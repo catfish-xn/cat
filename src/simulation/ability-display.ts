@@ -38,6 +38,28 @@ export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
   const physical = (key: string, apKey?: string) => amount(key, apKey);
   // Explicit aliases avoid treating every Modified* token as an AP multiplier.
   switch (definitionId) {
+    case 'camille': values.TotalDamage = physical('PercentAttackDamage','APDamage'); break;
+    case 'vi': Object.assign(values,{ModifiedShield:magic('Shield'),ModifiedDamage:physical('PercentAttackDamage'),ModifiedSecondaryDamage:physical('PercentAttackDamage_SecondaryDamage')}); break;
+    case 'akali': case 'vex': Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedSecondaryDamage:magic('SecondaryDamage')}); break;
+    case 'sett': case 'heimerdinger': case 'morgana': case 'amumu': case 'powder': case 'rumble': values.ModifiedDamage=magic('Damage');break;
+    case 'draven': values.TotalDamage=amount('PercentAD',undefined,'BaseDamage');break;
+    case 'trundle': Object.assign(values,{ModifiedHeal:magic('GainHealth'),ModifiedDamage:physical('PercentAttackDamage')});break;
+    case 'ziggs': Object.assign(values,{ModifiedInitialDamage:magic('Damage'),ModifiedSecondaryDamage:magic('MinibombDamage')});break;
+    case 'steb': case 'vladimir': Object.assign(values,{ModifiedHeal:magic('Heal'),ModifiedDamage:magic('Damage')});break;
+    case 'jinx': Object.assign(values,{ZapModifiedDamage:physical('ZapPercentAD'),FlameChompersModifiedDamage:physical('FlameChompersPercentAD'),DeathRocketModifiedDamage:physical('DeathRocketPercentAD','DeathRocketAP')});break;
+    case 'ambessa': Object.assign(values,{ModifiedChainDamage:physical('PercentChainAttackAD'),ModifiedStrikeDamage:physical('PercentStrikeAD'),ModifiedSlamDamage:physical('SlamDamageAD'),ModifiedOmnivamp:v('PercentOmnivamp')*ap});break;
+    case 'twistedfate': Object.assign(values,{ModifiedHeal:magic('BlueHeal'),ModifiedRedDamage:magic('RedDamage'),ModifiedYellowDamage:magic('YellowDamage')});break;
+    case 'mordekaiser': Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedTargetDamage:magic('TargetDamage'),ModifiedSecondaryDamage:magic('SlamDamage')});break;
+    case 'blitzcrank': Object.assign(values,{ModifiedDamage:magic('BaseDamage'),ModifiedShield:magic('Shield')});break;
+    case 'ekko': Object.assign(values,{ModifiedDamage:magic('TargetDamage'),ModifiedSecondaryDamage:magic('SecondaryDamage')});break;
+    case 'illaoi': Object.assign(values,{ModifiedHealthSteal:magic('HealthSteal'),ModifiedDamage:Math.floor((base.armor+base.magicResist)*v('DamageResistRatio'))});break;
+    case 'leblanc': Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedAutoDamage:magic('AutoDamage')});break;
+    case 'malzahar': Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedInfectionDamage:magic('InfectionDamage')});break;
+    case 'nocturne': values.ModifiedDamage=amount('ADPercent',undefined,'BaseDamage');break;
+    case 'singed': values.ModifiedDurability=Math.min(100,v('DR')*ap);break;
+    case 'twitch': Object.assign(values,{TotalDamage:physical('PercentAttackDamage','APDamage'),'TFTUnitProperty.:TFT13_TwitchCurrentExperimentBonus':v('ExperimentMaxHealthDamage')*100});break;
+    case 'violet': Object.assign(values,{ModifiedDamage:physical('PercentAttackDamage'),TotalDamage:physical('PercentIncreasedAttackDamage','APDamage')});break;
+    case 'zeri': values.TotalDamage=physical('PercentAttackDamage','APDamage');values.SecondaryDamage=Math.floor(values.TotalDamage*v('PercentDealtToBouncedEnemies'));break;
     case 'irelia': Object.assign(values, { ModifiedShield: magic('ShieldHealth'), ModifiedBaseStrikeDamage: magic('StrikeBaseDamage') }); break;
     case 'maddie': case 'tristana': case 'caitlyn':
       values.TotalDamage = physical('PercentAttackDamage', 'APDamage');

@@ -1,0 +1,12 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/p7-carousel.test.ts tests/p7-1-carousel-rules.test.ts tests/p7-1-identity.test.ts tests/g2-2-identity.test.ts
+
+
+ RUN  v5.0.3 /root/projects/p7-1-carousel-rules
+
+
+ Test Files  4 passed (4)
+      Tests  25 passed (25)
+   Start at  23:53:07
+   Duration  9.12s (tests 55%, transform 35%, import 9%, setup 1%)

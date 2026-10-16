@@ -1,0 +1,197 @@
+{
+  "base": "343877a5d364231ac64cdca0e2b7882730f35dea",
+  "contentDigest": "fnv1a32-utf16:bb66f4f8",
+  "method": "Public commands rerun; byte comparisons use original archived bytes. No digest normalization. Route first-command/event differences: release-audit.json; detailed Herald commands/events: p7-1-herald-raw/trajectory.json.",
+  "files": [
+    {
+      "beforePath": "tests/fixtures/m5/full-match-golden.g2-2.json",
+      "afterPath": "tests/fixtures/m5/full-match-golden.p7-1.json",
+      "previousFileBytes": 101012,
+      "currentFileBytes": 101071,
+      "previousFileSha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+      "currentFileSha256": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4",
+      "previousUtf8Bytes": 101012,
+      "currentUtf8Bytes": 101071,
+      "previousUtf8Sha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+      "currentUtf8Sha256": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4",
+      "byteEqual": false,
+      "firstByteOffset": 13,
+      "firstFieldDifference": {
+        "path": "$.note",
+        "previous": "G2-2 public commands rerun; no identity normalization or historical trajectory replacement.",
+        "current": "P7 public offline routes re-recorded; exact previous commands/events and all 134 archived state fields preserved except the explicit content identity."
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-c19-seed-9-minimal.json",
+      "afterPath": "tests/fixtures/p7-1-c19-seed-9-minimal.json",
+      "previousFileBytes": 24293,
+      "currentFileBytes": 24293,
+      "previousFileSha256": "fb0cf7d48300b81bff21d701761db95a5353d310dd5b5e9b554677f04a8051d6",
+      "currentFileSha256": "d72b78870ef9160c06b2cc1424afbcefd37fcb2b6ec32532b86b59b70b18f79c",
+      "previousUtf8Bytes": 24293,
+      "currentUtf8Bytes": 24293,
+      "previousUtf8Sha256": "fb0cf7d48300b81bff21d701761db95a5353d310dd5b5e9b554677f04a8051d6",
+      "currentUtf8Sha256": "d72b78870ef9160c06b2cc1424afbcefd37fcb2b6ec32532b86b59b70b18f79c",
+      "byteEqual": false,
+      "firstByteOffset": 207,
+      "firstFieldDifference": {
+        "path": "$.a.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-recorded-states/cannon.json.gz",
+      "afterPath": "tests/fixtures/p7-1-recorded-states/cannon.json.gz",
+      "previousFileBytes": 614118,
+      "currentFileBytes": 614171,
+      "previousFileSha256": "85ee1ce7f9bafa78f4cf0e47fac46e8ca70bbeda4dc5558023c6055eb5dd6b38",
+      "currentFileSha256": "d58d92efb645c9aa71d3b9d0a889176916fc2aca85b2c1004cf7eaeb710524b3",
+      "previousUtf8Bytes": 7957518,
+      "currentUtf8Bytes": 7957518,
+      "previousUtf8Sha256": "a67a92c8913353fec0ccf61789d715ef359139adaa27283fa99135841ee9d8f3",
+      "currentUtf8Sha256": "d0c218159969ce55f6f9a877f96b25bb8ad05a5219e9980cdff33a402fa75c30",
+      "byteEqual": false,
+      "firstByteOffset": 5446,
+      "firstFieldDifference": {
+        "path": "$.states.0.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-recorded-states/sniper.json.gz",
+      "afterPath": "tests/fixtures/p7-1-recorded-states/sniper.json.gz",
+      "previousFileBytes": 640992,
+      "currentFileBytes": 641044,
+      "previousFileSha256": "75ebed977bd56981a72962a2af12cd9e573660fc62a80469493573711534f9ec",
+      "currentFileSha256": "4747211d15f44543df7e6ecf54e1de613e50917a5ad0cb0170d5de8b8b7d31ef",
+      "previousUtf8Bytes": 8198304,
+      "currentUtf8Bytes": 8198304,
+      "previousUtf8Sha256": "ebce8e79217cbf73f62e535223c677ffc9850ed8ae54652258c1edd08bfb10c9",
+      "currentUtf8Sha256": "fb538151e0d7f66dbe832993c99c11eb230592d06220852f5eef3a22f466e0a1",
+      "byteEqual": false,
+      "firstByteOffset": 5446,
+      "firstFieldDifference": {
+        "path": "$.states.0.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/ionic-spark.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/ionic-spark.json",
+      "previousFileBytes": 110974,
+      "currentFileBytes": 110974,
+      "previousFileSha256": "79ef2a0dc19283c5a0178c1345a0b46af2ae7b5ee25d1a42e7b7f32fd35349d2",
+      "currentFileSha256": "7c9cc1029d42c113276d13f8b8f52ce37b43fdf333714486b14d1e34d6f99745",
+      "previousUtf8Bytes": 110974,
+      "currentUtf8Bytes": 110974,
+      "previousUtf8Sha256": "79ef2a0dc19283c5a0178c1345a0b46af2ae7b5ee25d1a42e7b7f32fd35349d2",
+      "currentUtf8Sha256": "7c9cc1029d42c113276d13f8b8f52ce37b43fdf333714486b14d1e34d6f99745",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "firstFieldDifference": {
+        "path": "$.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/evenshroud.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/evenshroud.json",
+      "previousFileBytes": 110973,
+      "currentFileBytes": 110973,
+      "previousFileSha256": "a3077d692c16bb38ab60780759eedd9468d703e801bf42aae0a01ec051c855b9",
+      "currentFileSha256": "045d2ef9037d22bf1ca2e0076390e875a1f392e831ad67b95e307f98c7f4469b",
+      "previousUtf8Bytes": 110973,
+      "currentUtf8Bytes": 110973,
+      "previousUtf8Sha256": "a3077d692c16bb38ab60780759eedd9468d703e801bf42aae0a01ec051c855b9",
+      "currentUtf8Sha256": "045d2ef9037d22bf1ca2e0076390e875a1f392e831ad67b95e307f98c7f4469b",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "firstFieldDifference": {
+        "path": "$.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/ionic-spark--evenshroud.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/ionic-spark--evenshroud.json",
+      "previousFileBytes": 111098,
+      "currentFileBytes": 111098,
+      "previousFileSha256": "9fbc3013c20272c32909c724b82116d5b508e5e43d31cf36a7da3aae305d1827",
+      "currentFileSha256": "516a96de7ac8935753e5811551dbf8761189854501e90741319860b76dc9c6fd",
+      "previousUtf8Bytes": 111098,
+      "currentUtf8Bytes": 111098,
+      "previousUtf8Sha256": "9fbc3013c20272c32909c724b82116d5b508e5e43d31cf36a7da3aae305d1827",
+      "currentUtf8Sha256": "516a96de7ac8935753e5811551dbf8761189854501e90741319860b76dc9c6fd",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "firstFieldDifference": {
+        "path": "$.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/quicksilver.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/quicksilver.json",
+      "previousFileBytes": 110977,
+      "currentFileBytes": 110977,
+      "previousFileSha256": "c7b7f8b78037a2c49eb6fb3a87d41d525e4eac80b0326f8bdd81af9007ff7ae9",
+      "currentFileSha256": "4a4ee0e18db09d2bdfb37c761980b61e33e80baf43764350526064853032faba",
+      "previousUtf8Bytes": 110977,
+      "currentUtf8Bytes": 110977,
+      "previousUtf8Sha256": "c7b7f8b78037a2c49eb6fb3a87d41d525e4eac80b0326f8bdd81af9007ff7ae9",
+      "currentUtf8Sha256": "4a4ee0e18db09d2bdfb37c761980b61e33e80baf43764350526064853032faba",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "firstFieldDifference": {
+        "path": "$.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/edge-of-night.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/edge-of-night.json",
+      "previousFileBytes": 110979,
+      "currentFileBytes": 110979,
+      "previousFileSha256": "1d18156fe13d42ff7bb43c1a31491d746f97244635b2ad9967ace40c9e02b828",
+      "currentFileSha256": "affe9cbf9915d147e68ace0a2a49b1c2820ab0dc34706db864b17ac8dd1b4463",
+      "previousUtf8Bytes": 110979,
+      "currentUtf8Bytes": 110979,
+      "previousUtf8Sha256": "1d18156fe13d42ff7bb43c1a31491d746f97244635b2ad9967ace40c9e02b828",
+      "currentUtf8Sha256": "affe9cbf9915d147e68ace0a2a49b1c2820ab0dc34706db864b17ac8dd1b4463",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "firstFieldDifference": {
+        "path": "$.contentDigest",
+        "previous": "fnv1a32-utf16:22f31569",
+        "current": "fnv1a32-utf16:bb66f4f8"
+      }
+    },
+    {
+      "beforePath": "tests/fixtures/g2-2-herald-raw/trajectory.json",
+      "afterPath": "tests/fixtures/p7-1-herald-raw/trajectory.json",
+      "previousFileBytes": 203115,
+      "currentFileBytes": 203115,
+      "previousFileSha256": "863072aca92b823d18cb5b716648fb10714893910e277c3fdf114e73b4846a64",
+      "currentFileSha256": "74b37ccc8586cf36ad157a265c968fdea63bb14c7b7d4e5bf03037bc65355a97",
+      "previousUtf8Bytes": 203115,
+      "currentUtf8Bytes": 203115,
+      "previousUtf8Sha256": "863072aca92b823d18cb5b716648fb10714893910e277c3fdf114e73b4846a64",
+      "currentUtf8Sha256": "74b37ccc8586cf36ad157a265c968fdea63bb14c7b7d4e5bf03037bc65355a97",
+      "byteEqual": false,
+      "firstByteOffset": 661,
+      "firstFieldDifference": {
+        "path": "$.branches.0.battles.0.resultSha256",
+        "previous": "a8fc378f9b246d1e3f95c40996393cd4b7566b9e4302d1382a2487638c480f16",
+        "current": "b431d445ac5299a4c15722a8947f81bf35e1286760fbae660113d2292c8472df"
+      }
+    }
+  ]
+}

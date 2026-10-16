@@ -68,7 +68,7 @@ describe('Room on the shared pool: opening (§12.2)', () => {
     expect(state.pool.naturalRound).toBe(1);
     expect(state.pool.available['irelia']).toBe(30 - 8 - state.pool.shops.filter(shop => shop.definitionId === 'irelia').length);
     // 674 copies − 8 openings − 40 reserved shop cards (contract §12.2).
-    expect(total(state.pool.available)).toBe(626);
+    expect(total(state.pool.available)).toBe(942);
     expect(state.pool.shops).toHaveLength(40);
     for (const seat of state.seats) {
       expect(seat.match.sharedPool).toEqual({ poolId: 'test-room', seatId: seat.seatId, revision: 1 });

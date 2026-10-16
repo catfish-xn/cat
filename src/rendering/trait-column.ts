@@ -12,7 +12,7 @@ import type { TraitSnapshot } from '../simulation/strategy-types';
 import { deriveTraits } from '../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { describeTraitTier } from '../presentation/effect-text';
-import { getHeroIdentity } from '../presentation/hero-identity';
+import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
 import { s13IconHtml } from '../presentation/s13-assets';
 
@@ -36,7 +36,7 @@ export interface TraitRow {
 export function traitRows(snapshots: readonly TraitSnapshot[]): TraitRow[] {
   return snapshots.filter(snapshot => snapshot.count > 0 && Object.hasOwn(TRAIT_DEFINITIONS, snapshot.traitId)).map(snapshot => {
     const definition = TRAIT_DEFINITIONS[snapshot.traitId]!;
-    return { traitId: snapshot.traitId, name: definition.name, count: snapshot.count, tier: snapshot.tier, thresholds: definition.tiers.map(tier => tier.threshold), members: snapshot.memberDefinitionIds };
+    return { traitId: snapshot.traitId, name: traitDisplayName(snapshot.traitId), count: snapshot.count, tier: snapshot.tier, thresholds: definition.tiers.map(tier => tier.threshold), members: snapshot.memberDefinitionIds };
   }).sort((a, b) => Number(b.tier > 0) - Number(a.tier > 0) || b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }
 /** Player rows of a preparation state; an unknown definition (content mismatch) shows no rows instead of throwing. */
@@ -48,7 +48,7 @@ export function boardTraitRows(preparation: GameState): TraitRow[] {
 export function traitIconHtml(traitId: string, size: number): string {
   const icon = s13IconHtml('trait', traitId, size, 'trait-icon');
   if (icon) return icon;
-  const letter = escapeHtml([...(TRAIT_DEFINITIONS[traitId]?.name ?? traitId)][0] ?? '?');
+  const letter = escapeHtml([...traitDisplayName(traitId)][0] ?? '?');
   return `<span class="trait-letter" style="width:${size}px;height:${size}px" aria-hidden="true">${letter}</span>`;
 }
 
@@ -81,7 +81,7 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
   if (!definition) return null;
   const body = el('div', '', 'trait-card'); body.dataset.trait = traitId;
   const head = el('div', '', 'trait-card-head'); head.insertAdjacentHTML('afterbegin', traitIconHtml(traitId, 28));
-  head.append(el('strong', definition.name), el('span', `${count} 人 · ${definition.target === 'team' ? '全队收益' : '成员收益'}`, 'trait-card-meta'));
+  head.append(el('strong', traitDisplayName(traitId)), el('span', `${count} 人 · ${definition.target === 'team' ? '全队收益' : '成员收益'}`, 'trait-card-meta'));
   body.append(head);
   const tiers = el('ul', '', 'trait-card-tiers'); tiers.dataset.debug = 'trait-card:tiers';
   for (const tier of definition.tiers) {

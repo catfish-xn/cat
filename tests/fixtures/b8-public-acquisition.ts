@@ -1,8 +1,8 @@
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
-import { buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
+import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
-import { publicEquipmentPreparation } from './b8-public-equipment';
+import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices } from './b8-public-equipment';
 
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public acquisition fixture: ${result.reason}`);
@@ -20,7 +20,7 @@ export function publicInventory(definitions: readonly string[], late = false, se
   if (late) while (components.length < 4) components.push('sword');
   // Recursive nine-card purchase controls need the later seeded economy;
   // the faster seed-38 glove route intentionally stops with less liquid gold.
-  const routeSeed = seed ?? (late ? (components.filter(id => id === 'gloves').length >= 3 ? 38 : 9)
+  const routeSeed = seed ?? (late ? ((components.filter(id => id === 'gloves').length >= 2 || components.every(id => id === 'tear')) ? 38 : 9)
     : components.length === 4 && components.every(id => id === 'tear') ? 9 : undefined);
   let state = publicEquipmentPreparation(components, routeSeed === undefined ? {} : { seed: routeSeed });
   const available = [...state.items], itemIds: string[] = [];
@@ -47,11 +47,12 @@ export function publicInventory(definitions: readonly string[], late = false, se
 export function publicRecursivePurchase(state: MatchState): {
   state: MatchState; slot: number; definitionId: string; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
 } {
+  const fundingState = state;
   for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) state = accepted(sellUnit(state, unit.id));
   // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
   // nine-card paid route using the independent shop oracle; never grant gold,
   // rewrite RNG or edit offers. All actual operations below remain public.
-  const candidates = ['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'];
+  const candidates = Object.keys(COST).filter(id=>COST[id]===1);
   const routeCost = (id: string) => {
     let count = 0, spent = 0, shop = state.shop, rng = state.rngState;
     for (let rolls = 0; rolls < 1000; rolls++) {
@@ -65,7 +66,12 @@ export function publicRecursivePurchase(state: MatchState): {
   };
   const costs = new Map(candidates.map(id => [id, routeCost(id)]));
   const definitionId = candidates.sort((a,b) => costs.get(a)! - costs.get(b)! || a.localeCompare(b))[0];
-  if (costs.get(definitionId)! > state.gold) throw Error('No affordable nine-card public route');
+  if (costs.get(definitionId)! > state.gold) {
+    // Empty-board losses exchange real HP for ordinary income and a free shop refresh.
+    const settled = finishPublicEquipmentBattle(fundingState);
+    const advanced = resolvePublicEquipmentChoices(accepted(nextRound(settled,state.round)));
+    return publicRecursivePurchase(advanced);
+  }
   if (COST[definitionId] !== 1) throw Error('Recursive fixture requires a one-cost hero');
   const purchaseIds: string[] = [];
   while (true) {

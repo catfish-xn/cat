@@ -378,13 +378,49 @@ def generate_g2(source, destination, check=False):
             target.write_bytes(content)
 
 
+G22_FACTIONS = frozenset(('Rebel', 'Academy', 'Enforcer', 'Conqueror', 'Scrap', 'Emissary'))
+G22_BLOCKED = frozenset(('TFT13_Swain', 'TFT13_Jayce', 'TFT13_Gangplank'))
+def g22_outputs(source):
+    index, _ = select(source)
+    mode = source['setData'][index]
+    prior = g2_outputs(source)['normalized/g2-1-champions.json']['champions']
+    previous = {c['apiName'] for c in prior if c['status'] != 'blocked-on-form-stats'}
+    selected = G2_CLASSES | G2_FACTIONS | G22_FACTIONS
+    rows = []
+    for n, c in enumerate(mode['champions']):
+        if c['apiName'] in G22_BLOCKED or c['cost'] not in range(1,6): continue
+        if c['apiName'] not in previous and not set(c['traits']) & G22_FACTIONS and c['apiName'] != 'TFT13_Morgana': continue
+        identity = {**G2_ALIASES, 'TFT13_Fish':'steb'}.get(c['apiName'], c['apiName'].removeprefix('TFT13_').lower())
+        stats = c['stats']
+        if any(v is None for v in stats.values()): raise ValueError('Missing stat: ' + identity)
+        rows.append({'id':identity, 'record':c, 'new':c['apiName'] not in previous,
+            'runtimeTraits':[t.lower() for t in c['traits'] if t in selected],
+            'source':{'upstreamSha256':SHA256,'jsonPointer':f'/setData/{index}/champions/{n}','recordCanonicalSha256':digest(c)}})
+    rows.sort(key=lambda c:c['id'])
+    if len(rows)!=48 or sum(c['new'] for c in rows)!=15: raise ValueError('Expected 48 champions, 15 new')
+    traits = [{'record':t,'source':{'upstreamSha256':SHA256,'jsonPointer':f'/setData/{index}/traits/{n}','recordCanonicalSha256':digest(t)}}
+              for n,t in enumerate(mode['traits']) if t['name'] in G22_FACTIONS]
+    return {'normalized/g2-2-champions.json':{'upstreamSha256':SHA256,'champions':rows},
+            'normalized/g2-2-traits.json':{'upstreamSha256':SHA256,'traits':traits}}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=DEST / 'raw/en_us.json.gz')
     parser.add_argument('--output', type=Path, default=DEST)
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--g2-2', action='store_true', help='Extract the 48-hero / 14-trait G2-2 inventory')
     parser.add_argument('--g2-1', action='store_true', help='Extract the G2-1 roster, origins and complete ordinary item inventory')
     args = parser.parse_args()
+    if args.g2_2:
+        for relative, value in g22_outputs(load_source(args.source)).items():
+            target = args.output / relative
+            text = encoded(value)
+            if args.check:
+                if target.read_text() != text: raise ValueError('Generated G2-2 output differs: ' + relative)
+            else: target.write_text(text)
+        print('Verified G2-2: 48 admitted champions, six additional origins; three forms excluded')
+        return
     if args.g2_1:
         generate_g2(load_source(args.source), args.output, args.check)
         print('Verified G2-1: 34 champions (28 class members), three origins, eight components / 36 recipes')

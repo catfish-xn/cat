@@ -60,10 +60,10 @@ export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchS
   return resolveChoices?resolveM5Choices(state):state;
 }
 
-/** Seed-42 multi-holder fixture acquired entirely through normal opening/shops.
+/** Seed-5 multi-holder fixture acquired entirely through normal opening/shops.
  * These paid purchases are not B8 rewards and do not prove the opening loot chain. */
 export function purchasedThreeHeroMatch():MatchState {
-  let state=reachRound('2-1');
+  let state=reachRound('2-1',true,5);
   state=accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
   for(const id of ['maddie','lux']) {
     const slot=state.shop.slots.findIndex(s=>s.status==='available'&&s.definitionId===id);

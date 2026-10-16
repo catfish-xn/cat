@@ -1,3 +1,4 @@
+import { trigger, enemies, status } from '../content/item-programs';
 import { programEntries } from './item-program';
 import { conditionHolds } from './stats';
 import { startingRows } from './targeting';
@@ -18,6 +19,8 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
     const source = asSource(m.source), v = m.values;
     let effects: Effect[] | undefined;
     if (m.mechanic === 'rageblade') eventTriggers.push({ id: 'attack-growth', source, listener: { subject: 'actor', relationToHolder: 'self', withinHexes: null }, aggregation: 'event', counters: [], gate: { kind: 'always' }, event: 'attack-completed', condition: { kind: 'always' }, selector: selfSelector({ sample: 'action-completion' }), internalCooldownTicks: 0, maxPerAction: 1, maxPerCombat: null, stackPolicy: { kind: 'add-stacks', cap: null }, effects: [{ kind: 'modify-stat', modifier: { stat: 'attackSpeed', unit: 'bps', value: { kind: 'constant', amount: v.attackSpeedBps }, condition: { kind: 'always' }, damageFilter: null }, activation: 'immediate', duration: { kind: 'combat' }, stackPolicy: { kind: 'add-stacks', cap: null } }] });
+    if (m.mechanic === 'blisteringStrikes') eventTriggers.push({ ...trigger({ id: 'blistering-strikes', event: 'attack-completed', selector: enemies({ candidates: 'event-target' }),
+      effects: [status('burn', v.burnBpsPerSecond, v.durationTicks, { activation: 'immediate' }), status('wound', v.woundBps, v.durationTicks, { activation: 'immediate' })] }), source });
     // Legacy mechanic tags compile data only; G04–G07 executors receive frozen programs, never item IDs.
     if (m.mechanic === 'dragonClaw') effects = [{ kind: 'heal', amount: flatAmount(0, { maxHpBps: v.healMaxHpBps, sample: 'each-pulse' }) }];
     if (m.mechanic === 'archangel') effects = [{ kind: 'modify-stat', activation: 'immediate', stackPolicy: { kind: 'add-stacks', cap: null }, duration: { kind: 'combat' },

@@ -102,7 +102,7 @@ describe('T2 true two-sided combat', () => {
       expect(unit.abilityPower).toBe(110);
       expect(unit.armor).toBe(87);
       expect(unit.attackDamage).toBe(52); // floor(42 * 1.25)
-      expect(unit.attackSpeedBonusBps).toBe(700); // 600 + 2*50 from pumping progress.
+      expect(unit.attackSpeedBonusBps).toBe(1300); // 600 base + 600 Emissary/Tristana + 2*50 pumping.
       expect(unit.sources!.filter(s=>s.source.sourceKind === 'item')[0].source.sourceInstanceId).toBe(local(battle,seatId,'item-1','item'));
       expect(new Set(unit.sources!.map(s=>s.source.sourceKind))).toEqual(new Set(['trait','item','augment','anomaly','ability']));
       expect(unit.sources!.every(s=>s.source.ownerId === id)).toBe(true);

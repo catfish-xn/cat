@@ -1,3 +1,5 @@
+import { compileAugmentEffect } from './augment-effects';
+import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
 import type { CombatStrategyInputs } from './combat-input';
 import type {
@@ -36,6 +38,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
@@ -49,25 +52,24 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       const definition = lookup(catalog.traits, trait.traitId);
       const tier = definition.tiers.find(candidate => candidate.threshold === trait.tier);
       if (!tier) throw new RangeError(`Unknown trait tier: ${trait.traitId}/${trait.tier}`);
-      sources.push(...makeSourcedEffects(unit.id, 'trait', trait.traitId, `${trait.team}:${trait.tier}`, [...tier.effects, ...(trait.memberDefinitionIds.includes(unit.definitionId) ? tier.memberEffects ?? [] : [])]));
+      sources.push(...makeSourcedEffects(unit.id, 'trait', trait.traitId, `${trait.team}:${trait.tier}`, g22TraitEffects(state, unit, trait, tier, boardUnits, equipment, conversions, catalog.items)));
     }
     if (unit.team === 'player') {
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
-        const definition = lookup(catalog.items, item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, item.id, definition.effects));
+        const definition = lookup(catalog.items, conversions.get(item.id) ?? item.definitionId);
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, definition.effects));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
-        const definition = lookup(catalog.items, child.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', child.definitionId, child.temporaryId, definition.effects, child.parentItemInstanceId));
+        const definition = lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId);
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, definition.effects, child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => {
+        sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
           if (effect.kind !== 'mechanic') return [effect];
-          if (effect.mechanic === 'pumpingUp') return [{ kind: 'attackSpeedBps' as const, bps: state.augmentProgress.pumpingRounds * effect.values.attackSpeedBpsPerRound }];
           if (effect.mechanic === 'investment') return [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }];
           if (effect.values.backRowOnly && unit.location.kind === 'board' && unit.location.cell.row !== state.preparation.board.deploymentZones.player.lastRow) return [];
           if (effect.mechanic === 'bulkyBuddies') {
@@ -84,8 +86,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       }
     } else {
       for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
-        const definition = lookup(catalog.items, item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
+        const definition = lookup(catalog.items, conversions.get(`enemy:${state.round}:${unit.id}:${item.slot}`) ?? item.definitionId);
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
     }

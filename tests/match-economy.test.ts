@@ -59,7 +59,7 @@ describe('M5 atomic economy and independent ledger', () => {
     expect({ shop: state.shop, rngState: state.rngState }).toEqual(expectedShop(42, 1, 3));
     const next = ledger(state, { type: 'buy', slot: 4, generation: 1 });
     expect(next.gold).toBe(8); expect(next.nextUnitSerial).toBe(5);
-    expect(next.preparation.units.find(u => u.id === 'unit-4')).toEqual(fixtureUnit('unit-4', 'zeri', { kind: 'bench', slot: 0 }));
+    expect(next.preparation.units.find(u => u.id === 'unit-4')).toEqual(fixtureUnit('unit-4', 'ziggs', { kind: 'bench', slot: 0 }));
     expect(next.rngState).toBe(state.rngState);
   });
   it('fills holes by slot number independently of array order and never reuses a sold ID', () => {
@@ -144,7 +144,7 @@ describe('M5 atomic economy and independent ledger', () => {
     expect([state.level, state.xp, state.gold]).toEqual([4, 2, 2]);
     expect(state.shop).toBe(before.shop); expect(state.rngState).toBe(before.rngState);
     state = ledger(state, { type: 'reroll' });
-    expect(state.shop.slots).toEqual(['kogmaw', 'vladimir', 'leona', 'zyra', 'scar'].map(definitionId => ({ status: 'available', definitionId })));
+    expect(state.shop.slots).toEqual(['loris', 'zeri', 'camille', 'zyra', 'twistedfate'].map(definitionId => ({ status: 'available', definitionId })));
     rejects(state, buyXp, 'insufficient-gold');
   });
   it('F preserves a valid old-generation offer and checks max-level before money', () => {

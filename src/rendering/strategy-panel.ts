@@ -24,7 +24,8 @@ import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from 
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
-import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
+import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -93,7 +94,7 @@ interface PanelActions {
 
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
-  for (const label of heroTraitLabels(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
+  for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
   return line;
 }
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
@@ -104,7 +105,7 @@ export { describeEffect, describeTraitTier };
 const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
-const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
+const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
@@ -540,7 +541,7 @@ export class StrategyPanel {
     for (const snapshot of deriveTraits(state.preparation, 'player')) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
-      const title = element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
+      const title = element('h3', `${traitDisplayName(snapshot.traitId)} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
       title.insertAdjacentHTML('afterbegin', s13IconHtml('trait', snapshot.traitId, 20, 'trait-icon'));
       row.append(title);
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
@@ -835,7 +836,7 @@ export class StrategyPanel {
       if (selected) {
         const definition = UNIT_DEFINITIONS[selected.definitionId], stats = getUnitStats(selected.definitionId, selected.starLevel);
         node.append(element('h3', `${displayUnitName(selected.definitionId)} ${'★'.repeat(selected.starLevel)}`), element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
-        node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id]?.name ?? `${id}（本版本未开放）`).join(' / ')}`));
+        node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : `${id}（本版本未开放）`).join(' / ')}`));
         this.appendEquipmentDetail(node, state, selected.id);
       }
       return;
@@ -881,7 +882,7 @@ export class StrategyPanel {
       row.dataset.debug = `combat-stat:${id}`; row.dataset.current = String(value); node.append(row);
     }
     const ability = engine.ability;
-    node.append(element('p', `技能 · ${ability.kind === 's13' ? `${displayUnitName(ability.championId)} 技能` : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
+    node.append(element('p', `技能 · ${ability.kind === 's13' ? (abilityNameOf(ability.championId) ?? `${displayUnitName(ability.championId)} 技能`) : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
     node.append(element('p', `当前目标 ${combat.units.find(target => target.id === unit.targetId) ? definitionName(combat.units.find(target => target.id === unit.targetId)!.definitionId) : '无'}`));
     const label = (origin: CombatOrigin) => originLabel(origin, id => this.combatUnitName(id));
     for (const layer of engine.shieldLayers ?? []) {

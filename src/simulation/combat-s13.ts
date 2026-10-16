@@ -1,3 +1,5 @@
+import { advanceAugmentCombat, settleAugmentDeaths } from './combat-augment-effects';
+import { advanceG22Traits, recordG22Damage, shareStebHeal } from './combat-g2-2';
 import { advanceG2Passives, recordG2Damage } from './combat-g2';
 import { freezeCombatDeclarations, sharedCombatDeclarations } from './combat-static';
 import { startingRows } from './m8/targeting';
@@ -79,6 +81,7 @@ function damageRequest(packet: S13Packet, combatId: string, tick: number): Damag
 }
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
   const amplifiers: StatModifier[] = owner ? [...statusModifiers(owner, 'damageAmp', tick)] : [];
+  if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
@@ -181,6 +184,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
+  advanceAugmentCombat(ctx);
+  advanceG22Traits(ctx);
   advanceG2Passives(ctx, () => actionSeq++);
   const blocked = new Set<string>();
   for (const unit of units) {
@@ -280,6 +285,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ricochetActions = new Set<string>(), aggregatedActions = new Set<number>();
   const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet) => {
     const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
+    recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
     recordG2Damage(ctx, units.find(u => u.id === packet.source.ownerId), target, actual, absorbed, packet, Math.max(0, (virtualHp.get(target.id) ?? 0) - actual));
     target.shieldLayers = result.shields.map(layer => {
       const old = target.shieldLayers.find(s => s.key === layer.key)!;
@@ -395,7 +401,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const healIds = new Set<string>();
   for (const entry of ctx.heals) {
     if (entry.request) { if (healIds.has(entry.request.healId)) throw new RangeError('Duplicate planned healing mutation'); healIds.add(entry.request.healId); }
+    const healTarget = units.find(u => u.id === entry.targetId), beforeHeal = healTarget?.hp ?? 0;
     commitMechanismHeal(ctx, entry);
+    shareStebHeal(ctx, entry, healTarget, (healTarget?.hp ?? 0) - beforeHeal);
     if (entry.reactionKey && companionState && units.find(u => u.id === entry.targetId)!.hp <= 0) companionState = { ...companionState, reactions: companionState.reactions.map(r => r.key === entry.reactionKey ? { ...r, status: 'cancelled' as const } : r) };
   }
   if (trackAssists) for (const death of allOutcomes.filter(o => o.killingPacket)) for (const actorId of damageContributors[death.context.targetId] ?? [])
@@ -426,11 +434,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.mana = outcome.after;
       if (gain > 0) events.push({ type: 'manaChanged', tick, outcome });
     }
-    for (const effect of unit.mechanics ?? []) if (effect.mechanic === 'bulkyBuddies' && !unit.runtime.buddyTriggered) {
-      const buddy = units.find(u => u.id === effect.targetId);
-      if (buddy && (startHp.get(buddy.id) ?? 0) > 0 && buddy.hp === 0) {
-        unit.runtime.buddyTriggered = true; grantShield(unit, effect.source, Math.floor(unit.maxHp * effect.values.shieldMaxHpBps / 10000), tick + effect.values.durationTicks, tick, events);
-      }
+    if (!unit.runtime.buddyTriggered) {
+      const grants = (unit.mechanics ?? []).filter(effect => effect.mechanic === 'bulkyBuddies' && units.some(buddy => buddy.id === effect.targetId && (startHp.get(buddy.id) ?? 0) > 0 && buddy.hp === 0));
+      for (const effect of grants) grantShield(unit, effect.source, Math.floor(unit.maxHp * effect.values.shieldMaxHpBps / 10000), tick + effect.values.durationTicks, tick, events);
+      if (grants.length) unit.runtime.buddyTriggered = true;
     }
   }
   cleanupMechanisms(ctx);
@@ -444,6 +451,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
+  settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive));
   if (companionState) {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));

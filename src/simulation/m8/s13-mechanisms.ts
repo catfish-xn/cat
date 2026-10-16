@@ -136,7 +136,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
     }
     case 'grant-shield': {
       const identity = effectIdentity(target.mechanismState!.combatId, source, target.id), legacyKey = source.parentItemInstanceId === null ? sourceKey(source) : identity.key, old = target.shieldLayers.find(l => l.key === legacyKey);
-      const state = grantShieldState(identity, value, effect, ctx.tick, old ? frozenShield(old, target) : undefined);
+      const state = grantShieldState(identity, Math.floor(value * (10000 - ((target.g22?.reaveUntilTick ?? 0) > ctx.tick ? target.g22!.reaveBps : 0)) / 10000), effect, ctx.tick, old ? frozenShield(old, target) : undefined);
       const layer = shieldProjection(state, legacyKey, effect);
       target.shieldLayers = [...target.shieldLayers.filter(l => l.key !== legacyKey), layer]; syncShield(target);
       ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, layer: layer.m8State!, reason: 'granted' }); break;

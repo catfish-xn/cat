@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
+import { displayUnitName } from './display-names';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
@@ -649,7 +650,7 @@ export class BoardScene extends Phaser.Scene {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];
         const borders = [0x7b94a3, 0x68c087, 0x72b6ff, 0xba8bff, 0xffd675];
-        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
+        button.setText(`${definition.symbol} ${displayUnitName(offer.definitionId)}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
         frame.lineStyle(2, borders[definition.cost - 1], operable ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
       }
     }
@@ -676,7 +677,7 @@ export class BoardScene extends Phaser.Scene {
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
+      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);

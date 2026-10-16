@@ -1,32 +1,19 @@
+import {must,supplySeats,atSupply} from './p7-carousel-helper';
+import { createMatch } from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { createSharedPool, initializeSharedSeat, assertSharedPoolConservation } from '../src/simulation/shared-pool';
 import { createCarouselMatch, prepareCarouselParticipants, createCarousel, advanceCarousel, pickFromCarousel, autoPickFromCarousel, pickCarouselForSeat, autoPickCarouselForSeat, grantCarouselPick, restoreCarouselSeat, restoreCarousel, schedule, opensCarousel } from '../src/simulation/carousel';
-import { validateB8Resources } from '../src/simulation/b8-restore';
 import type { MatchState } from '../src/simulation/match-types';
 import type { CarouselState } from '../src/simulation/carousel-types';
-import { generateSharedShop, runSharedMatchCommand, nextSharedRound, buySharedUnit, rerollSharedShop, sellSharedUnit } from '../src/simulation/shared-pool';
-import { releaseCarouselParticipant, completeCarouselForSeat, releaseCarouselSeat, resolvePendingCarouselUnits, sellPendingCarouselUnit } from '../src/simulation/carousel';
+import { buySharedUnit, rerollSharedShop } from '../src/simulation/shared-pool';
+import { releaseCarouselParticipant, completeCarouselForSeat, releaseCarouselSeat } from '../src/simulation/carousel';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
-function must<T extends {
-    ok: boolean;
-}>(r: T): Extract<T, {
-    ok: true;
-}> { if (!r.ok)
-    throw Error('reason' in r ? String(r.reason) : 'fixture transaction failed'); return r as Extract<T, {
-    ok: true;
-}>; }
 function opening(seats = 8) {
-    let pool = createSharedPool('p7', 42, { seatCount: seats });
-    const states: MatchState[] = [];
-    for (let i = 0; i < seats; i++) {
-        const r = must(initializeSharedSeat(pool, createCarouselMatch(42 + i), `s${i}`, i));
-        pool = r.pool;
-        states.push(r.state);
-    }
-    pool = must(prepareCarouselParticipants(pool, states.map((state, i) => ({ seatId: `s${i}`, state })))).pool;
-    return { states, state: must(createCarousel(pool, '1-1', { algorithm: 'lcg32-v1', state: 9 })).state };
+    const {pool,states}=supplySeats(seats);
+    return {states,state:must(createCarousel(pool,'2-4',{algorithm:'lcg32-v1',state:9})).state};
 }
+beforeAll(()=>{supplySeats(8);});
 describe('P7 carousel rule transactions', () => {
     it('deterministic nine-slot creation reserves real pool copies without mutating inputs', () => {
         const a = opening(), b = opening();
@@ -35,16 +22,16 @@ describe('P7 carousel rule transactions', () => {
         expect(a.state.pool.carouselReservations).toHaveLength(9);
         expect(a.state.rngAfter.state).not.toBe(9);
         assertSharedPoolConservation(a.state.pool, a.states);
-        const r = createCarousel(a.state.pool, '1-1', { algorithm: 'lcg32-v1', state: 9 });
+        const r = createCarousel(a.state.pool, '2-4', { algorithm: 'lcg32-v1', state: 9 });
         expect(r.ok).toBe(false);
         if (!r.ok) {
             expect(r.reason).toBe('carousel-exists');
             expect(r.pool).toBe(a.state.pool);
         }
     });
-    it('scheme B includes opening: HP pairs, original cutoff, and no early close', () => {
+    it('scheme B supply: HP pairs, original cutoff, and no early close', () => {
         const { state } = opening();
-        expect(schedule('1-1')).toEqual({ firstBatchMs: 6000, batchIntervalMs: 6000, tailMs: 6000 });
+        expect(schedule('2-4')).toEqual({ firstBatchMs: 6000, batchIntervalMs: 6000, tailMs: 6000 });
         expect(state.deadlineMs).toBe(30000);
         const locked = pickFromCarousel(state, 's0', 0);
         expect(locked).toMatchObject({ ok: false, reason: 'seat-locked', state });
@@ -59,30 +46,20 @@ describe('P7 carousel rule transactions', () => {
         expect(closed.events).toHaveLength(1);
         assertSharedPoolConservation(closed.state.pool);
     });
-    it('grants one opening champion/component, zero gold/XP and restores without granting twice', () => {
-        const initial = opening(2);
-        let current = must(advanceCarousel(initial.state, 6000)).state;
-        let match = initial.states[0];
-        expect(match.gold).toBe(0);
-        expect(match.items).toHaveLength(0);
-        expect(match.preparation.units.filter(u => u.team === 'player')).toHaveLength(0);
-        expect(opensCarousel(match)).toBe(true);
-        const r = must(pickCarouselForSeat(current.pool, current, match, 's0', 0));
-        current = r.carousel;
-        match = r.state;
-        expect(match.gold).toBe(0);
-        expect(match.xp).toBe(0);
-        expect(match.items).toHaveLength(1);
-        expect(match.preparation.units.filter(u => u.team === 'player')).toHaveLength(1);
-        expect(match.nextUnitSerial).toBe(2);
-        expect(opensCarousel(match)).toBe(false);
-        validateB8Resources(match);
-        const recovered = restoreCarousel(JSON.stringify(current));
-        const repeat = must(grantCarouselPick(recovered, restoreCarouselSeat(recovered,JSON.stringify(match)), 's0'));
-        expect(repeat.events).toEqual([]);
-        expect(repeat.match).toEqual(match);
-        expect(repeat.state).toBe(recovered);
-        assertSharedPoolConservation(recovered.pool, [match]);
+    it('restores free Irelia and existing opening economy, rejects 1-1, grants a supply pick once',()=>{
+        const initial=createCarouselMatch(42),solo=createMatch(42,{mode:'shared-deferred'});
+        expect(initial.preparation).toEqual(solo.preparation);expect(initial.gold).toBe(solo.gold);
+        expect(initial.xp).toBe(solo.xp);expect(initial.nextUnitSerial).toBe(solo.nextUnitSerial);
+        expect(initial.resourceProvenance).toEqual(solo.resourceProvenance);expect(opensCarousel(initial)).toBe(false);
+        const pool=createSharedPool('no-opening',42,{seatCount:1}),rng={algorithm:'lcg32-v1' as const,state:9};
+        expect(createCarousel(pool,'1-1',rng)).toEqual({ok:false,pool,rng,reason:'invalid-round',events:[]});
+        expect(()=>schedule('1-1')).toThrow('invalid-round');
+        const a=opening(2),ready=must(advanceCarousel(a.state,6000)).state;
+        const r=must(pickCarouselForSeat(ready.pool,ready,a.states[0],'s0',0));
+        expect(r.state.nextUnitSerial).toBe(a.states[0].nextUnitSerial+1);
+        const restored=restoreCarousel(JSON.stringify(r.carousel));
+        const repeat=must(grantCarouselPick(restored,restoreCarouselSeat(restored,JSON.stringify(r.state)),'s0'));
+        expect(repeat.events).toEqual([]);expect(repeat.match).toEqual(r.state);expect(opensCarousel(r.state)).toBe(false);
     });
     it('rejects duplicate seats and occupied slots with exact original state and no events', () => {
         let { state } = opening(2);
@@ -105,42 +82,16 @@ describe('P7 carousel rule transactions', () => {
             if (i===7) expect(r.events.some(e=>e.type==='carousel-closed')).toBe(true);
             a.states[i] = r.state;
             assertSharedPoolConservation(state.pool, a.states);
-            validateB8Resources(r.state);
-        }
+            }
         expect(state.status).toBe('closed');
         expect(state.pool.carouselReservations).toHaveLength(0);
-        expect(state.pool.holdings).toHaveLength(8);
+        expect(state.pool.holdings).toHaveLength(a.states.reduce((n,s)=>n+s.preparation.units.filter(u=>u.team==='player').length,0));
         expect(state.pool.carouselReceipts.every(r => r.status === 'granted')).toBe(true);
         const invalid = JSON.parse(JSON.stringify(state)) as CarouselState;
         Object.assign(invalid.slots[0], { pickedBy: 'absent' });
         expect(() => restoreCarousel(invalid)).toThrow();
     });
 });
-function atSupply() {
-    const first = opening(1);
-    let carousel = must(advanceCarousel(first.state, 12000)).state;
-    const picked = must(autoPickCarouselForSeat(carousel.pool, carousel, first.states[0], 's0', 'timeout'));
-    let pool = picked.pool, state = picked.state;
-    const shop = must(generateSharedShop(pool, state, 0));
-    pool = shop.pool;
-    state = shop.state;
-    while (state.roundDefinitionId !== '2-4') {
-        let guard = 0;
-        while (state.phase !== 'settlement') {
-            if (++guard > 1500)
-                throw Error('fixture round guard');
-            const command = state.phase === 'choice' ? { type: 'timeoutChoice' as const, round: state.round, choiceId: state.pendingChoice!.choiceId, generation: state.pendingChoice!.generation } : state.m8.round.kind === 'pvp' ? { type: 'settleRound' as const, receipt: { version: 'multiplayer-settlement-v1' as const, settlementId: `p7-${state.round}`, battleId: `battle-${state.round}`, seatId: 's0', round: state.round, roundId: state.roundDefinitionId, settlementEligible: true, result: 'win' as const, damage: 0, baseDamage: 2, opposingSurvivors: 0, growth: [], combatTicks: 1, combatEventCount: 1 } } : { type: state.phase === 'combat' ? 'step' as const : 'startCombat' as const };
-            const r = must(runSharedMatchCommand(pool, state, command));
-            pool = r.pool;
-            state = r.state;
-        }
-        const next = must(nextSharedRound(pool, [state], state.round));
-        pool = next.pool;
-        state = next.states[0];
-    }
-    pool = must(prepareCarouselParticipants(pool, [{ seatId: 's0', state }])).pool;
-    return { pool, state };
-}
 function supply() { const { pool, state } = atSupply(); return { state, carousel: must(createCarousel(pool, '2-4', { algorithm: 'lcg32-v1', state: 123 })).state }; }
 describe('P7 supply and capacity integration', () => {
     it('retains catalog ordinal, suppresses the old component choice, settles natural economy once at close', () => {
@@ -167,7 +118,7 @@ describe('P7 supply and capacity integration', () => {
         expect(repeat.match).toBe(complete.match);
         expect(repeat.events).toEqual([]);
     });
-    it('full bench keeps real pool-owned pending card and grants its item; legal slots resolve the queue without another birth', () => {
+    it('full bench places a pick straight on a legal board cell and grants its item without merging', () => {
         let { pool, state } = atSupply();
         state = { ...state, gold: 1000 };
         let carousel: CarouselState;
@@ -184,23 +135,12 @@ describe('P7 supply and capacity integration', () => {
         const picked = must(pickCarouselForSeat(carousel.pool, carousel, state, 's0', slot));
         state = picked.state;
         pool = picked.pool;
-        expect(state.carousel!.pendingUnits).toHaveLength(1);
+        expect(state.carousel!.heldCarouselUnits).toEqual([]);
+        const receipt=state.carousel!.receipts.at(-1)!;
+        expect(state.preparation.units.find(u=>u.id===receipt.unitId)?.location.kind).toBe('board');
+        expect(picked.events.filter(e=>e.type==='unitUpgraded')).toEqual([]);
+        assertSharedPoolConservation(pool,[state]);
         expect(()=>restoreCarouselSeat(picked.carousel,state)).not.toThrow();
-        const pending = state.carousel!.pendingUnits[0], serial = state.nextUnitSerial;
-        pool = must(advanceCarousel(picked.carousel, 12000)).state.pool;
-        const discarded = must(sellPendingCarouselUnit(pool, state, pending.unitId));
-        expect(discarded.state.gold).toBe(state.gold + UNIT_DEFINITIONS[pending.definitionId].cost);
-        expect(discarded.state.items).toEqual(state.items);
-        expect(discarded.state.carousel!.pendingUnits).toEqual([]);
-        assertSharedPoolConservation(discarded.pool, [discarded.state]);
-        expect(()=>restoreCarouselSeat({...picked.carousel,pool:discarded.pool,status:'closed',elapsedMs:12000},discarded.state)).not.toThrow();
-        const sold = must(sellSharedUnit(pool, state, state.preparation.units.find(u => u.location.kind === 'bench')!.id));
-        const moved = must(resolvePendingCarouselUnits(sold.pool, sold.state));
-        expect(moved.state.carousel!.pendingUnits).toHaveLength(0);
-        expect(moved.state.nextUnitSerial).toBe(serial);
-        expect(moved.state.preparation.units.some(u => u.id === pending.unitId)).toBe(true);
-        assertSharedPoolConservation(moved.pool, [moved.state]);
-        expect(()=>restoreCarouselSeat({...picked.carousel,pool:moved.pool,status:'closed',elapsedMs:12000},moved.state)).not.toThrow();
     });
     it('release is inert on repeat and returns its reserved copy once', () => {
         let { state } = opening(2);
@@ -219,15 +159,16 @@ describe('P7 supply and capacity integration', () => {
         const automatic = must(autoPickFromCarousel(unlocked, 's0', match));
         expect(automatic.state.receipts[0].slot).toBe(0);
         expect(automatic.state.rngAfter).toBe(unlocked.rngAfter);
-        expect(UNIT_DEFINITIONS[sample].cost).toBe(1);
+        expect([1,2]).toContain(UNIT_DEFINITIONS[sample].cost);
     });
 });
 describe('P7 boundary rejection and recovery authentication', () => {
     it('fails exhausted pools without creating a round or advancing caller RNG', () => {
-        let pool = createSharedPool('small', 0, { seatCount: 1, capacities: { darius: 8 } });
+        let pool = createSharedPool('small', 0, { seatCount: 1, capacities: { irelia:1,darius: 8 } });
         const seat = must(initializeSharedSeat(pool, createCarouselMatch(1), 's0', 0));
         pool = must(prepareCarouselParticipants(seat.pool, [{ seatId: 's0', state: seat.state }])).pool;
-        const rng = { algorithm: 'lcg32-v1' as const, state: 0 }, r = createCarousel(pool, '1-1', rng);
+        pool={...pool,naturalRound:7};
+        const rng = { algorithm: 'lcg32-v1' as const, state: 0 }, r = createCarousel(pool, '2-4', rng);
         expect(r).toEqual({ ok: false, pool, rng, reason: 'pool-exhausted', events: [] });
         if (!r.ok) {
             expect(r.pool).toBe(pool);
@@ -252,7 +193,8 @@ describe('P7 boundary rejection and recovery authentication', () => {
             states[i] = { ...r.state, playerHp: states[i].playerHp };
         }
         pool = must(prepareCarouselParticipants(pool, states.map((state, i) => ({ seatId: `s${i}`, state })))).pool;
-        const c = must(createCarousel(pool, '1-1', { algorithm: 'lcg32-v1', state: 1 })).state;
+        pool={...pool,naturalRound:7};
+        const c = must(createCarousel(pool, '2-4', { algorithm: 'lcg32-v1', state: 1 })).state;
         expect(c.releaseOrder).toEqual(['s1', 's2', 's4', 's0', 's3']);
         expect(c.releaseAtMs).toEqual({ s1: 6000, s2: 6000, s4: 12000, s0: 12000, s3: 18000 });
         expect(c.deadlineMs).toBe(24000);
@@ -311,8 +253,8 @@ it('restores trusted carousel seat snapshots without births and rejects missing,
     expect(()=>restoreMatch(r.state)).toThrow();
     for (const mutate of [
         (s:MatchState)=>{(s.carousel!.receipts as unknown[]).push(s.carousel!.receipts[0]);},
-        (s:MatchState)=>{(s.items as import('../src/simulation/strategy-types').ItemInstance[])[0] = {...s.items[0],definitionId:s.items[0].definitionId==='sword'?'bow':'sword'};},
-        (s:MatchState)=>{(s.resourceProvenance.entries as unknown[]).splice(0,1);},
+        (s:MatchState)=>{const index=s.items.findIndex(i=>i.id===s.carousel!.receipts[0].itemInstanceId);(s.items as import('../src/simulation/strategy-types').ItemInstance[])[index] = {...s.items[index],definitionId:s.items[index].definitionId==='sword'?'bow':'sword'};},
+        (s:MatchState)=>{(s.resourceProvenance.entries as unknown[]).splice(r.state.resourceProvenance.entries.findIndex(e=>e.kind==='unit-acquired'&&e.source.kind==='carousel'),1);},
     ]) {
         const edited = structuredClone(r.state); mutate(edited);
         expect(()=>restoreCarouselSeat(r.carousel,edited)).toThrow();

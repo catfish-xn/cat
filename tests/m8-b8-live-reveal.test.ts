@@ -38,9 +38,9 @@ const clone = (state: api.MatchState): api.MatchState => {
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals four orb entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(prefix)));
-    while (state.phase === 'combat' && state.combat.tick < 51) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 47) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(51);
+    expect(state.combat!.tick).toBe(47);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
@@ -54,12 +54,12 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 158/159.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 52, eventSeq: 449 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 52, eventSeq: 450 },
+      // W4 lawful seed42 mage route: both sources die in the same tick-48 action batch.
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 48, eventSeq: 413 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 48, eventSeq: 414 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([449, 449, 449, 449]); // was 158/158/159 (replay2 eventSeq shift)
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([413, 413, 413, 413]); // All four frozen drops belong to r00.
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -70,7 +70,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 450; // r00's death eventSeq (was 158 before the replay2 shift)
+    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 414; // Substitute r01's real death identity for r00's drop evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: source death conflict');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {
@@ -87,10 +87,13 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    ['unit-11', 'r00', 344, 'settlement', 4],
-    ['unit-15', 'r01', 164, 'settlement', 0],
+    ['unit-15', 'r00', 381, 'settlement', 4],
+    ['unit-12', 'r01', 152, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
     let state = clone(prefix), slot = 0;
+    expect(state.preparation.units.find(unit => unit.id === survivor)).toMatchObject({
+      definitionId: survivor === 'unit-15' ? 'loris' : 'lux', starLevel: 2, team: 'player',
+    });
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== survivor))
       state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'bench', slot: slot++ }));
     state = clone(state);

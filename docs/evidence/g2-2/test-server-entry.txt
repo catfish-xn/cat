@@ -7,12 +7,12 @@
 > node scripts/build-server.cjs
 
 
-  dist-server/chunks/chunk-SL6TBJIO.mjs  786.9kb
+  dist-server/chunks/chunk-VFDWPZF4.mjs  836.3kb
   dist-server/index.mjs                    4.2kb
   dist-server/run-battle.mjs               1.7kb
 
-⚡ Done in 247ms
-Server ESM built: 139 inputs; Node >=22.12; dist-server/index.mjs, dist-server/run-battle.mjs
+⚡ Done in 82ms
+Server ESM built: 144 inputs; Node >=22.12; dist-server/index.mjs, dist-server/run-battle.mjs
 {
   "passed": true,
   "node": "v24.19.0",
@@ -20,18 +20,18 @@ Server ESM built: 139 inputs; Node >=22.12; dist-server/index.mjs, dist-server/r
   "ticks": 164,
   "events": 106,
   "result": "playerWin",
-  "stateHash": "fnv1a32-utf16:8070e205",
+  "stateHash": "fnv1a32-utf16:1541a026",
   "eventHash": "fnv1a32-utf16:966105d6",
   "traceHashes": {
-    "state": "5ea54a05d1d09423a9ba4cce61160a1686c66c06bb4ced3edd925df87fd8bc5d",
+    "state": "2d94593d0ecce1ef188f58cb6beaea63ed547d72bf3a66872c87f4c18475c7b6",
     "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
     "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
   },
   "originalStateTraceHash": "2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167",
   "t13Identity": {
-    "contentDigest": "fnv1a32-utf16:1ce135cf",
-    "lootReplayDigest": "fnv1a32-utf16:65a85ecd",
-    "rulesVersion": "s13-g2-1-v1",
+    "contentDigest": "fnv1a32-utf16:22f31569",
+    "lootReplayDigest": "fnv1a32-utf16:028e5593",
+    "rulesVersion": "s13-g2-2-v1",
     "schemaVersion": 7
   },
   "deploymentBaseline": {
@@ -76,13 +76,8 @@ Server ESM built: 139 inputs; Node >=22.12; dist-server/index.mjs, dist-server/r
   "browserGlobalsAndImplicitClockAndRandomBlocked": true,
   "cliSnapshotMatches": true,
   "cliBudgetEnforced": true,
-  "inputCount": 139,
+  "inputCount": 144,
   "comparison": "UTF-8 Buffer.equals of all start/tick states, event batches and RNG; pinned probe FNV hashes; deepStrictEqual on every restored continuation step",
   "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance",
   "report": "artifacts/t1-node-entry/report.json"
 }
-npm notice
-npm notice New major version of npm available! 11.9.0 -> 12.2.0
-npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
-npm notice To update run: npm install -g npm@12.2.0
-npm notice

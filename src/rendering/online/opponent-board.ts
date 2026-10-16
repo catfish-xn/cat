@@ -6,11 +6,10 @@
  */
 import type { Board } from '../../simulation/board';
 import type { GameState } from '../../simulation/game';
-import { TRAIT_DEFINITIONS } from '../../simulation/content/traits';
 import { ITEM_DEFINITIONS } from '../../simulation/content/items';
 import { deriveTraits } from '../../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
-import { getHeroIdentity, heroEmblemSvg } from '../../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../../presentation/hero-identity';
 import { itemMarkHtml } from '../../presentation/item-codex';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { attachItemPopover } from '../../presentation/item-codex';
@@ -36,7 +35,7 @@ export function publicTraitRows(board: PublicBoard, layout: Board): TraitRow[] {
 /** Traits a public board activates; deriveTraits only reads definition ids and board locations. */
 export function publicTraits(board: PublicBoard, layout: Board): { traitId: string; name: string; count: number; tier: number }[] {
   return deriveTraits(publicPreparation(board, layout), 'player').filter(trait => trait.count > 0)
-    .map(trait => ({ traitId: trait.traitId, name: TRAIT_DEFINITIONS[trait.traitId]?.name ?? trait.traitId, count: trait.count, tier: trait.tier }))
+    .map(trait => ({ traitId: trait.traitId, name: traitDisplayName(trait.traitId), count: trait.count, tier: trait.tier }))
     .sort((a, b) => b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }
 

@@ -12,7 +12,7 @@ const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
 const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
-const t13Baseline = require('../tests/p7-content-baseline.json');
+const t13Baseline = require('../tests/g2-augments-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
@@ -97,7 +97,7 @@ async function worker() {
     const browserBytes = Buffer.from(JSON.stringify(expected.steps.map(project)));
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
-    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned G2-1 ${key} trace`);
+    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned W4 ${key} trace`);
     // T13 changes opening reward content, Match schema and random streams.
     // Preserve prior baselines; do not normalize away actual gameplay differences.
     assert.notEqual(traceHashes[key], baseline.traceHashes[key], `T13 ${key} must record the signed change`);
@@ -108,7 +108,7 @@ async function worker() {
     eventHash: reference.digestContent(combatEvents) };
   const probe = JSON.parse(fs.readFileSync(path.join(root, 'artifacts/server-authority-audit/report.json'), 'utf8'));
   for (const [key, value] of Object.entries(summary)) {
-    assert.equal(value, t13Baseline.firstBattle[key], `pinned G2 first battle: ${key}`);
+    assert.equal(value, t13Baseline.firstBattle[key], `pinned W4 first battle: ${key}`);
     if(key !== 'stateHash') assert.equal(value, baseline[key], `unchanged original probe: ${key}`);
     assert.equal(value, probe[key], `unmodified probe rerun: ${key}`);
   }

@@ -1,3 +1,4 @@
+import { startG22Traits } from './combat-g2-2';
 import type { CombatEvent, CombatState, CombatStep, CombatUnit } from './combat-types';
 import { compileMechanismDefinitions } from './m8/s13-definitions';
 import { EMPTY_MECHANISMS } from './m8/runtime-types';
@@ -58,6 +59,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
   if (mechanismUnits.length) {
     initializeMechanisms({ tick: 1, combatId: state.combatId, board: state.board, units: mechanismUnits, events: shields, packets: [], heals: [], draw: () => { throw new Error('Combat start mechanisms cannot draw RNG'); } });
     for (const unit of mechanismUnits) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
+    startG22Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('G22 starts cannot draw RNG');}});
     refreshMechanismAuras({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Auras cannot draw RNG');}});
   }
   return stampCombatStep({ ...state, units, startEffectsApplied: true }, [...effects, ...shields, ...mana]);

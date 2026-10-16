@@ -1,18 +1,20 @@
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { describe, expect, it } from 'vitest';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, heroTraitLabels } from '../src/presentation/hero-identity';
+import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, S13_TRAIT_IDS, heroTraitTags } from '../src/presentation/hero-identity';
 import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
 import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
 import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
 
-const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => !definition.id.startsWith('neutral'));
+// Presentation ownership remains Claude's: preserve the 33 authored styles and test fallback for the new content.
+const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => Object.hasOwn(HERO_STYLE, definition.id));
 const rgb = (hex: string) => [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16));
 const lum = (hex: string) => { const [r, g, b] = rgb(hex).map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
 describe('M7 hero identity (G01)', () => {
-  it('covers exactly the 33 purchasable S13 heroes', () => {
+  it('preserves the 33 authored presentation styles', () => {
     expect(heroes).toHaveLength(33);
     expect(Object.keys(HERO_STYLE).sort()).toEqual(heroes.map(hero => hero.id).sort());
   });
@@ -49,12 +51,26 @@ describe('M7 hero identity (G01)', () => {
       expect(HERO_S13_TRAITS[hero.id], hero.id).toEqual(archive[hero.id].traits);
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
-      const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
-      expect(open.sort()).toEqual(hero.traits.map(id => ({sentinel:'哨兵',artillerist:'炮手',sniper:'狙神',watcher:'监察',sorcerer:'法师',automata:'海克斯机械',family:'家人',firelight:'野火帮'}[id])).sort());
+      const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
+      const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(14);
+      expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
   });
+  it('opens all fourteen content traits for all forty-eight G2-2 heroes', () => {
+    const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+    const observed = new Set<string>();
+    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(48);
+    for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
+      const expected = hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id));
+      expected.forEach(id => observed.add(id));
+      expect(heroTraitTags(hero.id).filter(tag => tag.open).map(tag => tag.name).sort(), hero.id)
+        .toEqual(expected.map(id => names[id]).sort());
+    }
+    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
+  });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
-    for (const hero of heroes) {
+    for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
       const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id);
       expect(s13AssetUrl('champion', hero.id) !== null).toBe(bundled);
       const html = heroPortraitHtml(hero.id, 34, heroEmblemSvg(hero.id, 34));

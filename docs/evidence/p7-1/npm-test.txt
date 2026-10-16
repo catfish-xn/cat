@@ -1,0 +1,152 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast
+
+
+ RUN  v5.0.3 /root/projects/p7-1-carousel-rules
+
+ ❯ |fast| tests/server/carousel-room.test.ts (8 tests | 7 failed) 1516ms
+   ❯ G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) (8)
+     × opens the match with the 1-1 carousel on createCarouselMatch seats: no free unit, no gold, no component, no shop 242ms
+     × runs on the rules' release times, auto-picks bots on release and the rest at the deadline, then deals the first shop 101ms
+     × a disconnected player is picked for at the deadline (not on release) and resumes onto the same carousel 57ms
+     × a timer firing early, with time passing during the catch-up, never skips a release batch (real clocks do both) 93ms
+     × option B: stays until the deadline and departure after every seat holds a unit 135ms
+     × 2-4 releases lowest HP first, replaces the component supply, settles the round once and the match plays to its end 843ms
+     × faults the room when the rules refuse to open the carousel 37ms
+ ❯ |fast| tests/server/local-room-client.test.ts (6 tests | 1 failed) 64124ms
+   ❯ LocalRoomClient (1)
+     × plays the room from the first preparation to the final ranking, pushing one replay per battle round 62785ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > opens the match with the 1-1 carousel on createCarouselMatch seats: no free unit, no gold, no component, no shop
+AssertionError: expected { Object (receipts, pendingUnits, ...) } to match object { openingPending: true, …(2) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "openingPending": true,
+    "pendingUnits": [],
+    "receipts": [],
+  }
+
+ ❯ tests/server/carousel-room.test.ts:25:35
+     23|     const { room } = makeRoom(new DamageResolver(() => 0), { carousel:…
+     24|     for (const seat of room.state.seats) {
+     25|       expect(seat.match.carousel).toMatchObject({ openingPending: true…
+       |                                   ^
+     26|       expect(seat.match.preparation.units.filter(unit => unit.team ===…
+     27|       expect(seat.match).toMatchObject({ gold: 0, items: [] });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > runs on the rules' release times, auto-picks bots on release and the rest at the deadline, then deals the first shop
+AssertionError: expected { ok: false, …(2) } to match object { ok: false, reason: 'wrong-phase' }
+(47 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "ok": false,
+-   "reason": "wrong-phase",
++   "reason": "insufficient-gold",
+  }
+
+ ❯ tests/server/carousel-room.test.ts:48:51
+     46|     room.start();
+     47|     // Preparation commands wait; before its release the rules lock th…
+     48|     expect(room.handle('s0', { type: 'reroll' })).toMatchObject({ ok: …
+       |                                                   ^
+     49|     let before = room.state;
+     50|     expect(pick(room, 's0', 4)).toMatchObject({ ok: false, reason: 'se…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > a disconnected player is picked for at the deadline (not on release) and resumes onto the same carousel
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ tests/server/carousel-room.test.ts:123:37
+    121|     room.start();
+    122|     room.setConnected('s3', false);
+    123|     const id = room.state.carousel!.state.id;
+       |                                     ^
+    124|     clock.advance(12_000);
+    125|     expect(room.state.carousel!.state.receipts.some(receipt => receipt…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > a timer firing early, with time passing during the catch-up, never skips a release batch (real clocks do both)
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ tests/server/carousel-room.test.ts:148:33
+    146|     room.start();
+    147|     inner.advance(18_000);
+    148|     expect(room.state.carousel!.state.elapsedMs).toBe(18_000);
+       |                                 ^
+    149|     expect(room.state.carousel!.auto).toEqual({ s4: 'bot', s5: 'bot' }…
+    150|     inner.advance(6_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > option B: stays until the deadline and departure after every seat holds a unit
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ pick tests/server/carousel-room.test.ts:15:41
+     13| const rules = CAROUSEL_RULES_BINDING;
+     14| const pick = (room: Room, seatId: string, slot: number, override: { ca…
+     15|   const carousel = room.state.carousel!.state;
+       |                                         ^
+     16|   return room.handle(seatId, { type: 'carousel-pick', carouselId: over…
+     17| };
+ ❯ tests/server/carousel-room.test.ts:159:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > 2-4 releases lowest HP first, replaces the component supply, settles the round once and the match plays to its end
+Error: room never reached the expected state (phase ended, round 1, fault {"kind":"seat-stuck","seatId":"s0","reason":"stale-refresh"})
+ ❯ runUntil tests/server/helpers.ts:40:37
+     38|     if (!clock.runNext()) break;
+     39|   }
+     40|   if (!predicate(room.state)) throw new Error(`room never reached the …
+       |                                     ^
+     41|   return room.state;
+     42| }
+ ❯ tests/server/carousel-room.test.ts:179:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > faults the room when the rules refuse to open the carousel
+AssertionError: expected 'preparation' to be 'ended' // Object.is equality
+
+Expected: "ended"
+Received: "preparation"
+
+ ❯ tests/server/carousel-room.test.ts:206:30
+    204|     const { room } = makeRoom(new DamageResolver(() => 0), { carousel:…
+    205|     room.start();
+    206|     expect(room.state.phase).toBe('ended');
+       |                              ^
+    207|     expect(room.state.fault).toEqual({ kind: 'carousel-error', reason:…
+    208|     expect(toPlayerView(room.state, 's0', 0).fault?.kind).toBe('carous…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  |fast| tests/server/local-room-client.test.ts > LocalRoomClient > plays the room from the first preparation to the final ranking, pushing one replay per battle round
+Error: Test timed out in 60000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/server/local-room-client-helper.ts:66:26
+     64|     expect(client.currentRoom!.state.seats[0]!.seatRevision).toBe(1);
+     65|   });
+     66|   if (mode === 'timing') it('plays the room from the first preparation…
+       |                          ^
+     67|     const { client, log, runUntil, last } = harness();
+     68|     client.joinQueue('a'); client.startMatch();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  2 failed | 232 passed (234)
+      Tests  8 failed | 2930 passed (2938)
+   Start at  00:26:46
+   Duration  720.24s (tests 92%, import 7%, transform 1%)

@@ -112,8 +112,8 @@ describe('M5 frozen XP and shop', () => {
   });
 
   it.each([
-    { level: 3, definitions: ['amumu', 'irelia', 'amumu', 'darius', 'zeri'] },
-    { level: 9, definitions: ['leona', 'ezreal', 'blitzcrank', 'blitzcrank', 'zoe'] },
+    { level: 3, definitions: ['darius', 'irelia', 'amumu', 'darius', 'ziggs'] },
+    { level: 9, definitions: ['camille', 'ezreal', 'blitzcrank', 'blitzcrank', 'zoe'] },
   ])('seed 42 level $level uses independently tabulated 10-word shop', ({ level, definitions }) => {
     // Independent BigInt LCG tabulation: words 1/3/5/7/9 map to percentiles 25/57/37/44/87;
     // words 2/4/6/8/10 map within each bucket to 8/22/2/11/99 percentiles.
