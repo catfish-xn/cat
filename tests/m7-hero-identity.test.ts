@@ -6,6 +6,7 @@ import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
 import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
 import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
+import { g23ChampionAssets } from '../src/presentation/g23-display';
 
 // Presentation ownership remains Claude's: preserve the 33 authored styles and test fallback for the new content.
 const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => Object.hasOwn(HERO_STYLE, definition.id));
@@ -71,7 +72,8 @@ describe('M7 hero identity (G01)', () => {
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
-      const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id);
+      // G2-3 heroes take their portrait from the G2-3 icon manifest (s13-g23-manifest.ts) instead.
+      const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id) || g23ChampionAssets().some(asset => asset.id === hero.id);
       expect(s13AssetUrl('champion', hero.id) !== null).toBe(bundled);
       const html = heroPortraitHtml(hero.id, 34, heroEmblemSvg(hero.id, 34));
       expect(html.startsWith(bundled ? '<img' : '<svg')).toBe(true);
