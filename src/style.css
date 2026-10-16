@@ -249,6 +249,10 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .item-l10n { margin-left: 2px; font-size: 9px; color: var(--c-text-faint); }
 .item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
 .item-codex .codex-note { color: var(--c-text-muted); }
+.choice-extras { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.anomaly-codex { margin-top: 10px; padding: 0 9px 6px; background: var(--c-surface-alt); border-radius: 8px; }
+.anomaly-codex > summary { cursor: pointer; padding: 6px 0; }
+.anomaly-codex-list { margin: 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12px; }
 .codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .codex-filter { font-size: 12px; padding: 4px; }
 .codex-filter[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); }
@@ -599,6 +603,8 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .trait-step.reached { color: #9aaeb9; }
 .trait-step.current { color: #0b151f; background: #e6bc76; border-radius: 3px; padding: 0 3px; font-weight: 700; }
 .trait-sep { opacity: .5; }
+.trait-runtime { grid-column: 2 / -1; font-size: 11px; color: #e6bc76; overflow-wrap: anywhere; }
+.trait-card-runtime { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: #e6bc76; }
 .trait-letter { display: inline-grid; place-items: center; border-radius: 50%; background: #34505f; color: #e2eef1; font-size: 12px; font-weight: 700; line-height: 1; }
 .opponent-traits.trait-rows { display: grid; gap: 3px; }
 .opponent-traits .opponent-trait { display: grid; padding: 2px 8px 2px 4px; border-radius: 6px; }

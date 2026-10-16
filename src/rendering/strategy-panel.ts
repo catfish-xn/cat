@@ -39,6 +39,7 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
+import { genericOffer, isKnownChoiceKind, readChoiceExtras, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
@@ -84,6 +85,8 @@ interface PanelActions {
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
+  /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
+  readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
   readonly deploy: (id: string, location: UnitLocation) => void;
   readonly control: (name: ControlName) => void;
@@ -122,6 +125,7 @@ export class StrategyPanel {
   private selectedItems: string[] = [];
   /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
   private selectedConsumable: string | null = null;
+  private anomalyCodexOpen = false;
   private tab: 'traits' | 'items' | 'units' | 'builds' | 'events' = 'items';
   private lastCombatTick = -1;
   private lastCombatId: string | undefined;
@@ -787,7 +791,9 @@ export class StrategyPanel {
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
     if (loot) card.dataset.dropId = loot.dropId;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
-    card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
+    // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
+    const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
+    card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
@@ -801,6 +807,7 @@ export class StrategyPanel {
       }
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
+        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras))); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
         const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
@@ -815,6 +822,12 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
+      if (generic && extras.skip) {
+        // Extras slot (skip and the like): shown only when the choice declares it; disabled until a command is wired.
+        const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
+        row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+        card.append(row);
+      }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
     this.modal.append(card);
@@ -822,6 +835,17 @@ export class StrategyPanel {
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer): HTMLButtonElement {
+    const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price} 金币`, offer.description].filter(Boolean).join('\n');
+    const button = this.button(`choice:${offer.id}`, label, () => {
+      this.actions.choose(choice.choiceId, choice.generation, offer.id);
+      const after = this.actions.state().pendingChoice;
+      if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+    });
+    if (offer.price !== undefined) button.dataset.price = String(offer.price);
+    button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
+    return button;
   }
   private focusChoice(): void {
     if (this.modal.hidden || getComputedStyle(this.modal).display === 'none' || document.body.dataset.helpOpen === 'true') return;
@@ -979,11 +1003,25 @@ export class StrategyPanel {
       ['四法四哨', '拉克丝 / 婕拉 / 娜美 / 佐伊 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '拉克丝/婕拉 过渡 → 娜美 中期 → 8级二星 佐伊；出售过渡持装者后重购羁绊挂件。', '佐伊：朔极之矛 / 灭世者的死亡之帽 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
     ];
     for (const [title, units, route, items] of builds) { const card = element('article', '', 'trait'); card.append(element('h3', title), element('p', units), element('p', route), element('p', items)); section.append(card); }
-    for (const definition of Object.values(ANOMALY_DEFINITIONS)) section.append(element('p', `${anomalyDisplayName(definition.id)}：${definition.description}`));
-    section.append(element('p', '异常适配：库奇/崔丝塔娜 可选泰坦打击；克格莫/佐伊 可选法师护甲；库奇/佐伊 可选连杀。无需特定异常才能继续。'));
+    section.append(this.anomalyCodex());
     section.append(element('p', '日程：强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7。S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀。', 'mode-note'));
     section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自每阶段 .4 补给；1-2～1-4 与各阶段 .7 为野怪回合，野怪掉落尚未开放。副羁绊只保留原生身份，本版本未开放。'));
     this.root.append(section);
+  }
+  /** Collapsible anomaly codex: every definition the content ships, name + verbatim description; open state survives re-renders. */
+  private anomalyCodex(): HTMLElement {
+    const definitions = Object.values(ANOMALY_DEFINITIONS);
+    const codex = element('details', '', 'anomaly-codex'); codex.dataset.debug = 'anomaly-codex'; codex.open = this.anomalyCodexOpen;
+    codex.addEventListener('toggle', () => { this.anomalyCodexOpen = codex.open; });
+    codex.append(element('summary', `异常图鉴（${definitions.length} 个）`));
+    const list = element('ul', '', 'anomaly-codex-list');
+    for (const definition of definitions) {
+      const row = element('li', '', 'anomaly-codex-entry'); row.dataset.anomaly = definition.id;
+      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${definition.description}`));
+      list.append(row);
+    }
+    codex.append(list);
+    return codex;
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
