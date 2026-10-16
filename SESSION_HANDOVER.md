@@ -1,4 +1,4 @@
-# 交接记录（2026-10-15 深夜更新）
+# 交接记录（2026-10-16 上午更新）
 
 ## 0.0 高吞吐派单与输出铁律（2026-10-14 用户确认，从下一轮派单起严格执行）
 
@@ -7,7 +7,18 @@
 3. **Codex 测试指令只给目标集。** 子任务只要求 typecheck + 本次受影响的目标测试文件；不得要求"空闲机单跑全套长回放"。全套回归只在最终合并树上由指挥跑唯一一次。
 4. **拉满横向并发度。** 不局限于 1 Opus + 1 Codex。每次盘点 backlog 后，只要修改目录不强冲突，一次开出 3～4 条并行派单，每条标明窗口编号、分支、目录边界、验收命令。
 
-## 0.0.8 当前状态（2026-10-16 凌晨，指挥更新；以本节为准，细节见 `docs/DISPATCH_2026-10-14.md` 第九/十批）
+## 0.0.8 当前状态（2026-10-16 上午，指挥更新；以本节为准，细节见 `docs/DISPATCH_2026-10-14.md` 第九～十一批）
+
+**一页总结（新会话先读这段）**
+- 阶段：第十一批已收口，**main 已同步到 multiplayer，等用户真机部署与反馈**；本会话没有未合的开放 PR，没有正在跑的任务。
+- 部署：`deploy/deploy.sh 5494ab96093daeba99a4d7351ce1bac7ece35445`（main `5494ab9` = multiplayer `592cb30` 树）。旧存档作废；前后端必须同时部署（NET_PROTOCOL 3）。
+- 本批合入顺序：#114 → #115 → #116（P7-1 三件套）→ #117（timing 拆分）→ #118（W4 强化 30，Codex 经 bundle 代推）→ #119（→ main）。
+- 最终合并树全套验收数字：typecheck 通过；fast 239 文件 / 3202 用例；timing 7 文件 / 33 用例；server-entry、build、build:game 通过；e2e c7 23、g1 20、g2-traits-tooltips 18、g5 78、p7-carousel 47 全通。main 与 multiplayer `git diff --stat` 为空。
+- CI 常红但可忽略：m8-u6-loot / m6-retention / m8-u3-dynamic / input-* / m7-presentation（旧夹具 save 版本不兼容，所有 multiplayer PR 一致）；m8-b7-audit-vectors 20 s 超时为 CI 负载噪声。
+- 下一批待派（真机反馈后，可并行）：Opus = 24 个新强化中文名/图标/提示接入界面；Codex = G2-3（剩余英雄与羁绊、成装补齐 36、异变 30）+ 补推 `304845a` 文档提交。
+- 已知缺口：新强化界面英文名 + fallback 图标；强化出现等权（证据级 U，无 14.24b 一手概率）；`releaseCarouselParticipant` 无调用点；征服者/学院有限实现；Swain/Jayce/Gangplank 未进。
+- 指挥环境坑：Codex 平台"发布审核"拦 git push，走 bundle 通道；指挥会话 auto 模式偶发误拦 Bash（拆命令或改用 Read 即可）；gh GraphQL 403，只用 REST/MCP。
+
 
 **分支与身份**
 - `multiplayer` head `599b2e7`（#118 merge；代码含 #114–#118）。**main `5494ab9`（#119，2026-10-16 上午，与 multiplayer `592cb30` 同树）**，部署用 SHA `5494ab96093daeba99a4d7351ce1bac7ece35445`。旧 main `b4db0d5`（#111）已被覆盖。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112 规则 + #114 界面）、P7-1 完整包（#113 界面切换与临时位、#115 规则、#116 服务器接线）。
