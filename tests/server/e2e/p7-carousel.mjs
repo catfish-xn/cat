@@ -253,7 +253,7 @@ async function main() {
     await c.screenshot({ path: `${OUT}/2-4-auto.png` });
     check(s.m6.phase.kind === 'carousel', 'the phase holds after the close (departure)');
     // Leave the closed carousel on the board side: the bar goes with it.
-    await a.click('[data-debug="online:carousel-to-board"]').catch(() => {});
+    await click(a, 'online:carousel-to-board');
     s = await waitRead(a, watch(s => s.m6.phase.kind !== 'carousel'), 'the end of the departure', 10_000);
     check(await bar(a) === null && s.m6.carouselSide === null && await ring(a) === null, 'the bar and the ring are gone with the carousel');
     s = await waitRead(a, watch(s => s.m6.phase.kind !== 'carousel' && s.state.roundResults.length > resultsBefore), '2-4 settled', 20_000);
