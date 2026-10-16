@@ -415,10 +415,12 @@ describe('P7 carousel timing and refusals, each on its own room played to 2-4', 
 });
 
 /**
- * Why the room never calls `releaseCarouselParticipant` (MULTIPLAYER_CONTRACT §21.4: it is required only for an elimination
- * while a carousel is open): eliminations happen only at a round settlement, and the carousel phase closes (deadline plus
+ * Why the room never calls `releaseCarouselParticipant`. MULTIPLAYER_CONTRACT §21.5 says an elimination must not bypass it
+ * while a carousel is active; the room's current reading (pending a contract clarification, docs/UI_REQUESTS.md:916) is
+ * that it is needed only then. Eliminations happen only at a round settlement, and the carousel phase closes (deadline plus
  * departure, `finishCarousel`) before the round goes on. A seat eliminated later releases through `releaseSeatOnElimination`,
- * which the rules accept once the closed carousel has left no reservation. These pin both halves on one played room.
+ * which the rules accept once the closed carousel has left no reservation; it returns the holdings but does not touch
+ * `carouselReceipts`, so the dead seat's receipts stay `granted` (not asserted here). These pin both halves on one played room.
  */
 describe('carousel and elimination never overlap; a later elimination returns the carousel picks', () => {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules });
