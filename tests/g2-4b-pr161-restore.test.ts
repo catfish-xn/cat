@@ -10,6 +10,7 @@ import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
 import {g23BattlePayouts} from '../src/simulation/g2-3-settlement';
+import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {grantMechanicGold,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
 import {accepted,naturalForgeStates,naturalTier4Preparation} from './fixtures/g24-natural-forge';
 
@@ -65,6 +66,24 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
   expect(restoreMatch(save)).toEqual(state);
   expect(JSON.stringify(state)).toBe(before);
  }
+},60000);
+
+it('rejects a duplicator receipt and matching hero forged to an unowned option at tier4',()=>{
+ const state=naturalForgeStates().get(4)!;
+ expect([state.seed,state.round,state.roundDefinitionId]).toEqual([42,6,'2-3']);
+ const receiptId='g23:conqueror:4:atom:1:copy:0';
+ const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-63'});
+ expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
+ const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
+ const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
+ expect(atom.options).toContain('zeri');
+ const bad=structuredClone(state);
+ Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!,{definitionId:'zeri'});
+ Object.assign(bad.preparation.units.find(u=>u.id==='unit-63')!,{definitionId:'zeri'});
+ expect(()=>serializeMatch(bad)).toThrow('mechanic duplicator target');
+ expect(()=>restoreMatch(bad)).toThrow('mechanic duplicator target');
+ expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('mechanic duplicator target');
 },60000);
 
 it('replays automatic unit upgrades atomically and rejects an edited upgrade transaction',()=>{

@@ -133,7 +133,7 @@ describe('G2-3 mechanic choices', () => {
     const renamed = { ...state, pendingChoice: { ...choice, choiceId: 'armory-1', eventId: 'armory-1' } };
     for (const input of [renamed, JSON.stringify(renamed)]) expect(() => restoreMatch(input)).toThrow('G23 pending choice authority');
     expect(() => serializeMatch(renamed)).toThrow('G23 pending choice authority');
-  }, 30000);
+  }, 20000);
 });
 
 describe('G2-3 unit grants through the shared pool', () => {
