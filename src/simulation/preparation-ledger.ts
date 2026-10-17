@@ -111,7 +111,7 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
           proofs.push({ context: before, initial: rebuilt.combat,
             events: result.events.filter(event => event.domain === 'combat'), settledMatch: rebuilt });
         } else if (captureBattles && (command.name === 'stepMatch'
-          || before.combat !== null && rebuilt.combat === before.combat)) {
+          || before.phase === 'combat' && before.combat !== null && rebuilt.combat === before.combat)) {
           const index = proofs.findIndex(proof => proof.settledMatch === before);
           if (index !== -1) {
             const proof = proofs[index];
