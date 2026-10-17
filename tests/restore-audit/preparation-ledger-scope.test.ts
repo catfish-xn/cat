@@ -44,7 +44,10 @@ import type { SaveEnvelope } from '../../src/m6/contracts';
 it.each([false, true])('collection replays each battle once, including unchanged-combat equipment command: %s', async (equipDuringCombat) => {
   let state = createMatch(42);
   const history = new BattleHistory('scope-proof');
-  if (equipDuringCombat) state = publicEquipmentPreparation(['vest'], { history });
+  if (equipDuringCombat) {
+    state = publicEquipmentPreparation(['vest'], { history });
+    state = accept(matchApi.deployMatchUnit(state, 'unit-1', {kind:'board',cell:{col:3,row:7}}));
+  }
   function apply(result: ReturnType<typeof stepMatch>) {
     history.observe({ before: state, after: result.state,
       events: result.events.filter(e => e.domain === 'combat'), reason: 'tick' });
@@ -52,6 +55,7 @@ it.each([false, true])('collection replays each battle once, including unchanged
   }
   const start = startMatchCombat(state); expect(start.ok).toBe(true); apply(start as ReturnType<typeof stepMatch>);
   if (equipDuringCombat) {
+    expect(state.phase).toBe('combat');
     expect(state.items.length).toBeGreaterThan(0);
     const beforeCombat = state.combat;
     const equip = matchApi.equipItem(state, state.items[0].id, 'unit-1', 0);

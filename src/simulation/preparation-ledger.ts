@@ -94,7 +94,7 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
     let rebuilt = candidates.filter(prefix).sort((a, b) =>
       b.preparationLedger.commands.length - a.preparationLedger.commands.length)[0] ?? match.createMatch(state.seed);
     const offset = rebuilt.preparationLedger.commands.length;
-    for (const command of ledger.commands.slice(offset)) {
+    for (const command of ledger.commands.slice(offset) as readonly PreparationCommand[]) {
       if (command.name === 'startMatchCombat' && !openings.some(value => value === rebuilt)) openings.push(rebuilt);
       for (let count = 0; count < command.repeats; count++) {
         const before = rebuilt;
@@ -104,7 +104,7 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
           const run = match[command.name] as (state: MatchState, ...args: unknown[]) => MatchCommandResult | MatchStep;
           result = run(rebuilt, ...command.args);
         } catch { throw new Error('Invalid Match save: preparation-ledger-command'); }
-        requireLedger(!('ok' in result) || result.ok, 'command-rejected');
+        if ('ok' in result && !result.ok) throw new Error('Invalid Match save: preparation-ledger-command-rejected');
         requireLedger(result.state !== rebuilt, 'command-noop');
         rebuilt = result.state;
         if (captureBattles && command.name === 'startMatchCombat' && rebuilt.combat) {
