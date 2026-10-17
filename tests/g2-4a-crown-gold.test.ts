@@ -127,6 +127,7 @@ import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {nextRound} from '../src/simulation/match';
 import {g23BattleFacts} from '../src/simulation/g2-3-settlement';
 import {rollG23BlackMarket} from '../src/simulation/g2-3-progress';
+import {recordedCrownBattle} from './crown-history-helpers';
 
 it('real combat saves restore crown receipts and Continue never pays the completed battle twice',()=>{
  // Public grant API provides a provenance-backed test fixture, not fabricated settlement facts.
@@ -140,11 +141,11 @@ it('real combat saves restore crown receipts and Continue never pays the complet
   }
   const started=accepted(startMatchCombat(before));
   expect(restoreMatch(serializeMatch(started))).toEqual(started);
-  const after=fight(before),receipt=lastBattle(after),drops=crownReceipts(after);
+  const {state:after,battles}=recordedCrownBattle(before),receipt=lastBattle(after),drops=crownReceipts(after);
   expect(receipt.facts.crowns).toBe(3);
   expect(receipt.facts.result).toBe('win');
-  const restored=restoreMatch(serializeMatch(after));
-  expect(restored).toEqual(after);expect(restoreMatch(structuredClone(after))).toEqual(after);
+  const restored=restoreMatch(serializeMatch(after,battles),battles);
+  expect(restored).toEqual(after);expect(restoreMatch(structuredClone(after),battles)).toEqual(after);
   expect(stepMatch(restored).state).toEqual(after);
   expect(commitG23Settlement(restored,receipt.facts)).toBe(restored);
   const continued=accepted(nextRound(restored,restored.round));

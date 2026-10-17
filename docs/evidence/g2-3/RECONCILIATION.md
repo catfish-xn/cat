@@ -176,6 +176,6 @@
 | G24-CROWN-GOLD-02 | PvE及PvP胜利均触发；失败和平局不掷骰、不消耗冠冕随机数。 |
 | G24-CROWN-GOLD-03 | 每顶独立掷骰，允许叠加；同一持有者的多顶冠冕也各掷一次。数量校验上限84只取自7×4部署格×3装备槽结构，非额外玩法上限；不使用无依据的30顶限制。 |
 | G24-CROWN-GOLD-04 | 命中直接到账1金币，不生成拾取球；汇总收据 `g23:crown:<battleId>`，source=`tacticians-crown`，位于豪赌客/征服者箱金币之后。0命中保留经济收据的 `crownGold:0`，不生成0额资源收据。 |
-| G24-CROWN-GOLD-05 | 使用G23进度既有lcg32-v1随机流，每顶恰好一次，排在本战黑市roll之后；相同输入确定复现。 |
+| G24-CROWN-GOLD-05 | 使用G23进度既有lcg32-v1随机流，每顶恰好一次，排在本战黑市roll之后；相同输入确定复现。冠冕掷骰推进共享RNG，因此会改变后续黑市结果；本战已经完成的黑市掷骰不变。 |
 
 规则/content为 `s13-g2-3-v5` / `s13-14.24b-g2-3-v5`，policy=`g2-4a-v5`；schema7/save3/replay3不变。v4旧存档/输入按版本和digest拒绝，不补账迁移。内容digest由录制脚本计算，见 `tests/g2-3-content-baseline.json`。专项测试 `tests/g2-4a-crown-gold.test.ts` 包含真实grant/equip/战斗/文本和对象restore/Continue防重发，以及黑市顺序、伪造金额拒绝；各生成物旧新SHA、字节数和冻结源hash见 `crown-gold-recording-audit.json`。

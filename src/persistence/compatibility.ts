@@ -2,7 +2,7 @@ import type { SaveEnvelope } from '../m6/contracts';
 import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { CONTENT_DIGEST } from '../simulation/content';
-import { restoreMatch } from '../simulation/serialization';
+import { validateMatchStructure } from '../simulation/serialization-structure';
 import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION } from '../simulation/m8/version';
 import { validateBattleCollectionSync } from '../replay/history';
 
@@ -59,8 +59,8 @@ export function routeSaveFile(input: unknown): RoutedFile {
     if (record.events.length > MAX_EVENTS_PER_BATTLE) return reject('capacity-exceeded', fileRules, '战斗事件边界超限');
   }
   try {
-    // Only a validated Match is handed on to the isolated historical validator.
-    const restored = restoreMatch(match);
+    // Staging only: resumption additionally requires full collection validation.
+    const restored = validateMatchStructure(match);
     return { view: null, envelope: structuredClone({ ...input, match: restored }) as unknown as SaveEnvelope };
   } catch (error) { return reject('invalid-data', fileRules, error instanceof Error ? error.message : String(error)); }
 }

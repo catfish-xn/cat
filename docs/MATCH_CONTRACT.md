@@ -48,7 +48,7 @@ Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and
 - `nextRound(state,expectedRound)` accepts only the current completed settlement. It advances schedule/enemies, handles the shop lock, discards the old Combat and drains ordered before-round events. Receipts prevent duplicate grants. Income was already committed at settlement and is never repeated here.
 - HP0 ends in defeat. At round35, final PvE victory ends in victory; other results end in defeat. All normal commands reject in gameOver. New Match discards the entire prior session. `stepMatch` outside Combat returns unchanged state and no events.
 - `MatchSession` delegates synchronously, retains the complete current battle event ledger and uses a fixed-step accumulator. Phase changes and New Match clear time remainder. Native D/F/E commit in event order, independently of pointer-dismissal protection. The UI never settles, repairs state or calculates a parallel economy.
-- `serializeMatch`/`restoreMatch` validate exact versions/digest, IDs and ownership, receipts/history, terminal and phase boundaries, normalized economy, RNG, growth/augment state, frozen Combat sources and dynamic layers/statuses/tasks. Restoration runs no hooks or random draws. Old schema4 and unknown content versions are explicitly rejected. This is structural consistency validation, not cryptographic proof of command history.
+- `serializeMatch`/`restoreMatch` validate exact versions/digest, IDs and ownership, receipts/history, terminal and phase boundaries, normalized economy, RNG, growth/augment state, frozen Combat sources and dynamic layers/statuses/tasks. Crown history additionally uses isolated deterministic replay as specified below; it never advances the active match or pays its rewards again. Old schema4 and unknown content versions are explicitly rejected. Validation is not cryptographic proof of command history.
 - Match event sequences and Combat `combatId/tick/eventSeq` are distinct and monotonic. Start events at tick0 are retained. Replay verifies every command/tick state and all events, including failed-command noninterference. Canonical evidence hashes use SHA-256; the content drift digest is not a security primitive.
 
 
@@ -68,7 +68,19 @@ B5 第3阶段新增开发期必需字段 `equipmentState` 和 `temporaryEquipmen
 - `deaths[]` 每个中立死者至多一笔：`unitId`、正式死亡 `tick`、Combat 局部 `eventSeq`。恢复要求死者属于本场可信遭遇且确已死亡；每个已死亡中立都必须有收据。该身份绑定同伴反应的 `registeredAtTick` 与 `deathEventId`，防止删除／重定时后再次消费。
 - `controls[]` 记录中立来源眩晕：`key` 是完整机制身份，`targetId` 是受控目标，`appliedEventSeq` 是施加事件序号。仍挂载时 `removedAtTick`、`removedEventSeq`、`removedReason` 全为 null；移除后填写对应正式事件的 tick、序号与原因。
 - 恢复校验施加身份与可信开场任务／目标一致，状态应用来自同版本声明。起点由任务 `executeAtTick` 加声明的 next-tick 偏移计算，终点再加声明 `duration.ticks`；当前先锋为 `[2,12)`。活动收据须有对应存活目标和状态；移除收据须无活动状态，原因限有效的 `expired`、`death-cleanup`、`combat-end` 或有已消费装备净化依据的 `cleansed`。到期必须匹配声明终点；移除事件序号晚于施加序号。收据事件序号在本 Combat 的 `nextEventSeq` 范围内且不重复。
-- `serializeMatch`／`restoreMatch` 执行上述同版本结构和一次消费一致性检查，不重放战斗启动、伤害、控制、奖励或随机流。这些观察收据不是 B8 `LootReceipt`、资产／掉落键，也不是对联合伪造整段历史的密码学认证；不替代 B9 完整恢复／回放验收。
+- B7 观察收据本身执行上述同版本结构和一次消费一致性检查；冠冕历史另按下节在独立副本上重放。这些观察收据不是 B8 `LootReceipt`、资产／掉落键，也不是对联合伪造整段历史的密码学认证；不替代完整恢复／回放验收。
+
+## G2-4a 冠冕历史恢复 API（M1，方案 A）
+
+本节覆盖上文仅结构恢复的历史描述，不增加 MatchState、BattleRecord 或 SaveEnvelope 字段，不改变规则、数值、内容 digest。G24-CROWN-GOLD-01…05 保持：开战场上装备、阵亡仍算、PvE/PvP 赢才掷、每顶独立、直接到账、G23 黑市掷骰之后。征服者／化学男爵仍由现有结算逻辑按当前棋盘取档位；历史验证不引入另一套结算规则。
+
+- `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState`：文本／对象输入均先检查结构和资源来源折叠。存在冠冕战斗声明（包括零命中或败／平局的 `crowns`）时必须提供本局从首战至最新已结算战斗的完整回放；否则抛出 `Invalid Match save: missing historical evidence / 缺少冠冕历史证据，请提供完整 battles 回放`。提供历史时，无论有没有冠冕，均验证整段历史。没有冠冕声明的孤立 Match 保留原结构恢复合同，不代表其完整战斗历史已获认证。
+- `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string`：与恢复相同的验证条件，仍只输出原 Match JSON。调用方必须另外保留现有 `SaveEnvelope.battles`，不能只存该字符串后丢弃历史。
+- 逐轮验证 `BattleRecord.context` 的来源账本（真实获得／合成记录）、开战输入及全部事件／终局 hash；正常 `startMatchCombat`／`stepMatch` 在副本上重建胜负、开战冠冕资格、经济 RNG 和金币收据。后续开战上下文和最终 Match 必须继承已验证的经济、机制收据和资源来源前缀；不能用候选自报的 `crowns` 或 RNG 自洽代替历史证据。缺战、乱序、跨局、前缀改写或重建不符均整份拒绝，错误说明对应历史证据／经济收据／获得合成记录问题。
+- `validateBattleRecord(record, battles?)` 与 `new PlaybackSession(record, battles?)` 的第二参数是**该记录之前**的完整已完成回放。上下文含冠冕历史而省略参数时同样拒绝。`BattleHistory` 恢复当前前缀及 `MatchApplication` 打开回放已传入相应历史。单条记录的结构兼容检查 `checkRecordCompatibility` 不授予恢复权限。
+- `validateBattleCollection[Sync](envelope)` 按顺序验证全部已完成战斗、最终经济／资源前缀及当前战斗；`validateEnvelope`／`validateFile` 强制调用这项验证，调用方提供的附加回调不能取代它。`routeSaveFile` 只是版本／结构分流，返回 `view:null` 不表示可续玩；应调用完整验证入口或 `readCompatibility`。归档准入也使用完整集合校验。
+- 调用方迁移：把 `restoreMatch(text)` 改成 `restoreMatch(text, envelope.battles)`，序列化相应传同一历史；产品导入／继续优先使用 `validateFile(file, validateBattleCollection)`／`validateEnvelope(envelope, validateBattleCollection)`。单场回放传入同局按轮排序的先前记录。缺少所需历史的旧孤立冠冕 Match 无法补证，不迁移、不猜测装备或胜负，应保留原文件并开始新局。
+- 验证只在独立副本重演，不修改调用者状态、发奖或推进活跃对局 RNG。缓存仅复用 recorder 私有标记且深冻结记录的单场重演结果；每次仍重新校验历史前缀，外部对象／自行 freeze 的输入不获得该信任。完整回放的耗时随历史长度增加，性能门槛与超时保持原值。
 
 详见 [M8B_CONTRACT_ADDENDUM §5.1](M8B_CONTRACT_ADDENDUM.md#51-b7-已接入的中立观察收据) 与 [B7 交接](M8_B7_HANDOFF.md)。
 

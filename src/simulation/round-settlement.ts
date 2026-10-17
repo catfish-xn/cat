@@ -89,6 +89,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player');
       if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result||facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0)
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
+       // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
     }
     // Require contiguous history, including already-settled PvE/supply nodes.

@@ -24,6 +24,8 @@ v1的存档和回放输入按身份拒绝；v2夹具通过原公共指令生成�
 
 在冠冕人口版本上保留历史合入 `148d6a2d87a438f580a41bf55f1651c2d5a9d8a3`（冻结输入rewardClaims前缀校验），规则/content维持本批v5，policy=`g2-4a-v5`，不回退v4也不重复升版。当前digest见 `tests/g2-3-content-baseline.json`。
 
-已实现源 `PercentGoldChance=10`：开战场上装备的每顶冠冕在PvE/PvP胜利时独立10%直接到账1金币；背包/备战不算，持有者阵亡仍算，输/平不算。采用用户确认的 G24-CROWN-GOLD-01..05（见RECONCILIATION），G23 lcg32随机流排在黑市之后。经济收据保存冠冕数量/命中金币，并与唯一资源收据 `g23:crown:<battleId>` 交叉验证，恢复与重复结算不能重发。不新增界面/服务器逻辑；沿用mechanicGranted事件。
+已实现源 `PercentGoldChance=10`：开战场上装备的每顶冠冕在PvE/PvP胜利时独立10%直接到账1金币；背包/备战不算，持有者阵亡仍算，输/平不算。采用用户确认的 G24-CROWN-GOLD-01..05（见RECONCILIATION），G23 lcg32随机流排在黑市之后。冠冕掷骰推进共享RNG，会改变后续黑市结果，本战已经完成的黑市掷骰不变。经济收据保存冠冕数量/命中金币，并与唯一资源收据 `g23:crown:<battleId>` 交叉验证，恢复与重复结算不能重发。不新增界面/服务器逻辑；沿用mechanicGranted事件。
+
+M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格、来源、胜负、经济和资源收据前缀。只携带冠冕 Match、缺少历史证据的恢复会明确拒绝；调用方须给 `restoreMatch`／`serializeMatch` 传入 `battles`，或使用完整 SaveEnvelope 验证入口。字段、digest 和五条玩法约定不变，详见 [恢复 API 合同](../../MATCH_CONTRACT.md#g2-4a-冠冕历史恢复-apim1方案-a)。
 
 专项测试验证源概率、独立叠加、PvE/PvP、场上/备战/背包、死亡持有者、黑市随机次序、真实战斗恢复及Continue防重复；release/inputs/live-reveal/herald均从脚本重录，旧新SHA/bytes及冻结source hashes见 `crown-gold-recording-audit.json`。最终head全套由发布协调者单独执行一次。
