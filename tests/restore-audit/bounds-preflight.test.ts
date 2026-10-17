@@ -3,10 +3,15 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { stepMatch, startMatchCombat, type MatchState } from '../../src/simulation/match';
 import * as mechanisms from '../../src/simulation/m8/restore';
+import { canonicalContent } from '../../src/simulation/content';
+import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
+import { projectG23Summons } from '../../src/simulation/g2-3-summons';
+import { validateRestoreBoundsPreflight } from '../../src/simulation/restore-bounds-preflight';
 import { effectIdentity } from '../../src/simulation/m8/identity';
 import { accepted, battle } from '../match-helpers';
 import { itemMatch } from '../fixtures/m8-b4-match';
 import { startBracerFight } from '../fixtures/explorer-bracer-public';
+import { validateArtifactCombatFixture } from '../fixtures/artifact-combat-validation';
 import { publicNeutralPreparation } from '../fixtures/m8-neutral-public-route';
 import * as expressions from '../../src/simulation/content/item-programs';
 
@@ -77,15 +82,37 @@ it.each([
     rejected(bad, reason);
   });
 
+function rejectSyntheticBracer(state: MatchState): void {
+  for (const input of [state, JSON.stringify(state)])
+    expect(() => restoreMatch(input)).toThrow('preparation-ledger-command-rejected');
+  expect(() => serializeMatch(state)).toThrow('preparation-ledger-command-rejected');
+}
+
+function bracerPreflight(state: MatchState): void {
+  const inputs = state.combatInputBasis!.inputs;
+  validateRestoreBoundsPreflight(state.combat!, projectG23Summons(inputs.preparation), buildStrategySnapshot(inputs),
+    (a, b) => canonicalContent(a) === canonicalContent(b));
+}
+
 it('bounds sampled kill triggerCount by trusted roster/lives before the fact replay', () => {
   const legal = startBracerFight();
-  expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+  // The artificial bracer/hero grants cannot authenticate a public Match save.
+  rejectSyntheticBracer(legal);
+  expect(() => bracerPreflight(legal)).not.toThrow();
   const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.definitionId === 'lux')!;
   const d = owner.mechanismDefinitions!.eventTriggers!.find(t => t.id === 'kill')!;
   Object.assign(owner, { triggerLedger: { runtimes: [{ ...effectIdentity(bad.combat!.combatId!, d.source, owner.id),
     startsAtTick: 0, expiresAtTick: null, triggerCount: 64, stacks: 0, counters: {}, consumedRewards: [],
     nextEligibleTick: 0, consumed: false, stackPolicy: d.stackPolicy }], processed: {}, actionCounts: {} } });
   rejected(bad, 'sampled stat trigger count bound');
+  // Repeat the original preflight rejection directly at the combat layer;
+  // the untouched synthetic control is separately rejected by B admission.
+  const consumer = vi.spyOn(mechanisms, 'validateMechanisms');
+  try {
+    for (const input of [bad, JSON.parse(JSON.stringify(bad)) as MatchState])
+      expect(() => validateArtifactCombatFixture(input)).toThrow('sampled stat trigger count bound');
+    expect(consumer).not.toHaveBeenCalled();
+  } finally { consumer.mockRestore(); }
 });
 
 it('bounds a runtime counter by its authenticated item declaration', () => {
@@ -125,11 +152,22 @@ function continueEveryTick(legal: MatchState, liveSteps?: readonly ReturnType<ty
   return live;
 }
 
-it('preserves a real long fight with growing trigger counts and resumes every tick', () => {
+it('rejects synthetic bracer acquisition but preserves the long-fight preflight and every domain tick', () => {
   let state = startBracerFight();
   while (state.phase === 'combat' && state.combat!.tick < 400) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(400); expect(state.phase).toBe('combat');
-  continueEveryTick(state);
+  rejectSyntheticBracer(state);
+  // Test the downstream allocation boundary directly, without bypassing the save ledger.
+  // JSON and object domain copies retain the original full-result tick oracle.
+  bracerPreflight(state);
+  let object = structuredClone(state), json = JSON.parse(JSON.stringify(state)) as MatchState;
+  validateArtifactCombatFixture(object); validateArtifactCombatFixture(json);
+  while (state.phase === 'combat') {
+    const next = stepMatch(state), fromObject = stepMatch(object), fromJson = stepMatch(json);
+    deepStrictEqual(fromObject, next); deepStrictEqual(fromJson, next);
+    state = next.state; object = fromObject.state; json = fromJson.state;
+    bracerPreflight(state);
+  }
 });
 
 describe('public single-player late fight', () => {

@@ -6,6 +6,7 @@ import {
 } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { validateArtifactCombatFixture, artifactCombatFixtureText } from './fixtures/artifact-combat-validation';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
 import { publicEquipmentPreparation } from './fixtures/b8-public-equipment';
@@ -80,6 +81,16 @@ beforeAll(() => {
   terminal = state;
 });
 
+// These are additional boundary cases, separate from the unchanged timed
+// combat continuation cases below; each still checks all three public entries.
+it.each(['initial', 'terminal', ...checkpointCases.map(([, tick]) => tick)] as const)(
+  'Match boundaries reject the mechanic-granted chest/bracer at checkpoint %s', checkpoint => {
+    const state = checkpoint === 'initial' ? initial : checkpoint === 'terminal' ? terminal : checkpoints.get(checkpoint)!.state;
+    for (const input of [state, JSON.stringify(state)])
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+    expect(() => serializeMatch(state)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  });
+
 describe('chest-granted Archangel with an originally equipped Seeker’s Armguard', () => {
   it('pins the natural grant, pulse, repeated stacks and receiver death in one fight', () => {
     expect(checkpoints.size).toBe(checkpointCases.length);
@@ -100,7 +111,7 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(receiverOf(at(551)).alive).toBe(false);
     expect(pulses(at(550))).toEqual([3]);
     // Production death cleanup cancels attached periodic tasks, but preserves
-    // the earned grant and bracer receipts in the deceased receiver’s save.
+    // the earned grant and bracer receipts in the deceased receiver’s combat fixture.
     expect(pulses(at(551))).toEqual([]);
     expect(receiverOf(at(551)).combatItemGrants).toEqual(receiverOf(at(550)).combatItemGrants);
     expect(receiverOf(at(551)).triggerLedger).toEqual(receiverOf(at(550)).triggerLedger);
@@ -109,28 +120,29 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(terminal.phase).not.toBe('combat');
   });
 
-  it.each(['restore', 'serialize'] as const)('rejects an in-place grant edit after successful %s validation', warmup => {
+  it.each(['object direct validator', 'canonical direct validator'] as const)('rejects an in-place grant edit after successful %s validation', warmup => {
     const candidate = structuredClone(checkpoints.get(263)!.state);
     const grants = receiverOf(candidate).combatItemGrants!;
     expect(grants[0].definitionId).toBe('archangel');
-    if (warmup === 'restore') expect(restoreMatch(candidate)).toEqual(candidate);
-    else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
+    if (warmup === 'object direct validator') expect(() => validateArtifactCombatFixture(candidate)).not.toThrow();
+    else expect(JSON.parse(artifactCombatFixtureText(candidate))).toEqual(candidate);
     (grants[0] as { definitionId: string }).definitionId = 'shojin';
     expect(receiverOf(candidate).combatItemGrants).toBe(grants);
-    expect(() => restoreMatch(candidate)).toThrow('uncompiled mechanism definitions');
-    expect(() => serializeMatch(candidate)).toThrow('uncompiled mechanism definitions');
+    expect(() => validateArtifactCombatFixture(candidate)).toThrow('uncompiled mechanism definitions');
+    expect(() => artifactCombatFixtureText(candidate)).toThrow('uncompiled mechanism definitions');
   });
 
-  it.each(checkpointCases)('%s @%i: JSON/object restore preserves the entire state and uninterrupted continuation', (_label, tick) => {
+  it.each(checkpointCases)('%s @%i: JSON/object direct validation preserves the entire state and uninterrupted continuation', (_label, tick) => {
     const { state, eventOffset } = checkpoints.get(tick)!;
-    const saved = serializeMatch(state);
+    const saved = artifactCombatFixtureText(state);
     for (const input of [saved, structuredClone(state)]) {
-      const restored = restoreMatch(input);
-      expect(restored).toEqual(state);
-      expect(serializeMatch(restored)).toBe(saved);
-      // Full Match equality includes outcome/settlement, every unit, grants,
+      validateArtifactCombatFixture(input);
+      const validated: MatchState = typeof input === 'string' ? JSON.parse(input) : structuredClone(input);
+      expect(validated).toEqual(state);
+      expect(artifactCombatFixtureText(validated)).toBe(saved);
+      // Full fixture equality includes outcome/settlement, every unit, grants,
       // sampled-stat receipts, periodic state, RNG counters and all events.
-      expect(finish(restored, state)).toEqual({ state: terminal, events: events.slice(eventOffset) });
+      expect(finish(validated, state)).toEqual({ state: terminal, events: events.slice(eventOffset) });
     }
   });
 });

@@ -359,8 +359,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
 }
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
-export function validateMatchStructureForSerialization(state: MatchState): MatchState {
-  return withItemRestoreCache(() => restoreMatchWithinCall(state, true));
+export function validateMatchStructureForSerialization(state: MatchState,
+  validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+  return withItemRestoreCache(() => restoreMatchWithinCall(state, true, validateLedger));
 }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.

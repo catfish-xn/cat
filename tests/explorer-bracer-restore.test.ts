@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { stepMatch, type MatchEvent, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { validateArtifactCombatFixture, artifactCombatFixtureText } from './fixtures/artifact-combat-validation';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { variable } from '../src/simulation/combat-s13-state';
 import { abilityPowerCandidates } from '../src/simulation/m8/item-restore';
@@ -42,15 +43,25 @@ beforeAll(() => {
   expect(stacked, 'the live fight must cast after two bracer kills').toBeDefined();
 });
 
-describe('Seeker\'s Armguard save/restore', () => {
+it('Match boundaries reject mechanic-granted bracer fixtures before they can claim preparation provenance', () => {
+  // Covers the old initial, mid-stack, settled and continuation checkpoint controls.
+  for (const state of [initial, stacked, terminal, ...checkpoints.map(c => c.state)]) {
+    for (const input of [state, JSON.stringify(state)])
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+    expect(() => serializeMatch(state)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  }
+});
+
+describe('Seeker\'s Armguard direct production combat validators', () => {
   it.each([false, true])('rejects coordinated count/AP/sample edits (sample edited = %s)', sampled => {
     expect(stacked.combat!.tick).toBe(410);
-    const control = restoreMatch(JSON.stringify(stacked));
+    validateArtifactCombatFixture(JSON.stringify(stacked));
+    const control = structuredClone(stacked);
     expect(finish(control)).toEqual(finish(stacked));
     const bad = structuredClone(stacked), u = holder(bad);
     Object.assign(bracerRuntimes(u)[0], { triggerCount: 3 });
     Object.assign(u.runtime!, { abilityPowerFlat: 60, ...(sampled ? { nextAttackMagic: 1710 } : {}) });
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save');
   });
 
   it('rejects coordinated growth even when actionCounts and processed are rebuilt too', () => {
@@ -60,12 +71,14 @@ describe('Seeker\'s Armguard save/restore', () => {
     Object.assign(u.runtime!, { abilityPowerFlat: 60, nextAttackMagic: 1710 });
     Object.assign(u.triggerLedger!.actionCounts, { [JSON.stringify([receipt.key, kill.id, u.id, bad.combat!.nextActionSeq! - 1])]: 1 });
     Object.assign(u.triggerLedger!.processed, { [JSON.stringify(['trigger', receipt.key, kill.id, kill.event, kill.aggregation])]: bad.combat!.nextTriggerEventSeq! - 1 });
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: sampled stat trigger facts');
-    expect(restoreMatch(JSON.stringify(stacked))).toEqual(stacked);
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save: sampled stat trigger facts');
+    expect(() => validateArtifactCombatFixture(JSON.stringify(stacked))).not.toThrow();
+    expect(JSON.parse(JSON.stringify(stacked))).toEqual(stacked);
   });
 
   it('rejects a fabricated tick-zero kill receipt and AP20 beside its public control', () => {
-    const control = restoreMatch(JSON.stringify(initial));
+    validateArtifactCombatFixture(JSON.stringify(initial));
+    const control = structuredClone(initial);
     expect(finish(control)).toEqual(finish(initial));
     const bad = structuredClone(initial), u = holder(bad);
     const kill = u.mechanismDefinitions!.eventTriggers!.find(t => t.source.definitionId === BRACER && t.id === 'kill')!;
@@ -73,11 +86,13 @@ describe('Seeker\'s Armguard save/restore', () => {
       stacks: 0, triggerCount: 1, counters: {}, consumedRewards: [], nextEligibleTick: 0, consumed: false, stackPolicy: kill.stackPolicy };
     Object.assign(u, { triggerLedger: { runtimes: [receipt], processed: {}, actionCounts: {} } });
     Object.assign(u.runtime!, { abilityPowerFlat: 20 });
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save');
   });
 
   it('rejects transferring Lux kills to Irelia with rebuilt owner/item/trigger identities', () => {
-    const state = stackedBracerSave(true), control = restoreMatch(JSON.stringify(state));
+    const state = stackedBracerSave(true);
+    validateArtifactCombatFixture(JSON.stringify(state));
+    const control = structuredClone(state);
     expect(finish(control)).toEqual(finish(state));
     const bad = structuredClone(state), lux = holder(bad), irelia = bad.combat!.units.find(u => u.definitionId === 'irelia' && u.team === 'player')!;
     const luxKill = lux.mechanismDefinitions!.eventTriggers!.find(t => t.source.definitionId === BRACER && t.id === 'kill')!;
@@ -100,25 +115,39 @@ describe('Seeker\'s Armguard save/restore', () => {
       processed: { ...newLedger.processed, ...movedProcessed }, actionCounts: { ...newLedger.actionCounts, ...movedActions } } });
     Object.assign(lux.runtime!, { abilityPowerFlat: lux.runtime!.abilityPowerFlat - old.triggerCount * 20 });
     Object.assign(irelia.runtime!, { abilityPowerFlat: old.triggerCount * 20 });
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save');
   });
 
-  it('restores the real mid-stack save whose empowered magic was rejected on d3112d6', () => {
+  it('direct validators accept the live mid-stack combat fixture whose empowered magic was rejected on d3112d6', () => {
     expect(bracerRuntimes(holder(stacked)).map(r => r.triggerCount)).toEqual([2]);
     expect(holder(stacked).runtime!.abilityPowerFlat).toBe(40);
     expect(holder(stacked).runtime!.nextAttackMagic).toBe(1530);
-    expect(restoreMatch(JSON.stringify(stacked))).toEqual(stacked);
-    expect(restoreMatch(structuredClone(stacked))).toEqual(stacked);
+    expect(() => validateArtifactCombatFixture(JSON.stringify(stacked))).not.toThrow();
+    expect(JSON.parse(JSON.stringify(stacked))).toEqual(stacked);
+    expect(() => validateArtifactCombatFixture(structuredClone(stacked))).not.toThrow();
+    expect(structuredClone(stacked)).toEqual(stacked);
   });
 
-  it('restores before, during and after stacking, then continues with identical state, events and RNG', () => {
+  it('direct validators accept before, during and after stacking, then continues with identical state, events and RNG', () => {
     expect(new Set(checkpoints.map(c => holder(c.state).runtime!.abilityPowerFlat))).toEqual(new Set([0, 20, 40, 60]));
     for (const checkpoint of checkpoints) {
-      const saved = serializeMatch(checkpoint.state), restored = restoreMatch(saved);
-      expect(restored).toEqual(checkpoint.state);
-      expect(serializeMatch(restored)).toBe(saved);
-      expect(finish(restored)).toEqual({ state: terminal, events: events.slice(checkpoint.eventOffset) });
+      const saved = artifactCombatFixtureText(checkpoint.state);
+      validateArtifactCombatFixture(saved);
+      const validated: MatchState = JSON.parse(saved);
+      expect(validated).toEqual(checkpoint.state);
+      expect(artifactCombatFixtureText(validated)).toBe(saved);
+      expect(finish(validated)).toEqual({ state: terminal, events: events.slice(checkpoint.eventOffset) });
     }
+  });
+
+  it('direct production bounds reject 5,000,000 bracer triggers / 100,000,000 AP beside the legal stack control', () => {
+    expect(() => validateArtifactCombatFixture(stacked)).not.toThrow();
+    expect(structuredClone(stacked)).toEqual(stacked);
+    const bad = structuredClone(stacked), unit = holder(bad);
+    Object.assign(bracerRuntimes(unit)[0], { triggerCount: 5_000_000 });
+    Object.assign(unit.runtime!, { abilityPowerFlat: 100_000_000 });
+    for (const input of [bad, JSON.stringify(bad)])
+      expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save: sampled stat trigger count bound');
   });
 
   it('includes every AP the live holder sampled, including earlier casts after more stacks settle', () => {
@@ -138,10 +167,11 @@ describe('Seeker\'s Armguard save/restore', () => {
     ['an unearned sampled assist', (u: CombatUnit) => Object.assign(u.runtime!, { nextAttackMagic: Math.floor((u.abilityPower! + 15) * variable(u, 'Damage') / 100) }), 'derived empowered magic'],
     ['an extra trigger receipt count', (u: CombatUnit) => Object.assign(bracerRuntimes(u)[0], { triggerCount: 3 }), 'sampled stat trigger facts'],
     ['a missing trigger receipt', (u: CombatUnit) => Object.assign(u.triggerLedger!, { runtimes: [] }), 'sampled stat trigger facts'],
-  ] as const)('rejects %s for both JSON and object saves', (_name, edit, reason) => {
+  ] as const)('rejects %s for both JSON and object combat fixtures', (_name, edit, reason) => {
     const bad = structuredClone(stacked); edit(holder(bad));
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow(`Invalid Match save: ${reason}`);
-    expect(restoreMatch(JSON.stringify(stacked))).toEqual(stacked);
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => validateArtifactCombatFixture(input)).toThrow(`Invalid Match save: ${reason}`);
+    expect(() => validateArtifactCombatFixture(JSON.stringify(stacked))).not.toThrow();
+    expect(JSON.parse(JSON.stringify(stacked))).toEqual(stacked);
   });
 });
 

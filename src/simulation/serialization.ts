@@ -1,6 +1,6 @@
 import { createPreparationLedgerValidator } from './preparation-ledger';
 import type { BattleRecord } from '../m6/contracts';
-import { validateMatchHistory } from './battle-record-validation';
+import { validateRestorationHistory } from './battle-record-validation';
 import { canonicalContent } from './content';
 import { needsCrownHistory, missingCrownHistory } from './crown-history';
 import type { MatchState } from './match-types';
@@ -10,10 +10,12 @@ import { validateMatchStructure, validateMatchStructureForSerialization } from '
  * structural/RNG consistency alone is not evidence of historical eligibility.
  * All saves additionally require the verified preparation command ledger. */
 export function restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState {
-  return withHistory(validateMatchStructure(input), battles);
+  return withHistory(validateMatchStructure(input, battles === undefined ? undefined : () => {}), battles);
 }
 function withHistory(state: MatchState, battles: readonly BattleRecord[] | undefined): MatchState {
-  if (battles !== undefined) validateMatchHistory(state, battles);
+  if (!state.preparationLedger || typeof state.preparationLedger !== 'object')
+    throw new Error('Invalid Match save: preparation-ledger-missing');
+  if (battles !== undefined) validateRestorationHistory(state, battles);
   else if (needsCrownHistory(state)) missingCrownHistory();
   return state;
 }
@@ -28,6 +30,6 @@ export function createMatchRestoreSession() {
 
 /** Canonical Match text; supply the same history as restoreMatch for crown claims. */
 export function serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string {
-  return canonicalContent(withHistory(validateMatchStructureForSerialization(state), battles));
+  return canonicalContent(withHistory(validateMatchStructureForSerialization(state, battles === undefined ? undefined : () => {}), battles));
 }
 export { validateM5Runtime } from './serialization-structure';

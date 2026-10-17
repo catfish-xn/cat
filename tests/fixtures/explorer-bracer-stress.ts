@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import { restoreMatch } from '../../src/simulation/serialization';
+import { validateArtifactCombatFixture } from './artifact-combat-validation';
 import { abilityPowerCandidates, attackDamageCandidates } from '../../src/simulation/m8/item-restore';
 import { itemMatch } from './m8-b4-match';
 import { BRACER, stackedBracerSave } from './explorer-bracer-public';
@@ -12,7 +12,7 @@ if (scenario === 'huge-count') {
   Object.assign(unit.runtime!, { abilityPowerFlat: 100_000_000 });
   const started = performance.now();
   let outcome = 'accepted', reason = '';
-  try { restoreMatch(JSON.stringify(state)); } catch (error) { outcome = 'rejected'; reason = String(error); }
+  try { validateArtifactCombatFixture(JSON.stringify(state)); } catch (error) { outcome = 'rejected'; reason = String(error); }
   console.log(JSON.stringify({ scenario, outcome, reason, elapsedMs: performance.now() - started }));
 } else if (scenario === 'dedup-titan') {
   const state = itemMatch('titans-resolve'), unit = state.combat!.units.find(u => u.team === 'player')!;

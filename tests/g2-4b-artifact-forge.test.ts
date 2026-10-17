@@ -14,6 +14,8 @@ import {openG23Choice,claimG23Atom} from '../src/simulation/g2-3-runtime';
 import {previewUseConsumable,validateConsumableState} from '../src/simulation/consumables';
 import {REFORGE_POOLS} from '../src/simulation/content/consumables';
 import {publicConsumables} from './fixtures/r3r4-public';
+import {publicInventory} from './fixtures/b8-public-acquisition';
+import {finishPublicEquipmentBattle,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import {digestContent} from '../src/simulation/content';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 
@@ -166,19 +168,37 @@ it('completed reforger refuses artifacts in inventory or equipped without consum
  }
  expect(REFORGE_POOLS.completed).toHaveLength(36);
  expect(REFORGE_POOLS.completed.some(i=>artifactIds.includes(i.definitionId))).toBe(false);
- state=accepted(grantMechanicItem(state,{receiptId:'fixture:ordinary',source:'fixture',definitionId:'warmog'}));
- const ordinary=state.items.find(i=>i.definitionId==='warmog')!;
- const reforged=accepted(useConsumable(state,tool.consumableId,{kind:'item',itemId:ordinary.id}));
+ // The ordinary positive control uses real component rewards and the Warmog
+ // recipe. Seed162's real 2-7 package supplies the completed reforger.
+ const acquired=publicInventory(['warmog'],true,162);
+ state=acquired.state;
+ while(state.round<=10){
+  state=resolvePublicEquipmentChoices(state);
+  if(state.phase==='preparation')state=finishPublicEquipmentBattle(state);
+  state=resolvePublicEquipmentChoices(state);
+  if(state.phase!=='settlement')throw Error('Ordinary reforger route did not settle');
+  state=accepted(nextRound(state,state.round));
+ }
+ state=resolvePublicEquipmentChoices(state);
+ const ordinary=state.items.find(i=>i.id===acquired.itemIds[0])!;
+ expect(ordinary.definitionId).toBe('warmog');
+ const ordinaryTool=state.consumables.find(c=>c.definitionId==='completed-reforger');
+ expect(ordinaryTool).toBeDefined();
+ const reforged=accepted(useConsumable(state,ordinaryTool!.consumableId,{kind:'item',itemId:ordinary.id}));
  expect(restoreMatch(serializeMatch(reforged))).toEqual(reforged);
  const forged={...reforged,resourceProvenance:{...reforged.resourceProvenance,entries:reforged.resourceProvenance.entries.map(f=>f.kind==='consumable-used'?{...f,record:{...f.record,affectedItems:f.record.affectedItems.map(i=>({...i,definitionId}))}}:f)}};
  expect(()=>validateConsumableState(forged)).toThrow('Invalid consumable ledger');
 });
 
-it('single-player artifact windows and selected items round-trip through the full save API',()=>{
+it('rejects synthetic artifact windows at the save boundary while their choice domain still round-trips',()=>{
  const initial=createMatch(42),offers=g23RewardAtoms(bundle(10),42)[0].options;
  const state=accepted(openMechanicChoice(initial,{choiceId:'artifact-save',offers,returnPhase:'preparation',payload:{kind:'forge',source:'fixture',timeoutOption:offers[0]}}));
- expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ for(const input of [state,JSON.stringify(state)])expect(()=>restoreMatch(input)).toThrow('preparation-ledger-state-phase');
+ expect(()=>serializeMatch(state)).toThrow('preparation-ledger-state-phase');
+ expect(restoreDomain(state)).toEqual(state);
  const picked=accepted(selectChoice(state,'artifact-save',0,offers[3]));
- expect(restoreMatch(serializeMatch(picked))).toEqual(picked);
- expect(restoreMatch(serializeMatch(picked)).items.at(-1)?.definitionId).toBe(offers[3]);
+ for(const input of [picked,JSON.stringify(picked)])expect(()=>restoreMatch(input)).toThrow('preparation-ledger-command-rejected');
+ expect(()=>serializeMatch(picked)).toThrow('preparation-ledger-command-rejected');
+ expect(restoreDomain(picked)).toEqual(picked);
+ expect(restoreDomain(picked).items.at(-1)?.definitionId).toBe(offers[3]);
 });

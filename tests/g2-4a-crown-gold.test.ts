@@ -128,9 +128,27 @@ import {nextRound} from '../src/simulation/match';
 import {g23BattleFacts} from '../src/simulation/g2-3-settlement';
 import {rollG23BlackMarket} from '../src/simulation/g2-3-progress';
 import {recordedCrownBattle} from './crown-history-helpers';
+import {validateBattleFacts,matchHistoryChecks} from '../src/simulation/battle-record-validation';
+import {validateArtifactCombatFixture} from './fixtures/artifact-combat-validation';
 
-it('real combat saves restore crown receipts and Continue never pays the completed battle twice',()=>{
- // Public grant API provides a provenance-backed test fixture, not fabricated settlement facts.
+it.each([1,3,42])('Match boundaries reject artificial crown acquisition for seed %i',seed=>{
+ let before=createMatch(seed);
+ const holder=own(before)[0];
+ for(let slot=0;slot<3;slot++){
+  before=accepted(grantMechanicItem(before,{receiptId:`crown-test:${slot}`,source:'test',definitionId:TACTICIANS_CROWN_ID}));
+  before=accepted(equipItem(before,crowns(before)[slot].id,holder.id,slot));
+ }
+ const started=accepted(startMatchCombat(before)),{state:after,battles}=recordedCrownBattle(before);
+ for(const state of [started,after]){
+  for(const input of [state,JSON.stringify(state)])
+   expect(()=>restoreMatch(input,state===after?battles:undefined)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  expect(()=>serializeMatch(state,state===after?battles:undefined)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+ }
+});
+
+it('direct crown validators verify combat receipts and Continue never pays the completed battle twice',()=>{
+ // Artificial acquisition fixture: the actual Match boundaries reject it.
+ // Direct battle replay below still authenticates the opening crown count and payout.
  let paid=0;
  for(const seed of [1,3,42]){
   let before=createMatch(seed);
@@ -140,26 +158,38 @@ it('real combat saves restore crown receipts and Continue never pays the complet
    before=accepted(equipItem(before,crowns(before)[slot].id,holder.id,slot));
   }
   const started=accepted(startMatchCombat(before));
-  expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  expect(()=>validateArtifactCombatFixture(started)).not.toThrow();
+  expect(JSON.parse(JSON.stringify(started))).toEqual(started);
   const {state:after,battles}=recordedCrownBattle(before),receipt=lastBattle(after),drops=crownReceipts(after);
   expect(receipt.facts.crowns).toBe(3);
   expect(receipt.facts.result).toBe('win');
-  const restored=restoreMatch(serializeMatch(after,battles),battles);
-  expect(restored).toEqual(after);expect(restoreMatch(structuredClone(after),battles)).toEqual(after);
-  expect(stepMatch(restored).state).toEqual(after);
-  expect(commitG23Settlement(restored,receipt.facts)).toBe(restored);
-  const continued=accepted(nextRound(restored,restored.round));
+  expect(()=>validateG23Progress(readG23Progress(after)!,after.seed,after.round)).not.toThrow();
+  expect(()=>validateG23MechanicLinks(after)).not.toThrow();
+  for(const _ of matchHistoryChecks(after,battles,undefined,record=>{
+   const verified=validateBattleFacts(record,record.context);
+   expect(verified.settledMatch).toEqual(after);
+   return verified;
+  })){ /* Complete the real production crown-history checks. */ }
+  const candidate=structuredClone(after); // Explicit fixture clone for continuation; no Match admission is claimed.
+  expect(candidate).toEqual(after);expect(JSON.parse(JSON.stringify(after))).toEqual(after);
+  expect(stepMatch(candidate).state).toEqual(after);
+  expect(commitG23Settlement(candidate,receipt.facts)).toBe(candidate);
+  const continued=accepted(nextRound(candidate,candidate.round));
   expect(crownReceipts(continued)).toEqual(drops);
   expect(commitG23Settlement(continued,receipt.facts)).toBe(continued);
   if(drops.length){
    paid++;
    const forged=structuredClone(after),drop=forged.seatMechanics!.receipts.find(r=>r.source==='tacticians-crown')!;
    if(drop.kind!=='gold')throw Error('gold receipt');
-   Object.assign(drop,{amount:drop.amount+1});expect(()=>restoreMatch(forged,battles)).toThrow('Invalid G23 mechanic receipt link');
+   Object.assign(drop,{amount:drop.amount+1});
+   expect(()=>validateG23MechanicLinks(forged)).toThrow('Invalid G23 mechanic receipt link');
+   expect(()=>restoreMatch(forged,battles)).toThrow('Invalid G23 mechanic receipt link');
    expect(()=>restoreMatch({...after,gold:after.gold+1},battles)).toThrow('current settlement totals');
    const forgedCount=structuredClone(after),progress=readG23Progress(forgedCount)!;
    const action=progress.economyReceipts.at(-1) as G23EconomyAction;
-   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount,battles)).toThrow('Invalid G2-3 match progression');
+   Object.assign(action.facts,{crowns:1});
+   expect(()=>validateG23Progress(progress,forgedCount.seed,forgedCount.round)).toThrow('Invalid G2-3 match progression');
+   expect(()=>restoreMatch(forgedCount,battles)).toThrow('Invalid G2-3 match progression');
   }
  }
  expect(paid).toBeGreaterThan(0);

@@ -87,6 +87,8 @@ export interface PreparationBattleProof {
 }
 export type PreparationLedgerValidator = ((state: MatchState) => MatchState) & {
   battleProof(context: MatchState, endTick: number): PreparationBattleProof | undefined;
+  /** Internal only: a production replay whose complete opening was verified by this session. */
+  acceptReplayedBattle(state: MatchState): void;
 };
 export function createPreparationLedgerValidator(captureBattles = false): PreparationLedgerValidator {
   return preparationLedgerValidator(captureBattles);
@@ -155,7 +157,9 @@ function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: Ma
     latest = rebuilt;
     return structuredClone(rebuilt);
   };
-  return Object.assign(validate, { history(length: number) {
+  return Object.assign(validate, { acceptReplayedBattle(state: MatchState) {
+    latest = structuredClone(state);
+  }, history(length: number) {
     const state = histories.find(value => value.preparationLedger.commands.length === length);
     return state ? structuredClone(state) : undefined;
   }, battleProof(context: MatchState, endTick: number) {

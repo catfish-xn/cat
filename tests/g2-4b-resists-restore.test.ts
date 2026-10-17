@@ -4,11 +4,12 @@ import { expect, it } from 'vitest';
 import { startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { validateArtifactCombatFixture, artifactCombatFixtureText } from './fixtures/artifact-combat-validation';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { accepted, reachRound, purchasedThreeHeroMatch, resolveM5Choices, battle } from './match-helpers';
 
 const crest = 'TFT_Item_Artifact_LightshieldCrest';
-function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
+function mechanicFixtureStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
   let state = dynamic ? purchasedThreeHeroMatch() : reachRound('2-1', true, 5);
   if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player').entries())
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
@@ -24,7 +25,7 @@ function publicStart(dynamic = false, deathHolder = false, bracer = false): Matc
   return accepted(startMatchCombat(state));
 }
 function atTick(tick: number, dynamic = false) {
-  let state = publicStart(dynamic);
+  let state = mechanicFixtureStart(dynamic);
   while (state.phase === 'combat' && state.combat!.tick < tick) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(tick);
   return state;
@@ -51,14 +52,23 @@ function transfer(state: any) {
   const key = JSON.parse(layer.m8State.key); key[7] = target.id;
   layer.m8State.key = JSON.stringify(key); layer.m8State.targetId = target.id;
 }
-it('public equipped live shield restores unchanged and continues identically', () => {
+it.each([[false, false, false], [true, false, false], [true, true, false], [true, false, true]])(
+  'Match boundaries reject mechanic-granted crest (dynamic=%s, death=%s, bracer=%s)', (dynamic, death, bracer) => {
+    const state = mechanicFixtureStart(dynamic, death, bracer);
+    for (const input of [state, JSON.stringify(state)])
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+    expect(() => serializeMatch(state)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  });
+
+it('direct validators accept mechanic-equipped live shield unchanged and continues identically', () => {
   const state = atTick(60), text = JSON.stringify(state);
   expect(active(state).layer).toMatchObject({ granted: 133, remaining: 133 });
   for (const input of [state, text]) {
-    const restored = restoreMatch(input);
-    expect(restored).toEqual(state); expect(stepMatch(restored)).toEqual(stepMatch(state));
+    validateArtifactCombatFixture(input);
+    const validated: MatchState = typeof input === 'string' ? JSON.parse(input) : structuredClone(input);
+    expect(validated).toEqual(state); expect(stepMatch(validated)).toEqual(stepMatch(state));
   }
-  expect(JSON.parse(serializeMatch(state))).toEqual(state);
+  expect(JSON.parse(artifactCombatFixtureText(state))).toEqual(state);
   expect(JSON.stringify(state)).toBe(text);
 });
 it.each([
@@ -70,14 +80,14 @@ it.each([
   ['missing shield', (s: any) => { const {unit, layer} = active(s); unit.shieldLayers = unit.shieldLayers.filter((l: any) => l !== layer); unit.shield -= layer.remaining; unit.shieldExpiresAtTick = null; }],
   ['forged historical tick', (s: any) => { active(s).layer.m8State.startsAtTick--; }],
   ['forged coefficient', (s: any) => { active(s).layer.m8Grant.amount.resistsBps++; }],
-] as const)('rejects %s through real object and JSON restoration', (_name, corrupt) => {
+] as const)('rejects %s through direct production validators for object and JSON fixtures', (_name, corrupt) => {
   const state = atTick(60), candidate = structuredClone(state), before = JSON.stringify(state);
   corrupt(candidate);
-  for (const input of [candidate, JSON.stringify(candidate)]) expect(() => restoreMatch(input)).toThrow(/^Invalid Match save:/);
+  for (const input of [candidate, JSON.stringify(candidate)]) expect(() => validateArtifactCombatFixture(input)).toThrow(/^Invalid Match save:/);
   expect(JSON.stringify(state)).toBe(before);
 });
-it('restores live targeting-dependent resists, refreshes, absorption, expiry and combat end', () => {
-  let state = publicStart(true);
+it('direct validators accept live targeting-dependent resists, refreshes, absorption, expiry and combat end', () => {
+  let state = mechanicFixtureStart(true);
   const opening = readCombatStats(state.combat!.units.find(u => u.id === 'unit-1')!, state.combat!);
   const openingAmount = Math.floor((opening.armor + opening.magicResist) * 7000 / 10000);
   const checkpoints = new Set([60, 120, 180, 240, 600]);
@@ -89,20 +99,23 @@ it('restores live targeting-dependent resists, refreshes, absorption, expiry and
     sawDynamic ||= layers.some(l => l.granted !== openingAmount);
     sawAbsorption ||= layers.some(l => l.remaining < l.granted);
     const text = JSON.stringify(state), start = performance.now();
-    expect(restoreMatch(text)).toEqual(state);
-    console.log(`resists restore tick=${state.combat!.tick} ms=${(performance.now() - start).toFixed(2)}`);
+    expect(() => validateArtifactCombatFixture(text)).not.toThrow();
+    expect(JSON.parse(text)).toEqual(state);
+    console.log(`resists direct validation tick=${state.combat!.tick} ms=${(performance.now() - start).toFixed(2)}`);
     if (state.combat!.tick === 60) {
       expect(openingAmount).toBe(168); expect(layers[0].granted).toBe(196);
-      expect(stepMatch(restoreMatch(state))).toEqual(stepMatch(state));
+      validateArtifactCombatFixture(state);
+      expect(stepMatch(structuredClone(state))).toEqual(stepMatch(state));
     }
   }
   expect(sawDynamic).toBe(true); expect(sawAbsorption).toBe(true);
   expect(state.combat!.units.flatMap(u => u.shieldLayers ?? [])).toEqual([]);
-  expect(restoreMatch(JSON.stringify(state))).toEqual(state);
+  expect(() => validateArtifactCombatFixture(JSON.stringify(state))).not.toThrow();
+  expect(JSON.parse(JSON.stringify(state))).toEqual(state);
 });
 
-it('restores the holder-death grant after live defenses and periodic history', () => {
-  let state = publicStart(true, true), death: MatchState | undefined;
+it('direct validators accept the holder-death grant after live defenses and periodic history', () => {
+  let state = mechanicFixtureStart(true, true), death: MatchState | undefined;
   while (state.phase === 'combat') {
     state = stepMatch(state).state;
     const holder = state.combat!.units.find(u => u.id === 'unit-2')!;
@@ -111,8 +124,9 @@ it('restores the holder-death grant after live defenses and periodic history', (
     }
   }
   expect(death).toBeDefined();
-  const restored = restoreMatch(JSON.stringify(death));
-  expect(restored).toEqual(death); expect(stepMatch(restored)).toEqual(stepMatch(death!));
+  validateArtifactCombatFixture(JSON.stringify(death));
+  const validated = structuredClone(death!);
+  expect(validated).toEqual(death); expect(stepMatch(validated)).toEqual(stepMatch(death!));
 });
 
 it('rejects an invented resists declaration in a battle without a compiled resists source', () => {
@@ -158,11 +172,11 @@ it('rejects an extra zero-resists layer claiming a real source on another live t
     candidate.combat.combatId, false, candidate.combat.nextActionSeq))
     .toThrow('Invalid Match save: declared shield grant');
   for (const input of [candidate, JSON.stringify(candidate)])
-    expect(() => restoreMatch(input)).toThrow('Invalid Match save: resists shield replay');
+    expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save: resists shield replay');
 });
 
-it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer from %s and matches every tick through the next battle', format => {
-  let state = publicStart(true, false, true);
+it.each(['object', 'JSON'] as const)('direct validators accept stacked crest/gargoyle/bracer from %s and matches every tick through the next battle', format => {
+  let state = mechanicFixtureStart(true, false, true);
   while (state.phase === 'combat' && state.combat!.tick < 600) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(600);
   const holder = state.combat!.units.find(u => u.id === 'unit-1')!;
@@ -170,31 +184,32 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(holder.runtime!.abilityPowerFlat).toBe(15);
   expect(readCombatStats(holder, state.combat!).abilityPower).toBe(145);
   expect(active(state).layer.granted).toBe(217);
-  const input = format === 'object' ? state : serializeMatch(state);
-  let original = state, restored = restoreMatch(input);
-  expect(restored).toEqual(original);
+  const input = format === 'object' ? state : artifactCombatFixtureText(state);
+  validateArtifactCombatFixture(input);
+  let original = state, validated: MatchState = typeof input === 'string' ? JSON.parse(input) : structuredClone(input);
+  expect(validated).toEqual(original);
   const compareBattle = () => {
     while (original.phase === 'combat') {
-      const a = stepMatch(original), b = stepMatch(restored);
+      const a = stepMatch(original), b = stepMatch(validated);
       expect(b).toEqual(a); // Full state (including RNG) and events, at every tick.
-      original = a.state; restored = b.state;
+      original = a.state; validated = b.state;
     }
   };
   compareBattle();
-  original = resolveM5Choices(original); restored = resolveM5Choices(restored);
-  const a = nextRound(original, original.round), b = nextRound(restored, restored.round);
+  original = resolveM5Choices(original); validated = resolveM5Choices(validated);
+  const a = nextRound(original, original.round), b = nextRound(validated, validated.round);
   expect(b).toEqual(a);
-  original = resolveM5Choices(accepted(a)); restored = resolveM5Choices(accepted(b));
-  const startA = startMatchCombat(original), startB = startMatchCombat(restored);
+  original = resolveM5Choices(accepted(a)); validated = resolveM5Choices(accepted(b));
+  const startA = startMatchCombat(original), startB = startMatchCombat(validated);
   expect(startB).toEqual(startA);
-  original = accepted(startA); restored = accepted(startB);
+  original = accepted(startA); validated = accepted(startB);
   expect(original.phase).toBe('combat');
   expect(original.round).toBe(state.round + 1);
   compareBattle();
 }, 20000);
 
-it('restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
-  // Public commands only: crest is equipped at combat start; seed 37 naturally
+it('direct validators accept crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
+  // Combat-only mechanic-grant fixture: crest is equipped at combat start; seed 37 naturally
   // grants Gargoyle at tick 172, before the next crest pulse at tick 180.
   let state = reachRound('2-1', true, 37);
   state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
@@ -216,9 +231,14 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 172 }]);
   expect(active(state).layer.source.ownerId).toBe(receiver);
   expect(active(state).layer.m8State.startsAtTick).toBe(180);
-  for (const input of [structuredClone(state), serializeMatch(state)]) expect(restoreMatch(input)).toEqual(state);
+  for (const input of [state, JSON.stringify(state)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  expect(() => serializeMatch(state)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+  for (const input of [structuredClone(state), artifactCombatFixtureText(state)]) {
+    expect(() => validateArtifactCombatFixture(input)).not.toThrow();
+    expect(typeof input === 'string' ? JSON.parse(input) : structuredClone(input)).toEqual(state);
+  }
   const candidate = structuredClone(state);
   changeAmount(candidate, 1);
-  for (const input of [candidate, JSON.stringify(candidate)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: resists shield replay');
-  expect(() => serializeMatch(candidate)).toThrow('Invalid Match save: resists shield replay');
+  for (const input of [candidate, JSON.stringify(candidate)]) expect(() => validateArtifactCombatFixture(input)).toThrow('Invalid Match save: resists shield replay');
+  expect(() => artifactCombatFixtureText(candidate)).toThrow('Invalid Match save: resists shield replay');
 });

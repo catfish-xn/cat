@@ -7,7 +7,9 @@ const accepted = (r: MatchCommandResult): MatchState => {
   if (!r.ok) throw new Error(r.reason);
   return r.state;
 };
-/** Public commands only: no battle facts or stats are edited. */
+/** Combat-only artifact fixture. Mechanic grants are deliberately not a public
+ * preparation-ledger acquisition route; Match boundaries must reject it.
+ * No battle facts or stats are edited. */
 export function startBracerFight(twoHolders = false): MatchState {
   let state = publicEquipmentPreparation(['rod']);
   for (const definitionId of twoHolders ? ['lux', 'irelia'] : ['lux'])

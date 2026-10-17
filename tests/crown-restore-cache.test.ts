@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import * as commands from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { validateMatchHistory } from '../src/simulation/battle-record-validation';
 import { recordedCrownBattle } from './crown-history-helpers';
 import { accepted, resolveM5Choices } from './match-helpers';
@@ -64,4 +64,36 @@ it('retains native Proxy rejection and does not normalize object negative zero',
   const signed = structuredClone(original);
   Object.assign(signed.combat!.units[0], { cooldownTicks: -0 });
   expect(Object.is(restoreMatch(signed).combat!.units[0].cooldownTicks, -0)).toBe(true);
+});
+
+
+it('ties warmed owned proofs to seed economics and rechecks the current candidate', () => {
+  const first = recordedCrownBattle(commands.createMatch(42));
+  validateMatchHistory(first.state, first.battles);
+  const next = accepted(commands.nextRound(resolveM5Choices(first.state), first.state.round));
+  const second = recordedCrownBattle(next, first.history);
+  expect(restoreMatch(second.state, second.battles)).toEqual(second.state);
+  const forged = structuredClone(accepted(commands.nextRound(resolveM5Choices(second.state), second.state.round)));
+  Object.assign(forged, { gold: forged.gold + 1 });
+  for (const input of [forged, JSON.stringify(forged)])
+    expect(() => restoreMatch(input, second.battles)).toThrow('Invalid Match save: preparation-ledger-gold');
+  expect(() => serializeMatch(forged, second.battles)).toThrow('Invalid Match save: preparation-ledger-gold');
+  const records = structuredClone(second.battles);
+  Object.assign(records[1].context, { gold: records[1].context.gold + 1 });
+  expect(() => restoreMatch(second.state, records)).toThrow('Invalid Match save: preparation-ledger-gold');
+  const old = structuredClone(second.state) as Partial<typeof second.state>;
+  Reflect.deleteProperty(old, 'preparationLedger');
+  expect(() => restoreMatch(old, second.battles)).toThrow('Invalid Match save: preparation-ledger-missing');
+});
+
+it('validates a getter-provided forged context exactly once', () => {
+  const first = recordedCrownBattle(commands.createMatch(1));
+  validateMatchHistory(first.state, first.battles);
+  const record = structuredClone(first.battles[0]);
+  const forged = structuredClone(record.context);
+  Object.assign(forged, { gold: forged.gold + 1 });
+  let reads = 0;
+  Object.defineProperty(record, 'context', { enumerable: true, get: () => { reads++; return forged; } });
+  expect(() => restoreMatch(first.state, [record])).toThrow('Invalid Match save: preparation-ledger-gold');
+  expect(reads).toBe(1);
 });

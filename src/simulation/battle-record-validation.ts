@@ -1,4 +1,4 @@
-import type { createPreparationLedgerValidator } from './preparation-ledger';
+import { createPreparationLedgerValidator } from './preparation-ledger';
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
@@ -122,7 +122,17 @@ function replaySnapshot(record: BattleRecord): VerifiedReplay {
 function validateM8Record(record: BattleRecord, restore = validateMatchStructure,
   proofFor?: ReturnType<typeof createPreparationLedgerValidator>['battleProof']): VerifiedReplay {
   checkShape(record);
-  let state = restore(record.context);
+  const state = restore(record.context);
+  return validateBattleFacts(record, state, proofFor);
+}
+/** Direct battle-facts validator, not Match admission. Production callers must
+ * first verify the opening's complete structure and preparation economics.
+ * Exported for isolated rule tests whose artificial equipment has no save route. */
+export function validateBattleFacts(record: BattleRecord, context: MatchState,
+  proofFor?: ReturnType<typeof createPreparationLedgerValidator>['battleProof']): VerifiedReplay {
+  validatorFor(record);
+  checkShape(record);
+  let state = context;
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');
   // The new equipment command stream has its own strict production replay below.
@@ -192,7 +202,7 @@ export function replayBattleRecordInSession(record: BattleRecord, restore: (inpu
 /** Preparation commands may append market choices/resources, never rewrite a settled
  * battle or insert another battle without its replay. All inputs have passed the
  * structural resource fold before reaching this comparison. */
-function checkHistoryCarry(previous: MatchState | null, next: MatchState): void {
+export function checkHistoryCarry(previous: MatchState | null, next: MatchState): void {
   const before = previous ? readG23Progress(previous)!.economyReceipts : [];
   const after = readG23Progress(next)!.economyReceipts;
   check(equalContent(after.slice(0, before.length), before), '历史经济收据前缀不一致');
@@ -235,4 +245,30 @@ export function* matchHistoryChecks(match: MatchState, battles: readonly BattleR
  * own receipts and no externally supplied "verified" flag is accepted. */
 export function validateMatchHistory(match: MatchState, battles: readonly BattleRecord[]): void {
   for (const _ of matchHistoryChecks(match, battles)) { /* drain */ }
+}
+
+/** Restore-only history walk. Every opening is independently tied to the seed
+ * ledger before a recorder-owned battle result can advance that same verifier.
+ * This is not a public caller-supplied proof or a module-global active session. */
+export function validateRestorationHistory(match: MatchState, battles: readonly BattleRecord[]): void {
+  check(Array.isArray(battles) && battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
+  // External graphs are read once; owned records are already detached and frozen.
+  const records = battles.map(record => isOwnedBattleRecord(record) ? record : structuredClone(record));
+  const ledger = createPreparationLedgerValidator(true);
+  const restore = (input: unknown) => validateMatchStructure(input, ledger);
+  const replay = (record: BattleRecord): VerifiedReplay => {
+    // Even immutable cached records first prove their entire opening economics
+    // from this call's seed/previous verified settlement. Branding is insufficient.
+    restore(record.context);
+    let verified = isOwnedBattleRecord(record) ? verifiedRecords.get(record) : undefined;
+    if (!verified) {
+      validatorFor(record);
+      verified = validateM8Record(record, restore, ledger.battleProof);
+      if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(verified));
+    }
+    ledger.acceptReplayedBattle(verified.settledMatch);
+    return verified;
+  };
+  for (const _ of matchHistoryChecks(match, records, undefined, replay)) { /* drain all carry checks */ }
+  ledger(match);
 }

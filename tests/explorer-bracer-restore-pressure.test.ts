@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
 const { profile } = createRequire(import.meta.url)('../scripts/profile-explorer-bracer-restore.cjs');
 
-it('rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess', () => {
+it('direct production validators reject 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess', () => {
   const result = profile('huge-count');
   expect(result.exitCode).toBe(0);
   expect(result.outcome).toBe('rejected');
