@@ -19,6 +19,8 @@
 - `tests/m8-b8-live-reveal.test.ts:32`：在公共源前缀初始化时通过生产完整准入；保留同步死亡用例内全部读档、发奖和事件断言。
 - `tests/m8-b8-live-transfer.test.ts:12`：TG 两个完整场景在夹具初始化时通过生产准入；保留每个计时边界的原始读写和状态／事件比较。
 
+- `tests/g2-3-lesser-shimmer-duplicator.test.ts:21`：同步 #170 后的新调用方补录自然战斗与每个独立恢复分支的 BattleRecord；读写传完整证据，不改变新复制器规则或任何断言。
+
 ## 生产调用点逐项核对
 
 | 调用点 | 历史来源／处理结果 |
@@ -47,6 +49,10 @@
 
 扫描覆盖整个 src 的序列化导入、restore/validate 调用及动态 JSON.parse；未发现生产合法路径因漏传历史被本 PR 拒绝。脚本中的历史测量/探针不是生产入口，本次未扩大到旧脚本改造。
 
+## 目标分支同步
+
+交付前再次 fetch / ls-remote：任务分支仍为 ab94630，multiplayer 已前进到 `4ad4e83df584dee8ff7d4113c935ec03c8cca291`（#170 已合入）。同步该目标基线，两个生成清单冲突通过指定 recorder 和 inputs 脚本重新生成解决；源码无文本冲突。版本与策略数值文件相对该 multiplayer 为零差异，继承目标已有 v9，不另行升版或改规则值。
+
 ## 自行决定
 
 - 复用已有 BattleHistory 与 B7 的公开记录夹具，不合成历史，不放宽校验，不引入另一套规则。
@@ -56,12 +62,17 @@
 - B7 只补调用方证据及实际结算记录；首战尚无历史的结构/序列化专测保持直接调用，以继续覆盖省略 battles 的合法首战边界。
 - simulation 仅调整已验证数据的缓存，不改变任何校验条件；通过指定 recorder 更新源指纹，再按 inputs 生成、--check 顺序验证；不升版本，不改规则数值、测试时限，不删除或跳过测试；只跑指定及相关测试。
 
-## 验证结果
+## 最终验证（同步 4ad4e83 后）
 
 环境 Node 24.19.0；依照仓库 package-lock 执行 npm ci，Vitest 5.0.3。
 
-- B7 与缓存回归：8 文件、89/89 通过，141.54 秒（墙钟 142.425 秒）。命令：`npx vitest run --project fast tests/m8-b7-*.test.ts tests/crown-restore-cache.test.ts --maxWorkers=1`。
-- PR 原相关集合：34 文件、568 条；本轮 566 通过、2 条冷历史准入超时，232.25 秒。为两个固定源夹具补生产准入后，两个文件全部 22/22 通过，37.74 秒（墙钟 38.678 秒）。因此该集合全部 568 条均已覆盖通过；没有删断言、改时限或跳过用例。首轮命令：`npx vitest run --project fast tests/restore-audit tests/m8-b8-*.test.ts tests/g2-3-*.test.ts tests/crown-restore-cache.test.ts tests/g2-4a-crown-history.test.ts --maxWorkers=1`；复测命令：`npx vitest run --project fast tests/m8-b8-live-transfer.test.ts tests/m8-b8-live-reveal.test.ts --maxWorkers=1`。
-- 指纹按顺序执行：`node tests/fixtures/record-g2-3-herald.cjs --write`（119.83 秒）→ `node scripts/record-g2-3-inputs.cjs` → `node scripts/record-g2-3-inputs.cjs --check`，全部通过。未使用 `verify-m8-herald-fixtures.cjs --write`。
-- 五份原始 Match、trajectory 和内容 digest `fnv1a32-utf16:cf9dcfe5` 不变；Herald manifest 只改 sources / sourceSha256，对应 inputs audit 只更新 manifest 指纹。
-- M6：3 文件、56/56 通过，59.90 秒（墙钟 60.802 秒）。命令：`npx vitest run --project fast tests/m6-integration.test.ts tests/m6-replay.test.ts tests/m6-persistence.test.ts --maxWorkers=1`；包括完整 cannon 路线每战每 tick 回放／恢复对照、存储和历史集合准入。
+- 指定 Fast 回归一轮全部通过：45 文件、744/744，384.59 秒（墙钟 385.683 秒），无失败。覆盖 B7、B8、restore-audit、G2-3（含 #170 新增复制器）、冠冕缓存／历史，以及 M6 完整 cannon 路线、回放和存储。命令：`npx vitest run --project fast tests/m8-b7-*.test.ts tests/restore-audit tests/m8-b8-*.test.ts tests/g2-3-*.test.ts tests/crown-restore-cache.test.ts tests/g2-4a-crown-history.test.ts tests/m6-integration.test.ts tests/m6-replay.test.ts tests/m6-persistence.test.ts --maxWorkers=1 --reporter=verbose`。
+- 指纹按顺序执行：`node tests/fixtures/record-g2-3-herald.cjs --write`（113.50 秒）→ `node scripts/record-g2-3-inputs.cjs` → `node scripts/record-g2-3-inputs.cjs --check`，全部通过。未使用 `verify-m8-herald-fixtures.cjs --write`。
+- 相对已合入的 4ad4e83：五份原始 Match、trajectory 逐字节不变；内容 digest 仍为目标已有的 `fnv1a32-utf16:d6c9bf1b`。Herald manifest 只更新源指纹，对应 inputs audit 更新清单指纹。版本／策略数值文件与目标完全一致。
+- 最终 cannon：1 文件、1/1 通过；测试 161.01 秒，Vitest 总计 163.17 秒，命令墙钟 163.897 秒，原时限 180 秒不变；206 条命令、8703 tick 全部逐步恢复／字段／事件比较。命令：`npx vitest run --project timing tests/m5-replay-cannon.test.ts --no-file-parallelism --reporter=verbose`。
+- 最终 `npm run typecheck`、inputs `--check`、`git diff --check` 通过；修改文本均为 LF。
+- 没有删除、跳过测试或改测试时限；没有运行全套；没有自行修改目标的版本或规则数值。
+
+## 未完成
+
+无。本次只跑指定相关回归，完整 CI 由普通推送后自动触发。

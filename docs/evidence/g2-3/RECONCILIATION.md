@@ -42,6 +42,7 @@
 | 冠冕胜利掉金 | 已实现：源数据+用户确认约定 | TFT_Item_ForceOfNature 源 PercentGoldChance=10，胜利每顶独立10%获得1金币；开战场上装备、阵亡仍算、PvE/PvP赢才算、直接到账、G23黑市之后随机流，详见 G24-CROWN-GOLD-01..05。 |
 | 锻造器选项数 | 约定值 | 每个锻造器弹出4个不重复选项（用户2026-10-17）。神器锻造器自Set 11起4选1有外部依据（搜索摘录，页面未能打开）；成装锻造器的4选1为约定值。超时取第一项 |
 | 次级英雄复制器 | 约定值 | 沿用G2-3自动复制（用户2026-10-17）：复制第一个已拥有且≤3费的候选（候选顺序由种子+原子ID派生），走同一卡池policy；无合格英雄则托管，拥有后再发；不做玩家手动选目标。第4档先发三费英雄再结算复制器，同档三费英雄可被这次复制（审查建议） |
+| 次级微光复制器 | 源目标范围＋既有自动领取约定 | 用户2026-10-17 15:20批准恢复黑市`TFT13_Crime_Consumable_LesserShimmerDuplicator`身份，14.24 zh_cn名“次级微光复制器”。目标须≤3费且带chem-baron羁绊，场上/备战席均可；首个已拥有合法候选、无目标/满席托管及卡池policy沿用小英雄复制器。100微光LootA25%/LootA4 10%、200微光LootB1 20%，每包1个，原权重不变。raw物品对象`map22.bin.json.gz:/{93f1e034}`；中文键`tft_item_name_tft13_crime_consumable_lessershimmerduplicator`。本分支不升版本，合并时取multiplayer当时版本+1；两种大复制器不准入。 |
 
 下表原奖励与估值为**源数据**；含延后物品的过渡规则逐档标记，不能理解为源逐件价格。“当前奖励”列为G2-4B实现；10/12/14/15恢复，11/13的辅助装锻造器与指定辅助装仍延后。
 
@@ -189,3 +190,7 @@
 ## G2-4B 神器锻造器合入 multiplayer v7
 
 #161 基于 #147 开发（原 v5），合入 multiplayer `0cdd6eb`（v7，含 #149、#153、#157）后统一升为 rules/content `s13-g2-3-v8` / `s13-14.24b-g2-3-v8`，policy `g2-4b-artifact-forge-v8`；schema7/save3/replay3 不变，v7 及更早存档/输入按版本和 digest 拒绝，不迁移。第10档改发神器锻造器（0金），第14档恢复50金+光明装+神器锻造器+拆卸器；与冠冕第12/15档合并后全15档金币合计247。来源成长500Bps不变。release/herald/inputs/live-reveal 按顺序从脚本重录。详见[实施交付](../g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
+## PR #170：次级微光复制器 v9
+
+从 `f0f1d99` merge multiplayer `d6156ab`，再 merge 最新 `0719ced`（#162，仅界面及其测试增量），保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。

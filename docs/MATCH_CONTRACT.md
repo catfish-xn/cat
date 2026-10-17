@@ -13,6 +13,7 @@
 - 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
 - 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
 - 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
+- 黑市复制器（用户2026-10-17 15:20批准）：100微光的LootA/LootA4（25%/10%）及200微光的LootB1（20%）各发1个`TFT13_Crime_Consumable_LesserShimmerDuplicator`，14.24 zh_cn名“次级微光复制器”。仅复制场上或备战席已拥有的≤3费炼金男爵；目标按既有种子派生候选顺序取首个。无合格目标或备战席满则保留托管，不消费、重抽或改发其他英雄。征服者第4档`TFT_Consumable_ChampionDuplicator_III`仍可复制≤3费任意英雄。`G23RewardAtom.duplicatorDefinitionId?`在复制器原子上保留上述API身份，`readG23MechanismState(state).rewards`原样投影它；领取记录仍为现有`kind:'duplicator'`/英雄收据，不新增命令或手动消耗品。当前分支不升版本，合并时取multiplayer届时版本+1；digest按实际策略自动重算。大小两种大复制器均不准入。
 - Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。使用 pendingChoice.kind=armory、choose/timeoutChoice；超时始终选择0金项（普通Spare、全购Finishing、三星Titan），余额不足的付费选择拒绝并保持原对象。菜单待选期间拒绝卖出Rumble；联机购买合星改变菜单时刷新offers并增加generation，旧选择失效。
 - Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
 - G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。

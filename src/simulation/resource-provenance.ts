@@ -1,4 +1,4 @@
-import {g23RadiantDefinitionId} from './g2-3-rewards';
+import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
@@ -66,6 +66,7 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
   readonly pendingCarouselUnitIds?:readonly string[];
@@ -288,6 +289,29 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const prefixLength = context.prefixLength ?? entries.length;
   integer(prefixLength); requireValue(prefixLength <= entries.length, 'prefix bounds');
   const births = validateResourceReceipts(context), usedBirths = new Set<string>();
+  const rewardAtoms = new Map(context.g23?.rewards.flatMap(bundle => g23RewardAtoms(bundle,context.g23!.seed).map(atom => [atom.id,atom] as const)));
+  const duplicatorClaims = new Map(context.g23?.rewardClaims.flatMap(claim => {
+    const atom = rewardAtoms.get(claim.atomId);
+    return atom?.kind === 'duplicator' ? [[claim.id,atom] as const] : [];
+  }));
+  // Progress has been replayed from economy actions and linked to round results.
+  // Derive reward availability from that authority, never from the saved ordering.
+  const rewardBoundaries = new Map(context.g23?.rewardClaims.map(claim => {
+    const bundle = context.g23!.rewards.find(bundle => bundle.id === claim.bundleId)!;
+    const battle = context.g23!.economyReceipts.find(receipt => receipt.kind === 'battle'
+      && (bundle.source === 'conqueror' ? receipt.bundles.includes(bundle.id)
+        : bundle.id === `g23:market:${receipt.facts.battleId}:${bundle.tier}`));
+    requireValue(battle?.kind === 'battle', 'mechanic reward battle');
+    const roundId = getCatalogRoundByOrdinal(battle.facts.round).roundId;
+    const settlement = context.combatSettlements.find(value => value.roundId === roundId);
+    requireValue(settlement && claim.round >= bundle.round && bundle.round >= battle.facts.round,
+      'mechanic reward settlement');
+    const commitIndex = entries.findIndex(entry => entry.kind === 'combat-growth-committed'
+      && entry.roundId === roundId && entry.combatId === settlement.combatId
+      && entry.settlementId === settlement.settlementId);
+    requireValue(commitIndex >= 0, 'mechanic reward settlement');
+    return [claim.id, {claimRound:claim.round, commitIndex}] as const;
+  }));
   const units = new Map<string, ProvenanceUnit>(), items = new Map<string, ProvenanceItem>();
   let growth: readonly PersistentGrowth[] = [], nextUnitSerial = 1, nextItemSerial = 1, lastOrdinal = 1;
   let acquisition: { readonly sequence: number; readonly unitId: string; readonly definitionId: string; readonly roundId: string; survivorId: string; star: number } | null = null;
@@ -322,6 +346,16 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     const common = ['kind', 'sequence', 'roundId'];
     if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'loot'
       && !firstLootBirth.has(entry.roundId)) firstLootBirth.set(entry.roundId, index);
+    if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'mechanic') {
+      const boundary = rewardBoundaries.get(entry.source.receiptId);
+      if (boundary) {
+        const commit = entries[boundary.commitIndex] as Extract<ResourceProvenanceEntry, {kind:'combat-growth-committed'}>;
+        requireValue(round.ordinal === boundary.claimRound && index > boundary.commitIndex,
+          'mechanic reward settlement order');
+        requireValue(commit.combatStartProvenancePrefixLength <= boundary.commitIndex
+          && commit.combatStartProvenancePrefixLength < index, 'mechanic reward combat prefix');
+      }
+    }
     if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
       requireValue(round.kind !== 'supply'||entry.source.kind==='carousel', 'unit birth in supply');
@@ -345,6 +379,17 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       } else if (entry.source.kind === 'mechanic') {
         keys(entry.source, ['kind', 'receiptId']); nonempty(entry.source.receiptId);
         definitionId = takeBirth(`mechanic:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
+        const atom = duplicatorClaims.get(entry.source.receiptId);
+        if (atom) {
+          const owned = new Set([...units.values()].filter(unit => !deferredCarouselIds.has(unit.id)
+            && !context.pendingCarouselUnitIds?.includes(unit.id)).map(unit => unit.definitionId));
+          // Settlement births can only be automatic: the public claim command is
+          // preparation-only. Replay its ordered selection before adding this birth,
+          // even when the saved match has already advanced and combat is null.
+          if (commits.has(entry.roundId)) requireValue(atom.options.find(id => owned.has(id)) === definitionId, 'mechanic duplicator target');
+          else if (atom.duplicatorDefinitionId === 'TFT13_Crime_Consumable_LesserShimmerDuplicator')
+            requireValue(owned.has(definitionId), 'mechanic duplicator target');
+        }
       } else {
         keys(entry.source, ['kind', 'receiptId']);
         requireValue(entry.source.kind === 'loot', 'unit source'); nonempty(entry.source.receiptId);
