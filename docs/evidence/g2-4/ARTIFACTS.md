@@ -1,43 +1,44 @@
-# G2-4b 神器（第一批：现有装备程序可表达的部分）
+# G2-4b 神器（21 件：除 8 件新机制外全部）
 
 - 源：`raw/en_us.json.gz`（14.24，sha256 c1237ba2…）的 `ORNNARTIFACTS_SET6` 共 29 件；中文名取 `zh_cn.tft.stringtable.json.gz`。
   抽取脚本 `extract-artifacts.py` → `src/simulation/content/g2-4-artifact-source.ts`（29 件全量入库，进内容摘要）。
-- 执行：`src/simulation/content/g2-4-artifacts.ts`，只登记能用现有装备程序词汇（属性、周期、触发、生存阈值、状态、伤害）表达的 6 件，
-  其余 23 件不登记（`G24_ARTIFACT_PENDING`），约定编号 `G24-ARTIFACT-SUBSET-01`。
+- 执行：`src/simulation/content/g2-4-artifacts.ts` 登记 21 件；另 8 件要新机制，不登记（`G24_ARTIFACT_PENDING`），约定编号 `G24-ARTIFACT-SUBSET-01`。
 - 版本：`G23_POLICY.revision` 由 `g2-3-followup-v2` 升为 `g2-4b-artifacts-v1`，内容摘要随之变化；用原生成器重录 release / Herald / inputs / live-reveal，事件哈希不变。
 - 本批物品只是定义，正常对局还拿不到：神器锻造器与征服者第 10/14 档恢复在后续 PR。
+- 14.24b B 补丁没有神器条目，数值一律取 14.24 原档。未命名键用 32 位 FNV-1a（小写）对候选名解码，见 `/mnt/project-files/planning/g2-4b-values-2026-10-17.md` 第 2 节。
 
-## 已实现（6 件）
+## 已实现（21 件）
 
-| apiName | 中文名 | 执行 | 未执行 / 约定 |
+| apiName | 中文名 | 执行 | 约定 / 未执行 |
 |---|---|---|---|
-| TFT4_Item_OrnnAnimaVisage | 生命盔甲 | 属性；每 20 tick 治疗 3.5% 最大生命 | — |
-| TFT4_Item_OrnnInfinityForce | 三相之力 | 只有属性（AD 25%、AP 25、AS 25%、双抗 25、生命 250、法力 25） | — |
-| TFT4_Item_OrnnZhonyasParadox | 中娅悖论 | 生存阈值 40%，每场一次：无法被选取 + 免疫伤害各 60 tick | — |
-| TFT9_Item_OrnnDeathfireGrasp | 冥火之拥 | 伤害增幅 25%（`{1543aa48}` 解码为 StatDamageAmp）；开战对最近敌人造成其 40% 最大生命魔法伤害；此后每 260 tick 对当前普攻目标重复 | 开战瞬间还没有普攻目标，取最近敌人（约定）；StatDamageAmp 按属性栏常驻增幅理解（描述未提） |
-| TFT_Item_Artifact_TalismanOfAscension | 飞升护符 | 第 440 tick 一次：最大生命 +100%（当前生命同增），伤害增幅 +120% 至战斗结束 | — |
-| TFT_Item_Artifact_Mittens | 连指手套 | 攻速 60%；受到的物理/魔法伤害降低 25%（`PercentDR`；`{cd951938}` 解码为 StatDurability 0.25，是同一数值的属性栏形式，只算一次；与坚定之心同一过滤） | 移动速度提升不执行（项目移动间隔全局固定）；冰冷免疫无对象（项目没有冰冷） |
+| TFT4_Item_OrnnAnimaVisage | 生命盔甲 | 每 20 tick 治疗 3.5% 最大生命 | — |
+| TFT4_Item_OrnnInfinityForce | 三相之力 | 只有属性 | — |
+| TFT4_Item_OrnnZhonyasParadox | 中娅悖论 | 生命 ≤40% 时一次：无法被选取 + 免疫伤害各 60 tick | — |
+| TFT9_Item_OrnnDeathfireGrasp | 冥火之拥 | 伤害增幅 25%（`{1543aa48}`=StatDamageAmp）；开战对最近敌人 40% 最大生命魔法伤害，此后每 260 tick 对当前目标重复 | 开战瞬间无普攻目标，取最近敌人 |
+| TFT_Item_Artifact_TalismanOfAscension | 飞升护符 | 第 440 tick：最大生命 +100%、伤害增幅 +120% | — |
+| TFT_Item_Artifact_Mittens | 连指手套 | 受到的物理/魔法伤害 -25%（`{cd951938}`=StatDurability 0.25，同一数值只算一次） | 移速不执行（移动间隔全局固定）；冰冷免疫无对象（项目没有冰冷） |
+| TFT_Item_Artifact_RapidFirecannon | 疾射火炮 | 射程 +1，亲手击杀再 +1 | — |
+| TFT_Item_Artifact_SeekersArmguard | 探索者的护臂 | 参与击杀 +15、亲手击杀 +20 护甲/魔抗/法强 | — |
+| TFT_Item_Artifact_SilvermereDawn | 密银黎明 | 攻速锁定每秒 0.5 次；普攻眩晕 16 tick；免疫控制 | — |
+| TFT9_Item_OrnnHorizonFocus | 狙击手的专注 | 射程 +2；每格距离伤害增幅 +9% | 格数按两格中心距离（相邻=1），与项目狙神羁绊相同 |
+| TFT9_Item_OrnnHullbreaker | 碎舰者 | 无相邻友军时 +600 生命、+20% 攻击力、+20 法强 | 按布阵站位在策略快照判断（与大块头伙伴相同），开场位移不重算 |
+| TFT_Item_Artifact_HorizonFocus | 视界专注 | 携带者每次眩晕（施加或刷新）敌人，对其造成 30% 最大生命魔法伤害 | 战斗后段（击杀结算后）才施加的眩晕不触发 |
+| TFT_Item_Artifact_UnendingDespair | 无终恨意 | 携带者护盾层被打破时，对最近敌人造成该层初始值 150% 魔法伤害 | 到期、死亡清理不算"打破" |
+| TFT_Item_Artifact_InnervatingLocket | 激发之匣 | 被普攻命中回复 2% 最大法力；施法后 3 秒回复 20% 最大生命 | 法力四舍五入到整数；持续治疗每秒一跳，余数给前几跳 |
+| TFT4_Item_OrnnMuramana | 魔蕴 | 本场首次施法后 5 秒回复 120 法力 | 每秒一跳 24 |
+| TFT_Item_Artifact_LudensTempest | 卢登的激荡 | 携带者击杀时，100% 超杀 + 100 魔法伤害分别打向离目标最近的 3 名敌人 | 装备伤害造成的击杀不再触发（装备伤害不递归） |
+| TFT_Item_Artifact_BlightingJewel | 枯萎珠宝 | 每个魔法伤害包使目标魔抗 -4（可叠加至战斗结束）；目标魔抗已为 0 时改为自己回 5 法力 | — |
+| TFT_Item_Artifact_LightshieldCrest | 光盾徽章 | 每 60 tick 给生命比例最低的友军（含自己）护甲+魔抗之和 70% 的护盾，持续 100 tick；阵亡时给所有存活友军同样护盾 | 恢复存档只校验护盾为非负整数（存档不保留授予时的双抗） |
+| TFT_Item_Artifact_ProwlersClaw | 暗行者之爪 | 亲手击杀后净化并立即跳到 4 格内最远敌人身边；之后 2 次暴击普攻暴击伤害 +60%；暴击率 50% | 冲刺按 G2-3 跳跃规则瞬移到目标旁最近空格，无动画 |
+| TFT_Item_Artifact_WitsEnd | 智慧末刃 | 普攻额外魔法伤害（阶段 1–8：42/42/60/75/90/100/100/100）；造成的魔法伤害 35% 吸血 | 只算有吸血资格的伤害（普攻/技能/附加），装备触发伤害不算 |
+| TFT_Item_Artifact_LichBane | 巫妖之祸 | 每次施法后第一次普攻额外魔法伤害（阶段 1–8：200/200/270/340/410/480/480/480） | — |
 
-未命名键用 32 位 FNV-1a（小写）哈希对候选名解码，见 `/mnt/project-files/planning/g2-4b-values-2026-10-17.md` 第 2 节（"G2-4b 数值考证"线）。14.24b B 补丁没有神器条目，数值一律取 14.24 原档。
+阶段按 `getCatalogRoundByOrdinal(round).stage` 在策略快照里取值，第 8 阶段以后沿用最后一档。
 
-## 未实现（23 件）及所需扩展
+## 引擎扩展（只在持有对应神器时生效）
 
-小扩展（现有引擎加一个条件、数值来源或状态即可）：
+详见 `docs/M8_RULES.md` 非伤害事件表下的 G2-4b 段落。新事件 stun-applied、shield-broken、death 都先判断有没有订阅者，没有就不消耗动作序号，所以其余对局的事件哈希不变。
 
-| 物品 | 缺什么 |
-|---|---|
-| 魔蕴 Manazane | 首次施法后 5 秒内持续回蓝（触发器不能挂周期任务） |
-| 碎舰者 Hullcrusher | "开战时无相邻友军"条件 |
-| 狙击手的专注 Sniper's Focus | 按与目标的格数增伤（射程 +2 可拼） |
-| 视界专注 Horizon Focus | "眩晕敌人时"触发事件 |
-| 无终恨意 Unending Despair | 护盾破裂触发拿不到被破护盾的初始值，且需区分破裂与到期 |
-| 疾射火炮 Rapid Firecannon、探索者的护臂 Seeker's Armguard | 只有"参与击杀"事件，没有"亲手击杀"条件 |
-| 激发之匣 Innervating Locket | 按最大法力百分比回蓝、施法后持续治疗 |
-| 卢登的激荡 Luden's Tempest | 装备触发器读不到超杀量 |
-| 密银黎明 Silvermere Dawn | 攻速锁定 |
-| 枯萎珠宝 Blighting Jewel | 固定值叠加削魔抗、目标魔抗为 0 的条件 |
-| 光盾徽章 Lightshield Crest | 按持有者双抗算护盾值 |
-| 智慧末刃 Wit's End | 阶段数值已解码（42/42/60/75/90/100/100/100），但程序在快照时是固定的，要按对局阶段取值；另需"只按魔法伤害吸血" |
-| 巫妖之祸 Lich Bane | 阶段数值已解码（200/200/270/340/410/480/480/480），同样要按阶段取值；另需"施法后第一次攻击"的武装攻击 |
+## 未实现（8 件，新机制，归 Codex 最后一个 PR）
 
-新机制（原定最后一个 PR）：死亡之蔑（伤害延迟流血）、金币收集者 / 投机者之刃 / 大亨之铠（战斗中掉金币）、诡术师之镜（分身）、迷离风衣（复制体）、鱼骨头（随机目标）、暗行者之爪（冲刺）、幽魂弯刀（传送）。
+死亡之蔑（伤害延迟流血）、金币收集者 / 投机者之刃 / 大亨之铠（战斗中掉金币）、诡术师之镜（分身）、迷离风衣（复制体）、鱼骨头（随机目标）、幽魂弯刀（传送）。

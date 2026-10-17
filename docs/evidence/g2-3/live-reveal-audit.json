@@ -1,9 +1,9 @@
 {
-  "contentDigest": "fnv1a32-utf16:2ae3dc1a",
+  "contentDigest": "fnv1a32-utf16:27aaca67",
   "route": "mage",
   "seed": 42,
   "roundId": "4-7",
-  "prefixHash": "eb70b8c75dbe4b3b2bacd08f29cedc301b155185e3edf0ae3dc5dc7edc176076",
+  "prefixHash": "783aadf61452e91e84d7e67cbd7c5514a4df554659128eec46a6f2b2dc530e6d",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -129,7 +129,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "df40a045b5e798692ab50813e14e80c78d454a54af1d3e478910df0bfbf01d4e",
-      "terminalHash": "11c9c5218932de8fe799a2306c17a26fdddaf3c5fd026cbeafefe314292b1350",
+      "terminalHash": "fdd770168a778cf3e41d8eb2d3851fd3b30d9a5e41ae0737c02cea8f154c5b48",
       "receipts": 4
     },
     "simultaneous": {
@@ -202,7 +202,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "9e0f3f3d46c8aa863fd4bc32d413ecace6bc14a214f1458fdb9db5fb2281b36f",
-      "terminalHash": "f768a4680f8ce545b2f28c3e543866db40e50709891fbf7ec3a855375e48ce85",
+      "terminalHash": "b71a8f5376e134c05b4f1899d24a508390a3a9f8fc419442f6fa97cf2cc3e854",
       "receipts": 4
     },
     "loris": {
@@ -250,7 +250,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "ef87ee66495c9fb34cf3b46f7fe33edbfd29a6628ebd8bcd5b313f53a2a7bc37",
-      "terminalHash": "f83bc71738555af6ad6d6fef586e6f10886dc124ec7edf580856a06f3f257bb3",
+      "terminalHash": "46efa1c9f20445b5b86fb55b179fcbd797340ade609a3781fd54b778b00b5560",
       "receipts": 4,
       "star": 2
     },
@@ -266,7 +266,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "f19932f84c4ba5c180175f0bbe28c154ab10363a51837d9cc465beb9f43391bf",
-      "terminalHash": "ff41831e8c5b02f43a716573b18303a985ae57ac821811f2e42fea51b7f66a41",
+      "terminalHash": "832be6c379263f7e319efb31b1d7aee50206f95914ff8ebe3f60cd718e979b09",
       "receipts": 0,
       "star": 2
     }

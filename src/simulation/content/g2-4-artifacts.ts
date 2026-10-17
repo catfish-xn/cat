@@ -1,9 +1,9 @@
-/** G2-4b artifacts, first subset: only those whose source text is expressible in the existing item
- * program vocabulary. Every number reads G24_ARTIFACT_SOURCE; the rest of the pool lands later. */
+/** G2-4b artifacts: the 21 whose source text is expressible in the item program vocabulary (with the
+ * G2-4b extensions). Every number reads G24_ARTIFACT_SOURCE; the eight new-mechanism artifacts land later. */
 import type {Effect,ItemDefinition} from '../strategy-types';
 import type {ItemProgram} from '../m8/item-program';
 import {G24_ARTIFACT_SOURCE} from './g2-4-artifact-source';
-import {amount,damage,enemies,filter,modifier,periodic,stat,status,survival,trigger} from './item-programs';
+import {always,amount,damage,enemies,filter,mana,modifier,periodic,selector,stat,status,survival,trigger} from './item-programs';
 import {freezeContent} from './freeze';
 type ArtifactId=keyof typeof G24_ARTIFACT_SOURCE;
 const values=(id:ArtifactId):Readonly<Record<string,number>>=>G24_ARTIFACT_SOURCE[id].values as Readonly<Record<string,number>>;
@@ -19,7 +19,12 @@ const grow=(m:ReturnType<typeof modifier>)=>({...stat(m),stackPolicy:{kind:'add-
 const killingBlow=(by:'holder'|'other')=>({kind:'killing-blow' as const,by});
 const num=(x:number)=>Math.round(x*100)/100;
 const ticks=(seconds:number)=>Math.round(seconds*20),pct=(percent:number)=>Math.round(percent*100);
-const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly text:string;readonly omitted?:string}>>={
+const self=(event:'actor'|'target'='actor')=>({subject:event,relationToHolder:'self' as const,withinHexes:null});
+const extra=(patch:Parameters<typeof damage>[1])=>({...damage('magic',patch),delivery:'attack-extra' as const});
+const over=(resource:'heal'|'mana',patch:Parameters<typeof amount>[0],seconds:number)=>({kind:'over-time' as const,resource,amount:amount(patch),pulses:seconds,periodTicks:20});
+/** Stage-keyed values decode (FNV-1a) as Stage1..Stage8; the table is read in stage order. */
+const stages=(id:ArtifactId,names:readonly string[])=>{const v=values(id);return names.map(k=>Math.round(v[k]));};
+const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly isolatedEffects?:readonly Effect[];readonly text:string;readonly omitted?:string}>>={
  TFT4_Item_OrnnAnimaVisage:(()=>{const v=values('TFT4_Item_OrnnAnimaVisage');return {
   program:{periodic:[periodic(20,[{kind:'heal',amount:amount({maxHpBps:pct(v.PercentHealthRegen)})}])]},
   text:`每秒治疗${v.PercentHealthRegen}%最大生命值。`};})(),
@@ -53,11 +58,64 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
   program:{modifiers:[modifier('attackSpeedLock',Math.round(v.AttackSpeedCap*10000),'bps')],effects:[status('control-immunity',10000,1201,{activation:'immediate'})],
    triggers:[trigger({id:'stun',selector:enemies({candidates:'event-target'}),effects:[status('stun',10000,ticks(v.StunDuration),{activation:'immediate'})]})]},
   text:`免疫眩晕；普攻使目标眩晕${num(v.StunDuration)}秒；攻速锁定为每秒${num(v.AttackSpeedCap)}次。`};})(),
+ TFT9_Item_OrnnHorizonFocus:(()=>{const v=values('TFT9_Item_OrnnHorizonFocus');return {
+  // Hex count reads hexDistance, as the Sniper trait does: an adjacent target is one hex away.
+  program:{modifiers:[modifier('range',Math.round(v.HexRangeIncrease),'hexes'),modifier('damageAmpPerHex',Math.round(v.DamageAmpPerHex*10000),'bps')]},
+  text:`攻击距离+${v.HexRangeIncrease}；与目标每相距1格，伤害增幅+${Math.round(v.DamageAmpPerHex*100)}%（按格距计，与狙神羁绊相同）。`};})(),
+ TFT9_Item_OrnnHullbreaker:(()=>{const v=values('TFT9_Item_OrnnHullbreaker');return {
+  isolatedEffects:[{kind:'statFlat',stat:'maxHp',amount:v.ExtraHealth},{kind:'statPercentBps',stat:'attackDamage',bps:pct(v.ExtraADandAP)},{kind:'statFlat',stat:'abilityPower',amount:v.ExtraADandAP}],
+  text:`开战时若身边没有相邻友军，获得${v.ExtraHealth}生命值、${v.ExtraADandAP}%攻击力和${v.ExtraADandAP}法术强度（按布阵站位判断）。`};})(),
+ TFT_Item_Artifact_HorizonFocus:(()=>{const v=values('TFT_Item_Artifact_HorizonFocus');return {
+  program:{triggers:[trigger({id:'lightning',event:'stun-applied',selector:enemies({candidates:'event-target'}),effects:[damage('magic',{maxHpBps:pct(v.PercentHealthDamage),hpBasis:'target'})]})]},
+  text:`携带者眩晕敌人时，闪电劈中目标，造成其${v.PercentHealthDamage}%最大生命值的魔法伤害。`};})(),
+ TFT_Item_Artifact_UnendingDespair:(()=>{const v=values('TFT_Item_Artifact_UnendingDespair');return {
+  program:{triggers:[trigger({id:'despair',event:'shield-broken',maxPerAction:100,selector:enemies(),effects:[damage('magic',{shieldAbsorbedBps:pct(v.PercentDamage)})]})]},
+  text:`携带者身上的护盾被打破时，对最近的敌人造成该护盾初始值${v.PercentDamage}%的魔法伤害（自然到期不算）。`};})(),
+ TFT_Item_Artifact_InnervatingLocket:(()=>{const v=values('TFT_Item_Artifact_InnervatingLocket');return {
+  program:{triggers:[trigger({id:'hit-mana',event:'incoming-basic-hit',listener:self('target'),effects:[{kind:'grant-mana',amount:0,reason:'incoming-basic-hit',bypassLock:'none',maxManaBps:pct(v.PercentMana)}]}),
+   trigger({id:'cast-heal',event:'cast-completed',effects:[over('heal',{maxHpBps:pct(v.PercentHealth)},v.Duration)]})]},
+  text:`被普攻命中时回复${v.PercentMana}%最大法力值（四舍五入到整数）；每次施法后在${v.Duration}秒内回复${v.PercentHealth}%最大生命值（每秒一跳）。`};})(),
+ TFT4_Item_OrnnMuramana:(()=>{const v=values('TFT4_Item_OrnnMuramana');return {
+  program:{triggers:[trigger({id:'first-cast',event:'cast-completed',maxPerCombat:1,effects:[over('mana',{flat:v.ManaRestore},v.ManaDuration)]})]},
+  text:`本场第一次施法后，在${v.ManaDuration}秒内回复${v.ManaRestore}法力值（每秒一跳）。`};})(),
+ TFT_Item_Artifact_LudensTempest:(()=>{const v=values('TFT_Item_Artifact_LudensTempest');return {
+  program:{triggers:[trigger({id:'overkill',event:'damage-dealt',condition:{kind:'killed-target'},maxPerAction:100,selector:enemies({anchor:'event-target',maxTargets:3}),
+   effects:[damage('magic',{flat:v.BaseDamage,overkillBps:pct(v.PercentOfOverkill)})]})]},
+  text:`携带者击杀敌人时，把${v.PercentOfOverkill}%超杀伤害加${v.BaseDamage}点，作为魔法伤害分别打向离目标最近的3名敌人。`};})(),
+ TFT_Item_Artifact_BlightingJewel:(()=>{const v=values('TFT_Item_Artifact_BlightingJewel'),magic={kind:'damage-type' as const,damageType:'magic' as const};return {
+  program:{triggers:[trigger({id:'shred',event:'damage-dealt',condition:{kind:'all',conditions:[magic,{kind:'target-magic-resist',op:'gt',value:0}]},selector:enemies({candidates:'event-target'}),
+    effects:[grow(modifier('magicResist',-Math.round(v.MRReduction)))]}),
+   trigger({id:'mana',event:'damage-dealt',condition:{kind:'all',conditions:[magic,{kind:'target-magic-resist',op:'lte',value:0}]},effects:[mana(Math.round(v.ManaGain),'attack')]})]},
+  text:`每次造成魔法伤害使目标魔抗-${v.MRReduction}（可叠加，持续到战斗结束）；若目标魔抗已为0，改为携带者回复${v.ManaGain}法力值。`};})(),
+ TFT_Item_Artifact_LightshieldCrest:(()=>{const v=values('TFT_Item_Artifact_LightshieldCrest'),
+  grant={kind:'grant-shield' as const,amount:amount({resistsBps:pct(v.PercentOfResists)}),durationTicks:ticks(v.ShieldDuration),decay:{kind:'none' as const},onEnd:[],endTiming:'post-damage' as const,endTargeting:{kind:'select' as const,selector:selector()},endEffects:[]};return {
+  program:{periodic:[periodic(ticks(v.TriggerRate),[grant],selector({relation:'ally',order:'hp-ratio-id',sample:'each-pulse'}))],
+   triggers:[trigger({id:'death',event:'death',selector:selector({relation:'ally',excludeSelf:true,maxTargets:100,order:'id'}),effects:[grant]})]},
+  text:`每${v.TriggerRate}秒为生命百分比最低的友军提供护盾，数值为携带者护甲与魔抗之和的${v.PercentOfResists}%，持续${v.ShieldDuration}秒；携带者阵亡时为所有友军提供同样的护盾。`};})(),
+ TFT_Item_Artifact_ProwlersClaw:(()=>{const v=values('TFT_Item_Artifact_ProwlersClaw');return {
+  program:{triggers:[trigger({id:'kill-cleanse',event:'kill-or-assist',condition:killingBlow('holder'),effects:[{kind:'cleanse',remove:'removable-hostile-control-dot-debuff',retarget:true}]}),
+   trigger({id:'kill-dash',event:'kill-or-assist',condition:killingBlow('holder'),selector:enemies({order:'farthest-id',radius:Math.round(v.HexRange)}),effects:[{kind:'leap'}]}),
+   trigger({id:'crit-charges',event:'damage-dealt',condition:{kind:'critical-attack'},
+    counters:[{id:'charges',events:[{event:'kill-or-assist',listener:self(),qualifies:'killing-blow',refill:true}],scope:'source-instance',reset:'combat-start',cap:2}],
+    gate:{kind:'consume-counter',counterId:'charges',critDamageBps:pct(v.CritDamageBonusPercent)},effects:[]})]},
+  text:`亲手击杀后，移除自身负面效果并立即跳到${v.HexRange}格内最远的敌人身边；之后的2次暴击普攻额外+${v.CritDamageBonusPercent}%暴击伤害。`};})(),
+ TFT_Item_Artifact_WitsEnd:(()=>{const v=values('TFT_Item_Artifact_WitsEnd');return {
+  program:{byStage:{flat:stages('TFT_Item_Artifact_WitsEnd',['{58f90eac}','{5bf91365}','{5af911d2}','{55f909f3}','{54f90860}','{57f90d19}','{56f90b86}','{61f91cd7}'])},
+   triggers:[trigger({id:'on-hit',selector:enemies({candidates:'event-target'}),effects:[extra({})]})],
+   vamp:[{modifier:modifier('omnivamp',pct(v.PercentHealing),'bps'),allyBps:0,allyCondition:always,damageTypes:['magic']}]},
+  text:`普攻额外造成魔法伤害（按对局阶段：42/42/60/75/90/100/100/100）；按造成的魔法伤害的${v.PercentHealing}%治疗自己。`};})(),
+ TFT_Item_Artifact_LichBane:{
+  program:{byStage:{flat:stages('TFT_Item_Artifact_LichBane',['{a46d51dd}','{a16d4d24}','{a26d4eb7}','{9f6d49fe}','{a06d4b91}','{9d6d46d8}','{9e6d486b}','{9b6d43b2}'])},
+   triggers:[trigger({id:'empowered',counters:[{id:'cast',events:[{event:'cast-completed',listener:self(),qualifies:'completed-event'}],scope:'source-instance',reset:'combat-start',cap:1}],
+    gate:{kind:'consume-counter',counterId:'cast'},selector:enemies({candidates:'event-target'}),effects:[extra({})]})]},
+  text:'每次施法后的第一次普攻额外造成魔法伤害（按对局阶段：200/200/270/340/410/480/480/480）。'},
 };
 /** 约定值 G24-ARTIFACT-SUBSET-01: artifacts outside PROGRAMS are not yet executable and are not registered. */
 export const G24_ARTIFACT_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeContent(Object.fromEntries(Object.entries(PROGRAMS).map(([id,entry])=>{
  const s=G24_ARTIFACT_SOURCE[id as ArtifactId];
- return [id,{id,apiName:id,name:s.zhName,kind:'completed',evidenceStatus:'approved-provisional',unique:s.unique,slotCost:1,effects:sourceStats(id as ArtifactId),...entry!.program?{combatProgram:entry!.program}:{},
+ // Crit chance is a combat-program modifier (as for G2-3 reward items), compiled into the spell-crit authorization.
+ const crit=values(id as ArtifactId).CritChance,program=crit&&entry!.program?{...entry!.program,modifiers:[modifier('critChance',pct(crit),'bps'),...entry!.program.modifiers??[]]}:entry!.program;
+ return [id,{id,apiName:id,name:s.zhName,kind:'completed',evidenceStatus:'approved-provisional',unique:s.unique,slotCost:1,effects:sourceStats(id as ArtifactId),...program?{combatProgram:program}:{},...entry!.isolatedEffects?{isolatedEffects:entry!.isolatedEffects}:{},
   conventionIds:['G24-ARTIFACT-SUBSET-01'],effectDescriptions:['神器：'+entry!.text,...entry!.omitted?['未执行部分：'+entry!.omitted]:[]]} satisfies ItemDefinition];
 })));
 export const G24_ARTIFACT_PENDING=freezeContent(Object.keys(G24_ARTIFACT_SOURCE).filter(id=>!Object.hasOwn(G24_ARTIFACT_ITEMS,id)).sort());

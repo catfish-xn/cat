@@ -25,7 +25,7 @@ const ACTIVITY_NAMES: Readonly<Record<CombatActivity['kind'], string>> = { chann
 const ACTIVITY_BADGES: Readonly<Record<CombatActivity['kind'], string>> = { channel: '引', redirect: '担' };
 const STAT_NAMES: Readonly<Record<Stat, string>> = {
   maxHp: '最大生命', attackDamage: '攻击力', abilityPower: '法强', armor: '护甲', magicResist: '魔抗', attackSpeed: '攻速', range: '射程',
-  critChance: '暴击率', critMultiplier: '暴击伤害', damageAmp: '增伤', damageReduction: '减伤', omnivamp: '全能吸血', attackSpeedLock: '攻速锁定',
+  critChance: '暴击率', critMultiplier: '暴击伤害', damageAmp: '增伤', damageReduction: '减伤', omnivamp: '全能吸血', attackSpeedLock: '攻速锁定', damageAmpPerHex: '每格增伤',
 };
 const DELIVERY_NAMES: Readonly<Record<DamageDelivery, string>> = {
   'basic-attack': '普攻', 'ability-direct': '技能直接伤害', 'ability-periodic': '技能持续伤害', 'attack-extra': '普攻附加伤害', 'equipment-proc': '装备触发伤害', 'item-burn': '装备灼烧',

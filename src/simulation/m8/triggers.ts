@@ -8,6 +8,8 @@ export interface ResolutionFacts {
   readonly damage: readonly DamageOutcome[];
   readonly healing: readonly HealOutcome[];
   readonly shieldDecay: readonly { readonly key: string; readonly amount: number }[];
+  /** G2-4b shield-broken signals: the broken layer's initial value. */
+  readonly brokenShield?: number;
 }
 export interface TriggerSignal {
   readonly context: TriggerContext;
@@ -46,9 +48,10 @@ function effectQualifies(effect: Effect, signal: TriggerSignal): boolean {
   const permission = effect.status.kind === 'burn' || effect.status.kind === 'wound' ? 'apply-item-burn' : effect.status.kind === 'sunder' ? 'last-whisper' : null;
   return permission === null || outcomes.some(o => o.context.permissions.includes(permission) && o.absorbed + o.hpDamage > 0);
 }
+const readsResist=(c: TriggerDefinition['condition']): boolean => c.kind==='target-magic-resist' || c.kind==='all' && c.conditions.some(readsResist);
 /** Selection is an engine dependency, not serializable user code or an effect callback. */
 export function dispatchTriggers(combatId: string, definitions: readonly TriggerDefinition[], ledger: TriggerLedger, signal: TriggerSignal,
-  units: readonly TriggerUnit[], select: (definition: TriggerDefinition, signal: TriggerSignal) => readonly string[]): { ledger: TriggerLedger; invocations: TriggerInvocation[] } {
+  units: readonly TriggerUnit[], select: (definition: TriggerDefinition, signal: TriggerSignal) => readonly string[], magicResist?: (unitId: string) => number): { ledger: TriggerLedger; invocations: TriggerInvocation[] } {
   const event = signal.context; integer(event.eventSeq); integer(event.tick); integer(event.actionSeq);
   if (event.event === 'cast-completed' && (!event.cast.completed || event.cast.source.ownerId !== event.actorId || event.cast.actionSeq !== event.actionSeq || event.cast.targetsSampledAtTick !== event.tick)) throw new RangeError('Invalid cast trigger binding');
   const sorted = [...definitions].sort((a,b)=>compareCodePoints(canonicalSource(a.source),canonicalSource(b.source)) || compareCodePoints(a.id,b.id));
@@ -62,12 +65,12 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
   const changed = new Set<string>();
   for (const [key,{counter,owner:d}] of counters) {
     const holder = units.find(u=>u.id===d.source.ownerId); if (!holder?.alive || (processed[key] ?? -1)>=event.eventSeq) continue;
-    const eligible = counter.events.some(e=>e.event===event.event && listenerMatches(e.listener,holder,signal,units)
-      && (e.qualifies==='completed-event' || signal.facts.damage.some(o=>o.absorbed+o.hpDamage>0)));
-    if (!eligible || signal.aggregation !== 'event') continue;
+    const matched = counter.events.filter(e=>e.event===event.event && listenerMatches(e.listener,holder,signal,units)
+      && (e.qualifies==='completed-event' || (e.qualifies==='killing-blow' ? signal.facts.damage.some(o=>o.killingPacket&&o.context.source.ownerId===holder.id) : signal.facts.damage.some(o=>o.absorbed+o.hpDamage>0))));
+    if (!matched.length || signal.aggregation !== 'event') continue;
     processed[key]=event.eventSeq;
     const identity = runtimeFor(combatId,d,event.tick), old=next.get(identity.key) ?? identity, count=old.counters[counter.id] ?? 0;
-    const value=Math.min(counter.cap ?? Number.MAX_SAFE_INTEGER,count+1); integer(value);
+    const value=matched.some(e=>e.refill)&&counter.cap!==null?counter.cap:Math.min(counter.cap ?? Number.MAX_SAFE_INTEGER,count+1); integer(value);
     if(value!==count) { next.set(old.key,{...old,counters:{...old.counters,[counter.id]:value},stacks:value}); changed.add(key); }
   }
   const readCounters = (d: TriggerDefinition) => Object.fromEntries([...counters].filter(([key,{counter}])=>key===counterIdentity(combatId,d.source,counter.id)).map(([,entry])=>[entry.counter.id,next.get(runtimeFor(combatId,entry.owner,event.tick).key)?.counters[entry.counter.id] ?? 0]));
@@ -83,11 +86,14 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
     if((processed[seen] ?? -1)>=event.eventSeq) continue;
     processed[seen]=event.eventSeq;
     const target=units.find(u=>u.id===context.targetId);
-    if(!conditionHolds(d.condition,{holder,target,startingRows:holder.startingRows,positiveHpDamage:signal.facts.damage.some(o=>o.hpDamage>0),...(context.event==='kill-or-assist'&&signal.facts.damage[0]?{packet:signal.facts.damage[0].context}:{})})) continue;
+    const targetId=context.targetId,resist=targetId!==null&&magicResist&&readsResist(d.condition)?{targetMagicResistOf:()=>magicResist(targetId)}:{};
+    if(!conditionHolds(d.condition,{holder,target,startingRows:holder.startingRows,positiveHpDamage:signal.facts.damage.some(o=>o.hpDamage>0),...(context.event==='kill-or-assist'&&signal.facts.damage[0]?{packet:signal.facts.damage[0].context}:{}),
+      killedTarget:signal.facts.damage.some(o=>o.killingPacket),criticalAttack:signal.facts.damage.some(o=>o.hit&&o.critical&&o.context.delivery==='basic-attack'),damageTypes:signal.facts.damage.filter(o=>o.hit).map(o=>o.context.damageType),...resist})) continue;
     if(old.consumed || event.tick<old.nextEligibleTick || d.maxPerCombat!==null && old.triggerCount>=d.maxPerCombat) continue;
     const gate=d.gate, count=gate.kind==='always'?0:values[gate.counterId] ?? 0;
     if(gate.kind==='every-n' && (count<gate.firstAt || (count-gate.firstAt)%gate.everyN!==0)) continue;
     if(gate.kind==='stack-threshold-once' && (count<gate.at || old.consumedRewards.includes(gate.rewardId))) continue;
+    if(gate.kind==='consume-counter' && count<1) continue;
     let effectIndices=d.effects.flatMap((effect,index)=>effectQualifies(effect,current)?[index]:[]);
     const perPacket=signal.aggregation==='event' && ['damage-dealt','damage-taken','shield-hit','incoming-basic-hit'].includes(event.event);
     const stateStream=derived||perPacket;
@@ -102,7 +108,8 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
     const actionLimited=!stateStream||effectIndices.some(index=>d.effects[index].kind==='damage');
     const targetIds=select(d,current); if(targetIds.length===0) continue;
     const triggerCount=old.triggerCount+1; integer(triggerCount);
-    next.set(old.key,{...old,triggerCount,nextEligibleTick:event.tick+d.internalCooldownTicks,
+    const spent=gate.kind==='consume-counter'?{counters:{...old.counters,[gate.counterId]:count-1},stacks:count-1}:{};
+    next.set(old.key,{...old,...spent,triggerCount,nextEligibleTick:event.tick+d.internalCooldownTicks,
       consumed:d.maxPerCombat!==null && triggerCount>=d.maxPerCombat,
       consumedRewards:gate.kind==='stack-threshold-once'?[...old.consumedRewards,gate.rewardId]:old.consumedRewards});
     if(actionLimited) actionCounts[actionKey]=(actionCounts[actionKey] ?? 0)+1;
