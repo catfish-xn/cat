@@ -1,4 +1,5 @@
 import {expect,it} from 'vitest';
+import {deepStrictEqual} from 'node:assert/strict';
 import {gunzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
 import {createMatch,buyXp,deployMatchUnit,sellUnit,selectChoice,nextRound,startMatchCombat,stepMatch,claimG23Reward,type MatchState} from '../src/simulation/match';
@@ -131,7 +132,8 @@ function expectRoundTripAndNextBattle(state:MatchState):void{
  let ticks=0;
  while(original.phase==='combat'&&ticks++<1200){
   const step=stepMatch(original);original=step.state;
-  restored=restored.map(copy=>{const next=stepMatch(copy);expect(next).toEqual(step);return next.state;});
+  // node:assert compares a full step result several times faster than toEqual.
+  restored=restored.map(copy=>{const next=stepMatch(copy);deepStrictEqual(next,step);return next.state;});
  }
  expect(ticks).toBeGreaterThan(0);expect(original.combat?.status).toBe('finished');
 }
