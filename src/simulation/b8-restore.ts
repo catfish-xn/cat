@@ -195,7 +195,8 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(!commit || commit.kind === 'combat-growth-committed', 'growth commit');
   const candidate = state.combatInputBasis;
   check(candidate, 'missing input basis');
-  const prefixLength = commit?.combatStartProvenancePrefixLength ?? candidate.provenancePrefixLength;
+  check(!commit || commit.combatStartProvenancePrefixLength === candidate.provenancePrefixLength, 'combat prefix authority');
+  const prefixLength = candidate.provenancePrefixLength;
   integer(prefixLength, 1); check(prefixLength <= entries.length, 'combat prefix bounds');
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;

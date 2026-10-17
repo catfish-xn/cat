@@ -171,7 +171,33 @@ it.each(['settlement','next preparation'].flatMap(phase=>['smeech','silco','irel
  const forged=structuredClone(base);
  Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
  Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
- rejectsEveryEntry(forged);
+ rejectsEveryEntry(forged,['smeech','singed','renni'].includes(target)?'mechanic duplicator target':undefined);
+});
+
+it.each(['singed','renni'])('rejects moving the earning settlement and prefix past the forged %s birth',target=>{
+ const forged=structuredClone(preparation(usedMarket()));
+ const claim=readG23Progress(forged)!.rewardClaims.find(c=>c.kind==='duplicator')!;
+ expect(forged.round).toBe(9);expect(claim.instanceId).toBe('unit-40');
+ Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
+ Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
+ const entries=[...forged.resourceProvenance.entries];
+ const index=entries.findIndex(e=>e.kind==='combat-growth-committed'&&e.combatId==='round-8');
+ expect(index).toBe(64);
+ const [commit]=entries.splice(index,1);
+ entries.splice(index+1,0,{...commit,combatStartProvenancePrefixLength:65} as typeof commit);
+ Object.assign(forged.resourceProvenance,{entries:entries.map((entry,sequence)=>({...entry,sequence}))});
+ rejectsEveryEntry(forged,'mechanic reward settlement order');
+});
+
+it.each([12,15])('restores historical duplicator births at round %s and the next battle tick for tick',round=>{
+ let state=preparation(usedMarket());
+ while(state.round<round){
+  state=ok(startMatchCombat(state));
+  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+  state=preparation(state);
+ }
+ expect(state.round).toBe(round);
+ expectRoundTripAndNextBattle(state);
 });
 
 it.each(['settlement','next preparation'])('rejects a reward package changed to the ordinary lesser duplicator in %s',phase=>{
@@ -195,7 +221,7 @@ it('escrows a full-bench market and redeems its duplicator and later heroes in o
  const market=readG23Progress(state)!.rewards.find(b=>b.source==='black-market')!;
  const ids=()=>readG23Progress(state)!.rewardClaims.filter(c=>c.bundleId===market.id);
  expect(ids()).toEqual([]);
- expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ expectRoundTripAndNextBattle(state);
  state=preparation(state);
  for(const expected of ['renata','renni','smeech']){
   const previous=state.nextUnitSerial;
@@ -203,13 +229,19 @@ it('escrows a full-bench market and redeems its duplicator and later heroes in o
   state=ok(sellUnit(state,filler.id));
   expect(ids().at(-1)).toMatchObject({definitionId:expected,instanceId:`unit-${previous}`});
   expect(ids()).toHaveLength(['renata','renni','smeech'].indexOf(expected)+1);
-  expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  expectRoundTripAndNextBattle(state);
  }
  const saved=serializeMatch(preparation(state));expect(serializeMatch(restoreMatch(saved))).toBe(saved);
 });
 
-it('preserves a public preparation claim choosing an owned eligible target other than the automatic first target',()=>{
+it.each([9,10])('preserves an escrowed public claim at round %s choosing another owned eligible target',round=>{
  let state=preparation(fullMarket());
+ while(state.round<round){
+  state=ok(startMatchCombat(state));
+  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+  state=preparation(state);
+ }
+ expect(state.round).toBe(round);
  while(state.level<5)state=ok(buyXp(state));
  const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId==='leona')!;
  state=ok(deployMatchUnit(state,filler.id,{kind:'board',cell:{col:4,row:4}}));
@@ -253,6 +285,7 @@ it('keeps consecutive black-market RNG cursors and offers equal to the baseline 
 });
 
 let usedConqueror:MatchState|undefined;
+let beforeConqueror:MatchState|undefined;
 function publicConqueror():MatchState{
  if(usedConqueror)return usedConqueror;
  let state=preparation(createMatch(1));
@@ -268,9 +301,10 @@ function publicConqueror():MatchState{
   state=ok(deployMatchUnit(state,target.id,{kind:'board',cell:{col,row:4}}));
  }
  for(let battle=0;battle<20;battle++){
+  const before=state;
   state=ok(startMatchCombat(state));
   for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
-  if(readG23Progress(state)!.rewardClaims.some(c=>c.kind==='duplicator')){usedConqueror=state;return state;}
+  if(readG23Progress(state)!.rewardClaims.some(c=>c.kind==='duplicator')){beforeConqueror=before;usedConqueror=state;return state;}
   state=preparation(state);
  }
  throw Error('Public conqueror battle budget');
@@ -289,4 +323,28 @@ it.each(['settlement','next preparation'])('rejects a different owned ordinary l
  Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
  Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
  rejectsEveryEntry(forged,'mechanic duplicator target');
+});
+
+it('restores an ordinary duplicator manually claimed from escrow and the next battle tick for tick',()=>{
+ publicConqueror();
+ let state=beforeConqueror!;
+ for(const definitionId of ['leona','lux','tristana','maddie','vex','zyra','singed','renata','renni']){
+  if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===9)break;
+  state=ok(grantMechanicUnit(state,{receiptId:`fixture:ordinary-capacity:${definitionId}`,source:'fixture',definitionId}));
+ }
+ state=ok(startMatchCombat(state));
+ for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+ state=preparation(state);
+ const p=readG23Progress(state)!,bundle=p.rewards.find(b=>b.id==='g23:conqueror:4')!;
+ expect(bundle).toBeDefined();
+ const atom=g23RewardAtoms(bundle,p.seed).find(a=>a.kind==='duplicator')!;
+ expect(p.rewardClaims.some(c=>c.atomId===atom.id)).toBe(false);
+ while(state.level<5)state=ok(buyXp(state));
+ const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId==='leona')!;
+ state=ok(deployMatchUnit(state,filler.id,{kind:'board',cell:{col:4,row:4}}));
+ const first=atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id));
+ const target=['darius','draven','swain','irelia'].find(id=>id!==first)!;
+ state=ok(claimG23Reward(state,atom.id,target));
+ expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:target});
+ expectRoundTripAndNextBattle(state);
 });
