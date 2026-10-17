@@ -7,7 +7,7 @@ import type { MatchState } from '../simulation/match-types';
 import type { CombatState } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { MAX_COMBAT_TICKS } from '../simulation/combat-types';
-import { restoreMatch } from '../simulation/serialization';
+import { restoreMatch, createMatchRestoreSession } from '../simulation/serialization';
 import { canonicalContent, digestContent } from '../simulation/content';
 
 // Only this recorder can establish detached, deeply immutable record ownership.
@@ -98,11 +98,22 @@ export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
   if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(structuredClone(verified)));
   return verified;
 }
-function validateM8Record(record: BattleRecord): VerifiedReplay {
+function validateM8Record(record: BattleRecord, restore = restoreMatch,
+  proofFor?: ReturnType<typeof createMatchRestoreSession>['battleProof']): VerifiedReplay {
   checkShape(record);
-  let state = restoreMatch(record.context);
+  let state = restore(record.context);
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');
+  const proof = proofFor?.(state, record.endTick);
+  if (proof) {
+    check(equalContent(proof.initial, record.initial), 'tick0状态');
+    check(equalContent(proof.events, record.events), '事件缺失或内容错误');
+    const terminal = proof.settledMatch.combat!;
+    check(proof.events.length === record.events.length && terminal.nextEventSeq === record.nextEventSeq, '多余事件或游标');
+    check(terminal.result === record.result && terminal.tick === record.endTick, '终点结果');
+    check(digestContent(terminal) === record.stateHash && digestContent(record.events) === record.eventHash, '内容校验');
+    return { terminal, settledMatch: proof.settledMatch };
+  }
   const start = startMatchCombat(state);
   check(start.ok && start.state.combat, '无法开战');
   state = start.state;
@@ -126,7 +137,8 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
 }
 /** Strict archive topology and historical context validation; yields once after each battle. */
 function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
-  const match = restoreMatch(envelope.match);
+  const restore = createMatchRestoreSession();
+  const match = restore(envelope.match);
   check(Array.isArray(envelope.battles) && envelope.battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
   const results = match.roundResults.filter(result => result.result !== 'supply');
   check(results.length === envelope.battles.length, '历史缺战或重战');
@@ -134,7 +146,8 @@ function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, 
     check(record.runId === envelope.runId, '局身份');
     check(record.context.seed === match.seed, '历史种子');
     check(equalContent(record.context.roundResults, match.roundResults.filter(r => r.round < record.context.round)), '历史结算前缀');
-    return validateBattleRecord(record);
+    validatorFor(record);
+    return validateM8Record(record, restore, restore.battleProof);
   };
   for (let i = 0; i < envelope.battles.length; i++) {
     const record = envelope.battles[i], result = results[i];

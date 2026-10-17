@@ -52,54 +52,102 @@ function requireLedger(value: unknown, reason: string): asserts value {
 }
 /** No restore/serialize calls, saved snapshot seeds, external grants, or cross-call cache. */
 export function validatePreparationLedger(state: MatchState): void {
-  const ledger = state.preparationLedger;
-  requireLedger(ledger && typeof ledger === 'object', 'missing');
-  requireLedger(Object.keys(ledger).sort().join('|') === 'commands|events|version'
-    && ledger.version === 'preparation-command-ledger-v1'
-    && Array.isArray(ledger.commands) && Array.isArray(ledger.events), 'shape');
-  let rebuilt = match.createMatch(state.seed);
-  const arities: Record<PreparationCommandName, number> = {
-    deployMatchUnit: 2, buyUnit: 2, sellUnit: 1, setShopLock: 2, rerollShop: 0, buyXp: 0,
-    startMatchCombat: 0, stepMatch: 0, nextRound: 1, useConsumable: 2, combineItems: 2,
-    equipItem: 3, selectAnomalyTarget: 3, rerollAnomaly: 2, selectChoice: 3, claimG23Reward: 2,
-  };
-  for (const command of ledger.commands as readonly PreparationCommand[]) {
-    requireLedger(command && Object.keys(command).sort().join('|') === 'args|name|repeats'
-      && Object.hasOwn(arities, command.name) && Array.isArray(command.args)
-      && command.args.length === arities[command.name], 'command');
-    requireLedger(Number.isSafeInteger(command.repeats) && command.repeats >= 1
-      && command.repeats <= (command.name === 'stepMatch' ? MAX_COMBAT_TICKS : 1), 'repeat-bound');
-    for (let count = 0; count < command.repeats; count++) {
-      let result: MatchCommandResult | MatchStep;
-      try {
-        // Arity and allowlist are checked before selecting an actual public command.
-        const run = match[command.name] as (state: MatchState, ...args: unknown[]) => MatchCommandResult | MatchStep;
-        result = run(rebuilt, ...command.args);
-      } catch { throw new Error('Invalid Match save: preparation-ledger-command'); }
-      requireLedger(!('ok' in result) || result.ok, 'command-rejected');
-      requireLedger(result.state !== rebuilt, 'command-noop');
-      rebuilt = result.state;
+  createPreparationLedgerValidator()(state);
+}
+/** Explicit call-local scope: only states produced here by public commands are reusable.
+ * Keep opening boundaries (not every tick) so archived short prefixes remain checkable. */
+export interface PreparationBattleProof {
+  readonly context: MatchState; readonly initial: NonNullable<MatchState['combat']>;
+  readonly events: readonly MatchEvent[]; readonly settledMatch: MatchState;
+}
+export type PreparationLedgerValidator = ((state: MatchState) => void) & {
+  battleProof(context: MatchState, endTick: number): PreparationBattleProof | undefined;
+};
+export function createPreparationLedgerValidator(captureBattles = false): PreparationLedgerValidator {
+  const openings: MatchState[] = [];
+  let latest: MatchState | undefined;
+  const proofs: PreparationBattleProof[] = [];
+  const validate = (state: MatchState): void => {
+    const ledger = state.preparationLedger;
+    requireLedger(ledger && typeof ledger === 'object', 'missing');
+    requireLedger(Object.keys(ledger).sort().join('|') === 'commands|events|version'
+      && ledger.version === 'preparation-command-ledger-v1'
+      && Array.isArray(ledger.commands) && Array.isArray(ledger.events), 'shape');
+
+    const arities: Record<PreparationCommandName, number> = {
+      deployMatchUnit: 2, buyUnit: 2, sellUnit: 1, setShopLock: 2, rerollShop: 0, buyXp: 0,
+      startMatchCombat: 0, stepMatch: 0, nextRound: 1, useConsumable: 2, combineItems: 2,
+      equipItem: 3, selectAnomalyTarget: 3, rerollAnomaly: 2, selectChoice: 3, claimG23Reward: 2,
+    };
+    for (const command of ledger.commands as readonly PreparationCommand[]) {
+      requireLedger(command && Object.keys(command).sort().join('|') === 'args|name|repeats'
+        && Object.hasOwn(arities, command.name) && Array.isArray(command.args)
+        && command.args.length === arities[command.name], 'command');
+      requireLedger(Number.isSafeInteger(command.repeats) && command.repeats >= 1
+        && command.repeats <= (command.name === 'stepMatch' ? MAX_COMBAT_TICKS : 1), 'repeat-bound');
     }
-  }
-  const equal = (a: unknown, b: unknown) => a === undefined || b === undefined
-    ? a === b : canonicalContent(a) === canonicalContent(b);
-  requireLedger(state.gold === rebuilt.gold, 'gold');
-  requireLedger(state.level === rebuilt.level && state.xp === rebuilt.xp, 'experience');
-  requireLedger(equal(state.shop, rebuilt.shop), 'shop');
-  for (const key of ['rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState'] as const)
-    requireLedger(state[key] === rebuilt[key], `rng-${key}`);
-  requireLedger(equal(ledger.events, rebuilt.preparationLedger.events)
-    && state.nextMatchEventSeq === rebuilt.nextMatchEventSeq
-    && rebuilt.nextMatchEventSeq === rebuilt.preparationLedger.events.length, 'event-history');
-  requireLedger(equal(ledger.commands, rebuilt.preparationLedger.commands), 'command-canonical');
-  const combatPosition = (match: MatchState) => match.combat === null ? null : {
-    combatId: match.combat.combatId, tick: match.combat.tick, status: match.combat.status, result: match.combat.result,
+    const prefix = (candidate: MatchState) => candidate.seed === state.seed
+      && candidate.preparationLedger.commands.length <= ledger.commands.length
+      && candidate.preparationLedger.commands.every((command, index) =>
+        canonicalContent(command) === canonicalContent(ledger.commands[index]));
+    const candidates = latest ? [...openings, latest] : openings;
+    let rebuilt = candidates.filter(prefix).sort((a, b) =>
+      b.preparationLedger.commands.length - a.preparationLedger.commands.length)[0] ?? match.createMatch(state.seed);
+    const offset = rebuilt.preparationLedger.commands.length;
+    for (const command of ledger.commands.slice(offset)) {
+      if (command.name === 'startMatchCombat' && !openings.some(value => value === rebuilt)) openings.push(rebuilt);
+      for (let count = 0; count < command.repeats; count++) {
+        const before = rebuilt;
+        let result: MatchCommandResult | MatchStep;
+        try {
+          // Arity and allowlist are checked before selecting an actual public command.
+          const run = match[command.name] as (state: MatchState, ...args: unknown[]) => MatchCommandResult | MatchStep;
+          result = run(rebuilt, ...command.args);
+        } catch { throw new Error('Invalid Match save: preparation-ledger-command'); }
+        requireLedger(!('ok' in result) || result.ok, 'command-rejected');
+        requireLedger(result.state !== rebuilt, 'command-noop');
+        rebuilt = result.state;
+        if (captureBattles && command.name === 'startMatchCombat' && rebuilt.combat) {
+          proofs.push({ context: before, initial: rebuilt.combat,
+            events: result.events.filter(event => event.domain === 'combat'), settledMatch: rebuilt });
+        } else if (captureBattles && (command.name === 'stepMatch'
+          || before.combat !== null && rebuilt.combat === before.combat)) {
+          const index = proofs.findIndex(proof => proof.settledMatch === before);
+          if (index !== -1) {
+            const proof = proofs[index];
+            proofs[index] = { ...proof, events: [...proof.events,
+              ...result.events.filter(event => event.domain === 'combat')], settledMatch: rebuilt };
+          }
+        }
+      }
+    }
+    const equal = (a: unknown, b: unknown) => a === undefined || b === undefined
+      ? a === b : canonicalContent(a) === canonicalContent(b);
+    requireLedger(state.gold === rebuilt.gold, 'gold');
+    requireLedger(state.level === rebuilt.level && state.xp === rebuilt.xp, 'experience');
+    requireLedger(equal(state.shop, rebuilt.shop), 'shop');
+    for (const key of ['rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState'] as const)
+      requireLedger(state[key] === rebuilt[key], `rng-${key}`);
+    requireLedger(equal(ledger.events, rebuilt.preparationLedger.events)
+      && state.nextMatchEventSeq === rebuilt.nextMatchEventSeq
+      && rebuilt.nextMatchEventSeq === rebuilt.preparationLedger.events.length, 'event-history');
+    requireLedger(equal(ledger.commands, rebuilt.preparationLedger.commands), 'command-canonical');
+    const combatPosition = (match: MatchState) => match.combat === null ? null : {
+      combatId: match.combat.combatId, tick: match.combat.tick, status: match.combat.status, result: match.combat.result,
+    };
+    requireLedger(equal(combatPosition(state), combatPosition(rebuilt)), 'combat-position');
+    for (const key of ['round', 'phase', 'roundResults', 'combatInputBasis', 'scheduleReceipts',
+      'resourceProvenance', 'preparation', 'items', 'augments', 'anomalyBinding', 'pendingChoice',
+      'persistentGrowth', 'augmentProgress', 'nextUnitSerial', 'nextItemSerial', 'playerHp',
+      'seatMechanics', 'consumables', 'nextConsumableSerial', 'reforgeState',
+      'equipmentState', 'temporaryEquipment', 'm8'] as const)
+      requireLedger(equal(state[key], rebuilt[key]), `state-${key}`);
+    latest = rebuilt;
   };
-  requireLedger(equal(combatPosition(state), combatPosition(rebuilt)), 'combat-position');
-  for (const key of ['round', 'phase', 'roundResults', 'combatInputBasis', 'scheduleReceipts',
-    'resourceProvenance', 'preparation', 'items', 'augments', 'anomalyBinding', 'pendingChoice',
-    'persistentGrowth', 'augmentProgress', 'nextUnitSerial', 'nextItemSerial', 'playerHp',
-    'seatMechanics', 'consumables', 'nextConsumableSerial', 'reforgeState',
-    'equipmentState', 'temporaryEquipment', 'm8'] as const)
-    requireLedger(equal(state[key], rebuilt[key]), `state-${key}`);
+  return Object.assign(validate, { battleProof(context: MatchState, endTick: number) {
+    const proof = proofs.find(value => value.settledMatch.combat?.tick === endTick
+      && value.context.seed === context.seed && value.context.round === context.round
+      && canonicalContent(value.context) === canonicalContent(context));
+    return proof ? structuredClone(proof) : undefined;
+  } });
 }
