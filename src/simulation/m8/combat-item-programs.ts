@@ -27,7 +27,14 @@ function payloadOf(grant: CombatItemGrant) {
   if (!payload) throw new Error('Invalid Match save: combat item grant');
   return payload;
 }
-const cache = new WeakMap<readonly CombatItemGrant[], { unitId: string; bound: readonly BoundItemProgram[] }>();
+let cache = new WeakMap<readonly CombatItemGrant[], { unitId: string; bound: readonly BoundItemProgram[] }>();
+/** External save candidates are mutable. Never read or populate the live combat
+ * cache during validation; nested calls and failures restore the previous scope. */
+export function withGrantedItemRestoreCache<T>(run: () => T): T {
+  const previous = cache;
+  cache = new WeakMap();
+  try { return run(); } finally { cache = previous; }
+}
 export function grantedItemPrograms(unit: Pick<CombatUnit, 'id' | 'combatItemGrants'>): readonly BoundItemProgram[] {
   const grants = unit.combatItemGrants;
   if (grants !== undefined && !Array.isArray(grants)) throw new Error('Invalid Match save: combat item grants');

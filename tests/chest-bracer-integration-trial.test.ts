@@ -55,11 +55,13 @@ const pulses = (state: MatchState) => {
   const unit = receiverOf(state), grantedSources = new Set(grantedItemPrograms(unit).map(p => p.source.instanceId));
   return unit.mechanismState!.periodicTasks.filter(t => grantedSources.has(t.source.instanceId)).map(t => t.pulseOrdinal);
 };
-function finish(from: MatchState) {
+function finish(from: MatchState, original: MatchState) {
   let state = from;
   const continuation: MatchEvent[] = [];
   while (state.phase === 'combat') {
-    const result = stepMatch(state); state = result.state; continuation.push(...result.events);
+    const result = stepMatch(state), expected = stepMatch(original);
+    expect(result, `continuation tick ${expected.state.combat!.tick}`).toEqual(expected);
+    original = expected.state; state = result.state; continuation.push(...result.events);
   }
   return { state, events: continuation };
 }
@@ -105,6 +107,18 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(terminal.phase).not.toBe('combat');
   });
 
+  it.each(['restore', 'serialize'] as const)('rejects an in-place grant edit after successful %s validation', warmup => {
+    const candidate = structuredClone(checkpoints.get(263)!.state);
+    const grants = receiverOf(candidate).combatItemGrants!;
+    expect(grants[0].definitionId).toBe('archangel');
+    if (warmup === 'restore') expect(restoreMatch(candidate)).toEqual(candidate);
+    else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
+    (grants[0] as { definitionId: string }).definitionId = 'shojin';
+    expect(receiverOf(candidate).combatItemGrants).toBe(grants);
+    expect(() => restoreMatch(candidate)).toThrow('uncompiled mechanism definitions');
+    expect(() => serializeMatch(candidate)).toThrow('uncompiled mechanism definitions');
+  });
+
   it.each(checkpointCases)('%s @%i: JSON/object restore preserves the entire state and uninterrupted continuation', (_label, tick) => {
     const { state, eventOffset } = checkpoints.get(tick)!;
     const saved = serializeMatch(state);
@@ -114,7 +128,7 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
       expect(serializeMatch(restored)).toBe(saved);
       // Full Match equality includes outcome/settlement, every unit, grants,
       // sampled-stat receipts, periodic state, RNG counters and all events.
-      expect(finish(restored)).toEqual({ state: terminal, events: events.slice(eventOffset) });
+      expect(finish(restored, state)).toEqual({ state: terminal, events: events.slice(eventOffset) });
     }
   });
 });

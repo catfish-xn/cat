@@ -12,7 +12,7 @@ import { validateTriggerLedger } from './triggers';
 import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
 import { survivalConsumptionKeys } from './shield';
-import { grantOfSource, grantedMaxHpBasis } from './combat-item-programs';
+import { grantOfSource, grantedMaxHpBasis, withGrantedItemRestoreCache } from './combat-item-programs';
 import { DEFAULT_BOARD } from '../board';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
@@ -21,7 +21,7 @@ type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
 let restoreDeclarations:WeakMap<CombatUnit,Map<string,Declaration[]>>|undefined;
 export function withItemRestoreCache<T>(run:()=>T):T{
  const previous=restoreDeclarations;restoreDeclarations=new WeakMap();
- try{return run();}finally{restoreDeclarations=previous;}
+ try{return withGrantedItemRestoreCache(run);}finally{restoreDeclarations=previous;}
 }
 export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect;survivalSource?:Source}[] {
  const cached=restoreDeclarations?.get(unit)?.get(combatId);if(cached)return cached;
