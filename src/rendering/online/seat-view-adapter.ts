@@ -16,13 +16,15 @@ import { createMatch } from '../../simulation/match';
 import type { MatchState, RoundResult } from '../../simulation/match-types';
 import type { RevealedLootSummary } from '../../presentation/loot-view';
 import type { PrivateSeatView } from '../../server-entry';
-import type { RoundEconomyPreview, SeatStateView } from '../../server/protocol';
+import type { ItemSummonView, RoundEconomyPreview, SeatStateView } from '../../server/protocol';
 
 /**
  * Display MatchState of a seat view plus the server's revealed-loot summary of my current PvE round (SR-C7-02) and its
  * round economy preview (SR-G5-02).
  */
-export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null };
+export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null;
+  /** G2-4b (§26): my movable preparation summons as the server placed them; RemoteSession.itemSummons reads them. */
+  readonly itemSummons?: readonly ItemSummonView[] };
 
 /**
  * The rules' economy preview of my current round as the server sent it (SR-G5-02, contract §14.4); null outside

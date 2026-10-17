@@ -10,9 +10,9 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import type { CarouselView, ItemSummonView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { listCarouselSlots } from '../../server-entry';
+import { listCarouselSlots, readItemSummons } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -122,7 +122,21 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
  * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
  * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
  */
-export function toSeatPrivateView(match: MatchState): SeatStateView { return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match) }; }
+export function toSeatPrivateView(match: MatchState): SeatStateView {
+  return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+}
+/**
+ * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
+ * outside preparation (they exist in a battle only as its own units). Never minted, moved or scaled here.
+ */
+export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
+  if (match.phase !== 'preparation') return [];
+  return readItemSummons(match).filter(origin => origin.unit.team === 'player').map(origin => ({
+    kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId,
+    unit: { id: origin.unit.id, definitionId: origin.unit.definitionId, team: origin.unit.team, starLevel: origin.unit.starLevel,
+      location: origin.unit.location.kind === 'board' ? { kind: 'board', cell: { col: origin.unit.location.cell.col, row: origin.unit.location.cell.row } } : { ...origin.unit.location } },
+  }));
+}
 
 /** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
 const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded', 'mechanicGranted', 'seatMechanicChanged']);

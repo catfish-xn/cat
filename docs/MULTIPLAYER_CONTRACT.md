@@ -1714,3 +1714,20 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 `CombatInputBasis.inputs.g23`（领域 DTO，亦称 CombatInputBasis.g23）和 `PlayerBattleSnapshot.g23` 重建自权威 `seatMechanics`，包含 `hidden.progress` 中的 seed/rngState/rngDraws/economyReceipts。这些仅用于冻结输入、服务器计算和可信存档/回放校验，**禁止投影到任何私有、公开、观战或战斗视图**；不能因为字段名是 g23 就当成可公开数据。
 
 G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。服务器如需推送提示须将此事件加入本席白名单；本次不修改服务器目录。
+
+## 26. G2-4b 兹若特传送门虚空生物：准备期移动（2026-10-17）
+
+规则侧接口与恢复证据见 `docs/evidence/g2-3/G2-4B-RESTORE-AUDIT.md`（`readItemSummons` / `moveItemSummon`，`src/simulation/match.ts`）。本节只写联机接线；NET_PROTOCOL、schema、save、replay 版本号都不变，规则、数值和 digest 不变。
+
+**公共导出**：`src/server-entry` 新增 `readItemSummons`、`moveItemSummon` 和类型 `ItemSummonOrigin`，与 `match.ts` 的同名导出相同，服务器不另做逻辑。
+
+**指令**：新增线指令 `{type:'moveItemSummon', itemInstanceId:string, cell:{col:int,row:int}}`（`MoveItemSummonCommand`，属于 `WireCommand`，不进 `ClientCommand`，机器人不会发）。每层 onlyKeys；`itemInstanceId` 非空，`cell` 两个整数，其它形状一律 `invalid-message`。
+- 房间阶段门：只在 `preparation` 和 `choice` 两个房间阶段放行（与 deploy 同窗口但不进战斗/结算的 OPS）；其余阶段 `wrong-phase`。
+- 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
+- 客户端：`RemoteSession.moveItemSummon` 发送后等回执和下一次 state 推送，本地不先移动；战斗回放期间不发。
+
+**私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席阶段不是 `preparation` 时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
+
+**界面**：准备阶段且棋盘上没有战斗时，`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
+
+**未做**：他人公开棋盘（`publicBoard`）不含召唤物；机器人不移动召唤物（用规则默认位置）。
