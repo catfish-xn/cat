@@ -12,7 +12,8 @@ import { mechanic, variable } from '../src/simulation/combat-s13-state';
 import { compileItemCrit, validateItemProgram } from '../src/simulation/m8/item-program';
 import { validateCombatItemGrants } from '../src/simulation/m8/combat-item-grants';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch, validateM5Runtime } from '../src/simulation/serialization';
+import { canonicalContent } from '../src/simulation/content';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { G24_CHEST_POOL, G24_CHEST_PAYLOADS } from '../src/simulation/content/g2-4-chest-pool';
 import { G24_SUPPORT_DECLARATIONS } from '../src/simulation/content/g2-4-support-items';
@@ -197,6 +198,73 @@ describe('G2-4b chest in combat', () => {
 });
 
 describe('G2-4b chest restore candidates (sampled stats)', () => {
+  const idle = (u: CombatUnit): CombatUnit => ({ ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 });
+  function sampledFight(champion: string, chests = 1, titans = 0): CombatState {
+    const state = combatOf([['holder', 'leona', 3, 4], ['caster', champion, 0, 7]], [['foe', 'garen', 3, 3]],
+      [...Array.from({ length: chests }, () => ['holder', CHEST] as const), ...Array.from({ length: titans }, () => ['caster', 'titans-resolve'] as const)]);
+    return { ...state, units: state.units.map(u => u.id === 'holder' ? { ...idle(u), hp: 1 } : u.id === 'caster' ? idle(u) : u) };
+  }
+  function waitForPulses(state: CombatState, ticks: number): CombatState {
+    state = { ...state, units: state.units.map(idle) };
+    for (let i = 0; i < ticks; i++) state = stepCombat(state).state;
+    return state;
+  }
+  function castNow(state: CombatState): CombatState {
+    return stepCombat({ ...state, units: state.units.map(u => u.id === 'caster' ? { ...u, mana: u.maxMana, cooldownTicks: 0 } : u) }).state;
+  }
+  function expectSampledRestore(state: CombatState, field: 'nextAttackMagic' | 'nextAttackPhysical', damage: number): void {
+    validate(state);
+    const parsed = JSON.parse(JSON.stringify(state)) as CombatState, caster = unitOf(parsed, 'caster');
+    expect(caster.runtime![field]).toBe(damage);
+    // Call the production Match unit validator, including its cast-time stat check.
+    const check = (unit: CombatUnit) => validateM5Runtime(unit, parsed.tick, new Set(parsed.units.map(u => u.id)), parsed.units,
+      parsed.combatId!, new Set(), (a, b) => canonicalContent(a) === canonicalContent(b), parsed.nextActionSeq!);
+    expect(() => check(caster)).not.toThrow();
+    expect(() => check({ ...caster, runtime: { ...caster.runtime!, [field]: damage + 1 } }))
+      .toThrow(`Invalid Match save: derived empowered ${field === 'nextAttackMagic' ? 'magic' : 'physical'}`);
+  }
+
+  it('M1: Lux casts after receiving Nashor, accepts 594 magic damage and rejects 595', () => {
+    const { after } = untilGranted({ ...sampledFight('lux'), rngState: 328 });
+    expect(unitOf(after, 'caster').combatItemGrants!.map(g => g.definitionId)).toEqual(['nashors-tooth']);
+    const state = castNow(waitForPulses(after, 0));
+    expect(abilityPowerCandidates(unitOf(state, 'caster'), 0, state.combatId!)).toEqual(new Set([100, 110]));
+    expectSampledRestore(state, 'nextAttackMagic', 594);
+  });
+
+  it('M1: Lux casts at two Archangel pulses, accepts 972 magic damage and rejects 973', () => {
+    const { after } = untilGranted({ ...sampledFight('lux'), rngState: 64 });
+    expect(unitOf(after, 'caster').combatItemGrants!.map(g => g.definitionId)).toEqual(['archangel']);
+    const state = castNow(waitForPulses(after, 200)), caster = unitOf(state, 'caster');
+    expect(caster.mechanismState!.periodicTasks.map(t => t.pulseOrdinal)).toEqual([2]);
+    expect(abilityPowerCandidates(caster, 0, state.combatId!)).toEqual(new Set([100, 120, 130, 150, 160, 180]));
+    expectSampledRestore(state, 'nextAttackMagic', 972);
+  });
+
+  it('M1: Vander casts before Shojin arrives, accepts the old 540 physical damage and rejects 541', () => {
+    const fight = sampledFight('vander');
+    const cast = castNow({ ...fight, units: fight.units.map(idle) });
+    expect(unitOf(cast, 'caster').runtime!.nextAttackPhysical).toBe(540);
+    expect(unitOf(cast, 'caster').combatItemGrants).toBeUndefined();
+    const { after } = untilGranted({ ...cast, rngState: 317, units: cast.units.map(u => u.id === 'foe' ? { ...u, cooldownTicks: 0 } : idle(u)) });
+    const caster = unitOf(after, 'caster');
+    expect(caster.combatItemGrants!.map(g => g.definitionId)).toEqual(['shojin']);
+    expect(attackDamageCandidates(caster, after.tick, after.combatId!)).toEqual(new Set([90, 103]));
+    expectSampledRestore(after, 'nextAttackPhysical', 540);
+  });
+
+  it('three Titans plus three granted Archangels restore after eight pulses without expanding 102 million histories', () => {
+    const { after } = untilGranted({ ...sampledFight('lux', 3, 3), rngState: 52931 });
+    expect(unitOf(after, 'caster').combatItemGrants!.map(g => g.definitionId)).toEqual(['archangel', 'archangel', 'archangel']);
+    const state = castNow(waitForPulses(after, 800)), caster = unitOf(state, 'caster');
+    expect(state.tick).toBe(802);
+    expect(caster.mechanismState!.periodicTasks.map(t => t.pulseOrdinal)).toEqual([8, 8, 8]);
+    // 100 base + 0…150 Titan AP (step 2) + 0…60 granted base AP (step 20)
+    // + 0…720 pulse AP (step 30): exactly every even value from 100 to 1030.
+    expect(abilityPowerCandidates(caster, 0, state.combatId!)).toEqual(new Set(Array.from({ length: 466 }, (_, i) => 100 + 2 * i)));
+    expectSampledRestore(state, 'nextAttackMagic', 4752);
+  });
+
   it('every AP and AD a receiver had since the grant is among the restore candidates for that sample', { timeout: 180000 }, () => {
     const seen = new Set<string>();
     for (let seed = 1; seen.size < G24_CHEST_POOL.length && seed < 400; seed++) {

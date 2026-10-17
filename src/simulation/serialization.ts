@@ -317,8 +317,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
 }
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 
-/** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
+/** Runtime records are checked separately from frozen stats; restoring never executes them.
+ * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
+export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');

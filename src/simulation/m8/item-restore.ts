@@ -134,6 +134,18 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
  return new Set(bases.flatMap(b=>[...bonuses].map(n=>Math.floor((basis.base+b.flat)*(10000+b.bps+n)/10000))));
 }
+type SampledStatParts = { fixed: number; flat: number; bps: number };
+/** Merge reachable sums, not equipment histories. Equal parts have identical future
+ * transitions; keep all three parts until final rounding so no forged values enter. */
+function mergeSampledStatParts(values: readonly SampledStatParts[], field: keyof SampledStatParts, options: readonly number[]): SampledStatParts[] {
+ const reachable = new Map<string, SampledStatParts>();
+ for (const previous of values) for (const amount of options) {
+  const next = { ...previous, [field]: previous[field] + amount };
+  const key = `${next.fixed},${next.flat},${next.bps}`;
+  if (!reachable.has(key)) reachable.set(key, next);
+ }
+ return [...reachable.values()];
+}
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
@@ -163,16 +175,18 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   else if(m.value.kind==='constant')options=grant?[0,m.value.amount]:initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
-    if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=values.flatMap(previous=>options.map(v=>({...previous,[field]:previous[field as 'flat'|'bps'|'fixed']+v})));continue;}
+    if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=mergeSampledStatParts(values,field,options);continue;}
     const cap=(compileMechanismDefinitions(unit,combatId).eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
     if(cap===undefined||cap===null)throw new Error('Unbounded enabled AP counter');
     options=Array.from({length:cap+1},(_,i)=>i*value.perCount);
   } else options=[0];
-  values=values.flatMap(n=>options.map(v=>({...n,[m.unit]:n[m.unit as 'flat'|'bps']+v})));
+  values=mergeSampledStatParts(values,m.unit,options);
  }
  const histories=[{flat:0,bps:0}];
  for(const c of augmentGrowth){const m=c.application.modifier!;if(m.value.kind==='constant'&&(m.unit==='flat'||m.unit==='bps')){const previous=histories[histories.length-1];histories.push({...previous,[m.unit]:previous[m.unit]+m.value.amount});}}
- return new Set(values.flatMap(v=>histories.map(g=>Math.floor((base+v.flat+g.flat)*(10000+v.bps+g.bps)/10000)+v.fixed)));
+ const candidates=new Set<number>();
+ for(const v of values)for(const g of histories)candidates.add(Math.floor((base+v.flat+g.flat)*(10000+v.bps+g.bps)/10000)+v.fixed);
+ return candidates;
 }
 export const abilityPowerCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'abilityPower',at,combatId);
 export const attackDamageCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'attackDamage',at,combatId);
