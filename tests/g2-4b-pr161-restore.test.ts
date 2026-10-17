@@ -5,10 +5,121 @@ import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {buildSync} from 'esbuild';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {selectChoice} from '../src/simulation/match';
-import {readG23Progress} from '../src/simulation/g2-3-state';
-import {openMechanicChoice} from '../src/simulation/seat-mechanics';
-import {accepted,naturalForgeStates,receiptVectorTier14Save} from './fixtures/g24-natural-forge';
+import {selectChoice,nextRound,startMatchCombat,stepMatch,type MatchState} from '../src/simulation/match';
+import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
+import {createG23Progress} from '../src/simulation/g2-3-match-progress';
+import {advanceG23Economy} from '../src/simulation/g2-3-economy';
+import {g23BattlePayouts} from '../src/simulation/g2-3-settlement';
+import {grantMechanicGold,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
+import {accepted,naturalForgeStates,naturalTier4Preparation} from './fixtures/g24-natural-forge';
+
+let tier14:MatchState|undefined;
+/** Historical receipt vector reaches 1172; the tier14 award itself comes from a real solo battle. */
+function tier14Battle():MatchState{
+ if(tier14)return tier14;
+ const pending=naturalForgeStates().get(10)!,choice=pending.pendingChoice!;
+ let state=accepted(selectChoice(pending,choice.choiceId,choice.generation,choice.offers[0]));
+ const original=readG23Progress(state)!;let replay=createG23Progress(state.seed);
+ for(const receipt of original.economyReceipts){
+  if(receipt.kind!=='battle')throw Error('Unexpected fixture market');
+  const facts=receipt.facts.round===state.round?{...receipt.facts,conquerorTier:9,conquestTakedowns:Array.from({length:28},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
+  replay=advanceG23Economy(replay,facts).progress;
+ }
+ state=writeG23Progress(state,{...original,...replay});
+ const last=replay.economyReceipts.at(-1)!;
+ if(last.kind!=='battle')throw Error('Expected final battle');
+ for(const payout of g23BattlePayouts(last.facts,replay.conquest.chestsOpened,original.conquest.chestsOpened))state=accepted(grantMechanicGold(state,payout));
+ state=accepted(nextRound(state,state.round));
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-3',1172,13]);
+ while(state.phase==='choice'){
+  const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+ }
+ expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ state=accepted(startMatchCombat(state));
+ for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-3',1214,14]);
+ expect(state.pendingChoice?.choiceId).toBe('g23:conqueror:14:atom:1:copy:0');
+ tier14=state;return state;
+}
+
+function settlementCases():MatchState[]{
+ const pending=tier14Battle(),c=pending.pendingChoice!;
+ return [naturalForgeStates().get(4)!,pending,accepted(selectChoice(pending,c.choiceId,c.generation,c.offers[0]))];
+}
+
+it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round',()=>{
+ const states=settlementCases(),four=states[0];
+ expect([four.round,four.roundDefinitionId,readG23Progress(four)!.conquest.stacks]).toEqual([6,'2-3',108]);
+ expect(four.combat?.status).toBe('finished');
+ expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
+  expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
+ ]);
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
+  kind:'item',itemId:'item-16',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+ });
+ for(const state of states){
+  const before=JSON.stringify(state),save=serializeMatch(state);
+  expect(restoreMatch(state)).toEqual(state);
+  expect(restoreMatch(JSON.parse(save))).toEqual(state);
+  expect(restoreMatch(save)).toEqual(state);
+  expect(JSON.stringify(state)).toBe(before);
+ }
+},60000);
+
+it('replays automatic unit upgrades atomically and rejects an edited upgrade transaction',()=>{
+ const receipt=naturalForgeStates().get(4)!.seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:4:atom:0:copy:0');
+ if(receipt?.kind!=='unit')throw Error('Expected tier4 hero');
+ let state=naturalTier4Preparation();
+ for(let copy=0;copy<2;copy++)state=accepted(grantMechanicUnit(state,{receiptId:`fixture:upgrade:${copy}`,source:'fixture',definitionId:receipt.definitionId}));
+ state=accepted(startMatchCombat(state));
+ for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+ const upgrade=state.resourceProvenance.entries.find(f=>f.sequence>=state.combatInputBasis!.provenancePrefixLength&&f.kind==='unit-upgraded');
+ expect(upgrade).toBeDefined();
+ expect(restoreMatch(state)).toEqual(state);
+ expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ const bad=structuredClone(state);
+ Object.assign(bad.resourceProvenance.entries[upgrade!.sequence],{acquisitionSequence:0});
+ expect(()=>restoreMatch(bad)).toThrow();
+ expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();
+},60000);
+
+it('rejects edited automatic birth serials, receipt/ledger order, rounds and definitions',()=>{
+ for(const state of settlementCases()){
+  const prefix=state.combatInputBasis!.provenancePrefixLength;
+  const births=state.resourceProvenance.entries.filter(f=>f.sequence>=prefix&&(f.kind==='unit-acquired'||f.kind==='item-acquired')&&f.source.kind==='mechanic');
+  expect(births.length).toBeGreaterThan(0);
+  for(const birth of births){
+   const bad=structuredClone(state),fact=bad.resourceProvenance.entries[birth.sequence];
+   if(fact.kind==='unit-acquired')Object.assign(fact,{unitId:'unit-9999'});
+   else if(fact.kind==='item-acquired')Object.assign(fact,{itemId:'item-9999'});
+   for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreMatch(input)).toThrow();
+   expect(()=>serializeMatch(bad)).toThrow();
+  }
+  const first=births[0];
+  if((first.kind!=='unit-acquired'&&first.kind!=='item-acquired')||first.source.kind!=='mechanic')throw Error('Expected mechanic birth');
+  const receiptId=first.source.receiptId;
+  const receiptIndex=state.seatMechanics!.receipts.findIndex(r=>r.receiptId===receiptId);
+  for(const mutation of ['order','definition','round','ledger'] as const){
+   const bad=structuredClone(state),receipts=[...bad.seatMechanics!.receipts],entries=[...bad.resourceProvenance.entries];
+   if(mutation==='order'){
+    const other=receipts.findIndex((r,i)=>i>receiptIndex&&(r.kind==='unit'||r.kind==='item'||r.kind==='choice'&&r.itemId!==null));
+    // Tier14 pending has only one birth: move its receipt across the combat boundary instead.
+    const target=other<0?state.combatInputBasis!.mechanicReceiptPrefixLength-1:other;
+    [receipts[receiptIndex],receipts[target]]=[receipts[target],receipts[receiptIndex]];
+   }else if(mutation==='definition')Object.assign(receipts[receiptIndex],{definitionId:receipts[receiptIndex].kind==='unit'?'vex':'warmog'});
+   else if(mutation==='round')Object.assign(entries[births[0].sequence],{roundId:'2-2'});
+   else{
+    const index=births[0].sequence;
+    [entries[index-1],entries[index]]=[entries[index],entries[index-1]];
+    entries.forEach((fact,sequence)=>{entries[sequence]={...fact,sequence};});
+   }
+   const forged={...bad,seatMechanics:{...bad.seatMechanics!,receipts},resourceProvenance:{...bad.resourceProvenance,entries}};
+   expect(()=>restoreMatch(forged)).toThrow();
+   expect(()=>restoreMatch(JSON.stringify(forged))).toThrow();
+   expect(()=>serializeMatch(forged)).toThrow();
+  }
+ }
+},60000);
 
 it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
@@ -32,7 +143,7 @@ it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected
  expect(restoreMatch(serializeMatch(twice))).toEqual(twice);
  const receipts=[...twice.seatMechanics!.receipts],firstIndex=receipts.findIndex(r=>r.receiptId===choice.choiceId),secondIndex=receipts.findIndex(r=>r.receiptId==='fixture:second-forge');
  [receipts[firstIndex],receipts[secondIndex]]=[receipts[secondIndex],receipts[firstIndex]];
- expect(()=>restoreMatch({...twice,seatMechanics:{...twice.seatMechanics!,receipts}})).toThrow('mechanic choice birth order');
+ expect(()=>restoreMatch({...twice,seatMechanics:{...twice.seatMechanics!,receipts}})).toThrow('mechanic birth order');
 },60000);
 
 it('cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice',()=>{
@@ -44,10 +155,10 @@ it('cold Node processes restore actual canonical saves for tiers4/10/14 with the
    import {readG23Progress} from './src/simulation/g2-3-state';
    const text=readFileSync(process.argv[2],'utf8');
    const state=restoreMatch(process.argv[4]==='object'?JSON.parse(text):text);
-   writeFileSync(process.argv[3],JSON.stringify({progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry});
+   writeFileSync(process.argv[3],JSON.stringify({state,progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry});
   for(const tier of [4,10,14]){
-   const initial=tier===14?receiptVectorTier14Save():naturalForgeStates().get(tier)!;
-   const states=tier===10?[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,'TFT_Item_Artifact_SeekersArmguard'))]:[initial];
+   const initial=tier===14?tier14Battle():naturalForgeStates().get(tier)!;
+   const states=tier===4?[initial]:[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,tier===10?'TFT_Item_Artifact_SeekersArmguard':initial.pendingChoice!.offers[0]))];
    for(const [index,state] of states.entries()){
     const save=join(directory,`tier${tier}-${index}.json`);
     writeFileSync(save,serializeMatch(state));
@@ -57,6 +168,7 @@ it('cold Node processes restore actual canonical saves for tiers4/10/14 with the
      expect(child.error).toBeUndefined();
      expect(child.status,child.stderr).toBe(0);
      const result=JSON.parse(readFileSync(output,'utf8'));
+     expect(result.state).toEqual(state);
      expect(result.progress).toEqual(readG23Progress(state));
      expect(result.choice).toEqual(state.pendingChoice);
     }
