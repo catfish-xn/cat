@@ -214,7 +214,7 @@
     "src/simulation/seat-mechanics/replay-units.ts": "59c8a0bdfe882d8b340737330f750e8d597f443dd57e06eb9f53e9f5ce4035c7",
     "src/simulation/seat-mechanics/state.ts": "2e220df7eeb9a6865d6a56a9be5314eef0bc386ecf6456605a993b0bc446ca06",
     "src/simulation/seat-mechanics/types.ts": "7da237be058f0ed11fc504dd3f104e186038f2cf7082bb5494cd0b2e0d122b2d",
-    "src/simulation/serialization.ts": "03041fe1e578bb56d8ffda7e63f04cd848922d87eb48d3cdd19cea7c344a248e",
+    "src/simulation/serialization.ts": "0098280ea7e117c283130877ae61f9fdbdc783aae88c81642ab036b6757bc29c",
     "src/simulation/shared-pool-ledger.ts": "9bafcad9d29ed3e1eef75e6c9076aa13ff8feb82a90491254817e680543d40af",
     "src/simulation/shared-pool-types.ts": "c56f05680ce98c6bc2eb7af6f5b73f680b8910f790d7eac29350e6e97b064df3",
     "src/simulation/shared-pool.ts": "0e6e2947fb10b638125f80bb6a493d5c770d71ffaa460a5b8a0e94ca41756d17",
