@@ -1,3 +1,4 @@
+import { DEFAULT_BOARD } from './board';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward } from './content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
 import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-progress';
@@ -15,10 +16,12 @@ export interface G23ChemProgress {readonly shimmer:number;readonly losses:number
 export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[];readonly crownGold?:number}
 export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number}
 export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision;
+// Structural bound: every deployment cell may hold one unit with three equipment slots.
+export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZones.player.lastRow - DEFAULT_BOARD.deploymentZones.player.firstRow + 1) * 3;
 export function validateG23BattleFacts(f:G23BattleFacts):void{
  const int=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
  const crowns=Object.hasOwn(f??{},'crowns');
- if(!f||Object.keys(f).length!==(crowns?11:10)||crowns&&(!int(f.crowns!,30)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
+ if(!f||Object.keys(f).length!==(crowns?11:10)||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
 }

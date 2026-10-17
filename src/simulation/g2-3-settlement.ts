@@ -8,16 +8,21 @@ import type { CombatState } from './combat-types';
 import { advanceG23Economy,type G23BattleFacts } from './g2-3-economy';
 import type { Team } from './board';
 import { TACTICIANS_CROWN_ID } from './deployment-cap';
-export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp'):G23BattleFacts{
+export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp',openingUnits:readonly {readonly id:string;readonly team:Team}[]):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
  const allies=combat.units.filter(u=>u.team===team&&!u.definitionId.startsWith('g23-'));
  // 约定值 G24-CROWN-GOLD-01: only crowns bound to units deployed at combat start roll; the holder need not survive.
- const crowns=allies.reduce((n,u)=>n+(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item'&&p.source.definitionId===TACTICIANS_CROWN_ID).length,0);
+ if(!combat.strategy)throw new RangeError('Missing G23 opening strategy');
+ const owners=new Set(openingUnits.filter(u=>u.team===team).map(u=>u.id));
+ const crowns=combat.strategy.units.reduce((n,u)=>n+(owners.has(u.unitId)?(u.itemPrograms??[]).filter(p=>p.source.ownerId===u.unitId&&p.source.sourceKind==='item'&&p.source.definitionId===TACTICIANS_CROWN_ID).length:0),0);
  return {battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
  conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive).length,
  rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0),...(crowns?{crowns}:{})};
 }
-export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{return g23BattleFacts(combat,'player',state.round,state.m8.round.kind==='pvp'?'pvp':'pve');}
+export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{
+ const basis=state.combatInputBasis;if(!basis)throw new RangeError('Missing G23 opening input');
+ return g23BattleFacts(combat,'player',state.round,state.m8.round.kind==='pvp'?'pvp':'pve',basis.inputs.preparation.units.filter(u=>u.location.kind==='board'));
+}
 export function commitG23Settlement(state:MatchState,facts:G23BattleFacts,policy?:import('./loot-runtime').UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
  const p=readG23Progress(state);if(!p||p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId===facts.battleId))return state;
  const planned=advanceG23Economy(p,facts);let committed=writeG23Progress(state,planned.progress);

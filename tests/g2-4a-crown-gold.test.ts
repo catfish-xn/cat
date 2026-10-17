@@ -69,7 +69,13 @@ it('economy rolls only on a win with crowns, for PvE and PvP alike, and the rece
   expect(lost.progress.rngDraws).toBe(p.rngDraws);expect((lost.progress.economyReceipts[0] as G23EconomyAction).crownGold).toBeUndefined();
  }
  expect(()=>validateG23BattleFacts({...base,crowns:0})).toThrow();
- expect(()=>validateG23BattleFacts({...base,crowns:31})).toThrow();
+ for(const count of [31,84]){
+  expect(()=>validateG23BattleFacts({...base,crowns:count})).not.toThrow();
+  const won=advanceG23Economy(p,{...base,conquerorTier:0,conquestTakedowns:[],crowns:count});
+  expect(won.progress.rngDraws).toBe(p.rngDraws+count);
+  expect(()=>validateG23Progress(won.progress,42,1)).not.toThrow();
+ }
+ expect(()=>validateG23BattleFacts({...base,crowns:85})).toThrow();
 });
 
 it('a won battle with deployed crown holders pays the drop through a mechanic gold receipt',()=>{
@@ -114,4 +120,79 @@ it('PvP settlement proposals carry each side its own deployed crown count',()=>{
  const result=resolveTwoSidedBattle(compileBattle(snapshotForBattle(a,'A'),snapshotForBattle(b,'B'),42,{battleId:'crown-pvp'}),5000);
  const proposals=proposeSettlement(result);
  expect(proposals.a.g23Facts!.crowns).toBe(2);expect(proposals.b.g23Facts).not.toHaveProperty('crowns');
+});
+
+import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {grantMechanicItem} from '../src/simulation/seat-mechanics';
+import {nextRound} from '../src/simulation/match';
+import {g23BattleFacts} from '../src/simulation/g2-3-settlement';
+import {rollG23BlackMarket} from '../src/simulation/g2-3-progress';
+
+it('real combat saves restore crown receipts and Continue never pays the completed battle twice',()=>{
+ // Public grant API provides a provenance-backed test fixture, not fabricated settlement facts.
+ let paid=0;
+ for(const seed of [1,3,42]){
+  let before=createMatch(seed);
+  const holder=own(before)[0];
+  for(let slot=0;slot<3;slot++){
+   before=accepted(grantMechanicItem(before,{receiptId:`crown-test:${slot}`,source:'test',definitionId:TACTICIANS_CROWN_ID}));
+   before=accepted(equipItem(before,crowns(before)[slot].id,holder.id,slot));
+  }
+  const started=accepted(startMatchCombat(before));
+  expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  const after=fight(before),receipt=lastBattle(after),drops=crownReceipts(after);
+  expect(receipt.facts.crowns).toBe(3);
+  expect(receipt.facts.result).toBe('win');
+  const restored=restoreMatch(serializeMatch(after));
+  expect(restored).toEqual(after);expect(restoreMatch(structuredClone(after))).toEqual(after);
+  expect(stepMatch(restored).state).toEqual(after);
+  expect(commitG23Settlement(restored,receipt.facts)).toBe(restored);
+  const continued=accepted(nextRound(restored,restored.round));
+  expect(crownReceipts(continued)).toEqual(drops);
+  expect(commitG23Settlement(continued,receipt.facts)).toBe(continued);
+  if(drops.length){
+   paid++;
+   const forged=structuredClone(after),drop=forged.seatMechanics!.receipts.find(r=>r.source==='tacticians-crown')!;
+   if(drop.kind!=='gold')throw Error('gold receipt');
+   Object.assign(drop,{amount:drop.amount+1});expect(()=>restoreMatch(forged)).toThrow();
+   expect(()=>restoreMatch({...after,gold:after.gold+1})).toThrow();
+   const forgedCount=structuredClone(after),progress=readG23Progress(forgedCount)!;
+   const action=progress.economyReceipts.at(-1) as G23EconomyAction;
+   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount)).toThrow();
+  }
+ }
+ expect(paid).toBeGreaterThan(0);
+});
+
+it('G24-CROWN-GOLD-05 consumes the black-market draw before each independent crown draw',()=>{
+ let p=createG23Progress(42);
+ for(let round=1;round<=20;round++){
+  const base={...facts(round),conquerorTier:0,conquestTakedowns:[],chemBaronTier:3};
+  const without=advanceG23Economy(p,base);
+  if(without.progress.chem.offer){
+   const market=rollG23BlackMarket(without.progress.chem.offer.tier,p.rngState);
+   const roll=rollG23CrownGold(3,market.rngState);
+   const won=advanceG23Economy(p,{...base,crowns:3});
+   expect(won.progress.chem.offer).toEqual(without.progress.chem.offer);
+   expect(won.progress.rngState).toBe(roll.rngState);
+   expect(won.progress.rngDraws).toBe(p.rngDraws+4);
+   expect((won.progress.economyReceipts.at(-1) as G23EconomyAction).crownGold).toBe(roll.gold);
+   expect(()=>validateG23Progress(won.progress,42,round)).not.toThrow();
+   return;
+  }
+  p=without.progress;
+ }
+ throw Error('black-market threshold not reached');
+});
+
+it('G24-CROWN-GOLD-01 counts the frozen crown programs even after the holder dies',()=>{
+ const started=accepted(startMatchCombat(deployed(42,3))),combat=started.combat!;
+ const units=combat.units.map(u=>u.team==='player'?{...u,alive:false,hp:0}:u);
+ const facts=g23BattleFacts({...combat,units,result:'playerWin'},'player',started.round,'pve',combat.units);
+ expect(facts.crowns).toBe(3);expect(facts.alliedDeaths).toBeGreaterThan(0);
+ const holder=combat.units.find(u=>u.team==='player'&&u.itemPrograms?.some(p=>p.source.definitionId===TACTICIANS_CROWN_ID))!;
+ const copied={...holder,id:'replacement-copy',itemPrograms:[...holder.itemPrograms!,...holder.itemPrograms!,...holder.itemPrograms!]};
+ const replaced={...combat,units:[...combat.units.filter(u=>u.id!==holder.id),copied],result:'playerWin' as const};
+ expect(g23BattleFacts(replaced,'player',started.round,'pve',combat.units).crowns).toBe(3);
+ expect(()=>g23BattleFacts({...replaced,strategy:undefined},'player',started.round,'pve',combat.units)).toThrow('Missing G23 opening strategy');
 });
