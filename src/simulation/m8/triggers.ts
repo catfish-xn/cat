@@ -39,6 +39,8 @@ function runtimeFor(combatId: string, d: TriggerDefinition, tick: number): Effec
   return { ...effectIdentity(combatId, d.source, d.source.ownerId), startsAtTick: tick, expiresAtTick: null, stacks: 0,
     triggerCount: 0, counters: {}, consumedRewards: [], nextEligibleTick: 0, consumed: false, stackPolicy: d.stackPolicy };
 }
+/** Internal item-program extension; other triggers retain the action-wide limit. */
+export interface TargetLimitedTrigger extends TriggerDefinition { readonly actionLimitScope?: 'target' }
 export interface TriggerInvocation { readonly definition: TriggerDefinition; readonly signal: TriggerSignal; readonly targetIds: readonly string[]; readonly counters: Readonly<Record<string, number>>; readonly effectIndices: readonly number[] }
 /** Packet qualification precedes runtime consumption; source indices stay intact. */
 function effectQualifies(effect: Effect, signal: TriggerSignal): boolean {
@@ -50,7 +52,7 @@ function effectQualifies(effect: Effect, signal: TriggerSignal): boolean {
 }
 const readsResist=(c: TriggerDefinition['condition']): boolean => c.kind==='target-magic-resist' || c.kind==='all' && c.conditions.some(readsResist);
 /** Selection is an engine dependency, not serializable user code or an effect callback. */
-export function dispatchTriggers(combatId: string, definitions: readonly TriggerDefinition[], ledger: TriggerLedger, signal: TriggerSignal,
+export function dispatchTriggers(combatId: string, definitions: readonly TargetLimitedTrigger[], ledger: TriggerLedger, signal: TriggerSignal,
   units: readonly TriggerUnit[], select: (definition: TriggerDefinition, signal: TriggerSignal) => readonly string[], magicResist?: (unitId: string) => number): { ledger: TriggerLedger; invocations: TriggerInvocation[] } {
   const event = signal.context; integer(event.eventSeq); integer(event.tick); integer(event.actionSeq);
   if (event.event === 'cast-completed' && (!event.cast.completed || event.cast.source.ownerId !== event.actorId || event.cast.actionSeq !== event.actionSeq || event.cast.targetsSampledAtTick !== event.tick)) throw new RangeError('Invalid cast trigger binding');
@@ -97,7 +99,7 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
     let effectIndices=d.effects.flatMap((effect,index)=>effectQualifies(effect,current)?[index]:[]);
     const perPacket=signal.aggregation==='event' && ['damage-dealt','damage-taken','shield-hit','incoming-basic-hit'].includes(event.event);
     const stateStream=derived||perPacket;
-    const actionKey=JSON.stringify([identity.key,d.id,event.actorId,event.actionSeq]);
+    const actionKey=JSON.stringify([identity.key,d.id,event.actorId,event.actionSeq,...(d.actionLimitScope==='target'?[event.targetId]:[])]);
     if((actionCounts[actionKey] ?? 0)>=d.maxPerAction) {
       if(!stateStream) continue;
       effectIndices=effectIndices.filter(index=>d.effects[index].kind!=='damage');

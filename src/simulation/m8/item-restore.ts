@@ -1,9 +1,10 @@
+import type { TargetLimitedTrigger } from './triggers';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
 import type { CombatUnit } from '../combat-types';
-import type { Effect, Source, StatusApplication, TriggerDefinition } from './contracts';
+import type { Effect, Source, StatusApplication } from './contracts';
 import { canonicalContent } from '../content';
 import { canonicalSource, effectIdentity, validateIdentity } from './identity';
 import { compileMechanismDefinitions } from './s13-definitions';
@@ -163,7 +164,7 @@ function mergeSampledStatParts(values: readonly SampledStatParts[], field: keyof
 /** Kill/assist triggers are action-limited. Check their source-bound action
  * receipts before any count-sized allocation, also for standalone callers.
  * Match restore independently authenticates these facts from its input basis. */
-function settledSampledStatCount(unit:CombatUnit,d:TriggerDefinition,combatId:string):number {
+function settledSampledStatCount(unit:CombatUnit,d:TargetLimitedTrigger,combatId:string):number {
  const r=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source));
  if(!r)return 0;
  const check=(v:unknown)=>{if(!v)throw new Error('Invalid Match save: sampled stat trigger count');};
@@ -178,7 +179,7 @@ function settledSampledStatCount(unit:CombatUnit,d:TriggerDefinition,combatId:st
   for(const [raw,amount] of Object.entries(unit.triggerLedger?.actionCounts ?? {})) {
    let tuple:unknown;try{tuple=JSON.parse(raw);}catch{check(false);}
    if(!Array.isArray(tuple)||tuple[0]!==key)continue;
-   check(tuple.length===4&&tuple[1]===d.id&&tuple[2]===unit.id&&Number.isSafeInteger(tuple[3])&&tuple[3]>=0
+   check(tuple.length===(d.actionLimitScope==='target'?5:4)&&(d.actionLimitScope!=='target'||typeof tuple[4]==='string'&&tuple[4].length>0)&&tuple[1]===d.id&&tuple[2]===unit.id&&Number.isSafeInteger(tuple[3])&&tuple[3]>=0
     &&Number.isSafeInteger(amount)&&amount>=1&&amount<=d.maxPerAction);
    settled+=amount;
   }
