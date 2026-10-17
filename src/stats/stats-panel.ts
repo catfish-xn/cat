@@ -40,7 +40,8 @@ function matches(event: LedgerCombatEvent, filter: EventFilter): boolean {
     || filter === 'mana' && event.type === 'manaChanged' || filter === 'target' && event.type === 'targetChanged'
     || filter === 'skill' && ['cast', 'effectTriggered', 'statChanged', 'maxHpChanged', 'growth'].includes(event.type);
 }
-function eventText(event: LedgerCombatEvent, combat: CombatState): string | null {
+/** One line of the ledger event list (exported for the line-level tests; the panel is the only caller). */
+export function eventText(event: LedgerCombatEvent, combat: CombatState): string | null {
   const name = (id: string | null) => unitName(combat, id);
   const prefix = `第 ${event.tick} tick：`;
   switch (event.type) {
@@ -59,7 +60,7 @@ function eventText(event: LedgerCombatEvent, combat: CombatState): string | null
 }
 const DAMAGE_NAMES = { physical: '物理', magic: '魔法', true: '真实' } as const;
 /** Sentences for §14.2 wire events: only the fields the event carries (no source kinds, no shares). */
-function viewEventText(event: DisplayCombatEvent, combat: CombatViewState): string | null {
+export function viewEventText(event: DisplayCombatEvent, combat: CombatViewState): string | null {
   if (event.type === 'unitUpdated' || event.type === 'unitEntered' || event.type === 'unitLeft') return null; // values, not a fact to list
   const name = (id: string | null) => unitName(combat, id);
   const prefix = `第 ${event.tick} tick：`;
