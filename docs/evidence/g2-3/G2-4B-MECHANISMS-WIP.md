@@ -279,3 +279,25 @@ final fixture migration and final-head performance/size/CI remain outstanding.
 - Pending: Trench Coat, Mirror inheritance/native forge, centralized convention
   decisions, predecessor integration, fixture migration and the single final-head
   full-suite run. No full suite has been run locally. No independent review.
+
+## Bounded restore audit after fixed checkpoint d095d2b
+
+See `G2-4B-RESTORE-AUDIT.md` and raw `G2-4B-RESTORE-TIMING.json`.
+Production code is unchanged. Six legal three-unit scenarios /36 checkpoints
+were measured through real restoreMatch (Node bundle, no mocks): gold/Zephyr
+terminal warm JSON medians9.06–13.73ms, cold single runs47.19–65.96ms; baseline
+1.34/17.53ms. Replaying from tick0 each call is the extra cost. Large armies,
+1200-tick legal combats and browser latency remain unmeasured; no gate changed.
+
+Eight restore authority tests passed, proving per-call fresh replay, warm-cache
+poisoning rejection and finite tick/terminal bounds. Nine Voidspawn tests passed,
+now using the existing server-entry snapshot/compile APIs and checking the roster
+lock. The first added lock test incorrectly attempted snapshotting after locking;
+it was corrected to the existing public lifecycle (snapshot before lock), with no
+production change. TypeScript passed. No full suite or independent review.
+
+The new preparation read/move APIs are exported from simulation/match; they are
+not yet re-exported by server-entry or connected to online commands/UI. Claude
+still owns those adapters. This distinction is recorded explicitly in the audit;
+no UI/server implementation was changed. Existing pure strategy/metadata caches
+predate this PR; new combat replay results are never cached across calls.

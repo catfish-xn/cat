@@ -1,5 +1,4 @@
-import {snapshotForBattle,restorePlayerBattleSnapshot} from '../src/simulation/two-sided-snapshot';
-import {compileBattle,startTwoSidedCombat} from '../src/simulation/two-sided-battle';
+import {snapshotForBattle,restorePlayerBattleSnapshot,compileBattle,startTwoSidedCombat,enableMultiplayerSettlement,lockMatchCombatRoster} from '../src/server-entry';
 import {expect,it} from 'vitest';
 import {createMatch,equipItem,startMatchCombat,stepMatch,readItemSummons,moveItemSummon} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
@@ -67,7 +66,11 @@ it('freezes both seats placement and mirrors only the opposing coordinates',()=>
  const base=createMatch(42),round=getCatalogRoundById('2-1');
  const state=equipped({...base,round:round.ordinal,roundDefinitionId:round.roundId,m8:{...base.m8,round}});
  const origin=readItemSummons(state)[0],moved=moveItemSummon(state,origin.itemInstanceId,{col:0,row:7});if(!moved.ok)throw Error(moved.reason);
- const a=snapshotForBattle(moved.state,'A'),b=snapshotForBattle(moved.state,'B');
+ const enabled=enableMultiplayerSettlement(moved.state,'A');if(!enabled.ok)throw Error(enabled.reason);
+ const locked=lockMatchCombatRoster(enabled.state);if(!locked.ok)throw Error(locked.reason);
+ expect(moveItemSummon(locked.state,origin.itemInstanceId,{col:1,row:7})).toEqual({ok:false,state:locked.state,reason:'wrong-phase'});
+ expect(()=>snapshotForBattle(locked.state,'A')).toThrow('wrong-phase');
+ const a=snapshotForBattle(enabled.state,'A'),b=snapshotForBattle(moved.state,'B');
  expect(restorePlayerBattleSnapshot(JSON.parse(JSON.stringify(a)))).toEqual(a);
  const combat=startTwoSidedCombat(compileBattle(a,b,42));
  expect(combat.units.find(u=>u.team==='player'&&u.itemSummon?.kind==='voidspawn')!.cell).toEqual({col:0,row:7});
