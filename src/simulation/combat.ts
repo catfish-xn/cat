@@ -47,6 +47,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       ...(getUnitForm(unit,preparationState.board)?{form:getUnitForm(unit,preparationState.board)!}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
+      ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist,

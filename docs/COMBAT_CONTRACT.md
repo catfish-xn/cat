@@ -30,3 +30,18 @@ The existing `stepCombat(state) → { state, events }` interface and explicit `l
 Every cast coefficient and star rank comes from `content/g2-abilities.ts`, generated from hash-gated normalized records. Twitch draws one random target per enhanced attack and one shared crit result per piercing bolt; secondary Zeri packets follow the existing non-critical extra-attack convention. LeBlanc initial kills scale subsequent empowered attacks. Attached Malzahar infections continue after caster death and transfer from dead targets; other non-attached tasks require a living owner. Trait blast, chain share and retaliation packets resolve on the following tick to avoid recursive same-tick damage.
 
 Source/runtime tables and explicit limitations are in [G2-1 reconciliation](evidence/g2-1/RECONCILIATION.md). This is a candidate with33 heroes; Swain and source/emblem tiers not reachable from this inventory remain outside runtime. This section does not assert full14.24b equivalence.
+
+## G2-4b WIP: Death’s Defiance
+
+`allocateDamage(context, prepared, hp, shields, deferBps=0)` returns an optional
+`outcome.deferred` after shield absorption. Packet conservation includes this
+amount: mitigated = absorbed + deferred + hpDamage + overkill. Defaults preserve
+existing callers. A holder stores `deferredItemDamage` debts with original packet
+identity, start tick, total, paid and elapsed ticks. Payments occur before new
+packets at the damage barrier over80ticks and never lower HP below1; excess is
+consumed. Each positive payment emits `packetDamage` with existing equipment-proc
+delivery plus `deferredPayment:true`; proc permissions are empty. No mana, vamp,
+shield, redirect or further deferral applies. Debt is cleared on death.
+These ordering details are pending project convention G24-DEFIANCE-ORDER-01,
+not asserted as verified original script order. Restore rejects missing/foreign
+item debt, duplicate or malformed packet provenance, and inconsistent progress.

@@ -181,3 +181,16 @@ restoration. Full digest fixture migration and final full-suite run remain pendi
 **G24-SHROUD-BEAM-01 — 约定值，待确认：** 在两席棋盘合并后的初始位置按列差≤1认定三列光束；多个光束取最强，不叠乘；最大法力向上取整，首次施法后恢复。原档确认30%和全队60HP，未说明此六角光束几何。
 
 补证：已取得 Riot 13.18 的虚空生物阶段 HP 表及 14.7 的阶段 AD/升星/双抗/攻速说明，见 [EXTERNAL_SOURCES](EXTERNAL_SOURCES.md#official-historical-follow-up-read-2026-10-17)。这些是对应历史补丁的真实值；截至 14.24 的中间变更链未核完，不能据此宣称目标版本的完整召唤属性已经确定。14.9 风衣与不稳定财宝箱的交互暗示复制装备，但未证明全部继承规则。新增考证暂未改变运行时数值。
+
+### G2-4b Death’s Defiance WIP checkpoint
+
+`TFT4_Item_OrnnDeathsDefiance`: archived 14.24 (authorized for 14.24b),
+AD10%, armor30, AS25%, omnivamp25%, damage defer50% for4seconds.
+Source pointers/hashes: normalized/g2-4b-mechanism-items.json.
+`G24-DEFIANCE-ORDER-01` is explicitly a **约定值**, pending confirmation: shields
+before defer, redirect before defer, integer payments over80ticks, nonlethal
+clipped excess consumed, no proc on repayment. BaseHeal25 is not independently
+interpreted as a flat heal. Concentrated source gaps and recommendations for
+all11items: [G2-4B-MECHANISMS-WIP.md](G2-4B-MECHANISMS-WIP.md).
+Voidspawn HP candidate from13.18 is superseded by official14.6 stage2–6 values
+1000/1500/2000/2500/3000; preparation placement remains unresolved for this project.

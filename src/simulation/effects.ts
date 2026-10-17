@@ -14,11 +14,12 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
 const MECHANICS = new Set(['g23Junker','g23Experiment','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
-  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud']);
+  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   g24Fishbones:['rangeMultiplier'],
   g24SpectralCutlass:['durationTicks'],
   g24Shroud:['costIncreaseBps','allyHealth'],
+  g24DeathsDefiance:['fractionBps','durationTicks'],
   g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],

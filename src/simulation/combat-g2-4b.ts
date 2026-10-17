@@ -1,8 +1,36 @@
 import type { AbilityContext } from './combat-s13-abilities';
-import { mirroredItemCell, nearestItemCell, manaReavedMaximum } from './g2-4b-item-kernel';
+import { mirroredItemCell, nearestItemCell, manaReavedMaximum, validateDeferredItemDamage } from './g2-4b-item-kernel';
 import { sameCell } from './board';
 import { MOVE_INTERVAL_TICKS } from './combat-types';
 import type {CombatUnit} from './combat-types';
+
+/** Dynamic debt is schema/timing/provenance checked, like the existing combat
+ * task ledger. This does not claim to reconstruct historical damage from HP. */
+export function validateDefianceDebts(unit:CombatUnit, units:readonly CombatUnit[], tick:number, combatId:string, nextActionSeq:number):void {
+  const item=unit.mechanics?.find(m=>m.mechanic==='g24DeathsDefiance');
+  if (!item) {
+    if(unit.deferredItemDamage!==undefined)throw new RangeError('Unexpected Defiance debt');
+    return;
+  }
+  const debts=unit.deferredItemDamage;
+  if(!Array.isArray(debts)||!unit.alive&&debts.length)throw new RangeError('Invalid Defiance debts');
+  const ids=new Set<string>();
+  for(const debt of debts){
+    validateDeferredItemDamage(debt,tick,item.values.durationTicks);
+    if(!debt.amount||debt.elapsedTicks!==tick-debt.startedAtTick||debt.elapsedTicks>=item.values.durationTicks||ids.has(debt.packetId))throw new RangeError('Invalid Defiance debt timing');
+    ids.add(debt.packetId);
+    let packet:unknown;
+    try{packet=JSON.parse(debt.packetId);}catch{throw new RangeError('Invalid Defiance packet');}
+    if(Array.isArray(packet)&&packet.length===3){
+      if(packet[1]!=='redirect'||packet[2]!==unit.id||typeof packet[0]!=='string')throw new RangeError('Invalid Defiance redirect');
+      try{packet=JSON.parse(packet[0]);}catch{throw new RangeError('Invalid Defiance parent');}
+    }else if(!Array.isArray(packet)||packet[4]!==unit.id)throw new RangeError('Invalid Defiance target');
+    if(!Array.isArray(packet)||packet.length!==6||packet[0]!==combatId||packet[1]!==debt.startedAtTick||packet[1]<1
+      ||!units.some(u=>u.id===packet[2])||!units.some(u=>u.id===packet[4])
+      ||!Number.isSafeInteger(packet[3])||packet[3]<0||packet[3]>=nextActionSeq
+      ||!Number.isSafeInteger(packet[5])||packet[5]<0)throw new RangeError('Invalid Defiance packet provenance');
+  }
+}
 
 type ShroudUnit=Pick<CombatUnit,'team'|'cell'|'mechanics'>;
 /** Evaluate only on original combat cells, after both seats have been combined. */

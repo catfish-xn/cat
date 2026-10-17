@@ -30,8 +30,8 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
   return {tier:i+1,table,options:Object.entries(objects[table].values).map(([id,weight]) => ({id,weightBps:Math.round((weight as number)*10000),reward:objects[id].values}))};
 }));
 export const G23_POLICY = freezeContent({
-  revision:'g2-4b-mechanisms-wip-v1', rngAlgorithm:'lcg32-v1', seedXor:0x67323370,
-  g24Items:{status:'fishbones-cutlass-shroud-wip',cutlass:{durationTicks:160,convention:'G24-CUTLASS-CELL-01'},shroud:{costIncreaseBps:3000,convention:'G24-SHROUD-BEAM-01'},fishbones:{targetPool:'living-targetable-in-effective-range',rangeStacking:'double-once-per-holder',streamSalt:0x66697368,selection:'sorted-id-floor-word-times-length-div-2pow32',draws:'one-per-actual-basic-attack',convention:'G24-FISHBONES-TARGET-01'}},
+  revision:'g2-4b-mechanisms-wip-v2', rngAlgorithm:'lcg32-v1', seedXor:0x67323370,
+  g24Items:{status:'four-of-eleven-wip',defiance:{fractionBps:5000,durationTicks:80,barrier:'post-shield',nonlethalExcess:'discard',bleedProcs:'none',convention:'G24-DEFIANCE-ORDER-01'},cutlass:{durationTicks:160,convention:'G24-CUTLASS-CELL-01'},shroud:{costIncreaseBps:3000,convention:'G24-SHROUD-BEAM-01'},fishbones:{targetPool:'living-targetable-in-effective-range',rangeStacking:'double-once-per-holder',streamSalt:0x66697368,selection:'sorted-id-floor-word-times-length-div-2pow32',draws:'one-per-actual-basic-attack',convention:'G24-FISHBONES-TARGET-01'}},
   conqueror:{radiantPoolExclusions:['TFT5_Item_ThiefsGlovesRadiant'],chests:G23_CONQUEROR_CHESTS,transitionalRewards:G23_CONQUEROR_CHESTS.map(g23ConquerorReward),deferredPolicy:'whole-tier-gold-floor-only-affected-v1', growthPerChestBps:500, progressCap:null,
     stacksPerTakedown:{2:1,4:3,6:6,9:20},radiantConversion:'equipped-board-and-bench-then-new-combinations'},
   highRoller:{first:[3500,3500,2000,1000],triple:[4000,3500,2450,50],mods:['rocket','shield','coin'],tripleMods:['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot'],

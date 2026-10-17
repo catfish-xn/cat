@@ -1,5 +1,5 @@
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
-import {chooseFishbonesTarget} from './g2-4b-item-kernel';
+import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {advanceSpectralCutlass} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
@@ -27,7 +27,7 @@ import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
 import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
   mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
-import { allocateDamage, permissionsFor, prepareDamage, resolveDamage, type DamageSample } from './m8/damage';
+import { allocateDamage, permissionsFor, prepareDamage, type DamageSample } from './m8/damage';
 import { rollCrit } from './m8/crit';
 import { resolveStat, safeNumber } from './m8/stats';
 import type { Amount, DamageContext, DamageRequest, DamageOutcome, StatModifier } from './m8/contracts';
@@ -301,6 +301,26 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const positiveDamage = new Set<string>();
   // Virtual health and layered shields give each packet a deterministic actual contribution and killer.
   const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>();
+  // Pay prior debts at the damage barrier. These are nonlethal HP payments:
+  // no second shield/resistance, redirection, mana, vamp or equipment proc.
+  for (const unit of units) if (unit.deferredItemDamage?.length) {
+    const item = unit.mechanics!.find(m=>m.mechanic==='g24DeathsDefiance')!;
+    const pending = [];
+    for (const debt of unit.deferredItemDamage) {
+      const payment = advanceDeferredItemDamage(debt,tick,virtualHp.get(unit.id)!,item.values.durationTicks);
+      virtualHp.set(unit.id,payment.hpAfter);
+      if (!payment.finished) pending.push(payment.debt);
+      if (payment.damage) {
+        const seq=actionSeq++;
+        const context:DamageContext={source:asSource(item.source),targetId:unit.id,damageType:'true',delivery:'equipment-proc',deferredPayment:true,triggeringCastActionSeq:null,
+          actionSeq:seq,rootActionSeq:seq,parentPacketId:debt.packetId,packetId:JSON.stringify([ctx.combatId,tick,unit.id,seq,'defiance',debt.packetId]),
+          packetOrdinal:0,equipmentDepth:1,redirected:false,area:false,critEligibility:'never',permissions:[]};
+        events.push({type:'packetDamage',tick,outcome:{context,hit:true,raw:payment.damage,prevented:0,mitigated:payment.damage,
+          absorbed:0,hpDamage:payment.damage,overkill:0,critical:false,killingPacket:false}});
+      }
+    }
+    unit.deferredItemDamage=pending;
+  }
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
   const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
@@ -311,6 +331,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ricochetActions = new Set<string>(), aggregatedActions = new Set<number>();
   const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet) => {
     const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
+    if (outcome.deferred) target.deferredItemDamage=[...target.deferredItemDamage??[],{
+      packetId:context.packetId,startedAtTick:tick,amount:outcome.deferred,paid:0,elapsedTicks:0}];
     recordG23SkillDamage(ctx,units.find(u=>u.id===packet.source.ownerId),target,actual,packet);
     recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed);
     recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
@@ -381,14 +403,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
     const transfer = protector ? safeNumber(BigInt(prepared.mitigated) * BigInt(Math.max(...active(protector, tick, 'redirect').map(s => s.amount))) / 10000n) : 0;
-    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields), packet);
+    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields,mechanic(target,'g24DeathsDefiance','fractionBps')), packet);
     if (protector && transfer > 0) {
       const partial: DamageContext = { ...request.context, targetId: protector.id, redirected: true, critEligibility: 'never',
         parentPacketId: request.context.packetId, packetId: JSON.stringify([request.context.packetId, 'redirect', protector.id]) };
       const redirected: DamageRequest = { context: { ...partial, permissions: permissionsFor(partial) }, input: { stage: 'after-mitigation', amount: transfer,
         inherited: { parentPacketId: request.context.packetId, resolvedAtTick: tick, portion: 'redirect-share', critical: prepared.critical } } };
       const redirectSample = damageSample(packet, protector, owner, tick, units, virtualHp.get(protector.id)!);
-      commitOutcome(protector, resolveDamage(redirected, redirectSample), packet);
+      commitOutcome(protector, allocateDamage(redirected.context,prepareDamage(redirected,redirectSample),redirectSample.target!.hp,redirectSample.shields,mechanic(protector,'g24DeathsDefiance','fractionBps')), packet);
     }
     // The bound target's virtual HP is authoritative here; alive/hp are committed
     // after the batch. Prevention and full shield absorption still allow control.
@@ -477,6 +499,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (unit.alive && unit.hp === 0) {
       unit.alive = false; unit.targetId = null; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
+      if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce'));
       events.push({ type: 'death', tick, unitId: unit.id });
     }

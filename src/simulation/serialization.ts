@@ -1,6 +1,6 @@
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
-import {shroudBpsAtCell} from './combat-g2-4b';
+import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
@@ -268,6 +268,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
+      validateDefianceDebts(unit,combat.units,combat.tick,combat.combatId!,combat.nextActionSeq!);
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');

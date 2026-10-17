@@ -153,6 +153,14 @@
       "label": "约定值，非官方证据",
       "behavior": "Freeze beam on initial combined-board columns: target within one column of holder (three-column beam). Overlaps take maximum 30%; integer maximum rounds upward; clear after first cast. Each equipped on-board Shroud adds 60 HP to every ally including holder.",
       "sourceLimit": "Source confirms 30% mana reave until next cast and 60 team HP; beam geometry and integer rounding are project conventions."
+    },
+    {
+      "id": "G24-DEFIANCE-ORDER-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Post-mitigation, post-redirect, post-shield remainder defers floor(50%) over 80 ticks. Existing debts pay at the next damage barrier by cumulative integer division, never below 1 HP; clipped excess is consumed. Payments bypass shields and do not trigger mana, vamp, redirect or item procs. A packet can still kill from its immediate half.",
+      "sourceLimit": "Raw 14.24 confirms 50%, 4 seconds, nonlethal and 25% omnivamp, but not shield/redirect ordering or proc semantics. BaseHeal=25 is retained in normalized data; no separate flat heal inferred from this unreferenced legacy constant."
     }
   ]
 }
