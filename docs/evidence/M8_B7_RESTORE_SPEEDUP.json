@@ -1,0 +1,702 @@
+{
+  "base": "05a45db290fa52206b0b22c762bde8c7fd8ac5c0",
+  "cpuQuotaCores": 4,
+  "before": {
+    "node": "v24.19.0",
+    "vitest": "5.0.3",
+    "results": [
+      {
+        "name": "single-3-7",
+        "exitCode": 0,
+        "processMs": 13716.428565,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3218.9976750000005
+          }
+        ]
+      },
+      {
+        "name": "single-4-7",
+        "exitCode": 0,
+        "processMs": 15861.840225,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 5450.7569490000005
+          }
+        ]
+      },
+      {
+        "name": "single-5-7",
+        "exitCode": 0,
+        "processMs": 17690.998368,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 7046.690807999999
+          }
+        ]
+      },
+      {
+        "name": "worker-1",
+        "exitCode": 0,
+        "processMs": 32189.767580999993,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3881.3518350000013
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 6291.387414999997
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 7334.6145590000015
+          }
+        ]
+      },
+      {
+        "name": "worker-2",
+        "exitCode": 0,
+        "processMs": 32650.077356999995,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 4320.396530000002
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 6432.169275
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 7418.479277999999
+          }
+        ]
+      },
+      {
+        "name": "worker-3",
+        "exitCode": 0,
+        "processMs": 32889.096784,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3898.4719110000005
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 6294.7676729999985
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 7247.060004999999
+          }
+        ]
+      },
+      {
+        "name": "worker-4",
+        "exitCode": 0,
+        "processMs": 32258.671910000005,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3994.9967060000017
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 6471.756548999998
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 7291.321687
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "node": "v24.19.0",
+    "vitest": "5.0.3",
+    "results": [
+      {
+        "name": "single-3-7",
+        "exitCode": 0,
+        "processMs": 12769.413195,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 1940.156946000001
+          }
+        ]
+      },
+      {
+        "name": "single-4-7",
+        "exitCode": 0,
+        "processMs": 13824.201309000002,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3142.3121090000004
+          }
+        ]
+      },
+      {
+        "name": "single-5-7",
+        "exitCode": 0,
+        "processMs": 14732.876439000003,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3666.436891000001
+          }
+        ]
+      },
+      {
+        "name": "worker-1",
+        "exitCode": 0,
+        "processMs": 24648.265633999996,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 2232.821380999998
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3600.309171000001
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3839.611305999999
+          }
+        ]
+      },
+      {
+        "name": "worker-2",
+        "exitCode": 0,
+        "processMs": 24804.872752999996,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 2438.7262280000014
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3925.764927999997
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 4257.016314999997
+          }
+        ]
+      },
+      {
+        "name": "worker-3",
+        "exitCode": 0,
+        "processMs": 25303.294712999996,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 2432.464656
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3842.3414580000026
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 4177.590743000001
+          }
+        ]
+      },
+      {
+        "name": "worker-4",
+        "exitCode": 0,
+        "processMs": 25219.323483,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 2587.3394750000007
+          },
+          {
+            "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 3805.3272590000015
+          },
+          {
+            "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "passed",
+            "ms": 4062.7955599999987
+          }
+        ]
+      }
+    ]
+  },
+  "profiles": {
+    "before": {
+      "3-7": {
+        "sampledMs": 3702.232,
+        "assertionCalls": 116,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 1416.417,
+            "percent": 38.25846138221484
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 0,
+            "percent": 0
+          },
+          "structuredClone": {
+            "ms": 319.216,
+            "percent": 8.622258140494708
+          },
+          "freezeContent": {
+            "ms": 219.691,
+            "percent": 5.9340149401766284
+          },
+          "buildStrategySnapshot": {
+            "ms": 137.748,
+            "percent": 3.7206744471983386
+          },
+          "stepMatch": {
+            "ms": 246.798,
+            "percent": 6.666194879197198
+          },
+          "validateB8Resources": {
+            "ms": 637.315,
+            "percent": 17.214345292245326
+          },
+          "restoreMatch": {
+            "ms": 2406.664,
+            "percent": 65.00575868827237
+          },
+          "serializeMatch": {
+            "ms": 1522.014,
+            "percent": 41.11071375321698
+          }
+        }
+      },
+      "4-7": {
+        "sampledMs": 6202.698,
+        "assertionCalls": 133,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 2508.641,
+            "percent": 40.44435179658916
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 0,
+            "percent": 0
+          },
+          "structuredClone": {
+            "ms": 604.375,
+            "percent": 9.743743770855843
+          },
+          "freezeContent": {
+            "ms": 357.202,
+            "percent": 5.75881656659731
+          },
+          "buildStrategySnapshot": {
+            "ms": 172.859,
+            "percent": 2.7868356640932705
+          },
+          "stepMatch": {
+            "ms": 436.719,
+            "percent": 7.040790959031054
+          },
+          "validateB8Resources": {
+            "ms": 1050.818,
+            "percent": 16.94130521911594
+          },
+          "restoreMatch": {
+            "ms": 4031.799,
+            "percent": 65.00073032735109
+          },
+          "serializeMatch": {
+            "ms": 2436.584,
+            "percent": 39.28264764784615
+          }
+        }
+      },
+      "5-7": {
+        "sampledMs": 6814.94,
+        "assertionCalls": 159,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 2794.561,
+            "percent": 41.006391839106435
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 0,
+            "percent": 0
+          },
+          "structuredClone": {
+            "ms": 703.702,
+            "percent": 10.325872274737561
+          },
+          "freezeContent": {
+            "ms": 444.398,
+            "percent": 6.520937821903054
+          },
+          "buildStrategySnapshot": {
+            "ms": 180.985,
+            "percent": 2.65570936794748
+          },
+          "stepMatch": {
+            "ms": 372.642,
+            "percent": 5.46801585927389
+          },
+          "validateB8Resources": {
+            "ms": 1144.714,
+            "percent": 16.797125139766454
+          },
+          "restoreMatch": {
+            "ms": 4418.138,
+            "percent": 64.83018192383206
+          },
+          "serializeMatch": {
+            "ms": 2727.096,
+            "percent": 40.01643448071443
+          }
+        }
+      }
+    },
+    "after": {
+      "3-7": {
+        "sampledMs": 2221.137,
+        "assertionCalls": 116,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 492.11,
+            "percent": 22.15576977016726
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 8.724,
+            "percent": 0.3927718101134689
+          },
+          "structuredClone": {
+            "ms": 184.882,
+            "percent": 8.323754905708203
+          },
+          "freezeContent": {
+            "ms": 72.195,
+            "percent": 3.250362314436255
+          },
+          "buildStrategySnapshot": {
+            "ms": 3.165,
+            "percent": 0.1424945872316746
+          },
+          "stepMatch": {
+            "ms": 186.472,
+            "percent": 8.395339864222693
+          },
+          "validateB8Resources": {
+            "ms": 380.546,
+            "percent": 17.13293686972033
+          },
+          "restoreMatch": {
+            "ms": 513.624,
+            "percent": 23.124372787450753
+          },
+          "serializeMatch": {
+            "ms": 995.416,
+            "percent": 44.815605701044106
+          }
+        }
+      },
+      "4-7": {
+        "sampledMs": 3298.778,
+        "assertionCalls": 133,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 785.033,
+            "percent": 23.797691145024007
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 24.256,
+            "percent": 0.7353025878067575
+          },
+          "structuredClone": {
+            "ms": 298.266,
+            "percent": 9.041711809645875
+          },
+          "freezeContent": {
+            "ms": 86.653,
+            "percent": 2.62682120470065
+          },
+          "buildStrategySnapshot": {
+            "ms": 3.304,
+            "percent": 0.10015830104359857
+          },
+          "stepMatch": {
+            "ms": 246.547,
+            "percent": 7.47388881579785
+          },
+          "validateB8Resources": {
+            "ms": 497.757,
+            "percent": 15.089133006222305
+          },
+          "restoreMatch": {
+            "ms": 779.467,
+            "percent": 23.62896199744269
+          },
+          "serializeMatch": {
+            "ms": 1516.647,
+            "percent": 45.97602506140152
+          }
+        }
+      },
+      "5-7": {
+        "sampledMs": 3830.467,
+        "assertionCalls": 159,
+        "inclusive": {
+          "canonicalContent": {
+            "ms": 966.182,
+            "percent": 25.223608505177044
+          },
+          "canSkipSerializationFreeze": {
+            "ms": 23.832,
+            "percent": 0.622169568358114
+          },
+          "structuredClone": {
+            "ms": 349.505,
+            "percent": 9.12434436845429
+          },
+          "freezeContent": {
+            "ms": 140.97,
+            "percent": 3.6802301129340105
+          },
+          "buildStrategySnapshot": {
+            "ms": 2.161,
+            "percent": 0.056416097567215696
+          },
+          "stepMatch": {
+            "ms": 227.279,
+            "percent": 5.933454067088948
+          },
+          "validateB8Resources": {
+            "ms": 746.398,
+            "percent": 19.485822485874436
+          },
+          "restoreMatch": {
+            "ms": 927.676,
+            "percent": 24.21835248809088
+          },
+          "serializeMatch": {
+            "ms": 1846.426,
+            "percent": 48.20367855929838
+          }
+        }
+      }
+    }
+  },
+  "productionOnlySequentialCases": [
+    {
+      "title": "3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "ms": 3122.993348
+    },
+    {
+      "title": "4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "ms": 5048.969177000001
+    },
+    {
+      "title": "5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "ms": 6023.931830999998
+    }
+  ],
+  "verification": {
+    "files": 26,
+    "passed": 322,
+    "failed": 0,
+    "typecheck": "passed",
+    "suites": [
+      {
+        "project": "fast",
+        "file": "tests/g4-replay-snapshot.test.ts",
+        "passed": 4
+      },
+      {
+        "project": "fast",
+        "file": "tests/m5-content.test.ts",
+        "passed": 9
+      },
+      {
+        "project": "timing",
+        "file": "tests/m5-replay-cannon.test.ts",
+        "passed": 1
+      },
+      {
+        "project": "fast",
+        "file": "tests/m5-replay-mage.test.ts",
+        "passed": 1
+      },
+      {
+        "project": "fast",
+        "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+        "passed": 1
+      },
+      {
+        "project": "fast",
+        "file": "tests/m5-replay.test.ts",
+        "passed": 1
+      },
+      {
+        "project": "fast",
+        "file": "tests/m5-serialization.test.ts",
+        "passed": 33
+      },
+      {
+        "project": "fast",
+        "file": "tests/m6-persistence.test.ts",
+        "passed": 44
+      },
+      {
+        "project": "fast",
+        "file": "tests/m6-replay.test.ts",
+        "passed": 9
+      },
+      {
+        "project": "fast",
+        "file": "tests/m7-m6-save-compat.test.ts",
+        "passed": 8
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b10-item-save-replay.test.ts",
+        "passed": 45
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "passed": 3
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b3-restore.test.ts",
+        "passed": 13
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-audit-vectors.test.ts",
+        "passed": 14
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-catalog.test.ts",
+        "passed": 5
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-cleanup.test.ts",
+        "passed": 5
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-known-limitations.test.ts",
+        "passed": 2
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-match-wiring.test.ts",
+        "passed": 30
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-mechanisms.test.ts",
+        "passed": 21
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b7-serialization-reuse.test.ts",
+        "passed": 6
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+        "passed": 5
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-b8-restore.test.ts",
+        "passed": 7
+      },
+      {
+        "project": "fast",
+        "file": "tests/m8-content-equivalence.test.ts",
+        "passed": 4
+      },
+      {
+        "project": "fast",
+        "file": "tests/p7-restore-compilation.test.ts",
+        "passed": 4
+      },
+      {
+        "project": "fast",
+        "file": "tests/t5r-b7-integration.test.ts",
+        "passed": 1
+      },
+      {
+        "project": "fast",
+        "file": "tests/t5r-combat-replay.test.ts",
+        "passed": 46
+      }
+    ]
+  }
+}
