@@ -1690,7 +1690,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 
 ## 25. G2-3 联机通用接口（2026-10-16）
 
-规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；G2-3 当前对局会初始化机制容器，并可能增加形态、选择、单位及事件字段；线数据已变化，不承诺与 G2-3 前逐字节相同。兼容性由当前 rules/content/digest 身份及合同字段约束。具体说：`createMatch` 对每局（单人和联机）开局即写入 `seatMechanics`（G2-3 进度的六个 seat 键和 `hidden.progress`），所以新对局的私有视图、存档和回放都带这个容器；G2-3 之前的存档和回放输入因 rules/content 版本切换在恢复时按 `unsupported-version` 拒绝，不做迁移，也不会出现"没有容器的当前版本对局"。
+规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；G2-3 当前对局会初始化机制容器，并可能增加形态、选择、单位及事件字段；线数据已变化，不承诺与 G2-3 前逐字节相同。兼容性由当前 rules/content/digest 身份及合同字段约束。具体说：`createMatch` 对每局（单人和联机）开局即写入 `seatMechanics`（G2-3 进度的六个 seat 键和 `hidden.progress`），所以新对局的私有视图、存档和回放都带这个容器；G2-3 之前的数据一律拒绝，不做迁移，也不会出现"没有容器的当前版本对局"：存档（`restoreMatch`）先比 rules/content 版本，按 `unsupported-version` 拒绝；双边快照（`restorePlayerBattleSnapshot`）和由它们重新编译的回放/战斗输入（`restoreBattleInput`）只带快照/战斗格式版本，这两个版本号没变，因此按内容摘要不符以 `BattleValidationError('content-digest')` 拒绝。
 
 **私有视图（toPrivateSeatView）**
 - `seatMechanics?: {version, seat, hidden:{}, receipts}`：整个本席机制容器原样进入视图，不用逐个字段加白名单。`hidden` 永远发空对象。键名与 MatchState 相同，`toDisplayMatch` 直接透传，客户端选择器用 `readSeatMechanic(display, key)` 读。
@@ -1699,7 +1699,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 
 **指令**：不新增 ClientCommand。三种新选择都用现有 `choose`，黑市跳过是 `definitionId:'@skip'`。房间阶段门、超时（`timeoutChoice` → `forfeitPendingChoice`）、机器人（`decideBotAction`）都已覆盖新 kind，服务器不用改分派。新的失败原因（`unit-not-sellable`、`item-restricted`、`choice-not-skippable` 等）走现有失败回执。
 
-**推送事件**：`PUSHED_EVENT_TYPES` 加入 `mechanicGranted`（带收据，用于开箱结果、金币来源、军械库购买提示）和 `seatMechanicChanged`（带 key）。只推给本席。
+**推送事件**：`PUSHED_EVENT_TYPES` 加入 `mechanicGranted`（带收据，用于开箱结果、金币来源、军械库购买提示）和 `seatMechanicChanged`（带 key）。只推给本席。之后又加入 `mechanicFailed`（见本节末段）。
 
 **战斗回放线格式**（`CombatViewEvent` 新增）
 - 动画事件：`unitSpawned{unitId, definitionId, team, cell, sourceId}`、`unitRemoved{unitId, reason}`、`unitRevived{unitId, hp, sourceId}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`、`bindingChanged{unitId, bound, reason}`。
@@ -1713,4 +1713,12 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 
 `CombatInputBasis.inputs.g23`（领域 DTO，亦称 CombatInputBasis.g23）和 `PlayerBattleSnapshot.g23` 重建自权威 `seatMechanics`，包含 `hidden.progress` 中的 seed/rngState/rngDraws/economyReceipts。这些仅用于冻结输入、服务器计算和可信存档/回放校验，**禁止投影到任何私有、公开、观战或战斗视图**；不能因为字段名是 g23 就当成可公开数据。
 
-G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。服务器如需推送提示须将此事件加入本席白名单；本次不修改服务器目录。
+G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。
+
+**mechanicFailed 推送（2026-10-17）**：服务器已把 `mechanicFailed` 加入 `PUSHED_EVENT_TYPES`（`src/server/room/projection.ts`）。服务器自发的转移（截止自动上阵、结算、回合进入等）里本席产生的该事件随本席 `state` 推送的 `events` 发出；玩家自己的命令里产生的仍照旧随该命令的 `applied` 回执 `events` 发出。线上字段只有 `type:'mechanicFailed'`、`hook`（`'rewards'|'choice'|'academy'`）、`reason`（`MatchFailure` 枚举字符串），加规则统一盖的 `domain:'match'`、`eventSeq`；不带收据、奖励内容、RNG、种子或任何别席数据，`projection-wire` 禁发名单里的键一个都不含。它只进本席私有推送，公共视图 `toPlayerView` 不含此事件，别的席位收不到。界面可据此给本席提示"这次发放失败、奖励保留待重试"。用例：`tests/server/mechanic-failed-push.test.ts`。
+
+## G2-4B / 神器锻造器（领域交接）
+
+本批基于 #147 d3112d6，恢复征服者10/14，11/13等待#149。领域规则/content版本v5；choice数据仍使用既有forge结构和choose/timeout命令，不新增服务器消息。接口、失败语义、收据ID和恢复函数完整约定见 [MATCH_CONTRACT 的 G2-4B 段](MATCH_CONTRACT.md#g2-4b-神器锻造器领域合同2026-10-17)。神器四项来自21件已实现池，不得在服务器再次抽取或替换；超时取payload.timeoutOption。结算g23Facts必须继续由领域提供并原样转发。
+
+本批不修改src/server/与界面，不能将领域交付称为联机端到端上线。服务器恢复应验证外层房间/席位结构；单人restoreMatch仍拒绝multiplayer字段，G23恢复辅助函数不替代整房恢复流程。

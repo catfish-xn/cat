@@ -72,7 +72,7 @@ const facts=(round:number,patch:Partial<G23BattleFacts>={}):G23BattleFacts=>({ba
 it('settlement commits every crossed source chest once, continues past1500 and restores without drawing',()=>{
  let p=createG23Progress(42),gold=0;
  for(let round=1;round<=10;round++){const r=advanceG23Economy(p,facts(round));p=r.progress;gold+=r.gold;expect(advanceG23Economy(p,facts(round))).toEqual({progress:p,gold:0});validateG23Progress(p,42,round);}
- expect(p.conquest.stacks).toBe(1800);expect(p.conquest.chestsOpened).toBe(15);expect(p.rewards.filter(r=>r.source==='conqueror')).toHaveLength(15);expect(p.conquest.radiantConversion).toBe(true);expect(gold).toBe(386+10*3);
+ expect(p.conquest.stacks).toBe(1800);expect(p.conquest.chestsOpened).toBe(15);expect(p.rewards.filter(r=>r.source==='conqueror')).toHaveLength(15);expect(p.conquest.radiantConversion).toBe(true);expect(gold).toBe(337+10*3); // G2-4b: tier10 removes14 gold; tier14 restores50 gold
  const forged={...p,conquest:{...p.conquest,stacks:1801}};expect(()=>validateG23Progress(forged,42,10)).toThrow();
 });
 it('source black-market offers sample once, skip once and cash out their exact weighted option',()=>{
@@ -89,16 +89,16 @@ it('all enabled source reward descriptors produce concrete finite atoms; all rew
 });
 
 it('only deferred Conqueror tiers get the whole-tier gold floor, preserving all other source rewards',()=>{
- const affected=[4,8,9,10,11,12,13,14,15];
- const cash=[2,0,0,4,0,0,0,9,12,14,15,20,50,60,200];
+ const affected=[11,12,13,15];
+ const cash=[2,0,0,0,0,0,0,0,0,0,15,20,50,50,200];
  expect(G23_CONQUEROR_CHESTS.map(c=>g23ConquerorReward(c).Gold??0)).toEqual(cash);
  for(const c of G23_CONQUEROR_CHESTS){
   const reward=g23ConquerorReward(c);
   if(!affected.includes(c.tier))expect(reward).toEqual(c.reward);
-  expect(JSON.stringify(reward)).not.toMatch(/ArmoryKey|ForceOfNature|ThiefsGloves|ChampionDuplicator|ZekesHerald|LocketOfTheIronSolari|TFT_Item_Chalice/);
+  expect(JSON.stringify(reward)).not.toMatch(/ArmoryKeySupport|ForceOfNature|ZekesHerald|LocketOfTheIronSolari|TFT_Item_Chalice/);
  }
- expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[13])).toEqual({Gold:60,ItemByKey:['RADIANTITEMS_SET5'],Item:['TFT_Consumable_ItemRemover']});
- expect(g23ConquerorReward({...G23_CONQUEROR_CHESTS[13],reward:{Gold:300,MeepTypeUnit:['TFT_ArmoryKeyOrnn']}})).toEqual({Gold:300});
+ expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[13])).toEqual({Gold:50,ItemByKey:['RADIANTITEMS_SET5'],MeepTypeUnit:['TFT_ArmoryKeyOrnn'],Item:['TFT_Consumable_ItemRemover']});
+ expect(g23ConquerorReward({...G23_CONQUEROR_CHESTS[13],reward:{Gold:300,MeepTypeUnit:['TFT_ArmoryKeySupport']}})).toEqual({Gold:300});
  expect(g23ConquerorReward({...G23_CONQUEROR_CHESTS[0],estimatedGold:200})).toEqual({Gold:2});
  expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[12])).toEqual({Gold:50,Item:['TFT_Consumable_ItemRemover']});
  expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[14])).toEqual({Gold:200,PlayerBuff:['TFT9_RadiantConversion_PlayerBuff']});

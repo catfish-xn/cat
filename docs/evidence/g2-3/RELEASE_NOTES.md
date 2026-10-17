@@ -6,7 +6,7 @@ rules `s13-g2-3-v3`、content `s13-14.24b-g2-3-v3`统一发布；旧存档及旧
 
 学院29组项目赞助池、未恢复的脚本/碰撞/召唤物属性均明确标约定值或有限近似，详见[实现对账](RECONCILIATION.md)。神器、辅助装、战术家之冠、窃贼手套新奖励、锻造器、复制器延后下一批。
 
-已接入#134（19aa9f1）的机制容器、弹出选择、免费超时项、召唤事件和radiant kind。目录选择g2-3-item-registry超集，统一用于发奖/选择/恢复/摘要。CONTENT digest为fnv1a32-utf16:427b83b0；本次收尾因规则修正升至v2。G2-4b（辅助装13件，见[../g2-4/SUPPORT_ITEMS.md](../g2-4/SUPPORT_ITEMS.md)）升至v3，digest见g2-3-content-baseline.json。
+已接入#134（19aa9f1）的机制容器、弹出选择、免费超时项、召唤事件和radiant kind。目录选择g2-3-item-registry超集，统一用于发奖/选择/恢复/摘要。CONTENT digest为fnv1a32-utf16:427b83b0；本次收尾因规则修正升至v2。G2-4a（征服者第4/8/9档恢复原奖励、锻造器4选1）再升至v3，digest见g2-3-content-baseline.json。
 
 服务器buildReceipt仍需Claude转发proposal.g23Facts；本PR不改server/rendering/server-entry，因此不是联机机制上线声明。夹具字节证据见release-audit.json、input-fixture-audit.json、live-reveal-audit.json，开发验证见development-validation.json；最终head全套与timing结果在PR记录。
 
@@ -19,3 +19,9 @@ rules `s13-g2-3-v3`、content `s13-14.24b-g2-3-v3`统一发布；旧存档及旧
 U6首跑失败（[run38938055193](https://github.com/catfish-xn/cat/actions/runs/38938055193)，job117098416536）出在先读领域状态、再异步读DOM：两次读取之间战斗可结算，revealed断言失效。验证改为同一浏览器任务读取两者，仍强制观测到有效的战中揭示；未发现随机流不确定性。
 
 v1的存档和回放输入按身份拒绝；v2夹具通过原公共指令生成器重录，历史夹具保留。性能门槛、单测超时和CI实际作业时限均未放宽；预算文档同步已有45分钟input作业时限。收尾逐项测试映射和开发测量见[FOLLOWUP_VALIDATION.md](FOLLOWUP_VALIDATION.md)，最终head的测试和性能结果见PR。
+
+## G2-4B 神器锻造器增量
+
+基于神器#147 d3112d6：21件已实现神器开放四选一，第10档移除14过渡金，第14档恢复50金+随机光明装+神器锻造器+拆卸器。用户确认11/13等#149，仍15金/拆卸器+50金。policy升g2-4b-artifact-forge-v5，rules/content升v5，digest由manifest重算。收据与超时走通用forge；恢复加强来源、选择类型、免费和超时默认校验，直接领取不能绕过多选。原脚本重录夹具，具体验证与JS gzip见[交付记录](../g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
+预演分支合并说明：#149 的13件辅助装与神器锻造器均保留；此处发布记录和夹具仍为历史证据，不代表预演内容已完成发布验收。

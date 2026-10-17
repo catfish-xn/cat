@@ -10,7 +10,7 @@ import { g23FormStats } from './g2-3-forms';
 import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-programs';
 import { compileAugmentEffect } from './augment-effects';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
-import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
+import { validateItemProgram, type BoundItemProgram, type ItemProgram } from './m8/item-program';
 import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
@@ -28,6 +28,12 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { compileSupportGrants, type G24HeldItem } from './g2-4-support';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
+/** G2-4b stage-scaled artifacts bind one concrete program per snapshot; combat never sees the table. */
+function stageProgram(program: ItemProgram, round: number): ItemProgram {
+  const { byStage, ...rest } = structuredClone(program); if (!byStage) return rest;
+  const flat = byStage.flat[Math.min(supportStage(round), byStage.flat.length) - 1];
+  return { ...rest, triggers: (rest.triggers ?? []).map(t => ({ ...t, effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, flat } } : e) })) };
+}
 export interface StrategyCatalog {
   readonly traits: Readonly<Record<string, TraitDefinition>>;
   readonly items: Readonly<Record<string, ItemDefinition>>;
@@ -72,8 +78,11 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:structuredClone(definition.combatProgram)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:stageProgram(definition.combatProgram,state.round)});
     };
+    // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
+    const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
+    const itemEffects = (definition: ItemDefinition): readonly Effect[] => isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects;
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);
@@ -85,12 +94,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
         const definition = lookup(catalog.items, conversions.get(item.id) ?? item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, definition.effects));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
         const definition = lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, definition.effects, child.parentItemInstanceId));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
@@ -114,7 +123,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     } else {
       for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
         const definition = lookup(catalog.items, conversions.get(`enemy:${state.round}:${unit.id}:${item.slot}`) ?? item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, itemEffects(definition)));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
     }
