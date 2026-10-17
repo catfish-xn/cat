@@ -123,5 +123,36 @@
     ],
     "ledger": "project-conventions.json",
     "note": "Source wording establishes conditional additional amp and strict threshold; undecoded/unspecified behavior follows labelled provisional project choices."
-  }
+  },
+  "g24PendingConventions": [
+    {
+      "id": "G24-FISHBONES-TARGET-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Each actual basic attack samples one living targetable enemy inside doubled effective range. Pools sort by code-point ID. No attack means no draw. Multiple Fishbones use one holder-level doubling and one draw per attack.",
+      "sourceLimit": "Raw says doubles attack range and each attack targets a random enemy; target-pool radius, multiple-copy composition and ordering are not specified. Wiki fetch denied."
+    },
+    {
+      "id": "G24-KERNEL-PENDING-01",
+      "status": "not-integrated-not-active",
+      "label": "约定值候选，非官方证据",
+      "behavior": "Mana cost rounds upward; deferred damage apportions each tick by cumulative integer division and discards nonlethal excess; cell ties use row then column.",
+      "sourceLimit": "Kernel-only proposals; damage mitigation/shield ordering and final integration remain unresolved."
+    },
+    {
+      "id": "G24-CUTLASS-CELL-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "behavior": "Mirror both board axes; at occupied mirror/home choose nearest free hex, ties row then column, holders processed by ID. Multiple cutlasses share one teleport/return. Dead holders do not return.",
+      "sourceLimit": "Source duration is 8 seconds; collision and multiple-copy rules absent."
+    },
+    {
+      "id": "G24-SHROUD-BEAM-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "behavior": "Freeze beam on initial combined-board columns: target within one column of holder (three-column beam). Overlaps take maximum 30%; integer maximum rounds upward; clear after first cast. Each equipped on-board Shroud adds 60 HP to every ally including holder.",
+      "sourceLimit": "Source confirms 30% mana reave until next cast and 60 team HP; beam geometry and integer rounding are project conventions."
+    }
+  ]
 }

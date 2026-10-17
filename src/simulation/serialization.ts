@@ -1,4 +1,6 @@
 import {getUnitForm} from './seat-mechanics/forms';
+import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
+import {shroudBpsAtCell} from './combat-g2-4b';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
@@ -239,7 +241,18 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
     const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
+      team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
+    }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
+    if (fishbones.length) {
+      requireValue(combat.itemRandomStreams, 'missing item random streams');
+      validateItemRandomStreams(combat.itemRandomStreams!, basis.battleSeed, {
+        fishbones: fishbones.reduce((sum, u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
+        collector: 0, 'gamblers-blade': 0,
+      });
+    } else requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
     requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
@@ -258,9 +271,15 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
+      if (unit.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass'))
+        requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'cutlass starting cell');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
-      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
+      const reaveBps=origin.location.kind==='board'?shroudBpsAtCell({team:origin.team,cell:origin.location.cell},shroudOrigins):0;
+      const reaved=reaveBps>0&&stats.maxMana>0;
+      requireValue(unit.unreavedMaxMana===(reaved?stats.maxMana:undefined),'shroud base mana');
+      const expectedMaxMana=reaved&&(unit.runtime?.castCount??0)===0?manaReavedMaximum(stats.maxMana,reaveBps):stats.maxMana;
+      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: expectedMaxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
       requireValue(same(unit.ability, resolved.ability), 'resolved ability');
       requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);

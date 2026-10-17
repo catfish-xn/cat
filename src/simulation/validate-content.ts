@@ -43,6 +43,9 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  g24Fishbones:['rangeMultiplier'],
+  g24SpectralCutlass:['durationTicks'],
+  g24Shroud:['costIncreaseBps','allyHealth'],
   g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],

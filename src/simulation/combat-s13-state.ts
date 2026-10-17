@@ -93,7 +93,8 @@ export function ad(unit: S13Unit): number {
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0);
 }
 export function range(unit: S13Unit): number {
-  return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  const resolved = resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return resolved * (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones') ? 2 : 1);
 }
 /** Historical floats are normalized to integer coefficient basis points before arithmetic. */
 export function amount(unit: S13Unit, tick: number, coefficients: { flat?: number; ad?: number; ap?: number; hp?: number }): number {

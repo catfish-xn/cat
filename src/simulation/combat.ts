@@ -1,4 +1,6 @@
 import {getUnitForm} from './seat-mechanics/forms';
+import {createItemRandomStreams} from './g2-4b-item-kernel';
+import {initializeShroud} from './combat-g2-4b';
 import {spawnCombatUnit} from './seat-mechanics/combat-events';
 import {stampCombatStep} from './combat-effects';
 import { projectG23Summons,isG23Summon } from './g2-3-summons';
@@ -33,7 +35,7 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
   preparationState=projectG23Summons(preparationState);
-  const units: CombatUnit[] = preparationState.units.flatMap(unit => {
+  let units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
@@ -44,6 +46,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       ...(getUnitForm(unit,preparationState.board)?{form:getUnitForm(unit,preparationState.board)!}:{}),cell: { ...unit.location.cell },
+      ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist,
@@ -60,6 +63,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
+  if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud')))units=initializeShroud(units);
   units.forEach(unit => freezeCombatDeclarations(unit, false, true));
   const result = eliminationResult(units);
   let state:CombatState={
@@ -69,6 +73,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     } },
     ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
+    ...(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };

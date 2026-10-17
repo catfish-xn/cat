@@ -50,9 +50,18 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
+  const shrouds=equipment.flatMap(item=>{
+    const definition=catalog.items[item.definitionId];
+    const effect=definition?.effects.find(e=>e.kind==='mechanic'&&e.mechanic==='g24Shroud');
+    const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
+    return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
+  });
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
+    for(const {item,owner,effect} of shrouds) if(owner.team===unit.team)
+      sources.push(...makeSourcedEffects(unit.id,'item',item.definitionId,item.id+':team-health',[
+        {kind:'statFlat',stat:'maxHp',amount:effect.values.allyHealth}]));
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);

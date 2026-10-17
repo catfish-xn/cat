@@ -34,5 +34,22 @@
   ],
   "semanticConventionLedger": "provenance/project-conventions.json",
   "confirmationList": "docs/M8_PROJECT_CONVENTIONS_REVIEW.md",
-  "equipmentApprovalPolicy": "Minor explicitly labelled conventions may be provisionally adopted without blocking; concrete TG tier/pool policy was separately approved. Official evidence limitations remain labelled."
+  "equipmentApprovalPolicy": "Minor explicitly labelled conventions may be provisionally adopted without blocking; concrete TG tier/pool policy was separately approved. Official evidence limitations remain labelled.",
+  "g24MechanismItems": {
+    "referencePatch": "14.24b",
+    "archivePatch": "14.24",
+    "bPatchBoundary": "User-confirmed: no artifact/support changes in 14.24b",
+    "normalized": "../normalized/g2-4b-mechanism-items.json",
+    "extractor": "scripts/extract-g2-4b-mechanism-items.py",
+    "numbers": "map22 TftItemData constants, cross-checked with en_us item effects",
+    "identityAndDescription": "en_us Set13 membership and item desc",
+    "localization": "zh_cn entries selected by map22 mDisplayNameTra and mDescriptionNameTra",
+    "runtimeStatus": "WIP: Fishbones, Spectral Cutlass and Shroud integrated; eight pending",
+    "unresolved": [
+      "Voidspawn stage HP/AD",
+      "copy inheritance and collision rules",
+      "Shroud beam width",
+      "hidden fields without confirmed semantic names"
+    ]
+  }
 }

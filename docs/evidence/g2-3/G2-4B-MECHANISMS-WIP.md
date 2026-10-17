@@ -20,14 +20,21 @@ Important distinctions:
   another legacy string says 兹若特的邀请 and must not be selected by substring.
 
 Unresolved source semantics, not adopted conventions: Voidspawn stage HP/AD,
-copy equipment/stat inheritance, exact beam width and collision fallback rules.
+copy equipment/stat inheritance. Beam width, collision fallback and Fishbones
+target-pool/stacking rules are explicitly provisional conventions in overrides.
 No incomplete item is registered merely because its numeric extraction exists.
-This source-only checkpoint does not alter runtime rules/content or digest.
+Fishbones, Spectral Cutlass and Shroud are now registered. The runtime policy
+revision/digest have changed; old fixture migration is still pending (WIP).
 
 The two planning attachments were read through the supported Library read API.
 Local signed-URL materialization was denied by the network proxy (HTTP 403).
 Their older scope proposals do not supersede the latest eleven-item dispatch.
 
-Validation: targeted `tests/g2-4b-source-pins.test.ts`; no full suite yet.
-Implementation, replay/save integration, final digest/fixture work, CI and JS
-measurement remain pending. This branch must remain a draft until complete.
+Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
+roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
+The gold/deferred-damage kernels are not connected to settlement/combat yet.
+Eight items, final fixture migration, final full suite, CI and JS measurement
+remain pending. This branch must remain a draft until complete.
+
+Draft PR creation attempted with gh (normal and approved escalation); both
+returned GitHub GraphQL Forbidden. Git push succeeded.

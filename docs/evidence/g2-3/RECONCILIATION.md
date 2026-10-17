@@ -159,3 +159,23 @@
 - 服务器交接：src/server/room/room.ts的buildReceipt须转发proposal.g23Facts；接口/命令exports和界面消费由Claude适配。src/server/、src/rendering/、src/server-entry/本批未改，不能将领域测试通过描述成联机上线。
 
 详见[PR134_INTEGRATION](PR134_INTEGRATION.md)和[发布说明](RELEASE_NOTES.md)。
+
+## G2-4b new mechanisms — WIP
+
+Fishbones, Spectral Cutlass and Shroud are connected to registry/combat; eight
+items remain source-pinned and unimplemented. No forge or Conqueror tier changes.
+Source extraction and hashes: `normalized/g2-4b-mechanism-items.json`, reproduced
+by `scripts/extract-g2-4b-mechanism-items.py`. The user confirmed no 14.24b change
+for these artifacts/supports; use 14.24 map22 numbers and map-selected zh_cn names.
+
+**G24-FISHBONES-TARGET-01 — 约定值，非官方证据，待用户确认：** 每次实际普攻从翻倍后有效射程内的存活、可选中敌人中按显式独立 RNG 抽一个；候选按 ID 排序。未攻击不抽样。多件鱼骨头暂按持有者只翻倍一次、每次攻击只抽一次处理。raw 未明确随机池半径和多件叠加；不能将此约定称为原版证据。
+
+**G24-KERNEL-PENDING-01 — 尚未接入、未生效的约定候选：** 法力劫掠整数向上取整；延伤按每 tick 累计整数差分分摊、非致死溢出丢弃；格子等距按行再列。延伤与护盾/转移的结算顺序仍待补证。虚空生物阶段 HP/AD 未查实，不以 null HP / 0 AD 充作战斗属性。
+
+Random state is disjoint from critical-hit RNG and validated on restore against
+the frozen battle seed and actual attack counter; dropping or forging it rejects
+restoration. Full digest fixture migration and final full-suite run remain pending.
+
+**G24-CUTLASS-CELL-01 — 约定值，待确认：** 镜像翻转两轴；被占格改选最近空格，等距按行/列，多个携带者按ID依次预留；多件同名只传送/返回一次。死亡不返回。
+
+**G24-SHROUD-BEAM-01 — 约定值，待确认：** 在两席棋盘合并后的初始位置按列差≤1认定三列光束；多个光束取最强，不叠乘；最大法力向上取整，首次施法后恢复。原档确认30%和全队60HP，未说明此六角光束几何。

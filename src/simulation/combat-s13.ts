@@ -1,4 +1,6 @@
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
+import {chooseFishbonesTarget} from './g2-4b-item-kernel';
+import {advanceSpectralCutlass} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
@@ -133,6 +135,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
   }).sort(compareIds);
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
+  let itemRandomStreams = state.itemRandomStreams;
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
@@ -142,6 +145,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     ctx.tick = 0;
     for (const unit of units) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
     for (const unit of units) emitMechanismSignal(ctx, { event: 'combat-start', tick: 0, actionSeq: 0, actorId: unit.id, targetId: unit.id, cast: null });
+    advanceSpectralCutlass(ctx);
     ctx.tick = tick;
     for (const unit of units) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: tick };
   }
@@ -190,6 +194,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
+  advanceSpectralCutlass(ctx);
   advanceAugmentCombat(ctx);
   advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
   advanceG2Passives(ctx, () => actionSeq++);
@@ -256,6 +261,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const seq = actionSeq++, beforeCount = events.length;
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
+      if(unit.unreavedMaxMana!==undefined)unit.maxMana=unit.unreavedMaxMana;
       const oldInterval = interval(unit, tick);
       const targets = planS13Cast(ctx, unit, target, seq);
       const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
@@ -270,10 +276,23 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       emitMechanismSignal(ctx, { event: 'cast-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: receipt });
     } else if (inRange && unit.cooldownTicks === 0) {
       const seq = actionSeq++, neutral = champion(unit) === 'neutral';
-      unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: target.id });
-      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, target, seq); recordG23Attack(ctx,unit,target,seq); unit.cooldownTicks = oldInterval;
+      let attackTarget = target;
+      if (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones')) {
+        if (!itemRandomStreams) throw new RangeError('Missing item random streams');
+        const selected = chooseFishbonesTarget(itemRandomStreams, enemies(unit, units)
+          .filter(enemy=>hexDistance(unit.cell,enemy.cell)<=range(unit)).map(enemy=>enemy.id));
+        itemRandomStreams = selected.streams;
+        attackTarget = units.find(enemy=>enemy.id===selected.targetId)!;
+        if (unit.targetId !== attackTarget.id) {
+          events.push({type:'targetChanged',tick,unitId:unit.id,before:unit.targetId,after:attackTarget.id});
+          unit.targetId = attackTarget.id;
+          emitMechanismSignal(ctx, {event:'target-changed',tick,actionSeq:seq,actorId:unit.id,targetId:attackTarget.id,cast:null});
+        }
+      }
+      unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
+      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); unit.cooldownTicks = oldInterval;
       hooks(unit, 'onAttack', seq);
-      emitMechanismSignal(ctx, { event: 'attack-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: null });
+      emitMechanismSignal(ctx, { event: 'attack-completed', tick, actionSeq: seq, actorId: unit.id, targetId: attackTarget.id, cast: null });
       if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
     }
     rollPlannedPackets();
@@ -481,5 +500,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events[i] = { ...event, receipt: final };
     }
   }
-  return stampCombatStep({ ...state, ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state, ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

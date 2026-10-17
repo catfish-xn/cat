@@ -510,3 +510,17 @@
 3. 异变候选57项不能对外声称完整正式服池；Hivemind等PBE线索先排除，Cosmic禁用，Miniaturize/Essence按社区停用证据保守排除。
 
 机器可读对应文件：[external-sources.json](external-sources.json)。JSON中的`value:null`表示目标问题未查到；`proposed_value`为独立未批准约定，不是已证实数值。
+
+## G2-4b mechanism follow-up (2026-10-17, incomplete research)
+
+- Pinned local 14.24 `en_us.json.gz`, `map22.bin.json.gz`, and
+  `zh_cn.tft.stringtable.json.gz`: all eleven identities and values cross-checked.
+- Additional character archive attempted:
+  `https://raw.communitydragon.org/14.24/game/characters/tft_voidspawn.cdtb.bin.json`;
+  proxy returned HTTP 403; no contents obtained or claimed as evidence.
+- Wiki pages attempted for TFT Zz'Rot Portal, Suspicious Trench Coat and Fishbones:
+  `https://wiki.leagueoflegends.com/en-us/TFT:Zz%27Rot_Portal`,
+  `https://wiki.leagueoflegends.com/en-us/TFT:Suspicious_Trench_Coat`,
+  `https://wiki.leagueoflegends.com/en-us/TFT:Fishbones`.
+  All rejected as restricted URLs. Search results provided no usable historical
+  evidence. Stage HP/AD and fine-grained behavior remain unconfirmed.

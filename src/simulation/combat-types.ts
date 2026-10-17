@@ -34,6 +34,7 @@ export interface G23State {
   highRoller: {actionSeq:number;spell:number;mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
 }
 export interface CombatUnit {
+  readonly unreavedMaxMana?: number;
   /** G2-3 form swapper's form, frozen from its preparation row at combat start (seat-mechanics/forms.ts). */
   readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly g23?: G23State;
@@ -67,6 +68,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
   readonly removedUnitIds?:readonly string[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
