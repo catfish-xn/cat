@@ -1,0 +1,1094 @@
+{
+  "baseHead": "12d71a11b26b4e972778ca53732cb322a14af8ba",
+  "node": "v22.17.0",
+  "method": "Windows, same machine; vitest --project fast --maxWorkers=1; same five files, one before and one after sample; timers unchanged; not CI full-load simulation",
+  "files": 35,
+  "tests": 600,
+  "passed": 600,
+  "skipped": 0,
+  "timing": [
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "beforeMs": 18392.375899999995,
+      "afterMs": 21400.65510000001,
+      "deltaPercent": 16.35612069020411,
+      "cases": [
+        {
+          "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 0 units per side",
+          "beforeMs": 6.53519999999844,
+          "afterMs": 6.48779999999897,
+          "deltaMs": -0.04739999999947031
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 1 units per side",
+          "beforeMs": 262.03480000000127,
+          "afterMs": 210.52149999999892,
+          "deltaMs": -51.513300000002346
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+          "beforeMs": 1464.3401000000013,
+          "afterMs": 1650.0666999999994,
+          "deltaMs": 185.72659999999814
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 1",
+          "beforeMs": 1093.662499999995,
+          "afterMs": 1195.2628000000004,
+          "deltaMs": 101.60030000000552
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 7",
+          "beforeMs": 1072.211900000002,
+          "afterMs": 1227.928200000002,
+          "deltaMs": 155.71630000000005
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 100",
+          "beforeMs": 1020.683100000002,
+          "afterMs": 1215.6160999999993,
+          "deltaMs": 194.93299999999726
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 1201",
+          "beforeMs": 1010.483699999997,
+          "afterMs": 1192.8485999999975,
+          "deltaMs": 182.3649000000005
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+          "beforeMs": 1862.476499999997,
+          "afterMs": 1955.5731000000014,
+          "deltaMs": 93.0966000000044
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+          "beforeMs": 2091.1860000000015,
+          "afterMs": 2027.810000000005,
+          "deltaMs": -63.375999999996566
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+          "beforeMs": 1725.1996,
+          "afterMs": 2138.286899999999,
+          "deltaMs": 413.08729999999923
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+          "beforeMs": 1813.9066999999995,
+          "afterMs": 2437.0259000000005,
+          "deltaMs": 623.119200000001
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks invalid budgets never consume a slice, including after completion; old total cap still faults",
+          "beforeMs": 1340.726999999999,
+          "afterMs": 1575.9003000000012,
+          "deltaMs": 235.1733000000022
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks tick0 terminal completes once without stepping",
+          "beforeMs": 1.518499999998312,
+          "afterMs": 1.8003000000026077,
+          "deltaMs": 0.2818000000042957
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+          "beforeMs": 1784.3093000000008,
+          "afterMs": 2228.6324000000022,
+          "deltaMs": 444.32310000000143
+        },
+        {
+          "name": "SR-B8-02 resumable pure tasks defers early and trailing animation divergence until the terminal slice",
+          "beforeMs": 1843.1010000000024,
+          "afterMs": 2336.894500000002,
+          "deltaMs": 493.79349999999977
+        }
+      ]
+    },
+    {
+      "file": "m6-persistence.test.ts",
+      "beforeMs": 1452.9326999999985,
+      "afterMs": 1553.7853000000177,
+      "deltaPercent": 6.94131256045234,
+      "cases": [
+        {
+          "name": "M6 seed and file boundaries accepts full uint32 input 0",
+          "beforeMs": 2.302599999999984,
+          "afterMs": 0.2649999999994179,
+          "deltaMs": -2.037600000000566
+        },
+        {
+          "name": "M6 seed and file boundaries accepts full uint32 input 42",
+          "beforeMs": 0.292699999999968,
+          "afterMs": 0.09430000001157168,
+          "deltaMs": -0.1983999999883963
+        },
+        {
+          "name": "M6 seed and file boundaries accepts full uint32 input 4294967295",
+          "beforeMs": 0.18340000000034706,
+          "afterMs": 0.07519999999203719,
+          "deltaMs": -0.10820000000830987
+        },
+        {
+          "name": "M6 seed and file boundaries accepts full uint32 input  00042 ",
+          "beforeMs": 0.2962999999999738,
+          "afterMs": 0.06420000000798609,
+          "deltaMs": -0.23209999999198772
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed ",
+          "beforeMs": 0.33090000000038344,
+          "afterMs": 0.08359999999811407,
+          "deltaMs": -0.24730000000226937
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed  ",
+          "beforeMs": 0.17610000000013315,
+          "afterMs": 0.05670000000100117,
+          "deltaMs": -0.11939999999913198
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed -1",
+          "beforeMs": 0.1740999999997257,
+          "afterMs": 0.051500000001396984,
+          "deltaMs": -0.12259999999832871
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed +1",
+          "beforeMs": 0.16580000000021755,
+          "afterMs": 0.05689999999594875,
+          "deltaMs": -0.1089000000042688
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed 1.0",
+          "beforeMs": 0.44250000000010914,
+          "afterMs": 0.05019999999785796,
+          "deltaMs": -0.3923000000022512
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed 1e2",
+          "beforeMs": 0.1653999999998632,
+          "afterMs": 0.04910000000381842,
+          "deltaMs": -0.11629999999604479
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed NaN",
+          "beforeMs": 0.09120000000029904,
+          "afterMs": 0.04889999999431893,
+          "deltaMs": -0.04230000000598011
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed 42abc",
+          "beforeMs": 0.0749999999998181,
+          "afterMs": 0.04910000000381842,
+          "deltaMs": -0.02589999999599968
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed 4294967296",
+          "beforeMs": 0.11549999999988358,
+          "afterMs": 0.052600000009988435,
+          "deltaMs": -0.06289999998989515
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed Infinity",
+          "beforeMs": 0.06880000000001019,
+          "afterMs": 0.05620000000635628,
+          "deltaMs": -0.01259999999365391
+        },
+        {
+          "name": "M6 seed and file boundaries rejects partial/invalid seed 1 2",
+          "beforeMs": 0.058299999999690044,
+          "afterMs": 0.051299999991897494,
+          "deltaMs": -0.007000000007792551
+        },
+        {
+          "name": "M6 seed and file boundaries uses one domain-external random word and a separate identity",
+          "beforeMs": 3.477599999999711,
+          "afterMs": 1.9928000000072643,
+          "deltaMs": -1.4847999999924468
+        },
+        {
+          "name": "M6 seed and file boundaries round-trips UTF8 and invokes isolated history validation after current validation",
+          "beforeMs": 27.39350000000013,
+          "afterMs": 66.18649999999616,
+          "deltaMs": 38.79299999999603
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"extra\":true}",
+          "beforeMs": 6.880200000000059,
+          "afterMs": 3.296199999997043,
+          "deltaMs": -3.584000000003016
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"kind\":\"wrong\"}",
+          "beforeMs": 4.755700000000161,
+          "afterMs": 1.978000000002794,
+          "deltaMs": -2.777699999997367
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":1}",
+          "beforeMs": 2.4802999999997155,
+          "afterMs": 1.9011000000027707,
+          "deltaMs": -0.5791999999969448
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":1}",
+          "beforeMs": 3.141900000000078,
+          "afterMs": 3.7066999999951804,
+          "deltaMs": 0.5647999999951026
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":2}",
+          "beforeMs": 2.2363000000000284,
+          "afterMs": 2.5020999999978812,
+          "deltaMs": 0.26579999999785286
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":2}",
+          "beforeMs": 3.1570999999999003,
+          "afterMs": 2.071700000000419,
+          "deltaMs": -1.0853999999994812
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":4}",
+          "beforeMs": 2.806999999999789,
+          "afterMs": 2.0367000000114786,
+          "deltaMs": -0.7702999999883104
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":4}",
+          "beforeMs": 2.557800000000043,
+          "afterMs": 1.8755999999993946,
+          "deltaMs": -0.6822000000006483
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"runId\":\"\"}",
+          "beforeMs": 3.40729999999985,
+          "afterMs": 3.3696000000054482,
+          "deltaMs": -0.03769999999440188
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"createdAt\":\"bad\"}",
+          "beforeMs": 2.4474999999997635,
+          "afterMs": 2.4847999999910826,
+          "deltaMs": 0.037299999991319055
+        },
+        {
+          "name": "M6 seed and file boundaries rejects outer corruption before history {\"currentBattle\":[]}",
+          "beforeMs": 2.3901999999998225,
+          "afterMs": 2.58179999999993,
+          "deltaMs": 0.19160000000010768
+        },
+        {
+          "name": "M6 seed and file boundaries checks file byte size before reading and bad JSON before history",
+          "beforeMs": 1.504399999999805,
+          "afterMs": 0.741200000004028,
+          "deltaMs": -0.763199999995777
+        },
+        {
+          "name": "M6 seed and file boundaries rejects old domain digest and propagates historical validation failure without touching source",
+          "beforeMs": 4.854100000000017,
+          "afterMs": 3.428799999994226,
+          "deltaMs": -1.425300000005791
+        },
+        {
+          "name": "M6 seed and file boundaries rejects a bare M5 state and record/event overflow before history",
+          "beforeMs": 6.7824999999998,
+          "afterMs": 5.9517999999952735,
+          "deltaMs": -0.8307000000045264
+        },
+        {
+          "name": "M6 serial snapshot coordinator fixes the queued snapshot and uses only prior committed revision",
+          "beforeMs": 8.23129999999992,
+          "afterMs": 7.844200000006822,
+          "deltaMs": -0.3870999999930973
+        },
+        {
+          "name": "M6 serial snapshot coordinator reports the actual successful in-flight phase before a later queued terminal snapshot",
+          "beforeMs": 5.325600000000122,
+          "afterMs": 4.221400000009453,
+          "deltaMs": -1.1041999999906693
+        },
+        {
+          "name": "M6 serial snapshot coordinator does not report a terminal commit until its failed transaction is successfully retried",
+          "beforeMs": 2.505500000000211,
+          "afterMs": 4.292099999991478,
+          "deltaMs": 1.7865999999912674
+        },
+        {
+          "name": "M6 serial snapshot coordinator stops forever on conflict and preserves token/local capture",
+          "beforeMs": 4.053799999999683,
+          "afterMs": 5.112999999997555,
+          "deltaMs": 1.0591999999978725
+        },
+        {
+          "name": "M6 serial snapshot coordinator retains failed snapshot for retry after quota failure",
+          "beforeMs": 3.866399999999885,
+          "afterMs": 2.671699999991688,
+          "deltaMs": -1.194700000008197
+        },
+        {
+          "name": "M6 serial snapshot coordinator bounds repeated quota failures to one latest fixed pending snapshot",
+          "beforeMs": 198.28610000000026,
+          "afterMs": 190.0630999999994,
+          "deltaMs": -8.223000000000866
+        },
+        {
+          "name": "M6 serial snapshot coordinator bounds repeated abort failures to one latest fixed pending snapshot",
+          "beforeMs": 178.93600000000015,
+          "afterMs": 191.24689999999828,
+          "deltaMs": 12.310899999998128
+        },
+        {
+          "name": "M6 serial snapshot coordinator fences notification and later queued writes after dispose",
+          "beforeMs": 4.493399999999838,
+          "afterMs": 3.9593999999924563,
+          "deltaMs": -0.5340000000073815
+        },
+        {
+          "name": "M6 owned capture boundaries does not trust shallow frozen inputs and makes every retained child immutable",
+          "beforeMs": 6.617699999999786,
+          "afterMs": 1.9021000000066124,
+          "deltaMs": -4.715599999993174
+        },
+        {
+          "name": "M6 owned capture boundaries shares only History-owned deeply frozen records, never caller-frozen imitations",
+          "beforeMs": 2.733099999999922,
+          "afterMs": 2.398800000009942,
+          "deltaMs": -0.3342999999899803
+        },
+        {
+          "name": "M6 owned capture boundaries reuses only branded captures after merge, preserving first immutable history",
+          "beforeMs": 3.4951999999998407,
+          "afterMs": 3.4196999999985565,
+          "deltaMs": -0.0755000000012842
+        },
+        {
+          "name": "activation detaches mutable caller data while sharing certified immutable metadata until IDB clones it",
+          "beforeMs": 3.2170999999998457,
+          "afterMs": 3.057300000000396,
+          "deltaMs": -0.15979999999944994
+        },
+        {
+          "name": "exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs",
+          "beforeMs": 945.9594999999999,
+          "afterMs": 1026.3853999999992,
+          "deltaMs": 80.42589999999927
+        }
+      ]
+    },
+    {
+      "file": "m8-b10-item-save-replay.test.ts",
+      "beforeMs": 18458.721099999966,
+      "afterMs": 18955.1634,
+      "deltaPercent": 2.68947289094712,
+      "cases": [
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore covers exactly the 44 frozen definitions",
+          "beforeMs": 0.21180000000458676,
+          "afterMs": 2.1542000000008557,
+          "deltaMs": 1.9423999999962689
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore adaptive-helm",
+          "beforeMs": 520.8905999999988,
+          "afterMs": 579.8109999999997,
+          "deltaMs": 58.92040000000088
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore archangel",
+          "beforeMs": 366.0887999999977,
+          "afterMs": 376.66820000000007,
+          "deltaMs": 10.579400000002352
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore belt",
+          "beforeMs": 341.6198000000004,
+          "afterMs": 339.21340000000055,
+          "deltaMs": -2.4063999999998487
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore bloodthirster",
+          "beforeMs": 459.3426000000036,
+          "afterMs": 459.27889999999934,
+          "deltaMs": -0.06370000000424625
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore blue-buff",
+          "beforeMs": 747.639900000002,
+          "afterMs": 574.4838,
+          "deltaMs": -173.15610000000197
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore bow",
+          "beforeMs": 340.9661999999953,
+          "afterMs": 443.02320000000145,
+          "deltaMs": 102.05700000000616
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore bramble-vest",
+          "beforeMs": 520.3914000000004,
+          "afterMs": 602.718499999999,
+          "deltaMs": 82.32709999999861
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore cloak",
+          "beforeMs": 433.61849999999686,
+          "afterMs": 404.9884000000002,
+          "deltaMs": -28.630099999996673
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore crownguard",
+          "beforeMs": 463.28859999999986,
+          "afterMs": 475.71500000000015,
+          "deltaMs": 12.426400000000285
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore deathblade",
+          "beforeMs": 361.668399999995,
+          "afterMs": 472.5030000000006,
+          "deltaMs": 110.8346000000056
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore deathcap",
+          "beforeMs": 306.32019999999466,
+          "afterMs": 321.27200000000084,
+          "deltaMs": 14.951800000006187
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore dragons-claw",
+          "beforeMs": 374.6126000000004,
+          "afterMs": 473.33140000000094,
+          "deltaMs": 98.71880000000056
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore edge-of-night",
+          "beforeMs": 508.1261999999988,
+          "afterMs": 640.4624999999996,
+          "deltaMs": 132.33630000000085
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore evenshroud",
+          "beforeMs": 639.491200000004,
+          "afterMs": 707.3392000000003,
+          "deltaMs": 67.84799999999632
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore gargoyle",
+          "beforeMs": 437.8046000000031,
+          "afterMs": 448.3243000000002,
+          "deltaMs": 10.519699999997101
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore giant-slayer",
+          "beforeMs": 419.5025999999998,
+          "afterMs": 429.3673000000017,
+          "deltaMs": 9.864700000001903
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore gloves",
+          "beforeMs": 345.4554999999964,
+          "afterMs": 325.47119999999995,
+          "deltaMs": -19.984299999996438
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore guardbreaker",
+          "beforeMs": 376.5213999999978,
+          "afterMs": 388.0033999999978,
+          "deltaMs": 11.481999999999971
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore gunblade",
+          "beforeMs": 323.22030000000086,
+          "afterMs": 324.1375999999982,
+          "deltaMs": 0.9172999999973399
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore hand-of-justice",
+          "beforeMs": 361.86729999999807,
+          "afterMs": 372.1912000000011,
+          "deltaMs": 10.32390000000305
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore infinity-edge",
+          "beforeMs": 324.3607000000047,
+          "afterMs": 344.78349999999773,
+          "deltaMs": 20.422799999993003
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore ionic-spark",
+          "beforeMs": 679.8099000000002,
+          "afterMs": 652.9239999999991,
+          "deltaMs": -26.88590000000113
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore jeweled-gauntlet",
+          "beforeMs": 360.37669999999343,
+          "afterMs": 346.77150000000256,
+          "deltaMs": -13.605199999990873
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore last-whisper",
+          "beforeMs": 335.8947000000044,
+          "afterMs": 347.1929999999993,
+          "deltaMs": 11.298299999994924
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore morellonomicon",
+          "beforeMs": 388.01699999999255,
+          "afterMs": 403.77030000000013,
+          "deltaMs": 15.753300000007584
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore nashors-tooth",
+          "beforeMs": 427.89360000001034,
+          "afterMs": 458.3675000000003,
+          "deltaMs": 30.473899999989953
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore protectors-vow",
+          "beforeMs": 488.00019999999495,
+          "afterMs": 433.70880000000034,
+          "deltaMs": -54.29139999999461
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore quicksilver",
+          "beforeMs": 383.53630000000703,
+          "afterMs": 378.08740000000034,
+          "deltaMs": -5.448900000006688
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore rageblade",
+          "beforeMs": 340.9128999999957,
+          "afterMs": 305.4473999999973,
+          "deltaMs": -35.46549999999843
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore red-buff",
+          "beforeMs": 436.0506999999925,
+          "afterMs": 436.89510000000155,
+          "deltaMs": 0.8444000000090455
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore redemption",
+          "beforeMs": 492.7978000000003,
+          "afterMs": 443.5774999999994,
+          "deltaMs": -49.22030000000086
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore rod",
+          "beforeMs": 328.94650000000547,
+          "afterMs": 366.606200000002,
+          "deltaMs": 37.65969999999652
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore runaans-hurricane",
+          "beforeMs": 318.55449999999837,
+          "afterMs": 313.0642000000007,
+          "deltaMs": -5.49029999999766
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore shojin",
+          "beforeMs": 374.5283000000054,
+          "afterMs": 372.9556999999986,
+          "deltaMs": -1.572600000006787
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore statikk-shiv",
+          "beforeMs": 455.90899999999965,
+          "afterMs": 451.7729999999974,
+          "deltaMs": -4.136000000002241
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore steadfast-heart",
+          "beforeMs": 466.0643999999884,
+          "afterMs": 466.61829999999827,
+          "deltaMs": 0.5539000000098895
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore steraks-gage",
+          "beforeMs": 470.3625999999931,
+          "afterMs": 446.6316000000006,
+          "deltaMs": -23.73099999999249
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore sunfire-cape",
+          "beforeMs": 472.7188000000024,
+          "afterMs": 506.6373999999996,
+          "deltaMs": 33.91859999999724
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore sword",
+          "beforeMs": 291.55799999999,
+          "afterMs": 280.14330000000336,
+          "deltaMs": -11.414699999986624
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore tear",
+          "beforeMs": 276.1478000000061,
+          "afterMs": 290.30049999999756,
+          "deltaMs": 14.152699999991455
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore thiefs-gloves",
+          "beforeMs": 446.87919999999576,
+          "afterMs": 400.1309000000001,
+          "deltaMs": -46.74829999999565
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore titans-resolve",
+          "beforeMs": 496.27129999999306,
+          "afterMs": 585.5839000000014,
+          "deltaMs": 89.31260000000839
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore vest",
+          "beforeMs": 287.73489999999583,
+          "afterMs": 294.3631999999998,
+          "deltaMs": 6.6283000000039465
+        },
+        {
+          "name": "B10 every M8 equipment definition survives record, replay and save/restore warmog",
+          "beforeMs": 466.7468000000081,
+          "afterMs": 468.3715000000011,
+          "deltaMs": 1.6246999999930267
+        }
+      ]
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "beforeMs": 73.38470000000234,
+      "afterMs": 74.34649999999965,
+      "deltaPercent": 1.310627419608279,
+      "cases": [
+        {
+          "name": "B7 cleanup independent restore boundaries derives execution 1 + duration 7 as [2, 9)",
+          "beforeMs": 13.276600000001054,
+          "afterMs": 13.400099999998929,
+          "deltaMs": 0.12349999999787542
+        },
+        {
+          "name": "B7 cleanup independent restore boundaries derives execution 1 + duration 17 as [2, 19)",
+          "beforeMs": 20.77140000000145,
+          "afterMs": 19.57390000000305,
+          "deltaMs": -1.1974999999983993
+        },
+        {
+          "name": "B7 cleanup independent restore boundaries derives execution 4 + duration 7 as [5, 12)",
+          "beforeMs": 9.073599999999715,
+          "afterMs": 11.806200000006356,
+          "deltaMs": 2.7326000000066415
+        },
+        {
+          "name": "B7 cleanup independent restore boundaries round-trips neutral 0/0 while rejecting hero zero mana and negative neutral mana",
+          "beforeMs": 19.725600000001577,
+          "afterMs": 18.8235999999888,
+          "deltaMs": -0.9020000000127766
+        },
+        {
+          "name": "B7 cleanup independent restore boundaries retains the hero minimum even if a future trusted strategy resolves zero maximum mana",
+          "beforeMs": 10.537499999998545,
+          "afterMs": 10.742700000002515,
+          "deltaMs": 0.20520000000396976
+        }
+      ]
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "beforeMs": 9941.496299999992,
+      "afterMs": 10029.214299999978,
+      "deltaPercent": 0.8823420273262661,
+      "cases": [
+        {
+          "name": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 131.8165999999983,
+          "afterMs": 128.69490000000224,
+          "deltaMs": -3.1216999999960535
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 113.32970000000205,
+          "afterMs": 113.7332999999926,
+          "deltaMs": 0.4035999999905471
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 220.26550000000134,
+          "afterMs": 211.07090000000608,
+          "deltaMs": -9.194599999995262
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 371.97649999999703,
+          "afterMs": 349.27210000000196,
+          "deltaMs": -22.704399999995076
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 573.6782999999996,
+          "afterMs": 517.4241000000038,
+          "deltaMs": -56.25419999999576
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 909.2739000000001,
+          "afterMs": 884.4555000000109,
+          "deltaMs": -24.818399999989197
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 862.5322999999989,
+          "afterMs": 800.8806999999942,
+          "deltaMs": -61.65160000000469
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "beforeMs": 1067.3230999999978,
+          "afterMs": 1100.1132999999973,
+          "deltaMs": 32.79019999999946
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "beforeMs": 180.03670000000056,
+          "afterMs": 104.8127999999997,
+          "deltaMs": -75.22390000000087
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "beforeMs": 156.5047999999988,
+          "afterMs": 165.49150000000373,
+          "deltaMs": 8.98670000000493
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "beforeMs": 0.35789999999906286,
+          "afterMs": 0.4074000000109663,
+          "deltaMs": 0.04950000001190347
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "beforeMs": 72.88440000000264,
+          "afterMs": 80.3527000000031,
+          "deltaMs": 7.468300000000454
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "beforeMs": 6.161000000000058,
+          "afterMs": 6.148000000001048,
+          "deltaMs": -0.01299999999901047
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "beforeMs": 170.0722999999998,
+          "afterMs": 120.04030000000785,
+          "deltaMs": -50.03199999999197
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "beforeMs": 208.28249999999753,
+          "afterMs": 193.1191000000108,
+          "deltaMs": -15.163399999986723
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "beforeMs": 441.38530000000173,
+          "afterMs": 518.0834999999934,
+          "deltaMs": 76.69819999999163
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "beforeMs": 216.3252999999968,
+          "afterMs": 215.39529999998922,
+          "deltaMs": -0.930000000007567
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "beforeMs": 216.0366000000031,
+          "afterMs": 213.48129999999946,
+          "deltaMs": -2.5553000000036263
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "beforeMs": 182.1238000000012,
+          "afterMs": 193.14510000000882,
+          "deltaMs": 11.021300000007614
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "beforeMs": 195.49369999999908,
+          "afterMs": 213.48129999999946,
+          "deltaMs": 17.987600000000384
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "beforeMs": 787.5998999999974,
+          "afterMs": 893.0169999999925,
+          "deltaMs": 105.41709999999512
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "beforeMs": 788.2628999999979,
+          "afterMs": 907.8050999999978,
+          "deltaMs": 119.54219999999987
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "beforeMs": 0.6105999999999767,
+          "afterMs": 0.49839999999676365,
+          "deltaMs": -0.11220000000321306
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "beforeMs": 348.7694999999985,
+          "afterMs": 195.21749999999884,
+          "deltaMs": -153.55199999999968
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "beforeMs": 382.2993000000024,
+          "afterMs": 320.0011999999988,
+          "deltaMs": -62.298100000003615
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "beforeMs": 218.67929999999978,
+          "afterMs": 242.40729999999166,
+          "deltaMs": 23.72799999999188
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "beforeMs": 201.4282000000021,
+          "afterMs": 207.1304999999993,
+          "deltaMs": 5.702299999997194
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "beforeMs": 183.10149999999703,
+          "afterMs": 243.75369999998657,
+          "deltaMs": 60.652199999989534
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "beforeMs": 243.62219999999797,
+          "afterMs": 247.87199999998847,
+          "deltaMs": 4.2497999999905005
+        },
+        {
+          "name": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "beforeMs": 491.26270000000295,
+          "afterMs": 641.4758999999904,
+          "deltaMs": 150.2131999999874
+        }
+      ]
+    }
+  ],
+  "testFiles": [
+    {
+      "file": "tests/g2-3-content.test.ts",
+      "tests": 10,
+      "passed": 10
+    },
+    {
+      "file": "tests/g2-3-followup.test.ts",
+      "tests": 11,
+      "passed": 11
+    },
+    {
+      "file": "tests/g2-3-identity.test.ts",
+      "tests": 14,
+      "passed": 14
+    },
+    {
+      "file": "tests/g2-3-integration.test.ts",
+      "tests": 18,
+      "passed": 18
+    },
+    {
+      "file": "tests/g2-3-netcode-hooks.test.ts",
+      "tests": 14,
+      "passed": 14
+    },
+    {
+      "file": "tests/g2-3-source-pins.test.ts",
+      "tests": 2,
+      "passed": 2
+    },
+    {
+      "file": "tests/g2-4a-conqueror-items.test.ts",
+      "tests": 6,
+      "passed": 6
+    },
+    {
+      "file": "tests/g2-4a-crown-gold.test.ts",
+      "tests": 9,
+      "passed": 9
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "tests": 6,
+      "passed": 6
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "tests": 6,
+      "passed": 6
+    },
+    {
+      "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+      "tests": 1,
+      "passed": 1
+    },
+    {
+      "file": "tests/m5-replay.test.ts",
+      "tests": 1,
+      "passed": 1
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "tests": 9,
+      "passed": 9
+    },
+    {
+      "file": "tests/m7-m6-save-compat.test.ts",
+      "tests": 8,
+      "passed": 8
+    },
+    {
+      "file": "tests/m8-b8-resource-provenance.test.ts",
+      "tests": 64,
+      "passed": 64
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "tests": 4,
+      "passed": 4
+    },
+    {
+      "file": "tests/m8-contracts.test.ts",
+      "tests": 6,
+      "passed": 6
+    },
+    {
+      "file": "tests/match-contract.test.ts",
+      "tests": 12,
+      "passed": 12
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "tests": 139,
+      "passed": 139
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "tests": 48,
+      "passed": 48
+    },
+    {
+      "file": "tests/t12-offline-transfer.test.ts",
+      "tests": 1,
+      "passed": 1
+    },
+    {
+      "file": "tests/t12-recovery-boundary.test.ts",
+      "tests": 5,
+      "passed": 5
+    },
+    {
+      "file": "tests/t2-two-sided-battle.test.ts",
+      "tests": 21,
+      "passed": 21
+    },
+    {
+      "file": "tests/t3-round-settlement.test.ts",
+      "tests": 10,
+      "passed": 10
+    },
+    {
+      "file": "tests/presentation/g2-4a-crown-display.test.ts",
+      "tests": 1,
+      "passed": 1
+    },
+    {
+      "file": "tests/server/g2-3-replay-mirror.test.ts",
+      "tests": 1,
+      "passed": 1
+    },
+    {
+      "file": "tests/server/two-sided-resolver.test.ts",
+      "tests": 13,
+      "passed": 13
+    },
+    {
+      "file": "tests/g4-replay-snapshot.test.ts",
+      "tests": 4,
+      "passed": 4
+    },
+    {
+      "file": "tests/m8-b3-audit.test.ts",
+      "tests": 6,
+      "passed": 6
+    },
+    {
+      "file": "tests/m8-b9-compatibility.test.ts",
+      "tests": 11,
+      "passed": 11
+    },
+    {
+      "file": "tests/b8-resumable-battle.test.ts",
+      "tests": 15,
+      "passed": 15
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "tests": 44,
+      "passed": 44
+    },
+    {
+      "file": "tests/m8-b10-item-save-replay.test.ts",
+      "tests": 45,
+      "passed": 45
+    },
+    {
+      "file": "tests/m8-b7-cleanup.test.ts",
+      "tests": 5,
+      "passed": 5
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "tests": 30,
+      "passed": 30
+    }
+  ],
+  "regressions": [
+    {
+      "name": "M1 crown history authority rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history",
+      "status": "passed",
+      "durationMs": 102.89799999999923
+    },
+    {
+      "name": "M1 crown history authority rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously",
+      "status": "passed",
+      "durationMs": 244.7012999999988
+    },
+    {
+      "name": "M1 crown history authority does not let a later record context authorize its own forged historical prefix",
+      "status": "passed",
+      "durationMs": 262.4444999999996
+    },
+    {
+      "name": "M1 crown history authority accepts the public-command no-crown control and resumes identically",
+      "status": "passed",
+      "durationMs": 276.2371999999996
+    },
+    {
+      "name": "M1 crown history authority restores and continues a legal provenance-backed crown control, seed 1",
+      "status": "passed",
+      "durationMs": 423.71479999999974
+    },
+    {
+      "name": "M1 crown history authority restores and continues a legal provenance-backed crown control, seed 42",
+      "status": "passed",
+      "durationMs": 430.4937000000009
+    }
+  ]
+}

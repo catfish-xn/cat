@@ -35,7 +35,7 @@ it('restores the missing carousel unit/item birth authority and rejects duplicat
  expect(births.get(`carousel-unit:${receipt.id}`)).toEqual({kind:'unit',id:'unit-1',definitionId:'maddie',roundId:'1-2'});
  expect(births.get(`carousel-item:${receipt.id}`)).toEqual({kind:'item',id:'item-1',definitionId:'sword',roundId:'1-2'});
  const entries=[{kind:'unit-acquired',unitId:'unit-1',source:{kind:'carousel',receiptId:receipt.id}},{kind:'item-acquired',itemId:'item-1',source:{kind:'carousel',receiptId:receipt.id}}].map((e,sequence)=>({...e,sequence,roundId:'1-2'}));
- expect(foldResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries},context)).toMatchObject({units:[{id:'unit-1',definitionId:'maddie',starLevel:1}],items:[{id:'item-1',definitionId:'sword'}]});
+ expect(foldResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,equipmentHistory:'ordered',entries},context)).toMatchObject({units:[{id:'unit-1',definitionId:'maddie',starLevel:1}],items:[{id:'item-1',definitionId:'sword'}]});
  expect(()=>validateResourceReceipts({...context,carouselReceipts:[receipt,receipt]})).toThrow();
  expect(()=>validateResourceReceipts({...context,carouselReceipts:[{...receipt,holdingSource:'forged'}]})).toThrow();
 });

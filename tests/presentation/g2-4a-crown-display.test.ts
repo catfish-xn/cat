@@ -5,5 +5,5 @@ import {ITEM_DEFINITIONS} from '../../src/simulation/content/g2-3-item-registry'
 it('the crown shows its official 14.24 name, its bundled loot icon and the permanent team-size text',()=>{
  expect(itemDisplayName('TFT_Item_ForceOfNature')).toBe('金铲铲冠冕');
  expect(g23IconUrl('item','TFT_Item_ForceOfNature')).toMatch(/assets\/s13\/g23\/loot\/tft_item_forceofnature\.png$/);
- expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.effectDescriptions).toEqual(['获得时队伍人口上限永久+1，与是否装备无关。']);
+ expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.effectDescriptions).toEqual(['获得时队伍人口上限永久+1，与是否装备无关。','装备在出战单位身上时，每次赢下战斗有10%几率掉落1金币。']);
 });

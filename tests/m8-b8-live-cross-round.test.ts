@@ -125,8 +125,8 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   it('rejects tampering with the cross-round consumption chain', () => {
     if (!sold.ok) throw new Error(sold.reason);
     const after = sold.state;
-    // Deleting the combine fact also moves the recorded 2-1 combat-start prefix, which is checked first.
-    reject(after, 'Invalid resource provenance: combat start prefix', raw => {
+    // Deleting the combine fact leaves the ordered placement of the combined item without an owned item, which is checked first.
+    reject(after, 'Invalid resource provenance: equipment ownership/slot', raw => {
       const index = raw.resourceProvenance.entries.findIndex((entry: any) => entry.kind === 'item-combined');
       raw.resourceProvenance.entries.splice(index, 1);
       raw.resourceProvenance.entries.forEach((entry: any, sequence: number) => { entry.sequence = sequence; });

@@ -25,3 +25,15 @@ v1的存档和回放输入按身份拒绝；v2夹具通过原公共指令生成�
 以 `65db5d2` 的13件辅助装效果和数值为准，merge `311017e`（含 #147 神器、#148 战术家之冠及 #158/#159/#160/#165）；复用主线的 `supportStage` 与 `holder-death`，不重复定义或触发。规则版本 `s13-g2-3-v6`，内容版本 `s13-14.24b-g2-3-v6`，policy revision `g2-4b-support-v6`；schema/save/replay 格式不变，content digest 为 `fnv1a32-utf16:e73164da`（见 `tests/g2-3-content-baseline.json`）。夹具按 release → herald → inputs → live-reveal 顺序重录。
 
 验证：`npm run typecheck` 通过；仅运行 `tests/g2-4b-support-items.test.ts`、`tests/m8-contracts.test.ts`、`tests/match-contract.test.ts`、`tests/g2-4a-crown.test.ts`、`tests/explorer-bracer-restore.test.ts`，5文件63测试全部通过。请求中的 `tests/g2-4a-crown-gold.test.ts` 在本分支及 `311017e` 均不存在，使用实际冠冕测试 `tests/g2-4a-crown.test.ts`。未运行全套，未修改测试时限。四步夹具录制完成，最终 `node scripts/record-g2-3-inputs.cjs --check` 9案例通过。
+
+## G2-4a 冠冕胜利掉金
+
+在冠冕人口版本上保留历史合入 `148d6a2d87a438f580a41bf55f1651c2d5a9d8a3`（冻结输入rewardClaims前缀校验），规则/content升为v7，policy=`g2-4a-crown-gold-v7`，合入 multiplayer v6 后统一升到 v7。当前digest见 `tests/g2-3-content-baseline.json`。
+
+已实现源 `PercentGoldChance=10`：开战场上装备的每顶冠冕在PvE/PvP胜利时独立10%直接到账1金币；背包/备战不算，持有者阵亡仍算，输/平不算。采用用户确认的 G24-CROWN-GOLD-01..05（见RECONCILIATION），G23 lcg32随机流排在黑市之后。冠冕掷骰推进共享RNG，会改变后续黑市结果，本战已经完成的黑市掷骰不变。经济收据保存冠冕数量/命中金币，并与唯一资源收据 `g23:crown:<battleId>` 交叉验证，恢复与重复结算不能重发。不新增界面/服务器逻辑；沿用mechanicGranted事件。
+
+M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格、来源、胜负、经济和资源收据前缀。只携带冠冕 Match、缺少历史证据的恢复会明确拒绝；调用方须给 `restoreMatch`／`serializeMatch` 传入 `battles`，或使用完整 SaveEnvelope 验证入口。字段、digest 和五条玩法约定不变，详见 [恢复 API 合同](../../MATCH_CONTRACT.md#g2-4a-冠冕历史恢复-apim1方案-a)。
+
+专项测试验证源概率、独立叠加、PvE/PvP、场上/备战/背包、死亡持有者、黑市随机次序、真实战斗恢复及Continue防重复；release/inputs/live-reveal/herald均从脚本重录，旧新SHA/bytes及冻结source hashes见 `crown-gold-recording-audit.json`。最终head全套由发布协调者单独执行一次。
+
+合入 multiplayer `8c7f6ac`（含 #149 辅助装、#153 不稳定宝箱、#167 上界预检、#166 前序修复）后升为规则/content `s13-g2-3-v7` / `s13-14.24b-g2-3-v7`，policy=`g2-4a-crown-gold-v7`；schema7/save3/replay3 与资源来源版本号不变，存档格式变化（有序穿戴记录 `equipmentHistory`）由规则版本校验隔离：v6 及更早存档按 `unsupported-version` 拒绝，不做迁移（用户 12:06 旧存档政策）。release/herald/inputs/live-reveal 按顺序从脚本重录。

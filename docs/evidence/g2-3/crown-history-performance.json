@@ -1,0 +1,4589 @@
+{
+  "baseline": "148d6a2d87a438f580a41bf55f1651c2d5a9d8a3",
+  "before": "47bcff0a42b3a765c9b09bf273153ea77b21830b",
+  "node": "v22.17.0",
+  "method": "Same Windows host, 3 fresh processes/variant; unchanged complete five files; vitest --project fast --maxWorkers=1; per-case medians; no concurrent task tests; not loaded CI.",
+  "cases": 62,
+  "withinFivePercent": 58,
+  "files": [
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "cases": 15,
+      "base148": {
+        "samplesMs": [
+          17372.478800000004,
+          17854.7836,
+          17380.003699999994
+        ],
+        "medianMs": 17380.003699999994
+      },
+      "before47": {
+        "samplesMs": [
+          17780.279100000007,
+          17864.104000000003,
+          17476.2396
+        ],
+        "medianMs": 17780.279100000007
+      },
+      "after": {
+        "samplesMs": [
+          17236.139000000003,
+          17406.497700000007,
+          17731.075599999996
+        ],
+        "medianMs": 17406.497700000007
+      },
+      "changeFromBeforePct": -2.1022245933136063,
+      "changeFromBasePct": 0.15243955327819414
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "cases": 5,
+      "base148": {
+        "samplesMs": [
+          75.13900000000285,
+          80.56519999999728,
+          72.74749999999767
+        ],
+        "medianMs": 75.13900000000285
+      },
+      "before47": {
+        "samplesMs": [
+          83.31460000000516,
+          71.40909999999712,
+          72.36250000000291
+        ],
+        "medianMs": 72.36250000000291
+      },
+      "after": {
+        "samplesMs": [
+          71.63769999999931,
+          70.68149999999878,
+          72.73019999999815
+        ],
+        "medianMs": 71.63769999999931
+      },
+      "changeFromBeforePct": -1.001623769222415,
+      "changeFromBasePct": -4.6597639042353585
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "cases": 30,
+      "base148": {
+        "samplesMs": [
+          9467.671899999987,
+          9476.295899999997,
+          9339.509600000034
+        ],
+        "medianMs": 9467.671899999987
+      },
+      "before47": {
+        "samplesMs": [
+          9613.579199999986,
+          9191.446099999994,
+          9217.14410000002
+        ],
+        "medianMs": 9217.14410000002
+      },
+      "after": {
+        "samplesMs": [
+          9126.659300000014,
+          9458.980899999988,
+          9349.031699999985
+        ],
+        "medianMs": 9349.031699999985
+      },
+      "changeFromBeforePct": 1.4308944133787138,
+      "changeFromBasePct": -1.2531084859415342
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "cases": 5,
+      "base148": {
+        "samplesMs": [
+          90.3695999999909,
+          90.78429999999935,
+          88.80360000000655
+        ],
+        "medianMs": 90.3695999999909
+      },
+      "before47": {
+        "samplesMs": [
+          71.56100000000879,
+          67.53579999999783,
+          67.45820000000094
+        ],
+        "medianMs": 67.53579999999783
+      },
+      "after": {
+        "samplesMs": [
+          66.3237999999983,
+          89.20899999999529,
+          69.0596000000005
+        ],
+        "medianMs": 69.0596000000005
+      },
+      "changeFromBeforePct": 2.256284814872589,
+      "changeFromBasePct": -23.58093872274807
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "cases": 7,
+      "base148": {
+        "samplesMs": [
+          1062.4960000000065,
+          1044.1937000000034,
+          1051.6164000000063
+        ],
+        "medianMs": 1051.6164000000063
+      },
+      "before47": {
+        "samplesMs": [
+          1055.1684999999925,
+          1011.0491000000111,
+          1067.871100000004
+        ],
+        "medianMs": 1055.1684999999925
+      },
+      "after": {
+        "samplesMs": [
+          999.562300000005,
+          1048.8682999999946,
+          1050.075199999992
+        ],
+        "medianMs": 1048.8682999999946
+      },
+      "changeFromBeforePct": -0.5970799924370329,
+      "changeFromBasePct": -0.26132152370499373
+    }
+  ],
+  "caseTimings": [
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 0 units per side",
+      "base148": {
+        "samplesMs": [
+          14.985999999999876,
+          8.412899999999354,
+          8.47939999999926
+        ],
+        "medianMs": 8.47939999999926
+      },
+      "before47": {
+        "samplesMs": [
+          8.723399999999856,
+          9.211300000000847,
+          8.681900000000496
+        ],
+        "medianMs": 8.723399999999856
+      },
+      "after": {
+        "samplesMs": [
+          8.632000000000517,
+          8.80369999999948,
+          8.350599999999758
+        ],
+        "medianMs": 8.632000000000517
+      },
+      "changeFromBeforePct": -1.0477566086542045,
+      "changeFromBasePct": 1.7996556360269755,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 1 units per side",
+      "base148": {
+        "samplesMs": [
+          217.44570000000022,
+          208.33510000000024,
+          203.6196
+        ],
+        "medianMs": 208.33510000000024
+      },
+      "before47": {
+        "samplesMs": [
+          212.67199999999957,
+          213.93139999999948,
+          196.59580000000005
+        ],
+        "medianMs": 212.67199999999957
+      },
+      "after": {
+        "samplesMs": [
+          190.97509999999966,
+          205.23040000000037,
+          218.15449999999964
+        ],
+        "medianMs": 205.23040000000037
+      },
+      "changeFromBeforePct": -3.499097201323731,
+      "changeFromBasePct": -1.490243362736221,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+      "base148": {
+        "samplesMs": [
+          1423.5310999999992,
+          1457.0559999999996,
+          1401.7844000000005
+        ],
+        "medianMs": 1423.5310999999992
+      },
+      "before47": {
+        "samplesMs": [
+          1485.1005000000005,
+          1503.0675999999994,
+          1513.7694999999994
+        ],
+        "medianMs": 1503.0675999999994
+      },
+      "after": {
+        "samplesMs": [
+          1458.6814000000004,
+          1412.4879,
+          1429.6025999999993
+        ],
+        "medianMs": 1429.6025999999993
+      },
+      "changeFromBeforePct": -4.887671053517495,
+      "changeFromBasePct": 0.4265098247590027,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 1",
+      "base148": {
+        "samplesMs": [
+          1101.3814000000002,
+          1089.9403000000002,
+          1062.7553000000007
+        ],
+        "medianMs": 1089.9403000000002
+      },
+      "before47": {
+        "samplesMs": [
+          1156.1939000000002,
+          1146.7458000000006,
+          1094.3562000000002
+        ],
+        "medianMs": 1146.7458000000006
+      },
+      "after": {
+        "samplesMs": [
+          1055.5517,
+          1079.9902000000002,
+          1147.4347000000007
+        ],
+        "medianMs": 1079.9902000000002
+      },
+      "changeFromBeforePct": -5.821307564414047,
+      "changeFromBasePct": -0.9129032113043278,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 7",
+      "base148": {
+        "samplesMs": [
+          1079.2987000000003,
+          1018.5906000000004,
+          1044.7390999999998
+        ],
+        "medianMs": 1044.7390999999998
+      },
+      "before47": {
+        "samplesMs": [
+          1060.6765999999998,
+          1091.6052,
+          1008.1899999999996
+        ],
+        "medianMs": 1060.6765999999998
+      },
+      "after": {
+        "samplesMs": [
+          979.8776000000007,
+          1066.3999000000003,
+          1092.6620000000003
+        ],
+        "medianMs": 1066.3999000000003
+      },
+      "changeFromBeforePct": 0.539589541241936,
+      "changeFromBasePct": 2.0733214637032926,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 100",
+      "base148": {
+        "samplesMs": [
+          1008.6708000000008,
+          1041.8596000000007,
+          1017.3545999999997
+        ],
+        "medianMs": 1017.3545999999997
+      },
+      "before47": {
+        "samplesMs": [
+          999.6741000000002,
+          1017.7778000000017,
+          975.9703
+        ],
+        "medianMs": 999.6741000000002
+      },
+      "after": {
+        "samplesMs": [
+          974.1153999999997,
+          995.9681999999993,
+          1014.8400999999994
+        ],
+        "medianMs": 995.9681999999993
+      },
+      "changeFromBeforePct": -0.37071081465458455,
+      "changeFromBasePct": -2.1021578906705973,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP and mirror equal synchronous bytes at slice 1201",
+      "base148": {
+        "samplesMs": [
+          1000.6231000000007,
+          1043.1625999999997,
+          1016.1467999999986
+        ],
+        "medianMs": 1016.1467999999986
+      },
+      "before47": {
+        "samplesMs": [
+          996.9842999999983,
+          1014.1706999999988,
+          993.2927999999993
+        ],
+        "medianMs": 996.9842999999983
+      },
+      "after": {
+        "samplesMs": [
+          990.9084999999995,
+          985.9172000000017,
+          1013.9783000000007
+        ],
+        "medianMs": 990.9084999999995
+      },
+      "changeFromBeforePct": -0.6094178213236323,
+      "changeFromBasePct": -2.4837257766298193,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+      "base148": {
+        "samplesMs": [
+          1743.955,
+          1815.3433999999997,
+          1706.101999999999
+        ],
+        "medianMs": 1743.955
+      },
+      "before47": {
+        "samplesMs": [
+          1761.8749000000007,
+          1781.217200000001,
+          1764.0829000000012
+        ],
+        "medianMs": 1764.0829000000012
+      },
+      "after": {
+        "samplesMs": [
+          1763.1286,
+          1731.7666000000008,
+          1788.9328000000005
+        ],
+        "medianMs": 1763.1286
+      },
+      "changeFromBeforePct": -0.054096097184619385,
+      "changeFromBasePct": 1.0994320380973255,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+      "base148": {
+        "samplesMs": [
+          1755.9214999999986,
+          2036.3973000000005,
+          1742.0797000000002
+        ],
+        "medianMs": 1755.9214999999986
+      },
+      "before47": {
+        "samplesMs": [
+          1978.1587999999992,
+          2002.8966,
+          1918.9051
+        ],
+        "medianMs": 1978.1587999999992
+      },
+      "after": {
+        "samplesMs": [
+          1870.208700000001,
+          1971.1496000000006,
+          1961.7464999999993
+        ],
+        "medianMs": 1961.7464999999993
+      },
+      "changeFromBeforePct": -0.8296755548644508,
+      "changeFromBasePct": 11.721765466166968,
+      "withinFivePercent": false
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+      "base148": {
+        "samplesMs": [
+          1709.6369000000013,
+          1724.103799999999,
+          1767.8189999999995
+        ],
+        "medianMs": 1724.103799999999
+      },
+      "before47": {
+        "samplesMs": [
+          1688.8219000000008,
+          1746.387499999999,
+          1673.5797000000002
+        ],
+        "medianMs": 1688.8219000000008
+      },
+      "after": {
+        "samplesMs": [
+          1633.6826999999994,
+          1684.8966,
+          1668.1665000000012
+        ],
+        "medianMs": 1668.1665000000012
+      },
+      "changeFromBeforePct": -1.2230656175171384,
+      "changeFromBasePct": -3.2444276266891725,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+      "base148": {
+        "samplesMs": [
+          1730.7495999999992,
+          1743.9346000000023,
+          1777.4296999999988
+        ],
+        "medianMs": 1743.9346000000023
+      },
+      "before47": {
+        "samplesMs": [
+          1723.0959000000003,
+          1707.3605000000007,
+          1668.7398000000012
+        ],
+        "medianMs": 1707.3605000000007
+      },
+      "after": {
+        "samplesMs": [
+          1673.7451999999994,
+          1698.7459,
+          1676.2329000000009
+        ],
+        "medianMs": 1676.2329000000009
+      },
+      "changeFromBeforePct": -1.8231416270904632,
+      "changeFromBasePct": -3.882123790651404,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks invalid budgets never consume a slice, including after completion; old total cap still faults",
+      "base148": {
+        "samplesMs": [
+          1295.4503000000004,
+          1277.4113999999972,
+          1307.9593999999997
+        ],
+        "medianMs": 1295.4503000000004
+      },
+      "before47": {
+        "samplesMs": [
+          1304.8165000000008,
+          1287.7711999999992,
+          1347.8689999999988
+        ],
+        "medianMs": 1304.8165000000008
+      },
+      "after": {
+        "samplesMs": [
+          1268.3773,
+          1273.8613000000005,
+          1279.8930999999975
+        ],
+        "medianMs": 1273.8613000000005
+      },
+      "changeFromBeforePct": -2.3723795644828405,
+      "changeFromBasePct": -1.6665247597688615,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks tick0 terminal completes once without stepping",
+      "base148": {
+        "samplesMs": [
+          2.049800000000687,
+          2.4553000000014435,
+          2.3135999999976775
+        ],
+        "medianMs": 2.3135999999976775
+      },
+      "before47": {
+        "samplesMs": [
+          2.2400000000016007,
+          2.274300000000949,
+          2.534700000000157
+        ],
+        "medianMs": 2.274300000000949
+      },
+      "after": {
+        "samplesMs": [
+          2.104699999999866,
+          2.1467000000011467,
+          2.4853000000002794
+        ],
+        "medianMs": 2.1467000000011467
+      },
+      "changeFromBeforePct": -5.610517521863823,
+      "changeFromBasePct": -7.213865836648448,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+      "base148": {
+        "samplesMs": [
+          1725.989300000001,
+          1654.3509999999987,
+          1768.6438000000016
+        ],
+        "medianMs": 1725.989300000001
+      },
+      "before47": {
+        "samplesMs": [
+          1734.4190000000017,
+          1711.700499999999,
+          1647.8659000000007
+        ],
+        "medianMs": 1711.700499999999
+      },
+      "after": {
+        "samplesMs": [
+          1699.0623000000014,
+          1680.965500000002,
+          1721.9447999999975
+        ],
+        "medianMs": 1699.0623000000014
+      },
+      "changeFromBeforePct": -0.7383417835069683,
+      "changeFromBasePct": -1.5600907838767997,
+      "withinFivePercent": true
+    },
+    {
+      "file": "b8-resumable-battle.test.ts",
+      "name": "SR-B8-02 resumable pure tasks defers early and trailing animation divergence until the terminal slice",
+      "base148": {
+        "samplesMs": [
+          1562.7896,
+          1733.4297000000006,
+          1552.7773000000016
+        ],
+        "medianMs": 1562.7896
+      },
+      "before47": {
+        "samplesMs": [
+          1666.8273000000008,
+          1627.9864000000016,
+          1661.8060000000005
+        ],
+        "medianMs": 1661.8060000000005
+      },
+      "after": {
+        "samplesMs": [
+          1667.0878000000012,
+          1608.1679999999978,
+          1706.6509000000005
+        ],
+        "medianMs": 1667.0878000000012
+      },
+      "changeFromBeforePct": 0.3178349338009756,
+      "changeFromBasePct": 6.6738478423455705,
+      "withinFivePercent": false
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "name": "B7 cleanup independent restore boundaries derives execution 1 + duration 7 as [2, 9)",
+      "base148": {
+        "samplesMs": [
+          12.566700000003038,
+          13.337599999998929,
+          12.062599999997474
+        ],
+        "medianMs": 12.566700000003038
+      },
+      "before47": {
+        "samplesMs": [
+          13.35410000000411,
+          12.658299999995506,
+          12.129399999997986
+        ],
+        "medianMs": 12.658299999995506
+      },
+      "after": {
+        "samplesMs": [
+          12.025000000001455,
+          12.136399999995774,
+          14.179400000000896
+        ],
+        "medianMs": 12.136399999995774
+      },
+      "changeFromBeforePct": -4.122986498976299,
+      "changeFromBasePct": -3.424128848521568,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "name": "B7 cleanup independent restore boundaries derives execution 1 + duration 17 as [2, 19)",
+      "base148": {
+        "samplesMs": [
+          18.468800000002375,
+          19.95969999999943,
+          18.94210000000021
+        ],
+        "medianMs": 18.94210000000021
+      },
+      "before47": {
+        "samplesMs": [
+          19.795300000005227,
+          18.864000000001397,
+          18.63539999999921
+        ],
+        "medianMs": 18.864000000001397
+      },
+      "after": {
+        "samplesMs": [
+          20.23309999999765,
+          18.20799999999872,
+          18.225799999992887
+        ],
+        "medianMs": 18.225799999992887
+      },
+      "changeFromBeforePct": -3.3831636980940605,
+      "changeFromBasePct": -3.7815236959329424,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "name": "B7 cleanup independent restore boundaries derives execution 4 + duration 7 as [5, 12)",
+      "base148": {
+        "samplesMs": [
+          10.875700000004144,
+          11.928699999996752,
+          11.121500000001106
+        ],
+        "medianMs": 11.121500000001106
+      },
+      "before47": {
+        "samplesMs": [
+          11.67160000000149,
+          10.46929999999702,
+          11.075799999998708
+        ],
+        "medianMs": 11.075799999998708
+      },
+      "after": {
+        "samplesMs": [
+          9.272499999999127,
+          10.647499999999127,
+          11.47899999999936
+        ],
+        "medianMs": 10.647499999999127
+      },
+      "changeFromBeforePct": -3.8669892919665494,
+      "changeFromBasePct": -4.2620150159774495,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "name": "B7 cleanup independent restore boundaries round-trips neutral 0/0 while rejecting hero zero mana and negative neutral mana",
+      "base148": {
+        "samplesMs": [
+          18.857499999998254,
+          22.657200000001467,
+          18.079100000002654
+        ],
+        "medianMs": 18.857499999998254
+      },
+      "before47": {
+        "samplesMs": [
+          20.459799999996903,
+          18.0312000000049,
+          18.298099999999977
+        ],
+        "medianMs": 18.298099999999977
+      },
+      "after": {
+        "samplesMs": [
+          19.75800000000163,
+          17.313200000004144,
+          17.622300000002724
+        ],
+        "medianMs": 17.622300000002724
+      },
+      "changeFromBeforePct": -3.693279630110524,
+      "changeFromBasePct": -6.550178973859966,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-cleanup.test.ts",
+      "name": "B7 cleanup independent restore boundaries retains the hero minimum even if a future trusted strategy resolves zero maximum mana",
+      "base148": {
+        "samplesMs": [
+          14.37029999999504,
+          12.682000000000698,
+          12.542199999996228
+        ],
+        "medianMs": 12.682000000000698
+      },
+      "before47": {
+        "samplesMs": [
+          18.033799999997427,
+          11.3862999999983,
+          12.223800000007031
+        ],
+        "medianMs": 12.223800000007031
+      },
+      "after": {
+        "samplesMs": [
+          10.349099999999453,
+          12.376400000001013,
+          11.223700000002282
+        ],
+        "medianMs": 11.223700000002282
+      },
+      "changeFromBeforePct": -8.181580196045212,
+      "changeFromBasePct": -11.498974925077565,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          152.88869999999588,
+          146.67900000000373,
+          146.22140000000218
+        ],
+        "medianMs": 146.67900000000373
+      },
+      "before47": {
+        "samplesMs": [
+          144.16539999999804,
+          141.4617999999973,
+          141.1823000000004
+        ],
+        "medianMs": 141.4617999999973
+      },
+      "after": {
+        "samplesMs": [
+          143.62810000000172,
+          152.82660000000033,
+          147.4667999999947
+        ],
+        "medianMs": 147.4667999999947
+      },
+      "changeFromBeforePct": 4.244962244222461,
+      "changeFromBasePct": 0.5370911991429805,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          125.83209999999963,
+          119.6797000000006,
+          107.3501000000033
+        ],
+        "medianMs": 119.6797000000006
+      },
+      "before47": {
+        "samplesMs": [
+          118.45049999999901,
+          111.6530999999959,
+          114.0934000000052
+        ],
+        "medianMs": 114.0934000000052
+      },
+      "after": {
+        "samplesMs": [
+          113.79170000000158,
+          144.96809999999823,
+          112.99719999999797
+        ],
+        "medianMs": 113.79170000000158
+      },
+      "changeFromBeforePct": -0.264432473748355,
+      "changeFromBasePct": -4.919798428638256,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          204.1030000000028,
+          208.5066999999981,
+          205.6886999999988
+        ],
+        "medianMs": 205.6886999999988
+      },
+      "before47": {
+        "samplesMs": [
+          209.46519999999873,
+          208.82610000000568,
+          201.80780000000232
+        ],
+        "medianMs": 208.82610000000568
+      },
+      "after": {
+        "samplesMs": [
+          206.25660000000062,
+          223.16189999999915,
+          211.4429999999993
+        ],
+        "medianMs": 211.4429999999993
+      },
+      "changeFromBeforePct": 1.2531479542037927,
+      "changeFromBasePct": 2.7975771153206486,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          345.1573999999964,
+          359.31810000000405,
+          352.612000000001
+        ],
+        "medianMs": 352.612000000001
+      },
+      "before47": {
+        "samplesMs": [
+          339.9695999999967,
+          337.424199999994,
+          338.95640000000276
+        ],
+        "medianMs": 338.95640000000276
+      },
+      "after": {
+        "samplesMs": [
+          343.282100000004,
+          388.0683999999965,
+          341.78429999999935
+        ],
+        "medianMs": 343.282100000004
+      },
+      "changeFromBeforePct": 1.2761818334160902,
+      "changeFromBasePct": -2.6459394461892827,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          502.8403000000035,
+          553.4770999999964,
+          489.82130000000325
+        ],
+        "medianMs": 502.8403000000035
+      },
+      "before47": {
+        "samplesMs": [
+          559.1220999999932,
+          531.1267999999982,
+          503.4994999999981
+        ],
+        "medianMs": 531.1267999999982
+      },
+      "after": {
+        "samplesMs": [
+          510.95210000000225,
+          505.7105999999985,
+          561.5060999999987
+        ],
+        "medianMs": 510.95210000000225
+      },
+      "changeFromBeforePct": -3.798471476113807,
+      "changeFromBasePct": 1.6131960783570376,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          870.9481999999989,
+          791.3441000000021,
+          838.529300000002
+        ],
+        "medianMs": 838.529300000002
+      },
+      "before47": {
+        "samplesMs": [
+          794.0077000000019,
+          770.5691000000006,
+          806.0217000000048
+        ],
+        "medianMs": 794.0077000000019
+      },
+      "after": {
+        "samplesMs": [
+          777.9198000000033,
+          855.7860000000001,
+          818.5568000000058
+        ],
+        "medianMs": 818.5568000000058
+      },
+      "changeFromBeforePct": 3.091796213059861,
+      "changeFromBasePct": -2.3818487916875575,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          871.8354000000036,
+          818.9009000000005,
+          845.2339999999967
+        ],
+        "medianMs": 845.2339999999967
+      },
+      "before47": {
+        "samplesMs": [
+          863.6584000000003,
+          810.1656999999977,
+          827.7044000000024
+        ],
+        "medianMs": 827.7044000000024
+      },
+      "after": {
+        "samplesMs": [
+          818.1067000000039,
+          801.0553,
+          896.9640999999974
+        ],
+        "medianMs": 818.1067000000039
+      },
+      "changeFromBeforePct": -1.15955647934195,
+      "changeFromBasePct": -3.2094425922280623,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "base148": {
+        "samplesMs": [
+          971.443100000004,
+          1018.8265000000029,
+          962.5310000000027
+        ],
+        "medianMs": 971.443100000004
+      },
+      "before47": {
+        "samplesMs": [
+          963.3378999999986,
+          987.9363000000012,
+          978.2698000000019
+        ],
+        "medianMs": 978.2698000000019
+      },
+      "after": {
+        "samplesMs": [
+          987.0495999999985,
+          1095.861499999999,
+          956.8487000000023
+        ],
+        "medianMs": 987.0495999999985
+      },
+      "changeFromBeforePct": 0.8974824736485365,
+      "changeFromBasePct": 1.6065274435522081,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+      "base148": {
+        "samplesMs": [
+          97.3359000000055,
+          97.96019999999407,
+          96.34100000000035
+        ],
+        "medianMs": 97.3359000000055
+      },
+      "before47": {
+        "samplesMs": [
+          96.9516999999978,
+          98.83559999999852,
+          97.9297000000006
+        ],
+        "medianMs": 97.9297000000006
+      },
+      "after": {
+        "samplesMs": [
+          97.34949999999662,
+          100.10700000000361,
+          91.5940999999948
+        ],
+        "medianMs": 97.34949999999662
+      },
+      "changeFromBeforePct": -0.5924658198727895,
+      "changeFromBasePct": 0.013972234284698182,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+      "base148": {
+        "samplesMs": [
+          220.19019999999728,
+          152.61670000000595,
+          213.2213000000047
+        ],
+        "medianMs": 213.2213000000047
+      },
+      "before47": {
+        "samplesMs": [
+          236.63059999999678,
+          146.94959999999992,
+          151.17150000000402
+        ],
+        "medianMs": 151.17150000000402
+      },
+      "after": {
+        "samplesMs": [
+          146.93770000000222,
+          171.38559999999416,
+          209.84130000000005
+        ],
+        "medianMs": 171.38559999999416
+      },
+      "changeFromBeforePct": 13.371634203530158,
+      "changeFromBasePct": -19.620788354638876,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+      "base148": {
+        "samplesMs": [
+          0.3665999999939231,
+          0.4092999999993481,
+          0.36770000000251457
+        ],
+        "medianMs": 0.36770000000251457
+      },
+      "before47": {
+        "samplesMs": [
+          0.3664000000062515,
+          0.3667000000059488,
+          0.3550000000032014
+        ],
+        "medianMs": 0.3664000000062515
+      },
+      "after": {
+        "samplesMs": [
+          0.3533999999999651,
+          0.5718999999953667,
+          0.36040000000502914
+        ],
+        "medianMs": 0.36040000000502914
+      },
+      "changeFromBeforePct": -1.6375545854585116,
+      "changeFromBasePct": -1.9853141140700359,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+      "base148": {
+        "samplesMs": [
+          73.70029999999679,
+          72.03420000000187,
+          75.87449999999808
+        ],
+        "medianMs": 73.70029999999679
+      },
+      "before47": {
+        "samplesMs": [
+          72.13199999999779,
+          71.79389999999694,
+          73.33200000000215
+        ],
+        "medianMs": 72.13199999999779
+      },
+      "after": {
+        "samplesMs": [
+          73.66719999999623,
+          74.0547000000006,
+          73.42119999999704
+        ],
+        "medianMs": 73.66719999999623
+      },
+      "changeFromBeforePct": 2.128320301667075,
+      "changeFromBasePct": -0.04491162179877106,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+      "base148": {
+        "samplesMs": [
+          8.3920999999973,
+          6.516999999999825,
+          6.427999999999884
+        ],
+        "medianMs": 6.516999999999825
+      },
+      "before47": {
+        "samplesMs": [
+          6.76929999999993,
+          6.784800000001269,
+          6.55630000000383
+        ],
+        "medianMs": 6.76929999999993
+      },
+      "after": {
+        "samplesMs": [
+          6.697500000002037,
+          8.295300000005227,
+          7.714500000001863
+        ],
+        "medianMs": 7.714500000001863
+      },
+      "changeFromBeforePct": 13.963039014402412,
+      "changeFromBasePct": 18.375019180636333,
+      "withinFivePercent": false
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+      "base148": {
+        "samplesMs": [
+          95.85410000000411,
+          102.82519999999931,
+          99.45590000000084
+        ],
+        "medianMs": 99.45590000000084
+      },
+      "before47": {
+        "samplesMs": [
+          106.33989999999903,
+          97.12780000000203,
+          100.85599999999977
+        ],
+        "medianMs": 100.85599999999977
+      },
+      "after": {
+        "samplesMs": [
+          100.27070000000094,
+          119.25789999999688,
+          96.22209999999905
+        ],
+        "medianMs": 100.27070000000094
+      },
+      "changeFromBeforePct": -0.5803323550396811,
+      "changeFromBasePct": 0.8192575804955693,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+      "base148": {
+        "samplesMs": [
+          227.91070000000036,
+          190.244200000001,
+          188.25630000000092
+        ],
+        "medianMs": 190.244200000001
+      },
+      "before47": {
+        "samplesMs": [
+          193.2502999999997,
+          184.46620000000257,
+          186.03340000000026
+        ],
+        "medianMs": 186.03340000000026
+      },
+      "after": {
+        "samplesMs": [
+          184.6359999999986,
+          201.29889999999432,
+          181.95230000000447
+        ],
+        "medianMs": 184.6359999999986
+      },
+      "changeFromBeforePct": -0.751155437680362,
+      "changeFromBasePct": -2.9478953891905135,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+      "base148": {
+        "samplesMs": [
+          416.9945000000007,
+          477.12510000000475,
+          417.96420000000217
+        ],
+        "medianMs": 417.96420000000217
+      },
+      "before47": {
+        "samplesMs": [
+          484.2140999999974,
+          450.78540000000066,
+          449.3522000000012
+        ],
+        "medianMs": 450.78540000000066
+      },
+      "after": {
+        "samplesMs": [
+          450.7094999999972,
+          409.35919999999896,
+          404.9852000000028
+        ],
+        "medianMs": 409.35919999999896
+      },
+      "changeFromBeforePct": -9.189782987648144,
+      "changeFromBasePct": -2.05878876707698,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+      "base148": {
+        "samplesMs": [
+          225.68529999999737,
+          223.50299999999697,
+          225.50280000000203
+        ],
+        "medianMs": 225.50280000000203
+      },
+      "before47": {
+        "samplesMs": [
+          231.61379999999917,
+          210.06040000000212,
+          224.03959999999643
+        ],
+        "medianMs": 224.03959999999643
+      },
+      "after": {
+        "samplesMs": [
+          206.1736000000019,
+          232.94860000000335,
+          275.5368000000017
+        ],
+        "medianMs": 232.94860000000335
+      },
+      "changeFromBeforePct": 3.9765291493142563,
+      "changeFromBasePct": 3.301865874836696,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "base148": {
+        "samplesMs": [
+          184.32299999999668,
+          186.13070000000153,
+          306.9799999999959
+        ],
+        "medianMs": 186.13070000000153
+      },
+      "before47": {
+        "samplesMs": [
+          190.29529999999795,
+          182.19740000000456,
+          193.92719999999827
+        ],
+        "medianMs": 190.29529999999795
+      },
+      "after": {
+        "samplesMs": [
+          226.92499999999563,
+          184.85429999999906,
+          184.24629999999888
+        ],
+        "medianMs": 184.85429999999906
+      },
+      "changeFromBeforePct": -2.8592403490779628,
+      "changeFromBasePct": -0.6857546874333265,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+      "base148": {
+        "samplesMs": [
+          183.21850000000268,
+          187.22030000000086,
+          192.4392000000007
+        ],
+        "medianMs": 187.22030000000086
+      },
+      "before47": {
+        "samplesMs": [
+          214.47900000000664,
+          178.0356000000029,
+          183.54530000000523
+        ],
+        "medianMs": 183.54530000000523
+      },
+      "after": {
+        "samplesMs": [
+          191.59350000000268,
+          183.6996999999974,
+          182.20270000000164
+        ],
+        "medianMs": 183.6996999999974
+      },
+      "changeFromBeforePct": 0.08412092273251126,
+      "changeFromBasePct": -1.8804584759256615,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "base148": {
+        "samplesMs": [
+          184.32299999999668,
+          186.13070000000153,
+          306.9799999999959
+        ],
+        "medianMs": 186.13070000000153
+      },
+      "before47": {
+        "samplesMs": [
+          190.29529999999795,
+          182.19740000000456,
+          193.92719999999827
+        ],
+        "medianMs": 190.29529999999795
+      },
+      "after": {
+        "samplesMs": [
+          226.92499999999563,
+          184.85429999999906,
+          184.24629999999888
+        ],
+        "medianMs": 184.85429999999906
+      },
+      "changeFromBeforePct": -2.8592403490779628,
+      "changeFromBasePct": -0.6857546874333265,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+      "base148": {
+        "samplesMs": [
+          839.9604999999938,
+          816.953800000003,
+          770.5900000000038
+        ],
+        "medianMs": 816.953800000003
+      },
+      "before47": {
+        "samplesMs": [
+          787.9801000000007,
+          875.9686999999976,
+          779.5164000000004
+        ],
+        "medianMs": 787.9801000000007
+      },
+      "after": {
+        "samplesMs": [
+          767.5507999999973,
+          768.3885000000009,
+          867.1293000000005
+        ],
+        "medianMs": 768.3885000000009
+      },
+      "changeFromBeforePct": -2.486306443525632,
+      "changeFromBasePct": -5.944681327145041,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+      "base148": {
+        "samplesMs": [
+          796.892200000002,
+          798.3604999999952,
+          734.0473999999958
+        ],
+        "medianMs": 796.892200000002
+      },
+      "before47": {
+        "samplesMs": [
+          852.8878000000041,
+          781.036500000002,
+          745.2592999999979
+        ],
+        "medianMs": 781.036500000002
+      },
+      "after": {
+        "samplesMs": [
+          741.4985000000015,
+          761.4306999999972,
+          746.3452999999936
+        ],
+        "medianMs": 746.3452999999936
+      },
+      "changeFromBeforePct": -4.44168742434039,
+      "changeFromBasePct": -6.343003482780773,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+      "base148": {
+        "samplesMs": [
+          1.0622000000003027,
+          1.2908000000024913,
+          1.0446999999985565
+        ],
+        "medianMs": 1.0622000000003027
+      },
+      "before47": {
+        "samplesMs": [
+          1.0996000000013737,
+          1.1471999999994296,
+          1.4222999999983585
+        ],
+        "medianMs": 1.1471999999994296
+      },
+      "after": {
+        "samplesMs": [
+          1.0529000000024098,
+          1.4954999999972642,
+          1.040899999999965
+        ],
+        "medianMs": 1.0529000000024098
+      },
+      "changeFromBeforePct": -8.220013946745697,
+      "changeFromBasePct": -0.8755413291178904,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+      "base148": {
+        "samplesMs": [
+          192.9751000000033,
+          199.77599999999802,
+          220.36900000000605
+        ],
+        "medianMs": 199.77599999999802
+      },
+      "before47": {
+        "samplesMs": [
+          216.54750000000058,
+          180.52529999999388,
+          235.42829999999958
+        ],
+        "medianMs": 216.54750000000058
+      },
+      "after": {
+        "samplesMs": [
+          206.29269999999815,
+          190.21650000000227,
+          188.91330000000016
+        ],
+        "medianMs": 190.21650000000227
+      },
+      "changeFromBeforePct": -12.159456932081058,
+      "changeFromBasePct": -4.785109322439052,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+      "base148": {
+        "samplesMs": [
+          357.2838999999949,
+          419.3403999999937,
+          327.049500000001
+        ],
+        "medianMs": 357.2838999999949
+      },
+      "before47": {
+        "samplesMs": [
+          340.19720000000234,
+          308.6725000000006,
+          317.44399999999587
+        ],
+        "medianMs": 317.44399999999587
+      },
+      "after": {
+        "samplesMs": [
+          314.09440000000177,
+          359.1539000000048,
+          330.1255999999994
+        ],
+        "medianMs": 330.1255999999994
+      },
+      "changeFromBeforePct": 3.994909338341146,
+      "changeFromBasePct": -7.601322085880691,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+      "base148": {
+        "samplesMs": [
+          204.88819999999396,
+          220.254399999998,
+          198.270500000006
+        ],
+        "medianMs": 204.88819999999396
+      },
+      "before47": {
+        "samplesMs": [
+          212.30490000000282,
+          226.9742000000042,
+          204.1794000000009
+        ],
+        "medianMs": 212.30490000000282
+      },
+      "after": {
+        "samplesMs": [
+          205.11759999999776,
+          207.6727000000028,
+          223.34769999999844
+        ],
+        "medianMs": 207.6727000000028
+      },
+      "changeFromBeforePct": -2.181862029562176,
+      "changeFromBasePct": 1.359033853588909,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+      "base148": {
+        "samplesMs": [
+          199.85770000000048,
+          204.25529999999708,
+          189.2355000000025
+        ],
+        "medianMs": 199.85770000000048
+      },
+      "before47": {
+        "samplesMs": [
+          201.8335999999981,
+          195.53019999999378,
+          189.98999999999796
+        ],
+        "medianMs": 195.53019999999378
+      },
+      "after": {
+        "samplesMs": [
+          205.54929999999877,
+          192.6067000000039,
+          186.74779999999737
+        ],
+        "medianMs": 192.6067000000039
+      },
+      "changeFromBeforePct": -1.4951654526973113,
+      "changeFromBasePct": -3.628081379900072,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+      "base148": {
+        "samplesMs": [
+          187.06719999999768,
+          181.04609999999957,
+          174.05189999999857
+        ],
+        "medianMs": 181.04609999999957
+      },
+      "before47": {
+        "samplesMs": [
+          184.8365999999951,
+          209.29079999999522,
+          179.80659999999625
+        ],
+        "medianMs": 184.8365999999951
+      },
+      "after": {
+        "samplesMs": [
+          176.36909999999625,
+          172.45739999999932,
+          178.35619999999471
+        ],
+        "medianMs": 176.36909999999625
+      },
+      "changeFromBeforePct": -4.5810732290028415,
+      "changeFromBasePct": -2.5833199389566186,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+      "base148": {
+        "samplesMs": [
+          204.97660000000178,
+          211.1643999999942,
+          227.710699999996
+        ],
+        "medianMs": 211.1643999999942
+      },
+      "before47": {
+        "samplesMs": [
+          267.7314999999944,
+          195.1742000000013,
+          205.94900000000052
+        ],
+        "medianMs": 205.94900000000052
+      },
+      "after": {
+        "samplesMs": [
+          213.57020000000193,
+          255.07530000000406,
+          204.32340000000113
+        ],
+        "medianMs": 213.57020000000193
+      },
+      "changeFromBeforePct": 3.7005278005726616,
+      "changeFromBasePct": 1.1393018899055862,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+      "base148": {
+        "samplesMs": [
+          510.3917000000001,
+          517.869200000001,
+          533.2113000000027
+        ],
+        "medianMs": 517.869200000001
+      },
+      "before47": {
+        "samplesMs": [
+          521.0187000000005,
+          501.68359999999666,
+          512.7371999999959
+        ],
+        "medianMs": 512.7371999999959
+      },
+      "after": {
+        "samplesMs": [
+          524.5992000000042,
+          477.8963999999978,
+          472.9151999999958
+        ],
+        "medianMs": 477.8963999999978
+      },
+      "changeFromBeforePct": -6.795059925435176,
+      "changeFromBasePct": -7.718705804477866,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse folds a running full prefix once per restore, never across inputs or calls",
+      "base148": {
+        "samplesMs": [
+          21.321300000003248,
+          21.061000000001513,
+          20.759799999999814
+        ],
+        "medianMs": 21.061000000001513
+      },
+      "before47": {
+        "samplesMs": [
+          15.853400000007241,
+          15.484199999998964,
+          15.22389999999723
+        ],
+        "medianMs": 15.484199999998964
+      },
+      "after": {
+        "samplesMs": [
+          14.441299999998591,
+          21.483699999997043,
+          14.619599999998172
+        ],
+        "medianMs": 14.619599999998172
+      },
+      "changeFromBeforePct": -5.583756345183155,
+      "changeFromBasePct": -30.584492664179663,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse retains two full-ledger validations for finished combat with a shorter historical prefix",
+      "base148": {
+        "samplesMs": [
+          53.30479999999807,
+          54.01090000000113,
+          53.143300000003364
+        ],
+        "medianMs": 53.30479999999807
+      },
+      "before47": {
+        "samplesMs": [
+          41.27219999999943,
+          39.597799999995914,
+          40.401300000004994
+        ],
+        "medianMs": 40.401300000004994
+      },
+      "after": {
+        "samplesMs": [
+          39.1079000000027,
+          52.71800000000076,
+          41.075599999996484
+        ],
+        "medianMs": 41.075599999996484
+      },
+      "changeFromBeforePct": 1.6690057002903602,
+      "changeFromBasePct": -22.942023982834613,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse still rejects a running basis prefix mutation after the complete fold succeeded",
+      "base148": {
+        "samplesMs": [
+          6.947599999999511,
+          6.280699999995704,
+          6.0415999999968335
+        ],
+        "medianMs": 6.280699999995704
+      },
+      "before47": {
+        "samplesMs": [
+          4.703699999998207,
+          4.283999999999651,
+          3.9948999999978696
+        ],
+        "medianMs": 4.283999999999651
+      },
+      "after": {
+        "samplesMs": [
+          4.2237999999997555,
+          5.377899999999499,
+          3.894800000001851
+        ],
+        "medianMs": 4.2237999999997555
+      },
+      "changeFromBeforePct": -1.4052287581675982,
+      "changeFromBasePct": -32.74953428753731,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse preserves object rejection if a persistentGrowth accessor changes the already-read ledger",
+      "base148": {
+        "samplesMs": [
+          4.559799999995448,
+          4.93909999999596,
+          4.692300000002433
+        ],
+        "medianMs": 4.692300000002433
+      },
+      "before47": {
+        "samplesMs": [
+          4.562800000006973,
+          3.9830000000001746,
+          4.045700000002398
+        ],
+        "medianMs": 4.045700000002398
+      },
+      "after": {
+        "samplesMs": [
+          4.75510000000213,
+          4.549299999998766,
+          4.922100000003411
+        ],
+        "medianMs": 4.75510000000213
+      },
+      "changeFromBeforePct": 17.53466643595205,
+      "changeFromBasePct": 1.3383628497680267,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse preserves object rejection if a preparation accessor changes the already-read ledger",
+      "base148": {
+        "samplesMs": [
+          4.236099999994622,
+          4.492600000005041,
+          4.1666000000041095
+        ],
+        "medianMs": 4.236099999994622
+      },
+      "before47": {
+        "samplesMs": [
+          5.168899999996938,
+          4.186800000003132,
+          3.7923999999984517
+        ],
+        "medianMs": 4.186800000003132
+      },
+      "after": {
+        "samplesMs": [
+          3.795699999995122,
+          5.08009999999922,
+          4.547500000000582
+        ],
+        "medianMs": 4.547500000000582
+      },
+      "changeFromBeforePct": 8.615171491286432,
+      "changeFromBasePct": 7.351101248940206,
+      "withinFivePercent": false
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything",
+      "base148": {
+        "samplesMs": [
+          550.5734999999986,
+          521.6183000000019,
+          543.4322000000029
+        ],
+        "medianMs": 543.4322000000029
+      },
+      "before47": {
+        "samplesMs": [
+          521.4928999999975,
+          510.9583000000057,
+          560.5613999999987
+        ],
+        "medianMs": 521.4928999999975
+      },
+      "after": {
+        "samplesMs": [
+          497.05019999999786,
+          542.7301999999981,
+          550.827400000002
+        ],
+        "medianMs": 542.7301999999981
+      },
+      "changeFromBeforePct": 4.072404437337651,
+      "changeFromBasePct": -0.12917894817509046,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore resumed combat has identical complete final state and events to uninterrupted combat",
+      "base148": {
+        "samplesMs": [
+          170.5132999999987,
+          168.94450000000506,
+          167.57370000000083
+        ],
+        "medianMs": 168.94450000000506
+      },
+      "before47": {
+        "samplesMs": [
+          170.14480000000185,
+          164.15469999999914,
+          169.59399999999732
+        ],
+        "medianMs": 169.59399999999732
+      },
+      "after": {
+        "samplesMs": [
+          164.93830000000162,
+          166.22439999999915,
+          164.45569999999861
+        ],
+        "medianMs": 164.93830000000162
+      },
+      "changeFromBeforePct": -2.7452032501124934,
+      "changeFromBasePct": -2.3713112886204257,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore retains input and zero-delta commit for immediate empty-board finishes",
+      "base148": {
+        "samplesMs": [
+          8.814400000002934,
+          8.869500000000698,
+          9.797500000000582
+        ],
+        "medianMs": 8.869500000000698
+      },
+      "before47": {
+        "samplesMs": [
+          9.62619999999879,
+          9.105499999997846,
+          7.8457000000053085
+        ],
+        "medianMs": 9.105499999997846
+      },
+      "after": {
+        "samplesMs": [
+          7.904999999998836,
+          8.773600000000442,
+          8.1278999999995
+        ],
+        "medianMs": 8.1278999999995
+      },
+      "changeFromBeforePct": -10.736368129137098,
+      "changeFromBasePct": -8.361237950291912,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects missing, forged or changed basis and running resources",
+      "base148": {
+        "samplesMs": [
+          12.729299999999057,
+          12.436699999998382,
+          12.530900000005204
+        ],
+        "medianMs": 12.530900000005204
+      },
+      "before47": {
+        "samplesMs": [
+          12.860899999999674,
+          14.22320000000036,
+          12.960500000001048
+        ],
+        "medianMs": 12.960500000001048
+      },
+      "after": {
+        "samplesMs": [
+          11.775200000003679,
+          12.107499999998254,
+          12.097099999999045
+        ],
+        "medianMs": 12.097099999999045
+      },
+      "changeFromBeforePct": -6.661780023933739,
+      "changeFromBasePct": -3.4618423258183983,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects frozen plan, receipt, birth, evidence, counter and source-delta corruption",
+      "base148": {
+        "samplesMs": [
+          83.74490000000515,
+          87.44139999999607,
+          84.64069999999629
+        ],
+        "medianMs": 84.64069999999629
+      },
+      "before47": {
+        "samplesMs": [
+          90.61940000000322,
+          83.35339999999997,
+          83.05079999999725
+        ],
+        "medianMs": 83.35339999999997
+      },
+      "after": {
+        "samplesMs": [
+          84.33299999999872,
+          86.06300000000192,
+          80.95729999999458
+        ],
+        "medianMs": 84.33299999999872
+      },
+      "changeFromBeforePct": 1.1752370029282089,
+      "changeFromBasePct": -0.36353669097440866,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore keeps receipt schema rejection through the shared lineage validator",
+      "base148": {
+        "samplesMs": [
+          81.08230000000185,
+          82.24090000000433,
+          79.59440000000177
+        ],
+        "medianMs": 81.08230000000185
+      },
+      "before47": {
+        "samplesMs": [
+          83.34009999999398,
+          79.27750000000378,
+          79.22409999999945
+        ],
+        "medianMs": 79.27750000000378
+      },
+      "after": {
+        "samplesMs": [
+          79.55159999999887,
+          78.66429999999673,
+          80.49809999999707
+        ],
+        "medianMs": 79.55159999999887
+      },
+      "changeFromBeforePct": 0.34574753239580147,
+      "changeFromBasePct": -1.887834952884837,
+      "withinFivePercent": true
+    },
+    {
+      "file": "m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects an unearned choice, wrong offered state and forged post-settlement resources",
+      "base148": {
+        "samplesMs": [
+          155.03830000000016,
+          162.642399999997,
+          154.04699999999866
+        ],
+        "medianMs": 155.03830000000016
+      },
+      "before47": {
+        "samplesMs": [
+          167.0841999999975,
+          149.9765000000043,
+          154.63460000000487
+        ],
+        "medianMs": 154.63460000000487
+      },
+      "after": {
+        "samplesMs": [
+          154.00900000000547,
+          154.3053,
+          153.1117000000013
+        ],
+        "medianMs": 154.00900000000547
+      },
+      "changeFromBeforePct": -0.4045666364444811,
+      "changeFromBasePct": -0.6639004684614647,
+      "withinFivePercent": true
+    }
+  ],
+  "history": {
+    "before": {
+      "battles": 33,
+      "coldMs": 8769.547599999998,
+      "warmMs": [
+        122.44640000000072,
+        113.11549999999988,
+        112.34149999999863,
+        112.70420000000013,
+        113.9330000000009
+      ],
+      "externalMs": 9965.868299999998
+    },
+    "after": {
+      "battles": 33,
+      "coldMs": 8512.923700000003,
+      "warmMs": [
+        26.0612000000001,
+        24.55199999999968,
+        24.202900000000227,
+        25.46480000000156,
+        24.93920000000071
+      ],
+      "externalMs": 9523.161099999998
+    }
+  },
+  "profile": [
+    {
+      "file": "m8-b7-match-wiring",
+      "before": {
+        "file": "m8-b7-match-wiring.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 307,
+            "ms": 1958.7162999999055
+          },
+          "serializeMatch": {
+            "calls": 404,
+            "ms": 5293.4560000000565
+          },
+          "validateMatchStructure": {
+            "calls": 711,
+            "ms": 6028.788799999958
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 469,
+            "ms": 241.9279000000388
+          },
+          "readG23Progress": {
+            "calls": 13047,
+            "ms": 25.91979999999603
+          },
+          "foldResourceProvenance": {
+            "calls": 1129,
+            "ms": 824.354699999989
+          }
+        },
+        "self": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 2122.1190000000006
+          },
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 1141.1939999999997
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 802.3319999999999
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 602.4250000000001
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 462.6209999999999
+          },
+          {
+            "frame": "eq file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1243",
+            "ms": 442.3859999999998
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 408.263
+          },
+          {
+            "frame": "plainJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:52",
+            "ms": 358.908
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 342.614
+          },
+          {
+            "frame": "keys file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1344",
+            "ms": 251.38799999999992
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 166.463
+          },
+          {
+            "frame": "foldResourceProvenance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:220",
+            "ms": 147.675
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 143.939
+          },
+          {
+            "frame": "hasKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1352",
+            "ms": 120.78700000000002
+          },
+          {
+            "frame": "getCatalogRoundById file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/round-selectors.ts:13",
+            "ms": 93.552
+          },
+          {
+            "frame": "quoteKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:80",
+            "ms": 82.19999999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:90",
+            "ms": 81.55600000000001
+          },
+          {
+            "frame": "validateResourceReceipts file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:128",
+            "ms": 80.86699999999998
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 70.61900000000001
+          },
+          {
+            "frame": "getCatalogRoundByOrdinal file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/round-selectors.ts:7",
+            "ms": 69.71600000000002
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 65.51400000000001
+          },
+          {
+            "frame": "corrupt file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/tests/m8-b7-match-wiring.test.ts:42",
+            "ms": 64.562
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 59.433
+          },
+          {
+            "frame": "validateMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/restore.ts:31",
+            "ms": 54.504
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-profile-setup.ts:26",
+            "ms": 49.55399999999999
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 49.22
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:142",
+            "ms": 49.12599999999999
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 46.477000000000004
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 44.177
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 42.047
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 12283.143999999984
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 5612.373999999995
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 5596.908999999995
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 5595.264999999995
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 5593.685999999994
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 5519.765999999993
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 4867.468999999997
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 2009.9129999999993
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 1882.8520000000005
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 1712.2369999999992
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 1521.7689999999993
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 1516.249999999999
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1470.9369999999994
+          },
+          {
+            "frame": "plainJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:52",
+            "ms": 906.8570000000003
+          },
+          {
+            "frame": "foldResourceProvenance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:220",
+            "ms": 721.8099999999997
+          },
+          {
+            "frame": "restoreCombatInput file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-input.ts:79",
+            "ms": 497.24
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 444.1959999999997
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 424.17
+          },
+          {
+            "frame": "equal2 file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:163",
+            "ms": 361.911
+          },
+          {
+            "frame": "validateResourceReceipts file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:128",
+            "ms": 350.98400000000004
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 330.626
+          },
+          {
+            "frame": "same file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:133",
+            "ms": 320.116
+          },
+          {
+            "frame": "validateMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/restore.ts:31",
+            "ms": 260.06699999999995
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 250.60799999999995
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:142",
+            "ms": 239.12499999999991
+          },
+          {
+            "frame": "buildStrategySnapshot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:60",
+            "ms": 202.47500000000005
+          },
+          {
+            "frame": "compileRestoredStrategy file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:89",
+            "ms": 202.14400000000006
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 191.44899999999996
+          },
+          {
+            "frame": "assertParsedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:144",
+            "ms": 183.10999999999996
+          },
+          {
+            "frame": "validateG23Progress file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-match-progress.ts:48",
+            "ms": 155.94299999999996
+          }
+        ]
+      },
+      "after": {
+        "file": "m8-b7-match-wiring.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 307,
+            "ms": 1832.8987999999154
+          },
+          "serializeMatch": {
+            "calls": 404,
+            "ms": 5133.32310000006
+          },
+          "validateMatchStructure": {
+            "calls": 711,
+            "ms": 5754.532299999948
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 469,
+            "ms": 228.3386999999857
+          },
+          "readG23Progress": {
+            "calls": 13047,
+            "ms": 25.077900000040245
+          },
+          "foldResourceProvenance": {
+            "calls": 1129,
+            "ms": 724.1287999999549
+          }
+        },
+        "self": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 2078.808
+          },
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 1360.4409999999996
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 770.2169999999988
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 468.151
+          },
+          {
+            "frame": "eq file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1243",
+            "ms": 422.56899999999996
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 412.6130000000001
+          },
+          {
+            "frame": "plainJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:52",
+            "ms": 406.7170000000001
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 293.46600000000007
+          },
+          {
+            "frame": "keys file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1344",
+            "ms": 271.773
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 262.3579999999999
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 156.86999999999998
+          },
+          {
+            "frame": "validateResourceReceipts file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:128",
+            "ms": 130.911
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 128.809
+          },
+          {
+            "frame": "hasKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1352",
+            "ms": 123.38999999999999
+          },
+          {
+            "frame": "foldResourceProvenance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:220",
+            "ms": 106.03399999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 105.77100000000002
+          },
+          {
+            "frame": "quoteKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:80",
+            "ms": 89.737
+          },
+          {
+            "frame": "getCatalogRoundById file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/round-selectors.ts:13",
+            "ms": 76.97099999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:90",
+            "ms": 71.16900000000001
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 63.381
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-profile-setup.ts:26",
+            "ms": 62.299000000000014
+          },
+          {
+            "frame": "getCatalogRoundByOrdinal file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/round-selectors.ts:7",
+            "ms": 56.48199999999999
+          },
+          {
+            "frame": "corrupt file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/tests/m8-b7-match-wiring.test.ts:42",
+            "ms": 54.119
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 50.81599999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:142",
+            "ms": 50.272
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 49.498
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 46.85
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 46.190000000000005
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:66",
+            "ms": 43.92299999999999
+          },
+          {
+            "frame": "assertParsedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:144",
+            "ms": 43.55599999999999
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 11707.374000000016
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 5435.715000000003
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 5424.997
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 5423.379000000002
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 5420.068000000002
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 5355.0250000000015
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 4749.230000000003
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 2208.5289999999986
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 1786.6760000000002
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 1744.5399999999986
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 1531.782999999999
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 1524.5049999999992
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1478.5909999999994
+          },
+          {
+            "frame": "plainJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:52",
+            "ms": 1001.8880000000006
+          },
+          {
+            "frame": "foldResourceProvenance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:220",
+            "ms": 663.4649999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 512.3719999999998
+          },
+          {
+            "frame": "restoreCombatInput file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-input.ts:79",
+            "ms": 506.57
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 431.65700000000015
+          },
+          {
+            "frame": "validateResourceReceipts file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:128",
+            "ms": 411.016
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 364.63499999999993
+          },
+          {
+            "frame": "equal2 file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:163",
+            "ms": 319.8089999999999
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 292.43499999999995
+          },
+          {
+            "frame": "same file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:133",
+            "ms": 290.077
+          },
+          {
+            "frame": "compileRestoredStrategy file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:89",
+            "ms": 246.81900000000002
+          },
+          {
+            "frame": "assertParsedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:144",
+            "ms": 244.17899999999977
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:142",
+            "ms": 242.97699999999992
+          },
+          {
+            "frame": "validateMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/restore.ts:31",
+            "ms": 233.59999999999997
+          },
+          {
+            "frame": "buildStrategySnapshot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:60",
+            "ms": 223.068
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 211.79199999999992
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:66",
+            "ms": 175.082
+          }
+        ]
+      }
+    },
+    {
+      "file": "m8-b8-restore",
+      "before": {
+        "file": "m8-b8-restore.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 143,
+            "ms": 175.69009999999253
+          },
+          "serializeMatch": {
+            "calls": 106,
+            "ms": 263.91919999998936
+          },
+          "validateMatchStructure": {
+            "calls": 249,
+            "ms": 379.4470999999976
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 133,
+            "ms": 18.864600000059
+          },
+          "readG23Progress": {
+            "calls": 5301,
+            "ms": 10.70470000008936
+          },
+          "foldResourceProvenance": {
+            "calls": 336,
+            "ms": 13.984099999994214
+          }
+        },
+        "self": [
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 197.75
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 192.238
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 135.415
+          },
+          {
+            "frame": "eq file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1243",
+            "ms": 82.21500000000002
+          },
+          {
+            "frame": "keys file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1344",
+            "ms": 77.134
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 64.83500000000002
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 49.143
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 43.564
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 35.715999999999994
+          },
+          {
+            "frame": "hasKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1352",
+            "ms": 27.487
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 22.745000000000005
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 21.903
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 16.016
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 14.645000000000001
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 14.639000000000001
+          },
+          {
+            "frame": "hasDefinedKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1349",
+            "ms": 14.142
+          },
+          {
+            "frame": "iterableEquality file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1399",
+            "ms": 13.069
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 12.823
+          },
+          {
+            "frame": "commitOutcome file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:407",
+            "ms": 12.128
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 11.577
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 11.540000000000001
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 11.402
+          },
+          {
+            "frame": "quoteKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:80",
+            "ms": 11.352000000000002
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 9.875
+          },
+          {
+            "frame": "isAsymmetric file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1219",
+            "ms": 8.449000000000002
+          },
+          {
+            "frame": "validateInputAssets file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/input-assets.ts:37",
+            "ms": 8.16
+          },
+          {
+            "frame": "namedObject file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/spy.DgMTfhrK.js:271",
+            "ms": 8.14
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:15",
+            "ms": 7.596
+          },
+          {
+            "frame": "plainJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:52",
+            "ms": 6.7219999999999995
+          },
+          {
+            "frame": "withCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:565",
+            "ms": 6.639
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 685.1489999999995
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 379.321
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 365.41900000000015
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 362.01500000000016
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 360.89800000000014
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 360.89800000000014
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 356.0410000000001
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 318.70300000000003
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 318.70300000000003
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 292.144
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 253.356
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 175.01099999999997
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 87.57500000000002
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 73.168
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 62.36599999999999
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 40.617000000000004
+          },
+          {
+            "frame": "startMatchCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:600",
+            "ms": 34.43
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 30.049999999999997
+          },
+          {
+            "frame": "withCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:565",
+            "ms": 28.226
+          },
+          {
+            "frame": "createMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:263",
+            "ms": 26.757
+          },
+          {
+            "frame": "validateInputAssets file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/input-assets.ts:37",
+            "ms": 24.458
+          },
+          {
+            "frame": "same file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:133",
+            "ms": 24.227
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 24.187
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 23.955000000000002
+          },
+          {
+            "frame": "validateContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:148",
+            "ms": 23.468999999999998
+          },
+          {
+            "frame": "assertParsedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:144",
+            "ms": 22.722
+          },
+          {
+            "frame": "foldResourceProvenance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/resource-provenance.ts:220",
+            "ms": 22.598
+          },
+          {
+            "frame": "restoreCombatInput file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-input.ts:79",
+            "ms": 20.638
+          },
+          {
+            "frame": "buildStrategySnapshot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:60",
+            "ms": 18.066
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 17.928
+          }
+        ]
+      },
+      "after": {
+        "file": "m8-b8-restore.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 143,
+            "ms": 159.141999999978
+          },
+          "serializeMatch": {
+            "calls": 106,
+            "ms": 244.07220000000962
+          },
+          "validateMatchStructure": {
+            "calls": 249,
+            "ms": 343.8109000000186
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 133,
+            "ms": 16.60029999998369
+          },
+          "readG23Progress": {
+            "calls": 5301,
+            "ms": 10.237299999971583
+          },
+          "foldResourceProvenance": {
+            "calls": 336,
+            "ms": 13.228699999963283
+          }
+        },
+        "self": [
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 226.17900000000003
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 172.712
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 105.31499999999998
+          },
+          {
+            "frame": "eq file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1243",
+            "ms": 93.43600000000002
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 61.422
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 60.79600000000001
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 52.82399999999999
+          },
+          {
+            "frame": "keys file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1344",
+            "ms": 50.79399999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 41.408
+          },
+          {
+            "frame": "hasKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1352",
+            "ms": 26.287000000000003
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 22.706999999999997
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 19.378
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 18.376
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 16.405
+          },
+          {
+            "frame": "hasDefinedKey file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1349",
+            "ms": 11.739999999999998
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 10.449000000000002
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 9.825
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 9.225000000000001
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 9.024999999999999
+          },
+          {
+            "frame": "readG23Progress file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:19",
+            "ms": 8.883
+          },
+          {
+            "frame": "isAsymmetric file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1219",
+            "ms": 8.859
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 7.835
+          },
+          {
+            "frame": "namedObject file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/spy.DgMTfhrK.js:271",
+            "ms": 7.708
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-profile-setup.ts:26",
+            "ms": 7.582000000000001
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 7.457
+          },
+          {
+            "frame": "setState file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1622",
+            "ms": 6.196
+          },
+          {
+            "frame": "equalValidatedContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:135",
+            "ms": 5.573
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 5.446
+          },
+          {
+            "frame": "resolveEffects file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/effects.ts:200",
+            "ms": 5.047999999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:66",
+            "ms": 5.021
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 496.1609999999997
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 356.482
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 330.4269999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 327.1169999999999
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 327.1169999999999
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 327.1169999999999
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 320.9819999999999
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 300.70099999999996
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 299.05099999999993
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 290.39099999999996
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 215.75199999999998
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 174.87099999999998
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 78.05800000000002
+          },
+          {
+            "frame": "validateB8Resources file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:162",
+            "ms": 64.41900000000001
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 43.384
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 41.620000000000005
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 31.299
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 28.72
+          },
+          {
+            "frame": "startMatchCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:600",
+            "ms": 25.957
+          },
+          {
+            "frame": "restoreCombatInput file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-input.ts:79",
+            "ms": 25.579
+          },
+          {
+            "frame": "compileRestoredStrategy file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:89",
+            "ms": 24.583
+          },
+          {
+            "frame": "buildStrategySnapshot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:60",
+            "ms": 23.208999999999996
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 22.706999999999997
+          },
+          {
+            "frame": "createMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:263",
+            "ms": 21.084000000000003
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 19.378
+          },
+          {
+            "frame": "validateContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:148",
+            "ms": 17.943
+          },
+          {
+            "frame": "validateB8Loot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/b8-restore.ts:69",
+            "ms": 17.759999999999998
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/strategy-snapshot.ts:66",
+            "ms": 17.230000000000004
+          },
+          {
+            "frame": "same file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:133",
+            "ms": 16.041
+          },
+          {
+            "frame": "withCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:565",
+            "ms": 15.044999999999998
+          }
+        ]
+      }
+    },
+    {
+      "file": "b8-resumable-battle",
+      "before": {
+        "file": "b8-resumable-battle.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 0,
+            "ms": 0
+          },
+          "serializeMatch": {
+            "calls": 0,
+            "ms": 0
+          },
+          "validateMatchStructure": {
+            "calls": 0,
+            "ms": 0
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 41,
+            "ms": 22.86300000000074
+          },
+          "readG23Progress": {
+            "calls": 32,
+            "ms": 0.25950000000057116
+          },
+          "foldResourceProvenance": {
+            "calls": 0,
+            "ms": 0
+          }
+        },
+        "self": [
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 6580.215000000001
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1705.4999999999998
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 1693.5750000000003
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 1330.5329999999994
+          },
+          {
+            "frame": "pick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:4",
+            "ms": 861.778
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 805.2059999999998
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:178",
+            "ms": 542.443
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 506.4669999999999
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 443.423
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 334.245
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:5",
+            "ms": 308.893
+          },
+          {
+            "frame": "readCombatStats file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:103",
+            "ms": 301.0239999999999
+          },
+          {
+            "frame": "defenses file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:87",
+            "ms": 296.63200000000006
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:209",
+            "ms": 293.449
+          },
+          {
+            "frame": "byDistance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:208",
+            "ms": 265.489
+          },
+          {
+            "frame": "integer file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:10",
+            "ms": 208.18199999999996
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:310",
+            "ms": 199.77900000000002
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 194.27700000000002
+          },
+          {
+            "frame": "unitView file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:46",
+            "ms": 168.23000000000008
+          },
+          {
+            "frame": "equalViewField file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:152",
+            "ms": 164.632
+          },
+          {
+            "frame": "modifierValues file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:43",
+            "ms": 149.41800000000006
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 145.793
+          },
+          {
+            "frame": "move file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:76",
+            "ms": 144.00300000000001
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:402",
+            "ms": 138.083
+          },
+          {
+            "frame": "settleSurvival file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:381",
+            "ms": 136.78500000000003
+          },
+          {
+            "frame": "cleanupMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:416",
+            "ms": 129.805
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 110.72200000000001
+          },
+          {
+            "frame": "freezeCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:8",
+            "ms": 104.74600000000001
+          },
+          {
+            "frame": "mechanic file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:153",
+            "ms": 100.43100000000003
+          },
+          {
+            "frame": "enemies file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:214",
+            "ms": 100.258
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 15150.614999999989
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 15132.07599999999
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 14738.464999999993
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:178",
+            "ms": 12841.499999999985
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 9495.076999999994
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/two-sided-battle.ts:166",
+            "ms": 7047.714999999996
+          },
+          {
+            "frame": "toCombatReplay file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:223",
+            "ms": 5729.834999999984
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 4746.981999999999
+          },
+          {
+            "frame": "toCombatViewState file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:54",
+            "ms": 3612.920000000002
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:58",
+            "ms": 2437.358
+          },
+          {
+            "frame": "unitView file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:46",
+            "ms": 2387.772
+          },
+          {
+            "frame": "resolveTwoSidedBattle file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/two-sided-battle.ts:194",
+            "ms": 2075.47
+          },
+          {
+            "frame": "pick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:4",
+            "ms": 1170.6709999999998
+          },
+          {
+            "frame": "readCombatStats file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:103",
+            "ms": 1136.8270000000002
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 841.139
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:310",
+            "ms": 829.7439999999999
+          },
+          {
+            "frame": "byDistance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:208",
+            "ms": 580.8290000000001
+          },
+          {
+            "frame": "defenses file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:87",
+            "ms": 484.97000000000014
+          },
+          {
+            "frame": "resolveStat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:80",
+            "ms": 369.6339999999999
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 323.0760000000001
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:209",
+            "ms": 315.34
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 314.3310000000001
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:5",
+            "ms": 308.893
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 299.84099999999995
+          },
+          {
+            "frame": "rollPlannedPackets file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:348",
+            "ms": 285.8880000000001
+          },
+          {
+            "frame": "modifierValues file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:43",
+            "ms": 234.58500000000004
+          },
+          {
+            "frame": "move file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:76",
+            "ms": 214.94299999999998
+          },
+          {
+            "frame": "startCombatReplay file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:156",
+            "ms": 211.106
+          },
+          {
+            "frame": "integer file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:10",
+            "ms": 208.18199999999996
+          },
+          {
+            "frame": "spellCrit file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:130",
+            "ms": 204.14299999999997
+          }
+        ]
+      },
+      "after": {
+        "file": "b8-resumable-battle.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 0,
+            "ms": 0
+          },
+          "serializeMatch": {
+            "calls": 0,
+            "ms": 0
+          },
+          "validateMatchStructure": {
+            "calls": 0,
+            "ms": 0
+          },
+          "validateMatchHistory": {
+            "calls": 0,
+            "ms": 0
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 41,
+            "ms": 20.457899999997608
+          },
+          "readG23Progress": {
+            "calls": 32,
+            "ms": 0.312600000000657
+          },
+          "foldResourceProvenance": {
+            "calls": 0,
+            "ms": 0
+          }
+        },
+        "self": [
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 6536.127999999996
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1729.874
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 1644.4789999999998
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 1437.3849999999989
+          },
+          {
+            "frame": "pick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:4",
+            "ms": 914.2800000000004
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 846.5259999999998
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 510.5389999999999
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:178",
+            "ms": 487.6169999999999
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 444.3960000000001
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 310.536
+          },
+          {
+            "frame": "defenses file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:87",
+            "ms": 306.7709999999999
+          },
+          {
+            "frame": "readCombatStats file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:103",
+            "ms": 293.977
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:5",
+            "ms": 291.3599999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:209",
+            "ms": 278.416
+          },
+          {
+            "frame": "byDistance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:208",
+            "ms": 262.19899999999996
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 247.677
+          },
+          {
+            "frame": "equalViewField file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:152",
+            "ms": 204.85899999999995
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 173.55299999999997
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:310",
+            "ms": 170.91800000000003
+          },
+          {
+            "frame": "modifierValues file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:43",
+            "ms": 170.24900000000005
+          },
+          {
+            "frame": "unitView file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:46",
+            "ms": 168.112
+          },
+          {
+            "frame": "integer file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:10",
+            "ms": 166.54400000000004
+          },
+          {
+            "frame": "move file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:76",
+            "ms": 162.284
+          },
+          {
+            "frame": "settleSurvival file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:381",
+            "ms": 143.718
+          },
+          {
+            "frame": "freezeCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:8",
+            "ms": 135.53900000000002
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 119.571
+          },
+          {
+            "frame": "cleanupMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:416",
+            "ms": 110.94999999999999
+          },
+          {
+            "frame": "enemies file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:214",
+            "ms": 105.06500000000001
+          },
+          {
+            "frame": "working file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:104",
+            "ms": 99.20699999999998
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:402",
+            "ms": 94.225
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 15141.857000000004
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 15119.795000000006
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 14754.447
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:178",
+            "ms": 13045.268000000015
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:190",
+            "ms": 9461.462999999996
+          },
+          {
+            "frame": "advance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/two-sided-battle.ts:166",
+            "ms": 7072.942000000003
+          },
+          {
+            "frame": "toCombatReplay file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:223",
+            "ms": 5771.004
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 5229.858999999998
+          },
+          {
+            "frame": "toCombatViewState file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:54",
+            "ms": 3868.759
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:58",
+            "ms": 2538.4229999999993
+          },
+          {
+            "frame": "unitView file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:46",
+            "ms": 2498.421999999999
+          },
+          {
+            "frame": "resolveTwoSidedBattle file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/two-sided-battle.ts:194",
+            "ms": 2084.9900000000007
+          },
+          {
+            "frame": "readCombatStats file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:103",
+            "ms": 1216.154
+          },
+          {
+            "frame": "pick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:4",
+            "ms": 1205.6399999999999
+          },
+          {
+            "frame": "sharedCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:15",
+            "ms": 878.2019999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:310",
+            "ms": 842.82
+          },
+          {
+            "frame": "byDistance file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:208",
+            "ms": 559.037
+          },
+          {
+            "frame": "defenses file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:87",
+            "ms": 453.17099999999994
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 387.826
+          },
+          {
+            "frame": "resolveStat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:80",
+            "ms": 372.35999999999996
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 342.5339999999998
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 326.14599999999996
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:209",
+            "ms": 296.83799999999997
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/view-fields.ts:5",
+            "ms": 291.3599999999999
+          },
+          {
+            "frame": "modifierValues file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:43",
+            "ms": 288.57499999999993
+          },
+          {
+            "frame": "rollPlannedPackets file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:348",
+            "ms": 259.67999999999995
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:202",
+            "ms": 249.41799999999995
+          },
+          {
+            "frame": "move file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:76",
+            "ms": 230.08799999999997
+          },
+          {
+            "frame": "startCombatReplay file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:156",
+            "ms": 207.943
+          },
+          {
+            "frame": "equalViewField file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-replay-view.ts:152",
+            "ms": 204.85899999999995
+          }
+        ]
+      }
+    },
+    {
+      "file": "g2-4a-crown-history",
+      "before": {
+        "file": "g2-4a-crown-history.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 18,
+            "ms": 356.1081000000049
+          },
+          "serializeMatch": {
+            "calls": 3,
+            "ms": 123.48950000000332
+          },
+          "validateMatchStructure": {
+            "calls": 49,
+            "ms": 58.86779999997816
+          },
+          "validateMatchHistory": {
+            "calls": 17,
+            "ms": 444.25220000000263
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 30,
+            "ms": 4.426999999966938
+          },
+          "readG23Progress": {
+            "calls": 11684,
+            "ms": 25.10180000042601
+          },
+          "foldResourceProvenance": {
+            "calls": 52,
+            "ms": 5.683599999989383
+          }
+        },
+        "self": [
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 792.9469999999999
+          },
+          {
+            "frame": "copy file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/replay/snapshot.ts:7",
+            "ms": 187.89200000000002
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 135.308
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 86.48699999999998
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 52.50199999999999
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 51.248
+          },
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 37.21099999999999
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 31.061999999999998
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 27.098000000000003
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 22.401999999999997
+          },
+          {
+            "frame": "isImmutableJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:52",
+            "ms": 17.763
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 16.655
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 16.410999999999998
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 16.209
+          },
+          {
+            "frame": "readG23Progress file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:19",
+            "ms": 15.686
+          },
+          {
+            "frame": "integer file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:10",
+            "ms": 14.157999999999998
+          },
+          {
+            "frame": "freezeCombatDeclarations file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-static.ts:8",
+            "ms": 14.133999999999999
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 14.096
+          },
+          {
+            "frame": "digestContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:160",
+            "ms": 13.799000000000003
+          },
+          {
+            "frame": "plainData file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:11",
+            "ms": 11.504999999999999
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 10.84
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 8.977
+          },
+          {
+            "frame": "rememberFrozen file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:89",
+            "ms": 8.844999999999999
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:15",
+            "ms": 8.202
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-profile-setup.ts:26",
+            "ms": 8.176
+          },
+          {
+            "frame": "settleSurvival file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:381",
+            "ms": 8.155
+          },
+          {
+            "frame": "authorizeSpellCrit file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/crit.ts:24",
+            "ms": 8.112
+          },
+          {
+            "frame": "applyG23Radiant file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-radiant.ts:8",
+            "ms": 7.563000000000001
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 6.6899999999999995
+          },
+          {
+            "frame": "modifierValues file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:43",
+            "ms": 6.555999999999999
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 1247.341
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 1066.618
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 1060.631
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1003.2349999999999
+          },
+          {
+            "frame": "replayBattleRecord file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:93",
+            "ms": 664.1
+          },
+          {
+            "frame": "matchHistoryChecks file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:140",
+            "ms": 662.576
+          },
+          {
+            "frame": "validateM8Record file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:100",
+            "ms": 654.575
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 451.993
+          },
+          {
+            "frame": "validateMatchHistory file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:160",
+            "ms": 419.90099999999995
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 184.077
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 125.139
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 118.77200000000002
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 60.354
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 59.746
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 58.67099999999999
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 58.67099999999999
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 58.67099999999999
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 57.087999999999994
+          },
+          {
+            "frame": "withCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:565",
+            "ms": 45.419000000000004
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 45.358999999999995
+          },
+          {
+            "frame": "plainData file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:11",
+            "ms": 40.382
+          },
+          {
+            "frame": "equalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:47",
+            "ms": 36.172000000000004
+          },
+          {
+            "frame": "digestContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:160",
+            "ms": 35.138000000000005
+          },
+          {
+            "frame": "applyG23Radiant file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-radiant.ts:8",
+            "ms": 35.095
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 32.606
+          },
+          {
+            "frame": "compare file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:110",
+            "ms": 28.216999999999995
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 27.785
+          },
+          {
+            "frame": "isImmutableJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:52",
+            "ms": 26.018
+          },
+          {
+            "frame": "shareGeneratedJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:44",
+            "ms": 22.508999999999997
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 22.401999999999997
+          }
+        ]
+      },
+      "after": {
+        "file": "g2-4a-crown-history.test.ts.cpuprofile",
+        "counters": {
+          "restoreMatch": {
+            "calls": 18,
+            "ms": 349.8387000000075
+          },
+          "serializeMatch": {
+            "calls": 3,
+            "ms": 123.08689999999478
+          },
+          "validateMatchStructure": {
+            "calls": 49,
+            "ms": 55.593400000005204
+          },
+          "validateMatchHistory": {
+            "calls": 17,
+            "ms": 442.14070000000356
+          },
+          "replayBattleRecord": {
+            "calls": 0,
+            "ms": 0
+          },
+          "buildStrategySnapshot": {
+            "calls": 30,
+            "ms": 4.584799999982351
+          },
+          "readG23Progress": {
+            "calls": 11684,
+            "ms": 27.158899999696587
+          },
+          "foldResourceProvenance": {
+            "calls": 52,
+            "ms": 5.472399999976915
+          }
+        },
+        "self": [
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 837.2130000000001
+          },
+          {
+            "frame": "copy file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/replay/snapshot.ts:7",
+            "ms": 180.25400000000008
+          },
+          {
+            "frame": "post node:inspector:115",
+            "ms": 114.691
+          },
+          {
+            "frame": "(garbage collector) :0",
+            "ms": 100.35099999999998
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 50.383
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 45.42300000000001
+          },
+          {
+            "frame": "structuredClone :0",
+            "ms": 42.506
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 34.332
+          },
+          {
+            "frame": "structuredClone node:internal/worker/js_transferable:112",
+            "ms": 27.778000000000002
+          },
+          {
+            "frame": "readG23Progress file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:19",
+            "ms": 25.054000000000002
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 24.679000000000002
+          },
+          {
+            "frame": "digestContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:160",
+            "ms": 19.130000000000003
+          },
+          {
+            "frame": "range file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13-state.ts:179",
+            "ms": 14.234000000000002
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 13.164000000000001
+          },
+          {
+            "frame": "plainData file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:11",
+            "ms": 11.812999999999999
+          },
+          {
+            "frame": "namedObject file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/node_modules/vitest/dist/chunks/spy.DgMTfhrK.js:271",
+            "ms": 11.747000000000002
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-profile-setup.ts:26",
+            "ms": 11.542
+          },
+          {
+            "frame": "maintainMechanisms file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/s13-mechanisms.ts:267",
+            "ms": 11.412
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:15",
+            "ms": 11.341
+          },
+          {
+            "frame": "advanceG22Traits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-g2-2.ts:205",
+            "ms": 8.262999999999998
+          },
+          {
+            "frame": "(idle) :0",
+            "ms": 7.59
+          },
+          {
+            "frame": "recordedCrownBattle file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/tests/crown-history-helpers.ts:6",
+            "ms": 7.343
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 6.656000000000001
+          },
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 6.603
+          },
+          {
+            "frame": "damageSample file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:154",
+            "ms": 6.53
+          },
+          {
+            "frame": "settleAugmentDeaths file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-augment-effects.ts:79",
+            "ms": 6.511
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:20",
+            "ms": 6.122999999999999
+          },
+          {
+            "frame": "integer file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/stats.ts:10",
+            "ms": 5.982
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 5.948
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 5.695
+          }
+        ],
+        "inclusive": [
+          {
+            "frame": "stepMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:609",
+            "ms": 1261.9070000000002
+          },
+          {
+            "frame": "stepCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat.ts:153",
+            "ms": 1077.1960000000001
+          },
+          {
+            "frame": "advanceCombatTick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-tick.ts:36",
+            "ms": 1072.7640000000001
+          },
+          {
+            "frame": "advanceS13Tick file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/combat-s13.ts:188",
+            "ms": 1019.0630000000001
+          },
+          {
+            "frame": "matchHistoryChecks file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:144",
+            "ms": 659.4470000000001
+          },
+          {
+            "frame": "validateM8Record file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:104",
+            "ms": 656.014
+          },
+          {
+            "frame": "replaySnapshot file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:97",
+            "ms": 656.014
+          },
+          {
+            "frame": "restoreMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:11",
+            "ms": 446.0000000000001
+          },
+          {
+            "frame": "validateMatchHistory file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:164",
+            "ms": 419.2170000000001
+          },
+          {
+            "frame": "canonicalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:98",
+            "ms": 171.34000000000006
+          },
+          {
+            "frame": "accept file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:162",
+            "ms": 142.335
+          },
+          {
+            "frame": "serializeMatch file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization.ts:17",
+            "ms": 117.969
+          },
+          {
+            "frame": "updateG23Cells file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:58",
+            "ms": 69.72699999999999
+          },
+          {
+            "frame": "deriveTraits file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/trait-snapshot.ts:7",
+            "ms": 59.76
+          },
+          {
+            "frame": "restoreMatchWithinCall file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:129",
+            "ms": 53.369
+          },
+          {
+            "frame": " file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:127",
+            "ms": 53.369
+          },
+          {
+            "frame": "withItemRestoreCache file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/m8/item-restore.ts:30",
+            "ms": 53.369
+          },
+          {
+            "frame": "validateMatchStructure file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/serialization-structure.ts:126",
+            "ms": 53.369
+          },
+          {
+            "frame": "plainData file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:11",
+            "ms": 53.206999999999994
+          },
+          {
+            "frame": "digestContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/index.ts:160",
+            "ms": 45.225
+          },
+          {
+            "frame": "applyG23Radiant file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-radiant.ts:8",
+            "ms": 41.358
+          },
+          {
+            "frame": "withCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:565",
+            "ms": 36.937999999999995
+          },
+          {
+            "frame": "finiteJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/validate-content.ts:36",
+            "ms": 30.659
+          },
+          {
+            "frame": "startMatchCombat file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/match.ts:600",
+            "ms": 30.04
+          },
+          {
+            "frame": "equalContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:47",
+            "ms": 27.539
+          },
+          {
+            "frame": "reuse file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:30",
+            "ms": 26.946000000000005
+          },
+          {
+            "frame": "readG23Progress file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/g2-3-state.ts:19",
+            "ms": 26.731
+          },
+          {
+            "frame": "compare file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/battle-record-validation.ts:114",
+            "ms": 25.874000000000002
+          },
+          {
+            "frame": "shareGeneratedJson file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/immutable-json.ts:44",
+            "ms": 23.233
+          },
+          {
+            "frame": "freezeContent file:///C:/Users/Administrator/Documents/Codex/2026-10-17/ben/work/crown-review/src/simulation/content/freeze.ts:7",
+            "ms": 22.964
+          }
+        ]
+      }
+    }
+  ],
+  "validation": {
+    "files": 41,
+    "passed": 661,
+    "skipped": 0,
+    "tests": [
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "cases": 15,
+        "passed": 15
+      },
+      {
+        "file": "tests/crown-restore-cache.test.ts",
+        "cases": 4,
+        "passed": 4
+      },
+      {
+        "file": "tests/g2-3-content.test.ts",
+        "cases": 10,
+        "passed": 10
+      },
+      {
+        "file": "tests/g2-3-followup.test.ts",
+        "cases": 11,
+        "passed": 11
+      },
+      {
+        "file": "tests/g2-3-identity.test.ts",
+        "cases": 14,
+        "passed": 14
+      },
+      {
+        "file": "tests/g2-3-integration.test.ts",
+        "cases": 18,
+        "passed": 18
+      },
+      {
+        "file": "tests/g2-3-netcode-hooks.test.ts",
+        "cases": 14,
+        "passed": 14
+      },
+      {
+        "file": "tests/g2-3-source-pins.test.ts",
+        "cases": 2,
+        "passed": 2
+      },
+      {
+        "file": "tests/g2-4a-conqueror-items.test.ts",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "tests/g2-4a-crown-gold.test.ts",
+        "cases": 9,
+        "passed": 9
+      },
+      {
+        "file": "tests/g2-4a-crown-history.test.ts",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "tests/g2-4a-crown.test.ts",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "tests/g4-reference-cache.test.ts",
+        "cases": 8,
+        "passed": 8
+      },
+      {
+        "file": "tests/g4-replay-snapshot.test.ts",
+        "cases": 4,
+        "passed": 4
+      },
+      {
+        "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+        "cases": 1,
+        "passed": 1
+      },
+      {
+        "file": "tests/m5-replay.test.ts",
+        "cases": 1,
+        "passed": 1
+      },
+      {
+        "file": "tests/m5-serialization.test.ts",
+        "cases": 33,
+        "passed": 33
+      },
+      {
+        "file": "tests/m6-persistence.test.ts",
+        "cases": 44,
+        "passed": 44
+      },
+      {
+        "file": "tests/m6-replay.test.ts",
+        "cases": 9,
+        "passed": 9
+      },
+      {
+        "file": "tests/m7-m6-save-compat.test.ts",
+        "cases": 8,
+        "passed": 8
+      },
+      {
+        "file": "tests/m8-b10-item-save-replay.test.ts",
+        "cases": 45,
+        "passed": 45
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "tests/m8-b7-cleanup.test.ts",
+        "cases": 5,
+        "passed": 5
+      },
+      {
+        "file": "tests/m8-b7-match-wiring.test.ts",
+        "cases": 30,
+        "passed": 30
+      },
+      {
+        "file": "tests/m8-b8-resource-provenance.test.ts",
+        "cases": 64,
+        "passed": 64
+      },
+      {
+        "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+        "cases": 5,
+        "passed": 5
+      },
+      {
+        "file": "tests/m8-b8-restore.test.ts",
+        "cases": 7,
+        "passed": 7
+      },
+      {
+        "file": "tests/m8-b9-compatibility.test.ts",
+        "cases": 11,
+        "passed": 11
+      },
+      {
+        "file": "tests/m8-content-equivalence.test.ts",
+        "cases": 4,
+        "passed": 4
+      },
+      {
+        "file": "tests/m8-contracts.test.ts",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "tests/match-contract.test.ts",
+        "cases": 12,
+        "passed": 12
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "cases": 139,
+        "passed": 139
+      },
+      {
+        "file": "tests/p7-restore-compilation.test.ts",
+        "cases": 4,
+        "passed": 4
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "cases": 48,
+        "passed": 48
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "cases": 1,
+        "passed": 1
+      },
+      {
+        "file": "tests/t12-recovery-boundary.test.ts",
+        "cases": 5,
+        "passed": 5
+      },
+      {
+        "file": "tests/t2-two-sided-battle.test.ts",
+        "cases": 21,
+        "passed": 21
+      },
+      {
+        "file": "tests/t3-round-settlement.test.ts",
+        "cases": 10,
+        "passed": 10
+      },
+      {
+        "file": "tests/presentation/g2-4a-crown-display.test.ts",
+        "cases": 1,
+        "passed": 1
+      },
+      {
+        "file": "tests/server/g2-3-replay-mirror.test.ts",
+        "cases": 1,
+        "passed": 1
+      },
+      {
+        "file": "tests/server/two-sided-resolver.test.ts",
+        "cases": 13,
+        "passed": 13
+      }
+    ]
+  },
+  "implementationFiles": [
+    "src/simulation/battle-record-validation.ts",
+    "tests/crown-restore-cache.test.ts"
+  ],
+  "guardrails": "No rules, values, save fields, digest, versions, fixtures, CI thresholds, timeouts or existing tests changed. No server/rendering edits."
+}
