@@ -87,6 +87,11 @@ it('Deathfire Grasp blasts the nearest enemy at combat start for 40% max health,
  expect(blasts.map(b=>[b.tick,b.unitId,b.damageType])).toEqual([[1,'e','magic'],[260,'e','magic']]); // combat-start packets settle in the first step
  expect(blasts[0].raw).toBe(Math.floor(garen.maxHp*4000/10000));
  expect(blasts.every(b=>!b.critical)).toBe(true);
+ // Decoded StatDamageAmp: Lux's own first attack lands 25% harder than without the artifact.
+ const attack=(s:CombatState)=>packets(run(s,300).events).find(p=>p.source.sourceKind==='attack'&&p.unitId==='e')!;
+ const plain=attack(frozen(start(null),['e'])),amped=attack(state);
+ expect(amped.raw).toBe(plain.raw);expect(Math.abs(amped.hpDamage+amped.absorbed-Math.round((plain.hpDamage+plain.absorbed)*1.25))).toBeLessThanOrEqual(1);
+ expect(G24_ARTIFACT_ITEMS.TFT9_Item_OrnnDeathfireGrasp.combatProgram!.modifiers).toEqual([expect.objectContaining({stat:'damageAmp',unit:'bps',value:{kind:'constant',amount:2500}})]);
  validate(after);
 });
 it('Talisman of Ascension doubles max health and adds 120% damage amp once, at 22 seconds',()=>{

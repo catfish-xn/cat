@@ -26,10 +26,10 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
   text:`每场战斗一次：生命值降到${v.PercentHealthThreshold}%时，免疫伤害且无法被选取${v.InvulnDuration}秒。`};})(),
  TFT9_Item_OrnnDeathfireGrasp:(()=>{const v=values('TFT9_Item_OrnnDeathfireGrasp'),blast=[damage('magic',{maxHpBps:pct(v.PercentMaxHealthDamage),hpBasis:'target'})],every=ticks(v.RepeatTime);return {
   // Tick 0 has no ordinary-attack target yet: the opening blast takes the nearest enemy, as target acquisition would.
-  program:{triggers:[trigger({id:'opening-blast',event:'combat-start',selector:enemies({sample:'combat-start'}),effects:blast})],
+  // {1543aa48} decodes (FNV-1a, lower-case) to StatDamageAmp: a stat-bar Damage Amp, like StatOmnivamp elsewhere.
+  program:{modifiers:[modifier('damageAmp',Math.round(v['{1543aa48}']*10000),'bps')],triggers:[trigger({id:'opening-blast',event:'combat-start',selector:enemies({sample:'combat-start'}),effects:blast})],
    periodic:[periodic(every,blast,enemies({primary:'first-required',sample:'each-pulse'}),{startsAtTick:every})]},
-  text:`开战时对当前目标（开战瞬间取最近敌人）造成其${v.PercentMaxHealthDamage}%最大生命值的魔法伤害，此后每${v.RepeatTime}秒对当前目标重复一次。`,
-  omitted:'源数据未命名键 {1543aa48}=0.25 不执行（14.24 描述未提及）。'};})(),
+  text:`开战时对当前目标（开战瞬间取最近敌人）造成其${v.PercentMaxHealthDamage}%最大生命值的魔法伤害，此后每${v.RepeatTime}秒对当前目标重复一次。伤害增幅${Math.round(v['{1543aa48}']*100)}%。`};})(),
  TFT_Item_Artifact_TalismanOfAscension:(()=>{const v=values('TFT_Item_Artifact_TalismanOfAscension'),at=ticks(v.Seconds);return {
   // One pulse at `at`: endsAtTick=at+1 removes the task on the following tick (no final pulse).
   program:{periodic:[periodic(at,[{kind:'change-max-hp',bonusBps:pct(v.MaxHealthPercent),currentHp:'add-max-delta',countsAsHeal:false},stat(modifier('damageAmp',Math.round(v.DamageAmp*10000),'bps'))],undefined,{startsAtTick:at,endsAtTick:at+1})]},
@@ -37,7 +37,8 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
  TFT_Item_Artifact_Mittens:(()=>{const v=values('TFT_Item_Artifact_Mittens');return {
   program:{modifiers:[modifier('damageReduction',pct(v.PercentDR),'bps',undefined,filter())]},
   text:`受到的伤害降低${v.PercentDR}%。`,
-  omitted:'移动速度提升不执行（项目移动间隔全局固定）；冰冷免疫无对象（项目没有冰冷）；未命名键 {cd951938}=0.25 不执行。'};})(),
+  // {cd951938} decodes to StatDurability 0.25: the stat-bar form of the same 25%, applied once.
+  omitted:'移动速度提升不执行（项目移动间隔全局固定）；冰冷免疫无对象（项目没有冰冷）。'};})(),
 };
 /** 约定值 G24-ARTIFACT-SUBSET-01: artifacts outside PROGRAMS are not yet executable and are not registered. */
 export const G24_ARTIFACT_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeContent(Object.fromEntries(Object.entries(PROGRAMS).map(([id,entry])=>{

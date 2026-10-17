@@ -1,5 +1,5 @@
 {
-  "contentDigest": "fnv1a32-utf16:57564059",
+  "contentDigest": "fnv1a32-utf16:03d77765",
   "lootReplayDigest": "fnv1a32-utf16:42389b9c",
   "rulesVersion": "s13-g2-3-v2",
   "contentVersion": "s13-14.24b-g2-3-v2",
@@ -7,7 +7,7 @@
   "previousContentDigest": "fnv1a32-utf16:299ec0d0",
   "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
   "traceHashes": {
-    "state": "5757ac190945af7533aeb735589ab33d2ddefc332339b00c89ddb12207a1573c",
+    "state": "8f2a002111ced87c07f8829fb650e2d53fe309e1c080dffd5d154ba545e3d9d1",
     "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
     "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
   },

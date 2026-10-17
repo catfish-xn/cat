@@ -62,7 +62,7 @@
     "src/simulation/content/g2-3-traits.ts": "3429e32adcb78d74733d466ecf4cca0ba4d16107aa905e224e4281398b0ad26c",
     "src/simulation/content/g2-3-units.ts": "974fbfc3c127dbd925046135731b9053368ea3194eac7195c43de9981d3b2b4f",
     "src/simulation/content/g2-4-artifact-source.ts": "786b8fa7f6e3f92f5516eb80e428edaa0e9d120eb4fc8d283d643a6f7be4dbe3",
-    "src/simulation/content/g2-4-artifacts.ts": "acd0fc3c4ba8f44409646e2457c96874c92298fd35dbf96aaffc4b4940e11116",
+    "src/simulation/content/g2-4-artifacts.ts": "325b4184108a75aa2e973038e51776966e223e96fbb8493952fddcc333f067a8",
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
@@ -239,7 +239,7 @@
   "integrationBaseCommit": "19aa9f1",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:57564059",
+    "contentDigest": "fnv1a32-utf16:03d77765",
     "lootReplayDigest": "fnv1a32-utf16:42389b9c",
     "rulesVersion": "s13-g2-3-v2",
     "contentVersion": "s13-14.24b-g2-3-v2",
@@ -247,7 +247,7 @@
     "previousContentDigest": "fnv1a32-utf16:299ec0d0",
     "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
     "traceHashes": {
-      "state": "5757ac190945af7533aeb735589ab33d2ddefc332339b00c89ddb12207a1573c",
+      "state": "8f2a002111ced87c07f8829fb650e2d53fe309e1c080dffd5d154ba545e3d9d1",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
     },
@@ -285,14 +285,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 620004,
-          "currentBytes": 689869,
+          "currentBytes": 689860,
           "previousSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0",
-          "currentSha256": "3ea4d18e3fad2747192b32ec1b3cd49b9a659f45175d7a7e320fcace77561ff2",
+          "currentSha256": "95dc631617dc08fed718c9411dc01e2298faafd656c39595d9c2510b1b4008ce",
           "firstDifferentByte": 11
         },
         "states": 67,
-        "gzipSha256": "3ea4d18e3fad2747192b32ec1b3cd49b9a659f45175d7a7e320fcace77561ff2",
-        "stateUtf8Sha256": "f15f66aeec9d1c4d92257c4cf6c292539de753492aa7bc9b141e996962e9f7b1",
+        "gzipSha256": "95dc631617dc08fed718c9411dc01e2298faafd656c39595d9c2510b1b4008ce",
+        "stateUtf8Sha256": "3be9e9b153264059251ec99d5ef8fa9dd41564f2149fe65f060dbd5f8ba77b1c",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0"
       },
@@ -1875,14 +1875,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 638531,
-          "currentBytes": 713530,
+          "currentBytes": 713520,
           "previousSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd",
-          "currentSha256": "f5c285683cb923c9f3b987ae57565b88c7482d0364521a95dbfeff5a562ff964",
+          "currentSha256": "205175a93fee9975f949ecc69c342c23dd5137e43921d02665d2c24a159ef74e",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "f5c285683cb923c9f3b987ae57565b88c7482d0364521a95dbfeff5a562ff964",
-        "stateUtf8Sha256": "53fb2b7ac6845dd1b33a1fcb81782281c06fe376e0d78d08cdb6de7468578a26",
+        "gzipSha256": "205175a93fee9975f949ecc69c342c23dd5137e43921d02665d2c24a159ef74e",
+        "stateUtf8Sha256": "ed6b4b07dec4a11bda296e875e4de7f7c696038cfebef7da1e8bb2809bbff994",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd"
       },
@@ -6578,12 +6578,12 @@
       }
     }
   },
-  "candidateSha256": "a7bf531a9d4bb192411c2d3b863cc65a042b8cf749f9c61b42c572ca54df2242",
+  "candidateSha256": "4f55ee9ba7b9858998a60680d1ac3170186015e1c912939d38ce377c5bb4ac39",
   "goldenByteEvidence": {
     "previousBytes": 101416,
     "currentBytes": 99700,
     "previousSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-    "currentSha256": "a7bf531a9d4bb192411c2d3b863cc65a042b8cf749f9c61b42c572ca54df2242",
+    "currentSha256": "4f55ee9ba7b9858998a60680d1ac3170186015e1c912939d38ce377c5bb4ac39",
     "firstDifferentByte": 13
   }
 }
