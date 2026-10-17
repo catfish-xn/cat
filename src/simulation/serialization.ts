@@ -9,6 +9,7 @@ import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
+import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -73,7 +74,8 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
   return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
 }
 /** Validates plain JSON and all persistent references before returning an independent state.
- * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
+ * Verification combats are isolated: no generated effects, rewards, offers or
+ * random cursor changes are committed to the restored state.
  */
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
@@ -250,6 +252,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
