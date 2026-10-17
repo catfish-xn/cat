@@ -85,8 +85,13 @@ B2签收时只交付类型、合同和可序列化的小样例，没有实现或
 | incoming-basic-hit | 前排自适应头盔额外1蓝、反甲（各自ICD） | 必须持有者被普通攻击命中，完全盾吸收也算；追加包/分担不重复计 |
 | cast-completed | 纳什、蓝返蓝、范围内离子惩罚 | 取消未完成施法；装备包不是一次施法 |
 | kill-or-assist | 蓝霸符500Bps刷新160tick | 不创建额外伤害递归，死亡持有者不领奖 |
+| stun-applied（G2-4b） | 视界专注 | 持有者对敌人施加或刷新眩晕各算一次；在伤害结算前、每个伤害包之后扫描当 tick 新增的眩晕 |
+| shield-broken（G2-4b） | 无终恨意 | 持有者身上任一护盾层被打到 0；自然到期、死亡清理不算；读取该层初始值 |
+| holder-death（G2-4b） | 光盾徽章、殉道美德死后两次强化治疗、恶意眩晕2格内敌人 | 持有者本 tick 生命归零、死亡清理之前；无订阅者不发、不占 actionSeq |
 
-装备追加伤害不引发新的装备伤害；上表特许的轻语/泰坦/破防者是有限状态监听。伤害型装备触发最多一层equipmentDepth=1，每实例每根动作有maxPerAction限制；周期burn是独立定时任务，不是同步递归回调。阈值、法力、治疗和状态不会再生成攻击完成事件。超过声明界限表示非法计划/恢复错误，应拒绝整个事务并保留原state，不能截断事件或吞掉已计划伤害。
+G2-4b 神器另加的有限词汇（`src/simulation/m8/contracts.ts`）：条件 killing-blow / killed-target / damage-type / target-magic-resist / critical-attack / all；属性 attackSpeedLock、damageAmpPerHex；数值 overkillBps、resistsBps；门 consume-counter（可带 critDamageBps，暗行者之爪暴击充能）；计数事件 killing-blow 资格与 refill；效果 over-time（拆成每秒一跳的不可取消延时任务 g24Heal/g24Mana）、leap（与 G2-3 跳跃同规则）、grant-mana 的 maxManaBps；选择锚点 event-target（不选目标本身）。按阶段取值（byStage）与"无相邻友军"（isolatedEffects）在策略快照里解析，战斗不读阶段表；联机加时轮（6-7 之后）按第 7 阶段取值，与 G2-4b 辅助装相同。带 resistsBps 的护盾（光盾徽章）恢复存档时只校验护盾值为非负安全整数：存档不保存授予时采样的双抗，无法像按最大生命计算的护盾那样重算候选值。以上全部只在持有对应装备时生效，其余对局的事件和动作序号不变。
+
+装备追加伤害不引发新的装备伤害；上表特许的轻语/泰坦/破防者是有限状态监听。G2-4b黑曜石切割者的削抗/碎甲声明`anyDamage`，在damage-dealt上对每个正伤害包都合资格，不受轻语物理权限限制，范围技能的每个受害者各自施加。伤害型装备触发最多一层equipmentDepth=1，每实例每根动作有maxPerAction限制；周期burn是独立定时任务，不是同步递归回调。阈值、法力、治疗和状态不会再生成攻击完成事件。超过声明界限表示非法计划/恢复错误，应拒绝整个事务并保留原state，不能截断事件或吞掉已计划伤害。
 
 吸血和枪刃治疗使用同一资格与`absorbed+hpDamage`基数，不额外惩罚AoE；各来源吸血Bps相加后自疗一次，枪刃每件友疗独立。200合资格伤害、饮血20%得40请求；300请求受33%重伤得201，缺血100则actual100/overheal101/preventedByWound99。最弱生命比例友军排除自身、死者，比例并列按ID；无队友不转给自身。重伤只减少治疗，不减盾/最大生命调整。
 

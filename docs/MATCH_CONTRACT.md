@@ -482,3 +482,13 @@ Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及�
 取得 Junkyard Titan 后后续军械库只给免费 Finishing Touch，不再付费购买已包含的升级。刷新当前军械库须同时匹配 kind='armory' 和 choiceId；其他待选奖励不能覆盖它。形态统一使用 `seat-mechanics/forms.resolveUnitForm`。
 
 恢复时先校验机制收据结构；损坏统一拒绝为 `Invalid Match save`。`combat.removedUnitIds` 如存在必须为无重复字符串数组，并与现役 combat.units 的 ID 分离。自动钩子失败事件及隐藏输入边界见 MULTIPLAYER_CONTRACT §25。schema/save/replay/protocol 不变；rules/content 升至 G2-3 v2，旧 digest 严格拒绝，不迁移。
+
+### G2-4b 不稳定的宝箱：战斗中途获得装备（v6）
+
+约定值与来源见 [SUPPORT_ITEMS.md](evidence/g2-4/SUPPORT_ITEMS.md) 的 G24-CHEST-01…04。随 #149 的 rules/content `s13-g2-3-v6` / `s13-14.24b-g2-3-v6`、policy `g2-4b-support-v6` 合入，本项不另升版本，只改内容摘要；schema7、存档3、回放3不变，旧 digest 严格拒绝。
+
+- 新战斗事件 `combatItemGranted{tick, unitId, definitionId, source}`：`unitId` 是受益者，`definitionId` 是获得的成装，`source` 是宝箱来源（持有者、物品实例、效果序号）。已并入 CombatEventData 和回放视图（回放里 `sourceId` 为持有者）。同一 tick 紧随其后可能有该受益者的 `maxHpChanged`、`manaChanged`（原因 `item-granted`）和开战类效果事件。
+- 新单位字段 `CombatUnit.combatItemGrants?: {chest: Source, ordinal, definitionId, grantedAtTick}[]`：只记获得事实，装备程序由冻结池派生，不进 `itemPrograms`、不占装备格、不进库存，战斗结束即失效。
+- 新声明词汇：效果 `grant-combat-item`（`policyId: 'G24-CHEST-01'`, `lifetime: 'combat'`），选择器排序 `hp-ratio-desc-id`（生命比从高到低，并列按 id）和选择器开关 `excludeSummons: true`（不选召唤物和建筑），法力请求原因 `item-granted`。
+- 恢复：先核对获得记录（形状、池内装备、tick、持有者已阵亡且宝箱触发过、同一宝箱序号 0…n−1 且受益者不重复、不超过 4 件、不发给召唤物），再按记录重新编译受益者的机制并照常逐项核对；任何损坏统一拒绝为 `Invalid Match save`。
+- 界面与服务器暂不消费此事件；装备图标另做。

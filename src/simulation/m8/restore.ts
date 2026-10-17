@@ -3,6 +3,7 @@ import { augmentCombatEffects } from '../combat-augment-effects';
 import { M5_UNIT_DEFINITIONS } from '../units';
 import { statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
 import { canonicalSource } from './identity';
+import { grantedMaxHpBasis } from './combat-item-programs';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
 import { canonicalContent, equalValidatedContent } from '../content';
@@ -23,9 +24,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
   validateItemRuntime(unit,combatId,tick,compiled);
   const basis = unit.maxHpBasis;
+  // G2-4b: health of items gained during combat is part of the basis from their grant on.
+  const granted = grantedMaxHpBasis(unit);
   const expectedBasis = { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.startingCell?.row ?? unit.cell.row).health,
-    flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
-    bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 };
+    flat: granted.flat+(unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
+    bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0)+granted.bps, bonusBps: 0 };
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
   const contributions = state.statuses.flatMap(g => g.contributions), covered = new Set<string>();
@@ -149,24 +152,27 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         continue;
       }
     }
-    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
+    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'):undefined;
     if(declared) {
+      check(same(declared.effect,grant), 'declared shield grant');
       validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
       const holder=units.find(u=>u.id===shield.source.ownerId)!;
       const pulse=holder.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(shield.source)&&t.nextPulseAtTick-t.periodTicks===shield.startsAtTick);
       const remainder=pulse?.remainders.find(r=>r.targetId===unit.id&&r.effectIndex===0);
       const reave=(unit.g22?.reaveUntilTick??0)>shield.startsAtTick?unit.g22!.reaveBps:0;
-      check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>{
+      // Resist grants get structural checks here and exact trusted-input replay in restoreMatch.
+      // Current or opening defenses cannot authenticate the historical live sample.
+      check(shield.decay.kind===grant.decay.kind && (grant.amount.resistsBps ? Number.isSafeInteger(shield.granted) && shield.granted >= 0 : [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>{
         const numerator=grant.amount.flat*10000+hp*grant.amount.maxHpBps;
         const previous=remainder?((remainder.numerator-numerator%10000+10000)%10000):0;
         return shield.granted===Math.floor(Math.floor((numerator+previous)/10000)*(10000-reave)/10000);
-      }), 'declared shield sampled amount');
+      })), 'declared shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
       continue;
     }
     check(grant.kind === 'grant-shield' && grant.durationTicks > 0 && grant.amount.sample === 'application'
       && grant.amount.flat >= 0 && grant.amount.attackDamageBps === 0 && grant.amount.abilityPowerBps === 0 && grant.amount.maxHpBps === 0
-      && grant.amount.missingHpBps === 0 && grant.amount.actualManaSpentBps === 0 && grant.amount.actualDamageBps === 0
+      && (grant.amount.resistsBps ?? 0) === 0 && grant.amount.missingHpBps === 0 && grant.amount.actualManaSpentBps === 0 && grant.amount.actualDamageBps === 0
       && grant.amount.shieldAbsorbedBps === 0 && grant.amount.cap === null && grant.amount.hpBasis === 'holder'
       , 'uncompiled shield grant');
     integer(grant.durationTicks, 1); integer(grant.amount.flat);

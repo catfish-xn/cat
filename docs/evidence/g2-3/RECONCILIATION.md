@@ -149,7 +149,7 @@
 - `seatMechanics.seat`持久化六键公开进度，hidden.progress保存种子、RNG与经济重演事实；学院/奖励领取凭通用MechanicReceipt派生，不持久化重复发奖收据。冻结战斗输入中的g23只是编译DTO，不是MatchState根权威。恢复从种子重演经济收据，并比对当前终局Combat事实；缺失G23进度、重复/篡改收据、非法领取副本均拒绝。恢复不发奖、不抽随机数。
 - rules=`s13-g2-3-v2`，content=`s13-14.24b-g2-3-v2`；本次#136后收尾修正升至v2，schema7/save3/replay3不变。旧存档与旧回放输入按版本/digest拒绝，无迁移。
 - G2-4a（征服者第4/8/9档恢复原奖励、锻造器4选1）再升至rules=`s13-g2-3-v3`、content=`s13-14.24b-g2-3-v3`，policy revision `g2-4a-v3`；v2存档与回放输入同样按版本/digest拒绝，G2-3夹具用原录制脚本重录。
-- G2-4a冠冕（第12/15档恢复原奖励、获得冠冕永久+1人口）再升至rules=`s13-g2-3-v4`、content=`s13-14.24b-g2-3-v4`，policy revision `g2-4a-v4`；v3存档与回放输入按版本/digest拒绝。冠冕人口从已有的奖励领取记录推出，存档、开战输入和联机快照都不新增字段。
+- G2-4a冠冕（第12/15档恢复原奖励、获得冠冕永久+1人口）与#147神器合并后统一升至rules=`s13-g2-3-v5`、content=`s13-14.24b-g2-3-v5`，policy revision `g2-4a-v5`；v3/v4存档与回放输入按版本/digest拒绝。冠冕人口从已有的奖励领取记录推出，存档、开战输入和联机快照都不新增字段。
 - `release-audit.json`与候选夹具已按19aa9f1接入后源码重录，包含源码摘要、旧新字节和恢复证据。历史opening-random夹具原字节保留；新增夹具不覆盖历史归档。全套`npm test`和`test:timing`尚未执行，仅最终head各一次。
 
 开发验证见`development-validation.json`；`live-reveal-audit.json`从真实mage公共命令前缀重跑完整及单留英雄分支，通过公共部署交换Lux/Nami得到tick51双死亡(447/448)，单留Loris保留有掉落失败、单留Zyra并部署(0,4)得到tick152无掉落失败。包含旧/新测试源码字节长度、SHA及首差异位置；没有改造战斗状态来伪造死亡，尚未宣称旧全套通过。
@@ -166,6 +166,10 @@
 
 详见[PR134_INTEGRATION](PR134_INTEGRATION.md)和[发布说明](RELEASE_NOTES.md)。
 
+## PR #149 辅助装合入当前 multiplayer
+
+以 `65db5d2` 的13件辅助装效果和数值为准，merge `311017e`（含 #147 神器、#148 战术家之冠及 #158/#159/#160/#165）；复用主线的 `supportStage` 与 `holder-death`，不重复定义或触发。规则版本 `s13-g2-3-v6`，内容版本 `s13-14.24b-g2-3-v6`，policy revision `g2-4b-support-v6`；schema/save/replay 格式不变，content digest 为 `fnv1a32-utf16:e73164da`（见 `tests/g2-3-content-baseline.json`）。夹具按 release → herald → inputs → live-reveal 顺序重录。
+
 ### 冠冕胜利金币（用户确认约定，2026-10-17）
 
 源证据：14.24 map22 `TFT_Item_ForceOfNature` 的 `PercentGoldChance=10`、`unique=false` 及 en_us 描述“10% chance to drop 1 gold when you win combat”。来源决定概率与金额；下列边界属于用户确认约定，不能冒称官方已明确。
@@ -178,4 +182,6 @@
 | G24-CROWN-GOLD-04 | 命中直接到账1金币，不生成拾取球；汇总收据 `g23:crown:<battleId>`，source=`tacticians-crown`，位于豪赌客/征服者箱金币之后。0命中保留经济收据的 `crownGold:0`，不生成0额资源收据。 |
 | G24-CROWN-GOLD-05 | 使用G23进度既有lcg32-v1随机流，每顶恰好一次，排在本战黑市roll之后；相同输入确定复现。冠冕掷骰推进共享RNG，因此会改变后续黑市结果；本战已经完成的黑市掷骰不变。 |
 
-规则/content为 `s13-g2-3-v5` / `s13-14.24b-g2-3-v5`，policy=`g2-4a-v5`；schema7/save3/replay3不变。v4旧存档/输入按版本和digest拒绝，不补账迁移。内容digest由录制脚本计算，见 `tests/g2-3-content-baseline.json`。专项测试 `tests/g2-4a-crown-gold.test.ts` 包含真实grant/equip/战斗/文本和对象restore/Continue防重发，以及黑市顺序、伪造金额拒绝；各生成物旧新SHA、字节数和冻结源hash见 `crown-gold-recording-audit.json`。
+规则/content为 `s13-g2-3-v7` / `s13-14.24b-g2-3-v7`，policy=`g2-4a-crown-gold-v7`；schema7/save3/replay3不变。v6及更早旧存档/输入按版本和digest拒绝，不补账迁移。内容digest由录制脚本计算，见 `tests/g2-3-content-baseline.json`。专项测试 `tests/g2-4a-crown-gold.test.ts` 包含真实grant/equip/战斗/文本和对象restore/Continue防重发，以及黑市顺序、伪造金额拒绝；各生成物旧新SHA、字节数和冻结源hash见 `crown-gold-recording-audit.json`。
+
+合入 multiplayer `8c7f6ac`（含 #149 辅助装、#153 不稳定宝箱、#167 上界预检、#166 前序修复）后升为规则/content `s13-g2-3-v7` / `s13-14.24b-g2-3-v7`，policy=`g2-4a-crown-gold-v7`；schema7/save3/replay3 与资源来源版本号不变，存档格式变化（有序穿戴记录 `equipmentHistory`）由规则版本校验隔离：v6 及更早存档按 `unsupported-version` 拒绝，不做迁移（用户 12:06 旧存档政策）。release/herald/inputs/live-reveal 按顺序从脚本重录。

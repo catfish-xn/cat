@@ -2,7 +2,7 @@ import { contains, getNeighbors, hexDistance, sameCell, type Board, type HexCell
 import type { AbilityTargeting, Source, TargetSelector } from './contracts';
 import { compareCodePoints } from './identity';
 import { integer } from './stats';
-export interface TargetUnit { readonly id: string; readonly team: Team; readonly cell: HexCell; readonly hp: number; readonly maxHp: number; readonly alive: boolean; readonly untargetable?: boolean; readonly burnSources?: readonly Source[] }
+export interface TargetUnit { readonly id: string; readonly team: Team; readonly cell: HexCell; readonly hp: number; readonly maxHp: number; readonly alive: boolean; readonly untargetable?: boolean; readonly burnSources?: readonly Source[]; readonly summon?: boolean }
 export interface TargetEnvironment {
   readonly board: Board; readonly units: readonly TargetUnit[]; readonly holderId: string; readonly tick: number;
   readonly primaryId?: string | null; readonly previousId?: string | null; readonly eventActorId?: string | null; readonly eventTargetId?: string | null;
@@ -26,12 +26,12 @@ export function selectTargets(selector: TargetSelector, env: TargetEnvironment):
   integer(selector.maxTargets); if(selector.radius!==null)integer(selector.radius);
   const holder=get(env,env.holderId);if(!holder)return[];
   const primary=get(env,env.primaryId), previous=get(env,env.previousId), actor=get(env,env.eventActorId);
-  const anchor=selector.anchor==='holder'?holder.cell:selector.anchor==='primary-target'?primary?.cell:selector.anchor==='previous-target'?previous?.cell:env.eventActorCell ?? actor?.cell;
+  const anchor=selector.anchor==='holder'?holder.cell:selector.anchor==='primary-target'?primary?.cell:selector.anchor==='previous-target'?previous?.cell:selector.anchor==='event-target'?get(env,env.eventTargetId)?.cell:env.eventActorCell ?? actor?.cell;
   if(!anchor)return[];
   const candidateIds=selector.candidates==='event-actor'?[env.eventActorId]:selector.candidates==='event-target'?[env.eventTargetId]:selector.candidates==='bound-target'?env.boundTargetIds??[]:null;
   const line=selector.geometry==='line-to-primary'&&primary?shortestPath(env.board,holder.cell,primary.cell).slice(0,selector.radius??100):null;
   const qualified=(u:TargetUnit)=>isSelectable(u,holder,env)&&(!line||line.some(c=>sameCell(c,u.cell)))&&(selector.relation==='self'?u.id===holder.id:selector.relation==='ally'?u.team===holder.team:u.team!==holder.team)
-    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
+    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludeSummons||!u.summon)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.anchor!=='event-target'||u.id!==env.eventTargetId)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
   let candidates=env.units.filter(u=>(candidateIds===null||candidateIds.includes(u.id))&&qualified(u));
   const burnt=(u:TargetUnit)=>env.source&&u.burnSources?.some(s=>s.ownerId===env.source!.ownerId&&s.sourceKind===env.source!.sourceKind&&s.definitionId===env.source!.definitionId&&s.instanceId===env.source!.instanceId&&s.parentItemInstanceId===env.source!.parentItemInstanceId)?1:0;
   candidates.sort((a,b)=>{
@@ -40,6 +40,7 @@ export function selectTargets(selector: TargetSelector, env: TargetEnvironment):
       case'id':return id;
       case'farthest-id':return -d||id;
       case'hp-ratio-id':{const left=integer(a.hp)*integer(b.maxHp,1),right=integer(b.hp)*integer(a.maxHp,1);return (left<right?-1:left>right?1:0)||id;}
+      case'hp-ratio-desc-id':{const left=integer(a.hp)*integer(b.maxHp,1),right=integer(b.hp)*integer(a.maxHp,1);return (left>right?-1:left<right?1:0)||id;}
       case'hp-absolute-distance-id':return a.hp-b.hp||d||id;
       case'not-burned-by-this-instance-distance-id':return burnt(a)-burnt(b)||d||id;
       default:return d||id;

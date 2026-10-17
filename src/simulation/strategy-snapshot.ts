@@ -3,13 +3,14 @@ import { g23ExperimentEffects } from './g2-3-experiment';
 import { projectG23Summons,g23SionTeam } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { getCatalogRoundByOrdinal } from './round-selectors';
+import { ROUND_CATALOG } from './content/round-catalog';
 import { g23ConversionProgramValues } from './g2-3-combat';
 import { modifier,stat,trigger } from './content/item-programs';
 import { g23FormStats } from './g2-3-forms';
 import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-programs';
 import { compileAugmentEffect } from './augment-effects';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
-import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
+import { validateItemProgram, type BoundItemProgram, type ItemProgram } from './m8/item-program';
 import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
@@ -24,8 +25,19 @@ import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
+import { compileSupportGrants, type G24HeldItem } from './g2-4-support';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
+/** Overtime ordinals lie past the catalog (after 6-7); they count as the stage after the last catalog stage. */
+function supportStage(ordinal: number): number {
+  return ROUND_CATALOG.find(r => r.ordinal === ordinal)?.stage ?? Math.max(...ROUND_CATALOG.map(r => r.stage)) + 1;
+}
+/** G2-4b stage-scaled artifacts bind one concrete program per snapshot; combat never sees the table. */
+function stageProgram(program: ItemProgram, round: number): ItemProgram {
+  const { byStage, ...rest } = structuredClone(program); if (!byStage) return rest;
+  const flat = byStage.flat[Math.min(supportStage(round), byStage.flat.length) - 1];
+  return { ...rest, triggers: (rest.triggers ?? []).map(t => ({ ...t, effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, flat } } : e) })) };
+}
 export interface StrategyCatalog {
   readonly traits: Readonly<Record<string, TraitDefinition>>;
   readonly items: Readonly<Record<string, ItemDefinition>>;
@@ -50,14 +62,27 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
+  // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
+  // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
+  const onBoard = (team: 'player' | 'enemy') => new Set(boardUnits.filter(u => u.team === team).map(u => u.id)), players = onBoard('player'), enemyIds = onBoard('enemy');
+  const held = new Map<string, G24HeldItem[]>(), hold = (unitId: string, definitionId: string, instanceId: string) =>
+    held.set(unitId, [...held.get(unitId) ?? [], { definition: lookup(catalog.items, conversions.get(instanceId) ?? definitionId), instanceId }]);
+  for (const item of state.items) if (item.location.kind === 'unit' && players.has(item.location.unitId)) hold(item.location.unitId, item.definitionId, item.id);
+  for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
+  if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
+  const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
+    held, supportStage(state.round));
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:structuredClone(definition.combatProgram)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:stageProgram(definition.combatProgram,state.round)});
     };
+    // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
+    const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
+    const itemEffects = (definition: ItemDefinition): readonly Effect[] => isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects;
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);
@@ -69,12 +94,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
         const definition = lookup(catalog.items, conversions.get(item.id) ?? item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, definition.effects));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
         const definition = lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, definition.effects, child.parentItemInstanceId));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
@@ -98,9 +123,13 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     } else {
       for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
         const definition = lookup(catalog.items, conversions.get(`enemy:${state.round}:${unit.id}:${item.slot}`) ?? item.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, itemEffects(definition)));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
+    }
+    for (const grant of supportGrants.get(unit.id) ?? []) {
+      sources.push(...makeSourcedEffects(unit.id, 'item', grant.definitionId, grant.instanceId, grant.effects));
+      if (grant.program) { validateItemProgram(grant.program); itemPrograms.push({ source: { ownerId: unit.id, sourceKind: 'item', definitionId: grant.definitionId, instanceId: grant.instanceId, effectIndex: (grant.effects.length + 1) * 1024, parentItemInstanceId: null }, program: structuredClone(grant.program) }); }
     }
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
     sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit)));

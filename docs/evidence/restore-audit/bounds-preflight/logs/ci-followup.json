@@ -1,0 +1,136 @@
+{
+  "baseCommit": "a46308564e3c2f26f94fc93574a7788d2c765115",
+  "preflightCommand": "node node_modules/vitest/vitest.mjs run --project fast --maxWorkers=1 tests/restore-audit/bounds-preflight.test.ts --reporter=json --outputFile=<run.json>",
+  "timingEnvironment": {
+    "platform": "Windows",
+    "node": "22.17.0",
+    "vitest": "5.0.3",
+    "execution": "three sequential fresh processes, one worker, unchanged default timeouts"
+  },
+  "runs": [
+    {
+      "run": 1,
+      "passed": 16,
+      "failed": 0,
+      "cases": [
+        {
+          "title": "preserves many legitimately acquired rewards through late-game saves",
+          "durationMs": 1266.1175000000003,
+          "status": "passed"
+        },
+        {
+          "title": "preserves a save at the actual maximum pending-task checkpoint of a public late fight",
+          "durationMs": 850.7516000000032,
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "passed": 16,
+      "failed": 0,
+      "cases": [
+        {
+          "title": "preserves many legitimately acquired rewards through late-game saves",
+          "durationMs": 1270.232500000002,
+          "status": "passed"
+        },
+        {
+          "title": "preserves a save at the actual maximum pending-task checkpoint of a public late fight",
+          "durationMs": 888.2977000000028,
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "passed": 16,
+      "failed": 0,
+      "cases": [
+        {
+          "title": "preserves many legitimately acquired rewards through late-game saves",
+          "durationMs": 1151.5128000000004,
+          "status": "passed"
+        },
+        {
+          "title": "preserves a save at the actual maximum pending-task checkpoint of a public late fight",
+          "durationMs": 806.1954000000005,
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "requiredSuites": [
+    {
+      "file": "tests/restore-audit/bounds-preflight.test.ts",
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b5-temporary.test.ts",
+      "passed": 30,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "passed": 30,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "passed": 19,
+      "failed": 0
+    },
+    {
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "passed": 2,
+      "failed": 0
+    }
+  ],
+  "uniquePassedTests": 97,
+  "typecheck": "passed",
+  "linuxPressure": {
+    "host": "ctyun-ubuntu",
+    "node": "24.21.0",
+    "python": "3.12.3",
+    "passed": 2,
+    "failed": 0,
+    "unmodifiedTestAndProfiler": true
+  },
+  "windowsPressureLimitation": "python3 ENOENT; the two required cases passed unchanged on Linux",
+  "unchangedLegacyFiles": [
+    "tests/explorer-bracer-restore-pressure.test.ts",
+    "tests/m8-b5-temporary.test.ts",
+    "tests/m8-b8-live-transfer.test.ts",
+    "tests/m8-b7-match-wiring.test.ts"
+  ],
+  "fingerprintChecks": {
+    "heraldWrite": "passed",
+    "heraldDefaultVerify": "passed",
+    "recordG23Inputs": "passed",
+    "recordG23InputsCheck": "passed",
+    "sourceSha256": "2b3a5792ba888b13dcca74e344a599ced6e0615767d8261fdc32bf0fe700da72",
+    "sourceLineEndings": "Git LF",
+    "rawStatesAndTrajectoryUnchanged": true
+  },
+  "fullSuiteRun": false,
+  "postMergeVerification": {
+    "remoteCommit": "f892e60e23702fb8cebc65e65eba934ea44d86f4",
+    "resolution": "preserved single-player case names and scope documentation; final implementation fingerprints retained",
+    "passed": 16,
+    "failed": 0,
+    "cases": [
+      {
+        "title": "preserves many legitimately acquired rewards in a single-player 6-7 save",
+        "durationMs": 1143.3878000000004,
+        "status": "passed"
+      },
+      {
+        "title": "preserves a single-player 6-7 save at the actual maximum pending-task checkpoint",
+        "durationMs": 815.5316999999995,
+        "status": "passed"
+      }
+    ],
+    "recordedSourceHashesStillMatch": true
+  }
+}

@@ -5,9 +5,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   createMatch, snapshotForBattle, restorePlayerBattleSnapshot, compileBattle, restoreBattleInput, startTwoSidedCombat,
-  priorPvpWins, BattleValidationError, type MatchState, type PlayerBattleSnapshot, type BattleInput,
+  priorPvpWins, enableMultiplayerSettlement, BattleValidationError, type MatchState, type PlayerBattleSnapshot, type BattleInput,
 } from '../src/server-entry';
-import { getCatalogRoundById } from '../src/simulation/round-selectors';
+import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import type { RoundResult } from '../src/simulation/match-types';
 import { freezeCombatInput, restoreCombatInput, type CombatInputAuthority } from '../src/simulation/combat-input';
@@ -18,11 +18,11 @@ import type { Unit } from '../src/simulation/unit-types';
 const ambessa = (id = 'unit-1'): Unit => ({ id, definitionId:'ambessa', starLevel:1, team:'player', location:{kind:'board',cell:{col:3,row:4}} });
 /** Only the three fields the Emissary count reads; the rest of a RoundResult is irrelevant here. */
 const history = (rows: readonly [string, RoundResult['result']][]) => rows.map(([roundId,result]) => {
-  const round = getCatalogRoundById(roundId);
+  const round = getMultiplayerRoundById(roundId);
   return { round:round.ordinal, roundId, roundKind:round.kind, result } as RoundResult;
 });
 function seat(roundId: string, roundResults: readonly RoundResult[], units = [ambessa()]): MatchState {
-  const base = createMatch(42), round = getCatalogRoundById(roundId);
+  const base = createMatch(42), round = getMultiplayerRoundById(roundId);
   return {...base, round:round.ordinal, roundDefinitionId:round.roundId, m8:{...base.m8,round}, level:9,
     preparation:{...base.preparation,units}, roundResults} as MatchState;
 }
@@ -73,6 +73,27 @@ describe('two-sided Emissary win history', () => {
     const solo = (results: readonly RoundResult[]) => buildStrategySnapshot({...state,roundResults:results}).units.find(u => u.unitId === 'unit-1')!;
     expect(solo(many)).not.toEqual(solo([]));
     expect(JSON.stringify(solo(many))).toContain('"stat":"armor","amount":14');
+  });
+
+  it('counts overtime wins: an overtime round is PvP, so its playerWin adds +2/+2 like any other PvP win', () => {
+    // Settlement writes overtime records as roundKind 'pvp' (round-settlement.ts); history() derives the same kind.
+    expect(getMultiplayerRoundById('overtime-1').kind).toBe('pvp');
+    const late = history([['2-1','playerWin'],['3-2','playerWin'],['6-7','enemyWin'],['overtime-1','playerWin'],['overtime-2','draw']]);
+    expect(priorPvpWins(late, getMultiplayerRoundById('overtime-3').ordinal)).toBe(3);
+    // The current overtime round's own result is never "prior".
+    expect(priorPvpWins(late, getMultiplayerRoundById('overtime-1').ordinal)).toBe(2);
+    // Overtime only exists online, so these seats are multiplayer-enabled.
+    const online = (results: readonly RoundResult[], seatId: string) => {
+      const enabled = enableMultiplayerSettlement(seat('overtime-3',results),seatId);
+      if (!enabled.ok) throw new Error(enabled.reason);
+      return snapshotForBattle(enabled.state,seatId);
+    };
+    const a = online(late,'A'), b = online([],'B');
+    expect(a.priorPvpWins).toBe(3);
+    expect(restorePlayerBattleSnapshot(JSON.stringify(a))).toEqual(a);
+    const input = compile(a,b);
+    expect(resist(input,'A').armor - resist(input,'B').armor).toBe(6);
+    expect(resist(input,'A').magicResist - resist(input,'B').magicResist).toBe(6);
   });
 
   it('survives freeze/restore: JSON round trip is identical; a changed win count is refused', () => {

@@ -115,7 +115,8 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
 // Real acquisition prefixes preserve the full Match restoration boundary.
 const prepared = publicNeutralPreparation;
 const encounterArmy = (s: api.MatchState) => s.roundDefinitionId === '6-7' ? publicHeraldTarget(s) : s;
-const restored = (s: api.MatchState) => restoreMatch(JSON.parse(serializeMatch(s)));
+// Let the restore boundary parse the saved text once; checkpoints/assertions stay unchanged.
+const restored = (s: api.MatchState) => restoreMatch(serializeMatch(s));
 const rejects = (s: api.MatchState, mutate: (x: any) => void) => { expect(restored(s)).toEqual(s); const x = JSON.parse(serializeMatch(s)); mutate(x); expect(() => restoreMatch(x)).toThrow(); };
 const mechanismTick = (events: readonly api.MatchEvent[]) => events.some(e => ['death', 'heal', 'movement', 'statusChanged'].includes(e.type));
 
