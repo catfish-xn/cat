@@ -1,21 +1,27 @@
+import { DEFAULT_BOARD } from './board';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward } from './content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
-import { rollG23BlackMarket,planG23Conquest } from './g2-3-progress';
+import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-progress';
 import type { G23MatchProgress } from './g2-3-match-progress';
 export interface G23BattleFacts {
  readonly battleId:string;readonly round:number;readonly roundKind:'pve'|'pvp';readonly result:'win'|'loss'|'draw';
  readonly conquerorTier:number;readonly conquestTakedowns:readonly string[];readonly chemBaronTier:number;
  readonly alliedDeaths:number;readonly rumbleStar:0|1|2|3;readonly highRollerGold:number;
+ /** Tactician's Crowns equipped on this side's deployed units; present only when nonzero. */
+ readonly crowns?:number;
 }
 export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>}
 export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly round:number}
 export interface G23ChemProgress {readonly shimmer:number;readonly losses:number;readonly skips:number;readonly offeredThrough:number;readonly offer:G23MarketOffer|null}
-export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[]}
+export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[];readonly crownGold?:number}
 export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number}
 export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision;
+// Structural bound: every deployment cell may hold one unit with three equipment slots.
+export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZones.player.lastRow - DEFAULT_BOARD.deploymentZones.player.firstRow + 1) * 3;
 export function validateG23BattleFacts(f:G23BattleFacts):void{
  const int=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
- if(!f||Object.keys(f).length!==10||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
+ const crowns=Object.hasOwn(f??{},'crowns');
+ if(!f||Object.keys(f).length!==(crowns?11:10)||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
 }
@@ -42,8 +48,10 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
    chem={...chem,offeredThrough:tier,offer:{id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.id,round:f.round}};
   }
  }else chem={...chem,losses};
+ let crownGold:number|undefined;
+ if(f.result==='win'&&f.crowns){const roll=rollG23CrownGold(f.crowns,rngState);rngState=roll.rngState;rngDraws+=roll.draws;crownGold=roll.gold;gold+=roll.gold;}
  const junkerRounds=p.junkerRounds+(f.rumbleStar?1:0);
- const receipt:G23EconomyAction={kind:'battle',facts:structuredClone(f),gold,bundles:ids};
+ const receipt:G23EconomyAction={kind:'battle',facts:structuredClone(f),gold,bundles:ids,...(crownGold===undefined?{}:{crownGold})};
  return {progress:{...p,conquest,chem,junkerRounds,rngState,rngDraws,rewards,economyReceipts:[...p.economyReceipts,receipt]},gold};
 }
 export function decideG23Market(p:G23MatchProgress,id:string,take:boolean,round:number):G23MatchProgress{

@@ -58,6 +58,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'unitRemoved': return { ...envelope, ...pick(event, ['type', 'unitId', 'reason']) };
     case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes] };
     case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
+    case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
 export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;

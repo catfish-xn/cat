@@ -17,7 +17,7 @@ export function mechanicGrantEvents(before:MatchState,after:MatchState):MatchEve
 }
 export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):{ok:true;state:MatchState;events:readonly MatchEvent[]}|{ok:false;state:MatchState;reason:MatchFailure}{
  const p=readG23Progress(state),bundle=p?.rewards.find(b=>g23RewardAtoms(b,p.seed).some(a=>a.id===atomId)),atom=bundle&&g23RewardAtoms(bundle,p!.seed).find(a=>a.id===atomId);
- if(!p||!bundle||!atom)return {ok:false,state,reason:'stale-choice'};
+ if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
  if(copy>=atom.quantity||atom.kind!=='gold'&&!atom.options.includes(definitionId)||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
  if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'

@@ -947,3 +947,9 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 已有正确名称：`src/presentation/s13-g23-manifest.ts:167`；已有图标：`src/presentation/s13-g23-asset-checks.ts:113`及`public/assets/s13/g23/loot/tft13_crime_consumable_lessershimmerduplicator.png`。不应改成通用小复制器或大微光的名称/图标。
 - 若展示托管奖励，请按上述身份区分名称/图标，并使用服务端返回的候选；现有`src/rendering/online/loot-fields.ts:31`、`src/rendering/strategy-panel.ts:593`、`src/presentation/orb-loot.ts:125`处理的是库存工具，不应为此凭空创建`consumableId`或拖放入口。Codex本次未修改界面目录。
 - 验收：黑市显示“次级微光复制器（≤3费炼金男爵）”，征服者显示“次级英雄复制器（≤3费）”；无合格目标仍保留托管，界面不自行授予英雄。
+
+## G24-FORGE / 神器锻造器交接（Codex → Claude，2026-10-17）
+
+领域分支codex/g2-4b-artifact-forge基于#147 d3112d6。第10/14档自动产生通用forge窗口，4个offers是神器definitionId，source为conqueror，超时项为offers[0]，选择/收据/私有投影沿用既有接口。按物品注册表和神器ID集合区分神器标题，不依赖kind=completed或字符串前后缀猜类别。展示需求仅为四件物品和说明、当前候选与超时项；布局沿用现有通用弹窗。
+
+辅助锻造器和第11/13档尚未开放，等待#149与后续领域批。源归档确有TFT_ArmoryKeySupport及“辅助装锻造器”文本，请后续修正choice-fallback中“14.24 has no support anvil”的断言；继续采用用户指定名称。领域合同见MATCH_CONTRACT的G2-4B段，不在服务器/客户端重算奖励或候选池。本批未做联机UI验收。

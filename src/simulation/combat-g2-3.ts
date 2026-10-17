@@ -8,6 +8,7 @@ import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, origin, path, variable } from './combat-s13-state';
 import { rollG23HighRoller } from './g2-3-progress';
 import { G23_POLICY } from './content/g2-3-policy';
+import { isSupportAuraInstance } from './g2-4-support';
 
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false){
   ctx.packets.push({source:origin(u),targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -24,7 +25,7 @@ function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
  const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>x.alive&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
  if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
 }
-const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)]).size;
+const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
 }

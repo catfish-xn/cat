@@ -15,15 +15,15 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(players(prepared).filter(u=>u.definitionId==='ezreal').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[SURVIVOR,DONOR].includes(e.unitId)).every(e=>e.kind==='unit-acquired'&&e.source.kind==='shop')).toBe(true);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[DONOR,SURVIVOR].includes(e.unitId))).toEqual([
-   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:14,slotIndex:4,definitionId:'ezreal'},sequence:28,roundId:'3-3'},
-   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:20,slotIndex:3,definitionId:'ezreal'},sequence:33,roundId:'3-3'},
+   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:14,slotIndex:4,definitionId:'ezreal'},sequence:29,roundId:'3-3'},
+   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:20,slotIndex:3,definitionId:'ezreal'},sequence:34,roundId:'3-3'},
   ]);
-  // W4 public-route accounting: 23 births + 20 growth + 10 item births + 5 upgrades + 3 combines + 2 sales = 63.
-  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([23,20,10,5,3,2]);
+  // W4 public-route accounting: 23 births + 20 growth + 10 item births + 5 upgrades + 3 combines + 2 sales + 4 placements = 67.
+  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([23,20,10,5,3,2,4]);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
   expect(prepared.anomalyBinding).toEqual({definitionId:'mage-armor',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(10);
-  expect(prepared.resourceProvenance.entries).toHaveLength(63);
+  expect(prepared.resourceProvenance.entries).toHaveLength(67);
   expect(prepared.nextUnitSerial).toBe(24);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'cloak',quantity:1},{kind:'item',definitionId:'rod',quantity:1},{kind:'gold',quantity:4},{kind:'unit',definitionId:'ezreal',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
  });
