@@ -99,6 +99,10 @@ export class BattleHistory {
               tick: change.before.combat!.tick, itemId: incoming.id,
               unitId: combined.location.unitId, slot: combined.location.slot,
             }));
+            else if (combined?.location.kind === 'inventory') this.current.equipmentCommands.push(Object.freeze({
+              tick: change.before.combat!.tick,
+              consumedIds: Object.freeze([fact.event.consumedIds[0], fact.event.consumedIds[1]] as const),
+            }));
           }
         }
       }

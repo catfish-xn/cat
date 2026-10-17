@@ -375,6 +375,165 @@ describe('M7/S7 combat equipment command replay', () => {
     for (const value of restored) expect(value).toEqual(state);
     return restored;
   }
+  function rejectAll(state: MatchState, battles: readonly BattleRecord[], reason?: string) {
+    for (const entry of [() => serializeMatch(state,battles),
+      () => restoreMatch(structuredClone(state),battles), () => restoreMatch(JSON.stringify(state),battles)]) {
+      if (reason) expect(entry).toThrow(reason);
+      else expect(entry).toThrow();
+    }
+  }
+  function nextBattleMatches(state: MatchState, restored: MatchState) {
+    let original = accepted(startMatchCombat(advance(state)));
+    let resumed = accepted(startMatchCombat(advance(restored)));
+    expect(resumed).toEqual(original);
+    while (original.phase === 'combat') {
+      const expected = stepMatch(original), actual = stepMatch(resumed);
+      expect(actual).toEqual(expected);
+      original = expected.state; resumed = actual.state;
+    }
+  }
+  function swords() {
+    let state = createMatch(7);
+    for (let i = 0; i < 2; i++) state = accepted(grantMechanicItem(state,
+      {receiptId:`m8:sword:${i}`,source:'test',definitionId:'sword'}));
+    return state;
+  }
+  function timedEquipment(kind: 'ordinary' | 'in-place' | 'inventory', tick = 1) {
+    const opening = kind === 'ordinary' ? grantBlades(createMatch(7),1)
+      : kind === 'in-place' ? accepted(equipItem(swords(),'item-1','unit-1',0)) : swords();
+    const live = recorder(opening);
+    while (live.state.combat!.tick < tick) live.commit(stepMatch(live.state),'tick');
+    live.commit(kind === 'inventory' ? combineItems(live.state,'item-1','item-2')
+      : equipItem(live.state,kind === 'ordinary' ? 'item-1' : 'item-2','unit-1',0),'command');
+    return live.finish();
+  }
+  it.each([false,true])('records inventory combination followed by equip=%s and resumes the next battle tick for tick (M8)', equip => {
+    const live = recorder(swords());
+    live.commit(stepMatch(live.state),'tick');
+    live.commit(combineItems(live.state,'item-1','item-2'),'command');
+    expect(live.history.capturePrefix()!.equipmentCommands).toEqual([{tick:1,consumedIds:['item-1','item-2']}]);
+    expect(live.state.items.find(item => item.id === 'item-3')).toMatchObject({
+      definitionId:'deathblade',location:{kind:'inventory'},
+    });
+    if (equip) live.commit(equipItem(live.state,'item-3','unit-1',0),'command');
+    const prefix = live.history.capturePrefix()!;
+    expect(validateBattleRecord(prefix,[]).settledMatch).toEqual(live.state);
+    expect(prefix.equipmentCommands).toHaveLength(equip ? 2 : 1);
+    const {state,battles} = live.finish();
+    expect(battles[0].endTick).toBe(164);
+    expect(validateBattleRecord(battles[0],[]).settledMatch).toEqual(state);
+    for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
+    const omitted = structuredClone(battles);
+    Object.assign(omitted[0],{equipmentCommands:equip ? prefix.equipmentCommands!.slice(1) : []});
+    rejectAll(state,omitted,equip ? '非法穿戴命令' : '历史获得或合成记录不一致');
+  });
+  it.each(['ordinary','in-place','inventory'] as const)('rejects changing only the command tick to 0, 2 or 69 for %s (M9)', kind => {
+    const {state,battles} = timedEquipment(kind);
+    const fact = state.resourceProvenance.entries.find(entry => (entry.kind === 'item-equipped' || entry.kind === 'item-combined') && entry.tick === 1);
+    expect(fact).toBeDefined();
+    if (kind === 'in-place') expect(battles[0].endTick).toBe(138);
+    for (const tick of [0,2,69]) {
+      const forged = structuredClone(battles);
+      Object.assign(forged[0].equipmentCommands![0],{tick});
+      rejectAll(state,forged,'历史获得或合成记录不一致');
+      const ledgerOnly = structuredClone(state);
+      Object.assign(ledgerOnly.resourceProvenance.entries[fact!.sequence],{tick});
+      rejectAll(ledgerOnly,battles,'历史获得或合成记录不一致');
+    }
+    const missingTick = structuredClone(state);
+    Reflect.deleteProperty(missingTick.resourceProvenance.entries[fact!.sequence],'tick');
+    rejectAll(missingTick,battles,'历史获得或合成记录不一致');
+  });
+  it.each([0,2,69])('certifies the same ordered result when both tick claims move to %i (M9 boundary)', tick => {
+    const {state,battles} = timedEquipment('in-place');
+    const shifted = structuredClone(state), records = structuredClone(battles);
+    const fact = shifted.resourceProvenance.entries.find(entry => entry.kind === 'item-combined')!;
+    Object.assign(fact,{tick});
+    Object.assign(records[0].equipmentCommands![0],{tick});
+    // A genuine public-command run at that time has exactly this entire state,
+    // including provenance. Only the recorded tick differs from the tick-1 run.
+    const genuine = timedEquipment('in-place',tick);
+    expect(shifted).toEqual(genuine.state);
+    expect(records).toEqual(genuine.battles);
+    for (const restored of roundTrip(shifted,records)) {
+      expect(restored).toEqual(genuine.state);
+      expect({...restored,resourceProvenance:state.resourceProvenance}).toEqual(state);
+      nextBattleMatches(genuine.state,restored);
+    }
+  });
+  it.each(['existing-target','missing-first','missing-second','ordinary-equip'] as const)('rejects %s in-place combination tampering at all three entries', mutation => {
+    let opening = accepted(grantMechanicUnit(swords(),{receiptId:'m9:target',source:'test',definitionId:'lux'}));
+    opening = accepted(equipItem(opening,'item-1','unit-1',0));
+    const live = recorder(opening);
+    live.commit(stepMatch(live.state),'tick');
+    live.commit(equipItem(live.state,'item-2','unit-1',0),'command');
+    const {state,battles} = live.finish();
+    const forged = structuredClone(state), records = structuredClone(battles);
+    const fact = forged.resourceProvenance.entries.find(entry => entry.kind === 'item-combined')!;
+    if (fact.kind !== 'item-combined') throw new Error('Expected combination');
+    if (mutation === 'existing-target') Object.assign(records[0].equipmentCommands![0],{unitId:'unit-2'});
+    else if (mutation === 'ordinary-equip') Object.assign(forged.resourceProvenance.entries,{[fact.sequence]:{
+      kind:'item-equipped',itemId:fact.event.itemId,unitId:'unit-1',slot:0,tick:1,sequence:fact.sequence,roundId:fact.roundId,
+    }});
+    else Object.assign(fact.event,{consumedIds:fact.event.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))});
+    rejectAll(forged,records);
+  });
+  it.each(['missing-first','missing-second','ordinary-equip'] as const)('rejects %s inventory combination commands at all three entries', mutation => {
+    const {state,battles} = timedEquipment('inventory'), records = structuredClone(battles);
+    const command = records[0].equipmentCommands![0];
+    if (!('consumedIds' in command)) throw new Error('Expected inventory combination');
+    Object.assign(records[0],{equipmentCommands:mutation === 'ordinary-equip'
+      ? [{tick:1,itemId:'item-1',unitId:'unit-1',slot:0}]
+      : [{tick:1,consumedIds:command.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))}]});
+    rejectAll(state,records);
+  });
+  it('binds combat equip order to the temporary item roll prefix (M9)', () => {
+    let opening = accepted(grantMechanicUnit(createMatch(7),{receiptId:'m9:bench',source:'test',definitionId:'lux'}));
+    for (let i = 0; i < 2; i++) opening = accepted(grantMechanicItem(opening,
+      {receiptId:`m9:gloves:${i}`,source:'test',definitionId:'thiefs-gloves'}));
+    const finish = (reverse: boolean) => {
+      const live = recorder(opening);
+      for (const i of reverse ? [1,0] : [0,1]) {
+        live.commit(stepMatch(live.state),'tick');
+        live.commit(equipItem(live.state,`item-${i+1}`,`unit-${i+1}`,0),'command');
+      }
+      return live.finish();
+    };
+    const original = finish(false), reordered = finish(true);
+    roundTrip(original.state,original.battles);
+    roundTrip(reordered.state,reordered.battles);
+    // Rewrite commands AND matching equip facts while keeping the original,
+    // locally valid RNG/children ledger. The historical roll prefix must bind it.
+    const forged = {...original.state,resourceProvenance:reordered.state.resourceProvenance};
+    expect(validateMatchStructure(forged)).toEqual(forged);
+    rejectAll(forged,reordered.battles,'历史临时装备收据前缀不一致');
+  });
+  it('keeps combat equips before terminal resources and crown gold (M9)', () => {
+    let opening = createMatch(42);
+    for (let slot = 0; slot < 3; slot++) {
+      opening = accepted(grantMechanicItem(opening,{receiptId:`m9:crown:${slot}`,source:'test',definitionId:TACTICIANS_CROWN_ID}));
+      opening = accepted(equipItem(opening,opening.items.at(-1)!.id,'unit-1',slot));
+    }
+    opening = grantBlades(accepted(grantMechanicUnit(opening,{receiptId:'m9:crown-bench',source:'test',definitionId:'lux'})),1);
+    const live = recorder(opening);
+    live.commit(stepMatch(live.state),'tick');
+    live.commit(equipItem(live.state,'item-4','unit-2',0),'command');
+    const {state,battles} = live.finish();
+    expect(state.seatMechanics!.receipts.find(receipt => receipt.source === 'tacticians-crown')).toMatchObject({kind:'gold',amount:1});
+    roundTrip(state,battles);
+    const fact = state.resourceProvenance.entries.find(entry => entry.kind === 'item-equipped' && entry.tick === 1)!;
+    const moved = {...state,resourceProvenance:{...state.resourceProvenance,entries:[
+      ...state.resourceProvenance.entries.filter(entry => entry.sequence !== fact.sequence),fact,
+    ].map((entry,sequence) => ({...entry,sequence}))}};
+    // Still a legal local equipment projection, but it rewrites the historical
+    // order across the atomic loot/growth/economy settlement.
+    expect(validateMatchStructure(moved)).toEqual(moved);
+    rejectAll(moved,battles,'历史获得或合成记录不一致');
+    const mistimed = structuredClone(state), records = structuredClone(battles);
+    Object.assign(mistimed.resourceProvenance.entries[fact.sequence],{tick:battles[0].endTick});
+    Object.assign(records[0].equipmentCommands![0],{tick:battles[0].endTick});
+    rejectAll(mistimed,records,'战后穿戴命令');
+  });
   it.each([0,2])('records in-place sword combination at tick 1 (requested slot %i) and resumes the next battle tick for tick', slot => {
     let opening = createMatch(7);
     for (let i = 0; i < 2; i++) opening = accepted(grantMechanicItem(opening,

@@ -16,6 +16,7 @@ import type { ScheduleReceipt, StrategyEvent } from './strategy-types';
 import { getUnitSellPrice } from './unit-stats';
 import type { StarLevel, UnitUpgradedEvent } from './unit-types';
 import { UNIT_DEFINITIONS } from './units';
+import { MAX_COMBAT_TICKS } from './combat-types';
 
 export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
@@ -41,8 +42,9 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
-  | { readonly kind: 'item-equipped'; readonly itemId: string; readonly unitId: string; readonly slot: number }
-  | { readonly kind: 'item-combined'; readonly event: Extract<StrategyEvent, { readonly type: 'itemCombined' }> }
+  // tick is present exactly for operations issued during combat.
+  | { readonly kind: 'item-equipped'; readonly itemId: string; readonly unitId: string; readonly slot: number; readonly tick?: number }
+  | { readonly kind: 'item-combined'; readonly event: Extract<StrategyEvent, { readonly type: 'itemCombined' }>; readonly tick?: number }
   | { readonly kind: 'combat-growth-committed'; readonly combatId: string; readonly settlementId: string;
       readonly combatStartProvenancePrefixLength: number; readonly sourceDeltas: readonly CombatGrowthDelta[] };
 export type ResourceProvenanceEntry = ResourceFact & { readonly sequence: number; readonly roundId: string };
@@ -399,10 +401,12 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     } else if(entry.kind==='g23-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-equipped') {
-      keys(entry, [...common, 'itemId', 'unitId', 'slot']); integer(entry.slot);
+      keys(entry, [...common, 'itemId', 'unitId', 'slot', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); integer(entry.slot);
+      if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
       requireValue(items.has(entry.itemId) && units.has(entry.unitId) && entry.slot < 3, 'equipment ownership/slot');
     } else if (entry.kind === 'item-combined') {
-      keys(entry, [...common, 'event']); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
+      keys(entry, [...common, 'event', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
+      if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
       // T12 permits combinations before/after settlement and during supply choices.
       // Input ownership, recipe, consumption and serial checks remain mandatory below.
       const event = entry.event; nonempty(event.definitionId);

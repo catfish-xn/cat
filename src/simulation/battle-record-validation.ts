@@ -1,7 +1,7 @@
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
-import { equipItem, startMatchCombat, stepMatch } from './match';
+import { combineItems, equipItem, startMatchCombat, stepMatch } from './match';
 import type { MatchState } from './match-types';
 import type { CombatState } from './combat-types';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -49,7 +49,12 @@ function checkShape(record: BattleRecord) {
   check(record.equipmentCommands === undefined || Array.isArray(record.equipmentCommands), '穿戴命令');
   let equipmentTick = 0;
   for (const command of record.equipmentCommands ?? []) {
-    check(command && equalContent(Object.keys(command).sort(), ['itemId','slot','tick','unitId']), '穿戴命令字段');
+    check(command && typeof command === 'object', '穿戴命令字段');
+    if ('consumedIds' in command) {
+      check(equalContent(Object.keys(command).sort(), ['consumedIds','tick'])
+        && Array.isArray(command.consumedIds) && command.consumedIds.length === 2
+        && command.consumedIds.every((id: unknown) => typeof id === 'string' && id.length > 0), '合成命令字段');
+    } else check(equalContent(Object.keys(command).sort(), ['itemId','slot','tick','unitId']), '穿戴命令字段');
     check(Number.isSafeInteger(command.tick) && command.tick >= equipmentTick && command.tick <= record.endTick, '穿戴命令tick');
     equipmentTick = command.tick;
   }
@@ -128,11 +133,15 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
     while (equipmentCursor < commands.length && commands[equipmentCursor].tick === state.combat!.tick) {
       const command = commands[equipmentCursor++];
       check(state.phase === 'combat', '战后穿戴命令');
-      const equipped = equipItem(state, command.itemId, command.unitId, command.slot);
-      // Production equip may append item-combined and allocate a new instance.
-      // Its placement event proves success; history carry still compares the
-      // complete resource prefix and exact equipment bindings after replay.
-      check(equipped.ok && equipped.events.some(event => event.type === 'itemEquipped'), '非法穿戴命令');
+      const inventoryCombination = 'consumedIds' in command;
+      const equipped = inventoryCombination
+        ? combineItems(state, command.consumedIds[0], command.consumedIds[1])
+        : equipItem(state, command.itemId, command.unitId, command.slot);
+      // Production commands allocate the result before the next command. Their
+      // resource facts include tick; history carry compares every fact, including
+      // its order relative to loot and other settlement resources, without filtering.
+      check(equipped.ok && equipped.events.some(event => event.type === (inventoryCombination ? 'itemCombined' : 'itemEquipped')),
+        inventoryCombination ? '非法合成命令' : '非法穿戴命令');
       state = equipped.state; compare(equipped.events);
     }
   };
@@ -160,6 +169,8 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   if (!previous) { validateHistoricalEquipment(null, next); return; }
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
+  const rolls = previous.equipmentState.rolls;
+  check(equalContent(next.equipmentState.rolls.slice(0, rolls.length), rolls), '历史临时装备收据前缀不一致');
   validateHistoricalEquipment(previous, next);
   const receipts = previous.seatMechanics!.receipts;
   check(equalContent(next.seatMechanics!.receipts.slice(0, receipts.length), receipts), '历史机制收据前缀不一致');

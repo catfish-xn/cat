@@ -330,7 +330,8 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       if(tool.kind==='item-equipped'){
         check(!committed||state.phase!=='gameOver','terminal equipment operation');
         items=replayEquipment(items,preparation,nextItem,tool).items;
-        take({kind:tool.kind,itemId:tool.itemId,unitId:tool.unitId,slot:tool.slot});continue;
+        take({kind:tool.kind,itemId:tool.itemId,unitId:tool.unitId,slot:tool.slot,
+          ...(tool.tick === undefined ? {} : {tick:tool.tick})});continue;
       }
       if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
@@ -341,7 +342,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');
       const fact = entries[cursor] as Extract<ResourceFact, { kind: 'item-combined' }>;
       const plan = replayCombination(items, preparation, nextItem, fact);
-      take({ kind: 'item-combined', event: fact.event });
+      take({ kind: 'item-combined', event: fact.event, ...(fact.tick === undefined ? {} : {tick:fact.tick}) });
       items = plan.items; nextItem = plan.nextItemSerial;
     }
   };
