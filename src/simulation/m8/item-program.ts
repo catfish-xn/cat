@@ -1,12 +1,13 @@
 /** Content declarations composed exclusively from the signed G01–G11 vocabulary.
  * No item ID or display name is inspected by this compiler or the combat executor. */
 import type { CombatUnit } from '../combat-types';
-import type { Effect, PeriodicProgram, StatModifier, TriggerDefinition, Source } from './contracts';
+import type { Effect, PeriodicProgram, StatModifier, Source } from './contracts';
+import type { TargetLimitedTrigger } from './triggers';
 import type { VampDefinition } from './runtime-types';
 import { authorizeSpellCrit } from './crit';
 import { validateStatusApplication } from './status';
 import { integer, resolveStat } from './stats';
-export type ItemTrigger = Omit<TriggerDefinition, 'source'> & { readonly initialAlso?: true };
+export type ItemTrigger = Omit<TargetLimitedTrigger, 'source'> & { readonly initialAlso?: true };
 export interface ItemProgram {
   readonly modifiers?: readonly StatModifier[];
   readonly effects?: readonly Effect[];
@@ -60,7 +61,7 @@ export function validateItemProgram(program: ItemProgram): void {
   (program.modifiers ?? []).forEach(modifier);(program.effects ?? []).forEach(effect);
   for(const d of [...program.triggers ?? [],...program.survival ?? []]) {
     check(d.id && !('source' in d) && d.effects.length<32);
-    if(d.gate.kind==='consume-counter'){const id=d.gate.counterId;check(d.counters.some(c=>c.id===id&&c.cap!==null));} integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
+    if(d.gate.kind==='consume-counter'){const id=d.gate.counterId;check(d.counters.some(c=>c.id===id&&c.cap!==null));} check(d.actionLimitScope===undefined||d.actionLimitScope==='target'&&d.event==='kill-or-assist');integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
   }
   for(const p of program.periodic ?? []){integer(p.periodTicks,1);if(p.endsAtTick!==undefined)integer(p.endsAtTick,1);check(p.program.effects.length<32);p.program.effects.forEach(effect);}
   for(const v of program.vamp ?? []){modifier(v.modifier);integer(v.allyBps);if(v.damageTypes)check(v.damageTypes.length>0&&v.damageTypes.every(t=>['physical','magic','true'].includes(t)));}

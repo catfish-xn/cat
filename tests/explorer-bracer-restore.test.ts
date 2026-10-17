@@ -58,7 +58,7 @@ describe('Seeker\'s Armguard save/restore', () => {
     const kill = u.mechanismDefinitions!.eventTriggers!.find(t => t.source.effectIndex === receipt.source.effectIndex)!;
     Object.assign(receipt, { triggerCount: 3 });
     Object.assign(u.runtime!, { abilityPowerFlat: 60, nextAttackMagic: 1710 });
-    Object.assign(u.triggerLedger!.actionCounts, { [JSON.stringify([receipt.key, kill.id, u.id, bad.combat!.nextActionSeq! - 1])]: 1 });
+    Object.assign(u.triggerLedger!.actionCounts, { [JSON.stringify([receipt.key, kill.id, u.id, bad.combat!.nextActionSeq! - 1, 'enemy-r4-3'])]: 1 });
     Object.assign(u.triggerLedger!.processed, { [JSON.stringify(['trigger', receipt.key, kill.id, kill.event, kill.aggregation])]: bad.combat!.nextTriggerEventSeq! - 1 });
     for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: sampled stat trigger facts');
     expect(restoreMatch(JSON.stringify(stacked))).toEqual(stacked);
@@ -154,7 +154,7 @@ describe('finite sampled bracer AP candidates', () => {
     const runtimes = unit.mechanismDefinitions!.eventTriggers!.filter(t => t.source.definitionId === BRACER).flatMap(t => {
       const count = t.id === 'kill' ? kills : assists;
       const identity = effectIdentity(initial.combat!.combatId!, t.source, unit.id);
-      for (let i = 0; i < count; i++) actionCounts[JSON.stringify([identity.key, t.id, unit.id, i])] = 1;
+      for (let i = 0; i < count; i++) actionCounts[JSON.stringify([identity.key, t.id, unit.id, i, `target-${i}`])] = 1;
       return count ? [{ ...identity, startsAtTick: 10, expiresAtTick: null,
         stacks: 0, triggerCount: count, counters: {}, consumedRewards: [], nextEligibleTick: 10, consumed: false, stackPolicy: t.stackPolicy }] : [];
     });
@@ -187,7 +187,7 @@ describe('finite sampled bracer AP candidates', () => {
     expect(abilityPowerCandidates(doubled, 0, initial.combat!.combatId!)).toEqual(expected);
     expected.add(doubled.abilityPower! + 60);
     expect(abilityPowerCandidates({ ...doubled, triggerLedger: { ...unit.triggerLedger!, runtimes: [...unit.triggerLedger!.runtimes, oneKill],
-      actionCounts: { ...unit.triggerLedger!.actionCounts, [JSON.stringify([oneKill.key, kill.id, unit.id, 1])]: 1 } } }, 0, initial.combat!.combatId!)).toEqual(expected);
+      actionCounts: { ...unit.triggerLedger!.actionCounts, [JSON.stringify([oneKill.key, kill.id, unit.id, 1, 'target-1'])]: 1 } } }, 0, initial.combat!.combatId!)).toEqual(expected);
   });
 
   it('rejects a huge standalone count before constructing any layer-sized array', () => {
