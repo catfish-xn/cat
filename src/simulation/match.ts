@@ -1,7 +1,8 @@
 import { recordPreparationCommand, appendPreparationEvents, emptyPreparationLedger } from './preparation-ledger';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {updateG23Cells} from './g2-3-state';
-import {writeG23Progress} from './g2-3-state';
+import {readG23Progress,writeG23Progress} from './g2-3-state';
+import { deploymentCapFor } from './deployment-cap';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {applyG23Radiant} from './g2-3-radiant';
 import {type G23JunkerUpgrade} from './g2-3-junker';
@@ -177,7 +178,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
   const entered = enterScheduledEvents(writeG23Progress(initial,createG23Progress(seed)));
   return accept(entered.state, entered.events).state;
 }
-export function getDeploymentCap(state: MatchState): number { return state.level; }
+export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
   if (!canOperateMatch(state)) return 'wrong-phase';
   if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && (target?.kind === 'board'
