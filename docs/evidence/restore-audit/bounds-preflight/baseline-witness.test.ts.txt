@@ -1,0 +1,26 @@
+import { expect, it, vi } from 'vitest';
+import { itemMatch } from '../fixtures/m8-b4-match';
+import { stepMatch } from '../../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
+import * as expressions from '../../src/simulation/content/item-programs';
+
+it('observes 64 expanded declarations before rejecting the later owner on 8db36d0', () => {
+  const legal = stepMatch(itemMatch('ionic-spark')).state;
+  expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+  const bad = structuredClone(legal), units = [...bad.combat!.units];
+  const owner = units.find(u => u.id === 'unit-1')!;
+  const target = units.find(u => u.mechanismState?.statuses.some(g => g.contributions.some(c => c.source.ownerId === owner.id)))!;
+  expect(target.id).not.toBe(owner.id);
+  Object.assign(owner, { mechanics: [...owner.mechanics!, {
+    mechanic: 'enforcer', source: owner.mechanics![0]?.source ?? owner.sources![0].source,
+    values: { wanted: 64, attackSpeedBps: 1 },
+  }] });
+  Object.assign(bad.combat!, { units: [target, ...units.filter(u => u !== target)] });
+  for (const input of [bad, JSON.stringify(bad)]) {
+    const allocation = vi.spyOn(expressions, 'stat');
+    expect(() => restoreMatch(input)).toThrow('Invalid Match save: resolved mechanics');
+    expect(allocation.mock.calls.length).toBeGreaterThanOrEqual(64);
+    console.log('expanded-before-rejection', allocation.mock.calls.length);
+    allocation.mockRestore();
+  }
+});

@@ -1,0 +1,37 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-4b-resists-restore.test.ts -t invented resists --disableConsoleIntercept --silent=false
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-resists-direct
+
+ ❯ |fast| tests/g2-4b-resists-restore.test.ts (17 tests | 1 failed | 16 skipped) 82ms
+   × rejects an invented resists declaration in a battle without a compiled resists source 80ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > rejects an invented resists declaration in a battle without a compiled resists source
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/g2-4b-resists-restore.test.ts:124:41
+    122|   expect(layer).toBeDefined();
+    123|   layer.m8Grant.amount.resistsBps = 7000;
+    124|   expect(() => restoreMatch(candidate)).toThrow(/^Invalid Match save:/…
+       |                                         ^
+    125| });
+    126|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 skipped (17)
+   Start at  09:17:29
+   Duration  1.87s (transform 78%, import 16%, tests 5%, setup 1%)

@@ -1,0 +1,40 @@
+{
+  "node": "v22.17.0",
+  "baseline": "8db36d0",
+  "command": "vitest run --project fast --dir tests --maxWorkers=1 tests/m8-b7-match-wiring.test.ts",
+  "results": [
+    {
+      "pair": 1,
+      "variant": "multiplayer",
+      "elapsedMs": 24776.204100000003
+    },
+    {
+      "pair": 1,
+      "variant": "preflight",
+      "elapsedMs": 25613.631699999998
+    },
+    {
+      "pair": 2,
+      "variant": "multiplayer",
+      "elapsedMs": 24185.683999999994
+    },
+    {
+      "pair": 2,
+      "variant": "preflight",
+      "elapsedMs": 24668.922699999996
+    },
+    {
+      "pair": 3,
+      "variant": "multiplayer",
+      "elapsedMs": 24281.05320000001
+    },
+    {
+      "pair": 3,
+      "variant": "preflight",
+      "elapsedMs": 24527.640700000004
+    }
+  ],
+  "baselineMedianMs": 24281.05320000001,
+  "preflightMedianMs": 24668.922699999996,
+  "changePercent": 1.5974162932931746
+}

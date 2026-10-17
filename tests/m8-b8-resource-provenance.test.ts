@@ -10,7 +10,7 @@ import type { ScheduleReceipt } from '../src/simulation/strategy-types';
 import type { UnitUpgradedEvent } from '../src/simulation/unit-types';
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
-const empty = (): ResourceProvenance => ({ version: RESOURCE_PROVENANCE_VERSION, entries: [] });
+const empty = (): ResourceProvenance => ({ version: RESOURCE_PROVENANCE_VERSION, equipmentHistory: 'ordered', entries: [] });
 const opening = (): ResourceProvenance => appendResourceProvenance(empty(), '1-2', { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed: 42, seatId: 'solo' } });
 const context = (extra: Partial<ResourceProvenanceContext> = {}): ResourceProvenanceContext => ({
   throughRoundOrdinal: 38, scheduleReceipts: [], lootReceipts: [], combatSettlements: [], ...extra,

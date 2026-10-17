@@ -1,6 +1,7 @@
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {updateG23Cells} from './g2-3-state';
-import {writeG23Progress} from './g2-3-state';
+import {readG23Progress,writeG23Progress} from './g2-3-state';
+import { deploymentCapFor } from './deployment-cap';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {applyG23Radiant} from './g2-3-radiant';
 import {type G23JunkerUpgrade} from './g2-3-junker';
@@ -176,7 +177,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
   const entered = enterScheduledEvents(writeG23Progress(initial,createG23Progress(seed)));
   return accept(entered.state, entered.events).state;
 }
-export function getDeploymentCap(state: MatchState): number { return state.level; }
+export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
   if (!canOperateMatch(state)) return 'wrong-phase';
   if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && (target?.kind === 'board'
@@ -446,14 +447,15 @@ export function useConsumable(state:MatchState,consumableId:string,target:Consum
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   return acceptEquipment({...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
-    {kind:'consumable-used',record:plan.record})},plan.events);
+    {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})},plan.events);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planCombine(state.items, state.nextItemSerial, aId, bId);
+  const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
   return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event}))) }, plan.events) : fail(state, plan.reason);
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event,...timing}))) }, plan.events) : fail(state, plan.reason);
 }
 export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
@@ -461,9 +463,11 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
   if (!plan.ok) return fail(state, plan.reason);
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
+  const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
   return acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
-      combined.map(event => ({ kind: 'item-combined' as const, event }))) : state.resourceProvenance,
+      combined.map(event => ({ kind: 'item-combined' as const, event, ...timing })))
+      : appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, {kind:'item-equipped',itemId,unitId,slot:plan.events.find(event => event.type === 'itemEquipped')!.slot,...timing}),
   }, plan.events);
 }
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {

@@ -5,14 +5,129 @@ import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {buildSync} from 'esbuild';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {selectChoice,nextRound,startMatchCombat,stepMatch,type MatchState} from '../src/simulation/match';
+import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
 import {g23BattlePayouts} from '../src/simulation/g2-3-settlement';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
-import {grantMechanicGold,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
+import {drainG23Rewards} from '../src/simulation/g2-3-runtime';
+import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
+import {grantMechanicGold,grantMechanicItem,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
 import {accepted,naturalForgeStates,naturalTier4Preparation} from './fixtures/g24-natural-forge';
+import {finishPublicEquipmentBattle} from './fixtures/b8-public-equipment';
+import {CompletedBattleHistory} from './fixtures/completed-battle-history';
+import {validateBattleCollection} from '../src/replay/history';
+import {exportFile,validateFile} from '../src/persistence/format';
+import {M8_VERSION} from '../src/simulation/m8/version';
+import type {SaveEnvelope} from '../src/m6/contracts';
+
+/** Advance supply/choice rounds through Match commands, stopping before a real battle. */
+function nextDuplicatorPreparation(input:MatchState):MatchState{
+ let state=input;
+ for(let guard=0;guard<20;guard++){
+  if(state.phase==='preparation')return state;
+  if(state.phase==='choice'){
+   const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+  }else if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
+  else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
+ }
+ throw Error('Duplicator preparation budget');
+}
+
+let duplicatorArchive:SaveEnvelope|undefined;
+/** Full live history: public grants build six Conquerors; a real tier4 chest grants the duplicator.
+ * Seed26 also supplies a magnetic remover from its real 2-7 prismatic package. */
+function publicDuplicatorArchive():{state:MatchState;history:CompletedBattleHistory;unitId:string}{
+ if(!duplicatorArchive){
+  let state=nextDuplicatorPreparation(createMatch(26));
+  const history=new CompletedBattleHistory('pr161-duplicator');
+  state=accepted(grantMechanicGold(state,{receiptId:'fixture:duplicator:gold',source:'fixture',amount:150}));
+  while(state.level<6)state=accepted(buyXp(state));
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'))
+   state=accepted(deployMatchUnit(state,unit.id,{kind:'bench',slot:0}));
+  for(const [col,definitionId] of ['darius','draven','rell','swain','ambessa','mordekaiser'].entries()){
+   for(let copy=0;copy<9;copy++)state=accepted(grantMechanicUnit(state,{receiptId:`fixture:duplicator:${definitionId}:${copy}`,source:'fixture',definitionId}));
+   const unit=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId&&u.starLevel===3)!;
+   state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:4}}));
+  }
+  for(let battles=0;battles<10;battles++){
+   state=finishPublicEquipmentBattle(state,history);
+   if(readG23Progress(state)!.rewardClaims.some(c=>c.kind==='duplicator'))break;
+   state=nextDuplicatorPreparation(state);
+  }
+  expect(readG23Progress(state)!.rewardClaims.some(c=>c.kind==='duplicator')).toBe(true);
+  duplicatorArchive={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,
+   replayFormatVersion:M8_VERSION.replayFormatVersion,runId:history.runId,createdAt:'2026-10-17T00:00:00.000Z',
+   match:state,battles:history.completedRecords,currentBattle:null};
+ }
+ const state=duplicatorArchive.match,claim=readG23Progress(state)!.rewardClaims.find(c=>c.kind==='duplicator')!;
+ expect(M5_UNIT_DEFINITIONS[claim.definitionId]!.cost).toBeLessThanOrEqual(3);
+ expect(state.preparation.units.find(u=>u.id===claim.instanceId)).toMatchObject({definitionId:claim.definitionId,starLevel:1});
+ expect(state.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)).toMatchObject({kind:'unit',resolution:'held',unitId:claim.instanceId});
+ return {state,history:new CompletedBattleHistory(duplicatorArchive.runId,duplicatorArchive.battles),unitId:claim.instanceId!};
+}
+
+async function expectFullDuplicatorSaveAndNextBattle(state:MatchState,history:CompletedBattleHistory):Promise<void>{
+ expect(state.combat?.status).toBe('finished');
+ const envelope:SaveEnvelope={...duplicatorArchive!,match:state,battles:history.completedRecords};
+ expect(envelope.battles.map(b=>b.roundId)).toEqual(state.roundResults.filter(r=>r.result!=='supply').map(r=>r.roundId));
+ expect(envelope.battles.every(b=>b.events.length>0&&b.result!==null)).toBe(true);
+ // Export and validate the complete archive, retaining every battle and event.
+ const loaded=await validateFile(exportFile(envelope),validateBattleCollection);
+ expect(loaded.battles).toEqual(envelope.battles);
+ const saved=serializeMatch(loaded.match);
+ const restored=[restoreMatch(saved),restoreMatch(state),restoreMatch(JSON.stringify(state))];
+ for(const candidate of restored)expect(candidate).toEqual(state);
+ let original=nextDuplicatorPreparation(state);
+ let copies=restored.map(nextDuplicatorPreparation);
+ const started=startMatchCombat(original);original=accepted(started);
+ copies=copies.map(copy=>{const result=startMatchCombat(copy);expect(result).toEqual(started);return accepted(result);});
+ expect(original.phase).toBe('combat');
+ let ticks=0;
+ while(original.phase==='combat'&&ticks++<1200){
+  const result=stepMatch(original);original=result.state;
+  copies=copies.map(copy=>{const step=stepMatch(copy);expect(step).toEqual(result);return step.state;});
+ }
+ expect(ticks).toBeGreaterThan(0);
+ expect(original.combat?.status).toBe('finished');
+ for(const copy of copies)expect(copy).toEqual(original);
+}
+
+it('restores a publicly granted hero duplicator after a completed battle with full history and identical next-battle ticks',async()=>{
+ let {state,history,unitId}=publicDuplicatorArchive();
+ state=nextDuplicatorPreparation(state);
+ // Put the copied hero into the battle, swapping out the original front-line holder.
+ state=accepted(deployMatchUnit(state,unitId,{kind:'board',cell:{col:3,row:4}}));
+ state=finishPublicEquipmentBattle(state,history);
+ expect(state.combat!.units.some(u=>u.id===unitId)).toBe(true);
+ await expectFullDuplicatorSaveAndNextBattle(state,history);
+});
+
+it('restores the copied hero across battles and an equip/remove cycle with full history and identical next-battle ticks',async()=>{
+ let {state,history,unitId}=publicDuplicatorArchive();
+ const claimRound=readG23Progress(state)!.rewardClaims.find(c=>c.kind==='duplicator')!.round;
+ state=nextDuplicatorPreparation(state);
+ state=accepted(deployMatchUnit(state,unitId,{kind:'board',cell:{col:3,row:4}}));
+ // Reach the real 2-7 remover drop, retaining every intervening battle.
+ while(state.round<=10){state=finishPublicEquipmentBattle(state,history);state=nextDuplicatorPreparation(state);}
+ const granted=grantMechanicItem(state,{receiptId:'fixture:duplicator:equipment',source:'fixture',definitionId:'warmog'});
+ state=accepted(granted);
+ if(!granted.ok||granted.receipt.kind!=='item')throw Error('Missing public item grant');
+ const itemId=granted.receipt.itemId;
+ state=accepted(equipItem(state,itemId,unitId,0));
+ expect(state.items.find(i=>i.id===itemId)!.location).toEqual({kind:'unit',unitId,slot:0});
+ state=finishPublicEquipmentBattle(state,history);
+ state=nextDuplicatorPreparation(state);
+ const remover=state.consumables.find(c=>c.definitionId==='magnetic-remover');
+ expect(remover).toBeDefined();
+ state=accepted(useConsumable(state,remover!.consumableId,{kind:'unit',unitId}));
+ expect(state.items.find(i=>i.id===itemId)!.location).toEqual({kind:'inventory'});
+ state=finishPublicEquipmentBattle(state,history);
+ expect(history.completedRecords.filter(b=>b.context.round>claimRound&&b.initial.units.some(u=>u.id===unitId)).length).toBeGreaterThanOrEqual(2);
+ expect(state.preparation.units.some(u=>u.id===unitId)).toBe(true);
+ await expectFullDuplicatorSaveAndNextBattle(state,history);
+});
 
 let tier14:MatchState|undefined;
 /** Historical receipt vector reaches 1172; the tier14 award itself comes from a real solo battle. */
@@ -48,6 +163,73 @@ function settlementCases():MatchState[]{
  return [naturalForgeStates().get(4)!,pending,accepted(selectChoice(pending,c.choiceId,c.generation,c.offers[0]))];
 }
 
+/** Keep the earlier chest awards, but move the historical receipt vector to 99
+ * stacks so two high-cost Conquerors can earn tier4 in a real solo battle. */
+function tier4WithoutOwnedTarget(fullBench=false):MatchState{
+ let state=naturalTier4Preparation();
+ const original=readG23Progress(state)!;let replay=createG23Progress(state.seed);
+ for(const receipt of original.economyReceipts){
+  if(receipt.kind!=='battle')throw Error('Unexpected fixture market');
+  const facts=receipt===original.economyReceipts.at(-1)?{...receipt.facts,conquerorTier:4,
+   conquestTakedowns:Array.from({length:(99-replay.conquest.stacks)/3},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
+  replay=advanceG23Economy(replay,facts).progress;
+ }
+ expect(replay.conquest.stacks).toBe(99);
+ expect(replay.rewards).toEqual(original.rewards);
+ state=writeG23Progress(state,{...original,...replay});
+ for(const unit of state.preparation.units.filter(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3))
+  state=accepted(sellUnit(state,unit.id));
+ if(fullBench){
+  const free=state.preparation.benchSize-state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length;
+  const fillers=Object.values(M5_UNIT_DEFINITIONS).filter(u=>u.cost>3&&!state.preparation.units.some(owned=>owned.team==='player'&&owned.definitionId===u.id)).slice(0,free);
+  for(const [index,{id:definitionId}] of fillers.entries())
+   state=accepted(grantMechanicUnit(state,{receiptId:`fixture:high-cost-bench:${index}`,source:'fixture',definitionId}));
+  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')).toHaveLength(state.preparation.benchSize);
+ }
+ expect(state.preparation.units.some(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3)).toBe(false);
+ state=accepted(startMatchCombat(state));
+ for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+ expect(state.phase).toBe('settlement');
+ expect(state.combat?.status).toBe('finished');
+ expect(readG23Progress(state)!.conquest.chestsOpened).toBe(4);
+ expect(readG23Progress(state)!.rewards.find(b=>b.tier===4)!.round).toBe(state.round);
+ return state;
+}
+
+function expectUnchangedRoundTrip(state:MatchState):void{
+ const before=JSON.stringify(state),progress=readG23Progress(state),pendingChoice=state.pendingChoice;
+ const save=serializeMatch(state);
+ for(const input of [state,JSON.parse(save),save]){
+  const restored=restoreMatch(input);
+  expect(restored).toEqual(state);
+  expect(readG23Progress(restored)).toEqual(progress);
+  expect(restored.pendingChoice).toEqual(pendingChoice);
+ }
+ expect(JSON.stringify(state)).toBe(before);
+}
+
+it('restores the award-round duplicator copying the hero just granted by the same tier4 chest',()=>{
+ const state=tier4WithoutOwnedTarget(),progress=readG23Progress(state)!;
+ const claims=progress.rewardClaims.filter(c=>c.bundleId==='g23:conqueror:4');
+ expect(claims.map(c=>c.kind)).toEqual(['unit','duplicator']);
+ expect(claims[1].definitionId).toBe(claims[0].definitionId);
+ expect(claims.map(c=>c.round)).toEqual([state.round,state.round]);
+ expect(state.preparation.units.filter(u=>u.team==='player'&&u.definitionId===claims[0].definitionId)).toHaveLength(2);
+ expect(state.pendingChoice).toBeNull();
+ expectUnchangedRoundTrip(state);
+},60000);
+
+it('restores the award-round duplicator in escrow when no eligible hero is owned',()=>{
+ const state=tier4WithoutOwnedTarget(true),progress=readG23Progress(state)!;
+ const bundle=progress.rewards.find(b=>b.tier===4)!;
+ expect(g23RewardAtoms(bundle,progress.seed).map(a=>a.kind)).toEqual(['unit','duplicator']);
+ expect(progress.rewardClaims.filter(c=>c.bundleId===bundle.id)).toEqual([]);
+ expect(state.preparation.units.some(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3)).toBe(false);
+ expect(state.pendingChoice).toBeNull();
+ expect(drainG23Rewards(state)).toEqual(state);
+ expectUnchangedRoundTrip(state);
+},60000);
+
 it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round',()=>{
  const states=settlementCases(),four=states[0];
  expect([four.round,four.roundDefinitionId,readG23Progress(four)!.conquest.stacks]).toEqual([6,'2-3',108]);
@@ -55,8 +237,10 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
+ // multiplayer G2-4a restored the tier-12 crown, which takes item-16 before tier 14.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-16',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
-  kind:'item',itemId:'item-16',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+  kind:'item',itemId:'item-17',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);

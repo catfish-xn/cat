@@ -259,7 +259,10 @@ export class MatchApplication {
         try { await this.coordinator?.flush(); } catch (error) { this.failed(error); }
       }
       if (this.disposed || id !== this.operation) return;
-      const candidate = new PlaybackSession(record);
+      const preceding = [...this.history.completedRecords, ...this.archives]
+        .filter(previous => previous.runId === record.runId && previous.context.round < record.context.round)
+        .sort((a, b) => a.context.round - b.context.round);
+      const candidate = new PlaybackSession(record, preceding);
       this.session.pause('replay'); this.hooks.clearInput();
       this.playbackSession?.dispose(); this.playbackSession = candidate; this.playbackRecord = record;
       this.replayView ??= new ReplayView(document.getElementById('board-root')!);

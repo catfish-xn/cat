@@ -1,5 +1,5 @@
 import type { BattleRecord, SaveEnvelope } from '../m6/contracts';
-import { deepFreeze, isOwnedBattleRecord } from '../replay/history';
+import { deepFreeze, isOwnedBattleRecord, validateBattleCollection } from '../replay/history';
 import { isImmutableJson } from '../simulation/immutable-json';
 import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_SAVE_BYTES } from '../m6/limits';
@@ -20,7 +20,11 @@ export class CompatibilityError extends SaveError {
 export async function validateEnvelope(input: unknown, validateHistory: ValidateHistory): Promise<SaveEnvelope> {
   const routed = routeSaveFile(input);
   if (routed.view) throw new CompatibilityError(routed.view, routed.detail);
-  try { await validateHistory(routed.envelope); return routed.envelope; }
+  try {
+    await validateBattleCollection(routed.envelope);
+    if (validateHistory !== validateBattleCollection) await validateHistory(routed.envelope);
+    return routed.envelope;
+  }
   catch (error) {
     if (error instanceof SaveError && error.reason === 'validation') throw error;
     throw new CompatibilityError(rejectedView('invalid-data', routed.envelope.match.rulesVersion), error instanceof Error ? error.message : String(error));

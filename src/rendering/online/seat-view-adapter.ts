@@ -60,8 +60,9 @@ function placeholderShell(): MatchState {
 
 /**
  * MatchState-shaped display copy of my seat view. Fields of the view win; anything else is a placeholder.
- * Round records miss the server-only bookkeeping (settlementId, roundKind, streaks, XP requested); they stay
- * absent and the panels print only what is there. `interestBasis` is whitelisted (PR #50) and shown as is.
+ * Round records miss the server-only bookkeeping (settlementId, streaks, XP requested); they stay
+ * absent and the panels print only what is there. `interestBasis` (PR #50) and `roundKind` (PR #146, for the
+ * Emissary's prior PvP wins) are whitelisted and shown as is.
  */
 export function toDisplayMatch(view: PrivateSeatView | SeatStateView): DisplayMatch {
   const base = placeholderShell();
