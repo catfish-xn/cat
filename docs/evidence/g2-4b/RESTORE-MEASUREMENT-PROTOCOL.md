@@ -65,3 +65,14 @@ The public progression reached round 3-5 with HP 100, level 9, and all nine requ
 | 159 | Terminal | 167880 | 25 |
 
 Each checkpoint passed full JSON and object restore equality; preparation also passed a JSON restore equality check. No warm/cold timing run was performed, and the 4-1 Zephyr scenario remains unvalidated. Initial setup corrections fixed the content ID spelling `drmundo` and recognized the normal supply-round settled state; they did not change the requested army, equipment, target round, or any production state field.
+
+### Additional preparation verification
+
+The same direct continuation also ran `lateGoldMixZephyr --validate-only`.
+It naturally reached4-1:16entities (10friendly/6enemy), checkpoints0/101/203,
+serialized195935/227321/209857bytes and0/16/33item-gold receipts. All three
+JSON/object restores matched completely. This supersedes the earlier statement
+that the late scenario was unvalidated; it still supplies no latency samples.
+The raw preparation report is `direct/late-gold-zephyr-route-validation.json`.
+Its recorded HEAD is5f61f70 with the exact staged measurement-script update;
+subsequent cd48003 preserved that script without production changes.
