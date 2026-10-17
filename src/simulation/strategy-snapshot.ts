@@ -3,6 +3,7 @@ import { g23ExperimentEffects } from './g2-3-experiment';
 import { projectG23Summons,g23SionTeam } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { getCatalogRoundByOrdinal } from './round-selectors';
+import { ROUND_CATALOG } from './content/round-catalog';
 import { g23ConversionProgramValues } from './g2-3-combat';
 import { modifier,stat,trigger } from './content/item-programs';
 import { g23FormStats } from './g2-3-forms';
@@ -41,6 +42,10 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
   return catalog[id];
 }
 
+/** Overtime ordinals lie past the catalog (after 6-7); they count as the stage after the last catalog stage. */
+function supportStage(ordinal: number): number {
+  return ROUND_CATALOG.find(r => r.ordinal === ordinal)?.stage ?? Math.max(...ROUND_CATALOG.map(r => r.stage)) + 1;
+}
 /** The only strategy compilation boundary. Combat receives JSON numbers and provenance,
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
@@ -52,13 +57,15 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
   // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
+  // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
+  const onBoard = (team: 'player' | 'enemy') => new Set(boardUnits.filter(u => u.team === team).map(u => u.id)), players = onBoard('player'), enemyIds = onBoard('enemy');
   const held = new Map<string, G24HeldItem[]>(), hold = (unitId: string, definitionId: string, instanceId: string) =>
     held.set(unitId, [...held.get(unitId) ?? [], { definition: lookup(catalog.items, conversions.get(instanceId) ?? definitionId), instanceId }]);
-  for (const item of state.items) if (item.location.kind === 'unit') hold(item.location.unitId, item.definitionId, item.id);
-  for (const child of state.temporaryEquipment) hold(child.holderId, child.definitionId, child.temporaryId);
-  for (const item of readRoundEnemyProjection(state.round).items) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
+  for (const item of state.items) if (item.location.kind === 'unit' && players.has(item.location.unitId)) hold(item.location.unitId, item.definitionId, item.id);
+  for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
+  if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
   const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
-    held, getCatalogRoundByOrdinal(state.round).stage);
+    held, supportStage(state.round));
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
