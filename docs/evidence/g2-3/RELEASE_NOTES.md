@@ -41,3 +41,7 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 ## G2-4B 神器锻造器增量
 
 基于神器#147 d3112d6：21件已实现神器开放四选一，第10档移除14过渡金，第14档恢复50金+随机光明装+神器锻造器+拆卸器。用户确认11/13等#149，仍15金/拆卸器+50金。policy升g2-4b-artifact-forge-v5，rules/content升v5；合入 multiplayer `0cdd6eb`（v7，含 #149、#153、#157）后统一升为 rules/content `s13-g2-3-v8` / `s13-14.24b-g2-3-v8`、policy `g2-4b-artifact-forge-v8`，v7 及更早存档/输入按版本和 digest 拒绝，digest由manifest重算。收据与超时走通用forge；恢复加强来源、选择类型、免费和超时默认校验，直接领取不能绕过多选。原脚本重录夹具，具体验证与JS gzip见[交付记录](../g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
+## PR #170：次级微光复制器 v9
+
+从 `f0f1d99` merge multiplayer `d6156ab`，再 merge 最新 `0719ced`（#162，仅界面及其测试增量），保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。
