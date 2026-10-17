@@ -1,0 +1,20 @@
+{"round":"1-2","hp":100,"gold":2,"level":2,"stacks":0,"chests":0,"board":[["irelia",1]],"crowns":0}
+{"round":"1-3","hp":100,"gold":4,"level":3,"stacks":0,"chests":0,"board":[["irelia",1],["darius",1]],"crowns":0}
+{"round":"1-4","hp":100,"gold":11,"level":3,"stacks":4,"chests":0,"board":[["irelia",1],["darius",1],["draven",1]],"crowns":0}
+{"round":"2-1","hp":100,"gold":18,"level":3,"stacks":7,"chests":0,"board":[["irelia",1],["darius",1],["draven",1]],"crowns":0}
+AssertionError [ERR_ASSERTION]: independent gold ledger
+
+26 !== 24
+
+    at Ledger.check (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/fixtures/m5/oracle.g2.cjs:217:76)
+    at Ledger.apply (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/fixtures/m5/oracle.g2.cjs:215:76)
+    at observe (/workspace/scratch/2d61d723fa5a/cat-restore-b/scripts/generate-m5-route.cjs:28:156)
+    at generateRoute.run (/workspace/scratch/2d61d723fa5a/cat-restore-b/scripts/generate-m5-route.cjs:41:1701)
+    at async /workspace/scratch/2d61d723fa5a/cat-restore-b/docs/evidence/restore-audit/batch-b/public-fixture-migration/explore-conqueror.cjs:8:14 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 26,
+  expected: 24,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

@@ -1,0 +1,102 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-4a-crown-history.test.ts -t component-reforger|completed-reforger --reporter=default --reporter=json --outputFile=/tmp/b-public-reforge.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/g2-4a-crown-history.test.ts (56 tests | 2 failed | 50 skipped) 10944ms
+   ↓ M1 crown history authority (6)
+     ↓ rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history
+     ↓ rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously
+     ↓ does not let a later record context authorize its own forged historical prefix
+     ↓ accepts the public-command no-crown control and resumes identically
+     ↓ restores and continues a legal provenance-backed crown control, seed 1
+     ↓ restores and continues a legal provenance-backed crown control, seed 42
+   ↓ M2 equipment binding continuity (9)
+     ↓ rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards
+     ↓ accepts legal sale and subsequent re-equipping
+     ↓ accepts legal remover and subsequent re-equipping
+     ↓ accepts legal upgrade and subsequent re-equipping
+     ↓ accepts legal upgrade-remover-equip and subsequent re-equipping
+     ↓ accepts legal combine-equip and subsequent re-equipping
+     ↓ replays survivor equipment before-upgrade in exact order (M4)
+     ↓ replays survivor equipment after-upgrade in exact order (M4)
+     ↓ also rejects moving a non-crown equipped instance
+   ↓ M5/M6 ordered equipment across the first battle (3)
+     ↓ replays combat equip before settlement, restores through all three entries and continues tick for tick
+     ↓ rejects a claimed pre-first-battle equip left in inventory, with or without an empty history
+     ↓ accepts legal pre-first-battle equipment and validates the first opening prefix
+   ❯ M7/S7 combat equipment command replay (38)
+     ↓ records combat consumable use with remove at all three entries and resumes tick for tick (M10)
+     ↓ records combat consumable use with reequip at all three entries and resumes tick for tick (M10)
+     ↓ records combat consumable use with combine at all three entries and resumes tick for tick (M10)
+     ✓ records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10) 2295ms
+     ✓ records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10) 1664ms
+     ↓ rejects changing the remove command tick at all three entries (M10)
+     ✓ rejects changing the component-reforger command tick at all three entries (M10) 838ms
+     ✓ rejects changing the completed-reforger command tick at all three entries (M10) 818ms
+     ↓ rejects changing the remove resource tick at all three entries (M10)
+     × rejects changing the component-reforger resource tick at all three entries (M10) 389ms
+     × rejects changing the completed-reforger resource tick at all three entries (M10) 385ms
+     ↓ records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)
+     ↓ records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for in-place (M9)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for inventory (M9)
+     ↓ certifies the same ordered result when both tick claims move to 0 (M9 boundary)
+     ↓ certifies the same ordered result when both tick claims move to 2 (M9 boundary)
+     ↓ certifies the same ordered result when both tick claims move to 69 (M9 boundary)
+     ↓ rejects existing-target in-place combination tampering at all three entries
+     ↓ rejects missing-first in-place combination tampering at all three entries
+     ↓ rejects missing-second in-place combination tampering at all three entries
+     ↓ rejects ordinary-equip in-place combination tampering at all three entries
+     ↓ rejects missing-first inventory combination commands at all three entries
+     ↓ rejects missing-second inventory combination commands at all three entries
+     ↓ rejects ordinary-equip inventory combination commands at all three entries
+     ↓ rejects a structurally valid command with an invalid recipe through production replay
+     ↓ binds combat equip order to the temporary item roll prefix (M9)
+     ↓ keeps combat equips before terminal resources and crown gold (M9)
+     ↓ records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick
+     ↓ records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick
+     ↓ rejects reordered commands at all three save/restore entries
+     ↓ rejects duplicated commands at all three save/restore entries
+     ↓ rejects extra commands at all three save/restore entries
+     ↓ rejects missing commands at all three save/restore entries
+     ↓ rejects unknown-target commands at all three save/restore entries
+     ↓ accepts combat equipment targeting a bench unit at all three entries
+     ↓ accepts combat equipment targeting a dead unit at all three entries
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the component-reforger resource tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the completed-reforger resource tick at all three entries (M10)
+AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "历史获得或合成记录不一致"
+Received: "Invalid Match save: preparation-ledger-state-resourceProvenance"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:384:33
+    382|     for (const entry of [() => serializeMatch(state,battles),
+    383|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    384|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    385|       else expect(entry).toThrow();
+    386|     }
+ ❯ tests/g2-4a-crown-history.test.ts:550:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed | 50 skipped (56)
+   Start at  00:28:46
+   Duration  12.26s (tests 90%, transform 8%, import 2%)
+
+JSON report written to /tmp/b-public-reforge.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
