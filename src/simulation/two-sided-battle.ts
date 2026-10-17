@@ -178,7 +178,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       baseDamage,opposingSurvivors:opponent.survivors.length,
       // Same frozen PvP rule as economy.ts: winner 0; otherwise stage base + opposing survivors.
       damage:own.seatId === result.mirrorOfSeatId || result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
-      growth:own.growth,events:result.events,...(own.seatId===result.mirrorOfSeatId?{}:{g23Facts:g23BattleFacts(result.terminal,own.seatId===result.a.seatId?'player':'enemy',stage.ordinal,'pvp')}),
+      growth:own.growth,events:result.events,...(own.seatId===result.mirrorOfSeatId?{}:{g23Facts:g23BattleFacts(result.terminal,own.seatId===result.a.seatId?'player':'enemy',stage.ordinal,'pvp',result.initial.units)}),
     });
     return freezeContent({a:side(result.a,result.b),b:side(result.b,result.a)});
   } catch (error) {

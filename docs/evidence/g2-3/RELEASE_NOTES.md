@@ -19,3 +19,11 @@ rules `s13-g2-3-v2`、content `s13-14.24b-g2-3-v2`统一发布；旧存档及旧
 U6首跑失败（[run38938055193](https://github.com/catfish-xn/cat/actions/runs/38938055193)，job117098416536）出在先读领域状态、再异步读DOM：两次读取之间战斗可结算，revealed断言失效。验证改为同一浏览器任务读取两者，仍强制观测到有效的战中揭示；未发现随机流不确定性。
 
 v1的存档和回放输入按身份拒绝；v2夹具通过原公共指令生成器重录，历史夹具保留。性能门槛、单测超时和CI实际作业时限均未放宽；预算文档同步已有45分钟input作业时限。收尾逐项测试映射和开发测量见[FOLLOWUP_VALIDATION.md](FOLLOWUP_VALIDATION.md)，最终head的测试和性能结果见PR。
+
+## G2-4a 冠冕胜利掉金
+
+在冠冕人口版本上保留历史合入 `148d6a2d87a438f580a41bf55f1651c2d5a9d8a3`（冻结输入rewardClaims前缀校验），规则/content维持本批v5，policy=`g2-4a-v5`，不回退v4也不重复升版。当前digest见 `tests/g2-3-content-baseline.json`。
+
+已实现源 `PercentGoldChance=10`：开战场上装备的每顶冠冕在PvE/PvP胜利时独立10%直接到账1金币；背包/备战不算，持有者阵亡仍算，输/平不算。采用用户确认的 G24-CROWN-GOLD-01..05（见RECONCILIATION），G23 lcg32随机流排在黑市之后。经济收据保存冠冕数量/命中金币，并与唯一资源收据 `g23:crown:<battleId>` 交叉验证，恢复与重复结算不能重发。不新增界面/服务器逻辑；沿用mechanicGranted事件。
+
+专项测试验证源概率、独立叠加、PvE/PvP、场上/备战/背包、死亡持有者、黑市随机次序、真实战斗恢复及Continue防重复；release/inputs/live-reveal/herald均从脚本重录，旧新SHA/bytes及冻结source hashes见 `crown-gold-recording-audit.json`。最终head全套由发布协调者单独执行一次。
