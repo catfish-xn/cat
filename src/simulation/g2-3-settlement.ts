@@ -11,7 +11,7 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
  const allies=combat.units.filter(u=>u.team===team&&!u.definitionId.startsWith('g23-'));
  return {battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
- conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive).length,
+ conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
  rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
 }
 export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{return g23BattleFacts(combat,'player',state.round,state.m8.round.kind==='pvp'?'pvp':'pve');}

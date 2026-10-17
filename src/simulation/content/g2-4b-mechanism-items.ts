@@ -45,4 +45,13 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
     combatProgram:{vamp:[vamp(2500)]},
     effectDescriptions:['受到伤害的50%转为4秒非致命持续扣血；护盾之后计算、逐tick分摊为待确认约定。'],
   },
+  TFT9_Item_OrnnTrickstersGlass: {
+    id:'TFT9_Item_OrnnTrickstersGlass',apiName:'TFT9_Item_OrnnTrickstersGlass',name:'诡术师之镜',
+    kind:'completed',unique:true,slotCost:1,evidenceStatus:'approved-provisional',
+    conventionIds:['G24-MIRROR-INHERIT-01','G24-SUMMON-CELL-01'],
+    effects:[{kind:'statFlat',stat:'armor',amount:10},{kind:'statFlat',stat:'magicResist',amount:10},
+      {kind:'attackSpeedBps',bps:1000},{kind:'mechanic',mechanic:'g24Mirror',values:{healthBps:7000,manaIncreaseBps:1000}}],
+    combatProgram:{modifiers:[modifier('critChance',1500,'bps')]},
+    effectDescriptions:['召唤70%最大生命、最大法力增加10%的复制体，继承已激活羁绊。其余继承与放置规则为待确认约定。'],
+  },
 });

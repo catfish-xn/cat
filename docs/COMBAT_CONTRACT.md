@@ -45,3 +45,15 @@ shield, redirect or further deferral applies. Debt is cleared on death.
 These ordering details are pending project convention G24-DEFIANCE-ORDER-01,
 not asserted as verified original script order. Restore rejects missing/foreign
 item debt, duplicate or malformed packet provenance, and inconsistent progress.
+
+### G2-4b WIP: mirror membership
+
+`appendMirrorSummons(preparation,strategy)` appends canonical strategy units with
+`itemSummon` origin derived from an actual on-board Mirror source.
+`projectItemSummons(preparation,strategy)` projects these into combat only.
+Restore independently recompiles the strategy and compares origin, identity,
+starting cell, frozen form, sources and complete roster. Item summons never enter
+permanent inventory/growth or survivor player damage. Trait counts are frozen
+before copies; active trait targets extend to copies. `scaleItemSummonHp` applies
+the clone multiplier to initial and dynamic health. Inheritance/placement are
+pending conventions and this WIP does not claim complete native summon behavior.

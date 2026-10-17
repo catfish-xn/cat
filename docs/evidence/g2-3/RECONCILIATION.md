@@ -194,3 +194,12 @@ interpreted as a flat heal. Concentrated source gaps and recommendations for
 all11items: [G2-4B-MECHANISMS-WIP.md](G2-4B-MECHANISMS-WIP.md).
 Voidspawn HP candidate from13.18 is superseded by official14.6 stage2–6 values
 1000/1500/2000/2500/3000; preparation placement remains unresolved for this project.
+
+### G2-4b Trickster’s Glass WIP
+
+Original14.24: armor10/MR10/AS10%/crit15%, clone70%maxHealth/+10%maxMana,
+no clone equipment, active traits. Provisional `G24-MIRROR-INHERIT-01` and
+`G24-SUMMON-CELL-01` in provenance are **约定值**; see the centralized WIP
+list for missing inheritance evidence and native-summon limitations.
+Clone identity and resolved sources must exactly match the independently rebuilt
+strategy; no self-authentication from candidate save declarations.

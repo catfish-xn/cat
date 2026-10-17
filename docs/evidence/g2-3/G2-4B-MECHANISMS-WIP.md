@@ -23,7 +23,7 @@ Unresolved source semantics, not adopted conventions: Voidspawn stage clamping/p
 copy equipment/stat inheritance. Beam width, collision fallback and Fishbones
 target-pool/stacking rules are explicitly provisional conventions in overrides.
 No incomplete item is registered merely because its numeric extraction exists.
-Fishbones, Spectral Cutlass, Shroud and Death’s Defiance are now registered. The runtime policy
+Fishbones, Spectral Cutlass, Shroud, Death’s Defiance and Trickster’s Glass are now registered. The runtime policy
 revision/digest have changed; old fixture migration is still pending (WIP).
 
 The two planning attachments were read through the supported Library read API.
@@ -33,7 +33,7 @@ Their older scope proposals do not supersede the latest eleven-item dispatch.
 Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
 roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
 The gold kernel is not connected to settlement yet; deferred damage is connected.
-Seven items, final fixture migration, final full suite and final-head CI/JS measurement
+Six items, final fixture migration, final full suite and final-head CI/JS measurement
 remain pending. This branch must remain a draft until complete.
 
 Draft PR #150 was created by Claude: https://github.com/catfish-xn/cat/pull/150 .
@@ -74,7 +74,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 ## 集中待定清单（2026-10-17，未逐项批准）
 
 原版明确的常数全部取已固定 hash 的 14.24 原档；下列实现细节缺少原版证据，
-均为 **约定值建议**，不是已经证实的原版行为。前 4 项已在 WIP 执行，其他未接线。
+均为 **约定值建议**，不是已经证实的原版行为。前 4 项与诡术师之镜已在 WIP 执行，其他未接线。
 
 | ID / status | Concrete recommendation | Source gap, research, behavior impact |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 | G24-SHROUD-BEAM-01 / WIP runtime | Initial combined-board column difference ≤1; strongest overlapping beam; ceil(maxMana×1.30); restore after first cast. Each deployed item adds 60 allied HP including holder. | Raw fixes 30% and 60 HP; Riot 13.18 independently establishes the team HP. No six-angle beam definition or rounding in source. Controls affected enemies and integer cast cost. |
 | G24-DEFIANCE-ORDER-01 / WIP runtime | Mitigate and redirect first, absorb shields, defer floor(remaining×0.50) over 80 ticks. Cumulative integer apportionment; each pulse stops at 1 HP and discards excess. Bleed neither redirects nor recursively delays; no repeated on-hit/vamp proc. | Raw specifies 50%, 4 seconds, nonlethal only. Wiki access restricted. Shield/redirect order, pulse timing and proc rules unconfirmed. Controls shield strength, lifesteal accounting and survival at 1 HP. |
 | G24-ITEM-GOLD-01 / proposed, not wired | Credit each positive receipt once at battle settlement. Gambler AS uses frozen opening bank plus this side's already-generated battle gold; 100 Bps per gold capped at 30. Failure rolls remain in ledger. | Raw gives bank scaling and 5%/1 gold, Collector 40%/1 gold, Mogul 1 gold. Inventory attachment explicitly calls out settlement convention. Client pickup timing absent. Decides whether this battle's gold accelerates later attacks; deferred credit cannot be spent mid-battle. |
-| G24-MIRROR-INHERIT-01 / candidate, not wired | One clone of same champion/star/form; recompile naked champion plus active trait effects; no item programs, no anomaly or persistent growth inheritance until verified. Multiply resulting max HP by 70%, max Mana by 110%, flooring HP/ceiling Mana. Clone does not add population, trait counts or survivor player damage. | Raw 14.24 says max Health (not base Health), disallows equipping items, and confirms active traits. A later 15.1 description changes max to base (values attachment; secondary data diff also found), so later text cannot silently establish 14.24 semantics. Riot 14.8 confirms original form inheritance for an older form-swap champion. Item-stat, anomaly and growth inheritance remain unproven. Proposal may underpower clones of scaled/anomalous units; requires explicit review. |
+| G24-MIRROR-INHERIT-01 / WIP runtime | One clone of same champion/star/form; recompile naked champion plus active trait effects; no item programs, no anomaly or persistent growth inheritance until verified. Multiply resulting max HP by 70%, max Mana by 110%, flooring HP/ceiling Mana. Clone does not add population, trait counts or survivor player damage. | Raw 14.24 says max Health (not base Health), disallows equipping items, and confirms active traits. A later 15.1 description changes max to base (values attachment; secondary data diff also found), so later text cannot silently establish 14.24 semantics. Riot 14.8 confirms original form inheritance for an older form-swap champion. Item-stat, anomaly and growth inheritance remain unproven. Proposal may underpower clones of scaled/anomalous units; requires explicit review. |
 | G24-TRENCH-INHERIT-01 / candidate, not wired | Replace holder with 3 fresh combat identities at first 50% threshold. Each starts full at floor(holder maxHP×0.30). Copy champion/star/form and item declarations, mark coat consumed on all three to prevent recursive splitting; reset transient combat timers/counters. No persistent inventory items minted. | Raw fixes 3/50%/30%. Riot 14.9's Treasure Chest interaction supports equipment effects on copies, but full inherited timers, mana, anomalies and growth are not specified. Resetting counters can retrigger survival effects and alter mana timing; do not describe as verified original behavior. |
 | G24-VOIDSPAWN-STAGES-01 / historical candidate, not wired | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 access gap; absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
 | G24-SUMMON-CELL-01 / candidate, not wired | Mirror clone nearest empty friendly-half cell to owner; Voidspawn auto-placement would seek front row, then remaining friendly cells; this differs from original movable preparation placement. Tie-break distance then row/column. Atomic allocation: if full, record no-space outcome without creating partial clones. | Riot 13.20 front-row preference was superseded by 14.6 movable preparation placement; 14.8 fixes placement persistence. A combat-only auto-placement substitute is a 约定值 and needs review, not an original implementation claim. Planning documents flag copy/placement semantics as missing. A full board can prevent summon benefit; engine must record the outcome and not silently create overlapping units. |
@@ -128,3 +128,20 @@ BaseHeal=25 has no referenced heal description; no extra flat heal is invented.
 The raw StatOmnivamp=.25 is implemented as 25% omnivamp.
 
 TypeScript checking passed after the fourth item integration.
+
+## Mirror runtime checkpoint (still WIP)
+
+Canonical clone origin is compiled from frozen equipment/owner inputs, then
+recompiled during Match restore. No clone is added to preparation assets or the
+shared pool. Active trait targets extend to the clone while original tiers/counts
+stay unchanged. Form follows the original holder even when placed in another row.
+Clone growth is excluded from permanent growth receipts and survivor player damage.
+HP scaling also applies to subsequent max-HP changes, preserving restore equations.
+Initial unit ordering was stabilized for clone battles so compact replay frames
+remain aligned; unrelated battles retain their previous initial order.
+
+Limitations requiring the centralized review: inheritance is the naked-plus-traits
+proposal, not proof of original item/augment/anomaly/growth behavior. Jayce's clone
+currently uses the existing self fallback when its private forge is absent; native
+summon inheritance is not yet complete. Team item auras on clones also need review.
+This registration is a WIP implementation, not a declaration of full item completion.

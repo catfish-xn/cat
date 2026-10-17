@@ -1,3 +1,4 @@
+import {scaleItemSummonHp} from '../g2-4b-summons';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
@@ -112,7 +113,7 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
  const rebelBonus=unit.g22?.rebelTriggered?(unit.mechanics??[]).find(m=>m.mechanic==='rebel')?.values.bonusHpBps??0:0;
  if(!expectedBonuses.has(basis.bonusBps-rebelBonus))throw new Error('Invalid Match save: item max HP consumption');
  const maximum=resolveStat('maxHp',basis.base,[{stat:'maxHp',unit:'flat',value:{kind:'constant',amount:basis.flat},condition:{kind:'always'},damageFilter:null},{stat:'maxHp',unit:'bps',value:{kind:'constant',amount:basis.bps+basis.bonusBps},condition:{kind:'always'},damageFilter:null}],{holder:unit});
- if(unit.maxHp!==maximum)throw new Error('Invalid Match save: current max HP');
+ if(unit.maxHp!==scaleItemSummonHp(unit,maximum))throw new Error('Invalid Match save: current max HP');
 }
 export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<number> {
  const basis=unit.maxHpBasis!;let bonuses=new Set([0]);const seen=new Set<string>();
@@ -128,7 +129,7 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
    const bonus=d.effect.bonusBps;bonuses=new Set([...bonuses].flatMap(n=>[n,n+bonus]));
   }
  }
- return new Set([...bonuses].map(n=>Math.floor((basis.base+basis.flat)*(10000+basis.bps+n)/10000)));
+ return new Set([...bonuses].map(n=>scaleItemSummonHp(unit,Math.floor((basis.base+basis.flat)*(10000+basis.bps+n)/10000))));
 }
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */

@@ -344,7 +344,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   return combat?commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy,hookEvents):settled;
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
-  return combat.units.filter(unit=>unit.team==='player' && (unit.runtime?.permanentAdBps??0)>0)
+  return combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
     .map(unit=>({unitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps})).sort((a,b)=>a.unitId<b.unitId?-1:a.unitId>b.unitId?1:0);
 }
 function enterLootChoice(state: MatchState): {state:MatchState;events:MatchEvent[]} {

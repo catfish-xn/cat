@@ -1,3 +1,4 @@
+import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
 import { g23ExperimentEffects } from './g2-3-experiment';
 import { projectG23Summons,g23SionTeam } from './g2-3-summons';
@@ -151,5 +152,5 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     return { unitId: unit.id, ...resolved, mechanics, ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
-  return { traits, units };
+  return appendMirrorSummons(state.preparation,{ traits, units });
 }

@@ -1,3 +1,4 @@
+import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
@@ -57,11 +58,13 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
   return {
     mapping,
-    units:projectG23Summons(preparation).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
+    units:projectItemSummons(projectG23Summons(preparation),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
       ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
       : unit.location})),
     strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
-      units:compiled.units.map(unit=>({...unit,sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
+      units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
+        unit:{...unit.itemSummon.unit,team,location:unit.itemSummon.unit.location.kind==='board'?{kind:'board' as const,cell:{col:unit.itemSummon.unit.location.cell.col,row:team==='player'?unit.itemSummon.unit.location.cell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.unit.location.cell.row}}:unit.itemSummon.unit.location},
+        formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
         const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
       }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
         ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})) },

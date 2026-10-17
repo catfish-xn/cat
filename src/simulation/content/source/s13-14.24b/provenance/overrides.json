@@ -161,6 +161,22 @@
       "version": "14.24b project WIP",
       "behavior": "Post-mitigation, post-redirect, post-shield remainder defers floor(50%) over 80 ticks. Existing debts pay at the next damage barrier by cumulative integer division, never below 1 HP; clipped excess is consumed. Payments bypass shields and do not trigger mana, vamp, redirect or item procs. A packet can still kill from its immediate half.",
       "sourceLimit": "Raw 14.24 confirms 50%, 4 seconds, nonlethal and 25% omnivamp, but not shield/redirect ordering or proc semantics. BaseHeal=25 is retained in normalized data; no separate flat heal inferred from this unreferenced legacy constant."
+    },
+    {
+      "id": "G24-MIRROR-INHERIT-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Compile same-star and owner-frozen-form naked champion with active trait declarations only; scale resulting health by70%, increase maxMana10%. No item, augment, anomaly or persistent-growth inheritance. Clone keeps army alive, does not add population/trait count/player damage or persist growth.",
+      "sourceLimit": "14.24 raw says max Health, no equipped items and active traits. Earlier14.8 fixes original form inheritance; precise item-stat, augment, anomaly, growth and native summon inheritance remain unverified. Jayce clone currently casts using existing self fallback without a private forge; not a complete native-summon equivalence claim."
+    },
+    {
+      "id": "G24-SUMMON-CELL-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Mirror clone uses nearest free cell in friendly deployment half; distance then row/column; holder ID order; full board produces no clone. Combat identity derives from item and original holder, never from candidate save metadata.",
+      "sourceLimit": "Raw provides no collision rules. Voidspawn original preparation movement from14.6 is not implemented by this Mirror rule."
     }
   ]
 }

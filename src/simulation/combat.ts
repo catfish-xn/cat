@@ -1,3 +1,4 @@
+import {projectItemSummons} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
 import {createItemRandomStreams} from './g2-4b-item-kernel';
 import {initializeShroud} from './combat-g2-4b';
@@ -34,18 +35,21 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
-  preparationState=projectG23Summons(preparationState);
+  preparationState=projectItemSummons(projectG23Summons(preparationState),strategy);
   let units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
+    const formCell=resolved?.itemSummon?.formCell??unit.location.cell;
+    const formUnit={...unit,location:{kind:'board' as const,cell:formCell}};
     const stats = resolved?.stats ?? getUnitStats(unit.definitionId, unit.starLevel);
     const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
     const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
     return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
-      ...(getUnitForm(unit,preparationState.board)?{form:getUnitForm(unit,preparationState.board)!}:{}),cell: { ...unit.location.cell },
+      ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
+      ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
@@ -56,7 +60,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row).health,
+        maxHpBasis: { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
@@ -78,15 +82,16 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
-  const summons=state.units.filter(u=>isG23Summon(u));
-  state={...state,units:state.units.filter(u=>!isG23Summon(u))};
+  const summons=state.units.filter(u=>isG23Summon(u)||u.itemSummon);
+  state={...state,units:state.units.filter(u=>!isG23Summon(u)&&!u.itemSummon)};
   const events:CombatEvent[]=[];
   for(const unit of summons){
-    const ownerId=unit.id.replace(/:g23-(sion|forge)$/, '');
-    const spawned=spawnCombatUnit(state,unit,{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
+    const ownerId=unit.itemSummon?.ownerId??unit.id.replace(/:g23-(sion|forge)$/, '');
+    const spawned=spawnCombatUnit(state,unit,unit.itemSummon?{ownerId,sourceKind:'item',definitionId:'TFT9_Item_OrnnTrickstersGlass',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0}:{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
     state=spawned.state;events.push(...spawned.events);
     if(unit.definitionId==='g23-sion')events.push({type:'bindingChanged',tick:0,unitId:unit.id,bound:true,reason:'combat-start'});
   }
+  if(state.units.some(u=>u.itemSummon))state={...state,units:[...state.units].sort(compareIds)};
   return stampCombatStep(state,events);
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState).state; }

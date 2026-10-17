@@ -1,3 +1,4 @@
+import {projectItemSummons} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -240,7 +241,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
-    const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
@@ -270,7 +271,10 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       validateDefianceDebts(unit,combat.units,combat.tick,combat.combatId!,combat.nextActionSeq!);
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
-      requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
+      requireValue(same(unit.itemSummon??null,resolved.itemSummon??null),'item summon origin');
+      const formOrigin=resolved.itemSummon?{...origin,location:{kind:'board' as const,cell:resolved.itemSummon.formCell}}:origin;
+      if(resolved.itemSummon)requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'summon starting cell');
+      requireValue((unit.form??null)===getUnitForm(formOrigin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       if (unit.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass'))
         requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'cutlass starting cell');
