@@ -11,6 +11,7 @@ export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 export interface PlayerBattleSnapshot {
   /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
   readonly bankGold?:number;
+  readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
   readonly playerHp?:number;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   /** Emissary history from the seat's own settled ledger (1..7); omitted when zero. */

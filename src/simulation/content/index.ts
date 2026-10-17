@@ -1,3 +1,4 @@
+import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
 import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
 import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
 import {G23_TRAIT_SOURCE} from './g2-3-trait-source';
@@ -134,6 +135,7 @@ export function digestContent(value: unknown): string {
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
 export const CONTENT_DIGEST = digestContent({
+  g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
   rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.

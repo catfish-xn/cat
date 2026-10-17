@@ -175,8 +175,8 @@
       "status": "provisional-needs-user-confirmation",
       "label": "约定值，非官方证据",
       "version": "14.24b project WIP",
-      "behavior": "Mirror clone uses nearest free cell in friendly deployment half; distance then row/column; holder ID order; full board produces no clone. Combat identity derives from item and original holder, never from candidate save metadata.",
-      "sourceLimit": "Raw provides no collision rules. Voidspawn original preparation movement from14.6 is not implemented by this Mirror rule."
+      "behavior": "Mirror clone uses nearest free cell in friendly deployment half; distance then row/column; holder ID order; full board produces no clone. Combat identity derives from item and original holder, never from candidate save metadata. Voidspawn now projects during preparation with movable positions keyed to permanent item IDs; absent/colliding positions use nearest free friendly cell, defaulting toward front row. Ordinary hero deployment into a projected cell relocates the summon on reprojection.",
+      "sourceLimit": "Raw collision rules unavailable.14.6 movable preparation placement and14.8 cross-round persistence are implemented in domain APIs; UI/server adapters remain separate. Exact spawn order and hero/summon collision behavior are conventions."
     },
     {
       "id": "G24-COLLECTOR-EXECUTE-01",
@@ -209,6 +209,14 @@
       "version": "14.24b project WIP",
       "behavior": "Opening frozen cell mirrors both axes; owner ID order reserves distinct nearest enemies, ties ID. Banished unit remains in the authoritative roster but is excluded from active actions/targets/passives through tick99, returns at100 to nearest free home cell. Start declarations execute before suspension; missed periodic pulses/opening jumps and companion reactions while absent are not replayed. Absolute buff deadlines continue. Return collision ties distance,row,column. Full combat reconstruction authorizes saves.",
       "sourceLimit": "Raw14.24 fixes5seconds, team2%AS,150HP and ignores CC immunity. Exact opening priority, multiple Zephyrs, missed passive timing and return collision are unverified."
+    },
+    {
+      "id": "G24-VOIDSPAWN-STAGES-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP; historical14.6/14.7 tables",
+      "behavior": "Carry forward14.6 stage2..6 HP1000/1500/2000/2500/3000 and14.7 stage2..5 AD80/80/120/180, stars1/1/2/3. Stage1 uses stage2; stage6+ clamps final row. Treat totals as already star-scaled. Preparation summon moves through public domain command; position persists by item ID. Missing/colliding desired cell falls back nearest free friendly cell; full board omits summon. No taunt. Team trait auras and augment compilation apply; counts are zero traits/population.",
+      "sourceLimit": "Raw14.24 stat block lacks HP/AD table; local AS.75,armor/MR30,crit25/140 agree with historical14.7. All30 later official patch pages searched in VOIDSPAWN-PATCH-CHAIN ledger; carry-forward is an inference. SummonedStatReduction25 remains uninterpreted, not silently implemented. Temporary equipment placement has automatic fallback only."
     }
   ]
 }

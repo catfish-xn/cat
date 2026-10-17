@@ -91,7 +91,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   const events:CombatEvent[]=[];
   for(const unit of summons){
     const ownerId=unit.itemSummon?.ownerId??unit.id.replace(/:g23-(sion|forge)$/, '');
-    const spawned=spawnCombatUnit(state,unit,unit.itemSummon?{ownerId,sourceKind:'item',definitionId:'TFT9_Item_OrnnTrickstersGlass',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0}:{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
+    const spawned=spawnCombatUnit(state,unit,unit.itemSummon?{ownerId,sourceKind:'item',definitionId:unit.itemSummon.kind==='mirror'?'TFT9_Item_OrnnTrickstersGlass':'TFT5_Item_ZzRotPortalRadiant',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0}:{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
     state=spawned.state;events.push(...spawned.events);
     if(unit.definitionId==='g23-sion')events.push({type:'bindingChanged',tick:0,unitId:unit.id,bound:true,reason:'combat-start'});
   }

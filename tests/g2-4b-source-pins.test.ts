@@ -1,3 +1,4 @@
+import {G24_MECHANISM_ITEMS} from '../src/simulation/content/g2-4b-mechanism-items';
 import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -37,4 +38,12 @@ it('keeps normal-mode economy values and the original 14.24 trench threshold', (
   expect(values('TFT7_Item_ShimmerscaleGamblersBlade').AS).toBe(45);
   expect(values('TFT_Item_Artifact_SuspiciousTrenchCoat')).toMatchObject({PercentHealthTrigger: 50, PercentHealthOfCopies: 30});
   expect(extracted.items.find(i => i.apiName === 'TFT5_Item_ZzRotPortalRadiant')!.name).toBe('兹若特传送门');
+});
+
+it('keeps every admitted runtime identity/name/uniqueness equal to the pinned original data',()=>{
+ for(const definition of Object.values(G24_MECHANISM_ITEMS)){
+  const source=extracted.items.find(i=>i.apiName===definition.id);
+  expect(source).toBeDefined();expect(definition.apiName).toBe(source!.apiName);
+  expect(definition.name).toBe(source!.name);expect(definition.unique).toBe(source!.unique);
+ }
 });

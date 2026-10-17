@@ -44,7 +44,7 @@
     "numbers": "map22 TftItemData constants, cross-checked with en_us item effects",
     "identityAndDescription": "en_us Set13 membership and item desc",
     "localization": "zh_cn entries selected by map22 mDisplayNameTra and mDescriptionNameTra",
-    "runtimeStatus": "WIP: nine entrypoints (Fishbones, Cutlass, Shroud, Defiance, Mirror, Collector, Gambler, Mogul, Zephyr); Trench/Voidspawn pending; Mirror inheritance/native-summon gaps remain",
+    "runtimeStatus": "WIP: ten runtime entries including movable preparation Voidspawn; Trench pending; Mirror inheritance/native-summon gaps remain",
     "unresolved": [
       "Voidspawn stage HP/AD",
       "copy inheritance and collision rules",
@@ -53,14 +53,16 @@
     ],
     "historicalFollowUp": {
       "ledger": "docs/evidence/g2-3/EXTERNAL_SOURCES.md#official-historical-follow-up-read-2026-10-17",
-      "status": "historical-evidence-only-not-runtime",
+      "status": "Voidspawn historical14.6/14.7 tables adopted provisionally, all30 official follow-up pages searched",
       "patches": [
         "13.18",
         "13.20",
+        "14.6",
         "14.7",
+        "14.8",
         "14.9"
       ],
-      "unresolved": "Voidspawn stage HP/AD historical values found; complete change chain through 14.24 remains unchecked."
+      "unresolved": "No later Voidspawn keyword change found through14.24; carry-forward and stage boundary clamps remain explicit conventions. Raw SummonedStatReduction25 uninterpreted."
     }
   }
 }

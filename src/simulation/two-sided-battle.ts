@@ -39,7 +39,8 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   // effects use the owner's preparation coordinates before B is mirrored to the upper half.
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
-    round:getMultiplayerRoundById(s.roundId).ordinal, preparation,...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
+    round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map('item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),

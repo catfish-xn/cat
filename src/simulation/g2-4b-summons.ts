@@ -9,7 +9,7 @@ import { effectKey, resolveEffects } from './effects';
 
 /** Combat-only provenance, derived by the strategy compiler. Never an asset. */
 export interface ItemSummonOrigin {
-  readonly kind:'mirror';
+  readonly kind:'mirror'|'voidspawn';
   readonly ownerId:string;
   readonly itemInstanceId:string;
   readonly unit:Unit;

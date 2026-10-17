@@ -1,3 +1,4 @@
+import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {projectItemSummons} from './g2-4b-summons';
 import {validateCombatItemGold,validateZephyrCombat} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
@@ -224,6 +225,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
   if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
+  if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
@@ -301,7 +303,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(same(unit.ability, resolved.ability), 'resolved ability');
       requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
-      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || champion(unit) === 'amumu' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');

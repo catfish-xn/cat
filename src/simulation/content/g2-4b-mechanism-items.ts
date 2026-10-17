@@ -84,4 +84,10 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
       {kind:'mechanic',mechanic:'g24Zephyr',values:{durationTicks:100,allyAttackSpeedBps:200}}],
     effectDescriptions:['开局将镜像飓风最近的敌人移出战斗5秒，无视控制免疫；全队获得2%攻速。碰撞与多件顺序为待确认约定。'],
   },
+  TFT5_Item_ZzRotPortalRadiant: {
+    id:'TFT5_Item_ZzRotPortalRadiant',apiName:'TFT5_Item_ZzRotPortalRadiant',name:'兹若特传送门',kind:'completed',unique:true,slotCost:1,
+    evidenceStatus:'approved-provisional',conventionIds:['G24-VOIDSPAWN-STAGES-01','G24-SUMMON-CELL-01'],
+    effects:[{kind:'statFlat',stat:'maxHp',amount:150}],
+    effectDescriptions:['备战阶段召唤可移动、随阶段成长的虚空生物；阶段表沿用14.6/14.7公告，边界阶段与碰撞为待确认约定。'],
+  },
 });

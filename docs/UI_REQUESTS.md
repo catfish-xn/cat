@@ -949,3 +949,16 @@ field as ordinary unitUpdated changes. Claude's display adapter should consume
 it without changing HP, death, targeting, or economy. Acceptance: tick0–99
 shows the temporary absence; tick100 returns at the authoritative cell; no death
 or new inventory unit is inferred. Codex has not changed UI/server files.
+
+### G2-4b WIP — movable preparation Voidspawn (domain API ready)
+
+`simulation/match` exports `readItemSummons(state)` and
+`moveItemSummon(state,itemInstanceId,cell)`. Read returns derived origin records
+with the owning item/unit and projected Unit location. Use this for preparation
+summon presence; it is not an inventory unit and takes no population. Movement
+returns the standard MatchCommandResult and is locked with the combat roster.
+The same item retains its chosen cell across rounds/save; stage changes update
+combat stats. Claude needs to wire presentation and server-entry/command dispatch
+without computing stage values, creating assets or changing economy. Acceptance:
+move during preparation, freeze for battle, restore the position, mirror seat B
+once, reject movement while roster locked. Codex changed no UI/server files.

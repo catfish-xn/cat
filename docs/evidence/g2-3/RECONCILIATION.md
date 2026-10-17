@@ -233,3 +233,14 @@ policy and return collisions; these are not attributed to original scripts.
 Banishment excludes units from active combat processing but preserves living
 roster membership. Saves require exact reconstruction from validated frozen
 inputs; this replaces clock-based structural checks only for Zephyr combats.
+
+Voidspawn now has a preparation projection and movement API, matching the14.6
+change from taunting combat spawn to movable preparation summon.14.8 establishes
+cross-round placement persistence. HP uses the14.6 stage2..6 table; AD/star rows
+use14.7. Sources: official
+https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-6-notes/
+and https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-7-notes/ .
+The30-page follow-up ledger supports carry-forward as an **inference**, not a
+recovered original script. G24-VOIDSPAWN-STAGES-01 records **约定值** for clamping,
+total-stat interpretation and collision handling. Raw14.24 AS.75/armor30/MR30
+and portal150HP apply directly; SummonedStatReduction25 has no confirmed meaning.

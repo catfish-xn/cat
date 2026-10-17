@@ -482,3 +482,17 @@ the latter is captured from the owning seat by snapshotForBattle.
 `StrategyUnitSnapshot.openingItemBankGold` is capped30; combat's current bank
 adds own-side earned receipts up to that cap. No combat payout is spendable
 until the existing settlement transaction commits it.
+
+### G2-4b WIP — movable portal summon
+
+`readItemSummons(state:MatchState):ItemSummonOrigin[]` derives owner-visible
+preparation summons from equipped portals. `moveItemSummon(state,itemInstanceId,
+cell:HexCell):MatchCommandResult` persists a portal's desired cell in the seat
+mechanic `g24ItemPositions`; it accepts only an unlocked live preparation,
+owned active summon and unoccupied friendly cell. Failures return unchanged
+state, no event/RNG: wrong-phase, unknown-unit, outside-deployment-zone, occupied.
+Success emits seatMechanicChanged. Ordinary hero movement into a projected cell
+makes the summon relocate on next projection; a full half omits it. No permanent
+unit or population is minted. Frozen solo inputs and two-sided snapshots capture
+positions; restore rejects invalid/future item identities or frozen/current
+position disagreement. UI/server command dispatch adapters are not implemented.

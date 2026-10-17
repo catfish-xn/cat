@@ -19,11 +19,12 @@ Important distinctions:
 - The actual Zz'Rot map22 localization reference resolves to 兹若特传送门;
   another legacy string says 兹若特的邀请 and must not be selected by substring.
 
-Unresolved source semantics, not adopted conventions: Voidspawn stage clamping/placement,
-copy equipment/stat inheritance. Beam width, collision fallback and Fishbones
+Unresolved source semantics: Voidspawn stage boundary/total-stat interpretation,
+copy equipment/stat inheritance. Voidspawn preparation movement is now implemented;
+its stage boundary/collision proposals remain explicitly provisional. Beam width, collision fallback and Fishbones
 target-pool/stacking rules are explicitly provisional conventions in overrides.
 Numeric extraction alone does not imply runtime integration or complete original behavior.
-Fishbones, Spectral Cutlass, Shroud, Death’s Defiance, Trickster’s Glass, Collector, Gambler’s Blade, Mogul’s Mail and Zephyr now have runtime entries. The runtime policy
+Fishbones, Spectral Cutlass, Shroud, Death’s Defiance, Trickster’s Glass, Collector, Gambler’s Blade, Mogul’s Mail Zephyr and Voidspawn now have runtime entries. The runtime policy
 revision/digest have changed; old fixture migration is still pending (WIP).
 
 The two planning attachments were read through the supported Library read API.
@@ -33,9 +34,9 @@ Their older scope proposals do not supersede the latest eleven-item dispatch.
 Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
 roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
 Gold receipts are now connected to settlement and independent frozen-input restore;
-deferred damage is connected. Nine runtime entrypoints remain WIP, not eight
+deferred damage is connected. Ten runtime entrypoints remain WIP, not eight
 fully accepted original implementations.
-Two items, Mirror inheritance gaps, final fixture migration, final full suite and final-head CI/JS measurement
+Trench Coat, Mirror inheritance gaps, final fixture migration, final full suite and final-head CI/JS measurement
 remain pending. This branch must remain a draft until complete.
 
 Draft PR #150 was created by Claude: https://github.com/catfish-xn/cat/pull/150 .
@@ -63,7 +64,7 @@ Record transitional CI failures until fixtures migrate; final-head CI must be gr
   merges are not present. Final synchronization and another revision bump are
   outstanding. Do not merge this branch.
 
-Remaining implementation boundaries (not claimed as permission blockers):
+Historical boundaries at the first-three-item checkpoint (superseded below):
 gold must connect opportunities to battle state, settlement payouts, economy
 replay and save authority; Gambler additionally needs an authoritative bank
 snapshot. Existing High Roller receipts cannot represent item gold. Deferred
@@ -88,7 +89,7 @@ PR #150's body was updated to distinguish11 source definitions from8 WIP runtime
 entrypoints and completed targeted checks. No tests were rerun for this metadata.
 
 原版明确的常数全部取已固定 hash 的 14.24 原档；下列实现细节缺少原版证据，
-均为 **约定值建议**，不是已经证实的原版行为。前 4 项、诡术师之镜与金币收集者已在 WIP 执行，其他未接线。
+均为 **约定值建议**，不是已经证实的原版行为。最新状态：除迷离风衣外，10 件已有 WIP 运行入口；镜像继承仍有缺口。各条历史 checkpoint 保留原时点结果，不代表最终验收。
 
 | ID / status | Concrete recommendation | Source gap, research, behavior impact |
 | --- | --- | --- |
@@ -101,8 +102,8 @@ entrypoints and completed targeted checks. No tests were rerun for this metadata
 | G24-MOGUL-STACK-01 / WIP runtime | One stack per positive HP-or-shield packet; bleed repayments do not stack. Resists apply to later packets; HP grows after the fixed-max survival barrier and never revives a lethal hit. At35 grant1gold, then every160ticks while alive. | Raw14.24 fixes7HP/1resist/35/1gold/8seconds. Shield eligibility, lethal35th-hit gold and growth ordering are **约定值**, not proved original script order. |
 | G24-MIRROR-INHERIT-01 / WIP runtime | One clone of same champion/star/form; recompile naked champion plus active trait effects; no item programs, no anomaly or persistent growth inheritance until verified. Multiply resulting max HP by 70%, max Mana by 110%, flooring HP/ceiling Mana. Clone does not add population, trait counts or survivor player damage. | Raw 14.24 says max Health (not base Health), disallows equipping items, and confirms active traits. A later 15.1 description changes max to base (values attachment; secondary data diff also found), so later text cannot silently establish 14.24 semantics. Riot 14.8 confirms original form inheritance for an older form-swap champion. Item-stat, anomaly and growth inheritance remain unproven. Proposal may underpower clones of scaled/anomalous units; requires explicit review. |
 | G24-TRENCH-INHERIT-01 / candidate, not wired | Replace holder with 3 fresh combat identities at first 50% threshold. Each starts full at floor(holder maxHP×0.30). Copy champion/star/form and item declarations, mark coat consumed on all three to prevent recursive splitting; reset transient combat timers/counters. No persistent inventory items minted. | Raw fixes 3/50%/30%. Riot 14.9's Treasure Chest interaction supports equipment effects on copies, but full inherited timers, mana, anomalies and growth are not specified. Resetting counters can retrigger survival effects and alter mana timing; do not describe as verified original behavior. |
-| G24-VOIDSPAWN-STAGES-01 / historical candidate, not wired | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 initial access gap (resolved by the official tft-patch-14-14 URL); absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
-| G24-SUMMON-CELL-01 / candidate, not wired | Mirror clone nearest empty friendly-half cell to owner; Voidspawn auto-placement would seek front row, then remaining friendly cells; this differs from original movable preparation placement. Tie-break distance then row/column. Atomic allocation: if full, record no-space outcome without creating partial clones. | Riot 13.20 front-row preference was superseded by 14.6 movable preparation placement; 14.8 fixes placement persistence. A combat-only auto-placement substitute is a 约定值 and needs review, not an original implementation claim. Planning documents flag copy/placement semantics as missing. A full board can prevent summon benefit; engine must record the outcome and not silently create overlapping units. |
+| G24-VOIDSPAWN-STAGES-01 / historical carry-forward WIP | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 initial access gap (resolved by the official tft-patch-14-14 URL); absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
+| G24-SUMMON-CELL-01 / WIP domain movement | Mirror uses nearest empty friendly-half cell. Voidspawn now projects during preparation and can move through a public command; desired positions persist by item ID across rounds/save. Default/colliding cell uses nearest free friendly cell; full half omits spawn. | Riot14.6 movable preparation placement and14.8 persistence now have domain implementation. Exact collision/default order is still a convention; hero deployment into a projected cell relocates it. UI/server adapters remain Claude work. The earlier combat-only automatic-placement proposal is superseded. |
 
 
 ### 已核实原版与证据边界
@@ -241,3 +242,23 @@ Two relevant files /14tests passed: Zephyr target reservation/public roundtrip/
 forged absence/neutral openings, plus9-item compact replay. TypeScript checked
 separately; no full suite or final-head CI/size/performance claim. No UI/server
 implementation was changed; optional view `banished` is documented for Claude.
+
+## Voidspawn checkpoint
+
+The radiant-ID portal now projects a movable preparation summon via
+`readItemSummons` and `moveItemSummon`; item-keyed positions persist through
+JSON, frozen solo input and two-sided namespace/mirroring. No permanent unit
+asset, shop/pool allocation or population is minted. A full friendly half
+omits the summon; a hero moving onto its preferred cell makes reprojection
+choose the nearest free cell. These collision details are pending conventions.
+
+Stage2..6 HP1000/1500/2000/2500/3000 comes from Riot14.6; stage2..5 AD80/80/120/180
+and stars1/1/2/3 from14.7. Later official patch keyword research is recorded;
+carry-forward to14.24b and stage1/late clamping remain explicit conventions,
+not recovered14.24 scripts. The runtime does not multiply those totals by stars
+a second time. Raw SummonedStatReduction25 remains unresolved. No taunt after14.6.
+
+Team trait auras and augments compile onto the summon without increasing trait
+counts. Three relevant files /21tests passed; the additional two-sided placement test
+also passed with all9 Voidspawn tests. TypeScript passed before this final test addition. Compact replay covers10 entries. Full suite,
+final fixture migration and final-head performance/size/CI remain outstanding.
