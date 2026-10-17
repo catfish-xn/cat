@@ -1,0 +1,83 @@
+{
+  "baseline": "d3112d681ecff96140c451a842c36f29537e1c07",
+  "command": "node tests/fixtures/record-g2-3-herald.cjs --write",
+  "files": {
+    "tests/fixtures/g2-3-herald-raw/edge-of-night.json": {
+      "before": {
+        "sha256": "8a2e7c9a25d8508abdcb53603790c03d5e56f87c13eb4a46cc96bc96cf551da9",
+        "bytes": 119117
+      },
+      "after": {
+        "sha256": "8a2e7c9a25d8508abdcb53603790c03d5e56f87c13eb4a46cc96bc96cf551da9",
+        "bytes": 119117
+      },
+      "identical": true
+    },
+    "tests/fixtures/g2-3-herald-raw/ionic-spark--evenshroud.json": {
+      "before": {
+        "sha256": "eacc373dc71b479de4eab02485ea3e6fac8fe32fb30370c4781b2bb772cf1b2f",
+        "bytes": 119236
+      },
+      "after": {
+        "sha256": "eacc373dc71b479de4eab02485ea3e6fac8fe32fb30370c4781b2bb772cf1b2f",
+        "bytes": 119236
+      },
+      "identical": true
+    },
+    "tests/fixtures/g2-3-herald-raw/evenshroud.json": {
+      "before": {
+        "sha256": "77f16ababdb401dd031e20b446367f0382c175a677a14f67d63f7a876db9abb3",
+        "bytes": 119111
+      },
+      "after": {
+        "sha256": "77f16ababdb401dd031e20b446367f0382c175a677a14f67d63f7a876db9abb3",
+        "bytes": 119111
+      },
+      "identical": true
+    },
+    "tests/fixtures/g2-3-herald-raw/trajectory.json": {
+      "before": {
+        "sha256": "0a1796ee4b4f78ac49d67d25e4ee8cd404fba549bc7885776081a56efaef36fb",
+        "bytes": 205305
+      },
+      "after": {
+        "sha256": "0a1796ee4b4f78ac49d67d25e4ee8cd404fba549bc7885776081a56efaef36fb",
+        "bytes": 205305
+      },
+      "identical": true
+    },
+    "tests/fixtures/g2-3-herald-raw/manifest.json": {
+      "before": {
+        "sha256": "4c617190510af6ebf2edf65e398a07eb1d8bb26294a5683d6c6c873e2b600ef2",
+        "bytes": 27916
+      },
+      "after": {
+        "sha256": "d1dd94cdf18ad5311678babc4c38504b0204b01eff3be87157ce748a9d68f90f",
+        "bytes": 28029
+      },
+      "identical": false
+    },
+    "tests/fixtures/g2-3-herald-raw/quicksilver.json": {
+      "before": {
+        "sha256": "01e6643b2990d719fb2a8dcacb41ef04e495003f1b8fbd0d2178f47d6259ee1b",
+        "bytes": 119115
+      },
+      "after": {
+        "sha256": "01e6643b2990d719fb2a8dcacb41ef04e495003f1b8fbd0d2178f47d6259ee1b",
+        "bytes": 119115
+      },
+      "identical": true
+    },
+    "tests/fixtures/g2-3-herald-raw/ionic-spark.json": {
+      "before": {
+        "sha256": "70ba6ce5ea39d01157b000b961200f68c8cefa0e75906c0a57fa230b2baa83fc",
+        "bytes": 119112
+      },
+      "after": {
+        "sha256": "70ba6ce5ea39d01157b000b961200f68c8cefa0e75906c0a57fa230b2baa83fc",
+        "bytes": 119112
+      },
+      "identical": true
+    }
+  }
+}

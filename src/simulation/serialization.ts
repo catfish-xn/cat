@@ -1,3 +1,4 @@
+import { validateResistsShields } from './m8/resists-shield-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -73,7 +74,8 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
   return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
 }
 /** Validates plain JSON and all persistent references before returning an independent state.
- * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
+ * It never changes saved RNG, grants rewards, or rebuilds offers. Resist-scaled
+ * shields are checked by an isolated trusted-input battle replay.
  */
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
@@ -251,6 +253,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
     const cells = new Set<string>();
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
