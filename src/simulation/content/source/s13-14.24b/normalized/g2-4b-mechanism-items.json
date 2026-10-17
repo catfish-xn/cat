@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "status": "source-extraction-only-not-runtime-implementation",
+  "archives": {
+    "en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "zh_cn.tft.stringtable.json.gz": "ae17b0ce7ebc199e3b3c8dbc7fc906cfb0a83a1c45a9d6ce2d4a78e1526ebca4"
+  },
+  "items": [
+    {
+      "apiName": "TFT9_Item_OrnnTrickstersGlass",
+      "name": "诡术师之镜",
+      "englishName": "Trickster's Glass",
+      "description": "Summon a clone with @HealthPercent@% max Health and +@ManaIncrease*100@% max Mana. You cannot equip items to the clone.<br><br><tftitemrules>The clone benefits from active traits</tftitemrules><br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules><br>",
+      "chineseDescription": "召唤一个拥有@HealthPercent@%最大生命值并且最大法力值+@ManaIncrease*100@%的复制体。你无法给复制体装上装备。<br><br><tftitemrules>复制体会受益于已激活的羁绊。</tftitemrules><br><br><tftitemrules>[唯一 - 每位英雄仅限1件]</tftitemrules><br>",
+      "unique": true,
+      "values": {
+        "HealthPercent": 70.0,
+        "Armor": 10.0,
+        "MagicResist": 10.0,
+        "AS": 10.0,
+        "CritChance": 15.0,
+        "ManaIncrease": 0.10000000149011612
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1169",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT9_Item_OrnnTrickstersGlass",
+        "nameKey": "tft9_item_ornntrickstersglass_name",
+        "descriptionKey": "tft9_item_ornn_trickstersglass_desc"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Artifact_SuspiciousTrenchCoat",
+      "name": "迷离风衣",
+      "englishName": "Suspicious Trench Coat",
+      "description": "Once per combat at @PercentHealthTrigger@% Health, the holder splits into 3 copies of themself each with @PercentHealthOfCopies@% of their max Health.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+      "chineseDescription": "每回合一次，在@PercentHealthTrigger@%生命值时，携带者分裂为自己的3个复制体，每个都有拥有其@PercentHealthOfCopies@%最大生命值。<br><br><tftitemrules>[唯一 - 每位英雄仅限1件]</tftitemrules>",
+      "unique": true,
+      "values": {
+        "PercentHealthTrigger": 50.0,
+        "PercentHealthOfCopies": 30.0,
+        "Health": 100.0,
+        "AS": 15.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1354",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT_Item_Artifact_SuspiciousTrenchCoat",
+        "nameKey": "tft_item_artifact_suspicioustrenchcoat",
+        "descriptionKey": "tft_item_artifact_suspicioustrenchcoat_desc"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Artifact_SpectralCutlass",
+      "name": "幽魂弯刀",
+      "englishName": "Spectral Cutlass",
+      "description": "Combat start: Teleport the holder to the mirrored hex on the enemy's side of the board. After @Duration@ seconds, the holder returns to their original location.",
+      "chineseDescription": "战斗开始时：将携带者传送到敌方一侧的镜像格上。在@Duration@秒后，携带者返回其原本的位置。",
+      "unique": false,
+      "values": {
+        "Duration": 8.0,
+        "AD": 0.4000000059604645,
+        "Armor": 40.0,
+        "MagicResist": 40.0,
+        "CritChance": 20.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1307",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT_Item_Artifact_SpectralCutlass",
+        "nameKey": "tft_item_artifact_spectralcutlass",
+        "descriptionKey": "tft_item_artifact_spectralcutlass_desc"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Artifact_Fishbones",
+      "name": "鱼骨头",
+      "englishName": "Fishbones",
+      "description": "Doubles the holder's attack range, and causes each of their attacks to target a random enemy.",
+      "chineseDescription": "将携带者的攻击距离翻倍，并且使其每次攻击都会将一个随机的敌人作为目标。",
+      "unique": false,
+      "values": {
+        "AD": 0.4000000059604645,
+        "AS": 40.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1251",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT_Item_Artifact_Fishbones",
+        "nameKey": "tft_item_artifact_fishbones",
+        "descriptionKey": "tft_item_artifact_fishbones_desc"
+      }
+    },
+    {
+      "apiName": "TFT4_Item_OrnnDeathsDefiance",
+      "name": "死亡之蔑",
+      "englishName": "Death's Defiance",
+      "description": "@IgnorePainPercent@% of the damage the holder receives is instead dealt over @BleedDuration@ seconds as non-lethal damage.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+      "chineseDescription": "携带者受到的@IgnorePainPercent@%伤害会转而在@BleedDuration@秒里作为非致命伤害来持续扣除。<br><br><tftitemrules>[唯一 - 每位英雄仅限1件]</tftitemrules>",
+      "unique": true,
+      "values": {
+        "AD": 0.10000000149011612,
+        "Armor": 30.0,
+        "IgnorePainPercent": 50.0,
+        "BleedDuration": 4.0,
+        "AS": 25.0,
+        "StatOmnivamp": 0.25,
+        "BaseHeal": 25.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1341",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT4_Item_OrnnDeathsDefiance",
+        "nameKey": "tft4_item_name_ornndeathsdefiance",
+        "descriptionKey": "tft4_item_description_ornndeathsdefiance"
+      }
+    },
+    {
+      "apiName": "TFT4_Item_OrnnTheCollector",
+      "name": "金币收集者",
+      "englishName": "Gold Collector",
+      "description": "Attacks and Abilities execute enemies below @ExecutePercent@% of their maximum Health. Executions have a @GoldChance@% chance to drop %i:goldCoins% 1 gold.<br><br><TFTTrackerLabel>Gold Collected:</TFTTrackerLabel> <TFTHighlight>@TFTUnitProperty.item:TFT_Tracker_Value1@g</TFTHighlight><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+      "chineseDescription": "携带者的攻击和技能会处决低于@ExecutePercent@%最大生命值的目标。处决有@GoldChance@%几率掉落%i:goldCoins%1金币。<br><br><TFTTrackerLabel>已收集的金币：</TFTTrackerLabel> <TFTHighlight>@TFTUnitProperty.item:TFT_Tracker_Value1@金币</TFTHighlight><br><tftitemrules>[唯一 - 每个弈子仅可装备1件]</tftitemrules>",
+      "unique": true,
+      "values": {
+        "AD": 0.30000001192092896,
+        "CritChance": 30.0,
+        "ExecutePercent": 12.0,
+        "GoldChance": 40.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1406",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT4_Item_OrnnTheCollector",
+        "nameKey": "tft4_item_name_ornnthecollector",
+        "descriptionKey": "tft4_item_description_ornnthecollector"
+      }
+    },
+    {
+      "apiName": "TFT7_Item_ShimmerscaleGamblersBlade",
+      "name": "投机者之刃",
+      "englishName": "Gambler's Blade",
+      "description": "Grant %i:scaleAS% @AttackSpeedPerGold*100@% bonus Attack Speed per %i:goldCoins% gold in your bank (up to %i:goldCoins% @AttackSpeedGoldLimit@ gold).<br><br>Each attack has a @ChanceToProc*100@% chance to drop %i:goldCoins% @GoldPerProc@ gold.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules><br><tftitemrules>Gold generated this game: @TFTUnitProperty.item:TFT_Item_GoldGenerated@</tftitemrules>",
+      "chineseDescription": "获得 %i:scaleAS% @AttackSpeedPerGold*100@% x你的 %i:goldCoins% 金币存款的攻击速度(在 %i:goldCoins% @AttackSpeedGoldLimit@金币时达到最大值)。<br><br>每次攻击有@ChanceToProc*100@%几率掉落%i:goldCoins% @GoldPerProc@金币。<br><br><tftitemrules>[唯一 - 每位英雄仅限1件]</tftitemrules><br><tftitemrules>这局游戏已生成的金币：@TFTUnitProperty.item:TFT_Item_GoldGenerated@</tftitemrules>",
+      "unique": true,
+      "values": {
+        "AP": 10.0,
+        "AS": 45.0,
+        "AttackSpeedPerGold": 0.009999999776482582,
+        "AttackSpeedGoldLimit": 30.0,
+        "ChanceToProc": 0.05000000074505806,
+        "GoldPerProc": 1.0,
+        "{b38e1643}": 20.0,
+        "{46736b3f}": 4.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1163",
+        "mapKey": "{c2535098}",
+        "nameKey": "tft_item_name_shimmerscalegamblersblade",
+        "descriptionKey": "tft_item_description_shimmerscalegamblersblade"
+      }
+    },
+    {
+      "apiName": "TFT7_Item_ShimmerscaleMogulsMail",
+      "name": "大亨之铠",
+      "englishName": "Mogul's Mail",
+      "description": "Grants @BaseResistsPerStack@ Armor, @BaseResistsPerStack@ Magic Resist, and @BaseHealthPerStack@ Health when taking damage, stacking up to @StackCap@ times.<br><br>At full stacks, grant %i:goldCoins% @GoldAtFullStacks@ gold and continue gaining %i:goldCoins% 1 gold every @GoldInterval@ seconds.<br><br><tftitemrules>Gold generated this game: @TFTUnitProperty.item:TFT_Item_GoldGenerated@<br>[Unique - only 1 per champion]</tftitemrules>",
+      "chineseDescription": "在承受伤害时提供@BaseResistsPerStack@护甲、@BaseResistsPerStack@魔抗和@BaseHealthPerStack@生命值，这个效果至多叠加@StackCap@次。<br><br>在满层时，提供%i:goldCoins%@GoldAtFullStacks@金币并且每@GoldInterval@秒继续提供%i:goldCoins% 1金币。<br><br><tftitemrules>这局游戏已生成的金币：@TFTUnitProperty.item:TFT_Item_GoldGenerated@<br>[唯一 - 每位英雄仅限1件]</tftitemrules>",
+      "unique": true,
+      "values": {
+        "Health": 50.0,
+        "StackCap": 35.0,
+        "GoldAtFullStacks": 1.0,
+        "BaseResistsPerStack": 1.0,
+        "BaseHealthPerStack": 7.0,
+        "GoldInterval": 8.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1157",
+        "mapKey": "{2b70cb73}",
+        "nameKey": "tft_item_name_shimmerscalemogulsmail",
+        "descriptionKey": "tft_item_description_shimmerscalemogulsmail"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Shroud",
+      "name": "静止法衣",
+      "englishName": "Shroud of Stillness",
+      "description": "Combat start: Shoot a beam that @CostIncrease@% <TFTKeyword>Mana Reaves</TFTKeyword> enemies.<br><br>Your team gains @BonusAllyHealth@ Health.<br><br><tftitemrules>[Support item] [Unique - only 1 per champion]<br><tftbold>Mana Reave</tftbold>: increase maximum Mana until the next cast</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+      "chineseDescription": "战斗开始时：射出一道光束，对敌人们施加@CostIncrease@%<TFTKeyword>破法</TFTKeyword>。<br><br>己方获得@BonusAllyHealth@生命值。<br><br><tftitemrules>[辅助装][唯一 - 每位英雄仅可装备一件]<br><tftbold>破法</tftbold>：最大法力值提升，持续到施放技能为止。</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+      "unique": true,
+      "values": {
+        "{4516a18d}": 60.0,
+        "CostIncrease": 30.0,
+        "Health": 150.0,
+        "BonusAllyHealth": 60.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1084",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT_Item_Shroud",
+        "nameKey": "tft_item_name_shroud",
+        "descriptionKey": "tft_item_description_shroud"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Zephyr",
+      "name": "灵风",
+      "englishName": "Zephyr",
+      "description": "Combat start: Summon a whirlwind on the opposite side of the arena that removes the closest enemy from combat for @BanishDuration@ seconds. <br><br>Your team gains @AllyBonusAS@% Attack Speed.<br><br><tftitemrules>[Support item]<br>[Ignores crowd control immunity.]<br>[Unique - only 1 per champion]</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+      "chineseDescription": "战斗开始时：在棋盘对面召唤一道飓风，来将与飓风相距最近的那个敌人移出战斗@BanishDuration@秒。<br><br>己方获得@AllyBonusAS@%攻击速度。<br><br><tftitemrules>[辅助装]<br>[无视控制免疫效果。]<br>[唯一 - 每位英雄仅可装备一件]</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+      "unique": true,
+      "values": {
+        "BanishDuration": 5.0,
+        "Health": 150.0,
+        "AllyBonusAS": 2.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/1140",
+        "mapKey": "Maps/Shipping/Map22/Items/TFT_Item_Zephyr",
+        "nameKey": "tft_item_name_zephyr",
+        "descriptionKey": "tft_item_description_zephyr"
+      }
+    },
+    {
+      "apiName": "TFT5_Item_ZzRotPortalRadiant",
+      "name": "兹若特传送门",
+      "englishName": "Zz'Rot Portal",
+      "description": "Summon a large Voidspawn. Its strength increases with each Stage.<br><br>​​<tftitemrules>[Support item]<br>[Unique - only 1 per champion]</tftitemrules>",
+      "chineseDescription": "召唤一个大型虚空生物。它的强度会在每个阶段提升。<br><br>​​<tftitemrules>[辅助装]<br>[唯一 - 每位英雄仅限1件]</tftitemrules>",
+      "unique": true,
+      "values": {
+        "Health": 150.0,
+        "SummonedStatReduction": 25.0,
+        "{50a0dbb5}": 1.0,
+        "{ef0bb7c2}": 1.0
+      },
+      "provenance": {
+        "archivePatch": "14.24",
+        "referencePatch": "14.24b",
+        "englishPointer": "/items/939",
+        "mapKey": "{4698d07e}",
+        "nameKey": "tft_item_name_zzrotportal",
+        "descriptionKey": "tft_item_description_zzrotportalradiant"
+      }
+    }
+  ]
+}
