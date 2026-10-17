@@ -495,6 +495,7 @@ describe('M7/S7 combat equipment command replay', () => {
           }
           if (!inputs) throw new Error('Public reforge route has no legal completed recipe');
           const combined = combineItems(opening, inputs[0], inputs[1]);
+          if (!combined.ok) throw new Error(`Public combination rejected: ${combined.reason}`);
           opening = accepted(combined);
           const event = combined.events.find(event => event.type === 'itemCombined');
           if (!event || event.type !== 'itemCombined') throw new Error('Public combination emitted no item');
