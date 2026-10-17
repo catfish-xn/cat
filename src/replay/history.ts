@@ -161,14 +161,21 @@ export function validateBattleCollectionSync(envelope: SaveEnvelope): void {
   for (const _ of battleCollectionChecks(envelope)) { /* drain */ }
 }
 
-interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[] }
+interface WorkingRecord {
+  context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[];
+  hashes?: { state: string; events: string };
+}
 function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
+  // This recorder owns every input. A restored prefix's two hashes have already
+  // been verified by validateBattleRecord. Normal observation invalidates both;
+  // repeated capture of an unchanged private prefix need not hash it again.
+  const hashes = working.hashes ??= { state: digestContent(terminal), events: digestContent(events) };
   // Context, initial state and individual events are already owned and deeply frozen.
   // Only the growing array needs a new snapshot; hashes still cover the complete payload.
   return markOwned(Object.freeze({ version: Object.freeze(recordVersion(context)), roundId: context.m8.round.roundId, runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
-    stateHash: digestContent(terminal), eventHash: digestContent(events) }));
+    stateHash: hashes.state, eventHash: hashes.events }));
 }
 /** Observes already committed steps; never advances or settles the active match. */
 export class BattleHistory {
@@ -178,7 +185,8 @@ export class BattleHistory {
     this.completed = battles.map(record => markOwned(deepFreeze(structuredClone(record))));
     const owned = currentBattle ? markOwned(deepFreeze(structuredClone(currentBattle))) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
-      terminal: validateBattleRecord(owned).terminal, events: [...owned.events] } : null;
+      terminal: validateBattleRecord(owned).terminal, events: [...owned.events],
+      hashes: { state: owned.stateHash, events: owned.eventHash } } : null;
   }
   get completedRecords(): readonly BattleRecord[] { return Object.freeze([...this.completed]); }
   capturePrefix(): BattleRecord | null { return this.current ? capture(this.runId, this.current) : null; }
@@ -190,6 +198,7 @@ export class BattleHistory {
       this.current = { context: deepFreeze(snapshotData(change.before)), initial, terminal: initial,
         events: change.events.map(event => deepFreeze(snapshotData(event))) };
     } else if (this.current && combat.combatId === this.current.terminal.combatId) {
+      this.current.hashes = undefined;
       this.current.terminal = snapshotData(combat);
       this.current.events.push(...change.events.map(event => deepFreeze(snapshotData(event))));
     }

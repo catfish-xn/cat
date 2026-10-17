@@ -18,5 +18,6 @@ it('rejects an invented Maddie delayed attack belonging to another champion', ()
     }, executeAtTick: 1, targetId: enemy.id, amount: 1000000,
     ordinal: 0, total: 1, cancellable: false, actionSeq: 0,
   }] });
+  expect(() => serializeMatch(bad)).toThrow('task binding facts');
   for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('task binding facts');
 });

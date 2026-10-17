@@ -11,6 +11,7 @@ import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
 import { validateTaskAndSummonFacts } from './combat-runtime-facts';
+import { createRestoreCombatReplay } from './restore-combat-replay';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -253,7 +254,8 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
-    const provenCombat = validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
+    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick);
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
@@ -287,7 +289,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       const runtimeKeys = new Set<string>();
       for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
     }
-    validateTaskAndSummonFacts(combat, basis, expectedStrategy, same, provenCombat);
+    validateTaskAndSummonFacts(combat, basis, expectedStrategy, same, replay);
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
