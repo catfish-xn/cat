@@ -930,6 +930,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 ### G2-2 联机外交官胜场历史缺口（有限实现清单）
 
 规则编译器可读 `CombatStrategyInputs.roundResults` 中此前 PvP 胜场，用于 Ambessa 外交官双抗；当前联机冻结输入没有这段历史，因此该项按 0 处理。后续服务器应在冻结战斗输入时提供经过权威账本验证的胜场历史（双方分别绑定），不能由客户端推算。当前有限版本不阻塞；更改须补联机数值与冻结/恢复测试。完整近似清单见 `evidence/g2-2/RECONCILIATION.md`。
+- **回应（2026-10-17，已实现）**：`snapshotForBattle` 用纯函数 `priorPvpWins()` 从本席权威 roundResults 推出此前 PvP 胜场（上限 7），写入 `PlayerBattleSnapshot.priorPvpWins`（0 时省略），双方各自绑定，恢复时重编译比对；服务器沿用现有冻结调用，无需另传。合同见 MULTIPLAYER_CONTRACT §10.11，测试 `tests/g2-2-online-emissary.test.ts`、`tests/server/g2-2-emissary-wins.test.ts`。
 # P7-1 给 Opus 的接线交接（规则 PR，2026-10-15）
 
 请从本规则分支 head 叠加服务器 PR；按用户确认，两份一起验、按顺序合，规则不单独发布。规范见 MULTIPLAYER_CONTRACT §21.6 与 MATCH_CONTRACT「P7-1 正式修订」。

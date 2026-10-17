@@ -287,7 +287,7 @@ function abilityDisplayValues(
 
 ### G2-2 有限内容合同（历史，已由顶部G2-3节覆盖）
 
-48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。当前联机冻结投影缺胜场历史时 Ambessa 胜场双抗为0，详见 UI_REQUESTS 的 G2-2 缺口。旧身份拒绝恢复，历史夹具只读保留。
+48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。联机由 `snapshotForBattle` 从本席权威 roundResults 冻结 `priorPvpWins`（同一 `priorPvpWins()` 口径），见 MULTIPLAYER_CONTRACT §10.11。旧身份拒绝恢复，历史夹具只读保留。
 
 ### P7-1 正式修订（覆盖本节旧开局/排队语义）
 

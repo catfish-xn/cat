@@ -20,6 +20,7 @@ export type {
   StrategySnapshot, StrategyUnitSnapshot, ItemInstance, OwnedAugment, AnomalyBinding,
 } from '../simulation/strategy-types';
 export { snapshotForBattle, restorePlayerBattleSnapshot } from '../simulation/two-sided-snapshot';
+export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-history';
 export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
   startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement } from '../simulation/two-sided-battle';
 export type { BattleTask } from '../simulation/two-sided-battle';
