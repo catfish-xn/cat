@@ -18,7 +18,7 @@
 
 main 当前包含：
 
-- 7 列 × 8 行棋盘，奇数行偏移坐标；敌方准备区 row 0–3，我方 row 4–7；九格备战席，人口上限等于等级。
+- 7 列 × 8 行棋盘，奇数行偏移坐标；敌方准备区 row 0–3，我方 row 4–7；九格备战席，人口上限等于等级（multiplayer 分支起另加已获得的金铲铲冠冕数，永久不收回，见 MATCH_CONTRACT）。
 - 19 个可购买英雄、5 个启用职业羁绊、7 个装备组件与 9 件成装、6 个强化、3 个异常；另有不进入商店的中立敌人和用于底层回归的旧单位。
 - 从 2-1 到 6-7 的 35 轮单人流程。每阶段 .4 是无战斗补给，.7 是 PvE；普通对手是固定模板，不模拟其他玩家的经济。
 - 默认 seed 42；新局 100 HP、10 G、等级 3，拥有一星 Irelia/Maddie/Lux。开局先选两件组件，再处理 2-1 强化。
@@ -280,14 +280,14 @@ M7 既有预算要求 JS gzip 不超过该 M6 基线的 1.10 倍、交互就绪�
 
 `.github/workflows/ci.yml` 在 main push、pull_request 和手动触发时运行；Node 22，`contents: read`。PR 使用明确的 PR head SHA，证据记录 `M5_COMMIT_SHA`。
 
-- `test-and-build`：安装、单测、构建、多 seed headless、三次领域性能样本；22 分钟预算。
+- `test-and-build`：拆成 4 个并行分片（2026-10-17），各占一台机器：`tests`（快测）、`timing`（单 worker 计时测）、`headless`（构建 + 多 seed headless）、`performance`（构建 + 三次领域性能样本）；每片 22 分钟上限。
 - `chromium-match`：dev/preview × cannon/sniper/mage，6 个完整路线任务；每个 28 分钟预算。
-- `chromium-input`：dev/preview 两个原生输入与正常时间触摸路线任务；每个 32 分钟预算。
+- `chromium-input`：每个模式拆成 `input`（原生输入）、`touch`（正常时间触摸路线）、`layout`（M6 布局）三片，dev 另有 `archives`（M6 存储、B9 旧档/档案、U7 兼容、统计组件、重试与应用失败）和 `m6-performance`（M6 性能门禁）两片，共 8 个作业；每片 45 分钟上限。各分片沿用原作业的 `M5_JOB_KEY`（`test-and-build-sampleN`、`input-<mode>-sampleN`），比较器仍按 9 个逻辑作业核对必需步骤；计时文件名带 `M5_JOB_PART` 后缀，合并下载时不互相覆盖。
 - `m7-presentation`：表现层、原有五视口、子路径资源及相对 M6 的预算；每个 25 分钟预算。
 - `m6-retention`：独立 Chromium 原生对象回归；`npm run test:retention` 自动生成当前合法存档并启动/关闭 Vite 服务器。实际产品入口执行30轮新局/导入/回放返回，另验继续、销毁及取消/失败保护；快照不进入正式总堆测量。20分钟独立作业时限，报告与边界快照单独上传。
 - `compare-evidence`：依赖 `test-and-build`、`chromium-match`、`chromium-input`、`m6-retention`，下载同 SHA 的 M5 产物并执行 M5 `--final` 与 M6 比较器；6 分钟预算。M7 与原生对象回归是独立必需作业，不由这个比较器代验原生计数。
 - `m8-u3-dynamic`：桌面 Chromium 1440×1000 的 UR-U3-08 装备预览和真实指针拖放回归；本地入口 `node scripts/verify-m8-u3-dynamic.cjs`，自动启动/关闭 Vite 和浏览器，10 组检查及逐组证据写入 `artifacts/m8-u3-dynamic/`。夹具在交互前构造准备状态与永久库存，实际输入走原 BoardScene/StrategyPanel/MatchSession；不替代无注入完整对局门禁，也不混入 M5 跨模式比较。独立 10 分钟执行上限，不改原有作业预算；报告记录 SHA、脚本 hash、可信输入、页面错误及命令结果。任一断言失败时作业失败，仍上传证据。
-- 常规共 13 个验收 job；另有暖机和 heap 诊断 job，普通运行按条件跳过。炮手路线已启用 `--m6-journey`，输入作业还包含 M6 存储、统计、布局、失败恢复及性能检查。手动 `profile=true` 时原 sample 1/2/3 的33个作业加独立原生和 U3 动态作业，共35个验收 job；显式诊断按各自条件另行运行。原有预算来自已记录实测，不随意加大或删减测试规避问题。
+- 常规共 23 个验收 job（4 个 test-and-build 分片、6 个浏览器路线、8 个输入分片、m7-presentation、m6-retention、U3、U6 和 compare-evidence）；另有暖机和 heap 诊断 job，普通运行按条件跳过。炮手路线已启用 `--m6-journey`，输入作业还包含 M6 存储、统计、布局、失败恢复及性能检查。手动 `profile=true` 时 sample 1/2/3 各跑一遍分片、浏览器、m7 和比较作业（3×20=60 个），加独立原生、U3 和 U6 作业，共 63 个验收 job；显式诊断按各自条件另行运行。原有预算来自已记录实测，不随意加大或删减测试规避问题。
 - 完整应用生命周期堆增长门禁按用户 2026-10-08 决定：dev ≤1.5 MiB（1,572,864 B），preview 保持 ≤1 MiB（1,048,576 B）；执行器与证据比较器共用模式门限，证据记录实际门限。仍为2次预热/30循环、原GC及输入路径、监听器/RAF不增长；独立模块预算和历史12次暖机实验的1MiB门限不变。若preview超限或dev持续接近1.5MiB，重新调查。依据与历史结果见 [M6-MEM-01](M6_LIFECYCLE_KNOWN_ISSUE.md)。
 
 ### 6.2 Pages 正式版与 M7 旧快照

@@ -87,7 +87,7 @@ B2签收时只交付类型、合同和可序列化的小样例，没有实现或
 | kill-or-assist | 蓝霸符500Bps刷新160tick | 不创建额外伤害递归，死亡持有者不领奖 |
 | stun-applied（G2-4b） | 视界专注 | 持有者对敌人施加或刷新眩晕各算一次；在伤害结算前、每个伤害包之后扫描当 tick 新增的眩晕 |
 | shield-broken（G2-4b） | 无终恨意 | 持有者身上任一护盾层被打到 0；自然到期、死亡清理不算；读取该层初始值 |
-| holder-death（G2-4b） | 光盾徽章、殉道美德、恶意 | 持有者自身本 tick 降到 0 血时、死亡清理之前发一次；分别授予友军护盾、强化治疗、眩晕周围敌人；无订阅者不发、不占 actionSeq |
+| holder-death（G2-4b） | 光盾徽章、殉道美德死后两次强化治疗、恶意眩晕2格内敌人 | 持有者本 tick 生命归零、死亡清理之前；无订阅者不发、不占 actionSeq |
 
 G2-4b 神器另加的有限词汇（`src/simulation/m8/contracts.ts`）：条件 killing-blow / killed-target / damage-type / target-magic-resist / critical-attack / all；属性 attackSpeedLock、damageAmpPerHex；数值 overkillBps、resistsBps；门 consume-counter（可带 critDamageBps，暗行者之爪暴击充能）；计数事件 killing-blow 资格与 refill；效果 over-time（拆成每秒一跳的不可取消延时任务 g24Heal/g24Mana）、leap（与 G2-3 跳跃同规则）、grant-mana 的 maxManaBps；选择锚点 event-target（不选目标本身）。按阶段取值（byStage）与"无相邻友军"（isolatedEffects）在策略快照里解析，战斗不读阶段表；联机加时轮（6-7 之后）按第 7 阶段取值，与 G2-4b 辅助装相同。带 resistsBps 的护盾（光盾徽章）恢复存档时只校验护盾值为非负安全整数：存档不保存授予时采样的双抗，无法像按最大生命计算的护盾那样重算候选值。以上全部只在持有对应装备时生效，其余对局的事件和动作序号不变。
 

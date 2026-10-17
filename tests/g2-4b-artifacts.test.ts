@@ -41,7 +41,7 @@ it('source records cover the 29-artifact pool; all but the eight new-mechanism a
  expect(Object.keys(G24_ARTIFACT_SOURCE)).toEqual([...G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6]);
  expect(Object.keys(G24_ARTIFACT_ITEMS).sort()).toEqual([...IMPLEMENTED].sort());
  expect([...G24_ARTIFACT_PENDING]).toEqual([...NEW_MECHANISM].sort());
- expect(G23_POLICY.revision).toBe('g2-4b-artifacts-v4');
+ expect(G23_POLICY.revision).toBe('g2-4b-support-v6');
  for(const [id,item] of Object.entries(G24_ARTIFACT_ITEMS)){
   expect(ITEM_DEFINITIONS[id]).toBe(item);
   expect(item).toMatchObject({apiName:id,kind:'completed',slotCost:1,unique:G24_ARTIFACT_SOURCE[id as keyof typeof G24_ARTIFACT_SOURCE].unique,conventionIds:['G24-ARTIFACT-SUBSET-01']});

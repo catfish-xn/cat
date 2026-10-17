@@ -100,7 +100,7 @@ export function toPrivateSeatView(state: MatchState) {
       ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
-      ['round', 'roundId', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',
+      ['round', 'roundId', 'roundKind', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',
         'playerDamage', 'hpLost', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
         'levelBefore', 'levelAfter', 'xpBefore', 'xpAfter']),
       incomeBreakdown: pick(result.incomeBreakdown, ['base', 'win', 'interest', 'streak']) })),

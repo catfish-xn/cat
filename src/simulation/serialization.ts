@@ -1,4 +1,7 @@
+import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
 import { validateResistsShields } from './m8/resists-shield-restore';
+import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -122,7 +125,10 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
-  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
+  // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
+  let teamSizeBonus = 0;
+  try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
@@ -277,6 +283,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
+    validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');

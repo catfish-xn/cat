@@ -916,6 +916,16 @@ export const G23_SPECIAL_ITEM_SOURCE=freezeContent({
       "MaxHealthRegen": 1.5
     },
     "unique": false
+  },
+  "TFT_Item_ForceOfNature": {
+    "name": "Tactician's Crown",
+    "apiName": "TFT_Item_ForceOfNature",
+    "description": "Your team gains +@MaxArmySizeIncrease@ max team size.<br><br>@PercentGoldChance@% chance to drop 1 gold when you win combat.<br><br><tftitemrules>\"...the Heart of a hero...\"</tftitemrules>",
+    "values": {
+      "MaxArmySizeIncrease": 1.0,
+      "PercentGoldChance": 10.0
+    },
+    "unique": false
   }
 });
 export const G23_SPECIAL_ITEM_POOLS=freezeContent({
