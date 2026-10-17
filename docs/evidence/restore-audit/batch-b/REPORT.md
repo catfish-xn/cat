@@ -50,7 +50,7 @@
 
 | 文件 | 结果 | 运行总耗时 |
 |---|---:|---:|
-| restore-audit/match-authority | 10/10 | 与专项一起末轮运行见日志 |
+| restore-audit/match-authority | 10/10 | 2.28s（固定代码 SHA） |
 | restore-audit/preparation-ledger | 16/16 | 4.83s |
 | m5-serialization | 33/33 | 3.15s |
 | m6-replay | 9/9 | 4.53s |

@@ -1,0 +1,14 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/m5-economy.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+
+ Test Files  1 passed (1)
+      Tests  42 passed (42)
+   Start at  14:41:19
+   Duration  283ms (transform 62%, tests 13%, import 12%, setup 11%, worker 3%)
+
