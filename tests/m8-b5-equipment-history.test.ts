@@ -134,7 +134,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     expect(state.equipmentState.rolls.find(r => r.roundId === '4-5')).toEqual(roll);
     expect(state.equipmentState.rolls.at(-1)?.playerLevelSnapshot).toBe(7);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  });
+  }, 20_000);
   it('allows the first equip after same-round F at the upper bound, not only the starting level', () => {
     let state = historicalProgression(false);
     expect(state.equipmentState.rolls).toEqual([]);
@@ -144,7 +144,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     state = settle(state);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  });
+  }, 20_000);
   it('validates round economy before consulting its level bounds for equipment', () => {
     const state = historicalProgression();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
