@@ -1,0 +1,18 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-ledger-scope.test.ts tests/restore-audit/verified-restore-cache.test.ts --no-file-parallelism --maxWorkers=1 --reporter=default --reporter=json --outputFile=/tmp/b-sync-scope.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/restore-audit/verified-restore-cache.test.ts (4 tests) 338ms
+ ✓ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests) 988ms
+   ✓ collection reuses plain battle proofs and fully checks equipment command records: true 798ms
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  00:21:42
+   Duration  2.69s (tests 52%, transform 40%, import 8%)
+
+JSON report written to /tmp/b-sync-scope.json

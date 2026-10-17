@@ -1,0 +1,18 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-ledger.test.ts --reporter=default --reporter=json --outputFile=/tmp/b-sync-smoke.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/restore-audit/preparation-ledger.test.ts (16 tests) 1326ms
+   ✓ preparation command ledger invariants (6)
+     ✓ rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick 602ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  00:21:18
+   Duration  2.63s (tests 53%, transform 39%, import 8%)
+
+JSON report written to /tmp/b-sync-smoke.json

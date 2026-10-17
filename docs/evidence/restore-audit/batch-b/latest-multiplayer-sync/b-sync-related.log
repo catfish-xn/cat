@@ -1,0 +1,1085 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-ledger.test.ts tests/restore-audit/preparation-ledger-scope.test.ts tests/restore-audit/preparation-history-cache.test.ts tests/restore-audit/verified-restore-cache.test.ts tests/restore-audit/match-authority.test.ts tests/restore-audit/bounds-preflight.test.ts tests/m5-serialization.test.ts tests/m6-replay.test.ts tests/m8-b8-restore-fold-reuse.test.ts tests/m6-persistence.test.ts tests/m5-economy.test.ts tests/m5-command-phases.test.ts tests/m8-b8-restore.test.ts tests/m8-b5-equipment-history.test.ts tests/m8-b7-match-wiring.test.ts tests/g2-4a-crown-gold.test.ts tests/g2-4a-crown-history.test.ts tests/crown-restore-cache.test.ts tests/g2-4b-resists-restore.test.ts --no-file-parallelism --maxWorkers=1 --reporter=default --reporter=json --outputFile=/tmp/b-sync-related.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/g2-4a-crown-history.test.ts (56 tests | 52 failed) 11371ms
+   ❯ M1 crown history authority (6)
+     × rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history 132ms
+     × rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously 73ms
+     × does not let a later record context authorize its own forged historical prefix 166ms
+     ✓ accepts the public-command no-crown control and resumes identically 245ms
+     × restores and continues a legal provenance-backed crown control, seed 1 51ms
+     × restores and continues a legal provenance-backed crown control, seed 42 39ms
+   ❯ M2 equipment binding continuity (9)
+     × rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards 87ms
+     × accepts legal sale and subsequent re-equipping 43ms
+     × accepts legal remover and subsequent re-equipping 38ms
+     × accepts legal upgrade and subsequent re-equipping 43ms
+     × accepts legal upgrade-remover-equip and subsequent re-equipping 54ms
+     × accepts legal combine-equip and subsequent re-equipping 37ms
+     × replays survivor equipment before-upgrade in exact order (M4) 39ms
+     × replays survivor equipment after-upgrade in exact order (M4) 39ms
+     × also rejects moving a non-crown equipped instance 19ms
+   ❯ M5/M6 ordered equipment across the first battle (3)
+     × replays combat equip before settlement, restores through all three entries and continues tick for tick 10ms
+     × rejects a claimed pre-first-battle equip left in inventory, with or without an empty history 65ms
+     × accepts legal pre-first-battle equipment and validates the first opening prefix 5ms
+   ❯ M7/S7 combat equipment command replay (38)
+     × records combat consumable use with remove at all three entries and resumes tick for tick (M10) 44ms
+     × records combat consumable use with reequip at all three entries and resumes tick for tick (M10) 34ms
+     × records combat consumable use with combine at all three entries and resumes tick for tick (M10) 30ms
+     × records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10) 698ms
+     × records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10) 702ms
+     × rejects changing the remove command tick at all three entries (M10) 29ms
+     × rejects changing the component-reforger command tick at all three entries (M10) 698ms
+     × rejects changing the completed-reforger command tick at all three entries (M10) 765ms
+     × rejects changing the remove resource tick at all three entries (M10) 33ms
+     × rejects changing the component-reforger resource tick at all three entries (M10) 808ms
+     × rejects changing the completed-reforger resource tick at all three entries (M10) 685ms
+     × records inventory combination followed by equip=false and resumes the next battle tick for tick (M8) 8ms
+     × records inventory combination followed by equip=true and resumes the next battle tick for tick (M8) 10ms
+     × rejects changing only the command tick to 0, 2 or 69 for ordinary (M9) 36ms
+     × rejects changing only the command tick to 0, 2 or 69 for in-place (M9) 35ms
+     × rejects changing only the command tick to 0, 2 or 69 for inventory (M9) 35ms
+     × certifies the same ordered result when both tick claims move to 0 (M9 boundary) 75ms
+     × certifies the same ordered result when both tick claims move to 2 (M9 boundary) 88ms
+     × certifies the same ordered result when both tick claims move to 69 (M9 boundary) 92ms
+     × rejects existing-target in-place combination tampering at all three entries 41ms
+     ✓ rejects missing-first in-place combination tampering at all three entries 41ms
+     ✓ rejects missing-second in-place combination tampering at all three entries 40ms
+     ✓ rejects ordinary-equip in-place combination tampering at all three entries 44ms
+     × rejects missing-first inventory combination commands at all three entries 43ms
+     × rejects missing-second inventory combination commands at all three entries 43ms
+     × rejects ordinary-equip inventory combination commands at all three entries 40ms
+     × rejects a structurally valid command with an invalid recipe through production replay 56ms
+     × binds combat equip order to the temporary item roll prefix (M9) 67ms
+     × keeps combat equips before terminal resources and crown gold (M9) 39ms
+     × records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick 7ms
+     × records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick 7ms
+     × rejects reordered commands at all three save/restore entries 34ms
+     × rejects duplicated commands at all three save/restore entries 35ms
+     × rejects extra commands at all three save/restore entries 33ms
+     × rejects missing commands at all three save/restore entries 42ms
+     × rejects unknown-target commands at all three save/restore entries 33ms
+     × accepts combat equipment targeting a bench unit at all three entries 40ms
+     × accepts combat equipment targeting a dead unit at all three entries 217ms
+ ✓ |fast| tests/m6-persistence.test.ts (44 tests) 1140ms
+   ✓ exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs 762ms
+ ❯ |fast| tests/m8-b7-match-wiring.test.ts (30 tests | 5 failed) 30931ms
+   ❯ B7 installed encounters and trusted Match restore (30)
+     ✓ 1-2 freezes, starts, runs to settlement and resumes canonical saves 260ms
+     ✓ 1-3 freezes, starts, runs to settlement and resumes canonical saves 225ms
+     ✓ 1-4 freezes, starts, runs to settlement and resumes canonical saves 462ms
+     ✓ 2-7 freezes, starts, runs to settlement and resumes canonical saves 1314ms
+     ✓ 3-7 freezes, starts, runs to settlement and resumes canonical saves 2514ms
+     ✓ 4-7 freezes, starts, runs to settlement and resumes canonical saves 4288ms
+     ✓ 5-7 freezes, starts, runs to settlement and resumes canonical saves 5779ms
+     ✓ 6-7 freezes, starts, runs to settlement and resumes canonical saves 8081ms
+     ✓ 3-7 separates captured initial events from tick-zero opening moves committed by the first step 162ms
+     ✓ 6-7 separates captured initial events from tick-zero opening moves committed by the first step 250ms
+     ✓ replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions 0ms
+     ✓ returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool 608ms
+     ✓ keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates 5ms
+     ✓ rejects injected or mutated authored inputs, including neutral capabilities placed on a champion 117ms
+     ✓ rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7 266ms
+     ✓ rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7 559ms
+     ✓ restores Herald action identity after earlier tick-one aura maintenance: undefined 364ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 12ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "evenshroud" 7ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 7ms
+     × round-trips legal Herald item immunity/cleanup boundaries with quicksilver 7ms
+     × round-trips legal Herald item immunity/cleanup boundaries with edge-of-night 8ms
+     ✓ pins the current catalog assumptions used by pure opening restore, without executing combatStart 1ms
+     ✓ rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts 302ms
+     ✓ rejects deletion of active Herald control, its receipt, or both, and forged cleanup 451ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants 336ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants 318ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants 301ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants 365ms
+     ✓ restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption 3559ms
+ ❯ |fast| tests/g2-4b-resists-restore.test.ts (21 tests | 6 failed) 2005ms
+   × public equipped live shield restores unchanged and continues identically 39ms
+   ✓ rejects small increase through real object and JSON restoration 39ms
+   ✓ rejects small decrease through real object and JSON restoration 39ms
+   ✓ rejects negative through real object and JSON restoration 40ms
+   ✓ rejects fractional through real object and JSON restoration 36ms
+   ✓ rejects coherently rebound target through real object and JSON restoration 40ms
+   ✓ rejects missing shield through real object and JSON restoration 36ms
+   ✓ rejects forged historical tick through real object and JSON restoration 39ms
+   ✓ rejects forged coefficient through real object and JSON restoration 22ms
+   × restores live targeting-dependent resists, refreshes, absorption, expiry and combat end 47ms
+   × restores the holder-death grant after live defenses and periodic history 346ms
+   ✓ rejects an invented resists declaration in a battle without a compiled resists source 17ms
+   ✓ bounds independent resists replay tick -1 18ms
+   ✓ bounds independent resists replay tick 0.5 18ms
+   ✓ bounds independent resists replay tick 1201 17ms
+   ✓ bounds independent resists replay tick 9007199254740991 17ms
+   ✓ does not inspect replay inputs when the trusted strategy has no resists grant 3ms
+   ✓ rejects an extra zero-resists layer claiming a real source on another live target 46ms
+   × restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle 521ms
+   × restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle 510ms
+   × restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits 115ms
+ ❯ |fast| tests/g2-4a-crown-gold.test.ts (9 tests | 1 failed) 1267ms
+   ✓ the source 10% chance is one lcg32 draw per crown, deterministic per state 1ms
+   ✓ economy rolls only on a win with crowns, for PvE and PvP alike, and the receipt replays 2ms
+   ✓ a won battle with deployed crown holders pays the drop through a mechanic gold receipt 518ms
+   ✓ restore links every drop to its battle receipt; a forged or missing drop is rejected 5ms
+   ✓ crowns in the inventory or on bench units never roll (约定值 G24-CROWN-GOLD-01) 444ms
+   ✓ PvP settlement proposals carry each side its own deployed crown count 253ms
+   × real combat saves restore crown receipts and Continue never pays the completed battle twice 11ms
+   ✓ G24-CROWN-GOLD-05 consumes the black-market draw before each independent crown draw 1ms
+   ✓ G24-CROWN-GOLD-01 counts the frozen crown programs even after the holder dies 31ms
+ ✓ |fast| tests/m8-b5-equipment-history.test.ts (9 tests) 15744ms
+   ✓ B5 audit R1: equipment roll level belongs to its round history (8)
+     ✓ rejects a historical level5 roll forged as level7 with RNG-consistent two completed items 2226ms
+     ✓ preserves a legal pre-F roll through current, settled and historical save/restore 3446ms
+     ✓ allows the first equip after same-round F at the upper bound, not only the starting level 2844ms
+ ✓ |fast| tests/m6-replay.test.ts (9 tests) 1309ms
+   ✓ M6 isolated battle records and replay (9)
+     ✓ [T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references 383ms
+ ❯ |fast| tests/restore-audit/bounds-preflight.test.ts (16 tests | 2 failed) 11156ms
+   ✓ rejects a later owner before cross-unit declaration expansion (reversed = false) 205ms
+   ✓ rejects a later owner before cross-unit declaration expansion (reversed = true) 23ms
+   ✓ rejects a forged item counter cap before compiling it or enumerating candidates 1260ms
+   ✓ rejects sampled tick before any per-unit candidate state construction 463ms
+   ✓ rejects attackCount before any per-unit candidate state construction 30ms
+   ✓ rejects castCount before any per-unit candidate state construction 32ms
+   ✓ rejects mechanism definitions before any per-unit candidate state construction 28ms
+   ✓ rejects periodTicks before any per-unit candidate state construction 32ms
+   ✓ rejects pulseOrdinal before any per-unit candidate state construction 29ms
+   × bounds sampled kill triggerCount by trusted roster/lives before the fact replay 31ms
+   ✓ bounds a runtime counter by its authenticated item declaration 17ms
+   ✓ authenticates every owner before checking an earlier owner count 11ms
+   × preserves a real long fight with growing trigger counts and resumes every tick 123ms
+   ✓ public single-player late fight (2)
+     ✓ preserves many legitimately acquired rewards in a single-player 6-7 save 1007ms
+     ✓ preserves a single-player 6-7 save at the actual maximum pending-task checkpoint 804ms
+   ✓ keeps the ordinary public opening positive control 141ms
+ ✓ |fast| tests/restore-audit/preparation-ledger.test.ts (16 tests) 1067ms
+   ✓ preparation command ledger invariants (6)
+     ✓ rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick 506ms
+ ✓ |fast| tests/m5-economy.test.ts (42 tests) 5ms
+ ✓ |fast| tests/m8-b8-restore.test.ts (7 tests) 2949ms
+   ✓ B8 default Match own restore (7)
+     ✓ round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything 2471ms
+ ✓ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests) 953ms
+   ✓ collection reuses plain battle proofs and fully checks equipment command records: true 782ms
+ ✓ |fast| tests/restore-audit/verified-restore-cache.test.ts (4 tests) 235ms
+ ✓ |fast| tests/m8-b8-restore-fold-reuse.test.ts (5 tests) 81ms
+ ✓ |fast| tests/m5-serialization.test.ts (33 tests) 397ms
+ ❯ |fast| tests/crown-restore-cache.test.ts (4 tests | 1 failed) 354ms
+   × reuses owned battle proofs but still checks each candidate and only replays a new round 228ms
+   ✓ replays mutable external evidence each time, including after an earlier success 102ms
+   ✓ restoration preserves detachment, continuation, key order and rejection 15ms
+   ✓ retains native Proxy rejection and does not normalize object negative zero 8ms
+ ✓ |fast| tests/restore-audit/preparation-history-cache.test.ts (1 test) 712ms
+   ✓ reuses only exact validated completed history; independently replays every current tail and rejects mutations 711ms
+ ✓ |fast| tests/m5-command-phases.test.ts (13 tests) 89ms
+ ✓ |fast| tests/restore-audit/match-authority.test.ts (10 tests) 129ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 67 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/crown-restore-cache.test.ts > reuses owned battle proofs but still checks each candidate and only replays a new round
+AssertionError: expected "startMatchCombat" to be called 1 times, but got 2 times
+ ❯ tests/crown-restore-cache.test.ts:28:17
+     26|   start.mockClear();
+     27|   expect(restoreMatch(second.state, second.battles)).toEqual(second.st…
+     28|   expect(start).toHaveBeenCalledTimes(1);
+       |                 ^
+     29| });
+     30|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-gold.test.ts > real combat saves restore crown receipts and Continue never pays the completed battle twice
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4a-crown-gold.test.ts:143:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M1 crown history authority > rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history
+AssertionError: expected [Function] to throw error matching /缺少冠冕历史证据/ but got 'Invalid Match save: preparation-ledge…'
+
+- Expected:
+/缺少冠冕历史证据/
+
++ Received:
+"Invalid Match save: preparation-ledger-gold"
+
+ ❯ tests/g2-4a-crown-history.test.ts:52:41
+     50|     const { forged, live } = forgedHistory();
+     51|     for (const input of [forged, JSON.stringify(forged)]) {
+     52|       expect(() => restoreMatch(input)).toThrow(/缺少冠冕历史证据/);
+       |                                         ^
+     53|       expect(() => restoreMatch(input, live.battles)).toThrow(/历史经济收据/…
+     54|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M1 crown history authority > rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously
+AssertionError: expected [Function] to throw error matching /历史经济收据/ but got 'Invalid Match save: preparation-ledge…'
+
+- Expected:
+/历史经济收据/
+
++ Received:
+"Invalid Match save: preparation-ledger-gold"
+
+ ❯ tests/g2-4a-crown-history.test.ts:58:54
+     56|   it('rejects the unchanged genuine replay collection paired with the …
+     57|     const { forged, live } = forgedHistory(), file = envelope(forged, …
+     58|     expect(() => validateBattleCollectionSync(file)).toThrow(/历史经济收据/);
+       |                                                      ^
+     59|     await expect(validateBattleCollection(file)).rejects.toThrow(/历史经济…
+     60|     expect(readCompatibility(file).canResume).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M1 crown history authority > does not let a later record context authorize its own forged historical prefix
+AssertionError: expected [Function] to throw error matching /历史经济收据/ but got 'Invalid Match save: preparation-ledge…'
+
+- Expected:
+/历史经济收据/
+
++ Received:
+"Invalid Match save: preparation-ledger-gold"
+
+ ❯ tests/g2-4a-crown-history.test.ts:68:62
+     66|     const { forged, live } = forgedHistory();
+     67|     const second = recordedCrownBattle(forged, live.history);
+     68|     expect(() => restoreMatch(second.state, second.battles)).toThrow(/…
+       |                                                              ^
+     69|     expect(() => validateBattleRecord(second.battles[1])).toThrow(/缺少冠…
+     70|     expect(() => validateBattleRecord(second.battles[1], [second.battl…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M1 crown history authority > restores and continues a legal provenance-backed crown control, seed 1
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M1 crown history authority > restores and continues a legal provenance-backed crown control, seed 42
+AssertionError: expected [Function] to throw error matching /缺少冠冕历史证据/ but got 'Invalid Match save: preparation-ledge…'
+
+- Expected:
+/缺少冠冕历史证据/
+
++ Received:
+"Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ tests/g2-4a-crown-history.test.ts:86:39
+     84|     }
+     85|     const first = recordedCrownBattle(opening), state = advance(first.…
+     86|     expect(() => restoreMatch(state)).toThrow(/缺少冠冕历史证据/);
+       |                                       ^
+     87|     expect(() => restoreMatch(state, [])).toThrow(/缺少历史证据/);
+     88|     const text = serializeMatch(state, first.battles);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/g2-4a-crown-history.test.ts:128:80
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > accepts legal sale and subsequent re-equipping
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > accepts legal remover and subsequent re-equipping
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > accepts legal upgrade and subsequent re-equipping
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > accepts legal upgrade-remover-equip and subsequent re-equipping
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > accepts legal combine-equip and subsequent re-equipping
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4a-crown-history.test.ts:191:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > replays survivor equipment before-upgrade in exact order (M4)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > replays survivor equipment after-upgrade in exact order (M4)
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4a-crown-history.test.ts:227:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M2 equipment binding continuity > also rejects moving a non-crown equipped instance
+AssertionError: expected [Function] to throw error including 'historical equipment continuation' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "historical equipment continuation"
+Received: "Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ tests/g2-4a-crown-history.test.ts:266:56
+    264|     const forged = {...state,items:state.items.map(value => value.id =…
+    265|       ? {...value,location:{kind:'unit' as const,unitId:target.id,slot…
+    266|     expect(() => serializeMatch(forged,first.battles)).toThrow('histor…
+       |                                                        ^
+    267|     for (const input of [forged,JSON.stringify(forged)])
+    268|       expect(() => restoreMatch(input,first.battles)).toThrow('histori…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M5/M6 ordered equipment across the first battle > replays combat equip before settlement, restores through all three entries and continues tick for tick
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the component-reforger command tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the completed-reforger command tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the component-reforger resource tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the completed-reforger resource tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)
+Error: Invalid Match save: preparation-ledger-state-resourceProvenance
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ comparePreparationState src/simulation/preparation-ledger.ts:192:5
+ ❯ validate src/simulation/preparation-ledger.ts:154:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ validateM8Record src/simulation/battle-record-validation.ts:125:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M5/M6 ordered equipment across the first battle > rejects a claimed pre-first-battle equip left in inventory, with or without an empty history
+AssertionError: expected [Function] to throw error including 'historical equipment continuation' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "historical equipment continuation"
+Received: "Invalid Match save: preparation-ledger-state-roundResults"
+
+ ❯ tests/g2-4a-crown-history.test.ts:329:61
+    327|     }
+    328|     const first = recordedCrownBattle(forged);
+    329|     expect(() => serializeMatch(first.state,first.battles)).toThrow('h…
+       |                                                             ^
+    330|     for (const input of [first.state,JSON.stringify(first.state)])
+    331|       expect(() => restoreMatch(input,first.battles)).toThrow('histori…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M5/M6 ordered equipment across the first battle > accepts legal pre-first-battle equipment and validates the first opening prefix
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4a-crown-history.test.ts:337:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records combat consumable use with remove at all three entries and resumes tick for tick (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records combat consumable use with reequip at all three entries and resumes tick for tick (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records combat consumable use with combine at all three entries and resumes tick for tick (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the remove command tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing the remove resource tick at all three entries (M10)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ validateM8Record src/simulation/battle-record-validation.ts:125:15
+ ❯ replaySnapshot src/simulation/battle-record-validation.ts:115:39
+ ❯ replayBattleRecord src/simulation/battle-record-validation.ts:107:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing only the command tick to 0, 2 or 69 for in-place (M9)
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects changing only the command tick to 0, 2 or 69 for inventory (M9)
+AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "历史获得或合成记录不一致"
+Received: "Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:383:33
+    381|     for (const entry of [() => serializeMatch(state,battles),
+    382|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    383|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    384|       else expect(entry).toThrow();
+    385|     }
+ ❯ tests/g2-4a-crown-history.test.ts:553:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > certifies the same ordered result when both tick claims move to 0 (M9 boundary)
+AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }
+
+- Expected
++ Received
+
+@@ -1373,10 +1373,15 @@
+          "args": [],
+          "name": "startMatchCombat",
+          "repeats": 1,
+        },
+        {
++         "args": [],
++         "name": "stepMatch",
++         "repeats": 1,
++       },
++       {
+          "args": [
+            "item-2",
+            "unit-1",
+            0,
+          ],
+@@ -1384,11 +1389,11 @@
+          "repeats": 1,
+        },
+        {
+          "args": [],
+          "name": "stepMatch",
+-         "repeats": 138,
++         "repeats": 137,
+        },
+      ],
+      "events": [
+        {
+          "domain": "match",
+
+ ❯ tests/g2-4a-crown-history.test.ts:571:21
+    569|     // including provenance. Only the recorded tick differs from the t…
+    570|     const genuine = timedEquipment('in-place',tick);
+    571|     expect(shifted).toEqual(genuine.state);
+       |                     ^
+    572|     expect(records).toEqual(genuine.battles);
+    573|     for (const restored of roundTrip(shifted,records)) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > certifies the same ordered result when both tick claims move to 2 (M9 boundary)
+AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }
+
+- Expected
++ Received
+
+@@ -1375,11 +1375,11 @@
+          "repeats": 1,
+        },
+        {
+          "args": [],
+          "name": "stepMatch",
+-         "repeats": 2,
++         "repeats": 1,
+        },
+        {
+          "args": [
+            "item-2",
+            "unit-1",
+@@ -1389,11 +1389,11 @@
+          "repeats": 1,
+        },
+        {
+          "args": [],
+          "name": "stepMatch",
+-         "repeats": 136,
++         "repeats": 137,
+        },
+      ],
+      "events": [
+        {
+          "domain": "match",
+
+ ❯ tests/g2-4a-crown-history.test.ts:571:21
+    569|     // including provenance. Only the recorded tick differs from the t…
+    570|     const genuine = timedEquipment('in-place',tick);
+    571|     expect(shifted).toEqual(genuine.state);
+       |                     ^
+    572|     expect(records).toEqual(genuine.battles);
+    573|     for (const restored of roundTrip(shifted,records)) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > certifies the same ordered result when both tick claims move to 69 (M9 boundary)
+AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }
+
+- Expected
++ Received
+
+@@ -1375,11 +1375,11 @@
+          "repeats": 1,
+        },
+        {
+          "args": [],
+          "name": "stepMatch",
+-         "repeats": 69,
++         "repeats": 1,
+        },
+        {
+          "args": [
+            "item-2",
+            "unit-1",
+@@ -1389,18 +1389,37 @@
+          "repeats": 1,
+        },
+        {
+          "args": [],
+          "name": "stepMatch",
+-         "repeats": 69,
++         "repeats": 137,
+        },
+      ],
+      "events": [
+        {
+          "domain": "match",
+          "eventSeq": 0,
+          "itemId": "item-1",
++         "slot": 0,
++         "type": "itemEquipped",
++         "unitId": "unit-1",
++       },
++       {
++         "consumedIds": [
++           "item-1",
++           "item-2",
++         ],
++         "definitionId": "deathblade",
++         "domain": "match",
++         "eventSeq": 1,
++         "itemId": "item-3",
++         "type": "itemCombined",
++       },
++       {
++         "domain": "match",
++         "eventSeq": 2,
++         "itemId": "item-3",
+          "slot": 0,
+          "type": "itemEquipped",
+          "unitId": "unit-1",
+        },
+        {
+@@ -1409,42 +1428,23 @@
+            "eventSeq": 19,
+            "tick": 35,
+          },
+          "domain": "match",
+          "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+-         "eventSeq": 1,
++         "eventSeq": 3,
+          "type": "lootRevealed",
+        },
+        {
+          "death": {
+            "combatId": "round-1",
+            "eventSeq": 19,
+            "tick": 35,
+          },
+          "domain": "match",
+          "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+-         "eventSeq": 2,
++         "eventSeq": 4,
+          "type": "lootRevealed",
+-       },
+-       {
+-         "consumedIds": [
+-           "item-1",
+-           "item-2",
+-         ],
+-         "definitionId": "deathblade",
+-         "domain": "match",
+-         "eventSeq": 3,
+-         "itemId": "item-3",
+-         "type": "itemCombined",
+-       },
+-       {
+-         "domain": "match",
+-         "eventSeq": 4,
+-         "itemId": "item-3",
+-         "slot": 0,
+-         "type": "itemEquipped",
+-         "unitId": "unit-1",
+        },
+        {
+          "domain": "match",
+          "eventSeq": 5,
+          "receipt": {
+
+ ❯ tests/g2-4a-crown-history.test.ts:571:21
+    569|     // including provenance. Only the recorded tick differs from the t…
+    570|     const genuine = timedEquipment('in-place',tick);
+    571|     expect(shifted).toEqual(genuine.state);
+       |                     ^
+    572|     expect(records).toEqual(genuine.battles);
+    573|     for (const restored of roundTrip(shifted,records)) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects existing-target in-place combination tampering at all three entries
+AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "历史获得或合成记录不一致"
+Received: "Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:383:33
+    381|     for (const entry of [() => serializeMatch(state,battles),
+    382|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    383|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    384|       else expect(entry).toThrow();
+    385|     }
+ ❯ tests/g2-4a-crown-history.test.ts:594:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects missing-first inventory combination commands at all three entries
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects missing-second inventory combination commands at all three entries
+AssertionError: expected [Function] to throw error including '合成命令字段' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "合成命令字段"
+Received: "Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:383:33
+    381|     for (const entry of [() => serializeMatch(state,battles),
+    382|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    383|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    384|       else expect(entry).toThrow();
+    385|     }
+ ❯ tests/g2-4a-crown-history.test.ts:604:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects ordinary-equip inventory combination commands at all three entries
+AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "历史获得或合成记录不一致"
+Received: "Invalid Match save: preparation-ledger-command-rejected"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:383:33
+    381|     for (const entry of [() => serializeMatch(state,battles),
+    382|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    383|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    384|       else expect(entry).toThrow();
+    385|     }
+ ❯ tests/g2-4a-crown-history.test.ts:604:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects a structurally valid command with an invalid recipe through production replay
+AssertionError: expected [Function] to throw error including '非法合成命令' but got 'Invalid Match save: preparation-ledge…'
+
+Expected: "非法合成命令"
+Received: "Invalid Match save: preparation-ledger-state-roundResults"
+
+ ❯ rejectAll tests/g2-4a-crown-history.test.ts:383:33
+    381|     for (const entry of [() => serializeMatch(state,battles),
+    382|       () => restoreMatch(structuredClone(state),battles), () => restor…
+    383|       if (reason) expect(entry).toThrow(reason);
+       |                                 ^
+    384|       else expect(entry).toThrow();
+    385|     }
+ ❯ tests/g2-4a-crown-history.test.ts:613:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > binds combat equip order to the temporary item roll prefix (M9)
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ roundTrip tests/g2-4a-crown-history.test.ts:375:18
+ ❯ tests/g2-4a-crown-history.test.ts:628:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > keeps combat equips before terminal resources and crown gold (M9)
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ roundTrip tests/g2-4a-crown-history.test.ts:375:18
+ ❯ tests/g2-4a-crown-history.test.ts:648:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects reordered commands at all three save/restore entries
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects duplicated commands at all three save/restore entries
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects extra commands at all three save/restore entries
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects missing commands at all three save/restore entries
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > rejects unknown-target commands at all three save/restore entries
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ roundTrip tests/g2-4a-crown-history.test.ts:375:18
+ ❯ tests/g2-4a-crown-history.test.ts:706:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > accepts combat equipment targeting a bench unit at all three entries
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ roundTrip tests/g2-4a-crown-history.test.ts:375:18
+ ❯ tests/g2-4a-crown-history.test.ts:738:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/67]⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay > accepts combat equipment targeting a dead unit at all three entries
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ roundTrip tests/g2-4a-crown-history.test.ts:375:18
+ ❯ tests/g2-4a-crown-history.test.ts:759:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > public equipped live shield restores unchanged and continues identically
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/g2-4b-resists-restore.test.ts:58:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores live targeting-dependent resists, refreshes, absorption, expiry and combat end
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/g2-4b-resists-restore.test.ts:92:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores the holder-death grant after live defenses and periodic history
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/g2-4b-resists-restore.test.ts:114:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/g2-4b-resists-restore.test.ts:174:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4b-resists-restore.test.ts:173:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/67]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/g2-4b-resists-restore.test.ts:219:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/67]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "evenshroud"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:101:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/m8-b7-match-wiring.test.ts:131:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/67]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with quicksilver
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with edge-of-night
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:101:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:108:35
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructure src/simulation/serialization-structure.ts:108:10
+ ❯ restoreMatch src/simulation/serialization.ts:13:22
+ ❯ tests/m8-b7-match-wiring.test.ts:154:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/67]⎯
+
+ FAIL  |fast| tests/restore-audit/bounds-preflight.test.ts > bounds sampled kill triggerCount by trusted roster/lives before the fact replay
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ tests/restore-audit/bounds-preflight.test.ts:82:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/67]⎯
+
+ FAIL  |fast| tests/restore-audit/bounds-preflight.test.ts > preserves a real long fight with growing trigger counts and resumes every tick
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:136:49
+    134|           result = run(rebuilt, ...command.args);
+    135|         } catch { throw new Error('Invalid Match save: preparation-led…
+    136|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    137|         requireLedger(result.state !== rebuilt, 'command-noop');
+    138|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization-structure.ts:333:3
+ ❯ src/simulation/serialization-structure.ts:363:37
+ ❯ withGrantedItemRestoreCache src/simulation/m8/combat-item-programs.ts:36:16
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:24:13
+ ❯ validateMatchStructureForSerialization src/simulation/serialization-structure.ts:363:10
+ ❯ serializeMatch src/simulation/serialization.ts:31:39
+ ❯ continueEveryTick tests/restore-audit/bounds-preflight.test.ts:113:16
+ ❯ tests/restore-audit/bounds-preflight.test.ts:132:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/67]⎯
+
+
+ Test Files  6 failed | 13 passed (19)
+      Tests  67 failed | 266 passed (333)
+   Start at  00:23:31
+   Duration  94.06s (tests 87%, import 11%, transform 2%)
+
+JSON report written to /tmp/b-sync-related.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

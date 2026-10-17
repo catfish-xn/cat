@@ -1,0 +1,3129 @@
+[
+  {
+    "file": "tests/crown-restore-cache.test.ts",
+    "case": "reuses owned battle proofs but still checks each candidate and only replays a new round",
+    "status": "failed",
+    "milliseconds": 228.46390699999756,
+    "testStackLocations": [
+      [
+        "tests/crown-restore-cache.test.ts",
+        "28",
+        "17"
+      ]
+    ],
+    "failure": "AssertionError: expected \"startMatchCombat\" to be called 1 times, but got 2 times\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/crown-restore-cache.test.ts:28:17\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64",
+    "observedGroup": "重演调用次数差异"
+  },
+  {
+    "file": "tests/crown-restore-cache.test.ts",
+    "case": "replays mutable external evidence each time, including after an earlier success",
+    "status": "passed",
+    "milliseconds": 102.2437590000045,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/crown-restore-cache.test.ts",
+    "case": "restoration preserves detachment, continuation, key order and rejection",
+    "status": "passed",
+    "milliseconds": 14.886797999992268,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/crown-restore-cache.test.ts",
+    "case": "retains native Proxy rejection and does not normalize object negative zero",
+    "status": "passed",
+    "milliseconds": 7.955518000002485,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "the source 10% chance is one lcg32 draw per crown, deterministic per state",
+    "status": "passed",
+    "milliseconds": 0.9444580000053975,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "economy rolls only on a win with crowns, for PvE and PvP alike, and the receipt replays",
+    "status": "passed",
+    "milliseconds": 1.8659929999994347,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "a won battle with deployed crown holders pays the drop through a mechanic gold receipt",
+    "status": "passed",
+    "milliseconds": 517.965025999998,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "restore links every drop to its battle receipt; a forged or missing drop is rejected",
+    "status": "passed",
+    "milliseconds": 5.23696700000437,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "crowns in the inventory or on bench units never roll (约定值 G24-CROWN-GOLD-01)",
+    "status": "passed",
+    "milliseconds": 444.024602999998,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "PvP settlement proposals carry each side its own deployed crown count",
+    "status": "passed",
+    "milliseconds": 253.08588100000634,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "real combat saves restore crown receipts and Continue never pays the completed battle twice",
+    "status": "failed",
+    "milliseconds": 10.602085999998963,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-gold.test.ts",
+        "143",
+        "23"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-gold.test.ts:143:23\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "G24-CROWN-GOLD-05 consumes the black-market draw before each independent crown draw",
+    "status": "passed",
+    "milliseconds": 1.4299680000040098,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-gold.test.ts",
+    "case": "G24-CROWN-GOLD-01 counts the frozen crown programs even after the holder dies",
+    "status": "passed",
+    "milliseconds": 30.99695999999676,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history",
+    "status": "failed",
+    "milliseconds": 132.24452500000007,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "52",
+        "41"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error matching /缺少冠冕历史证据/ but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:52:41\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously",
+    "status": "failed",
+    "milliseconds": 72.9261419999998,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "58",
+        "54"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error matching /历史经济收据/ but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:58:54\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "does not let a later record context authorize its own forged historical prefix",
+    "status": "failed",
+    "milliseconds": 165.52134699999988,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "68",
+        "62"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error matching /历史经济收据/ but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:68:62\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts the public-command no-crown control and resumes identically",
+    "status": "passed",
+    "milliseconds": 245.41238999999996,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "restores and continues a legal provenance-backed crown control, seed 1",
+    "status": "failed",
+    "milliseconds": 50.995038999999906,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "86",
+        "39"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error matching /缺少冠冕历史证据/ but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:86:39\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "restores and continues a legal provenance-backed crown control, seed 42",
+    "status": "failed",
+    "milliseconds": 38.95255999999972,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "86",
+        "39"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error matching /缺少冠冕历史证据/ but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:86:39\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards",
+    "status": "failed",
+    "milliseconds": 87.21236399999998,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "128",
+        "80"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:128:80\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal sale and subsequent re-equipping",
+    "status": "failed",
+    "milliseconds": 43.20079100000021,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "191",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:191:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal remover and subsequent re-equipping",
+    "status": "failed",
+    "milliseconds": 38.10386499999959,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "191",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:191:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal upgrade and subsequent re-equipping",
+    "status": "failed",
+    "milliseconds": 43.48697099999981,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "191",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:191:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal upgrade-remover-equip and subsequent re-equipping",
+    "status": "failed",
+    "milliseconds": 53.51440300000013,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "191",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:191:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal combine-equip and subsequent re-equipping",
+    "status": "failed",
+    "milliseconds": 37.336083000000144,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "191",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:191:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "replays survivor equipment before-upgrade in exact order (M4)",
+    "status": "failed",
+    "milliseconds": 38.991949000000204,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "227",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:227:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "replays survivor equipment after-upgrade in exact order (M4)",
+    "status": "failed",
+    "milliseconds": 38.810435999999754,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "227",
+        "18"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:227:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "also rejects moving a non-crown equipped instance",
+    "status": "failed",
+    "milliseconds": 19.384757999999692,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "266",
+        "56"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including 'historical equipment continuation' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:266:56\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "replays combat equip before settlement, restores through all three entries and continues tick for tick",
+    "status": "failed",
+    "milliseconds": 10.419970999999805,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects a claimed pre-first-battle equip left in inventory, with or without an empty history",
+    "status": "failed",
+    "milliseconds": 65.23549999999977,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "329",
+        "61"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including 'historical equipment continuation' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:329:61\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts legal pre-first-battle equipment and validates the first opening prefix",
+    "status": "failed",
+    "milliseconds": 5.230706000000282,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "337",
+        "20"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:337:20\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records combat consumable use with remove at all three entries and resumes tick for tick (M10)",
+    "status": "failed",
+    "milliseconds": 44.336514000000534,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records combat consumable use with reequip at all three entries and resumes tick for tick (M10)",
+    "status": "failed",
+    "milliseconds": 34.06759899999997,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records combat consumable use with combine at all three entries and resumes tick for tick (M10)",
+    "status": "failed",
+    "milliseconds": 30.02864899999986,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10)",
+    "status": "failed",
+    "milliseconds": 697.7216800000006,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10)",
+    "status": "failed",
+    "milliseconds": 702.092709999999,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the remove command tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 29.230360999999903,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the component-reforger command tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 698.1070440000003,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the completed-reforger command tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 764.7204689999999,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the remove resource tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 33.261185999999725,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the component-reforger resource tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 808.3717189999988,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing the completed-reforger resource tick at all three entries (M10)",
+    "status": "failed",
+    "milliseconds": 684.7688209999997,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)",
+    "status": "failed",
+    "milliseconds": 7.997885000000679,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)",
+    "status": "failed",
+    "milliseconds": 9.65179900000112,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-state-resourceProvenance\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at comparePreparationState (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:192:5)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:154:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)",
+    "observedGroup": "资源谱系重演不等"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)",
+    "status": "failed",
+    "milliseconds": 36.373201000000336,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "553",
+        "7"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:553:7\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing only the command tick to 0, 2 or 69 for in-place (M9)",
+    "status": "failed",
+    "milliseconds": 35.35727699999916,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "553",
+        "7"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:553:7\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects changing only the command tick to 0, 2 or 69 for inventory (M9)",
+    "status": "failed",
+    "milliseconds": 35.109872999999425,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "553",
+        "7"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:553:7\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "certifies the same ordered result when both tick claims move to 0 (M9 boundary)",
+    "status": "failed",
+    "milliseconds": 75.36547799999971,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "571",
+        "21"
+      ]
+    ],
+    "failure": "AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:571:21\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)",
+    "observedGroup": "人工轨迹完整相等失败"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "certifies the same ordered result when both tick claims move to 2 (M9 boundary)",
+    "status": "failed",
+    "milliseconds": 88.26824099999976,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "571",
+        "21"
+      ]
+    ],
+    "failure": "AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:571:21\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)",
+    "observedGroup": "人工轨迹完整相等失败"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "certifies the same ordered result when both tick claims move to 69 (M9 boundary)",
+    "status": "failed",
+    "milliseconds": 92.17112400000042,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "571",
+        "21"
+      ]
+    ],
+    "failure": "AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:571:21\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)",
+    "observedGroup": "人工轨迹完整相等失败"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects existing-target in-place combination tampering at all three entries",
+    "status": "failed",
+    "milliseconds": 40.94296700000086,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "594",
+        "5"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:594:5\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects missing-first in-place combination tampering at all three entries",
+    "status": "passed",
+    "milliseconds": 40.81532399999924,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects missing-second in-place combination tampering at all three entries",
+    "status": "passed",
+    "milliseconds": 39.77806600000076,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects ordinary-equip in-place combination tampering at all three entries",
+    "status": "passed",
+    "milliseconds": 44.07364000000052,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects missing-first inventory combination commands at all three entries",
+    "status": "failed",
+    "milliseconds": 42.515895000000455,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "604",
+        "5"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '合成命令字段' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:604:5\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects missing-second inventory combination commands at all three entries",
+    "status": "failed",
+    "milliseconds": 43.337219999999434,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "604",
+        "5"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '合成命令字段' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:604:5\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects ordinary-equip inventory combination commands at all three entries",
+    "status": "failed",
+    "milliseconds": 39.75680900000043,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "604",
+        "5"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:604:5\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects a structurally valid command with an invalid recipe through production replay",
+    "status": "failed",
+    "milliseconds": 55.766319000000294,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "383",
+        "33"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "613",
+        "5"
+      ]
+    ],
+    "failure": "AssertionError: expected [Function] to throw error including '非法合成命令' but got 'Invalid Match save: preparation-ledge…'\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/chai/index.js:1737:25)\n    at rejectAll (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:383:33)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:613:5\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)",
+    "observedGroup": "旧特定拒因未匹配"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "binds combat equip order to the temporary item roll prefix (M9)",
+    "status": "failed",
+    "milliseconds": 66.91064800000095,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "628",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:628:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "keeps combat equips before terminal resources and crown gold (M9)",
+    "status": "failed",
+    "milliseconds": 39.37641900000017,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "648",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:648:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick",
+    "status": "failed",
+    "milliseconds": 7.199093999999604,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick",
+    "status": "failed",
+    "milliseconds": 7.076268999999229,
+    "testStackLocations": [],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at validateM8Record (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:125:15)\n    at replaySnapshot (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:115:39)\n    at replayBattleRecord (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/battle-record-validation.ts:107:20)",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects reordered commands at all three save/restore entries",
+    "status": "failed",
+    "milliseconds": 34.042247000001225,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "706",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:706:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects duplicated commands at all three save/restore entries",
+    "status": "failed",
+    "milliseconds": 34.89302300000054,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "706",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:706:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects extra commands at all three save/restore entries",
+    "status": "failed",
+    "milliseconds": 33.22267500000089,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "706",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:706:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects missing commands at all three save/restore entries",
+    "status": "failed",
+    "milliseconds": 41.71992799999862,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "706",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:706:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "rejects unknown-target commands at all three save/restore entries",
+    "status": "failed",
+    "milliseconds": 33.16827299999932,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "706",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:706:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts combat equipment targeting a bench unit at all three entries",
+    "status": "failed",
+    "milliseconds": 40.338112999999794,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "738",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:738:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "case": "accepts combat equipment targeting a dead unit at all three entries",
+    "status": "failed",
+    "milliseconds": 216.6136719999995,
+    "testStackLocations": [
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "375",
+        "18"
+      ],
+      [
+        "tests/g2-4a-crown-history.test.ts",
+        "759",
+        "5"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at roundTrip (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:375:18)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4a-crown-history.test.ts:759:5",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "public equipped live shield restores unchanged and continues identically",
+    "status": "failed",
+    "milliseconds": 38.808334000001196,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "58",
+        "22"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:58:22\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects small increase through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 39.380262999999104,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects small decrease through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 39.26459900000191,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects negative through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 39.51466399999481,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects fractional through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 35.837493999999424,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects coherently rebound target through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 40.438451000001805,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects missing shield through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 35.53542999999627,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects forged historical tick through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 39.30104299999948,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects forged coefficient through real object and JSON restoration",
+    "status": "passed",
+    "milliseconds": 21.794560000002093,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "restores live targeting-dependent resists, refreshes, absorption, expiry and combat end",
+    "status": "failed",
+    "milliseconds": 46.61744799999724,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "92",
+        "12"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:92:12\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "restores the holder-death grant after live defenses and periodic history",
+    "status": "failed",
+    "milliseconds": 345.8860379999969,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "114",
+        "20"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:114:20\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects an invented resists declaration in a battle without a compiled resists source",
+    "status": "passed",
+    "milliseconds": 16.85012000000279,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "bounds independent resists replay tick -1",
+    "status": "passed",
+    "milliseconds": 18.159887000001618,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "bounds independent resists replay tick 0.5",
+    "status": "passed",
+    "milliseconds": 18.37676300000021,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "bounds independent resists replay tick 1201",
+    "status": "passed",
+    "milliseconds": 16.713595000001078,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "bounds independent resists replay tick 9007199254740991",
+    "status": "passed",
+    "milliseconds": 17.195678999996744,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "does not inspect replay inputs when the trusted strategy has no resists grant",
+    "status": "passed",
+    "milliseconds": 2.6832999999969616,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "rejects an extra zero-resists layer claiming a real source on another live target",
+    "status": "passed",
+    "milliseconds": 45.71264400000655,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle",
+    "status": "failed",
+    "milliseconds": 521.1560150000005,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "174",
+        "36"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:174:36\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle",
+    "status": "failed",
+    "milliseconds": 509.5181040000025,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "173",
+        "47"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:173:47\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/g2-4b-resists-restore.test.ts",
+    "case": "restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits",
+    "status": "failed",
+    "milliseconds": 115.2948499999984,
+    "testStackLocations": [
+      [
+        "tests/g2-4b-resists-restore.test.ts",
+        "219",
+        "48"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/g2-4b-resists-restore.test.ts:219:48\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "T12 equipment still rejects gameOver",
+    "status": "passed",
+    "milliseconds": 29.98674700000265,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "choice rejects every preparation command",
+    "status": "passed",
+    "milliseconds": 1.7943249999952968,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "combat rejects every preparation command",
+    "status": "passed",
+    "milliseconds": 1.695466999997734,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "settlement rejects every preparation command",
+    "status": "passed",
+    "milliseconds": 1.5174390000029234,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "gameOver rejects every preparation command",
+    "status": "passed",
+    "milliseconds": 1.0336629999947036,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "preparation rejects every choice command",
+    "status": "passed",
+    "milliseconds": 0.6256399999983842,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "combat rejects every choice command",
+    "status": "passed",
+    "milliseconds": 0.4259999999922002,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "settlement rejects every choice command",
+    "status": "passed",
+    "milliseconds": 0.5815430000075139,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "gameOver rejects every choice command",
+    "status": "passed",
+    "milliseconds": 0.5959850000072038,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "choice rejects Continue",
+    "status": "passed",
+    "milliseconds": 0.3387090000032913,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "preparation rejects Continue",
+    "status": "passed",
+    "milliseconds": 0.1033750000060536,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "combat rejects Continue",
+    "status": "passed",
+    "milliseconds": 0.15393099999346305,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-command-phases.test.ts",
+    "case": "gameOver rejects Continue",
+    "status": "passed",
+    "milliseconds": 0.14028099999995902,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "49G first win uses handwritten income, not a production oracle",
+    "status": "passed",
+    "milliseconds": 0.2595199999923352,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "49G first loss uses handwritten income, not a production oracle",
+    "status": "passed",
+    "milliseconds": 0.07664500000828411,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "9G second win uses handwritten income, not a production oracle",
+    "status": "passed",
+    "milliseconds": 0.0605409999989206,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "50G sixth loss uses handwritten income, not a production oracle",
+    "status": "passed",
+    "milliseconds": 0.051688000006834045,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 0 advances with payout 0",
+    "status": "passed",
+    "milliseconds": 0.14471800001047086,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 1 advances with payout 1",
+    "status": "passed",
+    "milliseconds": 0.10432699999364559,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 2 advances with payout 1",
+    "status": "passed",
+    "milliseconds": 0.05792700000165496,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 3 advances with payout 2",
+    "status": "passed",
+    "milliseconds": 0.05297000000427943,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 4 advances with payout 2",
+    "status": "passed",
+    "milliseconds": 0.061732000001939014,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 5 advances with payout 3",
+    "status": "passed",
+    "milliseconds": 0.04409599999780767,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "win/loss streak length 6 advances with payout 3",
+    "status": "passed",
+    "milliseconds": 0.04118200000084471,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "resets opposite streaks and treats a draw as a loss",
+    "status": "passed",
+    "milliseconds": 0.16651000001002103,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "pve preserves streak and pays only base and interest",
+    "status": "passed",
+    "milliseconds": 0.12055099999997765,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "supply preserves streak and pays only base and interest",
+    "status": "passed",
+    "milliseconds": 0.05211800000688527,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "stage 2 has base damage 2 and counts surviving enemy heroes once",
+    "status": "passed",
+    "milliseconds": 0.08434599998872727,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "stage 3 has base damage 5 and counts surviving enemy heroes once",
+    "status": "passed",
+    "milliseconds": 0.03886800000327639,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "stage 4 has base damage 8 and counts surviving enemy heroes once",
+    "status": "passed",
+    "milliseconds": 0.029985000001033768,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "stage 5 has base damage 10 and counts surviving enemy heroes once",
+    "status": "passed",
+    "milliseconds": 0.029024000003119,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "stage 6 has base damage 12 and counts surviving enemy heroes once",
+    "status": "passed",
+    "milliseconds": 0.028011999995214865,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "PvE loss and draw deal exactly three regardless of survivors; fatal HP is clamped",
+    "status": "passed",
+    "milliseconds": 0.15397100000700448,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "caps interest, advances XP across a boundary and records cap overflow",
+    "status": "passed",
+    "milliseconds": 0.11498199999914505,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "is a pure planner, preserving the caller even on rejection",
+    "status": "passed",
+    "milliseconds": 0.15980000000854488,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"gold\":-1}",
+    "status": "passed",
+    "milliseconds": 0.2724890000099549,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"gold\":9007199254740991}",
+    "status": "passed",
+    "milliseconds": 0.11848799999279436,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"hp\":101}",
+    "status": "passed",
+    "milliseconds": 0.07118700000864919,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"hp\":-1}",
+    "status": "passed",
+    "milliseconds": 0.058167000010143965,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"stage\":1}",
+    "status": "passed",
+    "milliseconds": 0.05511299999488983,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"stage\":7}",
+    "status": "passed",
+    "milliseconds": 0.11012499999196734,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"enemySurvivors\":0.5}",
+    "status": "passed",
+    "milliseconds": 0.08209399999759626,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"level\":7,\"xp\":48}",
+    "status": "passed",
+    "milliseconds": 0.08799200000066776,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"level\":9,\"xp\":1}",
+    "status": "passed",
+    "milliseconds": 0.07526300000608899,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"result\":null}",
+    "status": "passed",
+    "milliseconds": 0.11259900000004563,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"streak\":{\"kind\":null,\"count\":1}}",
+    "status": "passed",
+    "milliseconds": 0.07946000000811182,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"streak\":{\"kind\":\"win\",\"count\":0}}",
+    "status": "passed",
+    "milliseconds": 0.05987999998615123,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"streak\":{\"kind\":\"win\",\"count\":9007199254740991}}",
+    "status": "passed",
+    "milliseconds": 0.10278400000242982,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"roundKind\":\"supply\",\"result\":\"draw\"}",
+    "status": "passed",
+    "milliseconds": 0.46648000000277534,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "rejects invalid input without producing a plan: {\"roundKind\":\"supply\",\"result\":null,\"enemySurvivors\":1}",
+    "status": "passed",
+    "milliseconds": 0.10705099999904633,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "uses the complete frozen level 3–9 table",
+    "status": "passed",
+    "milliseconds": 0.14435699999739882,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "has exactly the 60 selectable heroes in stable code-point order",
+    "status": "passed",
+    "milliseconds": 0.07754700000805315,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "seed 42 level 3 uses independently tabulated 10-word shop",
+    "status": "passed",
+    "milliseconds": 0.11063700000522658,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "seed 42 level 9 uses independently tabulated 10-word shop",
+    "status": "passed",
+    "milliseconds": 0.09560400000191294,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-economy.test.ts",
+    "case": "keeps RNG consumption independent of level and allows seed zero",
+    "status": "passed",
+    "milliseconds": 0.37578499999654014,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects old schema",
+    "status": "passed",
+    "milliseconds": 17.18024400000286,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects unknown digest",
+    "status": "passed",
+    "milliseconds": 16.44710099999793,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects protocol",
+    "status": "passed",
+    "milliseconds": 13.320005000001402,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects RNG float",
+    "status": "passed",
+    "milliseconds": 12.899492999989889,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects gold negative",
+    "status": "passed",
+    "milliseconds": 13.015989000006812,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects unbounded XP",
+    "status": "passed",
+    "milliseconds": 12.914055999994162,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects unknown round",
+    "status": "passed",
+    "milliseconds": 15.155702000003657,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects streak",
+    "status": "passed",
+    "milliseconds": 15.03765499999281,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects fake progress",
+    "status": "passed",
+    "milliseconds": 13.585433999993256,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects shop lock",
+    "status": "passed",
+    "milliseconds": 13.370581000010134,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects shop wrapper",
+    "status": "passed",
+    "milliseconds": 13.589578999992227,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects unit wrapper",
+    "status": "passed",
+    "milliseconds": 16.86447899999621,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects legacy unit",
+    "status": "passed",
+    "milliseconds": 15.960590999995475,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects enemy serial",
+    "status": "passed",
+    "milliseconds": 13.04673499999626,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects duplicate unit",
+    "status": "passed",
+    "milliseconds": 16.190747000000556,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects item wrapper",
+    "status": "passed",
+    "milliseconds": 15.937295999989146,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects duplicate item",
+    "status": "passed",
+    "milliseconds": 16.08174300000246,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects duplicate receipt",
+    "status": "passed",
+    "milliseconds": 13.763722000003327,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects invented acquisition gold",
+    "status": "passed",
+    "milliseconds": 14.033355999999912,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects unknown augment",
+    "status": "passed",
+    "milliseconds": 13.890291999996407,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects duplicate offers",
+    "status": "passed",
+    "milliseconds": 5.571546999999555,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects invalid choice kind",
+    "status": "passed",
+    "milliseconds": 8.635685000001104,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects foreign offer",
+    "status": "passed",
+    "milliseconds": 10.772037999995518,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects stale choice",
+    "status": "passed",
+    "milliseconds": 13.770466000001761,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects forged early game over even if its finished battle and history are internally consistent",
+    "status": "passed",
+    "milliseconds": 26.784441999989212,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat base AD",
+    "status": "passed",
+    "milliseconds": 4.900058999992325,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat runtime stat",
+    "status": "passed",
+    "milliseconds": 4.598385999997845,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat unknown source",
+    "status": "passed",
+    "milliseconds": 3.678333999996539,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat finished running",
+    "status": "passed",
+    "milliseconds": 3.362680000005639,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat self target",
+    "status": "passed",
+    "milliseconds": 3.610462999989977,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat wrong RNG",
+    "status": "passed",
+    "milliseconds": 3.600918999989517,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "rejects combat negative seq",
+    "status": "passed",
+    "milliseconds": 5.425828999999794,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "case": "makes an isolated restore and does not issue a new choice, RNG draw or receipt",
+    "status": "passed",
+    "milliseconds": 8.953808000005665,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "accepts full uint32 input 0",
+    "status": "passed",
+    "milliseconds": 0.3346419999998034,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "accepts full uint32 input 42",
+    "status": "passed",
+    "milliseconds": 0.19175800000084564,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "accepts full uint32 input 4294967295",
+    "status": "passed",
+    "milliseconds": 0.1429550000011659,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "accepts full uint32 input  00042 ",
+    "status": "passed",
+    "milliseconds": 0.07202800000050047,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed ",
+    "status": "passed",
+    "milliseconds": 0.09972000000016124,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed  ",
+    "status": "passed",
+    "milliseconds": 0.050196000000141794,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed -1",
+    "status": "passed",
+    "milliseconds": 0.03562400000009802,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed +1",
+    "status": "passed",
+    "milliseconds": 0.028783000001567416,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed 1.0",
+    "status": "passed",
+    "milliseconds": 0.029043999998975778,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed 1e2",
+    "status": "passed",
+    "milliseconds": 0.026008999999248772,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed NaN",
+    "status": "passed",
+    "milliseconds": 0.02443700000003446,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed 42abc",
+    "status": "passed",
+    "milliseconds": 0.023746000000755885,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed 4294967296",
+    "status": "passed",
+    "milliseconds": 0.02844300000106159,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed Infinity",
+    "status": "passed",
+    "milliseconds": 0.029935000000477885,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects partial/invalid seed 1 2",
+    "status": "passed",
+    "milliseconds": 0.027651000000332715,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "uses one domain-external random word and a separate identity",
+    "status": "passed",
+    "milliseconds": 1.6124019999988377,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "round-trips UTF8 and invokes isolated history validation after current validation",
+    "status": "passed",
+    "milliseconds": 20.172441999999137,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"extra\":true}",
+    "status": "passed",
+    "milliseconds": 2.6512820000007196,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"kind\":\"wrong\"}",
+    "status": "passed",
+    "milliseconds": 1.8034690000004048,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"saveFormatVersion\":1}",
+    "status": "passed",
+    "milliseconds": 2.0123729999995703,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"replayFormatVersion\":1}",
+    "status": "passed",
+    "milliseconds": 1.78652399999919,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"saveFormatVersion\":2}",
+    "status": "passed",
+    "milliseconds": 1.7497380000004341,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"replayFormatVersion\":2}",
+    "status": "passed",
+    "milliseconds": 2.0947769999984303,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"saveFormatVersion\":4}",
+    "status": "passed",
+    "milliseconds": 1.7975100000003295,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"replayFormatVersion\":4}",
+    "status": "passed",
+    "milliseconds": 1.966684000000896,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"runId\":\"\"}",
+    "status": "passed",
+    "milliseconds": 1.8234700000011799,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"createdAt\":\"bad\"}",
+    "status": "passed",
+    "milliseconds": 1.6531930000001012,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects outer corruption before history {\"currentBattle\":[]}",
+    "status": "passed",
+    "milliseconds": 1.5678549999993265,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "checks file byte size before reading and bad JSON before history",
+    "status": "passed",
+    "milliseconds": 0.8069830000004004,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects old domain digest and propagates historical validation failure without touching source",
+    "status": "passed",
+    "milliseconds": 3.553948999999193,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "rejects a bare M5 state and record/event overflow before history",
+    "status": "passed",
+    "milliseconds": 5.269655000000057,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "fixes the queued snapshot and uses only prior committed revision",
+    "status": "passed",
+    "milliseconds": 4.297043999999005,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "reports the actual successful in-flight phase before a later queued terminal snapshot",
+    "status": "passed",
+    "milliseconds": 3.898275999999896,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "does not report a terminal commit until its failed transaction is successfully retried",
+    "status": "passed",
+    "milliseconds": 2.1894589999992604,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "stops forever on conflict and preserves token/local capture",
+    "status": "passed",
+    "milliseconds": 3.5202679999983957,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "retains failed snapshot for retry after quota failure",
+    "status": "passed",
+    "milliseconds": 1.8879259999994247,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "bounds repeated quota failures to one latest fixed pending snapshot",
+    "status": "passed",
+    "milliseconds": 152.1482419999993,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "bounds repeated abort failures to one latest fixed pending snapshot",
+    "status": "passed",
+    "milliseconds": 142.46374800000012,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "fences notification and later queued writes after dispose",
+    "status": "passed",
+    "milliseconds": 3.3285799999994197,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "does not trust shallow frozen inputs and makes every retained child immutable",
+    "status": "passed",
+    "milliseconds": 1.9647820000009233,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "shares only History-owned deeply frozen records, never caller-frozen imitations",
+    "status": "passed",
+    "milliseconds": 2.233604999999443,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "reuses only branded captures after merge, preserving first immutable history",
+    "status": "passed",
+    "milliseconds": 3.1549790000008215,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "activation detaches mutable caller data while sharing certified immutable metadata until IDB clones it",
+    "status": "passed",
+    "milliseconds": 2.1981219999997847,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-persistence.test.ts",
+    "case": "exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs",
+    "status": "passed",
+    "milliseconds": 761.768035000001,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "captures tick zero, current prefix, and restores an identical terminal without mutating the active match",
+    "status": "passed",
+    "milliseconds": 162.17030599999998,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "validates a running event prefix at ticks 39/40/41 and resumes recording with no repeated tick zero",
+    "status": "passed",
+    "milliseconds": 136.1201000000001,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "owns observed inputs and keeps earlier frozen prefixes unchanged across later ticks and completion",
+    "status": "passed",
+    "milliseconds": 140.41884500000742,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "brands only detached recorder-owned immutable records, not external frozen lookalikes",
+    "status": "passed",
+    "milliseconds": 109.07935600000201,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology",
+    "status": "passed",
+    "milliseconds": 176.84219300000404,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "retains frozen units after sale and does not duplicate an ended combat on later choice commands",
+    "status": "passed",
+    "milliseconds": 94.72817000000214,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "exposes frozen history/snapshot references after an ordinary completed battle",
+    "status": "passed",
+    "milliseconds": 90.44140199999674,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "[T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references",
+    "status": "passed",
+    "milliseconds": 383.3651470000041,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m6-replay.test.ts",
+    "case": "records legal empty-roster tick0 defeat exactly once",
+    "status": "passed",
+    "milliseconds": 15.372208999993745,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "rejects a historical level5 roll forged as level7 with RNG-consistent two completed items",
+    "status": "passed",
+    "milliseconds": 2225.6763989999963,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "rejects a roll below the previous settlement level in a settled supply round",
+    "status": "passed",
+    "milliseconds": 31.952762999993865,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "rejects a roll below the previous settlement level in a unsettled current round",
+    "status": "passed",
+    "milliseconds": 31.372933999999077,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "rejects a roll above even the T12 post-settlement levelAfter bound",
+    "status": "passed",
+    "milliseconds": 32.81055199999537,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "preserves a legal pre-F roll through current, settled and historical save/restore",
+    "status": "passed",
+    "milliseconds": 3445.7764190000016,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "allows the first equip after same-round F at the upper bound, not only the starting level",
+    "status": "passed",
+    "milliseconds": 2843.815047000011,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "validates round economy before consulting its level bounds for equipment",
+    "status": "passed",
+    "milliseconds": 28.339472999999998,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "rejects the forged historical level through full save-envelope validation without changing archived battles",
+    "status": "passed",
+    "milliseconds": 93.20633400000224,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b5-equipment-history.test.ts",
+    "case": "completed fixture batching preserves every record byte and rejects live-prefix use",
+    "status": "passed",
+    "milliseconds": 59.76436499999545,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 260.24525899999935,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 224.54702499999985,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 461.58865799999694,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 1314.437539999999,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 2513.6705059999986,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 4287.636585,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 5779.119676000002,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "status": "passed",
+    "milliseconds": 8080.6115969999955,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+    "status": "passed",
+    "milliseconds": 162.07593300000008,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+    "status": "passed",
+    "milliseconds": 250.005465000002,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+    "status": "passed",
+    "milliseconds": 0.38232399999833433,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+    "status": "passed",
+    "milliseconds": 607.6846189999997,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+    "status": "passed",
+    "milliseconds": 5.448584000005212,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+    "status": "passed",
+    "milliseconds": 117.01730300000054,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+    "status": "passed",
+    "milliseconds": 265.9915370000017,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+    "status": "passed",
+    "milliseconds": 559.3902249999956,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+    "status": "passed",
+    "milliseconds": 364.24336400000175,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+    "status": "failed",
+    "milliseconds": 11.747615000000224,
+    "testStackLocations": [
+      [
+        "tests/m8-b7-match-wiring.test.ts",
+        "131",
+        "26"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-missing\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:101:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/m8-b7-match-wiring.test.ts:131:26",
+    "observedGroup": "旧Herald缺账本"
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+    "status": "failed",
+    "milliseconds": 7.08724500000244,
+    "testStackLocations": [
+      [
+        "tests/m8-b7-match-wiring.test.ts",
+        "131",
+        "26"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-missing\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:101:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/m8-b7-match-wiring.test.ts:131:26",
+    "observedGroup": "旧Herald缺账本"
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+    "status": "failed",
+    "milliseconds": 7.365211999996973,
+    "testStackLocations": [
+      [
+        "tests/m8-b7-match-wiring.test.ts",
+        "131",
+        "26"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-missing\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:101:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/m8-b7-match-wiring.test.ts:131:26",
+    "observedGroup": "旧Herald缺账本"
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+    "status": "failed",
+    "milliseconds": 6.677499999997963,
+    "testStackLocations": [
+      [
+        "tests/m8-b7-match-wiring.test.ts",
+        "154",
+        "11"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-missing\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:101:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/m8-b7-match-wiring.test.ts:154:11",
+    "observedGroup": "旧Herald缺账本"
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+    "status": "failed",
+    "milliseconds": 8.028307999993558,
+    "testStackLocations": [
+      [
+        "tests/m8-b7-match-wiring.test.ts",
+        "154",
+        "11"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-missing\n    at requireLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:52:21)\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:101:5)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:35\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructure (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:108:10)\n    at restoreMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:13:22)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/m8-b7-match-wiring.test.ts:154:11",
+    "observedGroup": "旧Herald缺账本"
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+    "status": "passed",
+    "milliseconds": 0.6249080000052345,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+    "status": "passed",
+    "milliseconds": 302.2007139999987,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+    "status": "passed",
+    "milliseconds": 451.1222590000034,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+    "status": "passed",
+    "milliseconds": 335.69778600000427,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+    "status": "passed",
+    "milliseconds": 317.92054700000153,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+    "status": "passed",
+    "milliseconds": 300.9687330000015,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+    "status": "passed",
+    "milliseconds": 364.98569800000405,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "case": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+    "status": "passed",
+    "milliseconds": 3558.711513000002,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+    "case": "folds a running full prefix once per restore, never across inputs or calls",
+    "status": "passed",
+    "milliseconds": 15.584857000008924,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+    "case": "retains two full-ledger validations for finished combat with a shorter historical prefix",
+    "status": "passed",
+    "milliseconds": 54.82816699999967,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+    "case": "still rejects a running basis prefix mutation after the complete fold succeeded",
+    "status": "passed",
+    "milliseconds": 3.5488100000075065,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+    "case": "preserves object rejection if a persistentGrowth accessor changes the already-read ledger",
+    "status": "passed",
+    "milliseconds": 3.32463300001109,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+    "case": "preserves object rejection if a preparation accessor changes the already-read ledger",
+    "status": "passed",
+    "milliseconds": 3.0917029999982333,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything",
+    "status": "passed",
+    "milliseconds": 2470.5437660000025,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "resumed combat has identical complete final state and events to uninterrupted combat",
+    "status": "passed",
+    "milliseconds": 189.8500880000065,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "retains input and zero-delta commit for immediate empty-board finishes",
+    "status": "passed",
+    "milliseconds": 13.147205999994185,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "rejects missing, forged or changed basis and running resources",
+    "status": "passed",
+    "milliseconds": 11.323357000001124,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "rejects frozen plan, receipt, birth, evidence, counter and source-delta corruption",
+    "status": "passed",
+    "milliseconds": 66.93107299999974,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "keeps receipt schema rejection through the shared lineage validator",
+    "status": "passed",
+    "milliseconds": 82.07142200000817,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/m8-b8-restore.test.ts",
+    "case": "rejects an unearned choice, wrong offered state and forged post-settlement resources",
+    "status": "passed",
+    "milliseconds": 114.01601899998786,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects a later owner before cross-unit declaration expansion (reversed = false)",
+    "status": "passed",
+    "milliseconds": 204.52495200000703,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects a later owner before cross-unit declaration expansion (reversed = true)",
+    "status": "passed",
+    "milliseconds": 23.371413000000757,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects a forged item counter cap before compiling it or enumerating candidates",
+    "status": "passed",
+    "milliseconds": 1259.9378220000071,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects sampled tick before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 463.15366700000595,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects attackCount before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 30.240970999991987,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects castCount before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 31.993894999992335,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects mechanism definitions before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 27.87233300000662,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects periodTicks before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 32.28632299999299,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "rejects pulseOrdinal before any per-unit candidate state construction",
+    "status": "passed",
+    "milliseconds": 28.702350999999908,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "bounds sampled kill triggerCount by trusted roster/lives before the fact replay",
+    "status": "failed",
+    "milliseconds": 30.527341000008164,
+    "testStackLocations": [
+      [
+        "tests/restore-audit/bounds-preflight.test.ts",
+        "82",
+        "23"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/restore-audit/bounds-preflight.test.ts:82:23\n    at file:///workspace/scratch/2d61d723fa5a/cat-m8/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "bounds a runtime counter by its authenticated item declaration",
+    "status": "passed",
+    "milliseconds": 16.713052000006428,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "authenticates every owner before checking an earlier owner count",
+    "status": "passed",
+    "milliseconds": 11.443313000010676,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "preserves a real long fight with growing trigger counts and resumes every tick",
+    "status": "failed",
+    "milliseconds": 123.24531700000807,
+    "testStackLocations": [
+      [
+        "tests/restore-audit/bounds-preflight.test.ts",
+        "113",
+        "16"
+      ],
+      [
+        "tests/restore-audit/bounds-preflight.test.ts",
+        "132",
+        "3"
+      ]
+    ],
+    "failure": "Error: Invalid Match save: preparation-ledger-command-rejected\n    at validate (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:136:49)\n    at validatePreparationLedger (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/preparation-ledger.ts:76:19)\n    at restoreMatchWithinCall (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:333:3)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:37\n    at withGrantedItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/combat-item-programs.ts:36:16)\n    at withItemRestoreCache (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/m8/item-restore.ts:24:13)\n    at validateMatchStructureForSerialization (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization-structure.ts:363:10)\n    at serializeMatch (/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/serialization.ts:31:39)\n    at continueEveryTick (/workspace/scratch/2d61d723fa5a/cat-restore-b/tests/restore-audit/bounds-preflight.test.ts:113:16)\n    at /workspace/scratch/2d61d723fa5a/cat-restore-b/tests/restore-audit/bounds-preflight.test.ts:132:3",
+    "observedGroup": "命令重演拒绝"
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "preserves many legitimately acquired rewards in a single-player 6-7 save",
+    "status": "passed",
+    "milliseconds": 1007.0183470000047,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "preserves a single-player 6-7 save at the actual maximum pending-task checkpoint",
+    "status": "passed",
+    "milliseconds": 804.255885999999,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/bounds-preflight.test.ts",
+    "case": "keeps the ordinary public opening positive control",
+    "status": "passed",
+    "milliseconds": 141.448384000003,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects preparation gold inflation without any command or income receipt",
+    "status": "passed",
+    "milliseconds": 42.1621129999985,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects four free experience without spending gold",
+    "status": "passed",
+    "milliseconds": 9.295941999997012,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects coordinated free experience and a purported matching gold payment",
+    "status": "passed",
+    "milliseconds": 10.310263999999734,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary valid rngState cursor at opening",
+    "status": "passed",
+    "milliseconds": 10.507008999993559,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary valid choiceRngState cursor at opening",
+    "status": "passed",
+    "milliseconds": 9.545424999989336,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary valid rewardRngState cursor at opening",
+    "status": "passed",
+    "milliseconds": 11.098949000006542,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary valid battleSeedRngState cursor at opening",
+    "status": "passed",
+    "milliseconds": 9.210172999999486,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary next match event serial",
+    "status": "passed",
+    "milliseconds": 11.656824999998207,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "rejects arbitrary shop generation without refresh",
+    "status": "passed",
+    "milliseconds": 9.07460799999535,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/match-authority.test.ts",
+    "case": "refuses the old format without a command ledger",
+    "status": "passed",
+    "milliseconds": 5.353740000005928,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-history-cache.test.ts",
+    "case": "reuses only exact validated completed history; independently replays every current tail and rejects mutations",
+    "status": "passed",
+    "milliseconds": 711.4300159999984,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+    "case": "keeps seed, full commands and short prefixes independent",
+    "status": "passed",
+    "milliseconds": 16.16404699999839,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+    "case": "does not equate same-length command parameters or compressed tick endpoints",
+    "status": "passed",
+    "milliseconds": 20.025766999999178,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+    "case": "collection reuses plain battle proofs and fully checks equipment command records: false",
+    "status": "passed",
+    "milliseconds": 133.6374680000008,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+    "case": "collection reuses plain battle proofs and fully checks equipment command records: true",
+    "status": "passed",
+    "milliseconds": 782.2420880000136,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "accepts the original full collection and file",
+    "status": "passed",
+    "milliseconds": 73.41834200000449,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 in object restore with the original history unchanged",
+    "status": "passed",
+    "milliseconds": 2.0926929999986896,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 in json restore with the original history unchanged",
+    "status": "passed",
+    "milliseconds": 4.977645000006305,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects XP and gold changed together to imitate an unrecorded purchase",
+    "status": "passed",
+    "milliseconds": 21.94064499999513,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 through collection/envelope/file, even with an empty history callback",
+    "status": "passed",
+    "milliseconds": 33.78453900000022,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "accepts the original full collection and file",
+    "status": "passed",
+    "milliseconds": 76.44813200000499,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 in object restore with the original history unchanged",
+    "status": "passed",
+    "milliseconds": 2.132612000001245,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 in json restore with the original history unchanged",
+    "status": "passed",
+    "milliseconds": 1.5317700000014156,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects XP and gold changed together to imitate an unrecorded purchase",
+    "status": "passed",
+    "milliseconds": 21.41630900000746,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects only gold +1 through collection/envelope/file, even with an empty history callback",
+    "status": "passed",
+    "milliseconds": 39.324428000007174,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "keeps failed and true no-op commands completely unchanged",
+    "status": "passed",
+    "milliseconds": 5.8334389999945415,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick",
+    "status": "passed",
+    "milliseconds": 505.51440499999444,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects a forged unbounded compressed tick count before any repeated dispatch",
+    "status": "passed",
+    "milliseconds": 37.51777599999332,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects gold altered only during final object detachment",
+    "status": "passed",
+    "milliseconds": 36.95301800000016,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects preparationLedger altered only during final object detachment",
+    "status": "passed",
+    "milliseconds": 37.26107999999658,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/preparation-ledger.test.ts",
+    "case": "rejects omitted, forged and renamed match events and external grant commands",
+    "status": "passed",
+    "milliseconds": 91.57198200000857,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/verified-restore-cache.test.ts",
+    "case": "bounds entries and bytes, evicts least-recently-used, and copies on ingress/egress",
+    "status": "passed",
+    "milliseconds": 0.4002820000023348,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/verified-restore-cache.test.ts",
+    "case": "never treats a hash collision as exact input equality",
+    "status": "passed",
+    "milliseconds": 0.2902349999931175,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/verified-restore-cache.test.ts",
+    "case": "cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted",
+    "status": "passed",
+    "milliseconds": 66.77933499999926,
+    "testStackLocations": [],
+    "failure": ""
+  },
+  {
+    "file": "tests/restore-audit/verified-restore-cache.test.ts",
+    "case": "collection keys include every battle byte and never borrow a standalone-state cache on a miss",
+    "status": "passed",
+    "milliseconds": 167.48637999998755,
+    "testStackLocations": [],
+    "failure": ""
+  }
+]
