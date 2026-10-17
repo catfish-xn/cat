@@ -83,12 +83,19 @@ export function validateBattleRecord(record: BattleRecord, battles?: readonly Ba
 /** Internal single-battle reconstruction. Collection admission separately binds
  * its context to the verified historical prefix; this is never a resume API. */
 export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
+  const verified = replaySnapshot(record);
+  // Public results remain detached and mutable; only the internal history walk
+  // may read the private immutable proof without copying every completed Match.
+  return isOwnedBattleRecord(record) ? structuredClone(verified) : verified;
+}
+function replaySnapshot(record: BattleRecord): VerifiedReplay {
   const cached = verifiedRecords.get(record);
-  if (cached) return structuredClone(cached);
+  if (cached) return cached;
   const verified = validatorFor(record)(record);
   // Only recorder-owned, detached immutable records qualify, after full replay.
-  // Keep a private independent snapshot; callers can mutate their result freely.
-  if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(structuredClone(verified)));
+  // Reconstruction already owns this detached graph. Freeze it directly;
+  // replayBattleRecord copies it at the public boundary, never inside the walk.
+  if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(verified));
   return verified;
 }
 function validateM8Record(record: BattleRecord): VerifiedReplay {
@@ -145,7 +152,7 @@ export function* matchHistoryChecks(match: MatchState, battles: readonly BattleR
     check(record.runId === (runId ?? battles[0].runId), '局身份');
     check(record.context.seed === match.seed, '历史种子');
     check(equalContent(record.context.roundResults, match.roundResults.filter(r => r.round < record.context.round)), '历史结算前缀');
-    const verified = replayBattleRecord(record);
+    const verified = replaySnapshot(record);
     checkHistoryCarry(previous, record.context);
     check(record.context.round === result.round && record.result !== null && verified.terminal.status === 'finished', '历史身份或完成状态');
     check(equalContent(verified.settledMatch.roundResults.at(-1), result), '历史结算结果');
