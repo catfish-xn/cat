@@ -49,13 +49,17 @@
 
 `serialization.ts` 仅两行增量（import + 验证调用），没有改写这些分支也在施工的资源、账本、task 或候选重演实现。后续合并保持本调用在已验证输入之后、所有逐单位/跨单位候选读取之前即可；本轮没有执行这些分支的集成合并。
 
+#157 后续提交 `db80d91` 已把恢复主体迁到 `src/simulation/serialization-structure.ts`。将来合并时，预检的 import 和 `validateRestoreBoundsPreflight` 调用也要跟着迁过去；调用必须位于已验证输入、strategy、roster 校验之后（参照该提交 `serialization-structure.ts:251` 的 roster 校验），并在 sampled-stat、neutral（同提交 `:259`）、resists 校验及逐单位恢复之前。本轮只记录合并要求，没有执行迁移或集成合并。
+
 ## 复现与测试证据
 
 原基线 witness 以公开 `itemMatch('ionic-spark')` + `stepMatch` 建立合法正控，保留真实的跨单位 aura contribution，再给后面的 owner 加入安全小数 `wanted=64`。spy 观测 `stat()` 声明生成，对象和 JSON 都先生成64条，才报 `resolved mechanics`。见 [witness 源码](baseline-witness.test.ts.txt) 与 [原基线结果](logs/baseline-witness.json)。没有制造 OOM。
 
 正式回归把这个顺序翻转为拒绝，明确要求 `bounds preflight mechanics`，stat 声明生成次数为0，并测试反转单位顺序。其他负例分别要求 `item programs`、`mechanism definitions`、`sampled tick`、`attackCount`、`castCount`、`periodTicks`、`pulseOrdinal`、`triggerCount`、`counter` 的具体拒绝原因。每个负例覆盖 object、JSON 和 serialize，并断言尚未调用逐单位 `validateMechanisms`。
 
-合法正例来自公开命令：400 tick 的护臂长局、6-7 的多奖励/92条资源账本存档、真实后期战斗中待执行+周期任务最多的检查点（至少5项），以及普通开局。每例先验证 serialize、object restore、JSON restore 与规范化重存，再对两条恢复分支逐 tick 比较完整 step 结果（state、事件和 RNG 都包含在内）直到战斗结束。
+三入口合法正例覆盖的都是**单人存档**，来自公开命令：400 tick 的护臂长局、单人 6-7 的多奖励/92条资源账本存档、单人 6-7 战斗中待执行+周期任务最多的检查点（至少5项），以及普通开局。每例先验证 serialize、object restore、JSON restore 与规范化重存，再对两条恢复分支逐 tick 比较完整 step 结果（state、事件和 RNG 都包含在内）直到战斗结束。
+
+加时轮从 round ordinal 39 起，走在线扩展的 `restoreBattleInput`（`src/simulation/two-sided-battle.ts:91`）；离线 `restoreMatch` 照旧拒绝 multiplayer 状态（`serialization.ts:113`）和超过 `FINAL_ROUND` 的状态（`:122`）。因此本次没有加时的运行证据；加时不属于这次离线恢复预检的覆盖范围，也不需要为本项提供加时运行证据。上述单人 6-7 正例不代表加时覆盖。
 
 最终相关回归：**7文件156/156通过**，见 [机器结果](logs/final-targeted.json)：
 
@@ -72,6 +76,12 @@
 `npm run typecheck` 通过。只跑上述相关测试、下述 B7 单文件计时与 typecheck，没有跑全套、build 或 server 测试。Node 22.17.0，Vitest 5.0.3，Windows。
 
 准备阶段的非产品问题：沙箱临时 fixture rename EPERM，改用正常本地权限执行；最初多奖励正例要求账本>100，但公开路径实际92，改为>80且保留同一公开路径；导出的基线临时放在 artifacts 内时被 Vitest 顺带发现，已移到仓库外，最终156项清单不含这些副本。不把这些初轮准备结果算入最终通过数。
+
+## 本次报告补充与指纹复核
+
+在 `a463085` 上补充报告和两个单人 6-7 正例名称，未修改 `src/`、测试逻辑或任何测试时限。运行 `node scripts/verify-m8-herald-fixtures.cjs --write` 和 `node scripts/record-g2-3-inputs.cjs` 重算后，Herald 默认校验命令 `node scripts/verify-m8-herald-fixtures.cjs` 与 `node scripts/record-g2-3-inputs.cjs --check` 均通过（Herald 脚本以无参数方式校验，不接受 `--check`）。
+
+Herald `sourceSha256` 更新为 `67db984c2df764cc0d002617198d976701a6575cf52d9e8bb99687a35d58b7d3`；源码清单只新增 `restore-bounds-preflight.ts` 的指纹并更新 `serialization.ts` 的指纹，五份原始存档、轨迹及其哈希保持不变，`input-fixture-audit.json` 同步记录新 manifest 的字节数与哈希。本次仅运行 `npm test -- tests/restore-audit/bounds-preflight.test.ts`（15/15 通过）和 `npm run typecheck`（通过），未重跑前述多文件回归或 B7 计时。
 
 ## B7 耗时对比
 

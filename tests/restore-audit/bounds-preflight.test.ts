@@ -114,14 +114,14 @@ it('preserves a real long fight with growing trigger counts and resumes every ti
   continueEveryTick(state);
 });
 
-it('preserves many legitimately acquired rewards through late-game saves', () => {
+it('preserves many legitimately acquired rewards in a single-player 6-7 save', () => {
   const preparation = publicNeutralPreparation('6-7');
   expect(preparation.m8.loot.receipts.length).toBeGreaterThan(15);
   expect(preparation.resourceProvenance.entries.length).toBeGreaterThan(80);
   continueEveryTick(accepted(startMatchCombat(preparation)));
 });
 
-it('preserves a save at the actual maximum pending-task checkpoint of a public late fight', () => {
+it('preserves a single-player 6-7 save at the actual maximum pending-task checkpoint', () => {
   let state = accepted(startMatchCombat(publicNeutralPreparation('6-7'))), busiest = state, maximum = 0;
   while (state.phase === 'combat') {
     const n = state.combat!.units.reduce((sum, u) => sum + (u.tasks?.length ?? 0) + (u.mechanismState?.periodicTasks.length ?? 0), 0);
