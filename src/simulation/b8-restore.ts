@@ -1,8 +1,7 @@
-import {openG23Choice} from './g2-3-runtime';
-import {readG23Progress,validateG23MechanicLinks} from './g2-3-state';
-import {g23RadiantRound,g23SoloFacts} from './g2-3-settlement';
+import {validateG23Restoration} from './g2-3-restore';
+import {readG23Progress} from './g2-3-state';
+import {g23RadiantRound} from './g2-3-settlement';
 import {g23RadiantDefinitionId} from './g2-3-rewards';
-import { validateG23Progress } from './g2-3-match-progress';
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
@@ -14,6 +13,7 @@ import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } f
 import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
 import { planUnitAcquisition } from './unit-acquisition';
+import { planPermanentItemGrant } from './item-grants';
 import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
 import type { LootChoiceDescriptor, FrozenDirectDrop } from './loot-types';
@@ -159,24 +159,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
-  check(!!state.seatMechanics?.hidden.progress&&!!readG23Progress(state), 'G23 progress required');
-  validateG23MechanicLinks(state);
-  if(state.phase==='choice'&&state.pendingChoice!.choiceId.startsWith('g23:')){
-    const choice=state.pendingChoice!;const expected=openG23Choice({...state,phase:choice.returnPhase,pendingChoice:null} as MatchState);
-    check(equal(expected.state.pendingChoice,choice),'G23 pending choice authority');
-  }
-  if(readG23Progress(state)){
-    validateG23Progress(readG23Progress(state)!,state.seed,state.round);
-    if(!state.multiplayer&&state.combat?.status==='finished'){
-     const receipt=readG23Progress(state)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===state.round);
-     check(receipt?.kind==='battle'&&equal(receipt.facts,g23SoloFacts(state,state.combat)),'G23 terminal combat facts');
-    }
-    for(const r of readG23Progress(state)!.economyReceipts)if(r.kind==='battle'){
-      const history=state.roundResults.find(h=>h.round===r.facts.round);check(history&&history.roundKind!=='supply'&&r.facts.roundKind===(history.roundKind==='pvp'?'pvp':'pve')&&r.facts.result===(history.result==='playerWin'?'win':history.result==='enemyWin'?'loss':'draw'),'G23 settlement history');
-      const multiplayer=state.multiplayer?.receipts.find(m=>m.round===r.facts.round);
-      check(multiplayer?!!multiplayer.g23Facts&&equal(multiplayer.g23Facts,r.facts):r.facts.battleId===`round-${r.facts.round}`,'G23 settlement identity');
-    }
-  }
+  validateG23Restoration(state,parsedJsonInput);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
   const context: ResourceProvenanceContext = { g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
@@ -307,14 +290,50 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
   committed = true;
+  // Mechanic/G23 authority and provenance have already validated these receipts.
+  // Replay every post-freeze birth in receipt order, even if later consumed.
+  // Automatic rewards commit before loot choices; mechanic choices follow them.
+  const mechanicBirths = (state.seatMechanics?.receipts ?? []).slice(basis.mechanicReceiptPrefixLength).filter(receipt =>
+    receipt.kind === 'item' || receipt.kind === 'unit' && receipt.resolution === 'held'
+    || receipt.kind === 'choice' && receipt.itemId !== null);
+  let mechanicCursor = 0;
   let resolvedChoices = 0;
+  const mechanicBirth = (): boolean => {
+    const birth = entries[cursor];
+    if ((birth?.kind !== 'item-acquired' && birth?.kind !== 'unit-acquired') || birth.source.kind !== 'mechanic') return false;
+    const receipt = mechanicBirths[mechanicCursor++];
+    check(receipt && receipt.round === state.round && receipt.roundId === state.roundDefinitionId
+      && receipt.receiptId === birth.source.receiptId, 'mechanic birth order');
+    const source = {kind:'mechanic' as const,receiptId:receipt.receiptId};
+    if (receipt.kind === 'unit') {
+      check(birth.kind === 'unit-acquired' && receipt.resolution === 'held', 'mechanic unit birth');
+      survivingPlacements();
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor);
+      check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
+      for (const fact of plan.facts) take(fact);
+      preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding; nextUnit = plan.nextUnitSerial;
+    } else {
+      check(birth.kind === 'item-acquired' && (receipt.kind === 'item' || receipt.kind === 'choice'
+        && !receipt.skipped && state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length), 'mechanic choice birth order');
+      const definitionId = receipt.kind === 'item' ? receipt.definitionId : receipt.optionId;
+      const plan = planPermanentItemGrant({items,nextItemSerial:nextItem},{definitionId,receiptId:receipt.receiptId},[]);
+      check(plan.ok && receipt.itemId === plan.grantedItemIds[0], 'mechanic item transaction');
+      take({kind:'item-acquired',itemId:plan.grantedItemIds[0],source});
+      items = plan.state.items; nextItem = plan.state.nextItemSerial;
+    }
+    return true;
+  };
+  const continuation = () => {
+    combinations();
+    while (mechanicBirth()) combinations();
+  };
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
-    combinations(); // Between user choices, never inside a grant transaction.
+    continuation(); // Between user choices, never inside a grant transaction.
     if (!loot.choiceResolutions.some(value => value.dropId === choice.dropId)) break;
     resolve(choice); resolvedChoices++;
   }
   while (cursor < entries.length) {
-    combinations();
+    continuation();
     if (cursor === entries.length) break;
     const sale = entries[cursor];
     check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
@@ -329,6 +348,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
+  check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
