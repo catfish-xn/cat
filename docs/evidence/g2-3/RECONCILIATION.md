@@ -219,3 +219,9 @@ Gambler runtime uses normal `TFT7_Item_ShimmerscaleGamblersBlade`, raw14.24
 AP10/AS45%,1%AS per gold capped30,5%1gold per actual attack. Frozen opening
 bank plus own-side battle gold and post-attack update timing are **约定值**
 G24-ITEM-GOLD-01. Hashed20/4 fields remain recorded but uninterpreted.
+
+Mogul normal `TFT7_Item_ShimmerscaleMogulsMail`: raw14.24 health50, per-hit
+health7/resists1/cap35, full1gold, interval8seconds. G24-MOGUL-STACK-01
+contains **约定值** for shield-hit qualification, HP barrier and lethal35th hit.
+No HR3gold value is used. Original source constants and runtime limitations are
+listed in the centralized G2-4B-MECHANISMS-WIP.md.

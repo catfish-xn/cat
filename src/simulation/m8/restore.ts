@@ -26,6 +26,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const expectedBasis = { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.itemSummon?.formCell.row ?? unit.startingCell?.row ?? unit.cell.row).health,
     flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
     bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 };
+  expectedBasis.flat+=(unit.itemMogulHits?.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0);
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
   const contributions = state.statuses.flatMap(g => g.contributions), covered = new Set<string>();

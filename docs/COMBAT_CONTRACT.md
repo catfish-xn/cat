@@ -68,3 +68,13 @@ Gold-item save verification has one explicit exception to structural-only combat
 restore: it independently simulates the bounded combat from validated input and
 compares receipts/RNG. This is read-only verification; it grants no resources and
 does not advance candidate state. No-gold saves incur no combat replay.
+
+### G2-4b WIP: Mogul stacking
+
+`CombatUnit.itemMogulHits` retains at most35 packet/tick identities. Positive
+shield-or-HP packets add one stack; deferred repayments do not. Resists affect
+later packets. Max HP grows after the fixed-max survival sampling barrier,
+preserves missing HP and cannot revive a lethal hit. Gold is1at full, then1
+every160ticks while alive. These ordering details are convention
+G24-MOGUL-STACK-01. Gold replay independently validates the hit ledger; max-HP
+restore accounts for its historical stack count when checking shield samples.

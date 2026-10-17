@@ -70,4 +70,11 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
       {kind:'mechanic',mechanic:'g24Gambler',values:{goldLimit:30,speedPerGoldBps:100}}],
     effectDescriptions:['每金币增加1%攻速，最多30金币；每次攻击5%几率掉1金币。战斗内掉金计入攻速、结算入账为待确认约定。'],
   },
+  TFT7_Item_ShimmerscaleMogulsMail: {
+    id:'TFT7_Item_ShimmerscaleMogulsMail',apiName:'TFT7_Item_ShimmerscaleMogulsMail',name:'大亨之铠',
+    kind:'completed',unique:true,slotCost:1,evidenceStatus:'approved-provisional',conventionIds:['G24-MOGUL-STACK-01','G24-ITEM-GOLD-01'],
+    effects:[{kind:'statFlat',stat:'maxHp',amount:50},
+      {kind:'mechanic',mechanic:'g24Mogul',values:{stackCap:35,healthPerStack:7,resistPerStack:1,goldIntervalTicks:160}}],
+    effectDescriptions:['承受伤害时获得7生命和1双抗，最多35层；满层获得1金币，此后每8秒获得1金币。'],
+  },
 });

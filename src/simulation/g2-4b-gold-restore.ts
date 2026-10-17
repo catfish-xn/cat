@@ -8,7 +8,7 @@ import {canonicalContent} from './content';
  * replay only gold-item combats from the validated frozen input, without
  * settling or granting anything. Existing non-gold saves take no replay path. */
 export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
-  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler'].includes(m.mechanic)));
+  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul'].includes(m.mechanic)));
   if(!enabled){
     if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
     return;
@@ -18,5 +18,5 @@ export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBa
   while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
   if(expected.tick!==candidate.tick||canonicalContent(expected.itemGoldReceipts)!==canonicalContent(candidate.itemGoldReceipts)
     ||canonicalContent(expected.itemRandomStreams)!==canonicalContent(candidate.itemRandomStreams)
-    ||expected.units.some(u=>candidate.units.find(c=>c.id===u.id)?.currentItemBankGold!==u.currentItemBankGold))throw new RangeError('Invalid authoritative item gold replay');
+    ||expected.units.some(u=>candidate.units.find(c=>c.id===u.id)?.currentItemBankGold!==u.currentItemBankGold||canonicalContent(candidate.units.find(c=>c.id===u.id)?.itemMogulHits??null)!==canonicalContent(u.itemMogulHits??null)))throw new RangeError('Invalid authoritative item gold replay');
 }

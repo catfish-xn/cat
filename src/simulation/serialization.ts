@@ -248,7 +248,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
-    const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Collector'));
+    const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Mogul'].includes(m.mechanic)));
     const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
     if (fishbones.length||collector||gamblers.length) {
       requireValue(combat.itemRandomStreams, 'missing item random streams');
@@ -277,6 +277,11 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       if(unit.openingItemBankGold===undefined)requireValue(unit.currentItemBankGold===undefined,'unexpected item bank');
       else{integer(unit.currentItemBankGold);requireValue(unit.currentItemBankGold!>=unit.openingItemBankGold&&unit.currentItemBankGold!<=30,'item bank bounds');}
       validateDefianceDebts(unit,combat.units,combat.tick,combat.combatId!,combat.nextActionSeq!);
+      if(resolved.mechanics?.some(m=>m.mechanic==='g24Mogul')){
+        list(unit.itemMogulHits);requireValue(unit.itemMogulHits!.length<=35,'Mogul stack cap');
+        for(const hit of unit.itemMogulHits!){integer(hit.tick,1);requireValue(hit.tick<=combat.tick&&typeof hit.packetId==='string','Mogul hit receipt');}
+        requireValue(new Set(unit.itemMogulHits!.map(h=>h.packetId)).size===unit.itemMogulHits!.length,'Mogul duplicate hit');
+      }else requireValue(unit.itemMogulHits===undefined,'unexpected Mogul stacks');
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(same(unit.itemSummon??null,resolved.itemSummon??null),'item summon origin');
       const formOrigin=resolved.itemSummon?{...origin,location:{kind:'board' as const,cell:resolved.itemSummon.formCell}}:origin;

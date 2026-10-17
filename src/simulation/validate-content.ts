@@ -50,6 +50,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   g24Mirror:['healthBps','manaIncreaseBps'],
   g24Collector:['executeBps'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
+  g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
   g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],

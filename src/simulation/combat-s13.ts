@@ -1,6 +1,7 @@
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
-import {recordItemGold} from './g2-4b-item-gold';
+import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
+import {scaleItemSummonHp} from './g2-4b-summons';
 import {advanceSpectralCutlass} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
@@ -55,6 +56,7 @@ function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: Read
 function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatState['units']): number {
   const stat = physical ? 'armor' : 'magicResist';
   const modifiers: StatModifier[] = [...statusModifiers(unit, stat, tick), ...active(unit, tick, 'resistanceFlat').filter(s => !s.contributionKeys && (physical || !s.key.includes(':armor:'))).map(s => constantModifier(stat, s.amount))];
+  if(unit.itemMogulHits?.length)modifiers.push(constantModifier(stat,unit.itemMogulHits.length*mechanic(unit,'g24Mogul','resistPerStack')));
   for (const m of unit.mechanics ?? []) if (m.mechanic === 'gargoyle') modifiers.push({ ...constantModifier(stat, 0),
     value: { kind: 'unit-count', perUnit: m.values.resistPerEnemy, population: 'alive-enemies-targeting-holder', sample: 'current', distinctBy: 'unitId' } });
   const shred = Math.max(statusMagnitude(unit.mechanismState?.statuses ?? [], physical ? 'sunder' : 'shred', tick), ...(physical ? active(unit, tick, 'armorReduction').filter(s => !s.contributionKeys).map(s => s.amount) : [0]));
@@ -141,7 +143,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
-  const awardItemGold=(owner:S13Unit,item:NonNullable<S13Unit['mechanics']>[number],kind:'collector'|'gamblers-blade',ordinal:number)=>{
+  const awardItemGold=(owner:S13Unit,item:NonNullable<S13Unit['mechanics']>[number],kind:ItemGoldKind,ordinal:number)=>{
     if(!itemRandomStreams||!itemGoldReceipts)throw new RangeError('Missing item gold state');
     const next=recordItemGold({streams:itemRandomStreams,receipts:itemGoldReceipts},{battleId:ctx.combatId!,ownerId:owner.id,
       itemInstanceId:item.source.instanceId,kind,tick,ordinal});
@@ -207,6 +209,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
+  for(const unit of units){
+    if(!unit.itemMogulHits)continue;
+    const mogul=unit.mechanics?.find(m=>m.mechanic==='g24Mogul');
+    if(!mogul||!unit.alive||unit.hp<=0||unit.itemMogulHits?.length!==mogul.values.stackCap)continue;
+    const elapsed=tick-unit.itemMogulHits.at(-1)!.tick;
+    if(elapsed>0&&elapsed%mogul.values.goldIntervalTicks===0)awardItemGold(unit,mogul,'moguls-periodic',elapsed/mogul.values.goldIntervalTicks-1);
+  }
   advanceSpectralCutlass(ctx);
   advanceAugmentCombat(ctx);
   advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
@@ -372,6 +381,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
     // B9 replay2: the frozen DamageOutcome is the packet event payload.
     events.push({ type: 'packetDamage', tick, outcome });
+    const mogul=target.mechanics?.find(m=>m.mechanic==='g24Mogul');
+    if(mogul&&absorbed+actual>0&&(target.itemMogulHits?.length??0)<mogul.values.stackCap){
+      target.itemMogulHits=[...target.itemMogulHits??[],{packetId:context.packetId,tick}];
+      if(target.itemMogulHits.length===mogul.values.stackCap)awardItemGold(target,mogul,'moguls-full',0);
+    }
     const owner = units.find(u => u.id === packet.source.ownerId);
     if (owner && absorbed + actual > 0 && context.permissions.includes('omnivamp')) {
       const damageKey = JSON.stringify([owner.id, packet.actionSeq]), old = damageByAction.get(damageKey);
@@ -465,6 +479,19 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     unit.hp = virtualHp.get(unit.id)!;
   }
   settleSurvival(ctx, beforeDamage, positiveDamage);
+  // Max-HP growth follows the fixed-max survival barrier. A lethal packet cannot
+  // be undone by growth; missing HP is otherwise preserved (not healing).
+  for(const unit of units){
+    if(!unit.itemMogulHits?.length)continue;
+    const gained=(unit.itemMogulHits?.length??0)-(state.units.find(u=>u.id===unit.id)?.itemMogulHits?.length??0);
+    if(gained<=0)continue;
+    const mogul=unit.mechanics!.find(m=>m.mechanic==='g24Mogul')!,basis=unit.maxHpBasis!;
+    unit.maxHpBasis={...basis,flat:basis.flat+gained*mogul.values.healthPerStack};
+    const beforeMax=unit.maxHp,beforeHp=unit.hp;
+    unit.maxHp=scaleItemSummonHp(unit,Math.floor((basis.base+unit.maxHpBasis.flat)*(10000+basis.bps+basis.bonusBps)/10000));
+    unit.hp=beforeHp>0?Math.min(unit.maxHp,beforeHp+unit.maxHp-beforeMax):0;
+    events.push({type:'maxHpChanged',tick,unitId:unit.id,source:asSource(mogul.source),beforeMax,afterMax:unit.maxHp,beforeHp,afterHp:unit.hp,countsAsHeal:false});
+  }
   settleShieldEnds(ctx, () => actionSeq++);
   // Every vamp condition samples the same healing-entry HP, before any queued heal.
   const rates = new Map(units.map(unit => [unit.id, vampRates(unit, unit.hp)]));

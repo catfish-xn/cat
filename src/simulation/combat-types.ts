@@ -34,6 +34,7 @@ export interface G23State {
   highRoller: {actionSeq:number;spell:number;mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
 }
 export interface CombatUnit {
+  readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
   readonly openingItemBankGold?:number;
   readonly currentItemBankGold?:number;
   readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin;

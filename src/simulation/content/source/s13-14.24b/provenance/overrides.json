@@ -192,7 +192,15 @@
       "label": "约定值，非官方证据",
       "version": "14.24b project WIP",
       "behavior": "Store successful and failed combat gold rolls explicitly. Positive receipts grant exactly once at settlement through generic economy receipts. Gambler uses frozen opening bank plus this side’s earned battle receipts, capped30, updated after the triggering attack scheduled its cooldown.",
-      "sourceLimit": "Original pickup timing is unavailable. Collector and Gambler wired; Mogul pending. Raw Gambler hashed constants20/4 remain uninterpreted."
+      "sourceLimit": "Original pickup timing is unavailable. Collector, Gambler and Mogul wired; raw Gambler hashed20/4 remain uninterpreted."
+    },
+    {
+      "id": "G24-MOGUL-STACK-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "One stack per positive HP-or-shield packet, capped35; deferred payments do not stack. Resists affect later packets; HP grows after the fixed-max survival barrier, preserving missing HP but never reviving a lethal hit. Full-stack1gold may occur on a lethal35th hit; subsequent160tick payouts require a living holder.",
+      "sourceLimit": "Raw confirms health7/resists1/cap35/full1gold/8seconds, not shield qualification, per-packet order, lethal35th-hit eligibility or precise HP-growth barrier."
     }
   ]
 }
