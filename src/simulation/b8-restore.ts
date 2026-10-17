@@ -289,6 +289,14 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
   committed = true;
+  // Choice receipts have already passed mechanic/G23 authority and provenance
+  // validation. Replay their births in receipt order, including items since
+  // consumed by a later combination/tool; current inventory is not birth proof.
+  const prefixMechanicIds = new Set(entries.slice(0,basis.provenancePrefixLength).flatMap(fact =>
+    fact.kind === 'item-acquired' && fact.source.kind === 'mechanic' ? [fact.source.receiptId] : []));
+  const mechanicChoices = (state.seatMechanics?.receipts ?? []).filter(receipt => receipt.kind === 'choice'
+    && receipt.roundId === state.roundDefinitionId && receipt.itemId !== null && !prefixMechanicIds.has(receipt.receiptId));
+  let mechanicCursor = 0;
   let resolvedChoices = 0;
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
     combinations(); // Between user choices, never inside a grant transaction.
@@ -299,6 +307,15 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     combinations();
     if (cursor === entries.length) break;
     const sale = entries[cursor];
+    if (sale.kind === 'item-acquired' && sale.source.kind === 'mechanic') {
+      const receipt = mechanicChoices[mechanicCursor++], itemId = `item-${nextItem}`;
+      check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
+        && receipt?.kind === 'choice' && !receipt.skipped && receipt.itemId === itemId
+        && receipt.receiptId === sale.source.receiptId, 'mechanic choice birth order');
+      take({kind:'item-acquired',itemId,source:{kind:'mechanic',receiptId:receipt.receiptId}});
+      items = [...items,{id:itemId,definitionId:receipt.optionId,location:{kind:'inventory'}}]; nextItem++;
+      continue;
+    }
     check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
       && [...expectedProgress.values()].includes('pending-capacity') && sale.kind === 'unit-sold'
       && sale.context === 'settlement-capacity', 'capacity sale boundary');
@@ -311,6 +328,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
+  check(mechanicCursor === mechanicChoices.length, 'mechanic choice birth coverage');
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
