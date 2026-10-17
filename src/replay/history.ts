@@ -60,7 +60,9 @@ function capture(runId: string, working: WorkingRecord): BattleRecord {
   // Context, initial state and individual events are already owned and deeply frozen.
   // Snapshot the growing arrays; combat hashes cover state/events, while commands
   // are validated through production replay and strict resource-prefix comparison.
-  return markOwned(Object.freeze({ version: Object.freeze(recordVersion(context)), roundId: context.m8.round.roundId, runId, combatId: terminal.combatId!, context, initial, equipmentCommands: Object.freeze([...equipmentCommands]), events: Object.freeze([...events]),
+  return markOwned(Object.freeze({ version: Object.freeze(recordVersion(context)), roundId: context.m8.round.roundId, runId, combatId: terminal.combatId!, context, initial,
+    // Omitted when empty so records without combat equipment commands keep the earlier shape.
+    ...(equipmentCommands.length ? { equipmentCommands: Object.freeze([...equipmentCommands]) } : {}), events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
     stateHash: digestContent(terminal), eventHash: digestContent(events) }));
 }

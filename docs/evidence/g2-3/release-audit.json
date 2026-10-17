@@ -197,7 +197,7 @@
     "src/simulation/m8/version.ts": "7d3119760fba6663c3ba90294ea350ad90cd1d73c88c835f817a7155073ce321",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
-    "src/simulation/match.ts": "82f47220344b4387e583f507d4c2d3ba069f925744ae7798a2c603fdc505fc74",
+    "src/simulation/match.ts": "50944a7470725675b6b5a0a6b3b7e18673456a1eeb2926b6bb6024df886ddd77",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
