@@ -134,9 +134,12 @@ export function digestContent(value: unknown): string {
 }
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
+import { G24_SUPPORT_DECLARATIONS } from './g2-4-support-items';
+import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
+import { G24_CHEST_POOL } from './g2-4-chest-pool';
 export const CONTENT_DIGEST = digestContent({
   rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
-  g24:{artifactSource:G24_ARTIFACT_SOURCE},
+  g24:{artifactSource:G24_ARTIFACT_SOURCE,supportDeclarations:G24_SUPPORT_DECLARATIONS,supportItemSource:G24_SUPPORT_ITEM_SOURCE,chestPool:G24_CHEST_POOL},
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},

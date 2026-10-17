@@ -19,8 +19,8 @@ export class PlaybackSession {
   private speed: 1 | 2 | 4 = 1;
   private accumulator = 0;
   private snapshot: ReplaySnapshot | null = null;
-  constructor(record: BattleRecord) {
-    const verified = validateBattleRecord(record);
+  constructor(record: BattleRecord, battles?: readonly BattleRecord[]) {
+    const verified = validateBattleRecord(record, battles);
     if (verified.terminal.status !== 'finished') throw new Error('只能回放已完成战斗');
     this.record = isOwnedBattleRecord(record) ? record : deepFreeze(structuredClone(record)); this.state = snapshotData(record.initial);
     this.checkpoints.set(0, snapshotData(this.state));

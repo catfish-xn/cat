@@ -237,8 +237,10 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
+ // multiplayer G2-4a restored the tier-12 crown, which takes item-16 before tier 14.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-16',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
-  kind:'item',itemId:'item-16',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+  kind:'item',itemId:'item-17',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);

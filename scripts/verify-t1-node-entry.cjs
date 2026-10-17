@@ -71,6 +71,7 @@ async function worker() {
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
+    'priorPvpWins', 'G22_EMISSARY_WIN_CAP',
     'startTwoSidedBattle', 'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
     'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
     'createSharedPool', 'initializeSharedSeat', 'generateSharedShop', 'buySharedUnit', 'rerollSharedShop',
