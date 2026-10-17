@@ -46,9 +46,9 @@
     },
     "tests/fixtures/g2-3-herald-raw/manifest.json": {
       "previousBytes": 21927,
-      "currentBytes": 27916,
+      "currentBytes": 28138,
       "previousSha256": "ba1bc8168ebd3ddbcab18c8e4d1864b312d43c12d6e97743bfae03b0fb09a392",
-      "currentSha256": "4c617190510af6ebf2edf65e398a07eb1d8bb26294a5683d6c6c873e2b600ef2",
+      "currentSha256": "329fd7476929a42f4156fc0a4b4cb37397f82188a42fb35a56e680323fbf8176",
       "firstDifferentByte": 151
     },
     "tests/fixtures/g2-3-herald-raw/quicksilver.json": {
