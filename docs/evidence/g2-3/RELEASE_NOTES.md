@@ -44,4 +44,4 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 
 ## PR #170：次级微光复制器 v9
 
-从 `f0f1d99` merge multiplayer `d6156ab`，保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。
+从 `f0f1d99` merge multiplayer `d6156ab`，再 merge 最新 `0719ced`（#162，仅界面及其测试增量），保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。
