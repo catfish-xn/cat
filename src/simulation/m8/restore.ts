@@ -161,11 +161,12 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       const pulse=holder.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(shield.source)&&t.nextPulseAtTick-t.periodTicks===shield.startsAtTick);
       const remainder=pulse?.remainders.find(r=>r.targetId===unit.id&&r.effectIndex===0);
       const reave=(unit.g22?.reaveUntilTick??0)>shield.startsAtTick?unit.g22!.reaveBps:0;
-      check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>{
+      // G2-4b resist-scaled grants sample live defenses, which this schema does not retain: only the integer grant is checked.
+      check(shield.decay.kind===grant.decay.kind && (grant.amount.resistsBps ? Number.isSafeInteger(shield.granted) && shield.granted >= 0 : [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>{
         const numerator=grant.amount.flat*10000+hp*grant.amount.maxHpBps;
         const previous=remainder?((remainder.numerator-numerator%10000+10000)%10000):0;
         return shield.granted===Math.floor(Math.floor((numerator+previous)/10000)*(10000-reave)/10000);
-      }), 'declared shield sampled amount');
+      })), 'declared shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
       continue;
     }

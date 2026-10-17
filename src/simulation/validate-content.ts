@@ -154,7 +154,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     const approved=ITEM_DEFINITIONS[item.id];
     if(!approved||item.apiName!==approved.apiName||item.kind!==approved.kind||item.unique!==approved.unique||item.slotCost!==approved.slotCost
       ||[...item.recipe ?? []].sort().join('|')!==[...approved.recipe ?? []].sort().join('|')) fail('Item differs from approved B1 mapping');
-    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram);
+    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram); if(item.isolatedEffects) effects(item.isolatedEffects);
     if(item.kind==='component') {if(item.recipe!==undefined) fail('Component recipe');}
     else if(item.kind==='completed') {
       if(!item.recipe&&approved.evidenceStatus==='approved-provisional')continue;

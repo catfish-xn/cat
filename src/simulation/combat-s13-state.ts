@@ -109,6 +109,9 @@ export function interval(unit: S13Unit, tick: number): number {
   // R7 neutral definitions author exact integer periods; they have no speed
   // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
   if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
+  // G2-4b Silvermere Dawn: a lock replaces every speed term; two locks keep the slower one.
+  const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
+  if (locks.length) return attackInterval(Math.min(...locks), 0);
   const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
   const bankSpeed=gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0;
   const speedBps = bankSpeed + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });

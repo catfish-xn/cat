@@ -27,7 +27,7 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
         board: ctx.board, tick: ctx.tick, eventActorId: s.context.actorId, eventTargetId: s.context.targetId,
         eventActorCell: s.context.cast?.completionCell, eligibility: 'new-selection',
       }).map(u => u.id);
-    });
+    }, ctx.defenses ? id => ctx.defenses!(ctx.units.find(u => u.id === id)!, false) : undefined);
     holder.triggerLedger=result.ledger;
     for(const invocation of result.invocations) invocations.push({holder,invocation});
   }
@@ -45,7 +45,7 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
         && invocation.effectIndices.some(i => i > index && invocation.definition.effects[i].kind === 'damage')) {
         beforeDamage.push({ source, effect, ordinal }); continue;
       }
-      executeMechanismEffect(ctx,holder,source,target,effect,context.actionSeq,ctx.packets.length+100000,undefined,undefined,undefined,undefined,
+      executeMechanismEffect(ctx,holder,source,target,effect,context.actionSeq,ctx.packets.length+100000,undefined,undefined,undefined,facts.brokenShield,
         {area:invocation.targetIds.length>1,triggeringCastActionSeq:context.event==='cast-completed'?context.actionSeq:null,
           cast:signal.context.cast ?? undefined,facts,counters:invocation.counters});
       if (effect.kind === 'damage' && beforeDamage.length) ctx.packets[ctx.packets.length - 1].beforeDamage = beforeDamage.splice(0);
