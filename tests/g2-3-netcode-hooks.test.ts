@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createMatch, enableMultiplayerSettlement, forfeitPendingChoice, selectChoice, toPrivateSeatView, type MatchState } from '../src/server-entry';
 import { decideBotAction } from '../src/simulation/bot';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { readG23Progress } from '../src/simulation/g2-3-state';
+import { g23JunkerMenu } from '../src/simulation/g2-3-junker';
 import { getRoundSchedule } from '../src/simulation/round-schedule';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -18,6 +20,7 @@ import { CHOICE_SKIP_OPTION, alignReplayUnits, grantMechanicGold, grantMechanicI
   type MechanicChoiceSpec } from '../src/simulation/seat-mechanics';
 import { battle, freeze, unit } from './combat-helpers';
 import { room } from './tp-helpers';
+import { publicPendingArmory } from './fixtures/g2-3-armory-public';
 
 const ok = <T extends { ok: boolean }>(result: T): Extract<T, { ok: true }> => {
   if (!result.ok) throw new Error((result as unknown as { reason: string }).reason);
@@ -111,10 +114,26 @@ describe('G2-3 mechanic choices', () => {
     const strict = ok(openMechanicChoice(solo(), blackMarket(false))).state;
     expect(selectChoice(strict, 'market-1', 0, CHOICE_SKIP_OPTION)).toMatchObject({ ok: false, reason: 'choice-not-skippable', state: strict });
   });
-  it('an offline save with a pending mechanic choice restores', () => {
-    const opened = ok(openMechanicChoice(createMatch(7), armory()));
-    expect(restoreMatch(JSON.stringify(opened.state)).pendingChoice).toEqual(opened.state.pendingChoice);
-  });
+  it('an offline save with a pending mechanic choice restores', async () => {
+    // Buy Rumble from the shop and complete three real battles; Match opens the armory.
+    const state = await publicPendingArmory(), progress = readG23Progress(state)!;
+    const choice = state.pendingChoice!, menu = g23JunkerMenu(state)!;
+    expect(state.multiplayer).toBeUndefined();
+    expect(state.phase).toBe('choice');
+    expect(progress.junkerRounds).toBe(3);
+    expect(progress.economyReceipts.filter(r => r.kind === 'battle' && r.facts.rumbleStar > 0)).toHaveLength(3);
+    expect(progress.junkerPurchases).toEqual([]);
+    expect(state.preparation.units.find(u => u.id === menu.unitId)).toMatchObject({ definitionId: 'rumble', team: 'player', location: { kind: 'board' } });
+    expect(choice).toMatchObject({ kind: 'armory', choiceId: 'g23:junker:1', eventId: menu.id, offers: menu.choices,
+      returnPhase: 'preparation', payload: { kind: 'armory', source: 'junker-king' } });
+    expect(restoreMatch(JSON.stringify(state)).pendingChoice).toEqual(choice);
+    const save = serializeMatch(state);
+    for (const input of [state, JSON.parse(save), save]) expect(restoreMatch(input)).toEqual(state);
+    // A renamed G23 window still needs its real authority, regardless of ID prefix.
+    const renamed = { ...state, pendingChoice: { ...choice, choiceId: 'armory-1', eventId: 'armory-1' } };
+    for (const input of [renamed, JSON.stringify(renamed)]) expect(() => restoreMatch(input)).toThrow('G23 pending choice authority');
+    expect(() => serializeMatch(renamed)).toThrow('G23 pending choice authority');
+  }, 30000);
 });
 
 describe('G2-3 unit grants through the shared pool', () => {
