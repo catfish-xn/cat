@@ -111,22 +111,25 @@ function forgeStates():Map<number,MatchState>{
  throw Error('forge fixture budget');
 }
 
-function restoreDomain(input:unknown):MatchState{
+function validateForgeDomain(input:unknown):void{
  const state=JSON.parse(JSON.stringify(input)) as MatchState;
- validateSeatMechanicsState(state.seatMechanics);if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);validateG23Restoration(state);return state;
+ validateSeatMechanicsState(state.seatMechanics);if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);validateG23Restoration(state);
 }
 
-it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects duplicate grants and edited authority',tier=>{
+it.each([10,14])('tier %i validates pending/manual/timeout domains and rejects duplicate grants and edited authority',tier=>{
  const state=forgeStates().get(tier)!,c=state.pendingChoice!;
- expect(restoreDomain(state)).toEqual(state);
+ validateForgeDomain(state);
+ expect(JSON.parse(JSON.stringify(state))).toEqual(state);
  const before=JSON.stringify(state),rng=state.reforgeState;
  const manual=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[2]));
  expect(manual.items.filter(i=>i.definitionId===c.offers[2]).length).toBe(state.items.filter(i=>i.definitionId===c.offers[2]).length+1);
- expect(restoreDomain(manual)).toEqual(manual);
+ validateForgeDomain(manual);
+ expect(JSON.parse(JSON.stringify(manual))).toEqual(manual);
  expect(selectChoice(manual,c.choiceId,c.generation,c.offers[2])).toMatchObject({ok:false,state:manual});
  const timeout=accepted(forfeitPendingChoice(state,state.round,c.choiceId,c.generation));
  expect(timeout.seatMechanics!.receipts.find(r=>r.receiptId===c.choiceId)).toMatchObject({kind:'choice',choiceKind:'forge',optionId:c.offers[0],price:0,timedOut:true,skipped:false});
- expect(restoreDomain(timeout)).toEqual(timeout);
+ validateForgeDomain(timeout);
+ expect(JSON.parse(JSON.stringify(timeout))).toEqual(timeout);
  expect(forfeitPendingChoice(timeout,state.round,c.choiceId,c.generation).ok).toBe(false);
  expect(timeout.reforgeState).toEqual(rng);
  expect(JSON.stringify(state)).toBe(before);
@@ -140,11 +143,11 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
  for(const [i,definitionId] of c.offers.entries())owned=accepted(grantMechanicItem(owned,{receiptId:`fixture:owned:${i}`,source:'fixture',definitionId})) as MatchState;
  expect(openG23Choice(owned).state.pendingChoice!.offers).toEqual(c.offers);
  for(const patch of [{offers:[...c.offers].reverse()},{offers:['warmog',...c.offers.slice(1)]},{choiceId:c.choiceId.replace(':copy:0',':copy:1')},{payload:{...c.payload,source:'black-market'}},{payload:{...c.payload,timeoutOption:c.offers[1]}}]){
-  expect(()=>restoreDomain({...state,pendingChoice:{...c,...patch}})).toThrow();
+  expect(()=>validateForgeDomain({...state,pendingChoice:{...c,...patch}})).toThrow();
  }
  for(const patch of [{itemId:null},{kind:'item',definitionId:c.offers[2]},{source:'black-market'},{choiceKind:'blackMarket'},{price:1},{skipped:true},{timedOut:true},{optionId:'warmog'},{receiptId:c.choiceId.replace(':copy:0',':copy:1')}]){
   const bad={...manual,seatMechanics:{...manual.seatMechanics!,receipts:manual.seatMechanics!.receipts.map(r=>r.receiptId===c.choiceId?{...r,...patch}:r)}};
-  expect(()=>restoreDomain(bad)).toThrow();
+  expect(()=>validateForgeDomain(bad)).toThrow();
  }
  expect(()=>validateG23MechanicLinks(manual)).not.toThrow();
  const receipt=state.multiplayer!.receipts.at(-1)!;
@@ -152,7 +155,7 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
  expect(state.seatMechanics!.receipts.filter(r=>r.receiptId===`g23:conqueror:${tier}:gold`)).toEqual(tier===10?[]:[expect.objectContaining({kind:'gold',amount:50})]);
  const goldId=`g23:conqueror:${tier}:gold`;
  const forgedGold={receiptId:goldId,source:'conqueror-chest',kind:'gold' as const,amount:tier===10?14:60,round:state.round,roundId:state.roundDefinitionId};
- expect(()=>restoreDomain({...manual,seatMechanics:{...manual.seatMechanics!,receipts:[...manual.seatMechanics!.receipts.filter(r=>r.receiptId!==goldId),forgedGold]}})).toThrow();
+ expect(()=>validateForgeDomain({...manual,seatMechanics:{...manual.seatMechanics!,receipts:[...manual.seatMechanics!.receipts.filter(r=>r.receiptId!==goldId),forgedGold]}})).toThrow();
 },30000);
 
 it('completed reforger refuses artifacts in inventory or equipped without consuming tool/RNG; ordinary reforge still restores',()=>{
@@ -195,10 +198,11 @@ it('rejects synthetic artifact windows at the save boundary while their choice d
  const state=accepted(openMechanicChoice(initial,{choiceId:'artifact-save',offers,returnPhase:'preparation',payload:{kind:'forge',source:'fixture',timeoutOption:offers[0]}}));
  for(const input of [state,JSON.stringify(state)])expect(()=>restoreMatch(input)).toThrow('preparation-ledger-state-phase');
  expect(()=>serializeMatch(state)).toThrow('preparation-ledger-state-phase');
- expect(restoreDomain(state)).toEqual(state);
+ validateForgeDomain(state);
+ expect(JSON.parse(JSON.stringify(state))).toEqual(state);
  const picked=accepted(selectChoice(state,'artifact-save',0,offers[3]));
  for(const input of [picked,JSON.stringify(picked)])expect(()=>restoreMatch(input)).toThrow('preparation-ledger-command-rejected');
  expect(()=>serializeMatch(picked)).toThrow('preparation-ledger-command-rejected');
- expect(restoreDomain(picked)).toEqual(picked);
- expect(restoreDomain(picked).items.at(-1)?.definitionId).toBe(offers[3]);
+ expect(validateForgeDomain(picked)).toEqual(picked);
+ expect(validateForgeDomain(picked).items.at(-1)?.definitionId).toBe(offers[3]);
 });

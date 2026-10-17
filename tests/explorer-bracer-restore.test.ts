@@ -91,6 +91,9 @@ describe('Seeker\'s Armguard direct production combat validators', () => {
 
   it('rejects transferring Lux kills to Irelia with rebuilt owner/item/trigger identities', () => {
     const state = stackedBracerSave(true);
+    for (const input of [state, JSON.stringify(state)])
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
+    expect(() => serializeMatch(state)).toThrow('Invalid Match save: preparation-ledger-command-rejected');
     validateArtifactCombatFixture(JSON.stringify(state));
     const control = structuredClone(state);
     expect(finish(control)).toEqual(finish(state));
