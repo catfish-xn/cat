@@ -19,16 +19,18 @@ export function ensureMechanisms(unit: S13Unit, tick = 0, combatId = 'standalone
 }
 // Index immutable contributions, never their HP-dependent evaluated values.
 // An array replacement or tick change invalidates the read cache automatically.
-const modifierIndex = new WeakMap<readonly StatusGroup[], { tick: number; values: Map<StatModifier['stat'], StatModifier[]> }>();
+const modifierIndex = new WeakMap<readonly StatusGroup[], { tick: number; values: Map<StatModifier['stat'], StatModifier[]>; fixedAd:number }>();
 export function statusModifiers(unit: S13Unit, stat: StatModifier['stat'], tick = unit.mechanismState?.sampledAtTick ?? 0): StatModifier[] {
   const groups = unit.mechanismState?.statuses; if (!groups?.length) return [];
   let index = modifierIndex.get(groups);
   if (!index || index.tick !== tick) {
-    const values = new Map<StatModifier['stat'], StatModifier[]>();
+    const values = new Map<StatModifier['stat'], StatModifier[]>();let fixedAd=0;
     for (const group of groups) for (const c of group.contributions) if (c.application.modifier && isEffective(c, tick)) {
-      const modifier = c.application.modifier, list = values.get(modifier.stat) ?? []; list.push(modifier); values.set(modifier.stat, list);
+      const modifier = c.application.modifier;
+      if(c.source.sourceKind==='anomaly'&&c.source.definitionId==='power-absorption'&&modifier.stat==='attackDamage'&&modifier.unit==='flat'&&modifier.value.kind==='constant'){fixedAd+=modifier.value.amount;continue;}
+      const list = values.get(modifier.stat) ?? []; list.push(modifier); values.set(modifier.stat, list);
     }
-    index = { tick, values }; modifierIndex.set(groups, index);
+    index = { tick, values, fixedAd }; modifierIndex.set(groups, index);
   }
   return index.values.get(stat) ?? [];
 }
@@ -88,7 +90,7 @@ export function ap(unit: S13Unit, tick: number): number {
 export function ad(unit: S13Unit): number {
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
-  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000);
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0);
 }
 export function range(unit: S13Unit): number {
   return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });

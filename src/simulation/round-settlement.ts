@@ -134,9 +134,10 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
-    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy):next);
+    const hookEvents:MatchEvent[]=[];
+    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
     const opened=openG23Choice(merged.state);
-    const extra=[...merged.events,...mechanicGrantEvents(state,merged.state),...opened.events];
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

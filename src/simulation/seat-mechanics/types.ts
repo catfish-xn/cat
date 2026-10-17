@@ -1,5 +1,5 @@
 /**
- * G2-3 netcode hooks (MULTIPLAYER_CONTRACT §19, MATCH_CONTRACT §20): one generic, owner-visible container for
+ * G2-3 netcode hooks (MULTIPLAYER_CONTRACT §25, MATCH_CONTRACT「G2-3 机制通用接口」): one generic, owner-visible container for
  * seat-level mechanic state, exactly-once mechanic receipts, three mechanic choice kinds, unit forms and summon flags.
  * Absent from every pre-G2-3 state, save and view; existing matches never create it.
  */
@@ -74,7 +74,8 @@ export interface MechanicChoiceSpec {
 /** UI-visible match events added by the hooks. */
 export type SeatMechanicMatchEvent =
   | { readonly type: 'mechanicGranted'; readonly receipt: MechanicReceipt }
-  | { readonly type: 'seatMechanicChanged'; readonly key: string };
+  | { readonly type: 'seatMechanicChanged'; readonly key: string }
+  | { readonly type: 'mechanicFailed'; readonly hook: 'rewards' | 'choice' | 'academy'; readonly reason: import('../match-types').MatchFailure };
 
 /** New command failures. Rules map them to MatchFailure; the UI maps them to text. */
 export type SeatMechanicFailure =

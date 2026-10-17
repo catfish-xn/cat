@@ -16,8 +16,8 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
  const a=m.seat.academy as {sponsored:readonly string[]};
  const j=m.seat.junkerKing as {rounds:number;purchases:G23MatchProgress['junkerPurchases']};
  const rewardClaims:G23RewardClaim[]=[];
- for(const r of m.receipts)for(const b of rewards){
-  const atoms=g23RewardAtoms(b,h.seed);
+ const bundles=rewards.map(b=>({b,atoms:g23RewardAtoms(b,h.seed)}));
+ for(const r of m.receipts)for(const {b,atoms} of bundles){
   for(const atom of atoms){
    const prefix=atom.id+':copy:';
    const marketFirst=r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===b.id&&!r.skipped&&atom===atoms.find(a=>a.kind==='item');

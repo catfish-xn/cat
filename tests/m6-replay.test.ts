@@ -56,6 +56,8 @@ describe('M6 isolated battle records and replay',()=>{
     const events=start.events.filter((event):event is CombatEvent=>event.domain==='combat');
     history.observe({before:initial,after:start.state,events,reason:'command'});
     const zero=history.capturePrefix()!, zeroSnapshot=structuredClone(zero);
+    expect(zero.context.m8).toBe(initial.m8);
+    expect(zero.context).not.toBe(initial);
     Object.assign(initial,{seed:99}); Object.assign(start.state.combat!,{tick:999});
     if(events[0]) Object.assign(events[0],{tick:999});
     expect(history.capturePrefix()).toEqual(zeroSnapshot);

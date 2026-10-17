@@ -52,3 +52,12 @@ describe('G4 detached replay snapshots', () => {
     expect(() => validateBattleRecord(deepFreeze(tampered))).toThrow();
   });
 });
+
+it('snapshots arrays, sparse entries and prototype-named JSON keys without changing the source',()=>{
+ const input:any={array:new Array(3),constructor:{value:1},toString:'plain'};
+ input.array[1]={hp:9};Object.defineProperty(input.array,'extra',{value:{ok:true},enumerable:true});
+ const copy=snapshotData(input);
+ deepStrictEqual(copy,structuredClone(input));
+ expect(0 in copy.array).toBe(false);expect(copy.array[1]).not.toBe(input.array[1]);
+ expect(Object.getPrototypeOf(copy)).toBe(Object.prototype);
+});

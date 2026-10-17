@@ -12,7 +12,16 @@ import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
 import { survivalConsumptionKeys } from './shield';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
+type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
+// Lifetime is exactly one synchronous restore. Mutable external objects are
+// never trusted between calls, even when their object identity is unchanged.
+let restoreDeclarations:WeakMap<CombatUnit,Map<string,Declaration[]>>|undefined;
+export function withItemRestoreCache<T>(run:()=>T):T{
+ const previous=restoreDeclarations;restoreDeclarations=new WeakMap();
+ try{return run();}finally{restoreDeclarations=previous;}
+}
 export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect;survivalSource?:Source}[] {
+ const cached=restoreDeclarations?.get(unit)?.get(combatId);if(cached)return cached;
  const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect;survivalSource?:Source}[]=[];
  const collect=(source:Source,effects:readonly Effect[],survivalSource?:Source)=>effects.forEach((effect,i)=>{
   const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect,survivalSource});
@@ -31,6 +40,7 @@ export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;
   }
   if(m.mechanic==='enforcer')for(let n=1;n<=m.values.wanted;n++)result.push({source,effect:stat(modifier('attackSpeed',n*m.values.attackSpeedBps,'bps'))});
  }
+ if(restoreDeclarations){let entries=restoreDeclarations.get(unit);if(!entries){entries=new Map();restoreDeclarations.set(unit,entries);}entries.set(combatId,result);}
  return result;
 }
 export function statusDeclaration(effect:Effect,owner:CombatUnit,source:Source):StatusApplication|null {
@@ -126,7 +136,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
  if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
- let values=[{flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
+ let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
   if(unit.mechanismDefinitions?.periodicTasks.some(t=>canonicalSource(t.source)===canonicalSource(d.source)))continue;
@@ -138,7 +148,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   if(m.value.kind==='constant')options=initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
-    if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];values=values.flatMap(previous=>options.map(v=>({...previous,[m.unit]:previous[m.unit as 'flat'|'bps']+v})));continue;}
+    if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=values.flatMap(previous=>options.map(v=>({...previous,[field]:previous[field as 'flat'|'bps'|'fixed']+v})));continue;}
     const cap=(compileMechanismDefinitions(unit,combatId).eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
     if(cap===undefined||cap===null)throw new Error('Unbounded enabled AP counter');
     options=Array.from({length:cap+1},(_,i)=>i*value.perCount);
@@ -147,7 +157,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
  }
  const histories=[{flat:0,bps:0}];
  for(const c of augmentGrowth){const m=c.application.modifier!;if(m.value.kind==='constant'&&(m.unit==='flat'||m.unit==='bps')){const previous=histories[histories.length-1];histories.push({...previous,[m.unit]:previous[m.unit]+m.value.amount});}}
- return new Set(values.flatMap(v=>histories.map(g=>Math.floor((base+v.flat+g.flat)*(10000+v.bps+g.bps)/10000))));
+ return new Set(values.flatMap(v=>histories.map(g=>Math.floor((base+v.flat+g.flat)*(10000+v.bps+g.bps)/10000)+v.fixed)));
 }
 export const abilityPowerCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'abilityPower',at,combatId);
 export const attackDamageCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'attackDamage',at,combatId);

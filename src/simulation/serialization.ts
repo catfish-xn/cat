@@ -8,7 +8,7 @@ import { freezeCombatDeclarations } from './combat-static';
 import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
-import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -76,6 +76,9 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
  * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
  */
 export function restoreMatch(input: unknown): MatchState {
+  return withItemRestoreCache(()=>restoreMatchWithinCall(input));
+}
+function restoreMatchWithinCall(input: unknown): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -146,8 +149,8 @@ export function restoreMatch(input: unknown): MatchState {
   }
   for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
   if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
-  const lootChoice = validateB8Loot(state, typeof input === 'string');
   if (state.seatMechanics !== undefined) mechanicCheck(() => validateSeatMechanicsState(state.seatMechanics), 'seat mechanics');
+  const lootChoice = validateB8Loot(state, typeof input === 'string');
   if (state.phase === 'choice' && !lootChoice && isMechanicChoice(state.pendingChoice)) mechanicCheck(() => validateMechanicPendingChoice(state), 'mechanic choice');
   else if (state.phase === 'choice' && !lootChoice) {
     record(state.pendingChoice); const choice = state.pendingChoice;
@@ -242,6 +245,11 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
     if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>countsG23SurvivorDamage(unit)&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
+    if (combat.removedUnitIds !== undefined) {
+      list(combat.removedUnitIds);
+      requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
+        && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
+    }
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {

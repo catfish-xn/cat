@@ -23,7 +23,10 @@ export function snapshotData<T>(value: T): T {
       const descriptor = Object.getOwnPropertyDescriptor(input, key)!;
       if (!('value' in descriptor)) throw nativeRequired;
       const child = copy(descriptor.value);
-      Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
+      // JSON keys are ordinary own properties. Only __proto__ needs definition
+      // to avoid invoking Object.prototype's legacy setter.
+      if (key === '__proto__') Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
+      else (result as Record<string, unknown>)[key] = child;
     }
     return result;
   };
