@@ -13,7 +13,9 @@ export type G23CombatEventData =
   /** One rolled ability result, e.g. High Roller: outcome 'rocket' | 'shield' | 'gold' | 'triple', subOutcomes for triple. */
   | { readonly type: 'castOutcome'; readonly tick: number; readonly unitId: string; readonly abilityKey: string; readonly outcome: string; readonly subOutcomes: readonly string[] }
   /** Sion bound (true) / broke free (false); reason e.g. 'combat-start' | 'casts' | 'hp-threshold'. */
-  | { readonly type: 'bindingChanged'; readonly tick: number; readonly unitId: string; readonly bound: boolean; readonly reason: string };
+  | { readonly type: 'bindingChanged'; readonly tick: number; readonly unitId: string; readonly bound: boolean; readonly reason: string }
+  /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */
+  | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 
