@@ -51,6 +51,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
       ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
+      ...(resolved?.openingItemBankGold===undefined?{}:{openingItemBankGold:resolved.openingItemBankGold,currentItemBankGold:resolved.openingItemBankGold}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
@@ -78,8 +79,8 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     } },
     ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
-    ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
-    ...(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Collector'))?{itemGoldReceipts:[]}:{}),
+    ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector','g24Gambler'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
+    ...(units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler'].includes(m.mechanic)))?{itemGoldReceipts:[]}:{}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };

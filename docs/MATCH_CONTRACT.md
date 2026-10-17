@@ -474,3 +474,11 @@ these payouts; `commitG23Settlement` grants each through the generic mechanic
 receipt exactly once. `validateG23MechanicLinks` checks both directions between
 facts and grant receipts. Trigger authenticity/RNG reconstruction belongs to
 the combat adapter, still WIP; arbitrary input facts are not an authority.
+
+Gambler adds optional `CombatStrategyInputs.bankGold` and private
+`PlayerBattleSnapshot.bankGold` only when its item is present. The former is
+validated against the current balance or current settlement's goldBefore;
+the latter is captured from the owning seat by snapshotForBattle.
+`StrategyUnitSnapshot.openingItemBankGold` is capped30; combat's current bank
+adds own-side earned receipts up to that cap. No combat payout is spendable
+until the existing settlement transaction commits it.

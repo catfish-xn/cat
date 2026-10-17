@@ -191,8 +191,8 @@
       "status": "provisional-needs-user-confirmation",
       "label": "约定值，非官方证据",
       "version": "14.24b project WIP",
-      "behavior": "Store successful and failed combat gold rolls explicitly. Positive receipts grant exactly once at settlement through generic economy receipts.",
-      "sourceLimit": "Original pickup timing is unavailable. Collector wired; Gambler/Mogul triggers and bank scaling remain pending."
+      "behavior": "Store successful and failed combat gold rolls explicitly. Positive receipts grant exactly once at settlement through generic economy receipts. Gambler uses frozen opening bank plus this side’s earned battle receipts, capped30, updated after the triggering attack scheduled its cooldown.",
+      "sourceLimit": "Original pickup timing is unavailable. Collector and Gambler wired; Mogul pending. Raw Gambler hashed constants20/4 remain uninterpreted."
     }
   ]
 }

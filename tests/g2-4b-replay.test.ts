@@ -21,7 +21,7 @@ function seat(item?:string):MatchState {
   return state;
 }
 
-it.each(['TFT_Item_Artifact_Fishbones','TFT_Item_Artifact_SpectralCutlass','TFT_Item_Shroud','TFT4_Item_OrnnDeathsDefiance','TFT9_Item_OrnnTrickstersGlass','TFT4_Item_OrnnTheCollector'])(
+it.each(['TFT_Item_Artifact_Fishbones','TFT_Item_Artifact_SpectralCutlass','TFT_Item_Shroud','TFT4_Item_OrnnDeathsDefiance','TFT9_Item_OrnnTrickstersGlass','TFT4_Item_OrnnTheCollector','TFT7_Item_ShimmerscaleGamblersBlade'])(
   '%s reproduces every compact replay frame and rejects a missing visible action',item=>{
     const input=compileBattle(snapshotForBattle(seat(item),'A'),snapshotForBattle(seat(),'B'),42);
     const battle=resolveTwoSidedBattle(input,1201), replay=toCombatReplay(battle);

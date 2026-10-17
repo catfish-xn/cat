@@ -249,11 +249,13 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
     const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Collector'));
-    if (fishbones.length||collector) {
+    const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
+    if (fishbones.length||collector||gamblers.length) {
       requireValue(combat.itemRandomStreams, 'missing item random streams');
       validateItemRandomStreams(combat.itemRandomStreams!, basis.battleSeed, {
         fishbones: fishbones.reduce((sum, u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
-        collector: Array.isArray(combat.itemGoldReceipts)?combat.itemGoldReceipts.filter(r=>r.kind==='collector').length:0, 'gamblers-blade': 0,
+        collector: Array.isArray(combat.itemGoldReceipts)?combat.itemGoldReceipts.filter(r=>r.kind==='collector').length:0,
+        'gamblers-blade':gamblers.reduce((sum,u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
       });
     } else requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
@@ -271,6 +273,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
+      requireValue(unit.openingItemBankGold===resolved.openingItemBankGold,'item opening bank');
+      if(unit.openingItemBankGold===undefined)requireValue(unit.currentItemBankGold===undefined,'unexpected item bank');
+      else{integer(unit.currentItemBankGold);requireValue(unit.currentItemBankGold!>=unit.openingItemBankGold&&unit.currentItemBankGold!<=30,'item bank bounds');}
       validateDefianceDebts(unit,combat.units,combat.tick,combat.combatId!,combat.nextActionSeq!);
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(same(unit.itemSummon??null,resolved.itemSummon??null),'item summon origin');

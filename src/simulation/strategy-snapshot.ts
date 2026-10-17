@@ -150,7 +150,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       return { ...mechanic, targetId: buddy!.id };
     });
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
-    return { unitId: unit.id, ...resolved, mechanics, ...(itemPrograms.length ? {itemPrograms} : {}) };
+    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler');
+    if(gambler&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative Gambler bank');
+    return { unitId: unit.id, ...resolved, mechanics,...(gambler?{openingItemBankGold:Math.min(gambler.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

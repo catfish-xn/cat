@@ -63,4 +63,11 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
     combatProgram:{modifiers:[modifier('critChance',3000,'bps')]},
     effectDescriptions:['攻击和技能处决低于12%最大生命的目标；处决有40%几率掉1金币，结算统一入账。'],
   },
+  TFT7_Item_ShimmerscaleGamblersBlade: {
+    id:'TFT7_Item_ShimmerscaleGamblersBlade',apiName:'TFT7_Item_ShimmerscaleGamblersBlade',name:'投机者之刃',
+    kind:'completed',unique:true,slotCost:1,evidenceStatus:'approved-provisional',conventionIds:['G24-ITEM-GOLD-01'],
+    effects:[{kind:'statFlat',stat:'abilityPower',amount:10},{kind:'attackSpeedBps',bps:4500},
+      {kind:'mechanic',mechanic:'g24Gambler',values:{goldLimit:30,speedPerGoldBps:100}}],
+    effectDescriptions:['每金币增加1%攻速，最多30金币；每次攻击5%几率掉1金币。战斗内掉金计入攻速、结算入账为待确认约定。'],
+  },
 });

@@ -141,6 +141,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
+  const awardItemGold=(owner:S13Unit,item:NonNullable<S13Unit['mechanics']>[number],kind:'collector'|'gamblers-blade',ordinal:number)=>{
+    if(!itemRandomStreams||!itemGoldReceipts)throw new RangeError('Missing item gold state');
+    const next=recordItemGold({streams:itemRandomStreams,receipts:itemGoldReceipts},{battleId:ctx.combatId!,ownerId:owner.id,
+      itemInstanceId:item.source.instanceId,kind,tick,ordinal});
+    itemRandomStreams=next.streams;itemGoldReceipts=next.receipts;
+    if(next.receipts.at(-1)!.gold)for(const holder of units){
+      if(holder.openingItemBankGold===undefined||holder.team!==owner.team)continue;
+      const limit=mechanic(holder,'g24Gambler','goldLimit');
+      holder.currentItemBankGold=Math.min(limit,holder.currentItemBankGold!+1);
+    }
+  };
   initializeMechanisms(ctx);
   if (state.tick === 0) {
     // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
@@ -293,6 +304,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
       const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); unit.cooldownTicks = oldInterval;
+      const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
+      if(gambler)awardItemGold(unit,gambler,'gamblers-blade',unit.runtime.attackCount-1);
       hooks(unit, 'onAttack', seq);
       emitMechanismSignal(ctx, { event: 'attack-completed', tick, actionSeq: seq, actorId: unit.id, targetId: attackTarget.id, cast: null });
       if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
@@ -399,11 +412,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
       // Execution bypasses shields and Defiance; death cleanup removes layers.
       commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
-      if(!itemRandomStreams||!itemGoldReceipts)throw new RangeError('Missing collector gold state');
-      const receipt=recordItemGold({streams:itemRandomStreams,receipts:itemGoldReceipts},{battleId:ctx.combatId!,ownerId:owner!.id,
-        itemInstanceId:collector.source.instanceId,kind:'collector',tick,
-        ordinal:itemGoldReceipts.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length});
-      itemRandomStreams=receipt.streams;itemGoldReceipts=receipt.receipts;
+      awardItemGold(owner!,collector,'collector',itemGoldReceipts?.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length??0);
     }
   };
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);

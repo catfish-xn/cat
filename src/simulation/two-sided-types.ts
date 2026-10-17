@@ -9,6 +9,8 @@ export const PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1';
 export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 /** Server-private frozen assets. No economy, shop, random stream or resolved combat numbers. */
 export interface PlayerBattleSnapshot {
+  /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
+  readonly bankGold?:number;
   readonly playerHp?:number;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   /** Emissary history from the seat's own settled ledger (1..7); omitted when zero. */

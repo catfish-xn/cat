@@ -214,3 +214,8 @@ receipts to settlement; G24-COLLECTOR-EXECUTE-01 is a **约定值**, not confirm
 original ordering. Source raw14.24 AD30%, crit30%, threshold12%, chance40%1gold.
 Gold restore independently reconstructs combat outcomes from the validated frozen
 input rather than authenticating a candidate's own opportunity list.
+
+Gambler runtime uses normal `TFT7_Item_ShimmerscaleGamblersBlade`, raw14.24
+AP10/AS45%,1%AS per gold capped30,5%1gold per actual attack. Frozen opening
+bank plus own-side battle gold and post-attack update timing are **约定值**
+G24-ITEM-GOLD-01. Hashed20/4 fields remain recorded but uninterpreted.
