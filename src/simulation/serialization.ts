@@ -7,7 +7,7 @@ import { projectG23Summons } from './g2-3-summons';
 import { validateG23State } from './g2-3-combat';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
-import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
+import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
@@ -47,13 +47,32 @@ import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanic
 // Reuse the pure default-catalog compilation, never any candidate validation.
 // Only local, already authenticated JSON basis inputs enter this byte-keyed map.
 const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
-function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean) {
-  if (!admittedJson) return buildStrategySnapshot(inputs);
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean, forSerialization: boolean) {
+  // Keep ordinary object restore's fresh compilation, including callers testing
+  // hypothetical trusted definitions. Serialization owns a validated, detached,
+  // frozen basis from restoreCombatInput; only proven data without -0 can reuse.
+  if (!admittedJson && (!forSerialization || !isImmutableJson(inputs))) return buildStrategySnapshot(inputs);
   const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
   if (cached) return cached;
   const compiled = freezeContent(buildStrategySnapshot(inputs));
   if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
   restoredStrategies.set(key, compiled); return compiled;
+}
+
+/** The private clone has no accessors, but structuredClone preserves extra array
+ * properties that canonicalContent ignores. Those can contain cycles or typed
+ * arrays whose legacy freeze throws. Only ordinary finite data may skip it. */
+function canSkipSerializationFreeze(value: unknown, ancestors = new Set<object>()): boolean {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'object' || ancestors.has(value)) return false;
+  const array = Array.isArray(value), keys = Object.keys(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) return false;
+  if (array && (keys.length !== value.length || keys.some((key, i) => key !== String(i)))) return false;
+  ancestors.add(value);
+  const safe = keys.every(key => canSkipSerializationFreeze((value as Record<string, unknown>)[key], ancestors));
+  ancestors.delete(value);
+  return safe;
 }
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
@@ -82,7 +101,7 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
 }
-function restoreMatchWithinCall(input: unknown): MatchState {
+function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -244,7 +263,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
     const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
@@ -298,6 +317,11 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Serialization consumes this private detached graph immediately. Freezing it
+  // would traverse the large metadata twice (freeze + canonical cache admission)
+  // only to discard it. Keep validation and cloning identical to object restore.
+  if (forSerialization && [detached.m8, detached.combatInputBasis, detached.resourceProvenance]
+    .every(value => canSkipSerializationFreeze(value))) return detached;
   // Exact JSON bytes (including property order) key immutable metadata sharing.
   // Object inputs retain their independent clone. '-0' conservatively disables
   // sharing for text inputs because JSON.stringify normalizes its numeric sign.
@@ -319,7 +343,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   freezeContent(restored.resourceProvenance);
   return restored;
 }
-export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
+export function serializeMatch(state: MatchState): string {
+  return withItemRestoreCache(() => canonicalContent(restoreMatchWithinCall(state, true)));
+}
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
 function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
