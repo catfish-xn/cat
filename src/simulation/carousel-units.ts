@@ -6,6 +6,7 @@ import { getCatalogRoundById } from './round-selectors';
 import { planDeferredUpgrades, transferUpgradeResources } from './upgrades';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import { canonicalContent } from './content';
+import { deploymentCapFor } from './deployment-cap';
 
 /** The deprecated aliases are persisted for the current server adapter, never separate queues. */
 export function validateCarouselMetadata(state: MatchState): void {
@@ -39,7 +40,7 @@ export function placeCarouselUnit(state: MatchState, unit: PendingCarouselUnit):
       location = {kind:'bench',slot}; break;
     }
   }
-  if (!location && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < state.level) {
+  if (!location && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < deploymentCapFor(state.level, preparation.units, state.items)) {
     const zone = preparation.board.deploymentZones.player;
     for (let row = zone.firstRow; row <= zone.lastRow && !location; row++) {
       for (let col = 0; col < preparation.board.columns; col++) {

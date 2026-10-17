@@ -319,6 +319,7 @@ interface PlayerBattleSnapshot {
   persistentGrowth: readonly PersistentGrowth[];
   augmentProgress: { pumpingRounds: number; investmentHp: number };
   priorPvpWins?: number;                   // 1..7，本席此前 PvP 胜场（外交官）；0 时省略，见 10.11
+  benchTeamSizeBonus?: number;             // 1..27，备战席单位所持金铲铲冠冕给的人口（场上单位的冠冕已在 items 中）；0 时省略（G2-4a）
 }
 interface BattleIdMapping {
   seatId: string; kind: 'unit' | 'item' | 'temporary-item' | 'augment' | 'anomaly';

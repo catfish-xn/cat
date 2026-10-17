@@ -27,6 +27,7 @@ import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount } from './game';
+import { deploymentCapFor } from './deployment-cap';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
@@ -55,7 +56,7 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { generateChoices } from './choices';
 import type { ScheduleReceipt } from './strategy-types';
-import { isSellableUnit } from './seat-mechanics/forms';
+import { countsTowardPopulation, isSellableUnit } from './seat-mechanics/forms';
 import { isMechanicChoice, isMechanicChoiceKind, resolveMechanicChoice, choiceTimeoutOption } from './seat-mechanics/choices';
 import type { FinishedCombat, MatchCommandResult, MatchEvent, MatchFailure, MatchState, MatchStep, RunningCombat } from './match-types';
 export * from './match-types';
@@ -176,7 +177,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
   const entered = enterScheduledEvents(writeG23Progress(initial,createG23Progress(seed)));
   return accept(entered.state, entered.events).state;
 }
-export function getDeploymentCap(state: MatchState): number { return state.level; }
+export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, state.preparation.units, state.items); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
   if (!canOperateMatch(state)) return 'wrong-phase';
   if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && (target?.kind === 'board'
@@ -211,8 +212,21 @@ export function lockMatchCombatRoster(state: MatchState): MatchCommandResult {
 /** Server preparation-deadline hook. Never called by the offline Start path. */
 export function autoDeployToCap(state: MatchState): MatchCommandResult {
   if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation' || isCombatRosterLocked(state)) return fail(state, 'wrong-phase');
-  const cap = getDeploymentCap(state), count = getPlayerDeploymentCount(state.preparation);
-  if (count > cap) return fail(state, 'population-cap');
+  const cap = getDeploymentCap(state);
+  let next: MatchState = state;
+  const events: MatchEvent[] = [];
+  // 约定值 (G2-4a crown): losing a crown can leave the board over cap; the newest counted units return to the first free bench slots.
+  const serial = (id: string): number => Number(id.slice(id.lastIndexOf('-') + 1)) || 0;
+  const excess = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && countsTowardPopulation(unit.definitionId))
+    .sort((a, b) => serial(b.id) - serial(a.id) || (a.id < b.id ? 1 : -1)).slice(0, Math.max(0, getPlayerDeploymentCount(state.preparation) - cap));
+  for (const unit of excess) {
+    const slot = Array.from({ length: next.preparation.benchSize }, (_, slot) => slot)
+      .find(slot => !next.preparation.units.some(other => other.location.kind === 'bench' && other.location.slot === slot));
+    if (slot === undefined) return fail(state, 'population-cap');
+    const result = deployMatchUnit(next, unit.id, { kind: 'bench', slot });
+    if (!result.ok) return fail(state, result.reason);
+    next = result.state; events.push(...result.events);
+  }
   const board = state.preparation.board, zone = board.deploymentZones.player;
   const columns = Array.from({ length: board.columns }, (_, col) => col)
     .sort((a, b) => Math.abs(a - (board.columns - 1) / 2) - Math.abs(b - (board.columns - 1) / 2) || a - b);
@@ -221,8 +235,6 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   const cells = rows.flatMap(row => columns.map(col => ({ col, row })));
   const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench')
     .sort((a, b) => (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
-  let next: MatchState = state;
-  const events: MatchEvent[] = [];
   for (const unit of reserves) {
     if (getPlayerDeploymentCount(next.preparation) >= cap) break;
     const cell = cells.find(cell => !next.preparation.units.some(other => other.location.kind === 'board'
