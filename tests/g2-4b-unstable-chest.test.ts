@@ -199,8 +199,8 @@ describe('G2-4b chest in combat', () => {
 
 describe('G2-4b chest restore candidates (sampled stats)', () => {
   const idle = (u: CombatUnit): CombatUnit => ({ ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 });
-  function sampledFight(champion: string, chests = 1, titans = 0): CombatState {
-    const state = combatOf([['holder', 'leona', 3, 4], ['caster', champion, 0, 7]], [['foe', 'garen', 3, 3]],
+  function sampledFight(champion: string, chests = 1, titans = 0, ally = false): CombatState {
+    const state = combatOf([['holder', 'leona', 3, 4], ['caster', champion, 0, 7], ...(ally ? [['z-ally', 'irelia', 6, 7] as Place] : [])], [['foe', 'garen', 3, 3]],
       [...Array.from({ length: chests }, () => ['holder', CHEST] as const), ...Array.from({ length: titans }, () => ['caster', 'titans-resolve'] as const)]);
     return { ...state, units: state.units.map(u => u.id === 'holder' ? { ...idle(u), hp: 1 } : u.id === 'caster' ? idle(u) : u) };
   }
@@ -222,6 +222,27 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expect(() => check(caster)).not.toThrow();
     expect(() => check({ ...caster, runtime: { ...caster.runtime!, [field]: damage + 1 } }))
       .toThrow(`Invalid Match save: derived empowered ${field === 'nextAttackMagic' ? 'magic' : 'physical'}`);
+  }
+  function killCaster(state: CombatState): CombatState {
+    state = { ...state, units: state.units.map(u => u.id === 'foe' ? { ...u, cell: { col: 0, row: 6 }, cooldownTicks: 0, moveCooldownTicks: 0 }
+      : u.id === 'caster' ? { ...idle(u), hp: 1 } : idle(u)) };
+    for (let i = 0; i < 100 && unitOf(state, 'caster').alive; i++) state = stepCombat(state).state;
+    expect(unitOf(state, 'caster').alive).toBe(false);
+    expect(state.status).toBe('running');
+    expect(unitOf(state, 'caster').mechanismState!.periodicTasks).toEqual([]);
+    return state;
+  }
+  function expectRestoredContinuation(state: CombatState): void {
+    const restored = JSON.parse(JSON.stringify(state)) as CombatState;
+    validate(restored);
+    for (const unit of restored.units) validateM5Runtime(unit, restored.tick, new Set(restored.units.map(u => u.id)), restored.units,
+      restored.combatId!, new Set(), (a, b) => canonicalContent(a) === canonicalContent(b), restored.nextActionSeq!);
+    const finish = (from: CombatState) => {
+      const events: CombatEvent[] = [];
+      while (from.status === 'running') { const step = stepCombat(from); from = step.state; events.push(...step.events); }
+      return { state: from, events };
+    };
+    expect(finish(restored)).toEqual(finish(state));
   }
 
   it('M1: Lux casts after receiving Nashor, accepts 594 magic damage and rejects 595', () => {
@@ -251,6 +272,44 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expect(caster.combatItemGrants!.map(g => g.definitionId)).toEqual(['shojin']);
     expect(attackDamageCandidates(caster, after.tick, after.combatId!)).toEqual(new Set([90, 103]));
     expectSampledRestore(after, 'nextAttackPhysical', 540);
+  });
+
+  it('M2: Lux dies after casting at two granted Archangel pulses; 972 magic restores and continues identically', () => {
+    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 64 });
+    expect(unitOf(after, 'caster').combatItemGrants!.map(g => g.definitionId)).toEqual(['archangel']);
+    const cast = castNow(waitForPulses(after, 200));
+    expect(unitOf(cast, 'caster').mechanismState!.periodicTasks.map(t => t.pulseOrdinal)).toEqual([2]);
+    const state = killCaster(cast);
+    expectSampledRestore(state, 'nextAttackMagic', 972);
+    expectRestoredContinuation(state);
+  });
+
+  it('M2: Lux shields Irelia after two granted Archangel pulses, then dies; the ally shield restores and continues identically', () => {
+    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 64 });
+    const ready = waitForPulses(after, 200);
+    const cast = castNow({ ...ready, units: ready.units.map(u => u.id === 'z-ally' ? { ...u, hp: 300 } : u) });
+    const shield = unitOf(cast, 'z-ally').shieldLayers!.find(s => s.source.ownerId === 'caster')!;
+    expect(shield).toBeDefined();
+    const state = killCaster(cast);
+    expect(unitOf(state, 'z-ally').shieldLayers).toContainEqual(shield);
+    expectSampledRestore(state, 'nextAttackMagic', 972);
+    expectRestoredContinuation(state);
+  });
+
+  it('granted periodic candidates stay bounded by the save clock even without live tasks or a known sample tick', () => {
+    const { after } = untilGranted({ ...sampledFight('lux'), rngState: 64 });
+    const state = castNow(waitForPulses(after, 200)), caster = unitOf(state, 'caster');
+    const withoutTasks = { ...caster, mechanismState: { ...caster.mechanismState!, periodicTasks: [] } };
+    const firstPulse = caster.mechanismDefinitions!.periodicTasks[0].nextPulseAtTick;
+    expect(abilityPowerCandidates(withoutTasks, firstPulse - 1, state.combatId!)).toEqual(new Set([100, 120]));
+    expect(abilityPowerCandidates(withoutTasks, firstPulse, state.combatId!)).toEqual(new Set([100, 120, 130, 150]));
+    const expected = new Set([100, 120, 130, 150, 160, 180]);
+    expect(abilityPowerCandidates(withoutTasks, 0, state.combatId!)).toEqual(expected);
+    expect(abilityPowerCandidates(withoutTasks, Number.MAX_SAFE_INTEGER, state.combatId!)).toEqual(expected);
+    for (const sampledAtTick of [-1, 0.5, 1201, 5_000_000, Number.MAX_SAFE_INTEGER]) {
+      expect(() => abilityPowerCandidates({ ...withoutTasks, mechanismState: { ...withoutTasks.mechanismState, sampledAtTick } }, 0, state.combatId!))
+        .toThrow('Invalid sampled periodic clock');
+    }
   });
 
   it('three Titans plus three granted Archangels restore after eight pulses without expanding 102 million histories', () => {

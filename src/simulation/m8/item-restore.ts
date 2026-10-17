@@ -3,6 +3,7 @@ import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
 import type { CombatUnit } from '../combat-types';
+import { MAX_COMBAT_TICKS } from '../combat-types';
 import type { Effect, Source, StatusApplication } from './contracts';
 import { canonicalContent } from '../content';
 import { canonicalSource, effectIdentity, validateIdentity } from './identity';
@@ -164,11 +165,17 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   const initial=compileMechanismDefinitions(unit,combatId).survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
   let options:number[];
   if(periodic) {
-   // G2-4b chest: a granted periodic stack (Archangel's) holds 0…n pulses at the sample, n bounded by the pulses due by `at`
-   // (every pulse so far when the sample tick is unknown, at = 0).
+   // Live tasks disappear on death. Bound the history by the original schedule
+   // and the verified save clock, including when the sample tick is unknown (0).
    if(m.value.kind!=='constant'||d.effect.stackPolicy.kind!=='add-stacks')throw new Error('Unsupported granted periodic stat');
-   const done=unit.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(periodic.source))?.pulseOrdinal ?? 0;
-   const n=at>0?Math.min(done,Math.max(0,Math.floor((at-periodic.nextPulseAtTick)/periodic.periodTicks)+1)):done;
+   const sampled=unit.mechanismState?.sampledAtTick;
+   if(sampled===undefined||!Number.isSafeInteger(sampled)||sampled<0||sampled>MAX_COMBAT_TICKS)throw new Error('Invalid sampled periodic clock');
+   integer(at);integer(periodic.nextPulseAtTick);integer(periodic.periodTicks,1);
+   if(periodic.endsAtTick!==null)integer(periodic.endsAtTick);
+   if(periodic.pulseLimit!==null)integer(periodic.pulseLimit,1);
+   const last=Math.min(sampled,at>0?at:sampled,periodic.endsAtTick===null?sampled:periodic.endsAtTick-(periodic.finalPulse==='none'?1:0));
+   const due=Math.max(0,Math.floor((last-periodic.nextPulseAtTick)/periodic.periodTicks)+1);
+   const n=Math.min(due,periodic.pulseLimit ?? due,d.effect.stackPolicy.cap ?? due);
    const amount=m.value.amount;options=Array.from({length:n+1},(_,i)=>i*amount);
   }
   // G2-4b chest: a granted item may arrive after the sample (or the sample tick is unknown), so it is always [0, amount].
