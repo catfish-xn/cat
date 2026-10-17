@@ -8,7 +8,7 @@ import { freezeCombatDeclarations } from './combat-static';
 import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
-import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -366,7 +366,8 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   const possibleAp = new Set([0]);
   for (const source of archangels) for (let at = source.values.periodTicks; at <= tick; at += source.values.periodTicks)
     possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
-  requireValue(unit.alive ? runtime.abilityPowerFlat === maximumAp : possibleAp.has(runtime.abilityPowerFlat), 'derived ability power');
+  const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
+  requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
   requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
     requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>

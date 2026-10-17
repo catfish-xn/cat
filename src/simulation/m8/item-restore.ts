@@ -130,12 +130,29 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  }
  return new Set([...bonuses].map(n=>Math.floor((basis.base+basis.flat)*(10000+basis.bps+n)/10000)));
 }
+/** The executor projects immediate, uncapped self AP stacks into the legacy
+ * runtime rather than status contributions. Current growth must match receipts
+ * exactly, even though an earlier spell may have sampled fewer stacks. */
+export function triggeredAbilityPowerGrowth(unit:CombatUnit,combatId:string):number {
+ let total=0;
+ for(const d of compileMechanismDefinitions(unit,combatId).eventTriggers ?? []) {
+  if(d.selector.relation!=='self')continue;
+  const count=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source))?.triggerCount ?? 0;
+  for(const effect of d.effects) {
+   if(effect.kind!=='modify-stat'||effect.duration.kind!=='combat'||effect.activation!=='immediate'||effect.stackPolicy.kind!=='add-stacks'||effect.stackPolicy.cap!==null)continue;
+   const m=effect.modifier;
+   if(m.stat==='abilityPower'&&m.unit==='flat'&&m.value.kind==='constant'&&m.condition.kind==='always')total+=count*m.value.amount;
+  }
+ }
+ return total;
+}
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
  if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ const compiled=compileMechanismDefinitions(unit,combatId);
  let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
@@ -143,13 +160,21 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   const key=canonicalSource(d.source);if(seen.has(key))continue;seen.add(key);
   const m=d.effect.modifier;
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');
-  const initial=compileMechanismDefinitions(unit,combatId).survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
+  const initial=compiled.survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
+  const stackingTrigger=m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'?compiled.eventTriggers?.find(t=>t.effects.some((_,i)=>canonicalSource({...t.source,effectIndex:t.source.effectIndex+i})===key)):undefined;
   let options:number[];
-  if(m.value.kind==='constant')options=initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
+  if(m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'&&stackingTrigger) {
+   // A trigger owns a block of effect indices: AP need not be its first effect.
+   // The sample time may be unknown (at = 0), but the settled count is retained.
+   const runtime=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(stackingTrigger.source));
+   const n=Math.min(d.effect.stackPolicy.cap??Number.MAX_SAFE_INTEGER,runtime&&(at===0||runtime.startsAtTick<=at)?runtime.triggerCount:0);
+   const amount=m.value.amount;options=Array.from({length:n+1},(_,i)=>i*amount);
+  }
+  else if(m.value.kind==='constant')options=initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
     if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=values.flatMap(previous=>options.map(v=>({...previous,[field]:previous[field as 'flat'|'bps'|'fixed']+v})));continue;}
-    const cap=(compileMechanismDefinitions(unit,combatId).eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
+    const cap=(compiled.eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
     if(cap===undefined||cap===null)throw new Error('Unbounded enabled AP counter');
     options=Array.from({length:cap+1},(_,i)=>i*value.perCount);
   } else options=[0];
