@@ -2,6 +2,9 @@ import { createCombatWithEvents, stepCombat, type CombatState } from '../combat'
 import type { CombatInputBasis } from '../combat-input';
 import type { StrategySnapshot } from '../strategy-types';
 import { canonicalContent } from '../content';
+import { declaredEffects } from './item-restore';
+import { canonicalSource } from './identity';
+import { asSource } from './s13-definitions';
 
 /** Read only compiler output, never a candidate's declarations, to select the replay path. */
 function hasResistsShield(value: unknown): boolean {
@@ -10,8 +13,8 @@ function hasResistsShield(value: unknown): boolean {
   if (object.kind === 'grant-shield' && (object.amount as { resistsBps?: number } | undefined)?.resistsBps) return true;
   return Object.values(object).some(hasResistsShield);
 }
-function projection(combat: CombatState) {
-  return combat.units.flatMap(unit => (unit.shieldLayers ?? []).filter(layer => layer.m8Grant?.amount.resistsBps)
+function projection(combat: CombatState, sources: ReadonlySet<string>) {
+  return combat.units.flatMap(unit => (unit.shieldLayers ?? []).filter(layer => sources.has(canonicalSource(asSource(layer.source))))
     .map(layer => ({ targetId: unit.id, layer }))).sort((a, b) => {
       const x = a.targetId + '\0' + a.layer.key, y = b.targetId + '\0' + b.layer.key;
       return x < y ? -1 : x > y ? 1 : 0;
@@ -29,7 +32,10 @@ export function validateResistsShields(combat: CombatState, basis: CombatInputBa
   if (!Number.isSafeInteger(combat.tick) || combat.tick < 0 || combat.tick > 1200)
     throw new Error('Invalid Match save: resists shield replay tick');
   let expected = createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
+  const sources = new Set(expected.units.flatMap(unit => declaredEffects(unit, basis.combatId))
+    .filter(d => d.effect.kind === 'grant-shield' && d.effect.amount.resistsBps)
+    .map(d => canonicalSource(d.source)));
   while (expected.tick < combat.tick && expected.status === 'running') expected = stepCombat(expected).state;
-  if (expected.tick !== combat.tick || canonicalContent(projection(expected)) !== canonicalContent(projection(combat)))
+  if (expected.tick !== combat.tick || canonicalContent(projection(expected, sources)) !== canonicalContent(projection(combat, sources)))
     throw new Error('Invalid Match save: resists shield replay');
 }

@@ -149,8 +149,9 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         continue;
       }
     }
-    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
+    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'):undefined;
     if(declared) {
+      check(same(declared.effect,grant), 'declared shield grant');
       validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
       const holder=units.find(u=>u.id===shield.source.ownerId)!;
       const pulse=holder.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(shield.source)&&t.nextPulseAtTick-t.periodTicks===shield.startsAtTick);

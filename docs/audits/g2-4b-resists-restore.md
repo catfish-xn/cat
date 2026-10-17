@@ -37,11 +37,13 @@
 
 诊断单次恢复：tick60原版约14.6ms、修复约34.7ms；单次测量含热身，不能视为性能阈值。相关测试并行运行下 tick60/120/180/240/600 约37/172/113/161/217ms。无 resists 装备战斗不新增重演。未改 timeout、skip、CI 或任何既有数值期望。全套 fast/timing 与审计指纹重录由主任务统一协调。
 
-## 独立既有问题：探索者护臂 AP 恢复
+## 历史观察（合入 #158 之前）：探索者护臂 AP 恢复
+
+以下为合入 #158 之前、基线 d3112d6 上的历史观察，不代表当前 HEAD：
 
 同一个脚本保留完整失败向量：公开 purchasedThreeHeroMatch 等价路线，unit-1 装光盾、石像鬼、探索者护臂，到 tick600。原版与补强版都拒绝 `Invalid Match save: derived ability power`。此时 runtime.abilityPowerFlat=15，展示 AP=145，双抗155+155，光盾217。
 
-具体拒绝链：restoreMatch → restoreMatchWithinCall → validateM5Runtime → derived ability power（基线 serialization.ts:369；补强后:371）。该检查仅从 archangel 机制推导允许的 runtime.abilityPowerFlat，未接纳探索者助攻成长。补强版的可信护盾重演比较已经通过，随后仍被该原有校验拒绝。此组合不能宣称合法恢复通过，本补强不扩大修改 AP 规则/恢复范围。
+具体拒绝链：restoreMatch → restoreMatchWithinCall → validateM5Runtime → derived ability power（基线 serialization.ts:369；补强后:371）。该检查仅从 archangel 机制推导允许的 runtime.abilityPowerFlat，未接纳探索者助攻成长。补强版的可信护盾重演比较已经通过，随后仍被该原有校验拒绝。当时此组合不能宣称合法恢复通过；该历史补强未扩大修改 AP 规则/恢复范围。
 
 ## 版本与源码审计
 
@@ -73,3 +75,16 @@ and `sourceSha256` changed. The byte audit and full generator output are retaine
 in adjacent `g2-4b-resists-herald-byte-audit.json` and
 `g2-4b-resists-herald-record.txt`. No content, rules, loot, schema or gameplay
 identity was changed. The requested final one-time full run is still pending.
+
+
+## PR #159 追加复核（基于 794c92a，已包含 #158）
+
+M1：从可信输入创建开战状态，并以编译后的 grant-shield 声明生成 canonicalSource 集合（持有者、装备实例、效果索引及完整来源）。两侧所有声称来自该集合的层均参与重演比较，不再由候选 resistsBps 决定。局部恢复先按来源找到盾声明，再严格核对 grant；不匹配直接拒绝，不能退回固定值盾分支。
+
+新增攻击以 atTick(60) 合法存档为基础，原光盾层不动，在另一个活单位增加同来源层，resistsBps=0、flat=1，并同步授予量、剩余量、目标总盾、过期时间、目标身份及固定目标声明。object/JSON 均被重演拒绝，独立局部验证也在 declared shield grant 拒绝。
+
+S1/S2 当前源码验证：公开命令生成光盾+石像鬼+探索者护臂，tick600 已有真实护臂触发收据，runtime.abilityPowerFlat=15、展示 AP=145、光盾217。object/JSON 均合法恢复；恢复前后逐 tick 比较完整 state（含 RNG）与 events，直到本轮结束，再公开推进到下一轮开战并比较至该轮结束。#158 之前的 derived ability power 拒绝在当前源码上不再发生。
+
+源码指纹使用原脚本 `node tests/fixtures/record-g2-3-herald.cjs --write` 重新生成；核对五个 raw JSON 与 trajectory 字节不变，仅 manifest 的 sources/sourceSha256 更新。规则、数值、存档字段、内容与 loot digest 均未修改。
+
+本次最终验证：仅运行 `npm test -- tests/g2-4b-resists-restore.test.ts tests/explorer-bracer-restore.test.ts`，2 files / 44 tests passed；`npm run typecheck` 与 `git diff --check` 通过。未跑全套，未调整 timeout、skip 或数值期望。生成器五份输入全部通过其内置恢复与开战后十五 tick 往返校验。
