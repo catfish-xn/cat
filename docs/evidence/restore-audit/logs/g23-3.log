@@ -1,0 +1,103 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/g23-history-facts.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-save-audit
+
+ ❯ |fast| tests/restore-audit/g23-history-facts.test.ts (3 tests | 3 failed) 260ms
+   ❯ read-only audit: historical G23 facts are not independently bound (3)
+     × accepts a nonexistent Conqueror participant and fabricated victim in a completed historical battle 124ms
+     × accepts fabricated Chem Baron participation and Shimmer with no such opening trait 46ms
+     × accepts fabricated Rumble participation and advances his armory round counter 87ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts a nonexistent Conqueror participant and fabricated victim in a completed historical battle
+Error: Invalid Match save: multiplayer-state
+ ❯ requireValue src/simulation/serialization.ts:57:103
+     55| }
+     56|
+     57| function requireValue(condition: unknown, message: string): asserts co…
+       |                                                                                                       ^
+     58| const inputValidation = createInputValidation(requireValue);
+     59| const integer: InputValidation['integer'] = inputValidation.integer;
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:91:3
+ ❯ src/simulation/serialization.ts:81:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:81:10
+ ❯ serializeMatch src/simulation/serialization.ts:317:85
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:16:22
+ ❯ tests/restore-audit/g23-history-facts.test.ts:28:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts fabricated Chem Baron participation and Shimmer with no such opening trait
+Error: Invalid Match save: multiplayer-state
+ ❯ requireValue src/simulation/serialization.ts:57:103
+     55| }
+     56|
+     57| function requireValue(condition: unknown, message: string): asserts co…
+       |                                                                                                       ^
+     58| const inputValidation = createInputValidation(requireValue);
+     59| const integer: InputValidation['integer'] = inputValidation.integer;
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:91:3
+ ❯ src/simulation/serialization.ts:81:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:81:10
+ ❯ serializeMatch src/simulation/serialization.ts:317:85
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:16:22
+ ❯ tests/restore-audit/g23-history-facts.test.ts:36:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts fabricated Rumble participation and advances his armory round counter
+Error: Invalid Match save: multiplayer-state
+ ❯ requireValue src/simulation/serialization.ts:57:103
+     55| }
+     56|
+     57| function requireValue(condition: unknown, message: string): asserts co…
+       |                                                                                                       ^
+     58| const inputValidation = createInputValidation(requireValue);
+     59| const integer: InputValidation['integer'] = inputValidation.integer;
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:91:3
+ ❯ src/simulation/serialization.ts:81:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:81:10
+ ❯ serializeMatch src/simulation/serialization.ts:317:85
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:16:22
+ ❯ tests/restore-audit/g23-history-facts.test.ts:44:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  13:46:31
+   Duration  2.02s (transform 71%, import 15%, tests 14%, setup 1%)
+
+Command exited with non-zero status 1
+	Command being timed: "npm test -- tests/restore-audit/g23-history-facts.test.ts"
+	User time (seconds): 2.23
+	System time (seconds): 0.85
+	Percent of CPU this job got: 113%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:02.72
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 279100
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 2
+	Minor (reclaiming a frame) page faults: 90518
+	Voluntary context switches: 5256
+	Involuntary context switches: 492
+	Swaps: 0
+	File system inputs: 360
+	File system outputs: 72
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1

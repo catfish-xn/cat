@@ -1,0 +1,88 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/g23-history-facts.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-save-audit
+
+ ❯ |fast| tests/restore-audit/g23-history-facts.test.ts (3 tests | 3 failed) 272ms
+   ❯ read-only audit: historical G23 facts are not independently bound (3)
+     × accepts a nonexistent Conqueror participant and fabricated victim in a completed historical battle 105ms
+     × accepts fabricated Chem Baron participation and Shimmer with no such opening trait 106ms
+     × accepts fabricated Rumble participation and advances his armory round counter 58ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts a nonexistent Conqueror participant and fabricated victim in a completed historical battle
+Error: multiplayer-required
+ ❯ ok tests/restore-audit/g23-history-facts.test.ts:7:77
+      5| import {readG23Progress,writeG23Progress} from '../../src/simulation/g…
+      6| import {advanceG23Economy,type G23BattleFacts} from '../../src/simulat…
+      7| const ok=(r: {ok:boolean;state:MatchState;reason?:string})=>{if(!r.ok)…
+       |                                                                             ^
+      8| function preparationAfterFirstBattle(){
+      9|  let s=ok(startMatchCombat(createMatch(42)));
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:11:4
+ ❯ tests/restore-audit/g23-history-facts.test.ts:27:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts fabricated Chem Baron participation and Shimmer with no such opening trait
+Error: multiplayer-required
+ ❯ ok tests/restore-audit/g23-history-facts.test.ts:7:77
+      5| import {readG23Progress,writeG23Progress} from '../../src/simulation/g…
+      6| import {advanceG23Economy,type G23BattleFacts} from '../../src/simulat…
+      7| const ok=(r: {ok:boolean;state:MatchState;reason?:string})=>{if(!r.ok)…
+       |                                                                             ^
+      8| function preparationAfterFirstBattle(){
+      9|  let s=ok(startMatchCombat(createMatch(42)));
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:11:4
+ ❯ tests/restore-audit/g23-history-facts.test.ts:35:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |fast| tests/restore-audit/g23-history-facts.test.ts > read-only audit: historical G23 facts are not independently bound > accepts fabricated Rumble participation and advances his armory round counter
+Error: multiplayer-required
+ ❯ ok tests/restore-audit/g23-history-facts.test.ts:7:77
+      5| import {readG23Progress,writeG23Progress} from '../../src/simulation/g…
+      6| import {advanceG23Economy,type G23BattleFacts} from '../../src/simulat…
+      7| const ok=(r: {ok:boolean;state:MatchState;reason?:string})=>{if(!r.ok)…
+       |                                                                             ^
+      8| function preparationAfterFirstBattle(){
+      9|  let s=ok(startMatchCombat(createMatch(42)));
+ ❯ preparationAfterFirstBattle tests/restore-audit/g23-history-facts.test.ts:11:4
+ ❯ tests/restore-audit/g23-history-facts.test.ts:43:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  13:45:25
+   Duration  2.26s (transform 69%, import 17%, tests 14%, setup 1%)
+
+Command exited with non-zero status 1
+	Command being timed: "npm test -- tests/restore-audit/g23-history-facts.test.ts"
+	User time (seconds): 2.22
+	System time (seconds): 1.14
+	Percent of CPU this job got: 109%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:03.07
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 286732
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1
+	Minor (reclaiming a frame) page faults: 92411
+	Voluntary context switches: 5409
+	Involuntary context switches: 220
+	Swaps: 0
+	File system inputs: 16144
+	File system outputs: 104
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1

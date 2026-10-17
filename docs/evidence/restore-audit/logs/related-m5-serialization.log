@@ -1,0 +1,37 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/m5-serialization.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-save-audit
+
+
+ Test Files  1 passed (1)
+      Tests  33 passed (33)
+   Start at  13:50:02
+   Duration  2.24s (transform 56%, tests 31%, import 12%)
+
+	Command being timed: "npm test -- tests/m5-serialization.test.ts"
+	User time (seconds): 2.55
+	System time (seconds): 0.84
+	Percent of CPU this job got: 115%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:02.93
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 307284
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 96719
+	Voluntary context switches: 5584
+	Involuntary context switches: 323
+	Swaps: 0
+	File system inputs: 128
+	File system outputs: 120
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
