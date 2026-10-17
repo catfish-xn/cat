@@ -203,11 +203,66 @@ describe('M2 equipment binding continuity', () => {
     const second = recordedCrownBattle(legal);
     expect(restoreMatch(second.state,[...first.battles,...second.battles])).toEqual(second.state);
   });
+  it.each(['before-upgrade','after-upgrade'] as const)('replays survivor equipment %s in exact order (M4)', order => {
+    const {first,state,holder} = transferFixture();
+    let legal = accepted(grantMechanicItem(state,{receiptId:'m4:blade',source:'test',definitionId:'deathblade'}));
+    legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:first',source:'test',definitionId:'irelia'}));
+    expect(holder.definitionId).toBe('irelia');
+    const equip = (value: MatchState) => accepted(equipItem(value,'item-4','unit-3',0));
+    if (order === 'before-upgrade') legal = equip(legal);
+    legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:second',source:'test',definitionId:'irelia'}));
+    expect(legal.resourceProvenance.entries.find(fact => fact.kind === 'unit-upgraded')).toMatchObject({
+      event:{survivorId:'unit-3',consumedIds:['unit-1','unit-4']},
+    });
+    if (order === 'after-upgrade') {
+      const remover = legal.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
+      legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
+      legal = equip(legal);
+    }
+    expect(legal.items.find(item => item.id === 'item-4')!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
+    if (order === 'before-upgrade') expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
+      .toEqual([{kind:'unit',unitId:'unit-3',slot:1},{kind:'unit',unitId:'unit-3',slot:2},{kind:'inventory'}]);
+    const text = serializeMatch(legal,first.battles);
+    for (const input of [structuredClone(legal),text]) {
+      const restored = restoreMatch(input,first.battles);
+      expect(restored).toEqual(legal);
+      let original = accepted(startMatchCombat(legal)), resumed = accepted(startMatchCombat(restored));
+      expect(resumed).toEqual(original);
+      while (original.phase === 'combat') {
+        const expected = stepMatch(original), actual = stepMatch(resumed);
+        expect(actual).toEqual(expected);
+        original = expected.state; resumed = actual.state;
+      }
+    }
+    if (order === 'after-upgrade') {
+      for (const change of ['holder','slot'] as const) {
+        const forged = structuredClone(legal);
+        const removal = forged.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used');
+        if (removal?.kind !== 'consumable-used') throw new Error('Expected remover receipt');
+        Object.assign(removal.record.affectedItems[0].location, change === 'holder' ? {unitId:'unit-2'} : {slot:2});
+        expect(() => serializeMatch(forged,first.battles)).toThrow();
+        for (const input of [forged,JSON.stringify(forged)]) expect(() => restoreMatch(input,first.battles)).toThrow();
+      }
+    }
+    // A legacy ledger without ordered equipment evidence is deliberately unsupported.
+    const legacy = structuredClone(legal);
+    Reflect.deleteProperty(legacy.resourceProvenance,'equipmentHistory');
+    expect(() => serializeMatch(legacy,first.battles)).toThrow();
+    for (const input of [legacy,JSON.stringify(legacy)]) expect(() => restoreMatch(input,first.battles)).toThrow();
+    // Dropping the equip fact while retaining the new format must not infer a placement.
+    const missing = {...legal,resourceProvenance:{...legal.resourceProvenance,entries:legal.resourceProvenance.entries
+      .filter(fact => !(fact.kind === 'item-equipped' && fact.itemId === 'item-4'))
+      .map((fact,sequence) => ({...fact,sequence}))}};
+    expect(() => serializeMatch(missing,first.battles)).toThrow();
+    for (const input of [missing,JSON.stringify(missing)]) expect(() => restoreMatch(input,first.battles)).toThrow();
+  });
   it('also rejects moving a non-crown equipped instance', () => {
     const {first,state,target} = transferFixture('deathblade');
     const item = state.items.find(item => item.location.kind === 'unit')!;
     const forged = {...state,items:state.items.map(value => value.id === item.id
       ? {...value,location:{kind:'unit' as const,unitId:target.id,slot:0}} : value)};
-    expect(() => restoreMatch(forged,first.battles)).toThrow('historical equipment continuation');
+    expect(() => serializeMatch(forged,first.battles)).toThrow('historical equipment continuation');
+    for (const input of [forged,JSON.stringify(forged)])
+      expect(() => restoreMatch(input,first.battles)).toThrow('historical equipment continuation');
   });
 });

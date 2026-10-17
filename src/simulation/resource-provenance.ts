@@ -41,12 +41,14 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
+  | { readonly kind: 'item-equipped'; readonly itemId: string; readonly unitId: string; readonly slot: number }
   | { readonly kind: 'item-combined'; readonly event: Extract<StrategyEvent, { readonly type: 'itemCombined' }> }
   | { readonly kind: 'combat-growth-committed'; readonly combatId: string; readonly settlementId: string;
       readonly combatStartProvenancePrefixLength: number; readonly sourceDeltas: readonly CombatGrowthDelta[] };
 export type ResourceProvenanceEntry = ResourceFact & { readonly sequence: number; readonly roundId: string };
 export interface ResourceProvenance {
   readonly version: typeof RESOURCE_PROVENANCE_VERSION;
+  readonly equipmentHistory: 'ordered';
   readonly entries: readonly ResourceProvenanceEntry[];
 }
 export interface ProvenanceUnit { readonly id: string; readonly definitionId: string; readonly starLevel: StarLevel }
@@ -118,16 +120,17 @@ function plainJson(value: unknown, ancestors = new Set<object>()): void {
 const compareIds = (a: { readonly id: string }, b: { readonly id: string }) => compareCodePoints(a.id, b.id);
 const compareGrowth = (a: PersistentGrowth, b: PersistentGrowth) => compareCodePoints(a.unitId, b.unitId);
 
-/** Append facts atomically; no grants, RNG, locations or independently writable counters. */
+/** Append ordered facts atomically; no grants, RNG or independently writable counters. */
 export function appendResourceProvenance(
-  provenance: ResourceProvenance, roundId: string, facts: ResourceFact | readonly ResourceFact[],
+  provenance: Omit<ResourceProvenance, 'equipmentHistory'> & { readonly equipmentHistory?: 'ordered' }, roundId: string, facts: ResourceFact | readonly ResourceFact[],
 ): ResourceProvenance {
   requireValue(provenance.version === RESOURCE_PROVENANCE_VERSION, 'version');
+  requireValue(provenance.equipmentHistory === 'ordered' || provenance.entries.length === 0, 'ordered equipment history required');
   const round = getMultiplayerRoundById(roundId);
   requireValue(!provenance.entries.length || getMultiplayerRoundById(provenance.entries.at(-1)!.roundId).ordinal <= round.ordinal, 'round order');
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
-  return shareGeneratedJson({ version: RESOURCE_PROVENANCE_VERSION,
+  return shareGeneratedJson({ version: RESOURCE_PROVENANCE_VERSION, equipmentHistory: 'ordered',
     entries: [...(isFrozenContent(provenance.entries) ? provenance.entries : structuredClone(provenance.entries)), ...added.map((fact, index) => ({
       ...structuredClone(fact), sequence: provenance.entries.length + index, roundId,
     }))] });
@@ -274,7 +277,8 @@ function validateUpgrade(event: UnitUpgradedEvent): void {
 export function foldResourceProvenance(value: unknown, context: ResourceProvenanceContext, parsedJsonInput = false): FoldedResourceProvenance {
   getCatalogRoundByOrdinal(context.throughRoundOrdinal);
   if (!parsedJsonInput) plainJson(value);
-  keys(value, ['version', 'entries']);
+  keys(value, ['version', 'equipmentHistory', 'entries']);
+  requireValue(value.equipmentHistory === 'ordered', 'ordered equipment history required');
   requireValue(value.version === RESOURCE_PROVENANCE_VERSION && Array.isArray(value.entries) && (value.entries.length > 0 || context.carouselOpening===true), 'version/opening');
   const entries = value.entries as ResourceProvenanceEntry[];
   const prefixLength = context.prefixLength ?? entries.length;
@@ -392,6 +396,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if(entry.kind==='g23-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
+    } else if (entry.kind === 'item-equipped') {
+      keys(entry, [...common, 'itemId', 'unitId', 'slot']); integer(entry.slot);
+      requireValue(items.has(entry.itemId) && units.has(entry.unitId) && entry.slot < 3, 'equipment ownership/slot');
     } else if (entry.kind === 'item-combined') {
       keys(entry, [...common, 'event']); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
       // T12 permits combinations before/after settlement and during supply choices.
@@ -438,7 +445,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
       requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
-      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind==='g23-item-converted'||fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
+      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind==='g23-item-converted'||fact.kind === 'item-equipped' || fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;

@@ -464,7 +464,8 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
   return acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
-      combined.map(event => ({ kind: 'item-combined' as const, event }))) : state.resourceProvenance,
+      combined.map(event => ({ kind: 'item-combined' as const, event })))
+      : appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, {kind:'item-equipped',itemId,unitId,slot:plan.events.find(event => event.type === 'itemEquipped')!.slot}),
   }, plan.events);
 }
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {

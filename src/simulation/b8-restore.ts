@@ -53,20 +53,20 @@ function replayCombination(items: readonly ItemInstance[], preparation: GameStat
   return plan;
 }
 
-/** Survivors of frozen equipment keep their exact position. Items still in
- * inventory in the replay may have been legally equipped since the freeze.
- * Final ownership/slots/unique/exclusive constraints are checked by restoreMatch. */
+/** Exact projection: every ordinary placement now has an ordered resource fact. */
 function equipmentContinuation(expected: readonly ItemInstance[], actual: readonly ItemInstance[]): boolean {
-  return expected.length === actual.length && expected.every(item => {
-    const current = actual.find(other => other.id === item.id);
-    return current?.definitionId === item.definitionId
-      && (item.location.kind === 'inventory' || equal(item.location, current.location));
-  });
+  return equal(sorted(expected), sorted(actual));
 }
 
-/** Carry verified equipment across preparation, including when no combat is active.
- * Plain equip has no fact: only inventory items may adopt a claimed placement.
- * Every detachment or donor migration must instead follow the resource ledger. */
+function replayEquipment(items: readonly ItemInstance[], preparation: GameState, serial: number,
+  fact: Extract<ResourceFact, {kind:'item-equipped'}>) {
+  const plan = planEquip(items, preparation, fact.itemId, fact.unitId, fact.slot, serial);
+  check(plan.ok && plan.nextItemSerial === serial && equal(plan.events,
+    [{type:'itemEquipped',itemId:fact.itemId,unitId:fact.unitId,slot:fact.slot}]), 'equipment transaction');
+  return plan;
+}
+
+/** Carry exact equipment bindings through the ordered resource ledger. */
 export function validateHistoricalEquipment(previous: MatchState, next: MatchState): void {
   let items = previous.items, serial = previous.nextItemSerial;
   let preparation = previous.preparation;
@@ -121,6 +121,10 @@ export function validateHistoricalEquipment(previous: MatchState, next: MatchSta
       case 'consumable-used': {
         const plan = replayConsumableItems(items, serial, fact.record, preparation);
         items = plan.items; serial = plan.nextItemSerial;
+        break;
+      }
+      case 'item-equipped': {
+        items = replayEquipment(items, preparation, serial, fact).items;
         break;
       }
       case 'item-combined': {
@@ -289,9 +293,9 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
     for (const fact of entries.slice(prefixLength)) {
-      check((fact.kind==='g23-item-converted'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      check((fact.kind==='g23-item-converted'||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
       if(fact.kind==='g23-item-converted'){items=replayG23Conversion(items,fact);continue;}
-      const plan = fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
+      const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
       items = plan.items; serial = plan.nextItemSerial;
     }
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
@@ -317,8 +321,13 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
   const combinations = () => {
-    while (entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+    while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
+      if(tool.kind==='item-equipped'){
+        check(!committed||state.phase!=='gameOver','terminal equipment operation');
+        items=replayEquipment(items,preparation,nextItem,tool).items;
+        take({kind:tool.kind,itemId:tool.itemId,unitId:tool.unitId,slot:tool.slot});continue;
+      }
       if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
         check(!committed||state.phase!=='gameOver','terminal consumable operation');
@@ -332,27 +341,11 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       items = plan.items; nextItem = plan.nextItemSerial;
     }
   };
-  // Plain equip has no birth/consumption fact. Before a loot-driven upgrade,
-  // replay surviving inventory items at their final legal positions when the
-  // holder already exists. This preserves the latest survivor's occupied slots
-  // (including exclusive parents) when frozen donor equipment is transferred.
-  // Never detach a frozen item or synthesize an unrecorded combination.
-  const survivingPlacements = () => {
-    for (const actual of state.items) {
-      const location = actual.location;
-      if (location.kind !== 'unit') continue;
-      const item = items.find(candidate => candidate.id === actual.id);
-      if (item?.location.kind !== 'inventory' || !preparation.units.some(unit => unit.id === location.unitId)) continue;
-      const plan = planEquip(items, preparation, item.id, location.unitId, location.slot, nextItem);
-      if (plan.ok && plan.nextItemSerial === nextItem) items = plan.items;
-    }
-  };
   const grant = (slot: FrozenDirectDrop | LootChoiceDescriptor, definitionId?: string): boolean => {
     const payload = 'payload' in slot ? slot.payload : {kind:'item' as const,definitionId:definitionId!,quantity:1};
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
     if (payload.kind === 'unit') {
-      survivingPlacements();
       const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
         payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
