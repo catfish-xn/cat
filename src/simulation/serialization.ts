@@ -382,9 +382,9 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
     requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && [...attackDamageCandidates(unit,tick,combatId)].some(attack=>runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000)), 'derived empowered physical');
   }
-  // Sion's flag records Black Rose release, checked exactly by
-  // validateTaskAndSummonFacts against the authenticated opening instead.
-  if (unit.definitionId !== 'g23-sion') requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
+  // Sion release and Bulky Buddies are historical one-time facts. A buddy may
+  // since have revived; validateTaskAndSummonFacts checks the actual trigger.
+  if (unit.definitionId !== 'g23-sion') requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies'), 'derived buddy trigger');
   const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
   requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + runtime.attackSpeedBps)), 'dynamic arithmetic bound');
   if (unit.ability.kind === 's13') {

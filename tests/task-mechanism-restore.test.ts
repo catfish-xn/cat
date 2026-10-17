@@ -153,3 +153,49 @@ it('rejects transferring pulses to another real Morgana even with rebuilt source
   for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: curse task binding facts');
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
 });
+
+it('rejects an appended fake bleed while retaining every genuine Morgana curse pulse', () => {
+  const state = morganaCurseSave(), bad = structuredClone(state);
+  const owner = bad.combat!.units.find(u => u.definitionId === 'morgana')!, curse = owner.tasks![0];
+  const fake = { key: 'forged-bleed-beside-real-curses', kind: 'bleed' as const,
+    source: { ...curse.source }, targetId: curse.targetId, actionSeq: curse.actionSeq,
+    executeAtTick: bad.combat!.tick + 1, amount: 1000, ordinal: 0, total: 1,
+    cancellable: false, attachedDot: true };
+  Object.assign(owner, { tasks: [...owner.tasks!, fake] });
+  expect(owner.tasks!.filter(t => t.kind === 'g22Curse')).toEqual(state.combat!.units.find(u => u.id === owner.id)!.tasks);
+  for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('curse task binding facts');
+  expect(restoreMatch(serializeMatch(state))).toEqual(state);
+});
+
+it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
+  const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
+  let state = prepare(['rod'], { seed: 26 });
+  expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
+  for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
+    for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));
+  const jayce = state.preparation.units.find(u => u.definitionId === 'jayce')!;
+  state = accepted(deployMatchUnit(state, jayce.id, { kind: 'board', cell: { col: 0, row: 7 } }));
+  state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 0, row: 4 } }));
+  state = accepted(startMatchCombat(state));
+  const forgeId = `${jayce.id}:g23-forge`;
+  expect(state.combat!.units.find(u => u.id === 'unit-1')!.mechanics).toContainEqual(expect.objectContaining({ mechanic: 'bulkyBuddies', targetId: forgeId }));
+  let beforeDeath: MatchState | undefined, afterDeath: MatchState | undefined, revived: MatchState | undefined;
+  while (state.phase === 'combat') {
+    const before = state, result = stepMatch(state); state = result.state;
+    if (result.events.some(e => e.type === 'death' && e.unitId === forgeId)) { beforeDeath = before; afterDeath = state; }
+    if (result.events.some(e => e.type === 'unitRevived' && e.unitId === forgeId)) { revived = state; break; }
+  }
+  expect(beforeDeath).toBeDefined(); expect(afterDeath).toBeDefined(); expect(revived).toBeDefined();
+  expect(afterDeath!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(false);
+  expect(afterDeath!.combat!.units.find(u => u.id === 'unit-1')!.runtime!.buddyTriggered).toBe(true);
+  expect(revived!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(true);
+  expect(revived!.combat!.units.find(u => u.id === 'unit-1')).toMatchObject({ alive: true, runtime: { buddyTriggered: true } });
+  expectRestoredTicks([beforeDeath!, afterDeath!, revived!]);
+  // A Forge binding alone authorizes neither an early flag nor deleting a real
+  // trigger after revival: validate the historical event in both directions.
+  for (const checkpoint of [beforeDeath!, revived!]) {
+    const bad = structuredClone(checkpoint), holder = bad.combat!.units.find(u => u.id === 'unit-1')!;
+    Object.assign(holder.runtime!, { buddyTriggered: !holder.runtime!.buddyTriggered });
+    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('buddy trigger binding facts');
+  }
+}, 30000);
