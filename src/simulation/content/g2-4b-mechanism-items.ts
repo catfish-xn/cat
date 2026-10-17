@@ -2,7 +2,7 @@ import { freezeContent } from './freeze';
 import type { ItemDefinition } from '../strategy-types';
 import {modifier,vamp} from './item-programs';
 
-/** Only complete mechanisms are admitted here. Values: archived 14.24 map22,
+/** WIP runtime entries. Values: archived 14.24 map22,
  * Maps/Shipping/Map22/Items/TFT_Item_Artifact_Fishbones; source pins in normalized
  * g2-4b-mechanism-items.json. Only the entries below are current runtime claims.
  */
@@ -76,5 +76,12 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
     effects:[{kind:'statFlat',stat:'maxHp',amount:50},
       {kind:'mechanic',mechanic:'g24Mogul',values:{stackCap:35,healthPerStack:7,resistPerStack:1,goldIntervalTicks:160}}],
     effectDescriptions:['承受伤害时获得7生命和1双抗，最多35层；满层获得1金币，此后每8秒获得1金币。'],
+  },
+  TFT_Item_Zephyr: {
+    id:'TFT_Item_Zephyr',apiName:'TFT_Item_Zephyr',name:'灵风',kind:'completed',unique:true,slotCost:1,
+    evidenceStatus:'approved-provisional',conventionIds:['G24-ZEPHYR-ABSENCE-01'],
+    effects:[{kind:'statFlat',stat:'maxHp',amount:150},
+      {kind:'mechanic',mechanic:'g24Zephyr',values:{durationTicks:100,allyAttackSpeedBps:200}}],
+    effectDescriptions:['开局将镜像飓风最近的敌人移出战斗5秒，无视控制免疫；全队获得2%攻速。碰撞与多件顺序为待确认约定。'],
   },
 });

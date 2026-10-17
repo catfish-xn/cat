@@ -1,8 +1,40 @@
 import type { AbilityContext } from './combat-s13-abilities';
 import { mirroredItemCell, nearestItemCell, manaReavedMaximum, validateDeferredItemDamage } from './g2-4b-item-kernel';
-import { sameCell } from './board';
+import { sameCell, hexDistance } from './board';
+import type {Board} from './board';
 import { MOVE_INTERVAL_TICKS } from './combat-types';
 import type {CombatUnit} from './combat-types';
+
+/** Opening-only absence. CC immunity is deliberately irrelevant. Multiple
+ * whirlwinds reserve distinct victims in owner/item order (pending convention). */
+export function initializeZephyr(units:readonly CombatUnit[],board:Board):CombatUnit[] {
+  const result=units.map(u=>({...u}));
+  for(const holder of [...units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)){
+    for(const item of holder.mechanics?.filter(m=>m.mechanic==='g24Zephyr')??[]){
+      const cell=mirroredItemCell(board,holder.cell);
+      const victim=result.filter(u=>u.team!==holder.team&&u.alive&&u.hp>0&&!u.itemBanish)
+        .sort((a,b)=>hexDistance(cell,a.cell)-hexDistance(cell,b.cell)||(a.id<b.id?-1:a.id>b.id?1:0))[0];
+      if(victim)Object.assign(victim,{itemBanish:{ownerId:holder.id,itemInstanceId:item.source.instanceId,untilTick:item.values.durationTicks}});
+    }
+  }
+  return result;
+}
+
+/** Missed periodic opportunities do not burst on return. Absolute buff expiry
+ * keeps advancing; suspended holders emit no actions or passive pulses. */
+export function returnZephyrUnits(ctx:AbilityContext):void {
+  for(const unit of ctx.units){
+    if(unit.itemBanish?.untilTick!==ctx.tick)continue;
+    const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
+    const to=nearestItemCell(unit.cell,cells.filter(c=>!ctx.units.some(u=>u.id!==unit.id&&u.alive&&sameCell(u.cell,c))));
+    if(!to)throw new RangeError('No Zephyr return cell');
+    if(!sameCell(to,unit.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});unit.cell=to;}
+    if(unit.mechanismState)unit.mechanismState={...unit.mechanismState,periodicTasks:unit.mechanismState.periodicTasks.map(t=>{
+      const skipped=Math.max(0,Math.ceil((ctx.tick-t.nextPulseAtTick)/t.periodTicks));
+      return {...t,nextPulseAtTick:t.nextPulseAtTick+skipped*t.periodTicks,pulseOrdinal:t.pulseOrdinal+skipped};
+    })};
+  }
+}
 
 /** Dynamic debt is schema/timing/provenance checked, like the existing combat
  * task ledger. This does not claim to reconstruct historical damage from HP. */

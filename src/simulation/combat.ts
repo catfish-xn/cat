@@ -1,7 +1,7 @@
 import {projectItemSummons} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
 import {createItemRandomStreams} from './g2-4b-item-kernel';
-import {initializeShroud} from './combat-g2-4b';
+import {initializeShroud,initializeZephyr} from './combat-g2-4b';
 import {spawnCombatUnit} from './seat-mechanics/combat-events';
 import {stampCombatStep} from './combat-effects';
 import { projectG23Summons,isG23Summon } from './g2-3-summons';
@@ -71,6 +71,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       alive: true, targetId: null }];
   }).sort(compareIds);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud')))units=initializeShroud(units);
+  if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr')))units=initializeZephyr(units,preparationState.board);
   units.forEach(unit => freezeCombatDeclarations(unit, false, true));
   const result = eliminationResult(units);
   let state:CombatState={

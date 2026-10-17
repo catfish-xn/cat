@@ -78,3 +78,17 @@ preserves missing HP and cannot revive a lethal hit. Gold is1at full, then1
 every160ticks while alive. These ordering details are convention
 G24-MOGUL-STACK-01. Gold replay independently validates the hit ledger; max-HP
 restore accounts for its historical stack count when checking shield samples.
+
+### G2-4b WIP Zephyr absence
+
+`CombatUnit.itemBanish?: {ownerId:string;itemInstanceId:string;untilTick:number}`
+is frozen from original starting cells. For tick<untilTick the unit is absent
+from active action, target and passive processing; it remains alive in roster
+and prevents elimination. At tick100 it returns, relocating to the nearest free
+cell if occupied. This is not a stun and ignores CC immunity. Combat start
+programs precede suspension; missed periodic opportunities and opening jumps
+are not replayed. Those ordering/collision details are pending convention
+G24-ZEPHYR-ABSENCE-01, not verified original script semantics.
+`CombatViewUnit.banished?:boolean` exposes presence without changing UI code.
+Zephyr save authority is exact independent combat reconstruction from validated
+frozen inputs; it does not accept candidate-supplied clocks as authority.

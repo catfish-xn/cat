@@ -43,6 +43,7 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
   g24SpectralCutlass:['durationTicks'],
   g24Shroud:['costIncreaseBps','allyHealth'],

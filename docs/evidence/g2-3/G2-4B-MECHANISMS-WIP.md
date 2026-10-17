@@ -23,7 +23,7 @@ Unresolved source semantics, not adopted conventions: Voidspawn stage clamping/p
 copy equipment/stat inheritance. Beam width, collision fallback and Fishbones
 target-pool/stacking rules are explicitly provisional conventions in overrides.
 Numeric extraction alone does not imply runtime integration or complete original behavior.
-Fishbones, Spectral Cutlass, Shroud, Death’s Defiance, Trickster’s Glass, Collector, Gambler’s Blade and Mogul’s Mail are now registered. The runtime policy
+Fishbones, Spectral Cutlass, Shroud, Death’s Defiance, Trickster’s Glass, Collector, Gambler’s Blade, Mogul’s Mail and Zephyr now have runtime entries. The runtime policy
 revision/digest have changed; old fixture migration is still pending (WIP).
 
 The two planning attachments were read through the supported Library read API.
@@ -33,9 +33,9 @@ Their older scope proposals do not supersede the latest eleven-item dispatch.
 Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
 roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
 Gold receipts are now connected to settlement and independent frozen-input restore;
-deferred damage is connected. Eight runtime entrypoints remain WIP, not eight
+deferred damage is connected. Nine runtime entrypoints remain WIP, not eight
 fully accepted original implementations.
-Three items, final fixture migration, final full suite and final-head CI/JS measurement
+Two items, Mirror inheritance gaps, final fixture migration, final full suite and final-head CI/JS measurement
 remain pending. This branch must remain a draft until complete.
 
 Draft PR #150 was created by Claude: https://github.com/catfish-xn/cat/pull/150 .
@@ -92,6 +92,7 @@ entrypoints and completed targeted checks. No tests were rerun for this metadata
 
 | ID / status | Concrete recommendation | Source gap, research, behavior impact |
 | --- | --- | --- |
+| G24-ZEPHYR-ABSENCE-01 / WIP runtime | Freeze mirrored whirlwind on starting cells; owner order reserves distinct nearest enemies, ties ID. Remove victims from active action/target/passive processing until tick100; retain living roster membership for elimination. Return to nearest free home cell. Start declarations precede suspension; skip missed opening moves, periodic pulses and companion reactions. | Raw14.24 fixes5seconds/150HP/team2%AS/ignoreCC, not simultaneous ordering, passive timing, multiple-item reservation or collision. Suspended buffs keep absolute expiry; save validation reconstructs the entire combat exactly, with restore performance still unmeasured. |
 | G24-FISHBONES-TARGET-01 / WIP runtime | Eligible living, targetable enemies inside doubled effective range; one draw per actual attack, ID-sorted pool; multiple copies double once. | Raw describes doubling/random target but not pool radius or stacking. Wiki fetch restricted; Riot 14.9 confirms the broad mechanic. Controls whether distant targets can be selected and whether multiple items multiply range. |
 | G24-CUTLASS-CELL-01 / WIP runtime | Mirror both axes. At occupied destination/home use nearest free cell; ties row then column; holders ordered by ID; multiple copies share one teleport/return; dead holders do not return. | Raw fixes return at 8 seconds, Riot 14.9 illustrates teleport/return. Neither specifies collisions or multiple-copy interaction. Controls exact landing cell and engagement timing. |
 | G24-SHROUD-BEAM-01 / WIP runtime | Initial combined-board column difference ≤1; strongest overlapping beam; ceil(maxMana×1.30); restore after first cast. Each deployed item adds 60 allied HP including holder. | Raw fixes 30% and 60 HP; Riot 13.18 independently establishes the team HP. No six-angle beam definition or rounding in source. Controls affected enemies and integer cast cost. |
@@ -226,3 +227,17 @@ receipts remain checkable. Independent gold replay authenticates the hit ledger.
 Three relevant files /13tests passed (Mogul, Defiance and eight replay cases).
 The35-stack/period-clock case uses a controlled low-damage combat fixture;
 public Match roundtrip is a separate unmodified-input test. No full suite ran.
+
+## Zephyr checkpoint
+
+Zephyr now excludes its victim from active action/target/passive processing until
+tick100, without treating it as dead for elimination or CC immunity. Frozen
+banish identity and all combat state are checked by independent reconstruction.
+Neutral opening moves belonging to absent actors are omitted; their missed
+companion reactions and periodic pulses do not replay on return. These timing
+choices are explicitly pending G24-ZEPHYR-ABSENCE-01.
+
+Two relevant files /14tests passed: Zephyr target reservation/public roundtrip/
+forged absence/neutral openings, plus9-item compact replay. TypeScript checked
+separately; no full suite or final-head CI/size/performance claim. No UI/server
+implementation was changed; optional view `banished` is documented for Claude.

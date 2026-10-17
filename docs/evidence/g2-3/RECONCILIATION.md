@@ -225,3 +225,11 @@ health7/resists1/cap35, full1gold, interval8seconds. G24-MOGUL-STACK-01
 contains **约定值** for shield-hit qualification, HP barrier and lethal35th hit.
 No HR3gold value is used. Original source constants and runtime limitations are
 listed in the centralized G2-4B-MECHANISMS-WIP.md.
+
+Zephyr `TFT_Item_Zephyr`: archived14.24 description and constants establish
+5seconds,150HP,team2%AS and ignoring CC immunity. G24-ZEPHYR-ABSENCE-01
+is a **约定值** for opening priority, distinct target reservation, missed pulse
+policy and return collisions; these are not attributed to original scripts.
+Banishment excludes units from active combat processing but preserves living
+roster membership. Saves require exact reconstruction from validated frozen
+inputs; this replaces clock-based structural checks only for Zephyr combats.

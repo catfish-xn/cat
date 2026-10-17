@@ -2,7 +2,7 @@ import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
 import {scaleItemSummonHp} from './g2-4b-summons';
-import {advanceSpectralCutlass} from './combat-g2-4b';
+import {advanceSpectralCutlass,returnZephyrUnits} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
@@ -137,6 +137,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
       moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
   }).sort(compareIds);
+  const hasBanish=units.some(u=>u.itemBanish);
+  const fullRoster=hasBanish?[...units]:units;
+  const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if((units[i].itemBanish?.untilTick??0)>tick)units.splice(i,1);};
+  if(hasBanish&&state.tick>0)suspendBanished();
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
   let itemRandomStreams = state.itemRandomStreams;
   let itemGoldReceipts=state.itemGoldReceipts;
@@ -148,12 +152,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const next=recordItemGold({streams:itemRandomStreams,receipts:itemGoldReceipts},{battleId:ctx.combatId!,ownerId:owner.id,
       itemInstanceId:item.source.instanceId,kind,tick,ordinal});
     itemRandomStreams=next.streams;itemGoldReceipts=next.receipts;
-    if(next.receipts.at(-1)!.gold)for(const holder of units){
+    if(next.receipts.at(-1)!.gold)for(const holder of fullRoster){
       if(holder.openingItemBankGold===undefined||holder.team!==owner.team)continue;
       const limit=mechanic(holder,'g24Gambler','goldLimit');
       holder.currentItemBankGold=Math.min(limit,holder.currentItemBankGold!+1);
     }
   };
+  if(hasBanish)returnZephyrUnits(ctx);
   initializeMechanisms(ctx);
   if (state.tick === 0) {
     // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
@@ -164,19 +169,21 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     ctx.tick = tick;
     for (const unit of units) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: tick };
   }
+  if(hasBanish&&state.tick===0)suspendBanished();
   let openingState = state.openingState;
   const openingUnits = (atTick = tick) => units.map(u => ({ ...targetUnit(u, atTick), controlled: active(u, atTick, 'stun').length > 0 || effectiveStatuses(u.mechanismState!.statuses, atTick).some(g => g.kind === 'stun') }));
   if (state.openingDefinitions?.length && !openingState) {
     if (state.tick !== 0) throw new RangeError('Missing consumed opening state');
-    openingState = planOpening(ctx.combatId!, ctx.board, openingUnits(state.tick), state.openingDefinitions);
+    openingState = planOpening(ctx.combatId!, ctx.board, openingUnits(state.tick),
+      hasBanish?state.openingDefinitions.filter(d=>units.some(u=>u.id===d.source.ownerId)):state.openingDefinitions);
   }
   if (openingState && !openingState.committed) {
     const committed = commitOpening(openingState, units); openingState = committed.state;
     for (const u of units) u.cell = committed.units.find(next => next.id === u.id)!.cell;
     events.push(...committed.movements);
   }
-  const companionDefinitions = units.flatMap(u => u.companionDefinitions ?? []);
-  let companionState = state.companionState ?? (companionDefinitions.length ? freezeCompanions(ctx.combatId!, units.filter(u => u.alive), companionDefinitions) : undefined);
+  const companionDefinitions = fullRoster.flatMap(u => u.companionDefinitions ?? []);
+  let companionState = state.companionState ?? (companionDefinitions.length ? freezeCompanions(ctx.combatId!, fullRoster.filter(u => u.alive), companionDefinitions) : undefined);
   if (companionState) {
     const reactions = advanceReactions(companionState, tick, units.filter(u => u.alive && u.hp > 0).map(u => u.id), false); companionState = reactions.state;
     for (const reaction of reactions.ready) {
@@ -565,7 +572,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));
   }
-  const eliminated = eliminationResult(units), result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);
+  const eliminated = eliminationResult(fullRoster), result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);
   if (result) { cleanupMechanisms(ctx, true); for (const unit of units) { unit.statuses = []; unit.shieldLayers = []; syncShield(unit); unit.tasks = []; } }
   if (result && companionState) companionState = advanceReactions(companionState, tick, [], true).state;
   if (result) events.push({ type: 'combatFinished', tick, result, reason: eliminated ? 'elimination' : 'timeout' });
@@ -577,5 +584,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events[i] = { ...event, receipt: final };
     }
   }
-  return stampCombatStep({ ...state, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

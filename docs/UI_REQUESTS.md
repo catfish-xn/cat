@@ -939,3 +939,13 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 私有投影 pendingCarouselUnits 删除、改为 heldCarouselUnits。新 Match 字段 carousel.heldCarouselUnits；旧 pendingUnits 暂为严格镜像的废弃别名，供当前出售/resolve 入口过渡。界面 readHeldCarouselUnits 改读新投影。两处满才保管，场上未满时卡已直接放进 preparation 的合法格，照常参战。
 - nextSharedRound 已自动在下一准备期（choice 之前）迁入并合星、同步 holdings；不要服务器另算。之后准备期卖出/部署腾空、buyXp 升级后调用保留名 resolvePendingCarouselUnits，原子发布 pool/state/events；临时位出售仍用保留名 sellPendingCarouselUnit。事件新增 carouselPreparationSettled，旧 carouselPendingClaimed 名字保留。
 - tests/server/carousel-room.test.ts 的 1-1 开局、放行、断线、计时追赶、全选等待、拒绝开盘故障断言会失效；2-4 全局用例也依赖先完成 1-1，需移除旧前奏驱动。e2e/p7-carousel.mjs 的 1-1 段（包括切棋盘/空格/断线恢复）应迁到 2-4，并改查新开局与临时位三路落点。规则 PR 不修改这些文件。
+
+### G2-4b WIP — Zephyr combat presence (Codex data contract)
+
+`toCombatViewState` / compact replay units expose optional `banished:boolean`.
+Absent means ordinary presence. `true` means the unit is alive but temporarily
+outside combat; `false` marks its return. Combat frames already carry this
+field as ordinary unitUpdated changes. Claude's display adapter should consume
+it without changing HP, death, targeting, or economy. Acceptance: tick0–99
+shows the temporary absence; tick100 returns at the authoritative cell; no death
+or new inventory unit is inferred. Codex has not changed UI/server files.

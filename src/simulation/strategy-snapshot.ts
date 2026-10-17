@@ -53,7 +53,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
   const shrouds=equipment.flatMap(item=>{
     const definition=catalog.items[item.definitionId];
-    const effect=definition?.effects.find(e=>e.kind==='mechanic'&&e.mechanic==='g24Shroud');
+    const effect=definition?.effects.find(e=>e.kind==='mechanic'&&(e.mechanic==='g24Shroud'||e.mechanic==='g24Zephyr'));
     const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
     return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
   });
@@ -61,8 +61,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
     for(const {item,owner,effect} of shrouds) if(owner.team===unit.team)
-      sources.push(...makeSourcedEffects(unit.id,'item',item.definitionId,item.id+':team-health',[
-        {kind:'statFlat',stat:'maxHp',amount:effect.values.allyHealth}]));
+      sources.push(...makeSourcedEffects(unit.id,'item',item.definitionId,item.id+(effect.mechanic==='g24Shroud'?':team-health':':team-speed'),[
+        effect.mechanic==='g24Shroud'?{kind:'statFlat',stat:'maxHp',amount:effect.values.allyHealth}
+          :{kind:'attackSpeedBps',bps:effect.values.allyAttackSpeedBps}]));
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);

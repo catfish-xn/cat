@@ -1,5 +1,5 @@
 import {projectItemSummons} from './g2-4b-summons';
-import {validateCombatItemGold} from './g2-4b-gold-restore';
+import {validateCombatItemGold,validateZephyrCombat} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -268,9 +268,10 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
-    const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    const verifiedZephyr=validateZephyrCombat(combat,basis,expectedStrategy);
+    const neutralStatuses = verifiedZephyr?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
-    for (const unit of combat.units) {
+    for (const unit of verifiedZephyr?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       requireValue(unit.openingItemBankGold===resolved.openingItemBankGold,'item opening bank');
@@ -322,7 +323,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
-    validateCombatItemGold(combat,basis,expectedStrategy);
+    if(!verifiedZephyr)validateCombatItemGold(combat,basis,expectedStrategy);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
