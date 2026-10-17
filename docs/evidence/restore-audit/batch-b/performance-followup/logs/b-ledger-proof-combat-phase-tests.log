@@ -1,0 +1,105 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests | 1 failed) 892ms
+   × collection replays each battle once, including unchanged-combat equipment command: true 355ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/preparation-ledger-scope.test.ts > collection replays each battle once, including unchanged-combat equipment command: true
+AssertionError: expected { preparationLedger: { …(3) }, …(44) } to deeply equal { preparationLedger: { …(3) }, …(44) }
+
+- Expected
++ Received
+
+@@ -1541,13 +1541,11 @@
+    "items": [
+      {
+        "definitionId": "belt",
+        "id": "item-1",
+        "location": {
+-         "kind": "unit",
+-         "slot": 0,
+-         "unitId": "unit-1",
++         "kind": "inventory",
+        },
+      },
+      {
+        "definitionId": "vest",
+        "id": "item-2",
+@@ -2297,11 +2295,11 @@
+        "subround": 1,
+      },
+    },
+    "nextConsumableSerial": 4,
+    "nextItemSerial": 3,
+-   "nextMatchEventSeq": 23,
++   "nextMatchEventSeq": 22,
+    "nextUnitSerial": 4,
+    "outcome": null,
+    "pendingChoice": null,
+    "persistentGrowth": [],
+    "phase": "settlement",
+@@ -2520,20 +2518,11 @@
+        {
+          "args": [],
+          "name": "startMatchCombat",
+          "repeats": 1,
+        },
+-       {
+-         "args": [
+-           "item-1",
+-           "unit-1",
+-           0,
+      ],
+-         "name": "equipItem",
+-         "repeats": 1,
+-       },
+-     ],
+      "events": [
+        {
+          "death": {
+            "combatId": "round-1",
+            "eventSeq": 26,
+@@ -2814,18 +2803,10 @@
+        {
+          "domain": "match",
+          "eventSeq": 21,
+          "round": 4,
+          "type": "roundSettled",
+-       },
+-       {
+-         "domain": "match",
+-         "eventSeq": 22,
+-         "itemId": "item-1",
+-         "slot": 0,
+-         "type": "itemEquipped",
+-         "unitId": "unit-1",
+        },
+      ],
+      "version": "preparation-command-ledger-v1",
+    },
+    "reforgeState": {
+
+ ❯ tests/restore-audit/preparation-ledger-scope.test.ts:70:73
+     68|   expect(proof).toBeDefined();
+     69|   Object.assign(proof.settledMatch, { gold: proof.settledMatch.gold + …
+     70|   expect(scoped.battleProof(context, state.combat!.tick)!.settledMatch…
+       |                                                                         ^
+     71|   const expected = state.preparationLedger.commands.reduce((n,c)=>n+(c…
+     72|   const spy = vi.spyOn(matchApi,'stepMatch');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 12 passed (13)
+   Start at  15:21:38
+   Duration  4.38s (tests 46%, transform 44%, import 10%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
