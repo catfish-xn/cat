@@ -1,0 +1,31 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-history-cache.test.ts --reporter=default
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/preparation-history-cache.test.ts (1 test | 1 failed) 45ms
+   × reuses only exact validated completed history; independently replays every current tail and rejects mutations 43ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/preparation-history-cache.test.ts > reuses only exact validated completed history; independently replays every current tail and rejects mutations
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/restore-audit/preparation-history-cache.test.ts:10:24
+      8|   const prepared=reachRound('2-1',true,5);
+      9|   const historySteps=prepared.preparationLedger.commands.reduce((n,c)=…
+     10|   expect(historySteps).toBeGreaterThan(0);
+       |                        ^
+     11|   const start=accepted(api.startMatchCombat(prepared));
+     12|   const one=api.stepMatch(start).state, two=api.stepMatch(one).state;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  16:52:32
+   Duration  1.92s (transform 76%, import 20%, tests 3%, setup 1%)
+

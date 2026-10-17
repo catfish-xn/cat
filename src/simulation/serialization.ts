@@ -1,3 +1,4 @@
+import { validatePreparationLedger, createPreparationLedgerValidator } from './preparation-ledger';
 import {readG23Progress} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
 import { validateResistsShields } from './m8/resists-shield-restore';
@@ -104,7 +105,14 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
 }
-function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
+/** One archive operation owns this closure; never retain it across import calls. */
+export function createMatchRestoreSession() {
+  const validateLedger = createPreparationLedgerValidator(true);
+  return Object.assign((input: unknown) => withItemRestoreCache(() => restoreMatchWithinCall(input, false, validateLedger)),
+    { battleProof: validateLedger.battleProof });
+}
+function restoreMatchWithinCall(input: unknown, forSerialization = false,
+  validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -322,6 +330,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Verify the exact independent graph returned below, not another read of an
+  // external object's accessors after validating its economic values.
+  validateLedger(detached);
   // Serialization consumes this private detached graph immediately. Freezing it
   // would traverse the large metadata twice (freeze + canonical cache admission)
   // only to discard it. Keep validation and cloning identical to object restore.

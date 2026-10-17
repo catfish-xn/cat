@@ -1,0 +1,18 @@
+import { it, expect } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { battle } from '../match-helpers';
+import { sharedCombatDeclarations } from '../../src/simulation/combat-static';
+import { cloneData as snapshotData } from '../../src/simulation/data-snapshot';
+it('diagnoses native versus existing exact data clone',()=>{
+ const units=battle().combat!.units.map(unit=>{
+  const shared=sharedCombatDeclarations(unit), omitted=Object.fromEntries(Object.keys(shared).map(key=>[key,undefined]));
+  return {...unit,...omitted,mechanismDefinitions:undefined,mechanismState:undefined,triggerLedger:undefined};
+ });
+ const results:Record<string,number>={};
+ for(const [name,clone] of [['native',structuredClone],['snapshot',snapshotData]] as const){
+  const start=performance.now();for(let i=0;i<3000;i++)for(const unit of units)clone(unit);
+  results[name]=performance.now()-start;
+ }
+ for(const unit of units)expect(snapshotData(unit)).toEqual(structuredClone(unit));
+ writeFileSync('/tmp/b7-clone-benchmark-detached.json',JSON.stringify({units:units.length,repetitions:3000,results},null,2));
+});

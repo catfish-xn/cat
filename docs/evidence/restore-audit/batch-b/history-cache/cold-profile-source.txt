@@ -1,0 +1,14 @@
+import { it } from 'vitest';
+import { Session } from 'node:inspector';
+import { writeFileSync } from 'node:fs';
+import { publicNeutralPreparation } from '../fixtures/m8-neutral-public-route';
+it('diagnoses cold 6-7 restore without changing acceptance limits',async()=>{
+ const session=new Session();session.connect();
+ const post=(method:string)=>new Promise<any>((resolve,reject)=>session.post(method as any,(error,result)=>error?reject(error):resolve(result)));
+ await post('Profiler.enable');await post('Profiler.start');const start=performance.now();
+ try {publicNeutralPreparation('6-7');}finally{
+  const ms=performance.now()-start;const result=await post('Profiler.stop');
+  writeFileSync('/tmp/b7-cold-profile.cpuprofile',JSON.stringify(result.profile));
+  writeFileSync('/tmp/b7-cold-profile-ms.json',JSON.stringify({ms,diagnostic:true}));session.disconnect();
+ }
+});

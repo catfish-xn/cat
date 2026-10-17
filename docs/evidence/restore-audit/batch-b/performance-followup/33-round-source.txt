@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as api from '../../../../../src/simulation/match';
+import { restoreMatch } from '../../../../../src/simulation/serialization';
+import { CompletedBattleHistory } from '../../../../../tests/fixtures/completed-battle-history';
+import { validateBattleCollection } from '../../../../../src/replay/history';
+import { run } from '../../../../../scripts/generate-m5-route.cjs';
+(async()=> {
+ const history = new CompletedBattleHistory('batch-b-33');
+ const t0=performance.now();
+ const route=await run(api,{build:'cannon',seed:42,onStep(before:any,result:any){history.observe({before,after:result.state,events:result.events.filter((e:any)=>e.domain==='combat'),reason:'command'});}});
+ const t1=performance.now();
+ assert.equal(history.completedRecords.length,33);
+ assert.deepEqual(restoreMatch(route.final),route.final); const t2=performance.now();
+ const envelope={kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,runId:'batch-b-33',createdAt:'2026-10-17T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
+ await validateBattleCollection(envelope as any);const t3=performance.now();
+ const result={battles:33,preparationMs:t1-t0,restoreMs:t2-t1,collectionMs:t3-t2,totalMs:t3-t0};
+ fs.writeFileSync('/tmp/b-ledger-33.json',JSON.stringify(result,null,2));console.log(result);
+})().catch(error=>{console.error(error);process.exitCode=1;});

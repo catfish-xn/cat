@@ -1,0 +1,37 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-ledger.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/preparation-ledger.test.ts (12 tests | 1 failed) 2511ms
+   ❯ preparation command ledger invariants (4)
+     × rejects omitted, forged and renamed match events and external grant commands 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/preparation-ledger.test.ts > preparation command ledger invariants > rejects omitted, forged and renamed match events and external grant commands
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/restore-audit/preparation-ledger.test.ts:108:51
+    106|   it('rejects omitted, forged and renamed match events and external gr…
+    107|     const state=createMatch(42);
+    108|     expect(state.preparationLedger.events.length).toBeGreaterThan(0);
+       |                                                   ^
+    109|     const deleted=structuredClone(state) as any;deleted.preparationLed…
+    110|     expect(()=>restoreMatch(deleted)).toThrow('preparation-ledger-even…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 passed (12)
+   Start at  14:37:38
+   Duration  4.66s (tests 57%, transform 35%, import 8%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

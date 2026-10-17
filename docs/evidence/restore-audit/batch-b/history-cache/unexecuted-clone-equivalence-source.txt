@@ -1,0 +1,31 @@
+import { expect, it, vi } from 'vitest';
+import * as clone from '../../src/simulation/data-snapshot';
+import { shareGeneratedJson } from '../../src/simulation/immutable-json';
+import * as api from '../../src/simulation/match';
+import { accepted, purchasedThreeHeroMatch } from '../match-helpers';
+it('keeps native ownership, aliases, cycles, special values and accessor fallback',()=>{
+ const shared={n:1}, graph:any={a:shared,b:shared,immutable:shareGeneratedJson({nested:{hp:1}}),values:[NaN,Infinity,-0,undefined,1n]};
+ graph.self=graph;
+ const copied=clone.cloneData(graph);expect(copied).toEqual(structuredClone(graph));
+ expect(copied).not.toBe(graph);expect(copied.self).toBe(copied);expect(copied.a).toBe(copied.b);expect(copied.a).not.toBe(shared);
+ expect(copied.immutable).not.toBe(graph.immutable);expect(copied.immutable.nested).not.toBe(graph.immutable.nested);
+ copied.immutable.nested.hp=8;expect(graph.immutable.nested.hp).toBe(1);
+ for(const value of [new Date(42),new Map([[1,{a:2}]]),new Set([1,2]),/x/gi,new Uint8Array([1,2]),new Array(3)])expect(clone.cloneData(value)).toEqual(structuredClone(value));
+ let reads=0;const getter={get n(){reads++;return {hp:4};}};
+ expect(clone.cloneData(getter)).toEqual({n:{hp:4}});expect(reads).toBe(1);
+ for(const value of [{f(){}},{symbol:Symbol('x')}])expect(()=>clone.cloneData(value)).toThrow();
+ const special=JSON.parse('{"__proto__":{"own":true}}');expect(clone.cloneData(special)).toEqual(structuredClone(special));
+});
+it('matches native clone every tick through a complete real battle, including RNG, events and input isolation',()=>{
+ let state=accepted(api.startMatchCombat(purchasedThreeHeroMatch())),ticks=0;
+ while(state.phase==='combat'){
+  const before=structuredClone(state);
+  const native=vi.spyOn(clone,'cloneData').mockImplementation(value=>structuredClone(value));
+  let expected:ReturnType<typeof api.stepMatch>;
+  try{expected=api.stepMatch(state);}finally{native.mockRestore();}
+  const actual=api.stepMatch(state);
+  expect(actual).toEqual(expected);expect(state).toEqual(before);
+  state=actual.state;ticks++;
+ }
+ expect(ticks).toBeGreaterThan(20);expect(ticks).toBeLessThanOrEqual(1200);
+});

@@ -1,0 +1,8 @@
+{
+  "units": 3,
+  "repetitions": 3000,
+  "results": {
+    "native": 103.21166300000004,
+    "snapshot": 72.95069699999976
+  }
+}

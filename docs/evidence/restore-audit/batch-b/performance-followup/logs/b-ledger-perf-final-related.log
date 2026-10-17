@@ -1,0 +1,15 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+
+ Test Files  5 passed (5)
+      Tests  44 passed (44)
+   Start at  15:19:06
+   Duration  4.34s (transform 48%, tests 42%, import 10%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

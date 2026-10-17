@@ -36,6 +36,7 @@ export interface RoundPreparation {
   readonly enemies: readonly import('./unit-types').Unit[];
 }
 export interface MatchBase {
+  readonly preparationLedger: import('./preparation-ledger').PreparationLedger;
   readonly carousel?: {readonly openingPending?:boolean;readonly receipts:readonly import('./carousel-types').CarouselReceipt[];readonly pendingUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly heldCarouselUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly preparationReceipts:readonly string[]};
   readonly consumables: readonly import('./consumable-types').ConsumableInstance[];
   readonly nextConsumableSerial: number;

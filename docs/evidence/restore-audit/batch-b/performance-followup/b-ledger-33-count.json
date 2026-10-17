@@ -1,0 +1,8 @@
+{
+  "battles": 33,
+  "stepCounts": [
+    8703
+  ],
+  "expectedSteps": 8703,
+  "diagnosticOnly": true
+}

@@ -1,0 +1,20 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 typecheck
+> tsc --noEmit
+
+src/simulation/preparation-ledger.ts(104,21): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'typeof import("/workspace/scratch/2d61d723fa5a/cat-restore-b/src/simulation/match")'.
+src/simulation/preparation-ledger.ts(112,26): error TS2339: Property 'events' does not exist on type 'MatchCommandResult | MatchStep'.
+  Property 'events' does not exist on type '{ readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure; }'.
+src/simulation/preparation-ledger.ts(112,40): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/simulation/preparation-ledger.ts(118,23): error TS2339: Property 'events' does not exist on type 'MatchCommandResult | MatchStep'.
+  Property 'events' does not exist on type '{ readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure; }'.
+src/simulation/preparation-ledger.ts(118,37): error TS7006: Parameter 'event' implicitly has an 'any' type.
+tests/restore-audit/preparation-ledger-scope.test.ts(14,51): error TS2540: Cannot assign to 'gold' because it is a read-only property.
+tests/restore-audit/preparation-ledger-scope.test.ts(18,48): error TS2540: Cannot assign to 'gold' because it is a read-only property.
+tests/restore-audit/preparation-ledger-scope.test.ts(34,47): error TS2540: Cannot assign to 'gold' because it is a read-only property.
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

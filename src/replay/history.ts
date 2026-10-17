@@ -1,3 +1,5 @@
+import { VerifiedRestoreCache, verifiedRestoreKey } from '../simulation/verified-restore-cache';
+import { comparePreparationState } from '../simulation/preparation-ledger';
 import { snapshotData } from './snapshot';
 import type { BattleRecord, BattleRecordVersion, SaveEnvelope, SessionChange } from '../m6/contracts';
 import { M8_VERSION } from '../simulation/m8/version';
@@ -7,7 +9,7 @@ import type { MatchState } from '../simulation/match-types';
 import type { CombatState } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { MAX_COMBAT_TICKS } from '../simulation/combat-types';
-import { restoreMatch } from '../simulation/serialization';
+import { restoreMatch, createMatchRestoreSession } from '../simulation/serialization';
 import { canonicalContent, digestContent } from '../simulation/content';
 
 // Only this recorder can establish detached, deeply immutable record ownership.
@@ -98,11 +100,22 @@ export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
   if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(structuredClone(verified)));
   return verified;
 }
-function validateM8Record(record: BattleRecord): VerifiedReplay {
+function validateM8Record(record: BattleRecord, restore = restoreMatch,
+  proofFor?: ReturnType<typeof createMatchRestoreSession>['battleProof']): VerifiedReplay {
   checkShape(record);
-  let state = restoreMatch(record.context);
+  let state = restore(record.context);
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');
+  const proof = proofFor?.(state, record.endTick);
+  if (proof) {
+    check(equalContent(proof.initial, record.initial), 'tick0状态');
+    check(equalContent(proof.events, record.events), '事件缺失或内容错误');
+    const terminal = proof.settledMatch.combat!;
+    check(proof.events.length === record.events.length && terminal.nextEventSeq === record.nextEventSeq, '多余事件或游标');
+    check(terminal.result === record.result && terminal.tick === record.endTick, '终点结果');
+    check(digestContent(terminal) === record.stateHash && digestContent(record.events) === record.eventHash, '内容校验');
+    return { terminal, settledMatch: proof.settledMatch };
+  }
   const start = startMatchCombat(state);
   check(start.ok && start.state.combat, '无法开战');
   state = start.state;
@@ -125,8 +138,17 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
   return { terminal, settledMatch: state };
 }
 /** Strict archive topology and historical context validation; yields once after each battle. */
-function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
-  const match = restoreMatch(envelope.match);
+// A real 33-battle envelope occupies about 58 MiB of canonical UTF-16 payload.
+const verifiedCollections = new VerifiedRestoreCache<MatchState>(2, 64 * 1024 * 1024);
+function* battleCollectionChecks(input: SaveEnvelope): Generator<void, void, void> {
+  // Key and validation read the same owned snapshot across asynchronous yields.
+  canonicalContent(input);
+  const envelope = snapshotData(input);
+  const key = verifiedRestoreKey(envelope);
+  const verified = verifiedCollections.get(key);
+  if (verified) { comparePreparationState(envelope.match, verified); return; }
+  const restore = createMatchRestoreSession();
+  const match = restore(envelope.match);
   check(Array.isArray(envelope.battles) && envelope.battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
   const results = match.roundResults.filter(result => result.result !== 'supply');
   check(results.length === envelope.battles.length, '历史缺战或重战');
@@ -134,7 +156,8 @@ function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, 
     check(record.runId === envelope.runId, '局身份');
     check(record.context.seed === match.seed, '历史种子');
     check(equalContent(record.context.roundResults, match.roundResults.filter(r => r.round < record.context.round)), '历史结算前缀');
-    return validateBattleRecord(record);
+    validatorFor(record);
+    return validateM8Record(record, restore, restore.battleProof);
   };
   for (let i = 0; i < envelope.battles.length; i++) {
     const record = envelope.battles[i], result = results[i];
@@ -151,6 +174,7 @@ function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, 
     check(equalContent(verified.terminal, match.combat), '当前战斗与事件前缀不一致');
     check(equalContent(verified.settledMatch, match), '当前会话与开战上下文不一致');
   } else check(envelope.currentBattle === null, '已结束战斗重复前缀');
+  verifiedCollections.put(key, match);
 }
 /** Same checks, yielding to the event loop between battles (import/continue paths). */
 export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {

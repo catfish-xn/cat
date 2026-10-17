@@ -1,0 +1,15 @@
+▲ [WARNING] "esbuild" should be marked as external for use with "require.resolve" [require-resolve-not-external]
+
+    ../cat-g24b-direct/node_modules/esbuild/lib/main.js:1950:36:
+      1950 │   const libMainJS = require.resolve("esbuild");
+           ╵                                     ~~~~~~~~~
+
+✘ [ERROR] Could not resolve "lightningcss"
+
+    ../cat-g24b-direct/node_modules/vite/dist/node/chunks/config.js:30969:59:
+      30969 │ ...ightningCSS = createCachedImport(() => import("lightningcss"));
+            ╵                                                  ~~~~~~~~~~~~~~
+
+  You can mark the path "lightningcss" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle. You can also add ".catch()" here to handle this failure at run-time instead of bundle-time.
+
+1 warning and 1 error

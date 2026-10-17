@@ -1,0 +1,6 @@
+{
+  "exitCode": 0,
+  "wallSeconds": 29.826190952000616,
+  "maxRSSKiB": 1235092,
+  "method": "Python getrusage(RUSAGE_CHILDREN); only one Node child; /usr/bin/time unavailable"
+}

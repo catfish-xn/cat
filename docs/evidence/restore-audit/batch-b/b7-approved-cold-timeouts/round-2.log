@@ -1,0 +1,109 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/m8-b7-match-wiring.test.ts --reporter=default --reporter=json --outputFile=/tmp/b7-approved20-round2.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/m8-b7-match-wiring.test.ts (30 tests | 6 failed) 40702ms
+   ❯ B7 installed encounters and trusted Match restore (30)
+     ✓ 1-2 freezes, starts, runs to settlement and resumes canonical saves 326ms
+     ✓ 1-3 freezes, starts, runs to settlement and resumes canonical saves 256ms
+     ✓ 1-4 freezes, starts, runs to settlement and resumes canonical saves 555ms
+     ✓ 2-7 freezes, starts, runs to settlement and resumes canonical saves 1565ms
+     ✓ 3-7 freezes, starts, runs to settlement and resumes canonical saves 3390ms
+     ✓ 4-7 freezes, starts, runs to settlement and resumes canonical saves 5566ms
+     ✓ 5-7 freezes, starts, runs to settlement and resumes canonical saves 7725ms
+     ✓ 6-7 freezes, starts, runs to settlement and resumes canonical saves 10122ms
+     ✓ 3-7 separates captured initial events from tick-zero opening moves committed by the first step 167ms
+     ✓ 6-7 separates captured initial events from tick-zero opening moves committed by the first step 281ms
+     ✓ replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions 1ms
+     ✓ returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool 712ms
+     ✓ keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates 9ms
+     ✓ rejects injected or mutated authored inputs, including neutral capabilities placed on a champion 144ms
+     ✓ rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7 348ms
+     ✓ rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7 707ms
+     ✓ restores Herald action identity after earlier tick-one aura maintenance: undefined 481ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 20ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "evenshroud" 13ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 24ms
+     × round-trips legal Herald item immunity/cleanup boundaries with quicksilver 11ms
+     × round-trips legal Herald item immunity/cleanup boundaries with edge-of-night 8ms
+     ✓ pins the current catalog assumptions used by pure opening restore, without executing combatStart 1ms
+     ✓ rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts 329ms
+     ✓ rejects deletion of active Herald control, its receipt, or both, and forged cleanup 691ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants 489ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants 459ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants 476ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants 649ms
+     × restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption 5171ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "evenshroud"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:101:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/m8-b7-match-wiring.test.ts:131:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with quicksilver
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with edge-of-night
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:101:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:76:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/m8-b7-match-wiring.test.ts:154:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:221:3
+    219|     expect(s.scheduleReceipts).toEqual([]);
+    220|   });
+    221|   it('restores real bird next-tick reactions and rejects changed effec…
+       |   ^
+    222|     let s=battleFixture('4-7');
+    223|     while(s.phase==='combat' && !s.combat.companionState?.reactions.so…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 24 passed (30)
+   Start at  17:13:56
+   Duration  55.72s (tests 73%, import 24%, transform 3%)
+
+JSON report written to /tmp/b7-approved20-round2.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

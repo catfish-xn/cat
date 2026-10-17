@@ -1,0 +1,40 @@
+diff --git a/src/simulation/serialization.ts b/src/simulation/serialization.ts
+index 6514592..dab8bb8 100644
+--- a/src/simulation/serialization.ts
++++ b/src/simulation/serialization.ts
+@@ -1,4 +1,7 @@
+ import { validatePreparationLedger, createPreparationLedgerValidator } from './preparation-ledger';
++import {readG23Progress} from './g2-3-state';
++import { crownTeamSizeBonus } from './deployment-cap';
++import { validateResistsShields } from './m8/resists-shield-restore';
+ import {getUnitForm} from './seat-mechanics/forms';
+ import {countsG23SurvivorDamage} from './g2-3-summons';
+ import { g23RoundGold } from './g2-3-settlement';
+@@ -96,6 +99,7 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
+ /** Validates plain JSON and all persistent references before returning an independent state.
+  * Verification combats are isolated: no generated effects, rewards, offers or
+  * random cursor changes are committed to the restored state.
++ * Resist-scaled shields are checked by a trusted-input battle replay.
+  */
+ export function restoreMatch(input: unknown): MatchState {
+   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
+@@ -127,7 +131,10 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
+   requireValue(state.round <= FINAL_ROUND, 'round bounds');
+   const roundDefinition = getCatalogRoundByOrdinal(state.round);
+   const enemyProjection = readRoundEnemyProjection(state.round);
+-  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
++  // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
++  let teamSizeBonus = 0;
++  try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
++  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+   record(state.m8); record(state.m8.round); record(state.m8.preparation);
+   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
+   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
+@@ -281,6 +288,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
+     }
+     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
+     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
++    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
+     const cells = new Set<string>();
+     for (const unit of combat.units) {
+       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');

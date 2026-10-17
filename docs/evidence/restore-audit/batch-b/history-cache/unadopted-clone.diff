@@ -1,0 +1,67 @@
+diff --git a/src/replay/snapshot.ts b/src/replay/snapshot.ts
+index 26b9bcd..eef3dc7 100644
+--- a/src/replay/snapshot.ts
++++ b/src/replay/snapshot.ts
+@@ -1,35 +1 @@
+-import { isImmutableJson } from '../simulation/immutable-json';
+-
+-const nativeRequired = Symbol('native clone required');
+-/** Detached data snapshot. Certified immutable JSON subgraphs can retain identity;
+- * dynamic objects retain aliases/cycles in a fresh graph. Unusual values and
+- * accessors stay on structuredClone's native path, without invoking getters in
+- * the speculative data walk. Never freezes or changes the caller's objects. */
+-export function snapshotData<T>(value: T): T {
+-  const copies = new Map<object, object>();
+-  const copy = (input: unknown): unknown => {
+-    if (input === null || typeof input !== 'object') {
+-      if (typeof input === 'function' || typeof input === 'symbol') throw nativeRequired;
+-      return input;
+-    }
+-    const previous = copies.get(input);
+-    if (previous) return previous;
+-    if (isImmutableJson(input)) return input;
+-    const array = Array.isArray(input), prototype = Object.getPrototypeOf(input);
+-    if (prototype !== (array ? Array.prototype : Object.prototype) && prototype !== null) throw nativeRequired;
+-    const result: Record<string, unknown> | unknown[] = array ? new Array((input as unknown[]).length) : {};
+-    copies.set(input, result);
+-    for (const key of Object.keys(input)) {
+-      const descriptor = Object.getOwnPropertyDescriptor(input, key)!;
+-      if (!('value' in descriptor)) throw nativeRequired;
+-      const child = copy(descriptor.value);
+-      // JSON keys are ordinary own properties. Only __proto__ needs definition
+-      // to avoid invoking Object.prototype's legacy setter.
+-      if (key === '__proto__') Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
+-      else (result as Record<string, unknown>)[key] = child;
+-    }
+-    return result;
+-  };
+-  try { return copy(value) as T; }
+-  catch (error) { if (error !== nativeRequired) throw error; return structuredClone(value); }
+-}
++export { snapshotData } from '../simulation/data-snapshot';
+diff --git a/src/simulation/combat-s13.ts b/src/simulation/combat-s13.ts
+index 26324f7..0deb599 100644
+--- a/src/simulation/combat-s13.ts
++++ b/src/simulation/combat-s13.ts
+@@ -1,3 +1,4 @@
++import { cloneData } from './data-snapshot';
+ import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
+ import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
+ import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
+@@ -126,14 +127,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
+     // ledgers use copy-on-write updates; sharing them preserves historical inputs.
+     const shared = sharedCombatDeclarations(unit);
+     const omitted = Object.fromEntries(Object.keys(shared).map(key => [key, undefined]));
+-    const copy = structuredClone({ ...unit, ...omitted,
++    const copy = cloneData({ ...unit, ...omitted,
+       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
+       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
+       ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
+     // A mutable checkpoint is copied first. Only our new declarations freeze;
+     // the caller retains its independent mutable input. Later ticks can share.
+     freezeCombatDeclarations(copy);
+-    // The native clone is fresh and has not escaped. Assign the overrides to it
++    // The detached clone is fresh and has not escaped. Assign the overrides to it
+     // instead of spreading the entire detached unit into a second large object.
+     return Object.assign(copy, { ...shared,
+       ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),

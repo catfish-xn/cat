@@ -1,0 +1,32 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests | 1 failed) 341ms
+   × collection replays each battle once, including unchanged-combat equipment command: true 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/preparation-ledger-scope.test.ts > collection replays each battle once, including unchanged-combat equipment command: true
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/restore-audit/preparation-ledger-scope.test.ts:53:32
+     51|   const start = startMatchCombat(state); expect(start.ok).toBe(true); …
+     52|   if (equipDuringCombat) {
+     53|     expect(state.items.length).toBeGreaterThan(0);
+       |                                ^
+     54|     const beforeCombat = state.combat;
+     55|     const equip = matchApi.equipItem(state, state.items[0].id, 'unit-1…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  15:18:11
+   Duration  2.46s (transform 68%, tests 16%, import 15%, setup 1%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

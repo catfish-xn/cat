@@ -1,0 +1,49 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/verified-restore-cache.test.ts (3 tests | 2 failed) 656ms
+   ❯ process-local exact verified input cache (3)
+     × cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted 258ms
+     × collection keys include every battle byte and never borrow a standalone-state cache on a miss 389ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/verified-restore-cache.test.ts > process-local exact verified input cache > cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted
+AssertionError: expected 'Invalid Match save: current settlemen…' to be 'Invalid Match save: preparation-ledge…' // Object.is equality
+
+Expected: "Invalid Match save: preparation-ledger-gold"
+Received: "Invalid Match save: current settlement totals"
+
+ ❯ tests/restore-audit/verified-restore-cache.test.ts:42:80
+     40|       Object.assign(restored,{gold:restored.gold+1});expect(restoreMat…
+     41|       const bad=structuredClone(state);Object.assign(bad,{gold:bad.gol…
+     42|       spy.mockClear();const first=errorOf(()=>restoreMatch(bad));expec…
+       |                                                                                ^
+     43|       expect(spy).toHaveBeenCalledTimes(steps);
+     44|       spy.mockClear();expect(errorOf(()=>restoreMatch(bad))).toBe(firs…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |fast| tests/restore-audit/verified-restore-cache.test.ts > process-local exact verified input cache > collection keys include every battle byte and never borrow a standalone-state cache on a miss
+AssertionError: expected [Function] to throw error including 'preparation-ledger-gold' but got 'Invalid Match save: current settlemen…'
+
+Expected: "preparation-ledger-gold"
+Received: "Invalid Match save: current settlement totals"
+
+ ❯ tests/restore-audit/verified-restore-cache.test.ts:59:54
+     57|       spy.mockClear();await expect(validateBattleCollection(bad)).reje…
+     58|       Object.assign(envelope.match,{gold:envelope.match.gold+1});
+     59|       await expect(validateBattleCollection(envelope)).rejects.toThrow…
+       |                                                      ^
+     60|     } finally {spy.mockRestore();}
+     61|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  2 failed | 45 passed (47)
+   Start at  15:33:08
+   Duration  4.39s (transform 48%, tests 38%, import 12%, setup 1%)
+

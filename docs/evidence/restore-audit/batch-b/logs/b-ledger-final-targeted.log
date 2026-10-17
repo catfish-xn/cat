@@ -1,0 +1,35 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/match-authority.test.ts tests/restore-audit/preparation-ledger.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/restore-audit/preparation-ledger.test.ts (16 tests | 2 failed) 2382ms
+   ❯ previous battle plus next preparation seed 42 (5)
+     × rejects XP and gold changed together to imitate an unrecorded purchase 4ms
+   ❯ previous battle plus next preparation seed 1 (5)
+     × rejects XP and gold changed together to imitate an unrecorded purchase 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/restore-audit/preparation-ledger.test.ts > previous battle plus next preparation seed 42 > rejects XP and gold changed together to imitate an unrecorded purchase
+ FAIL  |fast| tests/restore-audit/preparation-ledger.test.ts > previous battle plus next preparation seed 1 > rejects XP and gold changed together to imitate an unrecorded purchase
+AssertionError: expected 2 to be greater than or equal to 4
+ ❯ tests/restore-audit/preparation-ledger.test.ts:54:71
+     52|   });
+     53|   it('rejects XP and gold changed together to imitate an unrecorded pu…
+     54|     const bad=structuredClone(envelope.match) as any;expect(bad.gold).…
+       |                                                                       ^
+     55|     const xp=grantXp(bad.level,bad.xp,4);bad.level=xp.level;bad.xp=xp.…
+     56|     for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreMat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 24 passed (26)
+   Start at  14:45:28
+   Duration  4.42s (transform 45%, tests 43%, import 11%, setup 1%)
+
