@@ -102,7 +102,7 @@ entrypoints and completed targeted checks. No tests were rerun for this metadata
 | G24-MOGUL-STACK-01 / WIP runtime | One stack per positive HP-or-shield packet; bleed repayments do not stack. Resists apply to later packets; HP grows after the fixed-max survival barrier and never revives a lethal hit. At35 grant1gold, then every160ticks while alive. | Raw14.24 fixes7HP/1resist/35/1gold/8seconds. Shield eligibility, lethal35th-hit gold and growth ordering are **约定值**, not proved original script order. |
 | G24-MIRROR-INHERIT-01 / WIP runtime | One clone of same champion/star/form; recompile naked champion plus active trait effects; no item programs, no anomaly or persistent growth inheritance until verified. Multiply resulting max HP by 70%, max Mana by 110%, flooring HP/ceiling Mana. Clone does not add population, trait counts or survivor player damage. | Raw 14.24 says max Health (not base Health), disallows equipping items, and confirms active traits. A later 15.1 description changes max to base (values attachment; secondary data diff also found), so later text cannot silently establish 14.24 semantics. Riot 14.8 confirms original form inheritance for an older form-swap champion. Item-stat, anomaly and growth inheritance remain unproven. Proposal may underpower clones of scaled/anomalous units; requires explicit review. |
 | G24-TRENCH-INHERIT-01 / candidate, not wired | Replace holder with 3 fresh combat identities at first 50% threshold. Each starts full at floor(holder maxHP×0.30). Copy champion/star/form and item declarations, mark coat consumed on all three to prevent recursive splitting; reset transient combat timers/counters. No persistent inventory items minted. | Raw fixes 3/50%/30%. Riot 14.9's Treasure Chest interaction supports equipment effects on copies, but full inherited timers, mana, anomalies and growth are not specified. Resetting counters can retrigger survival effects and alter mana timing; do not describe as verified original behavior. |
-| G24-VOIDSPAWN-STAGES-01 / historical carry-forward WIP | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 initial access gap (resolved by the official tft-patch-14-14 URL); absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
+| G24-VOIDSPAWN-STAGES-01 / historical carry-forward WIP | Runtime uses HP stages2..6=1000/1500/2000/2500/3000 (Riot14.6), AD=80/80/120/180 and stars=1/1/2/3 (14.7). Stage1 uses stage2; stage6+ clamps final rows; totals are not star-multiplied again. Raw AS.75/armor30/MR30 apply. | All30 official follow-up pages were searched, including repaired14.14. No later Voidspawn keyword change found, so carry-forward remains an inference; stage boundaries/total interpretation remain conventions. Raw SummonedStatReduction25 is still uninterpreted. |
 | G24-SUMMON-CELL-01 / WIP domain movement | Mirror uses nearest empty friendly-half cell. Voidspawn now projects during preparation and can move through a public command; desired positions persist by item ID across rounds/save. Default/colliding cell uses nearest free friendly cell; full half omits spawn. | Riot14.6 movable preparation placement and14.8 persistence now have domain implementation. Exact collision/default order is still a convention; hero deployment into a projected cell relocates it. UI/server adapters remain Claude work. The earlier combat-only automatic-placement proposal is superseded. |
 
 
@@ -262,3 +262,20 @@ Team trait auras and augments compile onto the summon without increasing trait
 counts. Three relevant files /21tests passed; the additional two-sided placement test
 also passed with all9 Voidspawn tests. TypeScript passed before this final test addition. Compact replay covers10 entries. Full suite,
 final fixture migration and final-head performance/size/CI remain outstanding.
+
+## Consolidated verification at code HEAD930a821239c8f21985002bf291df0b018e490c96
+
+- All15 related `tests/g2-4b-*.test.ts` files passed,60tests total. This was a
+  targeted regression run after the shared strategy/summon changes, not the full suite.
+- `npm run build` passed, including TypeScript. Source/runtime identity test now
+  compares every admitted item's API/name/unique flag with the pinned original;
+  Portal is unique as the raw record requires.
+- Current policy revision `g2-4b-mechanisms-wip-v8`, digest `fnv1a32-utf16:504eaf54`.
+- JS gzip level9:560695bytes,1.3200184574× signed M7 baseline424763;
+  1.0189119152× branch base550288.1.50 limit unchanged. This is build size,
+  not measured interaction/restore performance and not final PR acceptance.
+- CI for this code head: queued run39004574010 when read through GitHub;
+  no all-green claim. Latest fetched multiplayer remains0bc011fa1c3a2b4947c86b24c4367a90268cc10d.
+- Pending: Trench Coat, Mirror inheritance/native forge, centralized convention
+  decisions, predecessor integration, fixture migration and the single final-head
+  full-suite run. No full suite has been run locally. No independent review.

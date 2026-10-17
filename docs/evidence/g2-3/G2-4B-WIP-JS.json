@@ -6,11 +6,12 @@
   "jsGzipBytes": {
     "m7": 424763,
     "branchBase": 550288,
-    "current": 552935
+    "current": 560695
   },
-  "jsRatio": 1.301749446161742,
-  "branchDeltaRatio": 1.0048102084726542,
+  "jsRatio": 1.3200184573515112,
+  "branchDeltaRatio": 1.0189119152153054,
   "jsBudget": 1.5,
   "jsSizeWithinBudget": true,
-  "interactionMeasured": false
+  "interactionMeasured": false,
+  "measuredCodeHead": "930a821239c8f21985002bf291df0b018e490c96"
 }
