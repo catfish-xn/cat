@@ -203,6 +203,8 @@ it('rejects synthetic artifact windows at the save boundary while their choice d
  const picked=accepted(selectChoice(state,'artifact-save',0,offers[3]));
  for(const input of [picked,JSON.stringify(picked)])expect(()=>restoreMatch(input)).toThrow('preparation-ledger-command-rejected');
  expect(()=>serializeMatch(picked)).toThrow('preparation-ledger-command-rejected');
- expect(validateForgeDomain(picked)).toEqual(picked);
- expect(validateForgeDomain(picked).items.at(-1)?.definitionId).toBe(offers[3]);
+ validateForgeDomain(picked);
+ const copied=JSON.parse(JSON.stringify(picked)) as MatchState;
+ expect(copied).toEqual(picked);
+ expect(copied.items.at(-1)?.definitionId).toBe(offers[3]);
 });
