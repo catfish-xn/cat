@@ -73,7 +73,7 @@ node scripts/record-g2-3-live-reveal.cjs
 
 ## 验证边界与构建体积
 
-提交前相关测试8文件/92项通过，包含新神器文件7项及成装锻造器、G23奖励/集成/通用选择、版本合同。`npm run build`通过（含typecheck）。新测试覆盖固定21ID和29源池、Python独立整数oracle固定候选、四项去重/跨窗口可重复、拥有物品不排除、10/14与11/13奖励边界、多档结算、领取/超时防重、pending/收据篡改、旧金币收据拒绝、普通重铸可恢复与神器输入/伪造重铸事实拒绝。
+提交前相关测试9文件/140项通过，包含新神器文件7项及成装锻造器、G23奖励/集成/通用选择、版本合同。`npm run build`通过（含typecheck）。新测试覆盖固定21ID和29源池、Python独立整数oracle固定候选、四项去重/跨窗口可重复、拥有物品不排除、10/14与11/13奖励边界、多档结算、领取/超时防重、pending/收据篡改、旧金币收据拒绝、普通重铸可恢复与神器输入/伪造重铸事实拒绝。
 
 高档征服者测试使用真实开局/命令历史和通用grant来源，在领域信任边界输入六征服者/30个不同击杀的服务器结算向量；JSON往返后调用与存档相同的G23恢复函数，验证待选、手选、超时三态。该向量不声称来自自然战斗，也不等于整房恢复。单人通用神器forge窗口/选中物品另通过完整serializeMatch/restoreMatch；单人restoreMatch原本拒绝multiplayer，本批保留。完整公共路线、Herald与原有恢复测试继续提供外围回归。
 
@@ -82,4 +82,4 @@ JS gzip按scripts/m7-budget.cjs同一算法：`dist/assets/*.js`逐文件gzip le
 - M7：424,763字节；本批：560,214字节。
 - 倍数：**1.3188860611682278×**，通过既有**1.50×**门槛。未测首次交互时间，未改预算。
 
-最终提交head验收命令：`npm test -- --maxWorkers=1`及`npm run test:timing`。只限制本地并发，所有fast/timing测试仍被选择，不改配置、门槛或skip。最终结果、exit code与`/usr/bin/time -v`峰值另随该head交付日志，本文不预先宣称最终全套已通过。若进程被OOM杀死，记录峰值并停止强行重跑。
+最终提交head验收命令：`npm test -- --maxWorkers=2 --reporter=verbose`及`npm run test:timing`。首个head 68ca3a6的全套运行发现旧神器测试将policy revision固定为v4，随后主动结束该轮；该轮不计通过，也不是OOM。只将版本断言同步到v5，生产源码、构建和夹具未变。新head重新完整运行全部测试，fast用两个worker、timing仍串行（可用内存恢复至约4.3GiB）；所有fast/timing测试仍被选择，不改配置、门槛或skip。最终结果、exit code与`/usr/bin/time -v`峰值另随该head交付日志，本文不预先宣称最终全套已通过。若进程被OOM杀死，记录峰值并停止强行重跑。
