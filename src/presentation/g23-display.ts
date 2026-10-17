@@ -76,7 +76,23 @@ const ANOMALY_BY_ID = bridge(G23_ANOMALIES, row => [...apiForms(row.apiName), ..
 const ANOMALY_BY_ZH = new Map(G23_ANOMALIES.map(row => [row.zh, row]));
 const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
 const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
-const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT].map(row => [row.apiName, row]));
+/**
+ * G2-4 support items without a manifest row: 14.24 zh_cn names from CommunityDragon
+ * https://raw.communitydragon.org/14.24/cdragon/tft/zh_cn.json (items[].name by apiName).
+ */
+const G24_SUPPORT_NAMES: readonly G23Name[] = [
+  { apiName: 'TFT4_Item_OrnnObsidianCleaver', en: 'Obsidian Cleaver', zh: '黑曜石切割者' },
+  { apiName: 'TFT4_Item_OrnnRanduinsSanctum', en: "Randuin's Omen", zh: '兰顿之兆' },
+  { apiName: 'TFT7_Item_ShimmerscaleHeartOfGold', en: 'Needlessly Big Gem', zh: '无用大宝石' },
+  { apiName: 'TFT_Item_AegisOfTheLegion', en: 'Aegis of the Legion', zh: '军团圣盾' },
+  { apiName: 'TFT_Item_BansheesVeil', en: "Banshee's Veil", zh: '女妖面纱' },
+  { apiName: 'TFT_Item_EternalFlame', en: 'The Eternal Flame', zh: '永恒烈焰' },
+  { apiName: 'TFT_Item_Moonstone', en: 'Moonstone Renewer', zh: '月石再生器' },
+  { apiName: 'TFT_Item_RadiantVirtue', en: 'Virtue of the Martyr', zh: '殉道美德' },
+  { apiName: 'TFT_Item_Spite', en: 'Spite', zh: '恶意' },
+  { apiName: 'TFT_Item_SupportKnightsVow', en: "Knight's Vow", zh: '骑士之誓' },
+];
+const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_NAMES].map(row => [row.apiName, row]));
 
 /** apiName of a G2-3 hero or summon by content id; undefined for everything else. */
 export function g23ChampionApiName(id: string): string | undefined {
