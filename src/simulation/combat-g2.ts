@@ -6,7 +6,7 @@ import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
-import { executeMechanismEffect } from './m8/s13-mechanisms';
+import { executeMechanismEffect, executeOverTimeTask } from './m8/s13-mechanisms';
 import { burn, modifier, stat, status } from './content/item-programs';
 
 export const EMPTY_EXPANSION: ExpansionState = { damageDealt: 0, damageTaken: 0, crystals: 0, crystalDamage: 0,
@@ -141,6 +141,7 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
 }
 export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask): void {
   if (t.kind.startsWith('g23')) { executeG23Task(ctx, unit, t); return; }
+  if (t.kind.startsWith('g24')) { executeOverTimeTask(ctx, t); return; }
   if (t.kind.startsWith('g22')) { executeG22Task(ctx, unit, t); return; }
   const target = ctx.units.find(u => u.id === t.targetId && u.alive && u.hp > 0);
   if (t.kind === 'g2SingedSpeed') {
