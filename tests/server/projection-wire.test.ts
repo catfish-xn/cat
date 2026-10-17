@@ -21,7 +21,7 @@ import { expectOk, flush, seatTwo, startServer, type NetHarness } from './net/he
 /** Fields of MatchState that must never reach a client (contract §14.1, work order B7 item 2). */
 const PRIVATE_KEYS = ['rngState', 'battleSeedRngState', 'choiceRngState', 'rewardRngState', 'resourceProvenance', 'combatInputBasis',
   'seed', 'scheduleReceipts', 'equipmentState', 'multiplayer', 'sharedPool', 'combat', 'outcome', 'nextItemSerial', 'nextUnitSerial', 'nextMatchEventSeq',
-  'loot', 'frozen', 'encounterPlan', 'settlementId'] as const;
+  'loot', 'frozen', 'encounterPlan', 'settlementId', 'g23Facts', 'economyReceipts'] as const;
 function privateKeysIn(value: unknown, path = '$', found: string[] = []): string[] {
   if (Array.isArray(value)) value.forEach((item, index) => privateKeysIn(item, `${path}[${index}]`, found));
   else if (typeof value === 'object' && value !== null) {
