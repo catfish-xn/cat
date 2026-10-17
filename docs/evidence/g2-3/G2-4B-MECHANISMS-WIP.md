@@ -32,7 +32,9 @@ Their older scope proposals do not supersede the latest eleven-item dispatch.
 
 Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
 roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
-The gold kernel is not connected to settlement yet; deferred damage is connected.
+Gold receipts are now connected to settlement and independent frozen-input restore;
+deferred damage is connected. Eight runtime entrypoints remain WIP, not eight
+fully accepted original implementations.
 Three items, final fixture migration, final full suite and final-head CI/JS measurement
 remain pending. This branch must remain a draft until complete.
 
@@ -72,6 +74,18 @@ compilation without counting additional traits or minting inventory assets.
 Voidspawn requires a verified stage table and spawn/restore integration.
 
 ## 集中待定清单（2026-10-17，未逐项批准）
+
+### Scope ownership gap: Unstable Treasure Chest
+
+On 2026-10-17, the GitHub connector read PR #149 at
+`147b1facb4bb98280ff99f4657fee98082408ac9`. Its actual body lists only13
+support items and defers Shroud, Zephyr, Zz'Rot **and Unstable Treasure Chest**.
+The user's split was14 predecessor +3 in this eleven-item task; thus13+3=16,
+leaving the chest unassigned. This PR does not add a twelfth item. Decision
+needed: assign the chest to its own follow-up or explicitly change a batch's
+scope. Recommendation: a separately assigned follow-up, preserving this scope.
+PR #150's body was updated to distinguish11 source definitions from8 WIP runtime
+entrypoints and completed targeted checks. No tests were rerun for this metadata.
 
 原版明确的常数全部取已固定 hash 的 14.24 原档；下列实现细节缺少原版证据，
 均为 **约定值建议**，不是已经证实的原版行为。前 4 项、诡术师之镜与金币收集者已在 WIP 执行，其他未接线。
