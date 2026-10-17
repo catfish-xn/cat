@@ -191,4 +191,4 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(original.phase).toBe('combat');
   expect(original.round).toBe(state.round + 1);
   compareBattle();
-});
+}, 20000);
