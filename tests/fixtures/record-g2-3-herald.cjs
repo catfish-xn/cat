@@ -1,7 +1,6 @@
 /* Independently regenerate the five approved Herald restore inputs from public
  * commands. Generation exports raw bytes before serialization.ts is even loaded.
- * Default: verify archived bytes and record current source fingerprints outside
- * the raw archive; --check: verify those fingerprints too; --write: replace the
+ * Default: regenerate and verify checked-in bytes/metadata; --write: replace the
  * generated files explicitly. Neither mode changes test timeouts or workloads. */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -12,11 +11,9 @@ const root = path.resolve(__dirname, '../..');
 const directory = path.join(root, 'tests/fixtures/g2-3-herald-raw');
 const args = process.argv.slice(2);
 const write = args.includes('--write');
-const check = args.includes('--check');
-assert(!(write && check), 'Choose write or check');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));
 const baselineDirectory = baselineArgument?.slice('--baseline-dir='.length);
-assert(args.every(argument => argument === '--write' || argument === '--check' || argument === baselineArgument), 'Unknown argument');
+assert(args.every(argument => argument === '--write' || argument === baselineArgument), 'Unknown argument');
 const sha256 = value => crypto.createHash('sha256').update(value).digest('hex');
 const sourceFiles = directory => fs.readdirSync(path.join(root, directory), { withFileTypes: true })
   .flatMap(entry => entry.isDirectory() ? sourceFiles(`${directory}/${entry.name}`) : [`${directory}/${entry.name}`]);
@@ -173,26 +170,10 @@ async function main() {
       fs.mkdirSync(directory, { recursive: true });
       for (const [file, bytes] of outputs) fs.writeFileSync(path.join(directory, file), bytes);
     } else {
-      // The raw directory is an immutable archive. Its manifest fingerprints the
-      // original source, while this regeneration fingerprints today's source.
-      // Keep all execution metadata and every raw/trajectory byte checked.
-      for (const [file, bytes] of outputs) {
-        const archived = fs.readFileSync(path.join(directory, file), 'utf8');
-        if (file !== 'manifest.json') assert.equal(archived, bytes, `Regenerated ${file} differs`);
-        else {
-          const original = JSON.parse(archived);
-          assert.equal(canonicalHash(original.sources), original.sourceSha256, 'Archived source fingerprint integrity');
-          const execution = ({ sources, sourceSha256, ...rest }) => rest;
-          assert.deepEqual(execution(original), execution(manifest), 'All archived execution metadata');
-        }
-      }
-      const fingerprintPath = path.join(root, 'docs/evidence/g2-3/herald-current-fingerprints.json');
-      const fingerprints = canonicalContent({ archivedManifestSha256: sha256(fs.readFileSync(path.join(directory, 'manifest.json'))),
-        manifest, validation }) + '\n';
-      if (check) assert.equal(fs.readFileSync(fingerprintPath, 'utf8'), fingerprints, 'Current source fingerprints');
-      else fs.writeFileSync(fingerprintPath, fingerprints);
+      for (const [file, bytes] of outputs) assert.equal(fs.readFileSync(path.join(directory, file), 'utf8'), bytes,
+        `Regenerated ${file} differs; review the cause before explicitly regenerating with --write`);
     }
-    console.log(JSON.stringify({ phase: 'complete', mode: write ? 'write' : check ? 'check' : 'record-fingerprints', files: outputs.size,
+    console.log(JSON.stringify({ phase: 'complete', mode: write ? 'write' : 'verify', files: outputs.size,
       cases: validation, sourceSha256: manifest.sourceSha256,
       allRawExportedBeforeRestoreImport: true, elapsedMs: performance.now() - started }));
   } finally { await server.close(); }

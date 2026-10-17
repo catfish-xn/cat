@@ -54,7 +54,8 @@ export function validateG23GrantEvidence(state:MatchState,context:ResourceProven
   if(!resources){resources=foldResourceProvenance(state.resourceProvenance,{...context,prefixLength:prefix},parsedJsonInput);projections.set(prefix,resources);}
   check(Array.isArray(e.units)&&canonicalContent(sort(e.units.map(({id,definitionId,starLevel})=>({id,definitionId,starLevel}))))===canonicalContent(resources.units),'unit ownership/star');
   const preparation={...state.preparation,units:e.units};
-  check(e.units.every(u=>Object.keys(u).length===5&&u.team==='player'&&!validateDeployment(preparation,u.id,u.location)),'deployment snapshot');
+  check(new Set(e.units.map(u=>canonicalContent(u.location))).size===e.units.length
+   &&e.units.every(u=>Object.keys(u).length===5&&u.team==='player'&&!validateDeployment(preparation,u.id,u.location)),'deployment snapshot');
   const progress=replayG23Economy(state.seed,economy);
   check(getPlayerDeploymentCount(preparation)<=e.level+crownTeamSizeBonus({...progress,rewardClaims:p.rewardClaims.filter(c=>receipts.findIndex(r=>r.receiptId===c.id)<e.mechanicPrefixLength)}),'deployment capacity');
   if(receipt.receiptId.startsWith('g23:academy:')){

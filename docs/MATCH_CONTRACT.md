@@ -428,7 +428,7 @@ reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
 
 - 存档一致性 A2/A4/A5：首次构造 G23 DTO/atoms 之前，先按经济收据中的轮次、结算身份与事实重推完整奖励包，核对 id、round、source、tier、reward；atoms 只遍历匹配的冻结表项，不按存档数量展开。
 - 学院赠装和拾荒者选择成功后，在 `seatMechanics.hidden.grantEvidence` 逐条记录 `{receiptId,round,resourcePrefixLength,mechanicPrefixLength,economyPrefixLength,level,units}`。快照取授予/选择前，units 为当时持有者的实例、定义、星级、队伍与部署位置；不投影给客户端。
-- 恢复时独立折叠资源前缀并核对快照，校验轮次、前缀顺序、部署合法性与容量。学院须满足当时 3/4/5 羁绊资格且下一资源事实恰为该物品出生；拾荒者用 seed、已验证购买前缀和当时最强 Rumble 重建菜单，核对 unitId、选项、3 星 titan 及超时默认项。当前单位售出/合星不改历史资格；冻结战斗 DTO 的购买记录须与已验证记录一致。
+- 恢复时独立折叠资源前缀并核对快照，校验轮次、前缀顺序、部署合法性、位置唯一性与容量。学院须满足当时 3/4/5 羁绊资格且下一资源事实恰为该物品出生；拾荒者用 seed、已验证购买前缀和当时最强 Rumble 重建菜单，核对 unitId、选项、3 星 titan 及超时默认项。当前单位售出/合星不改历史资格；冻结战斗 DTO 的购买记录须与已验证记录一致。
 - 相关收据缺少上述新证据即拒绝读取，不迁移、不补造；未触发这些授予的存档不需要空证据字段。规则数值、内容 digest 和各版本不变。
 
 ### 3 新的选择类型：锻造器、黑市、军械库

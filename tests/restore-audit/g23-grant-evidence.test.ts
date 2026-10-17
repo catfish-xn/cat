@@ -94,3 +94,15 @@ it('Academy3/4/5 each binds its own pre-grant birth boundary and qualifying depl
   rejects(bad);
  }
 });
+
+it.each(['extra snapshot','identity','round','level','deployment collision'])('rejects forged grant evidence %s without mutating either save entry',field=>{
+ for(const source of [junker,academy]){
+  const bad=structuredClone(source),snapshots=evidence(bad),snapshot=snapshots[0];
+  if(field==='extra snapshot')snapshots.push(structuredClone(snapshot));
+  else if(field==='identity')Object.assign(snapshot,{receiptId:'forged-grant'});
+  else if(field==='round')Object.assign(snapshot,{round:snapshot.round+1});
+  else if(field==='level')Object.assign(snapshot,{level:0});
+  else Object.assign(snapshot.units[1],{location:structuredClone(snapshot.units[0].location)});
+  const before=JSON.stringify(bad);rejects(bad,'grant evidence');expect(JSON.stringify(bad)).toBe(before);
+ }
+});
