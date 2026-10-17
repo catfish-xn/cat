@@ -1,0 +1,462 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/explorer-bracer-restore.test.ts tests/g2-4b-artifact-forge.test.ts --maxWorkers=1 --reporter=default --reporter=json --outputFile=/tmp/b-final-boundary-supplement.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/explorer-bracer-restore.test.ts (26 tests) 7279ms
+   ✓ Match boundaries reject mechanic-granted bracer fixtures before they can claim preparation provenance 3166ms
+   ✓ Seeker's Armguard direct production combat validators (17)
+     ✓ rejects transferring Lux kills to Irelia with rebuilt owner/item/trigger identities 530ms
+     ✓ direct validators accept before, during and after stacking, then continues with identical state, events and RNG 879ms
+ ❯ |fast| tests/g2-4b-artifact-forge.test.ts (7 tests | 1 failed) 3393ms
+   ✓ pins the approved 21 IDs separately from the intact 29 source identities and hashes the acquisition policy 4ms
+   ✓ restores source tiers 10/14 while support tiers 11/13 retain their transitional rewards 1ms
+   ✓ offers four distinct reproducible artifacts and permits overlap between independent windows 5ms
+   ✓ tier 10 validates pending/manual/timeout domains and rejects duplicate grants and edited authority 247ms
+   ✓ tier 14 validates pending/manual/timeout domains and rejects duplicate grants and edited authority 35ms
+   ✓ completed reforger refuses artifacts in inventory or equipped without consuming tool/RNG; ordinary reforge still restores 3070ms
+   × rejects synthetic artifact windows at the save boundary while their choice domain still round-trips 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4b-artifact-forge.test.ts > rejects synthetic artifact windows at the save boundary while their choice domain still round-trips
+AssertionError: expected undefined to deeply equal { preparationLedger: { …(3) }, …(44) }
+
+- Expected:
+{
+  "anomalyBinding": null,
+  "augmentProgress": {
+    "investmentHp": 0,
+    "pumpingRounds": 0,
+  },
+  "augments": [],
+  "battleSeedRngState": 2654435731,
+  "choiceRngState": 2654435731,
+  "combat": null,
+  "combatInputBasis": null,
+  "commandProtocolVersion": 3,
+  "consumables": [],
+  "contentDigest": "fnv1a32-utf16:cf9dcfe5",
+  "contentVersion": "s13-14.24b-g2-3-v8",
+  "equipmentState": {
+    "equipment": {
+      "draws": 0,
+      "state": 608135842,
+    },
+    "rolls": [],
+  },
+  "gold": 0,
+  "items": [
+    {
+      "definitionId": "TFT_Item_Artifact_UnendingDespair",
+      "id": "item-1",
+      "location": {
+        "kind": "inventory",
+      },
+    },
+  ],
+  "level": 1,
+  "m8": {
+    "encounterPlan": null,
+    "loot": {
+      "choiceEligibility": [],
+      "choiceResolutions": [],
+      "direct": [
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+          "receiptId": null,
+          "status": "planned",
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+          "receiptId": null,
+          "status": "planned",
+        },
+      ],
+      "earnedEvidence": [],
+      "frozen": {
+        "replayDigest": "fnv1a32-utf16:baac21c4",
+        "rng": {
+          "draws": 1,
+          "state": 1719738720,
+        },
+        "rounds": [
+          {
+            "choices": [],
+            "encounterPlan": {
+              "drops": [
+                [Object],
+                [Object],
+              ],
+              "encounterId": "minions-a-v1",
+              "policyVersion": "m8b-pve-project-v2",
+              "roundId": "1-2",
+            },
+            "orbs": [
+              {
+                "encounterId": "minions-a-v1",
+                "entries": [Array],
+                "orbId": "[\"orb\",\"1-2\",\"minions-a-v1\",\"[\\\"pve\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"m01\\\"]\",0]",
+                "roundId": "1-2",
+                "slotOrdinal": 0,
+                "sourceUnitId": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+                "templateId": "opening-unit",
+                "tier": "gray",
+              },
+            ],
+          },
+        ],
+        "seed": 42,
+        "throughRoundOrdinal": 1,
+        "version": "s13-orb-freeze-v1",
+      },
+      "guaranteeCounters": {
+        "[\"s13-orbs-project-v1\",\"1-2\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"1-3\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"1-4\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"2-7\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"3-7\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"4-7\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"5-7\",\"components-granted\"]": 0,
+        "[\"s13-orbs-project-v1\",\"6-7\",\"components-granted\"]": 0,
+      },
+      "layoutBinding": {
+        "layout": {
+          "rng": {
+            "draws": 0,
+            "state": 1330791033,
+          },
+          "rounds": [
+            {
+              "encounterId": "minions-a-v1",
+              "orbs": [
+                [Object],
+              ],
+              "roundId": "1-2",
+            },
+          ],
+          "seed": 42,
+          "throughRoundOrdinal": 1,
+          "version": "s13-orb-layout-v1",
+        },
+        "mode": "solo",
+      },
+      "receipts": [],
+    },
+    "preparation": {
+      "contentStatus": "ready-b8-loot",
+      "encounterId": "minions-a-v1",
+      "enemies": [
+        {
+          "definitionId": "pve-minion-melee-a",
+          "encounterId": "minions-a-v1",
+          "id": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+          "location": {
+            "cell": {
+              "col": 2,
+              "row": 3,
+            },
+            "kind": "board",
+          },
+          "starLevel": 1,
+          "team": "enemy",
+        },
+        {
+          "definitionId": "pve-minion-melee-a",
+          "encounterId": "minions-a-v1",
+          "id": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m02\"]",
+          "location": {
+            "cell": {
+              "col": 4,
+              "row": 3,
+            },
+            "kind": "board",
+          },
+          "starLevel": 1,
+          "team": "enemy",
+        },
+      ],
+      "roundId": "1-2",
+      "version": "m8-b8-preparation-v1",
+    },
+    "round": {
+      "displayName": "1-2",
+      "encounterId": "minions-a-v1",
+      "isFinal": false,
+      "kind": "pve",
+      "ordinal": 1,
+      "roundId": "1-2",
+      "stage": 1,
+      "subround": 2,
+    },
+  },
+  "nextConsumableSerial": 1,
+  "nextItemSerial": 2,
+  "nextMatchEventSeq": 2,
+  "nextUnitSerial": 2,
+  "outcome": null,
+  "pendingChoice": null,
+  "persistentGrowth": [],
+  "phase": "preparation",
+  "playerHp": 100,
+  "preparation": {
+    "benchSize": 9,
+    "board": {
+      "columns": 7,
+      "deploymentZones": {
+        "enemy": {
+          "firstRow": 0,
+          "lastRow": 3,
+        },
+        "player": {
+          "firstRow": 4,
+          "lastRow": 7,
+        },
+      },
+      "rows": 8,
+    },
+    "units": [
+      {
+        "definitionId": "irelia",
+        "id": "unit-1",
+        "location": {
+          "cell": {
+            "col": 1,
+            "row": 4,
+          },
+          "kind": "board",
+        },
+        "starLevel": 1,
+        "team": "player",
+      },
+      {
+        "definitionId": "pve-minion-melee-a",
+        "encounterId": "minions-a-v1",
+        "id": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+        "location": {
+          "cell": {
+            "col": 2,
+            "row": 3,
+          },
+          "kind": "board",
+        },
+        "starLevel": 1,
+        "team": "enemy",
+      },
+      {
+        "definitionId": "pve-minion-melee-a",
+        "encounterId": "minions-a-v1",
+        "id": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m02\"]",
+        "location": {
+          "cell": {
+            "col": 4,
+            "row": 3,
+          },
+          "kind": "board",
+        },
+        "starLevel": 1,
+        "team": "enemy",
+      },
+    ],
+  },
+  "preparationLedger": {
+    "commands": [
+      {
+        "args": [
+          "artifact-save",
+          0,
+          "TFT_Item_Artifact_UnendingDespair",
+        ],
+        "name": "selectChoice",
+        "repeats": 1,
+      },
+    ],
+    "events": [
+      {
+        "choiceId": "artifact-save",
+        "definitionId": "TFT_Item_Artifact_UnendingDespair",
+        "domain": "match",
+        "eventSeq": 0,
+        "type": "choiceSelected",
+        "unitId": null,
+      },
+      {
+        "domain": "match",
+        "eventSeq": 1,
+        "receipt": {
+          "choiceKind": "forge",
+          "itemId": "item-1",
+          "kind": "choice",
+          "optionId": "TFT_Item_Artifact_UnendingDespair",
+          "price": 0,
+          "receiptId": "artifact-save",
+          "round": 1,
+          "roundId": "1-2",
+          "skipped": false,
+          "source": "fixture",
+          "timedOut": false,
+        },
+        "type": "mechanicGranted",
+      },
+    ],
+    "version": "preparation-command-ledger-v1",
+  },
+  "reforgeState": {
+    "draws": 0,
+    "state": 1380271725,
+  },
+  "resourceProvenance": {
+    "entries": [
+      {
+        "kind": "unit-acquired",
+        "roundId": "1-2",
+        "sequence": 0,
+        "source": {
+          "kind": "opening",
+          "seatId": "solo",
+          "seed": 42,
+        },
+        "unitId": "unit-1",
+      },
+      {
+        "itemId": "item-1",
+        "kind": "item-acquired",
+        "roundId": "1-2",
+        "sequence": 1,
+        "source": {
+          "kind": "mechanic",
+          "receiptId": "artifact-save",
+        },
+      },
+    ],
+    "equipmentHistory": "ordered",
+    "version": "m8-b8-resource-provenance-v1",
+  },
+  "rewardRngState": 2246822465,
+  "rngAlgorithm": "lcg32-v1",
+  "rngState": 4271921684,
+  "round": 1,
+  "roundDefinitionId": "1-2",
+  "roundResults": [],
+  "rulesVersion": "s13-g2-3-v8",
+  "scheduleReceipts": [],
+  "schemaVersion": 7,
+  "seatMechanics": {
+    "hidden": {
+      "progress": {
+        "economyReceipts": [],
+        "rngDraws": 1,
+        "rngState": 2117823217,
+        "seed": 42,
+        "version": "g2-3-progress-v1",
+      },
+    },
+    "receipts": [
+      {
+        "choiceKind": "forge",
+        "itemId": "item-1",
+        "kind": "choice",
+        "optionId": "TFT_Item_Artifact_UnendingDespair",
+        "price": 0,
+        "receiptId": "artifact-save",
+        "round": 1,
+        "roundId": "1-2",
+        "skipped": false,
+        "source": "fixture",
+        "timedOut": false,
+      },
+    ],
+    "seat": {
+      "academy": {
+        "sponsored": [
+          "guardbreaker",
+          "rageblade",
+          "adaptive-helm",
+        ],
+      },
+      "alchemist": {
+        "losses": 0,
+        "offer": null,
+        "offeredThrough": 0,
+        "shimmer": 0,
+        "skips": 0,
+      },
+      "conqueror": {
+        "chestsOpened": 0,
+        "receipts": [],
+        "rewards": [],
+        "stacks": 0,
+      },
+      "experimentCells": [],
+      "junkerKing": {
+        "purchases": [],
+        "rounds": 0,
+      },
+      "radiantConversion": false,
+    },
+    "version": "g2-3-seat-mechanics-v1",
+  },
+  "seed": 42,
+  "shop": {
+    "generation": 1,
+    "locked": false,
+    "slots": [
+      {
+        "definitionId": "darius",
+        "status": "available",
+      },
+      {
+        "definitionId": "irelia",
+        "status": "available",
+      },
+      {
+        "definitionId": "amumu",
+        "status": "available",
+      },
+      {
+        "definitionId": "darius",
+        "status": "available",
+      },
+      {
+        "definitionId": "zyra",
+        "status": "available",
+      },
+    ],
+  },
+  "streak": {
+    "count": 0,
+    "kind": null,
+  },
+  "temporaryEquipment": [],
+  "tickMs": 50,
+  "xp": 0,
+}
+
++ Received:
+undefined
+
+ ❯ tests/g2-4b-artifact-forge.test.ts:206:38
+    204|  for(const input of [picked,JSON.stringify(picked)])expect(()=>restore…
+    205|  expect(()=>serializeMatch(picked)).toThrow('preparation-ledger-comman…
+    206|  expect(validateForgeDomain(picked)).toEqual(picked);
+       |                                      ^
+    207|  expect(validateForgeDomain(picked).items.at(-1)?.definitionId).toBe(o…
+    208| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 32 passed (33)
+   Start at  01:25:17
+   Duration  11.96s (tests 90%, transform 8%, import 2%)
+
+JSON report written to /tmp/b-final-boundary-supplement.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

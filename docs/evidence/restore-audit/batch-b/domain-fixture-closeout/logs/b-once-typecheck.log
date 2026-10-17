@@ -1,0 +1,28 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 typecheck
+> tsc --noEmit
+
+tests/g2-4b-pr161-restore.test.ts(366,100): error TS2322: Type 'ResourceProvenanceEntry | { itemId: string; sequence: number; source?: undefined; kind: "g23-item-converted"; from: string; to: string; receiptId: string; roundId: string; } | ... 34 more ... | { ...; }' is not assignable to type 'ResourceProvenanceEntry'.
+  Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type 'ResourceProvenanceEntry'.
+    Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type '{ readonly kind: "unit-acquired"; readonly unitId: string; readonly source: UnitAcquisitionSource; } & { readonly sequence: number; readonly roundId: string; }'.
+      Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type '{ readonly kind: "unit-acquired"; readonly unitId: string; readonly source: UnitAcquisitionSource; }'.
+        Types of property 'source' are incompatible.
+          Type '{ kind: string; receiptId: string; }' is not assignable to type 'UnitAcquisitionSource'.
+            Type '{ kind: string; receiptId: string; }' is not assignable to type '{ readonly kind: "mechanic"; readonly receiptId: string; }'.
+              Types of property 'kind' are incompatible.
+                Type 'string' is not assignable to type '"mechanic"'.
+tests/g2-4b-pr161-restore.test.ts(366,149): error TS2322: Type '{ itemId: string; sequence: number; source?: undefined; kind: "g23-item-converted"; from: string; to: string; receiptId: string; roundId: string; } | { sequence: number; itemId: string; source?: undefined; ... 4 more ...; roundId: string; } | ... 33 more ... | { ...; }' is not assignable to type 'ResourceProvenanceEntry'.
+  Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type 'ResourceProvenanceEntry'.
+    Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type '{ readonly kind: "unit-acquired"; readonly unitId: string; readonly source: UnitAcquisitionSource; } & { readonly sequence: number; readonly roundId: string; }'.
+      Type '{ source: { kind: string; receiptId: string; }; itemId?: undefined; sequence: number; kind: "unit-acquired"; unitId: string; roundId: string; }' is not assignable to type '{ readonly kind: "unit-acquired"; readonly unitId: string; readonly source: UnitAcquisitionSource; }'.
+        Types of property 'source' are incompatible.
+          Type '{ kind: string; receiptId: string; }' is not assignable to type 'UnitAcquisitionSource'.
+            Type '{ kind: string; receiptId: string; }' is not assignable to type '{ readonly kind: "mechanic"; readonly receiptId: string; }'.
+              Types of property 'kind' are incompatible.
+                Type 'string' is not assignable to type '"mechanic"'.
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

@@ -1,0 +1,119 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 typecheck
+> tsc --noEmit
+
+src/server/main.ts(37,13): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(54,88): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(83,1): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(83,33): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/server/main.ts(83,119): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(84,1): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(84,34): error TS7006: Parameter 'reason' implicitly has an 'any' type.
+src/server/main.ts(84,177): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(99,48): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(99,77): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(105,131): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(106,3): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(107,3): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/main.ts(108,140): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/server/net/server.ts(16,73): error TS2307: Cannot find module 'node:http' or its corresponding type declarations.
+src/server/net/server.ts(17,63): error TS2307: Cannot find module 'ws' or its corresponding type declarations.
+src/server/net/server.ts(499,27): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/server/net/server.ts(499,33): error TS7006: Parameter 'isBinary' implicitly has an 'any' type.
+src/server/net/server.ts(501,24): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/server/net/server.ts(550,21): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/server/net/server.ts(556,24): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/server/net/session.ts(7,41): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/b8-resumable-battle-helper.ts(2,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/b8-resumable-battle-helper.ts(5,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/b8-resumable-battle-helper.ts(6,29): error TS2307: Cannot find module 'node:perf_hooks' or its corresponding type declarations.
+tests/c19-missed-pulse.test.ts(2,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/chest-bracer-integration-trial.test.ts(1,33): error TS2307: Cannot find module 'node:assert/strict' or its corresponding type declarations.
+tests/ci-route-evidence.test.ts(1,28): error TS2307: Cannot find module 'node:events' or its corresponding type declarations.
+tests/ci-route-evidence.test.ts(2,29): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+tests/explorer-bracer-restore-pressure.test.ts(1,31): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+tests/fixtures/explorer-bracer-stress.ts(1,29): error TS2307: Cannot find module 'node:perf_hooks' or its corresponding type declarations.
+tests/fixtures/explorer-bracer-stress.ts(7,18): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/fixtures/g2-3-armory-public.ts(4,29): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+tests/fixtures/g4-global-setup.ts(1,37): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/fixtures/g4-global-setup.ts(2,24): error TS2307: Cannot find module 'node:os' or its corresponding type declarations.
+tests/fixtures/g4-global-setup.ts(3,22): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+tests/fixtures/g4-global-setup.ts(7,3): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/fixtures/g4-global-setup.ts(8,25): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/fixtures/g4-run-cache.ts(1,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/fixtures/g4-run-cache.ts(2,57): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/fixtures/g4-run-cache.ts(3,22): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+tests/fixtures/g4-run-cache.ts(9,21): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/fixtures/g4-run-cache.ts(16,33): error TS2503: Cannot find namespace 'NodeJS'.
+tests/fixtures/g4-run-cache.ts(21,32): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/fixtures/g4-worker-setup.ts(1,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/fixtures/t13-loot-public.ts(3,31): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+tests/g2-1-content.test.ts(1,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-1-content.test.ts(2,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/g2-1-content.test.ts(3,28): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/g2-2-identity.test.ts(2,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-2-identity.test.ts(3,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/g2-2-identity.test.ts(4,26): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/g2-2-traits.test.ts(10,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-3-content.test.ts(2,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-3-content.test.ts(3,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/g2-3-content.test.ts(4,28): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/g2-3-source-pins.test.ts(3,28): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/g2-3-source-pins.test.ts(4,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-4a-crown-history.test.ts(2,33): error TS2307: Cannot find module 'node:assert/strict' or its corresponding type declarations.
+tests/g2-4b-pr161-restore.test.ts(2,61): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-4b-pr161-restore.test.ts(3,22): error TS2307: Cannot find module 'node:os' or its corresponding type declarations.
+tests/g2-4b-pr161-restore.test.ts(4,28): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+tests/g2-4b-pr161-restore.test.ts(5,25): error TS2307: Cannot find module 'node:child_process' or its corresponding type declarations.
+tests/g2-4b-pr161-restore.test.ts(370,28): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/g2-augments-identity.test.ts(1,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/g2-augments-identity.test.ts(2,28): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/g2-augments-identity.test.ts(3,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/g4-replay-snapshot.test.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/m6-integration-helper.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/m6-persistence.test.ts(190,10): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/m6-persistence.test.ts(190,57): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/m8-b10-item-save-replay.test.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/opening-random-identity.test.ts(1,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/opening-random-identity.test.ts(2,28): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/opening-random-identity.test.ts(3,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/opening-random-identity.test.ts(13,30): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/p7-1-identity.test.ts(1,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/p7-1-identity.test.ts(2,26): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/p7-1-identity.test.ts(3,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/p7-identity.test.ts(1,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/p7-identity.test.ts(2,26): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/p7-identity.test.ts(3,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/presentation/g2-3-display.test.ts(3,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/presentation/g2-3-display.test.ts(4,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/r3r4-legacy.test.ts(5,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/restore-audit/bounds-preflight.test.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/server/net/server.test.ts(375,47): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/server/projection-wire.test.ts(36,35): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/server/purity.test.ts(2,53): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/server/purity.test.ts(3,32): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+tests/server/purity.test.ts(5,19): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/server/purity.test.ts(8,35): error TS7006: Parameter 'name' implicitly has an 'any' type.
+tests/t11-golden.test.ts(1,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/t11-golden.test.ts(2,30): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/t12-combat-equip.test.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/t12-golden.test.ts(1,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/t12-golden.test.ts(2,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/t13-a-golden.test.ts(1,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/t13-a-golden.test.ts(2,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/t13-golden.test.ts(1,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/t13-golden.test.ts(2,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/t13-identity.test.ts(1,28): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+tests/t13-identity.test.ts(2,26): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+tests/t13-identity.test.ts(3,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+tests/t5r-combat-replay.test.ts(1,33): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+tests/t5r-combat-replay.test.ts(82,17): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/t5r-combat-replay.test.ts(82,63): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+tests/t9-loadtest.test.ts(1,31): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+tests/u6-panel-snapshot.test.ts(2,29): error TS2307: Cannot find module 'node:module' or its corresponding type declarations.
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

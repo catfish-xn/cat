@@ -1,0 +1,11 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/crown-restore-cache.test.ts tests/g2-4a-crown-history.test.ts tests/g2-4b-resists-restore.test.ts tests/explorer-bracer-restore.test.ts tests/explorer-bracer-restore-pressure.test.ts tests/chest-bracer-integration-trial.test.ts tests/g2-4b-artifact-forge.test.ts tests/g2-4b-pr161-restore.test.ts tests/restore-audit/bounds-preflight.test.ts --no-file-parallelism --maxWorkers=1 --reporter=json --outputFile=/tmp/b-migration-round1.json
+
+JSON report written to /tmp/b-migration-round1.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

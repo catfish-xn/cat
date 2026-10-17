@@ -1,0 +1,174 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-4a-crown-history.test.ts -t M9 boundary --reporter=default
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+stdout | tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay: direct domain and public reforge controls > certifies the same ordered result when both tick claims move to 69 (M9 boundary)
+M9_LEDGER_EVENTS {"genuine":[{"type":"itemEquipped","itemId":"item-1","unitId":"unit-1","slot":0,"domain":"match","eventSeq":0},{"type":"lootRevealed","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]","death":{"combatId":"round-1","tick":35,"eventSeq":19},"domain":"match","eventSeq":1},{"type":"lootRevealed","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]","death":{"combatId":"round-1","tick":35,"eventSeq":19},"domain":"match","eventSeq":2},{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-3","definitionId":"deathblade","domain":"match","eventSeq":3},{"type":"itemEquipped","itemId":"item-3","unitId":"unit-1","slot":0,"domain":"match","eventSeq":4},{"type":"lootGranted","receipt":{"receiptId":"[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]","payload":{"kind":"unit","definitionId":"darius","quantity":1},"grantedItemIds":[],"grantedUnitIds":["unit-2"]},"domain":"match","eventSeq":5},{"type":"lootGranted","receipt":{"receiptId":"[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]","payload":{"kind":"consumable","definitionId":"magnetic-remover","quantity":1},"grantedItemIds":[],"grantedUnitIds":[],"grantedConsumableIds":["consumable-1"]},"domain":"match","eventSeq":6},{"type":"roundSettled","round":1,"domain":"match","eventSeq":7}],"shifted":[{"type":"itemEquipped","itemId":"item-1","unitId":"unit-1","slot":0,"domain":"match","eventSeq":0},{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-3","definitionId":"deathblade","domain":"match","eventSeq":1},{"type":"itemEquipped","itemId":"item-3","unitId":"unit-1","slot":0,"domain":"match","eventSeq":2},{"type":"lootRevealed","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]","death":{"combatId":"round-1","tick":35,"eventSeq":19},"domain":"match","eventSeq":3},{"type":"lootRevealed","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]","death":{"combatId":"round-1","tick":35,"eventSeq":19},"domain":"match","eventSeq":4},{"type":"lootGranted","receipt":{"receiptId":"[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]","payload":{"kind":"unit","definitionId":"darius","quantity":1},"grantedItemIds":[],"grantedUnitIds":["unit-2"]},"domain":"match","eventSeq":5},{"type":"lootGranted","receipt":{"receiptId":"[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]","dropId":"[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]","payload":{"kind":"consumable","definitionId":"magnetic-remover","quantity":1},"grantedItemIds":[],"grantedUnitIds":[],"grantedConsumableIds":["consumable-1"]},"domain":"match","eventSeq":6},{"type":"roundSettled","round":1,"domain":"match","eventSeq":7}]}
+
+ ❯ |fast| tests/g2-4a-crown-history.test.ts (56 tests | 1 failed | 53 skipped) 5580ms
+   ↓ M1 crown history authority (6)
+     ↓ rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history
+     ↓ rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously
+     ↓ does not let a later record context authorize its own forged historical prefix
+     ↓ accepts the public-command no-crown control and resumes identically
+     ↓ rejects synthetic opening crowns at Match entries and validates crown facts/continuation directly, seed 1
+     ↓ rejects synthetic opening crowns at Match entries and validates crown facts/continuation directly, seed 42
+   ↓ M2 equipment binding continuity: direct domain validators (9)
+     ↓ rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards
+     ↓ accepts legal sale and subsequent re-equipping
+     ↓ accepts legal remover and subsequent re-equipping
+     ↓ accepts legal upgrade and subsequent re-equipping
+     ↓ accepts legal upgrade-remover-equip and subsequent re-equipping
+     ↓ accepts legal combine-equip and subsequent re-equipping
+     ↓ replays survivor equipment before-upgrade in exact order (M4)
+     ↓ replays survivor equipment after-upgrade in exact order (M4)
+     ↓ also rejects moving a non-crown equipped instance
+   ↓ M5/M6 ordered equipment across the first battle: direct domain validators (3)
+     ↓ replays combat equip before settlement, validates the direct domain inputs and continues tick for tick
+     ↓ rejects a claimed pre-first-battle equip left in inventory, with or without an empty history
+     ↓ accepts legal pre-first-battle equipment and validates the first opening prefix
+   ❯ M7/S7 combat equipment command replay: direct domain and public reforge controls (38)
+     ↓ records remove and verifies every continuation tick (M10; reforgers also use actual save entries)
+     ↓ records reequip and verifies every continuation tick (M10; reforgers also use actual save entries)
+     ↓ records combine and verifies every continuation tick (M10; reforgers also use actual save entries)
+     ↓ records component-reforger and verifies every continuation tick (M10; reforgers also use actual save entries)
+     ↓ records completed-reforger and verifies every continuation tick (M10; reforgers also use actual save entries)
+     ↓ rejects changing the remove command tick through the direct domain validators (M10)
+     ↓ rejects changing the component-reforger command tick through the direct domain validators (M10)
+     ↓ rejects changing the completed-reforger command tick through the direct domain validators (M10)
+     ↓ rejects changing the remove resource tick through the direct domain validators (M10)
+     ↓ rejects changing the component-reforger resource tick through the direct domain validators (M10)
+     ↓ rejects changing the completed-reforger resource tick through the direct domain validators (M10)
+     ↓ records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)
+     ↓ records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for in-place (M9)
+     ↓ rejects changing only the command tick to 0, 2 or 69 for inventory (M9)
+     ✓ certifies the same ordered result when both tick claims move to 0 (M9 boundary) 332ms
+     ✓ certifies the same ordered result when both tick claims move to 2 (M9 boundary) 279ms
+     × certifies the same ordered result when both tick claims move to 69 (M9 boundary) 83ms
+     ↓ rejects existing-target in-place combination tampering through the direct domain validators
+     ↓ rejects missing-first in-place combination tampering through the direct domain validators
+     ↓ rejects missing-second in-place combination tampering through the direct domain validators
+     ↓ rejects ordinary-equip in-place combination tampering through the direct domain validators
+     ↓ rejects missing-first inventory combination commands through the direct domain validators
+     ↓ rejects missing-second inventory combination commands through the direct domain validators
+     ↓ rejects ordinary-equip inventory combination commands through the direct domain validators
+     ↓ rejects a structurally valid command with an invalid recipe through production replay
+     ↓ binds combat equip order to the temporary item roll prefix (M9)
+     ↓ keeps combat equips before terminal resources and crown gold (M9)
+     ↓ records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick
+     ↓ records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick
+     ↓ rejects reordered commands through the direct domain validators
+     ↓ rejects duplicated commands through the direct domain validators
+     ↓ rejects extra commands through the direct domain validators
+     ↓ rejects missing commands through the direct domain validators
+     ↓ rejects unknown-target commands through the direct domain validators
+     ↓ accepts combat equipment targeting a bench unit through the direct domain validators
+     ↓ accepts combat equipment targeting a dead unit through the direct domain validators
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4a-crown-history.test.ts > M7/S7 combat equipment command replay: direct domain and public reforge controls > certifies the same ordered result when both tick claims move to 69 (M9 boundary)
+AssertionError: expected [ Array(8) ] to deeply equal [ Array(8) ]
+
+- Expected
++ Received
+
+@@ -6,49 +6,49 @@
+      "slot": 0,
+      "type": "itemEquipped",
+      "unitId": "unit-1",
+    },
+    {
+-     "consumedIds": [
+-       "item-1",
+-       "item-2",
+-     ],
+-     "definitionId": "deathblade",
+-     "domain": "match",
+-     "eventSeq": 1,
+-     "itemId": "item-3",
+-     "type": "itemCombined",
+-   },
+-   {
+-     "domain": "match",
+-     "eventSeq": 2,
+-     "itemId": "item-3",
+-     "slot": 0,
+-     "type": "itemEquipped",
+-     "unitId": "unit-1",
+-   },
+-   {
+      "death": {
+        "combatId": "round-1",
+        "eventSeq": 19,
+        "tick": 35,
+      },
+      "domain": "match",
+      "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+-     "eventSeq": 3,
++     "eventSeq": 1,
+      "type": "lootRevealed",
+    },
+    {
+      "death": {
+        "combatId": "round-1",
+        "eventSeq": 19,
+        "tick": 35,
+      },
+      "domain": "match",
+      "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+-     "eventSeq": 4,
++     "eventSeq": 2,
+      "type": "lootRevealed",
++   },
++   {
++     "consumedIds": [
++       "item-1",
++       "item-2",
++     ],
++     "definitionId": "deathblade",
++     "domain": "match",
++     "eventSeq": 3,
++     "itemId": "item-3",
++     "type": "itemCombined",
++   },
++   {
++     "domain": "match",
++     "eventSeq": 4,
++     "itemId": "item-3",
++     "slot": 0,
++     "type": "itemEquipped",
++     "unitId": "unit-1",
+    },
+    {
+      "domain": "match",
+      "eventSeq": 5,
+      "receipt": {
+
+ ❯ tests/g2-4a-crown-history.test.ts:681:52
+    679|     expect(genuine.state.preparationLedger).not.toEqual(shifted.prepar…
+    680|     if (tick === 69) console.log('M9_LEDGER_EVENTS', JSON.stringify({g…
+    681|     expect(genuine.state.preparationLedger.events).toEqual(shifted.pre…
+       |                                                    ^
+    682|     rejectArtificialMatch(shifted, 'Invalid Match save: preparation-le…
+    683|     expect(battleDomainWithoutPreparationLedger(shifted)).toEqual(batt…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 53 skipped (56)
+   Start at  01:16:38
+   Duration  6.95s (tests 82%, transform 15%, import 3%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

@@ -1,0 +1,6 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/crown-restore-cache.test.ts --reporter=json --outputFile=/tmp/b-once-cache.json
+
+JSON report written to /tmp/b-once-cache.json
