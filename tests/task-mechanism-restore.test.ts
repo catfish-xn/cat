@@ -392,7 +392,7 @@ it('bounds replay evidence, separates complete input contents and detaches every
   } finally { vi.restoreAllMocks(); }
 });
 
-it('reuses only verified private prefix hashes and invalidates both on the next observed tick', () => {
+it('reuses verified hashes and incrementally hashes appended events against the full-ledger oracle', () => {
   let state = publicEquipmentPreparation(['rod']);
   state = accepted(grantMechanicUnit(state, { receiptId: 'capture-curse', source: 'test', definitionId: 'morgana' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'morgana')!;
@@ -419,11 +419,32 @@ it('reuses only verified private prefix hashes and invalidates both on the next 
     restored.observe({ before: state, after: next.state, events: next.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat'), reason: 'tick' });
     hash.mockClear();
     const advanced = restored.capturePrefix()!;
-    expect(hash).toHaveBeenCalledTimes(2);
+    expect(hash).toHaveBeenCalledTimes(1);
     expect(advanced.stateHash).toBe(content.digestContent(next.state.combat));
     expect(advanced.eventHash).toBe(content.digestContent(advanced.events));
     hash.mockClear();
     expect(restored.capturePrefix()).toEqual(advanced);
     expect(hash).not.toHaveBeenCalled();
+    // Different capture cadences, an eventless observation, and another restore
+    // must preserve the original canonical full-ledger digest and old snapshots.
+    let live = next.state, recorder = restored;
+    const ledger = [...advanced.events], retained = JSON.stringify(prefix);
+    recorder.observe({ before: live, after: live, events: [], reason: 'tick' });
+    expect(recorder.capturePrefix()!.eventHash).toBe(content.digestContent(ledger));
+    for (const ticks of [1, 3, 6]) {
+      for (let i = 0; i < ticks; i++) {
+        const result = stepMatch(live);
+        const events = result.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat');
+        recorder.observe({ before: live, after: result.state, events, reason: 'tick' });
+        ledger.push(...events); live = result.state;
+      }
+      const captured = recorder.capturePrefix()!;
+      expect(captured.eventHash).toBe(content.digestContent(ledger));
+      expect(captured.stateHash).toBe(content.digestContent(live.combat));
+      expect(captured.events).toEqual(ledger);
+      recorder = new BattleHistory('capture-curse', [], captured);
+      expect(recorder.capturePrefix()).toEqual(captured);
+    }
+    expect(JSON.stringify(prefix)).toBe(retained);
   } finally { vi.restoreAllMocks(); }
 });
