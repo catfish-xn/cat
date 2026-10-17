@@ -300,8 +300,10 @@ export interface CastReceipt {
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'
   | 'damage-dealt' | 'damage-taken' | 'shield-hit' | 'post-damage-survival' | 'shield-ended'
   | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated'
-  /** G2-4b: actor applied (or refreshed) a stun on target; a shield layer on actor reached zero; actor died this tick. */
-  | 'stun-applied' | 'shield-broken' | 'death';
+  /** G2-4b: actor applied (or refreshed) a stun on target; a shield layer on actor reached zero. */
+  | 'stun-applied' | 'shield-broken'
+  /** G2-4b: the actor reached 0 HP this tick; emitted once, before death cleanup. */
+  | 'holder-death';
 /** A05: event actor/target are not the holder or the current ordinary-attack target. */
 export type TriggerContext = { readonly eventSeq: number; readonly tick: Tick; readonly actionSeq: number;
   readonly actorId: string; readonly targetId: string | null } & (

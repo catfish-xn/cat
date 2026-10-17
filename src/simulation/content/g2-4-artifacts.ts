@@ -90,7 +90,7 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
  TFT_Item_Artifact_LightshieldCrest:(()=>{const v=values('TFT_Item_Artifact_LightshieldCrest'),
   grant={kind:'grant-shield' as const,amount:amount({resistsBps:pct(v.PercentOfResists)}),durationTicks:ticks(v.ShieldDuration),decay:{kind:'none' as const},onEnd:[],endTiming:'post-damage' as const,endTargeting:{kind:'select' as const,selector:selector()},endEffects:[]};return {
   program:{periodic:[periodic(ticks(v.TriggerRate),[grant],selector({relation:'ally',order:'hp-ratio-id',sample:'each-pulse'}))],
-   triggers:[trigger({id:'death',event:'death',selector:selector({relation:'ally',excludeSelf:true,maxTargets:100,order:'id'}),effects:[grant]})]},
+   triggers:[trigger({id:'death',event:'holder-death',selector:selector({relation:'ally',excludeSelf:true,maxTargets:100,order:'id'}),effects:[grant]})]},
   text:`每${v.TriggerRate}秒为生命百分比最低的友军提供护盾，数值为携带者护甲与魔抗之和的${v.PercentOfResists}%，持续${v.ShieldDuration}秒；携带者阵亡时为所有友军提供同样的护盾。`};})(),
  TFT_Item_Artifact_ProwlersClaw:(()=>{const v=values('TFT_Item_Artifact_ProwlersClaw');return {
   program:{triggers:[trigger({id:'kill-cleanse',event:'kill-or-assist',condition:killingBlow('holder'),effects:[{kind:'cleanse',remove:'removable-hostile-control-dot-debuff',retarget:true}]}),

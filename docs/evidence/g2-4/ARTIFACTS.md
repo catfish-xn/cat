@@ -37,7 +37,7 @@
 
 ## 引擎扩展（只在持有对应神器时生效）
 
-详见 `docs/M8_RULES.md` 非伤害事件表下的 G2-4b 段落。新事件 stun-applied、shield-broken、death 都先判断有没有订阅者，没有就不消耗动作序号，所以其余对局的事件哈希不变。
+详见 `docs/M8_RULES.md` 非伤害事件表下的 G2-4b 段落。新事件 stun-applied、shield-broken、holder-death 都先判断有没有订阅者，没有就不消耗动作序号，所以其余对局的事件哈希不变。
 
 ## 未实现（8 件，新机制，归 Codex 最后一个 PR）
 
