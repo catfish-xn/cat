@@ -348,7 +348,8 @@ export interface TargetSelector {
 export type Effect =
   | { readonly kind: 'modify-stat'; readonly stackPolicy: StackPolicy; readonly activation: 'immediate' | 'next-tick'; readonly modifier: StatModifier; readonly duration: Duration }
   | { readonly kind: 'damage'; readonly damageType: DamageType; readonly delivery: DamageDelivery; readonly amount: Amount; readonly critEligibility: CritEligibility }
-  | { readonly kind: 'apply-status'; readonly status: StatusApplication }
+  /** anyDamage (G2-4b Obsidian Cleaver): on damage-dealt, qualifies on every positive-damage packet instead of the status kind's proc permission. */
+  | { readonly kind: 'apply-status'; readonly status: StatusApplication; readonly anyDamage?: true }
   | { readonly kind: 'heal'; readonly amount: Amount }
   | { readonly kind: 'transfer-stat'; readonly activation: 'next-tick'; readonly stats: readonly Stat[]; readonly amount: number; readonly duration: Duration; readonly applicationIdentity: 'action-target'; readonly persistAfterTargetDeath: true }
   | { readonly kind: 'grant-shield'; readonly amount: Amount; readonly durationTicks: Tick; readonly decay: ShieldDecayPolicy; readonly onEnd: readonly ShieldEndReason[]; readonly endTiming: 'post-damage' | 'next-action-planning'; readonly endTargeting: AbilityTargeting; readonly endEffects: readonly Effect[] }
@@ -469,8 +470,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v5';
-  readonly contentVersion: 's13-14.24b-g2-3-v5';
+  readonly rulesVersion: 's13-g2-3-v6';
+  readonly contentVersion: 's13-14.24b-g2-3-v6';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

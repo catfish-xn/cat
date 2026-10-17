@@ -42,7 +42,7 @@ export function validateItemProgram(program: ItemProgram): void {
     check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment','over-time','leap'].includes(e.kind));
     if(e.kind==='over-time'){check(['heal','mana'].includes(e.resource));integer(e.pulses,1);integer(e.periodTicks,1);check(e.pulses*e.periodTicks<=1200);}
     if(e.kind==='grant-mana'&&e.maxManaBps!==undefined)integer(e.maxManaBps,1);
-    if(e.kind==='apply-status')validateStatusApplication(e.status);
+    if(e.kind==='apply-status'){validateStatusApplication(e.status);check(e.anyDamage===undefined||e.anyDamage===true);}
     if(e.kind==='modify-stat') { modifier(e.modifier); if(e.duration.kind==='ticks')integer(e.duration.ticks,1); }
     if('amount' in e) {
       if(typeof e.amount==='number')integer(e.amount);
