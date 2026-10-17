@@ -483,6 +483,20 @@ Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及�
 
 恢复时先校验机制收据结构；损坏统一拒绝为 `Invalid Match save`。`combat.removedUnitIds` 如存在必须为无重复字符串数组，并与现役 combat.units 的 ID 分离。自动钩子失败事件及隐藏输入边界见 MULTIPLAYER_CONTRACT §25。schema/save/replay/protocol 不变；rules/content 升至 G2-3 v2，旧 digest 严格拒绝，不迁移。
 
+## G2-4B 神器锻造器领域合同（2026-10-17）
+
+本节覆盖历史征服者延后清单与版本号。基于 #147 `d3112d6` 开发，合入 multiplayer `0cdd6eb`（含 #149 辅助装、#153 不稳定宝箱、#157 冠冕胜利掉金）后 rules/content 升至 `s13-g2-3-v8` / `s13-14.24b-g2-3-v8`；policy `g2-4b-artifact-forge-v8`。schema7、存档3、回放3、命令3不变；旧版本/digest 拒绝，无迁移。
+
+- 第10档650：神器锻造器，移除14过渡金。第14档1200：随机光明装备1件（沿用35件池）、50金、神器锻造器、拆卸器。第11档仍15金、第13档仍拆卸器+50金（辅助装锻造器与指定辅助装仍延后）；第12/15档冠冕已由G2-4a恢复。
+- `g23RewardAtoms(bundle, seed)` 对 `TFT_ArmoryKeyOrnn` 使用源29件与已实现21件交集；四选一、按ID排序等权无放回、不同窗口可重复、不排除已拥有物品。`TFT_ArmoryKeySupport` 仍拒绝，禁止落入任意其他池。全池与排除项、算法声明进入内容digest。
+- `openG23Choice(state)` → `{state,events}` 复用 `pendingChoice.kind='forge'`，`payload.source='conqueror'`、`timeoutOption=offers[0]`。第10档choiceId为 `g23:conqueror:10:atom:0:copy:0`；第14档为 `g23:conqueror:14:atom:1:copy:0`。光明装备不是锻造器，不新增光明选择。
+- `selectChoice(state, choiceId, generation, definitionId, policy?)` 与 `forfeitPendingChoice(state, round, choiceId, generation, policy?)` 签名不变。选择免费，发一件永久库存物品并写唯一 `MechanicReceipt{kind:'choice',choiceKind:'forge',source:'conqueror',price:0,skipped:false,timedOut,...}`，资源来源为该receiptId。超时只领取首项，不再抽签。
+- `claimG23Reward(state, atomId, definitionId, policy?)` 不绕过forge：多选item原子返回 `stale-choice`，无状态、资源或RNG变化；非准备阶段仍优先 `wrong-phase`。选择命令的 `wrong-phase` / `stale-choice` / `invalid-choice` 等既有失败语义不变，枚举以领域类型为准。
+- `validateG23Restoration(state, parsedJsonInput=false): void` 抽出既有G23恢复链供 `validateB8Resources` 调用，重演来源奖励/进度并重建完整pending choice；校验选择收据类型、来源、免费/未跳过、超时首项、合法选项与副本序号，异常抛RangeError。调用方仍须验证外围结构和资源账本。恢复不发奖、不修改活跃随机流；它不让单人 `restoreMatch` 接受联机状态。
+- `completed-reforger` 仍只允许普通36件成装，拒绝神器/辅助装；无需更改现有池成员保护。辅助锻造器只有计划接口，本批没有装备消耗品、时间参数或第二份选择账本。
+
+来源、约定编号与依赖见 [实施计划](evidence/g2-4/G2-4B-FORGES-PLAN.md)，验证边界见 [交付记录](evidence/g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
 ### G2-4b 不稳定的宝箱：战斗中途获得装备（v6）
 
 约定值与来源见 [SUPPORT_ITEMS.md](evidence/g2-4/SUPPORT_ITEMS.md) 的 G24-CHEST-01…04。随 #149 的 rules/content `s13-g2-3-v6` / `s13-14.24b-g2-3-v6`、policy `g2-4b-support-v6` 合入，本项不另升版本，只改内容摘要；schema7、存档3、回放3不变，旧 digest 严格拒绝。

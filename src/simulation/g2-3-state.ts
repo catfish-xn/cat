@@ -60,7 +60,14 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const claim of p.rewardClaims){
   const r=receipts.find(r=>r.receiptId===claim.id);check(r&&r.round===claim.round);
   if(!r)continue;
-  if(claim.kind==='item')check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)||(r.kind==='choice'&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+  const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed).find(a=>a.id===claim.atomId)!;
+  check(r.source===bundle.source);
+  if(claim.kind==='item'){
+   if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
+    &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
+   else check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)
+    ||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===bundle.id&&!r.skipped&&r.price===0&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+  }
   else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
   else if(claim.kind==='tool')check(r.kind==='consumable'&&r.definitionId===claim.definitionId&&r.consumableId===claim.instanceId);
   else check(r.kind==='gold'&&r.amount===claim.gold);
