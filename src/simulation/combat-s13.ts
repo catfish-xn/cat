@@ -1,3 +1,4 @@
+import {splitTrenchHolders} from './combat-g2-4b-trench';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -485,6 +486,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   for (const unit of units) {
     unit.hp = virtualHp.get(unit.id)!;
   }
+  const trenchEligible=new Map(units.filter(u=>u.alive&&u.hp>0&&u.mechanics?.some(m=>m.mechanic==='g24Trench'&&BigInt(u.hp)*10000n<=BigInt(u.maxHp)*BigInt(m.values.thresholdBps))).map(u=>[u.id,u.maxHp]));
   settleSurvival(ctx, beforeDamage, positiveDamage);
   // Max-HP growth follows the fixed-max survival barrier. A lethal packet cannot
   // be undone by growth; missing HP is otherwise preserved (not healing).
@@ -555,6 +557,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (grants.length) unit.runtime.buddyTriggered = true;
     }
   }
+  const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
+  if(hasBanish){const suspended=fullRoster.filter(u=>(u.itemBanish?.untilTick??0)>tick);fullRoster.splice(0,fullRoster.length,...units,...suspended);}
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {
@@ -584,5 +588,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events[i] = { ...event, receipt: final };
     }
   }
-  return stampCombatStep({ ...state, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  // Preserve prior view order; append new identities for compact replay.
+  if(state.trenchSplits?.length||trenchMembership.trenchSplits?.length){
+    const order=new Map(state.units.map((u,i)=>[u.id,i]));
+    fullRoster.sort((a,b)=>(order.get(a.id)??state.units.length)-(order.get(b.id)??state.units.length));
+  }
+  return stampCombatStep({ ...state,...trenchMembership, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

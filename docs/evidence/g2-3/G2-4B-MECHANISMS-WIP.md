@@ -319,3 +319,34 @@ floor1670*1.24=2070, clone1449. Persistent AD growth1250bps gives owner84AD whil
 clone retains75; clone mana66. Frozen two-sided input restoration and public Match
 high-HP item save/restore are covered. Six Mirror tests pass; previous checkpoint
 claims of naked-HP inheritance are superseded. Native forge/Trench work continues.
+
+## Direct dot reconstruction checkpoint (2026-10-17)
+
+All eleven definitions now have runtime entrypoints. This is **not final
+acceptance**: predecessor integration, final revision, fixture migration,
+final-head full suite and CI/performance remain outstanding. The stopped cloud
+executor's unpushed work was not recovered; these are newly reconstructed changes.
+
+Trench removes a surviving holder at the damage barrier, reserves three legal
+friendly-half cells atomically, and creates three fresh identities at 30% of the
+sampled maximum HP. A lethal hit does not split. Too few free cells defer the
+replacement without partial creation. Static declarations are recompiled, the
+coat cannot recursively split, and transient counters reset. Original earned
+permanent growth, item gold and G2-3 economy facts survive replacement exactly
+once. Clone bodies do not mint assets or add survivor player damage. Jayce copies
+have separate native forges; the replaced original forge is removed.
+
+Dynamic Match recovery independently reconstructs the whole combat from frozen
+validated inputs. Mirror Jayce has its own public Match recovery coverage for
+both forms. The preparation movement/read signatures for Claude are unchanged;
+see the updated RESTORE-AUDIT section for internal combat-state changes.
+
+The first combined related run covered20files/87tests:86passed,1failed because
+an added Archangel test looked for a status contribution while the existing
+unbounded permanent AP effect is stored in runtime. Its corrected independent
+expectation is AP0 before birth+100, AP30 at birth+100 and exactly one statChanged
+receipt. Production timing was not changed to satisfy this assertion. Preserve
+`../g2-4b/direct/related-first.log` and the corrected targeted log. The one
+final full-suite allowance remains unused. Missing G2-4b generated fixture files
+are intentional at this intermediate checkpoint; do not treat transitional CI
+failure as final validation or create placeholder fixture data.

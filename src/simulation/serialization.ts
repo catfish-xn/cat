@@ -1,6 +1,6 @@
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {projectItemSummons} from './g2-4b-summons';
-import {validateCombatItemGold,validateZephyrCombat,validateMirrorOpening} from './g2-4b-gold-restore';
+import {validateCombatItemGold,validateDynamicCombat,validateMirrorOpening} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -249,20 +249,21 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    const verifiedDynamic=validateDynamicCombat(combat,basis,expectedStrategy);
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
     const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Mogul'].includes(m.mechanic)));
     const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
-    if (fishbones.length||collector||gamblers.length) {
+    if (!verifiedDynamic && (fishbones.length||collector||gamblers.length)) {
       requireValue(combat.itemRandomStreams, 'missing item random streams');
       validateItemRandomStreams(combat.itemRandomStreams!, basis.battleSeed, {
         fishbones: fishbones.reduce((sum, u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
         collector: Array.isArray(combat.itemGoldReceipts)?combat.itemGoldReceipts.filter(r=>r.kind==='collector').length:0,
         'gamblers-blade':gamblers.reduce((sum,u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
       });
-    } else requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
+    } else if(!verifiedDynamic) requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
-    requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
+    if(!verifiedDynamic)requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
     if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>countsG23SurvivorDamage(unit)&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
     if (combat.removedUnitIds !== undefined) {
@@ -270,11 +271,10 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
-    const verifiedZephyr=validateZephyrCombat(combat,basis,expectedStrategy);
-    validateMirrorOpening(combat,basis,expectedStrategy);
-    const neutralStatuses = verifiedZephyr?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    if(!verifiedDynamic)validateMirrorOpening(combat,basis,expectedStrategy);
+    const neutralStatuses = verifiedDynamic?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
-    for (const unit of verifiedZephyr?[]:combat.units) {
+    for (const unit of verifiedDynamic?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       requireValue(unit.openingItemBankGold===resolved.openingItemBankGold,'item opening bank');
@@ -326,7 +326,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
-    if(!verifiedZephyr)validateCombatItemGold(combat,basis,expectedStrategy);
+    if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.

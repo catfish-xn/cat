@@ -1,7 +1,7 @@
 import type { GameState } from './game';
 import type { Unit } from './unit-types';
 import { UNIT_DEFINITIONS } from './units';
-import { sameCell,type Team } from './board';
+import { sameCell, contains, type Board, type HexCell, type Team } from './board';
 export const isG23Summon=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-sion'||unit.definitionId==='g23-forge';
 /** Forge and the reserved barrel identity are skill bodies, never an army's last fighter. */
 export const isG23NonCombatant=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-forge'||unit.definitionId==='g23-barrel';
@@ -29,4 +29,15 @@ export function g23SionTeam(preparation:GameState,team:Team){
  const roses=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&UNIT_DEFINITIONS[u.definitionId].traits.includes('black-rose'));
  const count=new Set(roses.map(u=>u.definitionId)).size;
  return {tier:count>=7?7:count>=5?5:count>=4?4:count>=3?3:0,stars:roses.reduce((n,u)=>n+u.starLevel,0)};
+}
+
+/** Skill bodies use owner-relative placement; full boards never overlap or displace units. */
+export function g23ForgeCell(owner:{readonly team:Team;readonly cell:HexCell},board:Board,occupied:readonly HexCell[]):HexCell|undefined {
+ const localRow=owner.team==='player'?owner.cell.row:board.rows-1-owner.cell.row;
+ const row=Math.min(board.rows-1,localRow+1);
+ const preferred={col:owner.cell.col,row:owner.team==='player'?row:board.rows-1-row};
+ const zone=board.deploymentZones[owner.team];
+ const rows=Array.from({length:zone.lastRow-zone.firstRow+1},(_,i)=>owner.team==='player'?zone.firstRow+i:zone.lastRow-i);
+ const cells=[preferred,...rows.flatMap(row=>Array.from({length:board.columns},(_,col)=>({col,row})))];
+ return cells.find(cell=>contains(board,cell)&&!occupied.some(other=>sameCell(other,cell)));
 }

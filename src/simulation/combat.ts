@@ -1,3 +1,4 @@
+import {createG23Forge} from './combat-g2-3-summons';
 import {projectItemSummons,initializeMirrorHealth} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
 import {createItemRandomStreams} from './g2-4b-item-kernel';
@@ -70,6 +71,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
+  for(const copy of [...units].filter(u=>u.itemSummon?.kind==='mirror')){const forge=createG23Forge(copy,units,preparationState.board);if(forge)units.push(forge);}
   initializeMirrorHealth(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud')))units=initializeShroud(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr')))units=initializeZephyr(units,preparationState.board);

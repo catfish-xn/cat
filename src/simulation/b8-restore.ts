@@ -224,7 +224,10 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     return {basis,saleGold:0};
   }
   const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && (unit.runtime?.permanentAdBps ?? 0) > 0)
-    .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps})).sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
+    .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
+  for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&basis.inputs.preparation.units.some(u=>u.id===split.ownerId&&u.team==='player'))
+    deltas.push({sourceUnitId:split.ownerId,attackDamageBps:split.permanentAdBps});
+  deltas.sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
   check(commit && equal(commit.sourceDeltas,deltas), 'original combat growth deltas');
   return {basis,saleGold:replayCurrentSuffix(state,basis)};
 }

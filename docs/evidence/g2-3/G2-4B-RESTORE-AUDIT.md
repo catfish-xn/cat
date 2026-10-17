@@ -114,3 +114,22 @@ The initial maximum is rebuilt from validated frozen input during restore.
 This adds an initial-combat reconstruction for Mirror saves; the earlier Gold/
 Zephyr timing measurements remain measurements of the stated older checkpoint,
 not a timing claim for this changed Mirror path. Final performance is pending.
+
+## Direct dot continuation (2026-10-17, not final acceptance)
+
+The approved preparation `readItemSummons` / `moveItemSummon` signatures,
+position persistence, and Claude-owned online/UI/export work are unchanged.
+Trench introduces combat-only split receipts and three new identities, plus
+independent Jayce skill bodies for copies. Original-owner growth and economic
+facts earned before removal must remain attributable exactly once; copies do
+not mint inventory or contribute additional survivor damage.
+
+Trench and Mirror-Jayce dynamic membership are validated by an exact fresh
+combat replay from already-validated frozen Match inputs before static roster
+checks. This is a stronger alternate proof, not permission to trust candidate
+roster/source claims. Two-sided BattleResult keeps its existing trusted-rule-
+output boundary; its dynamic terminal and subsequent events are recomputed
+from its initial state. This does not turn an arbitrary external initial state
+into an authenticated BattleInput. No accepted restore result is cached across
+calls. The previous 3-unit timings predate these changes; final measurements
+remain required and are not inferred from earlier passes.

@@ -11,10 +11,13 @@ import type { Team } from './board';
 export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp'):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
  const allies=combat.units.filter(u=>u.team===team&&!u.definitionId.startsWith('g23-'));
- const itemPayouts=combat.itemGoldReceipts&&combat.itemRandomStreams?itemGoldPayouts({receipts:combat.itemGoldReceipts,streams:combat.itemRandomStreams},new Set(allies.map(u=>u.id))):[];
+ const allyIds=new Set(allies.map(u=>u.id));
+ const splits=(combat.trenchSplits??[]).filter(split=>split.copyIds.some(id=>allyIds.has(id)));
+ for(const split of splits)allyIds.add(split.ownerId);
+ const itemPayouts=combat.itemGoldReceipts&&combat.itemRandomStreams?itemGoldPayouts({receipts:combat.itemGoldReceipts,streams:combat.itemRandomStreams},allyIds):[];
  return {...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
- conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
- rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
+ conquestTakedowns:[...new Set([...allies.flatMap(u=>u.g23?.conquestTakedowns??[]),...splits.flatMap(s=>s.g23?.conquestTakedowns??[])])].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
+ rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:[...allies.map(u=>u.g23),...splits.map(s=>s.g23)].reduce((n,g)=>n+(g?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
 }
 export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{return g23BattleFacts(combat,'player',state.round,state.m8.round.kind==='pvp'?'pvp':'pve');}
 export function commitG23Settlement(state:MatchState,facts:G23BattleFacts,policy?:import('./loot-runtime').UnitLootPolicy,events:MatchEvent[]=[]):MatchState{

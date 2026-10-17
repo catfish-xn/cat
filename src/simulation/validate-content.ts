@@ -49,6 +49,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   g24Shroud:['costIncreaseBps','allyHealth'],
   g24DeathsDefiance:['fractionBps','durationTicks'],
   g24Mirror:['healthBps','manaIncreaseBps'],
+  g24Trench:['thresholdBps','healthBps'],
   g24Collector:['executeBps'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
