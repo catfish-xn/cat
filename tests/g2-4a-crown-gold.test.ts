@@ -93,7 +93,7 @@ it('restore links every drop to its battle receipt; a forged or missing drop is 
  expect(state.gold).toBe(createMatch(42).gold+lastBattle(state).crownGold!);
  expect(()=>validateG23MechanicLinks(state)).not.toThrow();
  const receipts=state.seatMechanics!.receipts,with_=(next:typeof receipts)=>({...state,seatMechanics:{...state.seatMechanics!,receipts:next}}) as MatchState;
- expect(()=>validateG23MechanicLinks(with_(receipts.map(r=>r.source==='tacticians-crown'?{...r,amount:r.amount+1}:r)))).toThrow();
+ expect(()=>validateG23MechanicLinks(with_(receipts.map(r=>r.source==='tacticians-crown'&&r.kind==='gold'?{...r,amount:r.amount+1}:r)))).toThrow();
  expect(()=>validateG23MechanicLinks(with_(receipts.filter(r=>r.source!=='tacticians-crown')))).toThrow();
  expect(()=>validateG23MechanicLinks(with_([...receipts,{...drop[0],receiptId:'g23:crown:round-2'}]))).toThrow();
  // Settling the same battle again never pays twice.
