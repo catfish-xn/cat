@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { createMatch, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { createMatch, buyUnit, rerollShop, selectChoice, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { createG23Progress, validateG23Progress } from '../src/simulation/g2-3-match-progress';
@@ -383,8 +383,8 @@ describe('M7/S7 combat equipment command replay', () => {
     }
   }
   function nextBattleMatches(state: MatchState, restored: MatchState) {
-    let original = accepted(startMatchCombat(advance(state)));
-    let resumed = accepted(startMatchCombat(advance(restored)));
+    let original = accepted(startMatchCombat(resolveM5Choices(advance(state))));
+    let resumed = accepted(startMatchCombat(resolveM5Choices(advance(restored))));
     expect(resumed).toEqual(original);
     while (original.phase === 'combat') {
       const expected = stepMatch(original), actual = stepMatch(resumed);
@@ -407,37 +407,99 @@ describe('M7/S7 combat equipment command replay', () => {
       : equipItem(live.state,kind === 'ordinary' ? 'item-1' : 'item-2','unit-1',0),'command');
     return live.finish();
   }
-  function removedEquipment(mode: 'remove' | 'reequip' | 'combine') {
-    const first = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
-    const opening = advance(first.finish().state);
-    const tool = opening.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
+  type ConsumableScenario = 'remove' | 'reequip' | 'combine' | 'component-reforger' | 'completed-reforger';
+  let reforgerOpening: {state: MatchState; battles: readonly BattleRecord[]} | undefined;
+  function recordedReforgerOpening() {
+    if (reforgerOpening) return reforgerOpening;
+    // Same public seed-26 acquisition route as r3r4-public, with every battle
+    // recorded so the candidate must pass complete history admission.
+    let state = createMatch(26);
+    const history = new BattleHistory('crown-history');
+    while (state.round <= 10) {
+      while (state.phase === 'choice') {
+        const choice = state.pendingChoice!;
+        state = accepted(selectChoice(state,choice.choiceId,choice.generation,
+          choice.offers.find(id => id === 'bulky-buddies-i') ?? choice.offers[0]));
+      }
+      if (state.phase === 'preparation') {
+        if (state.round === 10) while (state.gold >= 2) {
+          const slot: number = state.shop.slots.findIndex(offer => offer.status === 'available'
+            && ['irelia','maddie','lux','darius','zyra'].includes(offer.definitionId!));
+          const result: ReturnType<typeof buyUnit> = slot < 0 ? rerollShop(state) : buyUnit(state,slot,state.shop.generation);
+          if (!result.ok) break;
+          state = result.state;
+        }
+        for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
+          if (unit.location.kind === 'board') continue;
+          const held = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
+          if (held.length >= state.level) break;
+          const col = [3,2,4,1,5,0,6].find(col => !held.some(unit => unit.location.kind === 'board'
+            && unit.location.cell.col === col && unit.location.cell.row === 7))!;
+          state = accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:7}}));
+        }
+        state = recorder(state,history).finish().state;
+      }
+      if (state.round === 10) break;
+      state = accepted(nextRound(state,state.round));
+    }
+    reforgerOpening = {state:advance(state),battles:history.completedRecords};
+    return reforgerOpening;
+  }
+  beforeAll(() => { recordedReforgerOpening(); });
+  function usedEquipment(mode: ConsumableScenario) {
+    const reforge = mode === 'component-reforger' || mode === 'completed-reforger';
+    const first = reforge ? recordedReforgerOpening()
+      : (() => {
+        const live = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
+        return {state:advance(live.finish().state),battles:live.history.completedRecords};
+      })();
+    let opening = first.state;
+    const inputId = `item-${opening.nextItemSerial}`;
+    if (reforge) opening = accepted(grantMechanicItem(opening,{receiptId:`m10:${mode}`,source:'test',
+      definitionId:mode === 'component-reforger' ? 'sword' : 'deathblade'}));
+    const tool = opening.consumables.find(tool => tool.definitionId === (reforge ? mode : 'magnetic-remover'))!;
     expect(tool).toBeDefined();
-    const live = recorder(opening,first.history);
+    const target = reforge ? {kind:'item' as const,itemId:inputId}
+      : {kind:'unit' as const,unitId:'unit-1'};
+    const live = recorder(opening,new BattleHistory('crown-history',first.battles));
     live.commit(stepMatch(live.state),'tick');
-    live.commit(useConsumable(live.state,tool.consumableId,{kind:'unit',unitId:'unit-1'}),'command');
+    const outputId = `item-${live.state.nextItemSerial}`;
+    live.commit(useConsumable(live.state,tool.consumableId,target),'command');
     expect(live.history.capturePrefix()!.equipmentCommands).toEqual([
-      {tick:1,consumableId:tool.consumableId,target:{kind:'unit',unitId:'unit-1'}},
+      {tick:1,consumableId:tool.consumableId,target},
     ]);
+    if (reforge) {
+      expect(live.state.items.find(item => item.id === outputId)).toMatchObject({location:{kind:'inventory'}});
+      live.commit(equipItem(live.state,outputId,'unit-1',0),'command');
+      expect(live.state.items.find(item => item.id === outputId)).toMatchObject({location:{kind:'unit',unitId:'unit-1',slot:0}});
+    }
     if (mode === 'reequip') live.commit(equipItem(live.state,'item-1','unit-1',0),'command');
     if (mode === 'combine') {
       live.commit(combineItems(live.state,'item-1','item-2'),'command');
       const item = live.state.items.find(item => item.definitionId === 'deathblade')!;
       live.commit(equipItem(live.state,item.id,'unit-1',0),'command');
     }
-    expect(validateBattleRecord(live.history.capturePrefix()!,first.history.completedRecords).settledMatch).toEqual(live.state);
+    expect(validateBattleRecord(live.history.capturePrefix()!,first.battles).settledMatch).toEqual(live.state);
     return live.finish();
   }
-  it.each(['remove','reequip','combine'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
-    const {state,battles} = removedEquipment(mode);
-    expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
+  it.each(['remove','reequip','combine','component-reforger','completed-reforger'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
+    const {state,battles} = usedEquipment(mode);
+    if (mode === 'remove' || mode === 'reequip' || mode === 'combine')
+      expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
   });
-  it('rejects changing the removal command or resource tick at all three entries (M10)', () => {
-    const {state,battles} = removedEquipment('remove');
-    const records = structuredClone(battles);
-    Object.assign(records[1].equipmentCommands![0],{tick:2});
+  it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s command tick at all three entries (M10)', mode => {
+    const {state,battles} = usedEquipment(mode);
+    // Preserve recorder ownership of the unchanged prefix; the altered record
+    // is detached and must be replayed afresh at every admission entry.
+    const records = [...battles.slice(0,-1),structuredClone(battles.at(-1)!)];
+    // Keep same-tick command order valid, so admission reaches production replay.
+    Object.assign(records.at(-1)!.equipmentCommands![0],{tick:0});
     rejectAll(state,records,'历史获得或合成记录不一致');
+  });
+  it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s resource tick at all three entries (M10)', mode => {
+    const {state,battles} = usedEquipment(mode);
     const forged = structuredClone(state);
     Object.assign(forged.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')!,{tick:2});
     rejectAll(forged,battles,'历史获得或合成记录不一致');
