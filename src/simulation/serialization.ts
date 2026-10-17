@@ -1,5 +1,6 @@
 import {readG23Progress} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
+import { validateResistsShields } from './m8/resists-shield-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -97,6 +98,7 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
 /** Validates plain JSON and all persistent references before returning an independent state.
  * Verification combats are isolated: no generated effects, rewards, offers or
  * random cursor changes are committed to the restored state.
+ * Resist-scaled shields are checked by a trusted-input battle replay.
  */
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
@@ -278,6 +280,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     }
     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
     const cells = new Set<string>();
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');

@@ -1,0 +1,24 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-4b-resists-restore.test.ts tests/g2-4b-artifacts.test.ts tests/m8-b3-restore.test.ts --disableConsoleIntercept --silent=false
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-resists-direct
+
+resists restore tick=60 ms=33.92
+resists restore tick=120 ms=74.03
+resists restore tick=180 ms=61.52
+resists restore tick=240 ms=83.09
+resists restore tick=600 ms=225.20
+
+ Test Files  3 passed (3)
+      Tests  78 passed (78)
+   Start at  09:17:31
+   Duration  3.71s (tests 57%, transform 35%, import 8%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
