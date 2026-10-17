@@ -74,13 +74,6 @@ export function validateHistoricalEquipment(previous: MatchState, next: MatchSta
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
   const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
-  const placeSurvivors = () => {
-    for (const actual of next.items) {
-      if (actual.location.kind !== 'unit' || !items.some(item => item.id === actual.id && item.location.kind === 'inventory')) continue;
-      const plan = planEquip(items, preparation, actual.id, actual.location.unitId, actual.location.slot, serial);
-      if (plan.ok && plan.nextItemSerial === serial) items = plan.items;
-    }
-  };
   const checkOpening = (prefixLength: number) => {
     const basis = next.combatInputBasis;
     if (basis?.provenancePrefixLength === prefixLength) {
@@ -115,7 +108,9 @@ export function validateHistoricalEquipment(previous: MatchState, next: MatchSta
       case 'unit-upgraded-after-combat':
       case 'carousel-unit-claimed':
       case 'carousel-preparation-settled': {
-        placeSurvivors();
+        // Final placements may follow this upgrade and a later removal. Keep the
+        // current bindings until their ordered resource fact changes them; using
+        // next.items here would let future equips occupy the migration slots.
         const upgrades = 'event' in fact ? [fact.event] : fact.upgrades;
         items = transferUpgradeResources(items, null, upgrades).items;
         for (const event of upgrades) preparation = {...preparation,units:preparation.units

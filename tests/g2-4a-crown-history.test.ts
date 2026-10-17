@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { createG23Progress, validateG23Progress } from '../src/simulation/g2-3-match-progress';
@@ -128,6 +128,7 @@ describe('M2 equipment binding continuity', () => {
       ? {...item,location:{kind:'unit' as const,unitId:target.id,slot:item.location.kind === 'unit' ? item.location.slot : 0}} : item)};
     // A genuine first record plus a freshly generated, internally valid second record.
     const running = accepted(startMatchCombat(forged));
+    expect(() => serializeMatch(running,first.battles)).toThrow('historical opening equipment continuation');
     for (const input of [running,JSON.stringify(running)])
       expect(() => restoreMatch(input,first.battles)).toThrow('historical opening equipment continuation');
     const second = recordedCrownBattle(forged);
@@ -137,6 +138,7 @@ describe('M2 equipment binding continuity', () => {
     expect(second.state.gold - control.state.gold).toBe(1);
     for (const candidate of [forged, second.state, advance(second.state)]) {
       const history = candidate === forged ? first.battles : battles;
+      expect(() => serializeMatch(candidate, history)).toThrow('historical equipment continuation');
       for (const input of [candidate, JSON.stringify(candidate)])
         expect(() => restoreMatch(input, history)).toThrow('historical equipment continuation');
     }
@@ -144,10 +146,21 @@ describe('M2 equipment binding continuity', () => {
     await expect(validateBattleCollection(envelope(second.state,battles))).rejects.toThrow('historical equipment continuation');
     expect(() => validateBattleRecord(second.battles[0],first.battles)).toThrow('historical equipment continuation');
   });
-  it.each(['sale','remover','upgrade'] as const)('accepts legal %s and subsequent re-equipping', kind => {
+  it.each(['sale','remover','upgrade','upgrade-remover-equip','combine-equip'] as const)('accepts legal %s and subsequent re-equipping', kind => {
     const {first,state,holder,target} = transferFixture();
     let legal = state;
-    if (kind === 'sale') legal = accepted(sellUnit(legal,holder.id));
+    if (kind === 'upgrade-remover-equip') {
+      legal = accepted(grantMechanicItem(legal,{receiptId:'spare-blade',source:'test',definitionId:'deathblade'}));
+    }
+    if (kind === 'combine-equip') {
+      const swords: string[] = [];
+      for (let i = 0; i < 2; i++) {
+        legal = accepted(grantMechanicItem(legal,{receiptId:`sword:${i}`,source:'test',definitionId:'sword'}));
+        swords.push(legal.items.at(-1)!.id);
+      }
+      legal = accepted(combineItems(legal,swords[0],swords[1]));
+      legal = accepted(equipItem(legal,legal.items.find(item => item.definitionId === 'deathblade')!.id,target.id,0));
+    } else if (kind === 'sale') legal = accepted(sellUnit(legal,holder.id));
     else if (kind === 'remover') {
       const remover = legal.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
       expect(remover).toBeDefined();
@@ -158,12 +171,35 @@ describe('M2 equipment binding continuity', () => {
       expect(legal.preparation.units.some(unit => unit.id === holder.id)).toBe(false);
       expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID)
         .every(item => item.location.kind === 'unit' && item.location.unitId !== holder.id)).toBe(true);
+      if (kind === 'upgrade-remover-equip') {
+        expect(legal.items.find(item => item.definitionId === 'deathblade')!.location).toEqual({kind:'inventory'});
+        const crowns = legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID);
+        expect(crowns.map(item => item.location)).toEqual([0,1,2].map(slot => ({kind:'unit',unitId:'unit-3',slot})));
+        const remover = legal.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
+        legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
+        legal = accepted(equipItem(legal,legal.items.find(item => item.definitionId === 'deathblade')!.id,'unit-3',0));
+        expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
+          .toEqual(crowns.map(() => ({kind:'inventory'})));
+      }
     }
-    for (const item of legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID && item.location.kind === 'inventory')) {
+    for (const item of legal.items.filter(item => kind !== 'upgrade-remover-equip' && item.definitionId === TACTICIANS_CROWN_ID && item.location.kind === 'inventory')) {
       const slot = legal.items.filter(other => other.location.kind === 'unit' && other.location.unitId === target.id).length;
       legal = accepted(equipItem(legal,item.id,target.id,slot));
     }
-    for (const input of [legal,JSON.stringify(legal)]) expect(restoreMatch(input,first.battles)).toEqual(legal);
+    const text = serializeMatch(legal,first.battles);
+    for (const input of [legal,text]) {
+      const restored = restoreMatch(input,first.battles);
+      expect(restored).toEqual(legal);
+      const originalStep = startMatchCombat(legal), restoredStep = startMatchCombat(restored);
+      expect(restoredStep).toEqual(originalStep);
+      let original = accepted(originalStep), resumed = accepted(restoredStep);
+      while (original.phase === 'combat') {
+        const expected = stepMatch(original), actual = stepMatch(resumed);
+        expect(actual.events).toEqual(expected.events);
+        expect(actual.state).toEqual(expected.state);
+        original = expected.state; resumed = actual.state;
+      }
+    }
     const second = recordedCrownBattle(legal);
     expect(restoreMatch(second.state,[...first.battles,...second.battles])).toEqual(second.state);
   });
