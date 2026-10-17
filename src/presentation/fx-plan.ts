@@ -91,6 +91,12 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
     } else if (event.type === 'death') {
       const target = unit(event.unitId);
       if (target) specs.push({ kind: 'death', at: target.cell, duration: 600 });
+    } else if (event.type === 'unitRevived') {
+      // The unit returns in place (same id); its token reappears from the end-of-tick alive flag.
+      const target = unit(event.unitId);
+      if (!target) continue;
+      specs.push({ kind: 'ring', at: target.cell, color: 0xffd56e, radius: 34, duration: 700 });
+      specs.push({ kind: 'label', at: target.cell, text: `复活 · 生命 ${event.hp}`, dy: 46, color: '#fff2c4', background: '#3a2c10', duration: 900 });
     } else if (event.type === 'effectTriggered') {
       const owner = unit(event.ownerId);
       if (owner) specs.push({ kind: 'label', at: owner.cell, text: `${SOURCE_KIND[event.sourceKind] ?? '效果'} · ${sourceName(event.sourceKind, event.sourceDefinitionId)}`,

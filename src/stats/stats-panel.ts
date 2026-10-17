@@ -50,6 +50,7 @@ function eventText(event: LedgerCombatEvent, combat: CombatState): string | null
     case 'targetChanged': return `${prefix}${name(event.unitId)} 目标由 ${name(event.before)} 变为 ${name(event.after)}`;
     case 'growth': return `${prefix}${name(event.unitId)} 永久攻击力增加 ${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'kill': return `${prefix}${sourceName(combat, event.source)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix}${sourceName(combat, event.source)} 复活 ${name(event.unitId)}，生命 ${event.hp}`;
     case 'death': return `${prefix}${name(event.unitId)} 阵亡`;
     case 'combatFinished': return `${prefix}战斗结束：${{ playerWin: '我方获胜', enemyWin: '敌方获胜', draw: '平局' }[event.result]}`;
     case 'effectTriggered': return `${prefix}${name(event.source.ownerId)} 的${SOURCE_NAMES[event.source.sourceKind]}生效，目标 ${name(event.targetId)}`;
@@ -74,6 +75,7 @@ function viewEventText(event: DisplayCombatEvent, combat: CombatViewState): stri
     case 'targetChanged': return `${prefix}${name(event.unitId)} 目标由 ${name(event.before)} 变为 ${name(event.after)}`;
     case 'growth': return `${prefix}${name(event.unitId)} 永久攻击力增加 ${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'kill': return `${prefix}${name(event.sourceId)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix}${name(event.sourceId)} 复活 ${name(event.unitId)}，生命 ${event.hp}`;
     case 'death': return `${prefix}${name(event.unitId)} 阵亡`;
     case 'combatFinished': return `${prefix}战斗结束：${{ playerWin: '我方获胜', enemyWin: '敌方获胜', draw: '平局' }[event.result]}`;
     default: return null;
@@ -85,7 +87,7 @@ function viewIncludesUnit(event: DisplayCombatEvent, id: string): boolean {
     case 'attack': return event.attackerId === id || event.targetId === id;
     case 'cast': return event.sourceId === id || event.targetIds.includes(id);
     case 'targetChanged': return event.unitId === id || event.before === id || event.after === id;
-    case 'kill': return event.unitId === id || event.sourceId === id;
+    case 'kill': case 'unitRevived': return event.unitId === id || event.sourceId === id;
     case 'heal': case 'manaChanged': case 'shieldLayerChanged': case 'statusChanged': return event.targetId === id;
     case 'combatFinished': return false;
     case 'effectTriggered': return event.ownerId === id || event.targetId === id;
@@ -130,7 +132,7 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   function renderEvents(): void {
     if (!view) return;
     const selected = selection.value; const visible: string[] = []; let count = 0;
-    const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'combatFinished', 'effectTriggered']);
+    const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'unitRevived', 'combatFinished', 'effectTriggered']);
     if (view.stats === null) {
       const online = view;
       for (let i = online.events.length - 1; i >= 0; i--) {
