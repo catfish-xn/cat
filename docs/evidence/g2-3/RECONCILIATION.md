@@ -165,3 +165,7 @@
 - 服务器交接：src/server/room/room.ts的buildReceipt须转发proposal.g23Facts；接口/命令exports和界面消费由Claude适配。src/server/、src/rendering/、src/server-entry/本批未改，不能将领域测试通过描述成联机上线。
 
 详见[PR134_INTEGRATION](PR134_INTEGRATION.md)和[发布说明](RELEASE_NOTES.md)。
+
+## PR #149 辅助装合入当前 multiplayer
+
+以 `65db5d2` 的13件辅助装效果和数值为准，merge `311017e`（含 #147 神器、#148 战术家之冠及 #158/#159/#160/#165）；复用主线的 `supportStage` 与 `holder-death`，不重复定义或触发。规则版本 `s13-g2-3-v6`，内容版本 `s13-14.24b-g2-3-v6`，policy revision `g2-4b-support-v6`；schema/save/replay 格式不变，content digest 为 `fnv1a32-utf16:e73164da`（见 `tests/g2-3-content-baseline.json`）。夹具按 release → herald → inputs → live-reveal 顺序重录。

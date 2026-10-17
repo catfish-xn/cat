@@ -1,6 +1,6 @@
 # G2-3 发布说明（#134 接入）
 
-rules `s13-g2-3-v2`、content `s13-14.24b-g2-3-v2`统一发布；旧存档及旧回放输入失效，不能继续旧局。schema7/save3/replay3保持，不提供内容迁移。
+rules `s13-g2-3-v3`、content `s13-14.24b-g2-3-v3`统一发布；旧存档及旧回放输入失效，不能继续旧局。schema7/save3/replay3保持，不提供内容迁移。
 
 本批增加12位英雄、4套按开战站位冻结的远程形态、其余羁绊规则和30个异变。征服者启用15箱，16–20无源阈值不启用；仅含延后物品的档位按Gold=max(原金币,map22整档估值)折金，并保留已实现奖励。已有拆卸器、重铸器保留。第14档60金+光明装备+拆卸器，第15档200金+本局永久光明转化。Rumble三星自爆采用官方20000%。
 
@@ -19,3 +19,9 @@ rules `s13-g2-3-v2`、content `s13-14.24b-g2-3-v2`统一发布；旧存档及旧
 U6首跑失败（[run38938055193](https://github.com/catfish-xn/cat/actions/runs/38938055193)，job117098416536）出在先读领域状态、再异步读DOM：两次读取之间战斗可结算，revealed断言失效。验证改为同一浏览器任务读取两者，仍强制观测到有效的战中揭示；未发现随机流不确定性。
 
 v1的存档和回放输入按身份拒绝；v2夹具通过原公共指令生成器重录，历史夹具保留。性能门槛、单测超时和CI实际作业时限均未放宽；预算文档同步已有45分钟input作业时限。收尾逐项测试映射和开发测量见[FOLLOWUP_VALIDATION.md](FOLLOWUP_VALIDATION.md)，最终head的测试和性能结果见PR。
+
+## PR #149 辅助装合入当前 multiplayer
+
+以 `65db5d2` 的13件辅助装效果和数值为准，merge `311017e`（含 #147 神器、#148 战术家之冠及 #158/#159/#160/#165）；复用主线的 `supportStage` 与 `holder-death`，不重复定义或触发。规则版本 `s13-g2-3-v6`，内容版本 `s13-14.24b-g2-3-v6`，policy revision `g2-4b-support-v6`；schema/save/replay 格式不变，content digest 为 `fnv1a32-utf16:e73164da`（见 `tests/g2-3-content-baseline.json`）。夹具按 release → herald → inputs → live-reveal 顺序重录。
+
+验证：`npm run typecheck` 通过；仅运行 `tests/g2-4b-support-items.test.ts`、`tests/m8-contracts.test.ts`、`tests/match-contract.test.ts`、`tests/g2-4a-crown.test.ts`、`tests/explorer-bracer-restore.test.ts`，5文件63测试全部通过。请求中的 `tests/g2-4a-crown-gold.test.ts` 在本分支及 `311017e` 均不存在，使用实际冠冕测试 `tests/g2-4a-crown.test.ts`。未运行全套，未修改测试时限。四步夹具录制完成，最终 `node scripts/record-g2-3-inputs.cjs --check` 9案例通过。
