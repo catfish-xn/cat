@@ -9,6 +9,7 @@ import { validateMatchStructure } from './serialization-structure';
 import { readG23Progress } from './g2-3-state';
 import { needsCrownHistory, missingCrownHistory } from './crown-history';
 import { canonicalContent, digestContent } from './content';
+import { validateHistoricalEquipment } from './b8-restore';
 import { isImmutableJson } from './immutable-json';
 
 // The recorder establishes detached, deeply immutable record ownership here.
@@ -135,12 +136,13 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   if (!previous) return;
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
+  validateHistoricalEquipment(previous, next);
   const receipts = previous.seatMechanics!.receipts;
   check(equalContent(next.seatMechanics!.receipts.slice(0, receipts.length), receipts), '历史机制收据前缀不一致');
 }
 
 /** Reconstruct completed battles in order, carrying only verified prefixes. Each
- * record supplies the opening equipment; its resource fold proves acquisition,
+ * record must continue verified equipment bindings through legal resource facts;
  * and normal combat/settlement reconstructs eligibility, result, RNG and payouts. */
 export function* matchHistoryChecks(match: MatchState, battles: readonly BattleRecord[], runId?: string): Generator<void, void, void> {
   check(Array.isArray(battles) && battles.length <= MAX_BATTLE_RECORDS, '战斗数量');

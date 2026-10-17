@@ -155,11 +155,11 @@ it('real combat saves restore crown receipts and Continue never pays the complet
    paid++;
    const forged=structuredClone(after),drop=forged.seatMechanics!.receipts.find(r=>r.source==='tacticians-crown')!;
    if(drop.kind!=='gold')throw Error('gold receipt');
-   Object.assign(drop,{amount:drop.amount+1});expect(()=>restoreMatch(forged)).toThrow();
-   expect(()=>restoreMatch({...after,gold:after.gold+1})).toThrow();
+   Object.assign(drop,{amount:drop.amount+1});expect(()=>restoreMatch(forged,battles)).toThrow('Invalid G23 mechanic receipt link');
+   expect(()=>restoreMatch({...after,gold:after.gold+1},battles)).toThrow('current settlement totals');
    const forgedCount=structuredClone(after),progress=readG23Progress(forgedCount)!;
    const action=progress.economyReceipts.at(-1) as G23EconomyAction;
-   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount)).toThrow();
+   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount,battles)).toThrow('Invalid G2-3 match progression');
   }
  }
  expect(paid).toBeGreaterThan(0);

@@ -13,6 +13,7 @@ import { makeLootPendingChoice, orderedUnresolvedLootChoices } from './loot-choi
 import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } from './combat-input';
 import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
+import { transferUpgradeResources } from './upgrades';
 import { planUnitAcquisition } from './unit-acquisition';
 import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
@@ -61,6 +62,85 @@ function equipmentContinuation(expected: readonly ItemInstance[], actual: readon
     return current?.definitionId === item.definitionId
       && (item.location.kind === 'inventory' || equal(item.location, current.location));
   });
+}
+
+/** Carry verified equipment across preparation, including when no combat is active.
+ * Plain equip has no fact: only inventory items may adopt a claimed placement.
+ * Every detachment or donor migration must instead follow the resource ledger. */
+export function validateHistoricalEquipment(previous: MatchState, next: MatchState): void {
+  let items = previous.items, serial = previous.nextItemSerial;
+  let preparation = previous.preparation;
+  const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
+    lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
+    mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
+  const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
+  const placeSurvivors = () => {
+    for (const actual of next.items) {
+      if (actual.location.kind !== 'unit' || !items.some(item => item.id === actual.id && item.location.kind === 'inventory')) continue;
+      const plan = planEquip(items, preparation, actual.id, actual.location.unitId, actual.location.slot, serial);
+      if (plan.ok && plan.nextItemSerial === serial) items = plan.items;
+    }
+  };
+  const checkOpening = (prefixLength: number) => {
+    const basis = next.combatInputBasis;
+    if (basis?.provenancePrefixLength === prefixLength) {
+      check(equipmentContinuation(items, basis.inputs.items), 'historical opening equipment continuation');
+      items = basis.inputs.items;
+    }
+  };
+  for (const fact of next.resourceProvenance.entries.slice(previous.resourceProvenance.entries.length)) {
+    checkOpening(fact.sequence);
+    switch (fact.kind) {
+      case 'unit-acquired': {
+        const definitionId = fact.source.kind === 'shop' ? fact.source.definitionId : birthById.get(fact.unitId)?.definitionId;
+        check(definitionId, 'historical unit birth');
+        // Equip planners inspect identity/team/definition only; deployment has no resource fact.
+        preparation = {...preparation, units:[...preparation.units, {id:fact.unitId, definitionId,
+          team:'player', starLevel:1, location:{kind:'bench',slot:0}}]};
+        break;
+      }
+      case 'item-acquired': {
+        const birth = birthById.get(fact.itemId);
+        check(birth, 'historical item birth');
+        items = [...items, {id:fact.itemId,definitionId:birth.definitionId,location:{kind:'inventory'}}];
+        serial++;
+        break;
+      }
+      case 'unit-sold':
+        items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
+          ? {...item,location:{kind:'inventory'}} : item);
+        preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
+        break;
+      case 'unit-upgraded':
+      case 'unit-upgraded-after-combat':
+      case 'carousel-unit-claimed':
+      case 'carousel-preparation-settled': {
+        placeSurvivors();
+        const upgrades = 'event' in fact ? [fact.event] : fact.upgrades;
+        items = transferUpgradeResources(items, null, upgrades).items;
+        for (const event of upgrades) preparation = {...preparation,units:preparation.units
+          .filter(unit => !event.consumedIds.includes(unit.id))
+          .map(unit => unit.id === event.survivorId ? {...unit,starLevel:event.toStar} : unit)};
+        break;
+      }
+      case 'consumable-used': {
+        const plan = replayConsumableItems(items, serial, fact.record, preparation);
+        items = plan.items; serial = plan.nextItemSerial;
+        break;
+      }
+      case 'item-combined': {
+        const plan = replayCombination(items, preparation, serial, fact);
+        items = plan.items; serial = plan.nextItemSerial;
+        break;
+      }
+      case 'g23-item-converted':
+        items = items.map(item => item.id === fact.itemId ? {...item,definitionId:fact.to} : item);
+        break;
+      case 'combat-growth-committed': break;
+    }
+  }
+  checkOpening(next.resourceProvenance.entries.length);
+  check(equipmentContinuation(items, next.items) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
 
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
