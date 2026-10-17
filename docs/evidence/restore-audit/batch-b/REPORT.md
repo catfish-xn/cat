@@ -105,3 +105,7 @@
 ## 本轮新增授权：进程内精确已验证缓存
 
 用户新授权已覆盖历史“禁止跨调用缓存”限制，当前只实现完整输入精确命中，详见 [exact-cache/REPORT.md](exact-cache/REPORT.md)。相关 48/48、typecheck 通过；B5 原文件 7 通过、2 超时仍保留，尚不可签收。
+
+## 明确授权的两项测试时限收尾
+
+见 [closeout/REPORT.md](closeout/REPORT.md)：仅 B5 指定两用例设 20 秒，受测 bbf27ba0b07010a254a7c2ff20af1a0d4c810b79，相关 196/196 与 typecheck 通过。Herald 默认 verify 在 5 份生产恢复正控全部通过后因旧 raw 缺账本导致字节不等退出 1；仅指纹授权不足以进行完整 raw 迁移，等待用户决定。不能称所有验收已完成。
