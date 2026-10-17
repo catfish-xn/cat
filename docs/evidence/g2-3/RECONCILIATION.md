@@ -159,3 +159,88 @@
 - 服务器交接：src/server/room/room.ts的buildReceipt须转发proposal.g23Facts；接口/命令exports和界面消费由Claude适配。src/server/、src/rendering/、src/server-entry/本批未改，不能将领域测试通过描述成联机上线。
 
 详见[PR134_INTEGRATION](PR134_INTEGRATION.md)和[发布说明](RELEASE_NOTES.md)。
+
+## G2-4b new mechanisms — WIP
+
+Fishbones, Spectral Cutlass and Shroud are connected to registry/combat; eight
+items remain source-pinned and unimplemented. No forge or Conqueror tier changes.
+Source extraction and hashes: `normalized/g2-4b-mechanism-items.json`, reproduced
+by `scripts/extract-g2-4b-mechanism-items.py`. The user confirmed no 14.24b change
+for these artifacts/supports; use 14.24 map22 numbers and map-selected zh_cn names.
+
+**G24-FISHBONES-TARGET-01 — 约定值，非官方证据，待用户确认：** 每次实际普攻从翻倍后有效射程内的存活、可选中敌人中按显式独立 RNG 抽一个；候选按 ID 排序。未攻击不抽样。多件鱼骨头暂按持有者只翻倍一次、每次攻击只抽一次处理。raw 未明确随机池半径和多件叠加；不能将此约定称为原版证据。
+
+**G24-KERNEL-PENDING-01 — 尚未接入、未生效的约定候选：** 法力劫掠整数向上取整；延伤按每 tick 累计整数差分分摊、非致死溢出丢弃；格子等距按行再列。延伤与护盾/转移的结算顺序仍待补证。虚空生物阶段 HP/AD 未查实，不以 null HP / 0 AD 充作战斗属性。
+
+Random state is disjoint from critical-hit RNG and validated on restore against
+the frozen battle seed and actual attack counter; dropping or forging it rejects
+restoration. Full digest fixture migration and final full-suite run remain pending.
+
+**G24-CUTLASS-CELL-01 — 约定值，待确认：** 镜像翻转两轴；被占格改选最近空格，等距按行/列，多个携带者按ID依次预留；多件同名只传送/返回一次。死亡不返回。
+
+**G24-SHROUD-BEAM-01 — 约定值，待确认：** 在两席棋盘合并后的初始位置按列差≤1认定三列光束；多个光束取最强，不叠乘；最大法力向上取整，首次施法后恢复。原档确认30%和全队60HP，未说明此六角光束几何。
+
+补证：已取得 Riot 13.18 的虚空生物阶段 HP 表及 14.7 的阶段 AD/升星/双抗/攻速说明，见 [EXTERNAL_SOURCES](EXTERNAL_SOURCES.md#official-historical-follow-up-read-2026-10-17)。这些是对应历史补丁的真实值；截至 14.24 的中间变更链未核完，不能据此宣称目标版本的完整召唤属性已经确定。14.9 风衣与不稳定财宝箱的交互暗示复制装备，但未证明全部继承规则。新增考证暂未改变运行时数值。
+
+### G2-4b Death’s Defiance WIP checkpoint
+
+`TFT4_Item_OrnnDeathsDefiance`: archived 14.24 (authorized for 14.24b),
+AD10%, armor30, AS25%, omnivamp25%, damage defer50% for4seconds.
+Source pointers/hashes: normalized/g2-4b-mechanism-items.json.
+`G24-DEFIANCE-ORDER-01` is explicitly a **约定值**, pending confirmation: shields
+before defer, redirect before defer, integer payments over80ticks, nonlethal
+clipped excess consumed, no proc on repayment. BaseHeal25 is not independently
+interpreted as a flat heal. Concentrated source gaps and recommendations for
+all11items: [G2-4B-MECHANISMS-WIP.md](G2-4B-MECHANISMS-WIP.md).
+Voidspawn HP candidate from13.18 is superseded by official14.6 stage2–6 values
+1000/1500/2000/2500/3000; preparation placement remains unresolved for this project.
+
+### G2-4b Trickster’s Glass WIP
+
+Original14.24: armor10/MR10/AS10%/crit15%, clone70%maxHealth/+10%maxMana,
+no clone equipment, active traits. Provisional `G24-MIRROR-INHERIT-01` and
+`G24-SUMMON-CELL-01` in provenance are **约定值**; see the centralized WIP
+list for missing inheritance evidence and native-summon limitations.
+Clone identity and resolved sources must exactly match the independently rebuilt
+strategy; no self-authentication from candidate save declarations.
+
+G2-4b item-gold settlement bridge is wired to the generic economy receipt ledger;
+combat producers remain pending. Positive receipt amounts are1, never piggyback
+on High Roller's multiple-of3 grant. Collector's archived14.24 description
+specifically says executions have40% drop chance, not arbitrary kills.
+
+Collector runtime now executes its own post-hit threshold check and supplies gold
+receipts to settlement; G24-COLLECTOR-EXECUTE-01 is a **约定值**, not confirmed
+original ordering. Source raw14.24 AD30%, crit30%, threshold12%, chance40%1gold.
+Gold restore independently reconstructs combat outcomes from the validated frozen
+input rather than authenticating a candidate's own opportunity list.
+
+Gambler runtime uses normal `TFT7_Item_ShimmerscaleGamblersBlade`, raw14.24
+AP10/AS45%,1%AS per gold capped30,5%1gold per actual attack. Frozen opening
+bank plus own-side battle gold and post-attack update timing are **约定值**
+G24-ITEM-GOLD-01. Hashed20/4 fields remain recorded but uninterpreted.
+
+Mogul normal `TFT7_Item_ShimmerscaleMogulsMail`: raw14.24 health50, per-hit
+health7/resists1/cap35, full1gold, interval8seconds. G24-MOGUL-STACK-01
+contains **约定值** for shield-hit qualification, HP barrier and lethal35th hit.
+No HR3gold value is used. Original source constants and runtime limitations are
+listed in the centralized G2-4B-MECHANISMS-WIP.md.
+
+Zephyr `TFT_Item_Zephyr`: archived14.24 description and constants establish
+5seconds,150HP,team2%AS and ignoring CC immunity. G24-ZEPHYR-ABSENCE-01
+is a **约定值** for opening priority, distinct target reservation, missed pulse
+policy and return collisions; these are not attributed to original scripts.
+Banishment excludes units from active combat processing but preserves living
+roster membership. Saves require exact reconstruction from validated frozen
+inputs; this replaces clock-based structural checks only for Zephyr combats.
+
+Voidspawn now has a preparation projection and movement API, matching the14.6
+change from taunting combat spawn to movable preparation summon.14.8 establishes
+cross-round placement persistence. HP uses the14.6 stage2..6 table; AD/star rows
+use14.7. Sources: official
+https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-6-notes/
+and https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-7-notes/ .
+The30-page follow-up ledger supports carry-forward as an **inference**, not a
+recovered original script. G24-VOIDSPAWN-STAGES-01 records **约定值** for clamping,
+total-stat interpretation and collision handling. Raw14.24 AS.75/armor30/MR30
+and portal150HP apply directly; SummonedStatReduction25 has no confirmed meaning.

@@ -1,4 +1,9 @@
+import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
+import {projectItemSummons} from './g2-4b-summons';
+import {validateCombatItemGold,validateZephyrCombat} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
+import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
+import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
@@ -220,6 +225,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
   if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
+  if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
@@ -238,8 +244,22 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
-    const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
+      team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
+    }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
+    const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Mogul'].includes(m.mechanic)));
+    const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
+    if (fishbones.length||collector||gamblers.length) {
+      requireValue(combat.itemRandomStreams, 'missing item random streams');
+      validateItemRandomStreams(combat.itemRandomStreams!, basis.battleSeed, {
+        fishbones: fishbones.reduce((sum, u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
+        collector: Array.isArray(combat.itemGoldReceipts)?combat.itemGoldReceipts.filter(r=>r.kind==='collector').length:0,
+        'gamblers-blade':gamblers.reduce((sum,u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
+      });
+    } else requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
     requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
@@ -250,21 +270,40 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
-    const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    const verifiedZephyr=validateZephyrCombat(combat,basis,expectedStrategy);
+    const neutralStatuses = verifiedZephyr?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
-    for (const unit of combat.units) {
+    for (const unit of verifiedZephyr?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
+      requireValue(unit.openingItemBankGold===resolved.openingItemBankGold,'item opening bank');
+      if(unit.openingItemBankGold===undefined)requireValue(unit.currentItemBankGold===undefined,'unexpected item bank');
+      else{integer(unit.currentItemBankGold);requireValue(unit.currentItemBankGold!>=unit.openingItemBankGold&&unit.currentItemBankGold!<=30,'item bank bounds');}
+      validateDefianceDebts(unit,combat.units,combat.tick,combat.combatId!,combat.nextActionSeq!);
+      if(resolved.mechanics?.some(m=>m.mechanic==='g24Mogul')){
+        list(unit.itemMogulHits);requireValue(unit.itemMogulHits!.length<=35,'Mogul stack cap');
+        for(const hit of unit.itemMogulHits!){integer(hit.tick,1);requireValue(hit.tick<=combat.tick&&typeof hit.packetId==='string','Mogul hit receipt');}
+        requireValue(new Set(unit.itemMogulHits!.map(h=>h.packetId)).size===unit.itemMogulHits!.length,'Mogul duplicate hit');
+      }else requireValue(unit.itemMogulHits===undefined,'unexpected Mogul stacks');
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
-      requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
+      requireValue(same(unit.itemSummon??null,resolved.itemSummon??null),'item summon origin');
+      const formOrigin=resolved.itemSummon?{...origin,location:{kind:'board' as const,cell:resolved.itemSummon.formCell}}:origin;
+      if(resolved.itemSummon)requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'summon starting cell');
+      requireValue((unit.form??null)===getUnitForm(formOrigin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
+      if (unit.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass'))
+        requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'cutlass starting cell');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
-      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
+      const reaveBps=origin.location.kind==='board'?shroudBpsAtCell({team:origin.team,cell:origin.location.cell},shroudOrigins):0;
+      const reaved=reaveBps>0&&stats.maxMana>0;
+      requireValue(unit.unreavedMaxMana===(reaved?stats.maxMana:undefined),'shroud base mana');
+      const expectedMaxMana=reaved&&(unit.runtime?.castCount??0)===0?manaReavedMaximum(stats.maxMana,reaveBps):stats.maxMana;
+      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: expectedMaxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
       requireValue(same(unit.ability, resolved.ability), 'resolved ability');
       requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
-      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || champion(unit) === 'amumu' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
@@ -286,6 +325,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
+    if(!verifiedZephyr)validateCombatItemGold(combat,basis,expectedStrategy);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.

@@ -6,7 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
 export type { ConsumableFailure, ConsumableTarget, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
@@ -53,6 +53,11 @@ export interface PublicBoardUnit {
   readonly cell: { readonly col: number; readonly row: number };
   /** Item definition ids held by the unit, in slot order. */
   readonly items: readonly string[];
+  /**
+   * G2-4b (contract §26): set on a movable preparation summon (兹若特传送门's 虚空生物) standing where the rules place it.
+   * `starLevel` is its stage appearance. Not a champion: no trait, no avatar, no items; the holder and item instance stay private.
+   */
+  readonly summon?: true;
 }
 export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
 /**
@@ -69,7 +74,19 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
  * settlement of this round would credit if that gold and streak stay as they are (a PvP draw settles as `ifLoss`).
  * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
  */
-export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null };
+export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[] };
+/**
+ * G2-4b (contract §26): one of my movable preparation summons (兹若特传送门's 虚空生物), the rules' `readItemSummons` of the
+ * same state, field by field. Not an asset: no bench slot, population, sale or equipment. `unit.location` is where the rules
+ * place it this preparation (the saved cell, or the nearest free one); the client draws it there and only sends
+ * `moveItemSummon` with `itemInstanceId`. Stage stats are not part of it and are never computed on the client.
+ */
+export interface ItemSummonView {
+  readonly kind: ItemSummonOrigin['kind'];
+  readonly ownerId: string;
+  readonly itemInstanceId: string;
+  readonly unit: Pick<ItemSummonOrigin['unit'], 'id' | 'definitionId' | 'team' | 'starLevel' | 'location'>;
+}
 /** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. G1-P7 adds `carousel`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel' | 'combat' | 'settlement' | 'ended';
 
@@ -190,5 +207,11 @@ export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }
  * which map ClientCommand 1:1 to match.ts, are unchanged.
  */
 export interface CarouselPickCommand { readonly type: 'carousel-pick'; readonly carouselId: string; readonly revision: number; readonly slot: number }
-/** Every command a seat may send over the wire: the match.ts commands (§18.8) plus the carousel pick (G1-P7). */
-export type WireCommand = ClientCommand | CarouselPickCommand;
+/**
+ * G2-4b (contract §26): move my preparation summon of item instance `itemInstanceId` (兹若特传送门's 虚空生物) to `cell`
+ * of my deployment rows; the room hands it to the rules' `moveItemSummon`, which decides everything. Kept out of
+ * ClientCommand for the same reason as the carousel pick: the bot policy never moves a summon.
+ */
+export interface MoveItemSummonCommand { readonly type: 'moveItemSummon'; readonly itemInstanceId: string; readonly cell: { readonly col: number; readonly row: number } }
+/** Every command a seat may send over the wire: the match.ts commands (§18.8), the carousel pick (G1-P7) and the summon move (G2-4b). */
+export type WireCommand = ClientCommand | CarouselPickCommand | MoveItemSummonCommand;

@@ -5,7 +5,9 @@ export {
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, advanceMultiplayerRound,
+  readItemSummons, moveItemSummon,
 } from '../simulation/match';
+export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';
 export type {
   MatchState, MatchBase, MatchCommandResult, MatchFailure, MatchStep, MatchEvent,

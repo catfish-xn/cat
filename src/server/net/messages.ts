@@ -181,6 +181,12 @@ export function validateClientCommand(value: unknown): WireCommand {
   const w = 'command';
   switch (value.type) {
     case 'deploy': onlyKeys(value, ['type', 'unitId', 'target'], w); return { type: 'deploy', unitId: str(value.unitId, `${w}.unitId`), target: location(value.target, `${w}.target`) };
+    case 'moveItemSummon': {
+      onlyKeys(value, ['type', 'itemInstanceId', 'cell'], w);
+      if (!isRecord(value.cell)) return bad(`${w}.cell must be an object`);
+      onlyKeys(value.cell, ['col', 'row'], `${w}.cell`);
+      return { type: 'moveItemSummon', itemInstanceId: str(value.itemInstanceId, `${w}.itemInstanceId`), cell: { col: int(value.cell.col, `${w}.cell.col`), row: int(value.cell.row, `${w}.cell.row`) } };
+    }
     case 'buy': onlyKeys(value, ['type', 'slot', 'generation'], w); return { type: 'buy', slot: int(value.slot, `${w}.slot`, 0), generation: int(value.generation, `${w}.generation`, 0) };
     case 'sell': onlyKeys(value, ['type', 'unitId'], w); return { type: 'sell', unitId: str(value.unitId, `${w}.unitId`) };
     case 'shopLock': onlyKeys(value, ['type', 'locked', 'generation'], w); return { type: 'shopLock', locked: bool(value.locked, `${w}.locked`), generation: int(value.generation, `${w}.generation`, 0) };

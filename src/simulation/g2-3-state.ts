@@ -49,6 +49,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  const receipts=state.seatMechanics!.receipts;
  const expectedGold=new Map<string,{amount:number;round:number;source:string}>();
  for(const action of p.economyReceipts)if(action.kind==='battle'){
+  for(const payout of action.facts.itemGoldPayouts??[]){check(!expectedGold.has(payout.receiptId));expectedGold.set(payout.receiptId,{amount:payout.amount,round:action.facts.round,source:payout.source});}
   if(action.facts.highRollerGold)expectedGold.set(`g23:high-roller:${action.facts.battleId}`,{amount:action.facts.highRollerGold,round:action.facts.round,source:'high-roller'});
   for(const bundleId of action.bundles){
    const chest=G23_CONQUEROR_CHESTS[Number(bundleId.split(':').at(-1))-1],amount=Number(g23ConquerorReward(chest).Gold??0);
@@ -67,7 +68,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const purchase of p.junkerPurchases){const r=receipts.find(r=>r.receiptId===purchase.id);check(r?.kind==='choice'&&r.choiceKind==='armory'&&r.optionId===purchase.upgrade&&r.price===purchase.cost&&r.round===purchase.round);}
  for(const r of receipts){
   check(r.round<=state.round&&r.roundId===getMultiplayerRoundByOrdinal(r.round).roundId);
-  if(r.source==='high-roller'||r.source==='conqueror-chest')check(expectedGold.has(r.receiptId));
+  if(r.source==='high-roller'||r.source==='conqueror-chest'||r.source==='g24-item-gold')check(expectedGold.has(r.receiptId));
   if(r.source==='conqueror'||r.source==='black-market')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
  }
 }

@@ -1,6 +1,8 @@
+import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
+import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
 import { g23ExperimentEffects } from './g2-3-experiment';
-import { projectG23Summons,g23SionTeam } from './g2-3-summons';
+import { g23SionTeam } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { getCatalogRoundByOrdinal } from './round-selectors';
 import { g23ConversionProgramValues } from './g2-3-combat';
@@ -45,14 +47,31 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
  */
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
   state=readCombatStrategyInputs(state);
-  state={...state,preparation:projectG23Summons(state.preparation)};
+  const voidspawn=projectVoidspawns(state);
+  state={...state,preparation:voidspawn.preparation};
   const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
+  const shrouds=equipment.flatMap(item=>{
+    const definition=catalog.items[item.definitionId];
+    const effect=definition?.effects.find(e=>e.kind==='mechanic'&&(e.mechanic==='g24Shroud'||e.mechanic==='g24Zephyr'));
+    const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
+    return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
+  });
   const units = boardUnits.map(unit => {
+    const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
+    if(itemSummon){
+      const stage=voidspawnStage(state.round);
+      sources.push(...makeSourcedEffects(unit.id,'ability','g24-voidspawn-ability',unit.id+':stage',[
+        {kind:'statFlat',stat:'maxHp',amount:stage.health-1000},{kind:'statFlat',stat:'attackDamage',amount:stage.attack-80}]));
+    }
     const itemPrograms: BoundItemProgram[] = [];
+    for(const {item,owner,effect} of shrouds) if(owner.team===unit.team)
+      sources.push(...makeSourcedEffects(unit.id,'item',item.definitionId,item.id+(effect.mechanic==='g24Shroud'?':team-health':':team-speed'),[
+        effect.mechanic==='g24Shroud'?{kind:'statFlat',stat:'maxHp',amount:effect.values.allyHealth}
+          :{kind:'attackSpeedBps',bps:effect.values.allyAttackSpeedBps}]));
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
@@ -140,7 +159,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       return { ...mechanic, targetId: buddy!.id };
     });
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
-    return { unitId: unit.id, ...resolved, mechanics, ...(itemPrograms.length ? {itemPrograms} : {}) };
+    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler');
+    if(gambler&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative Gambler bank');
+    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler?{openingItemBankGold:Math.min(gambler.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
-  return { traits, units };
+  return appendMirrorSummons(state.preparation,{ traits, units });
 }
