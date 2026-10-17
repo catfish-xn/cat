@@ -1716,3 +1716,9 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。
 
 **mechanicFailed 推送（2026-10-17）**：服务器已把 `mechanicFailed` 加入 `PUSHED_EVENT_TYPES`（`src/server/room/projection.ts`）。服务器自发的转移（截止自动上阵、结算、回合进入等）里本席产生的该事件随本席 `state` 推送的 `events` 发出；玩家自己的命令里产生的仍照旧随该命令的 `applied` 回执 `events` 发出。线上字段只有 `type:'mechanicFailed'`、`hook`（`'rewards'|'choice'|'academy'`）、`reason`（`MatchFailure` 枚举字符串），加规则统一盖的 `domain:'match'`、`eventSeq`；不带收据、奖励内容、RNG、种子或任何别席数据，`projection-wire` 禁发名单里的键一个都不含。它只进本席私有推送，公共视图 `toPlayerView` 不含此事件，别的席位收不到。界面可据此给本席提示"这次发放失败、奖励保留待重试"。用例：`tests/server/mechanic-failed-push.test.ts`。
+
+## G2-4B / 神器锻造器（领域交接）
+
+本批基于 #147 d3112d6，恢复征服者10/14，11/13等待#149。领域规则/content版本v5；choice数据仍使用既有forge结构和choose/timeout命令，不新增服务器消息。接口、失败语义、收据ID和恢复函数完整约定见 [MATCH_CONTRACT 的 G2-4B 段](MATCH_CONTRACT.md#g2-4b-神器锻造器领域合同2026-10-17)。神器四项来自21件已实现池，不得在服务器再次抽取或替换；超时取payload.timeoutOption。结算g23Facts必须继续由领域提供并原样转发。
+
+本批不修改src/server/与界面，不能将领域交付称为联机端到端上线。服务器恢复应验证外层房间/席位结构；单人restoreMatch仍拒绝multiplayer字段，G23恢复辅助函数不替代整房恢复流程。
