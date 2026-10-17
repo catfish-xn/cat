@@ -1,3 +1,4 @@
+import { recordPreparationCommand, appendPreparationEvents, emptyPreparationLedger } from './preparation-ledger';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {updateG23Cells} from './g2-3-state';
 import {writeG23Progress} from './g2-3-state';
@@ -71,7 +72,7 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
-  return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+  return { ok: true, state: appendPreparationEvents({ ...state, nextMatchEventSeq: seq }, stamped), events: stamped };
 };
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
   // Choice-phase trading can consume/sell the currently selected anomaly target.
@@ -156,7 +157,7 @@ export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
   const m8 = prepareRound(seed,1,undefined,undefined,loot);
-  const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
+  const initial: MatchState = { preparationLedger: emptyPreparationLedger(), schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
@@ -186,7 +187,7 @@ export function validateMatchDeployment(state: MatchState, unitId: string, targe
   // Check the final formation: swapping at the cap does not add a deployed unit.
   return getPlayerDeploymentCount(planned.state) > getDeploymentCap(state) ? 'population-cap' : undefined;
 }
-export function deployMatchUnit(state: MatchState, unitId: string, target: UnitLocation): MatchCommandResult {
+function deployMatchUnitImpl(state: MatchState, unitId: string, target: UnitLocation): MatchCommandResult {
   const reason = validateMatchDeployment(state, unitId, target);
   if (reason) return fail(state, reason);
   const result = deployUnit(state.preparation, unitId, target);
@@ -234,7 +235,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   }
   return { ok: true, state: next, events };
 }
-export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
+function buyUnitImpl(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -253,7 +254,7 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
   return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
 }
-export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+function sellUnitImpl(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -274,14 +275,14 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
   if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
   return acceptEquipment(sold,events);
 }
-export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
+function setShopLockImpl(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (typeof locked !== 'boolean') return fail(state, 'invalid-choice');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   if (Boolean(state.shop.locked) === locked) return { ok: true, state, events: [] };
   return accept({ ...state, shop: { ...state.shop, locked } });
 }
-export function rerollShop(state: MatchState): MatchCommandResult {
+function rerollShopImpl(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level);
@@ -289,7 +290,7 @@ export function rerollShop(state: MatchState): MatchCommandResult {
   return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
-export function buyXp(state: MatchState): MatchCommandResult {
+function buyXpImpl(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
@@ -376,7 +377,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const entered=enterScheduledEvents(settled,'after');
   return {state:entered.state,events:[...events,...entered.events]};
 }
-export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+function startMatchCombatImpl(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = matchStartFailure(state); if (reason) return fail(state, reason);
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
@@ -384,7 +385,7 @@ export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPol
   const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
   return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
 }
-export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
+function stepMatchImpl(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
@@ -398,7 +399,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   const settled=settleRound(state,null);
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
-export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+function nextRoundImpl(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
@@ -442,20 +443,20 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
   } catch { return multiplayerFail(state, 'invalid-round'); }
 }
 
-export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
+function useConsumableImpl(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   return acceptEquipment({...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
     {kind:'consumable-used',record:plan.record})},plan.events);
 }
-export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
+function combineItemsImpl(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planCombine(state.items, state.nextItemSerial, aId, bId);
   return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event}))) }, plan.events) : fail(state, plan.reason);
 }
-export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
+function equipItemImpl(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
@@ -471,7 +472,7 @@ function choiceFailure(state: MatchState, choiceId: string, generation: number):
   if (!state.pendingChoice || state.pendingChoice.choiceId !== choiceId || state.pendingChoice.generation !== generation) return 'stale-choice';
   return undefined;
 }
-export function selectAnomalyTarget(state: MatchState, choiceId: string, generation: number, unitId: string): MatchCommandResult {
+function selectAnomalyTargetImpl(state: MatchState, choiceId: string, generation: number, unitId: string): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
@@ -483,7 +484,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
-export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
+function rerollAnomalyImpl(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
@@ -591,7 +592,7 @@ function completeMechanicChoice(state: MatchState, optionId: string, timedOut: b
   const entered = enterScheduledEvents(completed, choice.returnPhase === 'settlement' ? 'after' : 'before');
   return acceptEquipment(entered.state, [...resolved.events,...mechanicGrantEvents(resolved.state,completed), ...hookEvents,...entered.events]);
 }
-export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+function selectChoiceImpl(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
   if (isMechanicChoiceKind(choice.kind)) return completeMechanicChoice(state, definitionId, false,unitLootPolicy);
@@ -641,8 +642,72 @@ export function chooseG23BlackMarket(state:MatchState,offerId:string,take:boolea
  if(state.pendingChoice?.choiceId!==offerId||state.pendingChoice.kind!=='blackMarket')return fail(state,'stale-choice');
  return selectChoice(state,offerId,state.pendingChoice.generation,take?state.pendingChoice.offers[0]:'@skip');
 }
-export function claimG23Reward(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):MatchCommandResult{
+function claimG23RewardImpl(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):MatchCommandResult{
  if(state.phase!=='preparation'||isCombatRosterLocked(state))return fail(state,'wrong-phase');
  const granted=claimG23Atom(state,atomId,definitionId,policy);
  return granted.ok?accept(granted.state,granted.events):fail(state,granted.reason);
+}
+
+export function deployMatchUnit(state: MatchState, unitId: string, target: UnitLocation): MatchCommandResult {
+  return recordPreparationCommand(state, deployMatchUnitImpl(state, unitId, target), 'deployMatchUnit', [unitId, target]);
+}
+
+export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
+  return recordPreparationCommand(state, buyUnitImpl(state, slotIndex, expectedGeneration), 'buyUnit', [slotIndex, expectedGeneration]);
+}
+
+export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  return recordPreparationCommand(state, sellUnitImpl(state, unitId, unitLootPolicy), 'sellUnit', [unitId]);
+}
+
+export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
+  return recordPreparationCommand(state, setShopLockImpl(state, locked, expectedGeneration), 'setShopLock', [locked, expectedGeneration]);
+}
+
+export function rerollShop(state: MatchState): MatchCommandResult {
+  return recordPreparationCommand(state, rerollShopImpl(state), 'rerollShop', []);
+}
+
+export function buyXp(state: MatchState): MatchCommandResult {
+  return recordPreparationCommand(state, buyXpImpl(state), 'buyXp', []);
+}
+
+export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  return recordPreparationCommand(state, startMatchCombatImpl(state, unitLootPolicy), 'startMatchCombat', []);
+}
+
+export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
+  return recordPreparationCommand(state, stepMatchImpl(state, unitLootPolicy), 'stepMatch', []);
+}
+
+export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+  return recordPreparationCommand(state, nextRoundImpl(state, expectedRound, layout), 'nextRound', [expectedRound]);
+}
+
+export function useConsumable(state: MatchState, consumableId:string,target:ConsumableTarget): MatchCommandResult {
+  return recordPreparationCommand(state, useConsumableImpl(state, consumableId, target), 'useConsumable', [consumableId, target]);
+}
+
+export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
+  return recordPreparationCommand(state, combineItemsImpl(state, aId, bId), 'combineItems', [aId, bId]);
+}
+
+export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
+  return recordPreparationCommand(state, equipItemImpl(state, itemId, unitId, slot), 'equipItem', [itemId, unitId, slot]);
+}
+
+export function selectAnomalyTarget(state: MatchState, choiceId: string, generation: number, unitId: string): MatchCommandResult {
+  return recordPreparationCommand(state, selectAnomalyTargetImpl(state, choiceId, generation, unitId), 'selectAnomalyTarget', [choiceId, generation, unitId]);
+}
+
+export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
+  return recordPreparationCommand(state, rerollAnomalyImpl(state, choiceId, generation), 'rerollAnomaly', [choiceId, generation]);
+}
+
+export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  return recordPreparationCommand(state, selectChoiceImpl(state, choiceId, generation, definitionId, unitLootPolicy), 'selectChoice', [choiceId, generation, definitionId]);
+}
+
+export function claimG23Reward(state: MatchState, atomId:string,definitionId:string,policy?:UnitLootPolicy): MatchCommandResult {
+  return recordPreparationCommand(state, claimG23RewardImpl(state, atomId, definitionId, policy), 'claimG23Reward', [atomId, definitionId]);
 }

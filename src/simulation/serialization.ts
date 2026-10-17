@@ -1,3 +1,4 @@
+import { validatePreparationLedger } from './preparation-ledger';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -312,6 +313,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Verify the exact independent graph returned below, not another read of an
+  // external object's accessors after validating its economic values.
+  validatePreparationLedger(detached);
   // Serialization consumes this private detached graph immediately. Freezing it
   // would traverse the large metadata twice (freeze + canonical cache admission)
   // only to discard it. Keep validation and cloning identical to object restore.
