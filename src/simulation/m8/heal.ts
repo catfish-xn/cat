@@ -49,7 +49,7 @@ export function selectVampAlly<T extends VampUnit>(holder: VampUnit, units: read
     return (left < right ? -1 : left > right ? 1 : 0) || compareCodePoints(a.id, b.id);
   })[0];
 }
-export interface VampRate { readonly source: Source; readonly bps: number; readonly allyBps: number }
+export interface VampRate { readonly source: Source; readonly bps: number; readonly allyBps: number; readonly damageTypes?: readonly DamageOutcome['context']['damageType'][] }
 export function vampRequests(healId: string, holder: VampUnit, damage: DamageOutcome | readonly DamageOutcome[], rates: readonly VampRate[], units: readonly VampUnit[]): HealRequest[] {
   if (!holder.alive || holder.hp <= 0) return [];
   const outcomes: readonly DamageOutcome[] = Array.isArray(damage) ? damage : [damage as DamageOutcome];
@@ -58,7 +58,8 @@ export function vampRequests(healId: string, holder: VampUnit, damage: DamageOut
   if (!actual) return [];
   const fromPacketId = eligible.length === 1 ? eligible[0].context.packetId : null;
   const ordered = [...rates].sort((a, b) => compareCodePoints(canonicalSource(a.source), canonicalSource(b.source)));
-  const self = ordered.filter(r => r.bps > 0).map(r => ({ source: r.source, numerator: safeNumber(integer(actual) * integer(r.bps)), denominator: 10000 }));
+  const typed = (r: VampRate) => r.damageTypes ? safeNumber(eligible.filter(o => r.damageTypes!.includes(o.context.damageType)).reduce((sum, o) => sum + integer(o.absorbed) + integer(o.hpDamage), 0n)) : actual;
+  const self = ordered.filter(r => r.bps > 0 && typed(r) > 0).map(r => ({ source: r.source, numerator: safeNumber(integer(typed(r)) * integer(r.bps)), denominator: 10000 }));
   const requests = self.length ? [makeHealRequest(healId, holder.id, 'omnivamp', fromPacketId, self)] : [];
   const ally = selectVampAlly(holder, units);
   const allyActual = safeNumber(eligible.filter(o => permissionsFor(o.context).includes('gunblade-ally-heal')).reduce((sum, o) => sum + integer(o.absorbed) + integer(o.hpDamage), 0n));
