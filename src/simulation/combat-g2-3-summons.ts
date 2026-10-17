@@ -1,7 +1,37 @@
 import type { AbilityContext } from './combat-s13-abilities';
 import { amount, applyStatus, enemies, grantShield, origin, type S13Unit } from './combat-s13-state';
-import { hexDistance } from './board';
+import { hexDistance, type Board } from './board';
 import { UNIT_DEFINITIONS } from './units';
+import type { CombatUnit } from './combat-types';
+import { getUnitStats } from './unit-stats';
+import { resolveAbility } from './combat-abilities';
+import { compileCombatInitialInputs } from './combat-initialization';
+import { freezeCombatDeclarations } from './combat-static';
+import { EMPTY_RUNTIME } from './combat-s13-state';
+import { g23ForgeCell } from './g2-3-summons';
+
+/** Fresh combat-only skill body for either form of an original or copied Jayce.
+ * The owner's star/form belongs to Jayce; native forges remain one-star 1000 HP.
+ * Caller appends through the membership ledger and initializes mechanisms at birth.
+ * No inventory, original forge state, item effects, or accumulated buffs are copied. */
+export function createG23Forge(jayce:CombatUnit,units:readonly CombatUnit[],board:Board):CombatUnit|undefined {
+ if(jayce.definitionId!=='jayce'||units.some(u=>u.id===jayce.id+':g23-forge'))return;
+ const cell=g23ForgeCell(jayce,board,units.filter(u=>u.alive).map(u=>u.cell));if(!cell)return;
+ const stats=getUnitStats('g23-forge',1),ability=resolveAbility(stats.abilityId,1);
+ return freezeCombatDeclarations({
+  ...compileCombatInitialInputs(jayce.id+':g23-forge',stats,ability),
+  id:jayce.id+':g23-forge',definitionId:'g23-forge',team:jayce.team,starLevel:1,
+  cell:{...cell},startingCell:{...cell},attackDamage:stats.attack,attackRange:stats.attackRange,
+  attackIntervalTicks:stats.attackIntervalTicks,cooldownTicks:0,moveCooldownTicks:0,
+  armor:stats.armor,magicResist:stats.magicResist,shield:0,shieldExpiresAtTick:null,ability,
+  attackDamageBase:stats.attack,attackDamagePercentBps:0,
+  baseAttackSpeedBps:stats.baseAttackSpeedBps??Math.floor(200000/stats.attackIntervalTicks),attackSpeedBonusBps:0,
+  maxHpBasis:{base:stats.health,flat:0,bps:0,bonusBps:0},
+  sources:[],triggers:[],effectRuntime:[],mechanics:[],shieldLayers:[],statuses:[],tasks:[],
+  runtime:{...EMPTY_RUNTIME},alive:true,targetId:null,
+ },false,true);
+}
+
 /** Binding is an activity gate, not invulnerability: opponents can break the chains by damage. */
 export function g23Bound(u:S13Unit):boolean{return u.definitionId==='g23-sion'&&!u.runtime.buddyTriggered;}
 export function advanceG23Summons(ctx:AbilityContext):void{

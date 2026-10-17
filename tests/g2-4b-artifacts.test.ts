@@ -11,6 +11,7 @@ import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {G23_SPECIAL_ITEM_POOLS} from '../src/simulation/content/g2-3-special-item-source';
 import {G24_ARTIFACT_SOURCE} from '../src/simulation/content/g2-4-artifact-source';
 import {G24_ARTIFACT_ITEMS,G24_ARTIFACT_PENDING} from '../src/simulation/content/g2-4-artifacts';
+import {G24_MECHANISM_ITEMS} from '../src/simulation/content/g2-4b-mechanism-items';
 import {G23_POLICY} from '../src/simulation/content/g2-3-policy';
 import {healView,packets} from './helpers/replay2-views';
 import {hexDistance} from '../src/simulation/board';
@@ -37,7 +38,7 @@ function run(initial:CombatState,count:number){let state=initial;const events:Co
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,COMBAT,state.status==='finished',state.nextActionSeq!);});}
 const unit=(state:CombatState,id:string)=>state.units.find(u=>u.id===id)!;
 
-it('source records cover the 29-artifact pool; all but the eight new-mechanism artifacts are registered',()=>{
+it('source records cover the 29-artifact pool across declarative and new-mechanism registries',()=>{
  expect(Object.keys(G24_ARTIFACT_SOURCE)).toEqual([...G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6]);
  expect(Object.keys(G24_ARTIFACT_ITEMS).sort()).toEqual([...IMPLEMENTED].sort());
  expect([...G24_ARTIFACT_PENDING]).toEqual([...NEW_MECHANISM].sort());
@@ -48,7 +49,14 @@ it('source records cover the 29-artifact pool; all but the eight new-mechanism a
   expect(item.recipe).toBeUndefined();
   if(item.combatProgram)expect(()=>validateItemProgram(item.combatProgram!)).not.toThrow();
  }
- for(const id of G24_ARTIFACT_PENDING)expect(ITEM_DEFINITIONS[id]).toBeUndefined();
+ // Pending means outside the declarative subset; PR150 supplies all eight mechanism artifacts.
+ for(const id of G24_ARTIFACT_PENDING){
+  expect(G24_ARTIFACT_ITEMS[id]).toBeUndefined();
+  expect(G24_MECHANISM_ITEMS[id]).toBeDefined();
+  expect(ITEM_DEFINITIONS[id]).toBe(G24_MECHANISM_ITEMS[id]);
+ }
+ expect(Object.keys(G24_ARTIFACT_ITEMS).filter(id=>Object.hasOwn(G24_MECHANISM_ITEMS,id))).toEqual([]);
+ expect([...IMPLEMENTED,...NEW_MECHANISM].sort()).toEqual([...G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6].sort());
  expect(G24_ARTIFACT_ITEMS.TFT4_Item_OrnnZhonyasParadox.name).toBe('中娅悖论');
 });
 it('Infinity Force carries every 14.24 source stat and nothing else',()=>{

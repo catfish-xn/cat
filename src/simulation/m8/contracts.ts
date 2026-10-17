@@ -101,6 +101,8 @@ export type ProcPermission = 'apply-item-burn' | 'last-whisper' | 'defender-tita
   | 'omnivamp' | 'gunblade-ally-heal' | 'guardbreaker' | 'incoming-basic-hit' | 'damage-mana';
 export type CritEligibility = 'basic' | 'requires-spell-authorization' | 'never';
 export interface DamageContext {
+  /** Nonlethal payment of previously deferred damage; no proc permissions. */
+  readonly deferredPayment?: true;
   readonly source: Source;
   readonly targetId: string;
   readonly damageType: DamageType;
@@ -134,6 +136,8 @@ export interface DamageOutcome {
   readonly absorbed: number;
   readonly hpDamage: number;
   readonly overkill: number;
+  /** Death's Defiance: post-shield amount scheduled separately, not HP damage. */
+  readonly deferred?: number;
   readonly critical: boolean;
   readonly killingPacket: boolean;
 }

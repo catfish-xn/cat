@@ -16,8 +16,8 @@ export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLeve
   return {
     ...(definition.unitKind ? { unitKind: definition.unitKind, ...(definition.monsterFamily ? { monsterFamily: definition.monsterFamily } : {}) } : {}),
     ...(definition.baseCritChanceBps === undefined ? {} : { baseCritChanceBps: definition.baseCritChanceBps, baseCritMultiplierBps: definition.baseCritMultiplierBps }),
-    health: Math.floor(definition.baseStats.health * STAR_PERCENT[starLevel] / 100),
-    attack: Math.floor(definition.baseStats.attack * STAR_PERCENT[starLevel] / 100),
+    health: Math.floor(definition.baseStats.health * (definition.summon?.fixedStarStats?100:STAR_PERCENT[starLevel]) / 100),
+    attack: Math.floor(definition.baseStats.attack * (definition.summon?.fixedStarStats?100:STAR_PERCENT[starLevel]) / 100),
     armor: definition.baseStats.armor, magicResist: definition.baseStats.magicResist,
     attackRange: definition.attackRange, attackIntervalTicks: definition.attackIntervalTicks,
     ...(definition.baseAttackSpeedBps === undefined ? {} : { baseAttackSpeedBps: definition.baseAttackSpeedBps }),
