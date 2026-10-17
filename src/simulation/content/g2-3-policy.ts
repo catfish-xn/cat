@@ -18,7 +18,9 @@ export const G23_CONQUEROR_CHESTS = freezeContent(Array.from({length:15}, (_, i)
 export const G23_DEFERRED_CONQUEROR_ITEMS=freezeContent(['TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport','TFT_Item_ForceOfNature','TFT_Item_ZekesHerald','TFT_Item_Chalice','TFT_Item_LocketOfTheIronSolari']);
 export function g23ConquerorReward(chest:typeof G23_CONQUEROR_CHESTS[number]):Readonly<Record<string,unknown>>{
  const reward:Record<string,unknown>={};let deferred=false;
- for(const [key,value] of Object.entries(chest.reward)){
+ // 约定值 (G2-4a review): a duplicator resolves after the chest's heroes, so tier 4 can copy the 3-cost hero it grants.
+ const entries=Object.entries(chest.reward),duplicates=(value:unknown)=>Array.isArray(value)&&value.some(api=>String(api).includes('ChampionDuplicator'));
+ for(const [key,value] of [...entries.filter(([,v])=>!duplicates(v)),...entries.filter(([,v])=>duplicates(v))]){
   if(['Item','ItemByKey','ExactItem','MeepTypeUnit'].includes(key)&&Array.isArray(value)){
    const keep=value.filter(api=>!G23_DEFERRED_CONQUEROR_ITEMS.includes(api));deferred ||=keep.length!==value.length;if(keep.length)reward[key]=keep;
   }else reward[key]=value;

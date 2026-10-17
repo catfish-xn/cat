@@ -34,7 +34,9 @@ it('the completed-item anvil offers four distinct ordinary completed items, stab
 });
 it('Thief\'s Gloves and the lesser duplicator become concrete atoms',()=>{
  expect(g23RewardAtoms(bundle(8),42)).toEqual([{id:'g23:conqueror:8:atom:0',kind:'item',options:['thiefs-gloves'],quantity:1,gold:0}]);
- const [duplicator,unit]=g23RewardAtoms(bundle(4),42);
+ // The 3-cost hero atom comes first so the same drain can copy it.
+ expect(Object.keys(g23ConquerorReward(chest(4)))).toEqual(['ThreeCostUnit','Item']);
+ const [unit,duplicator]=g23RewardAtoms(bundle(4),42);
  expect(duplicator.kind).toBe('duplicator');
  expect(duplicator.options.every(id=>M5_UNIT_DEFINITIONS[id]!.cost<=3)).toBe(true);
  expect(unit.kind).toBe('unit');
@@ -62,6 +64,7 @@ it('one settlement crossing tier 9 grants the duplicate, Thief\'s Gloves and a f
  expect(duplicate).toMatchObject({team:'player',definitionId:dupClaim.definitionId,starLevel:1});
  expect(settled.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:')||r.receiptId.startsWith('g23:conqueror:8:')||r.receiptId.startsWith('g23:conqueror:9:')).map(r=>r.receiptId).sort())
   .toEqual(['g23:conqueror:4:atom:0:copy:0','g23:conqueror:4:atom:1:copy:0','g23:conqueror:8:atom:0:copy:0']);
+ expect(p.rewardClaims.filter(c=>c.bundleId==='g23:conqueror:4').map(c=>c.kind)).toEqual(['unit','duplicator']);
  expect(()=>validateG23MechanicLinks(settled)).not.toThrow();
  // Settling the same battle again grants nothing.
  expect(commitG23Settlement(settled,facts())).toBe(settled);
@@ -92,4 +95,15 @@ it('without an eligible hero the duplicator stays in escrow and is claimed once 
  expect(readG23Progress(claimed)!.rewardClaims).toMatchObject([{kind:'duplicator',definitionId:'irelia',copy:0}]);
  expect(claimed.preparation.units.filter(u=>u.definitionId==='irelia')).toHaveLength(2);
  expect(drainG23Rewards(claimed)).toEqual(claimed);
+});
+it('a duplicator can copy the 3-cost hero granted by the same chest in the same drain',()=>{
+ const initial=preparedAtRound4(),p0=readG23Progress(initial)!,tier4=bundle(4);
+ const unit=g23RewardAtoms(tier4,p0.seed)[0];
+ // No hero owned beforehand: the only ≤3-cost candidate is the hero this chest grants.
+ const empty=writeG23Progress({...initial,preparation:{...initial.preparation,units:initial.preparation.units.filter(u=>u.team!=='player')}},{...p0,rewards:[tier4]});
+ const drained=drainG23Rewards(empty),claims=readG23Progress(drained)!.rewardClaims;
+ expect(claims.map(c=>c.kind)).toEqual(['unit','duplicator']);
+ expect(unit.options).toContain(claims[0].definitionId);
+ expect(claims[1].definitionId).toBe(claims[0].definitionId);
+ expect(drained.preparation.units.filter(u=>u.team==='player'&&u.definitionId===claims[0].definitionId)).toHaveLength(2);
 });
