@@ -57,3 +57,14 @@ permanent inventory/growth or survivor player damage. Trait counts are frozen
 before copies; active trait targets extend to copies. `scaleItemSummonHp` applies
 the clone multiplier to initial and dynamic health. Inheritance/placement are
 pending conventions and this WIP does not claim complete native summon behavior.
+
+### G2-4b WIP: Collector and gold authority
+
+`CombatState.itemGoldReceipts` retains failed and successful rolls. Collector
+uses an independent explicit stream and only produces a gold opportunity after
+its own execution. The post-packet strict12% check, bypass of shields/Defiance
+and exclusion of natural lethal hits are pending convention G24-COLLECTOR-EXECUTE-01.
+Gold-item save verification has one explicit exception to structural-only combat
+restore: it independently simulates the bounded combat from validated input and
+compares receipts/RNG. This is read-only verification; it grants no resources and
+does not advance candidate state. No-gold saves incur no combat replay.

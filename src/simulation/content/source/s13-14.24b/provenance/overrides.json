@@ -177,6 +177,22 @@
       "version": "14.24b project WIP",
       "behavior": "Mirror clone uses nearest free cell in friendly deployment half; distance then row/column; holder ID order; full board produces no clone. Combat identity derives from item and original holder, never from candidate save metadata.",
       "sourceLimit": "Raw provides no collision rules. Voidspawn original preparation movement from14.6 is not implemented by this Mirror rule."
+    },
+    {
+      "id": "G24-COLLECTOR-EXECUTE-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "After a positive ordinary attack/ability/attack-extra packet, execute a still-living target strictly below12% maxHP. Execution bypasses shields/Defiance and does not trigger vamp. Only such executions draw the independent40% gold roll; natural lethal packets do not roll.",
+      "sourceLimit": "Raw says attacks/abilities execute below12%, executions40%1gold. Exact barrier, natural-kill qualification and shield/deferral bypass are not proved by original script."
+    },
+    {
+      "id": "G24-ITEM-GOLD-01",
+      "status": "provisional-needs-user-confirmation",
+      "label": "约定值，非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Store successful and failed combat gold rolls explicitly. Positive receipts grant exactly once at settlement through generic economy receipts.",
+      "sourceLimit": "Original pickup timing is unavailable. Collector wired; Gambler/Mogul triggers and bank scaling remain pending."
     }
   ]
 }

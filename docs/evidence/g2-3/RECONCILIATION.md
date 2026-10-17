@@ -203,3 +203,14 @@ no clone equipment, active traits. Provisional `G24-MIRROR-INHERIT-01` and
 list for missing inheritance evidence and native-summon limitations.
 Clone identity and resolved sources must exactly match the independently rebuilt
 strategy; no self-authentication from candidate save declarations.
+
+G2-4b item-gold settlement bridge is wired to the generic economy receipt ledger;
+combat producers remain pending. Positive receipt amounts are1, never piggyback
+on High Roller's multiple-of3 grant. Collector's archived14.24 description
+specifically says executions have40% drop chance, not arbitrary kills.
+
+Collector runtime now executes its own post-hit threshold check and supplies gold
+receipts to settlement; G24-COLLECTOR-EXECUTE-01 is a **约定值**, not confirmed
+original ordering. Source raw14.24 AD30%, crit30%, threshold12%, chance40%1gold.
+Gold restore independently reconstructs combat outcomes from the validated frozen
+input rather than authenticating a candidate's own opportunity list.

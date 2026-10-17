@@ -1,5 +1,6 @@
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
+import {recordItemGold} from './g2-4b-item-gold';
 import {advanceSpectralCutlass} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
@@ -136,6 +137,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }).sort(compareIds);
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
   let itemRandomStreams = state.itemRandomStreams;
+  let itemGoldReceipts=state.itemGoldReceipts;
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
@@ -387,6 +389,22 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       emitMechanismSignal(ctx, { ...signal, event: 'damage-taken' }, facts);
       if (absorbed > 0 && context.permissions.includes('guardbreaker')) emitMechanismSignal(ctx, { ...signal, event: 'shield-hit' }, facts);
     }
+    const collector=owner?.mechanics?.find(m=>m.mechanic==='g24Collector');
+    const remaining=virtualHp.get(target.id)!;
+    if(collector&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
+      &&absorbed+actual>0&&remaining>0&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(collector.values.executeBps)){
+      const execution:S13Packet={source:collector.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,
+        delivery:'equipment-proc',critEligibility:'never',critical:false,area:false,triggeringCastActionSeq:null};
+      const request=damageRequest(execution,ctx.combatId!,tick);
+      const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+      // Execution bypasses shields and Defiance; death cleanup removes layers.
+      commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
+      if(!itemRandomStreams||!itemGoldReceipts)throw new RangeError('Missing collector gold state');
+      const receipt=recordItemGold({streams:itemRandomStreams,receipts:itemGoldReceipts},{battleId:ctx.combatId!,ownerId:owner!.id,
+        itemInstanceId:collector.source.instanceId,kind:'collector',tick,
+        ordinal:itemGoldReceipts.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length});
+      itemRandomStreams=receipt.streams;itemGoldReceipts=receipt.receipts;
+    }
   };
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   for (let packetIndex = 0; packetIndex < ctx.packets.length; packetIndex++) {
@@ -523,5 +541,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events[i] = { ...event, receipt: final };
     }
   }
-  return stampCombatStep({ ...state, ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

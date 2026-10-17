@@ -54,4 +54,13 @@ export const G24_MECHANISM_ITEMS: Readonly<Record<string, ItemDefinition>> = fre
     combatProgram:{modifiers:[modifier('critChance',1500,'bps')]},
     effectDescriptions:['召唤70%最大生命、最大法力增加10%的复制体，继承已激活羁绊。其余继承与放置规则为待确认约定。'],
   },
+  TFT4_Item_OrnnTheCollector: {
+    id:'TFT4_Item_OrnnTheCollector',apiName:'TFT4_Item_OrnnTheCollector',name:'金币收集者',
+    kind:'completed',unique:true,slotCost:1,evidenceStatus:'approved-provisional',
+    conventionIds:['G24-COLLECTOR-EXECUTE-01','G24-ITEM-GOLD-01'],
+    effects:[{kind:'statPercentBps',stat:'attackDamage',bps:3000},
+      {kind:'mechanic',mechanic:'g24Collector',values:{executeBps:1200}}],
+    combatProgram:{modifiers:[modifier('critChance',3000,'bps')]},
+    effectDescriptions:['攻击和技能处决低于12%最大生命的目标；处决有40%几率掉1金币，结算统一入账。'],
+  },
 });

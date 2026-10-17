@@ -22,8 +22,8 @@ Important distinctions:
 Unresolved source semantics, not adopted conventions: Voidspawn stage clamping/placement,
 copy equipment/stat inheritance. Beam width, collision fallback and Fishbones
 target-pool/stacking rules are explicitly provisional conventions in overrides.
-No incomplete item is registered merely because its numeric extraction exists.
-Fishbones, Spectral Cutlass, Shroud, Death’s Defiance and Trickster’s Glass are now registered. The runtime policy
+Numeric extraction alone does not imply runtime integration or complete original behavior.
+Fishbones, Spectral Cutlass, Shroud, Death’s Defiance, Trickster’s Glass and Collector are now registered. The runtime policy
 revision/digest have changed; old fixture migration is still pending (WIP).
 
 The two planning attachments were read through the supported Library read API.
@@ -33,7 +33,7 @@ Their older scope proposals do not supersede the latest eleven-item dispatch.
 Validation: source pins, item kernel, gold receipt kernel, Fishbones real Match
 roundtrip/multi-target, Cutlass geometry/public save, and Shroud two-seat tests.
 The gold kernel is not connected to settlement yet; deferred damage is connected.
-Six items, final fixture migration, final full suite and final-head CI/JS measurement
+Five items, final fixture migration, final full suite and final-head CI/JS measurement
 remain pending. This branch must remain a draft until complete.
 
 Draft PR #150 was created by Claude: https://github.com/catfish-xn/cat/pull/150 .
@@ -74,7 +74,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 ## 集中待定清单（2026-10-17，未逐项批准）
 
 原版明确的常数全部取已固定 hash 的 14.24 原档；下列实现细节缺少原版证据，
-均为 **约定值建议**，不是已经证实的原版行为。前 4 项与诡术师之镜已在 WIP 执行，其他未接线。
+均为 **约定值建议**，不是已经证实的原版行为。前 4 项、诡术师之镜与金币收集者已在 WIP 执行，其他未接线。
 
 | ID / status | Concrete recommendation | Source gap, research, behavior impact |
 | --- | --- | --- |
@@ -85,7 +85,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 | G24-ITEM-GOLD-01 / proposed, not wired | Credit each positive receipt once at battle settlement. Gambler AS uses frozen opening bank plus this side's already-generated battle gold; 100 Bps per gold capped at 30. Failure rolls remain in ledger. | Raw gives bank scaling and 5%/1 gold, Collector 40%/1 gold, Mogul 1 gold. Inventory attachment explicitly calls out settlement convention. Client pickup timing absent. Decides whether this battle's gold accelerates later attacks; deferred credit cannot be spent mid-battle. |
 | G24-MIRROR-INHERIT-01 / WIP runtime | One clone of same champion/star/form; recompile naked champion plus active trait effects; no item programs, no anomaly or persistent growth inheritance until verified. Multiply resulting max HP by 70%, max Mana by 110%, flooring HP/ceiling Mana. Clone does not add population, trait counts or survivor player damage. | Raw 14.24 says max Health (not base Health), disallows equipping items, and confirms active traits. A later 15.1 description changes max to base (values attachment; secondary data diff also found), so later text cannot silently establish 14.24 semantics. Riot 14.8 confirms original form inheritance for an older form-swap champion. Item-stat, anomaly and growth inheritance remain unproven. Proposal may underpower clones of scaled/anomalous units; requires explicit review. |
 | G24-TRENCH-INHERIT-01 / candidate, not wired | Replace holder with 3 fresh combat identities at first 50% threshold. Each starts full at floor(holder maxHP×0.30). Copy champion/star/form and item declarations, mark coat consumed on all three to prevent recursive splitting; reset transient combat timers/counters. No persistent inventory items minted. | Raw fixes 3/50%/30%. Riot 14.9's Treasure Chest interaction supports equipment effects on copies, but full inherited timers, mana, anomalies and growth are not specified. Resetting counters can retrigger survival effects and alter mana timing; do not describe as verified original behavior. |
-| G24-VOIDSPAWN-STAGES-01 / historical candidate, not wired | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 access gap; absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
+| G24-VOIDSPAWN-STAGES-01 / historical candidate, not wired | HP stages 2/3/4/5/6 = 1000/1500/2000/2500/3000 (Riot 14.6, supersedes 13.18). AD = 80/80/120/180, stars = 1/1/2/3 (Riot 14.7). If unresolved, propose stage 1 uses stage 2, ≥6 clamps at last HP row; do not multiply these displayed totals by stars again. AS .75, armor/MR 30 match local raw. | 14.6 removes taunt and creates the movable summon during preparation. Keyword patch-chain research has a 14.14 initial access gap (resolved by the official tft-patch-14-14 URL); absence of a keyword is not proof of no change. Corrected character-bin URL also unavailable (proxy 403); wiki/stored-page access restricted. Historical table is evidence at its published version, carry-forward/clamping are conventions. Controls summon tankiness/damage substantially; prefer completing patch-chain research before adopting. |
 | G24-SUMMON-CELL-01 / candidate, not wired | Mirror clone nearest empty friendly-half cell to owner; Voidspawn auto-placement would seek front row, then remaining friendly cells; this differs from original movable preparation placement. Tie-break distance then row/column. Atomic allocation: if full, record no-space outcome without creating partial clones. | Riot 13.20 front-row preference was superseded by 14.6 movable preparation placement; 14.8 fixes placement persistence. A combat-only auto-placement substitute is a 约定值 and needs review, not an original implementation claim. Planning documents flag copy/placement semantics as missing. A full board can prevent summon benefit; engine must record the outcome and not silently create overlapping units. |
 
 
@@ -95,7 +95,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 - 迷离风衣：14.24 为 50% 阈值、3 个 30% 最大生命复制体、15% 攻速。Riot 14.9 的 Treasure Chest 示例表明复制体拥有装备效果；不证明所有瞬时状态继承。
 - 虚空生物：Riot 14.6 明确阶段 2–6 生命 1000/1500/2000/2500/3000；移除嘲讽，准备阶段出现且可移动。14.7 攻击总值阶段 2/3/4/5 为 80/80/120/180，阶段 4 升二星、5+ 三星，攻速 .75、双抗 30。14.8 修复跨轮位置保持。阶段 1/7+ 钳制、是否对生命额外乘星级、自动放置替代原版移动仍是约定值建议。
 - 灵风：原档 5 秒、镜像旋风最近敌人、无视控制免疫、全队 2% 攻速；最近同距以 ID 排序、多个旋风优先选择尚未放逐者为约定值建议。
-- 金币收集者：12% 斩杀阈值，击杀 40% 掉 1 金。投机者：每金 1% 攻速、上限 30 金、攻击 5% 掉 1 金。大亨：受伤每层 7 生命/1 双抗、35 层满层掉 1 金、之后每 8 秒 1 金。金币拾取时点、同 tick 多伤害计层/斩杀先后未查到；建议每正伤害包一层、每包后斩杀、金币结算统一入账，不伪造原版时序。
+- 金币收集者：12% 斩杀阈值，处决 40% 掉 1 金（不是任意击杀）。投机者：每金 1% 攻速、上限 30 金、攻击 5% 掉 1 金。大亨：受伤每层 7 生命/1 双抗、35 层满层掉 1 金、之后每 8 秒 1 金。金币拾取时点、同 tick 多伤害计层/斩杀先后未查到；建议每正伤害包一层、每包后斩杀、金币结算统一入账，不伪造原版时序。
 
 官方出处：
 - https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-6-notes/
@@ -105,7 +105,7 @@ Voidspawn requires a verified stage table and spawn/restore integration.
 - https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/
 
 调查记录：13.19–14.24 官方公告关键词检索见 G2-4B-PATCH-CHAIN.json，
-14.14 页面不可访问；wiki 和正确 CommunityDragon character-bin 路径受代理限制。
+14.14 旧链接不可访问；已通过官方跳转读取 tft-patch-14-14，补齐该页面；wiki 和正确 CommunityDragon character-bin 路径受代理限制。
 检索没有命中不能证明中间版本没有变化。原始 13.18 生命候选表已废弃，不能使用。
 
 建议集中确认：保留已接线三项及上表约定；复制继承与虚空生物准备期站位需重点审阅。
@@ -145,3 +145,41 @@ proposal, not proof of original item/augment/anomaly/growth behavior. Jayce's cl
 currently uses the existing self fallback when its private forge is absent; native
 summon inheritance is not yet complete. Team item auras on clones also need review.
 This registration is a WIP implementation, not a declaration of full item completion.
+
+## Gold settlement bridge checkpoint
+
+Optional `G23BattleFacts.itemGoldPayouts` now enters the existing settlement
+transaction and generic gold receipt ledger. Receipt IDs must bind the exact
+battle, owner, item, kind and ordinal; each positive receipt is exactly1gold.
+Duplicates, another battle, arbitrary amounts/sources, missing/extra generic
+receipts are rejected. Historical economy replay includes the item payouts.
+Five related tests passed. Combat trigger generation is still not wired, so this
+bridge is not a claim that Collector/Gambler/Mogul already execute in battle.
+Collector source specifically rewards executions, not every kill; runtime must
+use that narrower original trigger.
+
+## Collector combat checkpoint
+
+Collector now emits a distinct execution packet below the strict12% threshold,
+records every40% roll (including failures) on its independent stream, and supplies
+positive item receipts to the actual Match settlement. Natural lethal hits do not
+roll in this pending ordering convention; raw text specifies executions, but exact
+original trigger ordering remains a source gap (`G24-COLLECTOR-EXECUTE-01`).
+
+Gold-item Match restore independently simulates only that combat from validated
+frozen inputs and compares all gold receipts and item RNG streams. It does not
+trust candidate opportunity counts; no grants or saved-state RNG are advanced.
+This adds restore cost specifically for gold-item battles; performance must be
+measured before final acceptance. The normal non-gold restore path is unchanged.
+Real public-command integration fixture: reach2-1, acquire/merge Singed through
+generic unit grants, equip Collector, resolve battle, restore settlement, reject
+an added self-consistent failure/RNG draw. Four seeds cover both execution and
+positive-gold cases. This targeted test passed; no full suite has run.
+
+Additional research: official14.14 was successfully read via
+https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/tft-patch-14-14/ .
+`G2-4B-VOIDSPAWN-PATCH-CHAIN.json` records30 official-page searches for Voidspawn,
+including the repaired14.14 link. No later keyword hit changes the14.6/14.7 table;
+this is a documented carry-forward inference, not proof of absent undocumented
+changes. Unknown raw SummonedStatReduction25 and Gambler hashed constants20/4
+remain uninterpreted; no mechanic is invented from their names/values.

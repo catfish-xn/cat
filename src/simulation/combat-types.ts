@@ -70,6 +70,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
   readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
   readonly removedUnitIds?:readonly string[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;

@@ -44,7 +44,7 @@
     "numbers": "map22 TftItemData constants, cross-checked with en_us item effects",
     "identityAndDescription": "en_us Set13 membership and item desc",
     "localization": "zh_cn entries selected by map22 mDisplayNameTra and mDescriptionNameTra",
-    "runtimeStatus": "WIP: Fishbones, Spectral Cutlass and Shroud integrated; eight pending",
+    "runtimeStatus": "WIP: Fishbones, Spectral Cutlass, Shroud, Deaths Defiance, Mirror and Collector integrated; five pending; Mirror native-summon/inheritance gaps remain",
     "unresolved": [
       "Voidspawn stage HP/AD",
       "copy inheritance and collision rules",

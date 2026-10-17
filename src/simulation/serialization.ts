@@ -1,4 +1,5 @@
 import {projectItemSummons} from './g2-4b-summons';
+import {validateCombatItemGold} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -247,11 +248,12 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
-    if (fishbones.length) {
+    const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Collector'));
+    if (fishbones.length||collector) {
       requireValue(combat.itemRandomStreams, 'missing item random streams');
       validateItemRandomStreams(combat.itemRandomStreams!, basis.battleSeed, {
         fishbones: fishbones.reduce((sum, u)=>sum+(combat.units.find(c=>c.id===u.unitId)?.runtime?.attackCount??0),0),
-        collector: 0, 'gamblers-blade': 0,
+        collector: Array.isArray(combat.itemGoldReceipts)?combat.itemGoldReceipts.filter(r=>r.kind==='collector').length:0, 'gamblers-blade': 0,
       });
     } else requireValue(combat.itemRandomStreams === undefined, 'unexpected item random streams');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
@@ -310,6 +312,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
+    validateCombatItemGold(combat,basis,expectedStrategy);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.

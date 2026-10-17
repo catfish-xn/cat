@@ -18,6 +18,25 @@ export interface ItemGoldLedger {
   readonly streams: ItemRandomStreams;
   readonly receipts: readonly ItemGoldReceipt[];
 }
+export interface ItemGoldPayout {
+  readonly receiptId:string;
+  readonly source:'g24-item-gold';
+  readonly amount:1;
+}
+
+/** Settlement accepts only positive, battle-scoped unit/item receipts. The
+ * combat adapter remains responsible for proving the triggering opportunity. */
+export function validateItemGoldPayouts(payouts:readonly ItemGoldPayout[],battleId:string):void {
+  if(!Array.isArray(payouts))throw new RangeError('Invalid item gold payouts');
+  const ids=new Set<string>();
+  for(const payout of payouts){
+    if(!payout||Object.keys(payout).length!==3||payout.source!=='g24-item-gold'||payout.amount!==1||typeof payout.receiptId!=='string'||ids.has(payout.receiptId))throw new RangeError('Invalid item gold payout');
+    let id:unknown;try{id=JSON.parse(payout.receiptId);}catch{throw new RangeError('Invalid item gold receipt identity');}
+    if(!Array.isArray(id)||id.length!==6||id[0]!=='g24-item-gold'||id[1]!==battleId||typeof id[2]!=='string'||!id[2]||typeof id[3]!=='string'||!id[3]
+      ||!['collector','gamblers-blade','moguls-full','moguls-periodic'].includes(id[4])||!Number.isSafeInteger(id[5])||id[5]<0)throw new RangeError('Invalid item gold receipt provenance');
+    ids.add(payout.receiptId);
+  }
+}
 
 function validateOpportunity(opportunity: ItemGoldOpportunity): void {
   if (!opportunity || Object.keys(opportunity).length !== 6
@@ -70,7 +89,7 @@ export function validateItemGoldLedger(candidate: ItemGoldLedger, initialStreams
 /** Pending gold is selected by combat owner, including a dead holder. The match
  * adapter must grant each returned positive receipt exactly once via its ledger.
  */
-export function itemGoldPayouts(ledger: ItemGoldLedger, ownerIds: ReadonlySet<string>) {
+export function itemGoldPayouts(ledger: ItemGoldLedger, ownerIds: ReadonlySet<string>):ItemGoldPayout[] {
   return ledger.receipts.filter(r => r.gold > 0 && ownerIds.has(r.ownerId))
-    .map(r => ({receiptId: r.id, source: 'g24-item-gold', amount: r.gold}));
+    .map(r => ({receiptId: r.id, source: 'g24-item-gold', amount: 1}));
 }
