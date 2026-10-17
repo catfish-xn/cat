@@ -280,7 +280,9 @@ export interface CastReceipt {
 }
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'
   | 'damage-dealt' | 'damage-taken' | 'shield-hit' | 'post-damage-survival' | 'shield-ended'
-  | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated';
+  | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated'
+  /** G2-4b: the actor reached 0 HP this tick; emitted once, before death cleanup. */
+  | 'holder-death';
 /** A05: event actor/target are not the holder or the current ordinary-attack target. */
 export type TriggerContext = { readonly eventSeq: number; readonly tick: Tick; readonly actionSeq: number;
   readonly actorId: string; readonly targetId: string | null } & (
@@ -437,8 +439,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v2';
-  readonly contentVersion: 's13-14.24b-g2-3-v2';
+  readonly rulesVersion: 's13-g2-3-v3';
+  readonly contentVersion: 's13-14.24b-g2-3-v3';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

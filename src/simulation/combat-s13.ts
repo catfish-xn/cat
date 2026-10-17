@@ -453,6 +453,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (grants.length) unit.runtime.buddyTriggered = true;
     }
   }
+  // G2-4b: on-death item declarations see the dying holder before its statuses and tasks are cleaned.
+  if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
+    emitMechanismSignal(ctx, { event: 'holder-death', tick, actionSeq: actionSeq++, actorId: unit.id, targetId: unit.id, cast: null });
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {

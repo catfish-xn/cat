@@ -30,7 +30,7 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
   return {tier:i+1,table,options:Object.entries(objects[table].values).map(([id,weight]) => ({id,weightBps:Math.round((weight as number)*10000),reward:objects[id].values}))};
 }));
 export const G23_POLICY = freezeContent({
-  revision:'g2-3-followup-v2', rngAlgorithm:'lcg32-v1', seedXor:0x67323370,
+  revision:'g2-4b-support-v3', rngAlgorithm:'lcg32-v1', seedXor:0x67323370,
   conqueror:{radiantPoolExclusions:['TFT5_Item_ThiefsGlovesRadiant'],chests:G23_CONQUEROR_CHESTS,transitionalRewards:G23_CONQUEROR_CHESTS.map(g23ConquerorReward),deferredPolicy:'whole-tier-gold-floor-only-affected-v1', growthPerChestBps:500, progressCap:null,
     stacksPerTakedown:{2:1,4:3,6:6,9:20},radiantConversion:'equipped-board-and-bench-then-new-combinations'},
   highRoller:{first:[3500,3500,2000,1000],triple:[4000,3500,2450,50],mods:['rocket','shield','coin'],tripleMods:['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot'],

@@ -24,6 +24,7 @@ import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
+import { compileSupportGrants, type G24HeldItem } from './g2-4-support';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
 export interface StrategyCatalog {
@@ -50,6 +51,14 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
+  // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
+  const held = new Map<string, G24HeldItem[]>(), hold = (unitId: string, definitionId: string, instanceId: string) =>
+    held.set(unitId, [...held.get(unitId) ?? [], { definition: lookup(catalog.items, conversions.get(instanceId) ?? definitionId), instanceId }]);
+  for (const item of state.items) if (item.location.kind === 'unit') hold(item.location.unitId, item.definitionId, item.id);
+  for (const child of state.temporaryEquipment) hold(child.holderId, child.definitionId, child.temporaryId);
+  for (const item of readRoundEnemyProjection(state.round).items) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
+  const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
+    held, getCatalogRoundByOrdinal(state.round).stage);
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
@@ -101,6 +110,10 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
+    }
+    for (const grant of supportGrants.get(unit.id) ?? []) {
+      sources.push(...makeSourcedEffects(unit.id, 'item', grant.definitionId, grant.instanceId, grant.effects));
+      if (grant.program) { validateItemProgram(grant.program); itemPrograms.push({ source: { ownerId: unit.id, sourceKind: 'item', definitionId: grant.definitionId, instanceId: grant.instanceId, effectIndex: (grant.effects.length + 1) * 1024, parentItemInstanceId: null }, program: structuredClone(grant.program) }); }
     }
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
     sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit)));
