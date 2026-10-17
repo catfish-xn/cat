@@ -40,7 +40,7 @@ function declare(id: string, v: Readonly<Record<string, number | null>>): G24Sup
     }
     case 'TFT4_Item_OrnnObsidianCleaver': {
       const t = ticks('Duration'), hit = enemies({ candidates: 'event-target' });
-      return { holder: { triggers: [trigger({ id: 'cleaver', event: 'damage-dealt', selector: hit, effects: [status('shred', pct('Shred'), t, { activation: 'immediate' }), status('sunder', pct('Shred'), t, { activation: 'immediate' })] })] },
+      return { holder: { triggers: [trigger({ id: 'cleaver', event: 'damage-dealt', selector: hit, effects: [...(['shred', 'sunder'] as const).map(kind => ({ ...status(kind, pct('Shred'), t, { activation: 'immediate' }), anyDamage: true as const }))] })] },
         auras: [{ area: 'team', radius: 0, effects: [{ kind: 'statPercentBps', stat: 'attackDamage', bps: ratio('TeamAD') }, { kind: 'statFlat', stat: 'abilityPower', amount: n('TeamAP') }] }] };
     }
     case 'TFT_Item_AegisOfTheLegion': {

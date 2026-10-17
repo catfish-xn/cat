@@ -38,7 +38,7 @@ export function validateItemProgram(program: ItemProgram): void {
   check(program && Object.keys(program).every(k=>['modifiers','effects','triggers','survival','periodic','vamp'].includes(k)));
   const effect=(e:Effect):void=>{
     check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment'].includes(e.kind));
-    if(e.kind==='apply-status')validateStatusApplication(e.status);
+    if(e.kind==='apply-status'){validateStatusApplication(e.status);check(e.anyDamage===undefined||e.anyDamage===true);}
     if(e.kind==='modify-stat') { modifier(e.modifier); if(e.duration.kind==='ticks')integer(e.duration.ticks,1); }
     if('amount' in e) {
       if(typeof e.amount==='number')integer(e.amount);

@@ -150,10 +150,19 @@ describe('G2-4b in-combat programs', () => {
     expect(after.map(e => e.tick)).toEqual([101, 201]);
     for (const e of after) expect(e.type === 'heal' && e.outcome.actual).toBe(Math.min(1000, Math.floor(left.maxHp * 1400 / 10000)));
   });
-  it('Obsidian Cleaver shreds and sunders whatever its holder damages', () => {
+  it('Obsidian Cleaver shreds and sunders on any damage type, every victim of an area ability included', () => {
     const { state } = run(setup(allies, enemy, [['holder', 'TFT4_Item_OrnnObsidianCleaver']]).combat, 80);
-    expect(statusesOf(state, 'foe', 'shred').length).toBeGreaterThan(0);
     expect(statusesOf(state, 'foe', 'shred')[0].application.magnitudeBps).toBe(3000);
+    const caster = (definitionId: string) => {
+      const { combat } = setup([['holder', definitionId, 3, 4]], [['e1', 'garen', 3, 3], ['e2', 'garen', 2, 3], ['e3', 'garen', 4, 3], ['e4', 'garen', 3, 2]], [['holder', 'TFT4_Item_OrnnObsidianCleaver']]);
+      // Only the holder's opening cast deals damage: magic damage alone must still Sunder.
+      return run({ ...combat, units: combat.units.map(u => u.id === 'holder' ? { ...u, mana: u.maxMana, cooldownTicks: 100000 } : { ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 }) }, 30);
+    };
+    const vladimir = caster('vladimir');
+    expect(vladimir.events.filter(e => e.type === 'packetDamage').map(e => e.type === 'packetDamage' && e.outcome.context.damageType)).toEqual(['magic']);
+    expect([statusesOf(vladimir.state, 'e1', 'shred').length, statusesOf(vladimir.state, 'e1', 'sunder').length]).toEqual([1, 1]);
+    const zyra = caster('zyra').state;
+    expect(['e1', 'e2', 'e3', 'e4'].map(id => statusesOf(zyra, id, 'sunder').length)).toEqual([1, 1, 1, 0]);
   });
   it('Spite stuns enemies within two hexes when its holder dies', () => {
     const combat = passive(setup(allies, enemy, [['holder', 'TFT_Item_Spite']]).combat);
