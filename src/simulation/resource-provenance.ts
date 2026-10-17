@@ -277,6 +277,8 @@ function validateUpgrade(event: UnitUpgradedEvent): void {
 export function foldResourceProvenance(value: unknown, context: ResourceProvenanceContext, parsedJsonInput = false): FoldedResourceProvenance {
   getCatalogRoundByOrdinal(context.throughRoundOrdinal);
   if (!parsedJsonInput) plainJson(value);
+  record(value);
+  requireValue(Object.hasOwn(value, 'equipmentHistory'), 'ordered equipment history required');
   keys(value, ['version', 'equipmentHistory', 'entries']);
   requireValue(value.equipmentHistory === 'ordered', 'ordered equipment history required');
   requireValue(value.version === RESOURCE_PROVENANCE_VERSION && Array.isArray(value.entries) && (value.entries.length > 0 || context.carouselOpening===true), 'version/opening');

@@ -6,7 +6,7 @@ import { createG23Progress, validateG23Progress } from '../src/simulation/g2-3-m
 import { advanceG23Economy } from '../src/simulation/g2-3-economy';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { TACTICIANS_CROWN_ID } from '../src/simulation/deployment-cap';
-import { validateBattleCollectionSync, validateBattleCollection, validateBattleRecord } from '../src/replay/history';
+import { BattleHistory, validateBattleCollectionSync, validateBattleCollection, validateBattleRecord } from '../src/replay/history';
 import { validateEnvelope, validateFile, exportFile } from '../src/persistence/format';
 import { readCompatibility } from '../src/persistence/compatibility';
 import { M8_VERSION } from '../src/simulation/m8/version';
@@ -247,8 +247,8 @@ describe('M2 equipment binding continuity', () => {
     // A legacy ledger without ordered equipment evidence is deliberately unsupported.
     const legacy = structuredClone(legal);
     Reflect.deleteProperty(legacy.resourceProvenance,'equipmentHistory');
-    expect(() => serializeMatch(legacy,first.battles)).toThrow();
-    for (const input of [legacy,JSON.stringify(legacy)]) expect(() => restoreMatch(input,first.battles)).toThrow();
+    expect(() => serializeMatch(legacy,first.battles)).toThrow('Invalid resource provenance: ordered equipment history required');
+    for (const input of [legacy,JSON.stringify(legacy)]) expect(() => restoreMatch(input,first.battles)).toThrow('Invalid resource provenance: ordered equipment history required');
     // Dropping the equip fact while retaining the new format must not infer a placement.
     const missing = {...legal,resourceProvenance:{...legal.resourceProvenance,entries:legal.resourceProvenance.entries
       .filter(fact => !(fact.kind === 'item-equipped' && fact.itemId === 'item-4'))
@@ -264,5 +264,83 @@ describe('M2 equipment binding continuity', () => {
     expect(() => serializeMatch(forged,first.battles)).toThrow('historical equipment continuation');
     for (const input of [forged,JSON.stringify(forged)])
       expect(() => restoreMatch(input,first.battles)).toThrow('historical equipment continuation');
+  });
+});
+
+
+describe('M5/M6 ordered equipment across the first battle', () => {
+  function openingWithBlade() {
+    return accepted(grantMechanicItem(createMatch(7), {receiptId:'m5:blade',source:'test',definitionId:'deathblade'}));
+  }
+  function checkNextTicks(state: MatchState, restored: MatchState) {
+    let original = accepted(startMatchCombat(advance(state)));
+    let resumed = accepted(startMatchCombat(advance(restored)));
+    expect(resumed).toEqual(original);
+    while (original.phase === 'combat') {
+      const expected = stepMatch(original), actual = stepMatch(resumed);
+      expect(actual).toEqual(expected);
+      original = expected.state; resumed = actual.state;
+    }
+  }
+  it('replays combat equip before settlement, restores through all three entries and continues tick for tick', () => {
+    const opening = openingWithBlade(), history = new BattleHistory('crown-history');
+    let state = opening;
+    const commit = (result: ReturnType<typeof startMatchCombat> | ReturnType<typeof stepMatch>, reason: 'command' | 'tick') => {
+      const before = state;
+      if ('ok' in result && !result.ok) throw new Error(result.reason);
+      state = result.state;
+      history.observe({before,after:state,events:result.events.filter(event => event.domain === 'combat'),reason});
+    };
+    commit(startMatchCombat(state), 'command');
+    commit(stepMatch(state), 'tick');
+    commit(equipItem(state, 'item-1', 'unit-1', 0), 'command');
+    const prefix = history.capturePrefix()!;
+    expect(prefix.equipmentCommands).toEqual([{tick:1,itemId:'item-1',unitId:'unit-1',slot:0}]);
+    expect(validateBattleRecord(prefix, []).settledMatch).toEqual(state);
+    while (state.phase === 'combat') commit(stepMatch(state), 'tick');
+    const battles = history.completedRecords;
+    expect(validateBattleRecord(battles[0], []).settledMatch).toEqual(state);
+    const text = serializeMatch(state, battles);
+    for (const input of [state, text]) {
+      const restored = restoreMatch(input, battles);
+      expect(restored).toEqual(state);
+      checkNextTicks(state, restored);
+    }
+    const omitted = structuredClone(battles);
+    Object.assign(omitted[0], {equipmentCommands:[]});
+    expect(() => restoreMatch(state, omitted)).toThrow();
+    const mistimed = structuredClone(battles);
+    Object.assign(mistimed[0].equipmentCommands![0], {tick:mistimed[0].endTick});
+    expect(() => restoreMatch(state, mistimed)).toThrow('战后穿戴命令');
+  });
+  it('rejects a claimed pre-first-battle equip left in inventory, with or without an empty history', () => {
+    const state = openingWithBlade();
+    const forged = {...state,resourceProvenance:{...state.resourceProvenance,entries:[...state.resourceProvenance.entries,
+      {kind:'item-equipped' as const,itemId:'item-1',unitId:'unit-1',slot:0,
+        sequence:state.resourceProvenance.entries.length,roundId:state.roundDefinitionId}]}};
+    for (const battles of [undefined, []]) {
+      expect(() => serializeMatch(forged, battles)).toThrow('historical equipment continuation');
+      for (const input of [forged, JSON.stringify(forged)])
+        expect(() => restoreMatch(input, battles)).toThrow('historical equipment continuation');
+    }
+    const first = recordedCrownBattle(forged);
+    expect(() => serializeMatch(first.state,first.battles)).toThrow('historical equipment continuation');
+    for (const input of [first.state,JSON.stringify(first.state)])
+      expect(() => restoreMatch(input,first.battles)).toThrow('historical equipment continuation');
+    expect(() => validateBattleRecord(first.battles[0], [])).toThrow('historical equipment continuation');
+  });
+  it('accepts legal pre-first-battle equipment and validates the first opening prefix', () => {
+    const state = accepted(equipItem(openingWithBlade(), 'item-1', 'unit-1', 0));
+    for (const battles of [undefined, []]) {
+      const text = serializeMatch(state, battles);
+      for (const input of [state,text]) expect(restoreMatch(input,battles)).toEqual(state);
+    }
+    const first = recordedCrownBattle(state);
+    const text = serializeMatch(first.state,first.battles);
+    for (const input of [first.state,text]) {
+      const restored = restoreMatch(input,first.battles);
+      expect(restored).toEqual(first.state);
+      checkNextTicks(first.state,restored);
+    }
   });
 });

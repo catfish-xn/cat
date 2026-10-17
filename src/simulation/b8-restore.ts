@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from './opening-unit';
 import {openG23Choice} from './g2-3-runtime';
 import {readG23Progress,validateG23MechanicLinks} from './g2-3-state';
 import {g23RadiantRound,g23SoloFacts} from './g2-3-settlement';
@@ -66,10 +67,11 @@ function replayEquipment(items: readonly ItemInstance[], preparation: GameState,
   return plan;
 }
 
-/** Carry exact equipment bindings through the ordered resource ledger. */
-export function validateHistoricalEquipment(previous: MatchState, next: MatchState): void {
-  let items = previous.items, serial = previous.nextItemSerial;
-  let preparation = previous.preparation;
+/** Carry exact equipment bindings through the ordered resource ledger.
+ * Before the first battle, start empty and rebuild units/items from validated births. */
+export function validateHistoricalEquipment(previous: MatchState | null, next: MatchState): void {
+  let items: readonly ItemInstance[] = previous?.items ?? [], serial = previous?.nextItemSerial ?? 1;
+  let preparation = previous?.preparation ?? {...next.preparation, units:[]};
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
@@ -81,11 +83,12 @@ export function validateHistoricalEquipment(previous: MatchState, next: MatchSta
       items = basis.inputs.items;
     }
   };
-  for (const fact of next.resourceProvenance.entries.slice(previous.resourceProvenance.entries.length)) {
+  for (const fact of next.resourceProvenance.entries.slice(previous?.resourceProvenance.entries.length ?? 0)) {
     checkOpening(fact.sequence);
     switch (fact.kind) {
       case 'unit-acquired': {
-        const definitionId = fact.source.kind === 'shop' ? fact.source.definitionId : birthById.get(fact.unitId)?.definitionId;
+        const definitionId = fact.source.kind === 'opening' ? selectOpeningUnit(fact.source.seed, fact.source.seatId)
+          : fact.source.kind === 'shop' ? fact.source.definitionId : birthById.get(fact.unitId)?.definitionId;
         check(definitionId, 'historical unit birth');
         // Equip planners inspect identity/team/definition only; deployment has no resource fact.
         preparation = {...preparation, units:[...preparation.units, {id:fact.unitId, definitionId,
@@ -265,6 +268,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(equal(current,{units:sorted([...state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
     items:sorted(state.items.map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
+  if (!state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);

@@ -17,6 +17,8 @@ export interface BattleRecord {
   readonly runId: string;
   readonly combatId: string;
   readonly context: MatchState;
+  /** Ordered ordinary equips issued during combat, before stepping this tick. */
+  readonly equipmentCommands?: readonly { readonly tick: number; readonly itemId: string; readonly unitId: string; readonly slot: number }[];
   readonly initial: CombatState;
   readonly events: readonly LedgerCombatEvent[];
   readonly endTick: number;

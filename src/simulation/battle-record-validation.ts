@@ -1,7 +1,7 @@
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
-import { startMatchCombat, stepMatch } from './match';
+import { equipItem, startMatchCombat, stepMatch } from './match';
 import type { MatchState } from './match-types';
 import type { CombatState } from './combat-types';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -39,13 +39,20 @@ export function recordVersion(context: MatchState): BattleRecordVersion {
 }
 function checkShape(record: BattleRecord) {
   check(record && typeof record === 'object' && !Array.isArray(record), '记录类型');
-  check(equalContent(Object.keys(record).sort(), keys), '记录字段');
+  check(equalContent(Object.keys(record).filter(key => key !== 'equipmentCommands').sort(), keys), '记录字段');
   check(typeof record.runId === 'string' && record.runId.length > 0 && typeof record.combatId === 'string', '身份');
   check(Number.isSafeInteger(record.endTick) && record.endTick >= 0 && record.endTick <= MAX_COMBAT_TICKS, '终点');
   check(Array.isArray(record.events) && record.events.length <= MAX_EVENTS_PER_BATTLE, '事件边界');
   check(record.nextEventSeq === record.events.length, '事件游标');
   check([null,'playerWin','enemyWin','draw'].includes(record.result), '结果');
   check(typeof record.stateHash === 'string' && typeof record.eventHash === 'string', '校验值');
+  check(record.equipmentCommands === undefined || Array.isArray(record.equipmentCommands), '穿戴命令');
+  let equipmentTick = 0;
+  for (const command of record.equipmentCommands ?? []) {
+    check(command && equalContent(Object.keys(command).sort(), ['itemId','slot','tick','unitId']), '穿戴命令字段');
+    check(Number.isSafeInteger(command.tick) && command.tick >= equipmentTick && command.tick <= record.endTick, '穿戴命令tick');
+    equipmentTick = command.tick;
+  }
   let lastTick = 0;
   for (let i = 0; i < record.events.length; i++) {
     const event = record.events[i];
@@ -115,10 +122,24 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
     }
   };
   compare(start.events);
+  let equipmentCursor = 0;
+  const replayEquipment = () => {
+    const commands = record.equipmentCommands ?? [];
+    while (equipmentCursor < commands.length && commands[equipmentCursor].tick === state.combat!.tick) {
+      const command = commands[equipmentCursor++];
+      check(state.phase === 'combat', '战后穿戴命令');
+      const equipped = equipItem(state, command.itemId, command.unitId, command.slot);
+      check(equipped.ok && equipped.state.resourceProvenance.entries.at(-1)?.kind === 'item-equipped', '非法穿戴命令');
+      state = equipped.state; compare(equipped.events);
+    }
+  };
+  replayEquipment();
   while (state.combat!.tick < record.endTick) {
     check(state.phase === 'combat', '终点超过战斗结束');
     const step = stepMatch(state); state = step.state; compare(step.events);
+    replayEquipment();
   }
+  check(equipmentCursor === (record.equipmentCommands?.length ?? 0), '未重演穿戴命令');
   const terminal = state.combat!;
   check(cursor === record.events.length && terminal.nextEventSeq === record.nextEventSeq, '多余事件或游标');
   check(terminal.result === record.result && terminal.tick === record.endTick, '终点结果');
@@ -133,7 +154,7 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   const after = readG23Progress(next)!.economyReceipts;
   check(equalContent(after.slice(0, before.length), before), '历史经济收据前缀不一致');
   check(after.slice(before.length).every(action => action.kind !== 'battle'), '缺少历史证据：未验证的战斗经济收据');
-  if (!previous) return;
+  if (!previous) { validateHistoricalEquipment(null, next); return; }
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
   validateHistoricalEquipment(previous, next);
