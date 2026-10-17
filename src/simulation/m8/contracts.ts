@@ -318,6 +318,8 @@ export interface TargetSelector {
   readonly distinct: boolean;
   readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-ratio-desc-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
   readonly sample: 'combat-start' | 'action-completion' | 'each-tick' | 'each-pulse';
+  /** G24-CHEST-02 (user 2026-10-17 06:25): summons and structures cannot hold items, so they are never chosen. */
+  readonly excludeSummons?: true;
 }
 /** Finite declarative payloads; executors are B3–B5 work. */
 export type Effect =

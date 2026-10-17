@@ -2,7 +2,7 @@ import { contains, getNeighbors, hexDistance, sameCell, type Board, type HexCell
 import type { AbilityTargeting, Source, TargetSelector } from './contracts';
 import { compareCodePoints } from './identity';
 import { integer } from './stats';
-export interface TargetUnit { readonly id: string; readonly team: Team; readonly cell: HexCell; readonly hp: number; readonly maxHp: number; readonly alive: boolean; readonly untargetable?: boolean; readonly burnSources?: readonly Source[] }
+export interface TargetUnit { readonly id: string; readonly team: Team; readonly cell: HexCell; readonly hp: number; readonly maxHp: number; readonly alive: boolean; readonly untargetable?: boolean; readonly burnSources?: readonly Source[]; readonly summon?: boolean }
 export interface TargetEnvironment {
   readonly board: Board; readonly units: readonly TargetUnit[]; readonly holderId: string; readonly tick: number;
   readonly primaryId?: string | null; readonly previousId?: string | null; readonly eventActorId?: string | null; readonly eventTargetId?: string | null;
@@ -31,7 +31,7 @@ export function selectTargets(selector: TargetSelector, env: TargetEnvironment):
   const candidateIds=selector.candidates==='event-actor'?[env.eventActorId]:selector.candidates==='event-target'?[env.eventTargetId]:selector.candidates==='bound-target'?env.boundTargetIds??[]:null;
   const line=selector.geometry==='line-to-primary'&&primary?shortestPath(env.board,holder.cell,primary.cell).slice(0,selector.radius??100):null;
   const qualified=(u:TargetUnit)=>isSelectable(u,holder,env)&&(!line||line.some(c=>sameCell(c,u.cell)))&&(selector.relation==='self'?u.id===holder.id:selector.relation==='ally'?u.team===holder.team:u.team!==holder.team)
-    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
+    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludeSummons||!u.summon)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
   let candidates=env.units.filter(u=>(candidateIds===null||candidateIds.includes(u.id))&&qualified(u));
   const burnt=(u:TargetUnit)=>env.source&&u.burnSources?.some(s=>s.ownerId===env.source!.ownerId&&s.sourceKind===env.source!.sourceKind&&s.definitionId===env.source!.definitionId&&s.instanceId===env.source!.instanceId&&s.parentItemInstanceId===env.source!.parentItemInstanceId)?1:0;
   candidates.sort((a,b)=>{

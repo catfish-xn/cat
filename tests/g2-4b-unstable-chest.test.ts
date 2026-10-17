@@ -95,7 +95,7 @@ describe('G2-4b chest content', () => {
   it('declares one holder-death grant to four allies ordered by health ratio then id', () => {
     const [trigger] = G24_SUPPORT_DECLARATIONS[CHEST].holder!.triggers!;
     expect(trigger).toMatchObject({ event: 'holder-death', maxPerCombat: 1, effects: [{ kind: 'grant-combat-item', policyId: 'G24-CHEST-01', lifetime: 'combat' }] });
-    expect(trigger.selector).toMatchObject({ relation: 'ally', excludeSelf: true, maxTargets: 4, order: 'hp-ratio-desc-id' });
+    expect(trigger.selector).toMatchObject({ relation: 'ally', excludeSelf: true, maxTargets: 4, order: 'hp-ratio-desc-id', excludeSummons: true });
   });
 });
 
@@ -116,6 +116,25 @@ describe('G2-4b chest in combat', () => {
     expect(grantedItemPrograms(unitOf(after, 'p6'))).toHaveLength(1);
     // Same input, same items.
     expect(grantsOf(untilGranted(chestFight(undefined, [['p6', 'warmog'], ['p6', 'dragons-claw'], ['p6', 'gargoyle']])).after)).toEqual(grantsOf(after));
+  });
+
+  it('summons and structures never receive an item (user 2026-10-17 06:25); the next healthiest champion does', () => {
+    const allies: Place[] = [['pj', 'jayce', 0, 7], ['p1', 'lux', 1, 7], ['p2', 'ezreal', 2, 7], ['p3', 'garen', 4, 7], ['p4', 'vi', 5, 7], ['p5', 'heimerdinger', 6, 7]];
+    const combat = combatOf([['holder', 'leona', 3, 4], ...allies], [['foe', 'garen', 3, 3]], [['holder', CHEST]]);
+    const forge = combat.units.find(u => u.definitionId === 'g23-forge')!;
+    expect(forge?.team).toBe('player');
+    // Champions at 50–90%, the forge untouched at 100%: without the rule it would rank first.
+    const ratio: Record<string, number> = { pj: 9000, p1: 8000, p2: 7000, p3: 6000, p4: 5000, p5: 4000 };
+    const start: CombatState = { ...combat, units: combat.units.map(u => u.id === 'holder' ? { ...u, hp: 1, cooldownTicks: 100000, moveCooldownTicks: 100000 }
+      : u.team === 'player' ? { ...u, ...(ratio[u.id] ? { hp: Math.floor(u.maxHp * ratio[u.id] / 10000) } : {}), cooldownTicks: 100000, moveCooldownTicks: 100000 } : u) };
+    const { after } = untilGranted(start, true);
+    expect(unitOf(after, forge.id).alive).toBe(true);
+    expect(grantsOf(after).map(g => g.unitId).sort()).toEqual(['p1', 'p2', 'p3', 'pj']);
+    // A save that hands the forge an item is refused.
+    const forged = structuredClone(after.units) as CombatUnit[];
+    const moved = forged.find(u => u.id === 'p3')! as { combatItemGrants?: CombatUnit['combatItemGrants'] };
+    (forged.find(u => u.id === forge.id)! as { combatItemGrants?: CombatUnit['combatItemGrants'] }).combatItemGrants = moved.combatItemGrants; moved.combatItemGrants = undefined;
+    expect(() => validateCombatItemGrants(forged, after.tick, u => u.mechanismDefinitions?.eventTriggers ?? [])).toThrow('Invalid Match save: combat item summon receiver');
   });
 
   it('every pool item gained mid-combat applies its stats and start effects at once and passes restore validation for the rest of the fight', { timeout: 120000 }, () => {

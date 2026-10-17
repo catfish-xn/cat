@@ -8,6 +8,7 @@ import { G24_CHEST_PAYLOADS, G24_CHEST_POOL } from '../content/g2-4-chest-pool';
 import { shareGeneratedDeclaration } from '../immutable-json';
 import type { Source, SurvivalSample } from './contracts';
 import { canonicalSource } from './identity';
+import { isG23NonCombatant, isG23Summon } from '../g2-3-summons';
 import { compileItemCrit } from './item-program';
 import { grantedItemInstanceId, grantedItemSource } from './combat-item-programs';
 import { resolveMana } from './mana';
@@ -96,6 +97,7 @@ function checkCombatItemGrants(units: readonly CombatUnit[], tick: number, compi
       const trigger = (triggers as import('./contracts').TriggerDefinition[]).find(d => canonicalSource(d.source) === canonicalSource({ ...valid.chest, effectIndex: d.source.effectIndex })
         && d.effects[valid.chest.effectIndex - d.source.effectIndex]?.kind === 'grant-combat-item');
       if (!trigger || trigger.event !== 'holder-death') return fail('combat item chest declaration');
+      if (trigger.selector.excludeSummons && (isG23Summon(receiver) || isG23NonCombatant(receiver))) fail('combat item summon receiver');
       if (!(runtimes as { source: Source; triggerCount: number; startsAtTick: number }[]).some(r => canonicalSource(r.source) === canonicalSource(trigger.source) && r.triggerCount === 1 && r.startsAtTick === valid.grantedAtTick)) fail('combat item chest receipt');
       const list = byChest.get(canonicalSource(valid.chest)) ?? [];
       list.push({ receiver, grant: valid }); byChest.set(canonicalSource(valid.chest), list);

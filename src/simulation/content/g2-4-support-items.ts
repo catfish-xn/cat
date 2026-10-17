@@ -84,7 +84,7 @@ function declare(id: string, v: Readonly<Record<string, number | null>>): G24Sup
         auras: [{ area: 'adjacent', radius: 1, effects: [{ kind: 'statPercentBps', stat: 'attackDamage', bps: ratio('ADIncrease') }, { kind: 'statFlat', stat: 'abilityPower', amount: n('APIncrease') }] }] };
     case 'TFT_Item_UnstableTreasureChest':
       // G24-CHEST-02: on death, the ItemsGranted highest-percent-health living allies each gain one random pool item (G24-CHEST-01).
-      return { holder: { triggers: [{ ...onDeath('chest-death', selector({ relation: 'ally', excludeSelf: true, maxTargets: n('ItemsGranted'), order: 'hp-ratio-desc-id' }),
+      return { holder: { triggers: [{ ...onDeath('chest-death', selector({ relation: 'ally', excludeSelf: true, maxTargets: n('ItemsGranted'), order: 'hp-ratio-desc-id', excludeSummons: true }),
         [{ kind: 'grant-combat-item', policyId: 'G24-CHEST-01', lifetime: 'combat' }]), maxPerCombat: 1 }] }, auras: [] };
     default: return null;
   }
