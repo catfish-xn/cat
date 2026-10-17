@@ -107,3 +107,128 @@ it.each(['unknown-target', 'duplicate-target', 'old-action-key'] as const)('reje
   for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
   expect(restoreMatch(serializeMatch(after))).toEqual(after);
 });
+
+// These fixtures use public grants/deployment and the normal Match combat loop.
+// No HP, cooldown, contribution history, packet or trigger signal is fabricated.
+function bracerCounts(state: MatchState, ownerId: string) {
+  const owner = state.combat!.units.find(u => u.id === ownerId)!;
+  return Object.fromEntries(['kill', 'assist'].map(id => {
+    const definition = owner.mechanismDefinitions!.eventTriggers!.find(d => d.source.definitionId === BRACER && d.id === id)!;
+    const runtime = owner.triggerLedger?.runtimes.find(r => r.source.instanceId === definition.source.instanceId && r.source.effectIndex === definition.source.effectIndex);
+    return [id, runtime?.triggerCount ?? 0];
+  }));
+}
+
+function bracerStats(state: MatchState, ownerId: string) {
+  const stats = readCombatStats(state.combat!.units.find(u => u.id === ownerId)!, state.combat!);
+  return [stats.armor, stats.magicResist, stats.abilityPower];
+}
+
+function equipBracer(state: MatchState, ownerId: string): MatchState {
+  state = accepted(grantMechanicItem(state, { receiptId: 'boundary-bracer', source: 'test', definitionId: BRACER }));
+  return accepted(equipItem(state, state.items.at(-1)!.id, ownerId, 0));
+}
+
+function stepTo(state: MatchState, tick: number): MatchState {
+  while (state.phase === 'combat' && state.combat!.tick < tick) state = stepMatch(state).state;
+  expect(state.phase).toBe('combat');
+  expect(state.combat!.tick).toBe(tick);
+  return state;
+}
+
+function expectRestoredTicks(checkpoints: readonly MatchState[]) {
+  for (const checkpoint of checkpoints) for (const format of ['object', 'json'] as const) {
+    let live = checkpoint;
+    let restored: MatchState | undefined;
+    // Check every checkpoint/format even if a current restore validator rejects
+    // one live save. Keep that rejection red instead of weakening the fixture.
+    expect.soft(() => {
+      restored = restoreMatch(format === 'json' ? serializeMatch(live) : structuredClone(live));
+    }, `${format} save at tick ${live.combat!.tick}`).not.toThrow();
+    if (!restored) continue;
+    expect(restored).toEqual(live);
+    expect(serializeMatch(restored)).toBe(serializeMatch(live));
+    while (live.phase === 'combat') {
+      const next = stepMatch(live), resumed = stepMatch(restored);
+      expect(resumed.events, `${format}: events at tick ${next.state.combat!.tick}`).toEqual(next.events);
+      expect(resumed.state, `${format}: state at tick ${next.state.combat!.tick}`).toEqual(next.state);
+      live = next.state; restored = resumed.state;
+    }
+  }
+}
+
+it("retains a dead holder's same-tick killing blow but grants zero kill or assist stacks, with identical restored ticks", () => {
+  let state = publicEquipmentPreparation(['rod']);
+  for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
+  const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
+  expect(owner.starLevel).toBe(3);
+  state = equipBracer(state, owner.id);
+  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 5, row: 4 } }));
+  const initial = accepted(startMatchCombat(state)), before = stepTo(initial, 410);
+  const result = stepMatch(before), after = result.state;
+  const targetId = 'enemy-r4-2';
+  expect(after.combat!.tick).toBe(411);
+  expect(result.events.filter(e => e.type === 'kill')).toEqual([
+    expect.objectContaining({ type: 'kill', tick: 411, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-2' }) }),
+    expect.objectContaining({ type: 'kill', tick: 411, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+  ]);
+  expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
+    expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
+    expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId, source: expect.objectContaining({ ownerId: owner.id }) }) }) }),
+  ]);
+  for (const id of [owner.id, targetId]) {
+    expect(before.combat!.units.find(u => u.id === id)).toMatchObject({ alive: true, hp: expect.any(Number) });
+    expect(before.combat!.units.find(u => u.id === id)!.hp).toBeGreaterThan(0);
+    expect(after.combat!.units.find(u => u.id === id)).toMatchObject({ alive: false, hp: 0 });
+  }
+  expect(after.combat!.damageContributors![targetId]).toContain(owner.id);
+  // Combat filters participants using settled HP, even though this packet keeps
+  // its kill attribution. The dead holder cannot receive either bracer trigger.
+  expect(bracerCounts(before, owner.id)).toEqual({ kill: 1, assist: 0 });
+  expect(bracerCounts(after, owner.id)).toEqual({ kill: 1, assist: 0 });
+  expect(bracerStats(before, owner.id)).toEqual([60, 60, 150]);
+  // Death cleanup removes the existing bracer resistance buffs and Rell's
+  // debuff; AP and receipts still show the one earlier personal-kill stack.
+  expect(bracerStats(after, owner.id)).toEqual([50, 50, 150]);
+  expectRestoredTicks([initial, before, after]);
+}, 30000);
+
+it.each([
+  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
+  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
+])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
+  let state = publicEquipmentPreparation(['rod']);
+  for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
+    state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
+    const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
+    state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: cells[i] }));
+  }
+  const owner = state.preparation.units.find(u => u.definitionId === 'morgana' && u.team === 'player')!;
+  state = equipBracer(state, owner.id);
+  const start = startMatchCombat(state), initial = accepted(start), summonId = `${owner.id}:g23-sion`;
+  if (!start.ok) throw new Error(start.reason);
+  // The real spawn receipt establishes that this Sion belongs to the holder.
+  expect(start.events.filter(e => e.type === 'unitSpawned')).toEqual([
+    expect.objectContaining({ type: 'unitSpawned', unitId: summonId, definitionId: 'g23-sion', source: expect.objectContaining({ ownerId: owner.id }) }),
+  ]);
+  const before = stepTo(initial, tick - 1), result = stepMatch(before), after = result.state;
+  expect(after.combat!.tick).toBe(tick);
+  expect(result.events.filter(e => e.type === 'kill')).toEqual([
+    expect.objectContaining({ type: 'kill', unitId: targetId, source: expect.objectContaining({ ownerId: summonId, sourceKind: 'attack' }) }),
+  ]);
+  const packets = result.events.flatMap(e => e.type === 'packetDamage' ? [e.outcome] : []);
+  expect(packets.filter(p => p.killingPacket)).toEqual([
+    expect.objectContaining({ context: expect.objectContaining({ targetId, source: expect.objectContaining({ ownerId: summonId }) }) }),
+  ]);
+  expect(packets.some(p => p.context.source.ownerId === owner.id && p.context.targetId === targetId && p.absorbed + p.hpDamage > 0)).toBe(false);
+  expect(before.combat!.damageContributors![targetId].includes(owner.id)).toBe(contribution);
+  expect(after.combat!.damageContributors![targetId].includes(owner.id)).toBe(contribution);
+  expect(after.combat!.damageContributors![targetId]).toContain(summonId);
+  expect(after.combat!.units.find(u => u.id === owner.id)!.hp).toBeGreaterThan(0);
+  expect(bracerCounts(before, owner.id)).toEqual({ kill: 0, assist: 0 });
+  expect(bracerCounts(after, owner.id)).toEqual({ kill: 0, assist: contribution ? 1 : 0 });
+  // +15 for an actual assist, +0 without personal contribution; never the +20
+  // personal-kill reward merely because the spawn receipt names the holder.
+  expect(bracerStats(after, owner.id).map((n, i) => n - bracerStats(before, owner.id)[i])).toEqual(Array(3).fill(contribution ? 15 : 0));
+  expectRestoredTicks([initial, before, after]);
+}, 30000);
