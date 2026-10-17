@@ -15,7 +15,7 @@ function check(value: unknown, label: string): asserts value {
  * evidence in an isolated combat, never from candidate counters/AP/HP or RNG.
  * No reconstructed state, effects or events are committed to the restored match. */
 export function validateSampledStatTriggerFacts(combat: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot,
-  same: (a: unknown, b: unknown) => boolean): void {
+  same: (a: unknown, b: unknown) => boolean): CombatState | undefined {
   if (!strategy.units.some(u => u.itemPrograms?.some(p => p.program.triggers?.some(t => t.effects.some(sampledGrowth))))) return;
   let expected = createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
   const holders = expected.units.filter(u => u.mechanismDefinitions?.eventTriggers?.some(t => t.effects.some(sampledGrowth)));
@@ -47,4 +47,5 @@ export function validateSampledStatTriggerFacts(combat: CombatState, basis: Comb
     // actor/root action and processed event sequence, including absent receipts.
     check(same(candidate.triggerLedger ?? EMPTY_TRIGGER_LEDGER, proven.triggerLedger ?? EMPTY_TRIGGER_LEDGER), 'facts');
   }
+  return expected;
 }

@@ -10,6 +10,7 @@ import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
+import { validateTaskAndSummonFacts } from './combat-runtime-facts';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -252,7 +253,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
-    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
+    const provenCombat = validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
@@ -286,6 +287,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       const runtimeKeys = new Set<string>();
       for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
     }
+    validateTaskAndSummonFacts(combat, basis, expectedStrategy, same, provenCombat);
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
@@ -380,7 +382,9 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
     requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && [...attackDamageCandidates(unit,tick,combatId)].some(attack=>runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000)), 'derived empowered physical');
   }
-  requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
+  // Sion's flag records Black Rose release, checked exactly by
+  // validateTaskAndSummonFacts against the authenticated opening instead.
+  if (unit.definitionId !== 'g23-sion') requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
   const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
   requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + runtime.attackSpeedBps)), 'dynamic arithmetic bound');
   if (unit.ability.kind === 's13') {
@@ -423,7 +427,9 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {
     record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
-    requireValue(task.attachedDot === (['bleed', 'g2Infection'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
+    // Morgana schedules an attached curse, just like bleed/infection; the
+    // exact source, holder and pulse timing are also checked against live facts.
+    requireValue(task.attachedDot === (['bleed', 'g2Infection', 'g22Curse'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
     const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
     const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
       + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
