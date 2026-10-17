@@ -30,6 +30,17 @@ describe('generic mechanic choice display', () => {
     expect(readChoiceExtras({ kind: 'forge', offers: [offers[0], 'gunblade'] }).title).toBe('锻造器 · 2 选 1');
     expect(readChoiceExtras({ kind: 'forge', offers: G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.slice(0, 4) }).title).toBe('成装锻造器 · 4 选 1');
   });
+  it('titles a support forge 辅助装锻造器 by the rules\' support pool and names every support item in Chinese', () => {
+    const offers = G24_FORGE_POOLS.TFT_ArmoryKeySupport.slice(0, 4);
+    const extras = readChoiceExtras({ kind: 'forge', offers, payload: { kind: 'forge', source: 'conqueror', timeoutOption: offers[0] } });
+    expect(extras.title).toBe('辅助装锻造器 · 4 选 1');
+    for (const id of G24_FORGE_POOLS.TFT_ArmoryKeySupport) {
+      const offer = genericOffer(id, extras);
+      expect(offer.name).toMatch(/^[一-鿿]/);
+      expect(offer.description).not.toBe('');
+    }
+    expect(genericOffer('TFT_Item_BansheesVeil', extras).name).toBe('女妖面纱');
+  });
   it('falls back to the plain anvil name when offers are not one item kind', () => {
     expect(readChoiceExtras({ kind: 'forge', offers: ['gunblade', 'not-an-item'] }).title).toBe('锻造器 · 2 选 1');
   });
