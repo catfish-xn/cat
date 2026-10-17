@@ -250,6 +250,16 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
 .item-codex .codex-note { color: var(--c-text-muted); }
 .choice-extras { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+/* Mechanic popups (forge, armory): item mark, name, smaller effect text; the timeout pick is tagged online. */
+.choice-cards button.generic-offer { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; min-height: 0; padding: 12px 10px; line-height: 1.4; }
+.generic-offer .item-mark { border-radius: 8px; }
+.generic-offer .offer-name { font-size: 16px; }
+.generic-offer .offer-desc { font-size: 13px; color: #c2d7de; line-height: 1.45; white-space: normal; }
+.choice-timeout { color: #ffd98f !important; }
+.choice-timeout-tag { position: absolute; top: 6px; right: 6px; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; color: #ffd98f; border: 1px solid #e6bc76; }
+.choice-reopen { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 90; padding: 10px 18px; border-color: #ffd782; background: #24404d; box-shadow: 0 6px 24px #000a; }
+body[data-m6-mode="startup"] .choice-reopen, body[data-m6-mode="import"] .choice-reopen, body[data-m6-mode="replay"] .choice-reopen,
+body[data-online-mode="online-ended"] .choice-reopen, body[data-online-spectating] .choice-reopen { display: none !important; }
 .anomaly-codex { margin-top: 10px; padding: 0 9px 6px; background: var(--c-surface-alt); border-radius: 8px; }
 .anomaly-codex > summary { cursor: pointer; padding: 6px 0; }
 .anomaly-codex-list { margin: 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12px; }

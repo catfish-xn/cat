@@ -39,7 +39,7 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, readChoiceExtras, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { genericOffer, isKnownChoiceKind, readChoiceExtras, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
@@ -136,6 +136,8 @@ export class StrategyPanel {
   /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
+  /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
+  private choiceReopen: HTMLButtonElement | null = null;
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
@@ -279,8 +281,8 @@ export class StrategyPanel {
       this.itemDrag = null;
     }
   }
-  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
+  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
@@ -770,7 +772,7 @@ export class StrategyPanel {
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
     if (!choice) {
-      this.choiceToken = '';
+      this.choiceToken = ''; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
         this.modal.hidden = true; this.modal.replaceChildren();
@@ -783,6 +785,7 @@ export class StrategyPanel {
     this.clearChoiceDismissal();
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
     if (token === this.choiceToken) return;
+    this.dropChoiceReopen();
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
@@ -793,8 +796,12 @@ export class StrategyPanel {
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
-    card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
+    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化';
+    card.append(element('h2', title));
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
+    // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
+    const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
+    if (fallback) card.append(element('p', `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
@@ -807,7 +814,7 @@ export class StrategyPanel {
       }
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
-        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras))); continue; }
+        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
         const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
@@ -822,10 +829,11 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
-      if (generic && extras.skip) {
-        // Extras slot (skip and the like): shown only when the choice declares it; disabled until a command is wired.
+      if (generic) {
+        // Extras slot: skip only when the choice declares it (disabled until a command is wired); fold always.
         const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-        row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+        if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+        row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
         card.append(row);
       }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
@@ -836,7 +844,19 @@ export class StrategyPanel {
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
   }
-  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer): HTMLButtonElement {
+  /** Hides the popup without answering it; the pending choice and its deadline are unchanged. */
+  private collapseChoice(title: string): void {
+    this.dropChoiceReopen();
+    this.modal.hidden = true;
+    const reopen = this.button('choice-reopen', `展开 ${title}`, () => {
+      this.dropChoiceReopen(); this.modal.hidden = false; this.focusChoice();
+    });
+    reopen.className = 'choice-reopen';
+    document.body.append(reopen); this.choiceReopen = reopen;
+    this.root.focus({ preventScroll: true });
+  }
+  private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
+  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price} 金币`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
       this.actions.choose(choice.choiceId, choice.generation, offer.id);
@@ -844,6 +864,12 @@ export class StrategyPanel {
       if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
     });
     if (offer.price !== undefined) button.dataset.price = String(offer.price);
+    // Name line, then the effect text in a smaller block so four offers fit one screen; the full label stays the tooltip.
+    button.classList.add('generic-offer'); button.title = label;
+    button.replaceChildren(element('strong', label.split('\n')[0]!, 'offer-name'));
+    if (offer.description) button.append(element('span', offer.description, 'offer-desc'));
+    if (catalogEntry(offer.id)) button.insertAdjacentHTML('afterbegin', itemMarkHtml(offer.id, 40));
+    if (timeoutPick) { button.dataset.timeoutPick = 'true'; button.append(element('span', '超时默认', 'choice-timeout-tag')); }
     button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
     return button;
   }
