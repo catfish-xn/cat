@@ -1,5 +1,5 @@
 import { canonicalContent } from '../src/simulation/content';
-import { validateB8Resources } from '../src/simulation/b8-restore';
+import { validateMatchStructure } from '../src/simulation/serialization-structure';
 import { needsCrownHistory, missingCrownHistory } from '../src/simulation/crown-history';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { deepStrictEqual } from 'node:assert/strict';
@@ -17,7 +17,7 @@ import { readCompatibility } from '../src/persistence/compatibility';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import type { BattleRecord, SaveEnvelope } from '../src/m6/contracts';
 import { accepted, resolveM5Choices } from './match-helpers';
-import { validateMatchHistory, validateBattleFacts, matchHistoryChecks } from '../src/simulation/battle-record-validation';
+import { validateMatchHistory, validateBattleFacts, matchHistoryChecks, isOwnedBattleRecord, type VerifiedReplay } from '../src/simulation/battle-record-validation';
 import { recordedCrownBattle } from './crown-history-helpers';
 
 const envelope = (match: MatchState, battles: readonly BattleRecord[]): SaveEnvelope => ({
@@ -48,11 +48,23 @@ function forgedHistory() {
   return { forged, live, state };
 }
 
+/** Complete production structure checks with only the preparation ledger omitted:
+ * the exact chain restoreMatch runs before its own ledger check. */
+const withoutLedger = (input: unknown) => validateMatchStructure(input, () => {});
 /** Direct crown/equipment history rules for artificial acquisition fixtures.
  * This proves battle facts and carry, never admissibility of a Match save. */
+// Like the production record cache, only recorder-owned (detached, deeply frozen)
+// records reuse an earlier direct verification; altered copies always replay.
+const ownedDomainFacts = new WeakMap<BattleRecord, VerifiedReplay>();
+function domainBattleFacts(record: BattleRecord): VerifiedReplay {
+  const cached = isOwnedBattleRecord(record) ? ownedDomainFacts.get(record) : undefined;
+  if (cached) return cached;
+  const verified = validateBattleFacts(record, withoutLedger(record.context));
+  if (isOwnedBattleRecord(record)) ownedDomainFacts.set(record, verified);
+  return verified;
+}
 function validateCrownHistoryDomain(state: MatchState, battles: readonly BattleRecord[]): void {
-  for (const _ of matchHistoryChecks(state, battles, undefined,
-    record => validateBattleFacts(record, record.context))) { /* complete production history checks */ }
+  for (const _ of matchHistoryChecks(state, battles, undefined, domainBattleFacts)) { /* complete production history checks */ }
 }
 
 /** The only newly added contract field excluded from OLD battle-domain equality.
@@ -65,13 +77,12 @@ function battleDomainWithoutPreparationLedger(state: MatchState) {
 /** Rule-only assertions for legacy fixture vectors, not a deserializer. */
 function validateCrownDomain(input: MatchState | string, battles?: readonly BattleRecord[]): void {
   const state: MatchState = typeof input === 'string' ? JSON.parse(input) : input;
-  validateB8Resources(state, typeof input === 'string');
+  withoutLedger(input);
   if (battles !== undefined) validateCrownHistoryDomain(state, battles);
   else if (needsCrownHistory(state)) missingCrownHistory();
 }
 function validateCrownRecordDomain(record: BattleRecord, battles?: readonly BattleRecord[]) {
-  validateB8Resources(record.context);
-  const facts = validateBattleFacts(record, record.context);
+  const facts = validateBattleFacts(record, withoutLedger(record.context));
   if (battles !== undefined) validateCrownHistoryDomain(record.context, battles);
   else if (needsCrownHistory(record.context)) missingCrownHistory();
   return facts; // actual production replay output, never a restored Match
@@ -139,7 +150,7 @@ describe('M1 crown history authority', () => {
     const originalNext = recordedCrownBattle(state, first.history);
     expect(recordedCrownBattle(candidate).state).toEqual(originalNext.state);
     validateCrownHistoryDomain(originalNext.state, originalNext.battles);
-    expect(validateBattleFacts(originalNext.battles[1], originalNext.battles[1].context).settledMatch)
+    expect(validateBattleFacts(originalNext.battles[1], withoutLedger(originalNext.battles[1].context)).settledMatch)
       .toEqual(originalNext.state);
     expect(stepMatch(structuredClone(originalNext.state))).toEqual(stepMatch(originalNext.state));
     const broken = structuredClone(first.battles);
@@ -183,7 +194,7 @@ describe('M2 equipment binding continuity: direct domain validators', () => {
       expect(() => validateCrownDomain(input,first.battles)).toThrow('historical opening equipment continuation');
     const second = recordedCrownBattle(forged);
     const battles = [...first.battles, ...second.battles];
-    expect(() => validateB8Resources(second.state)).not.toThrow();
+    expect(withoutLedger(second.state)).toEqual(second.state);
     expect(readG23Progress(second.state)!.rngDraws - readG23Progress(control.state)!.rngDraws).toBe(3);
     expect(second.state.gold - control.state.gold).toBe(1);
     for (const candidate of [forged, second.state, advance(second.state)]) {
@@ -193,7 +204,7 @@ describe('M2 equipment binding continuity: direct domain validators', () => {
         expect(() => validateCrownDomain(input, history)).toThrow('historical equipment continuation');
     }
     expect(() => validateCrownHistoryDomain(second.state,battles)).toThrow('historical equipment continuation');
-    await expect(Promise.resolve().then(() => validateCrownHistoryDomain(second.state,battles))).rejects.toThrow('historical equipment continuation');
+    await expect(validateBattleCollection(envelope(second.state,battles))).rejects.toThrow('Invalid Match save: preparation-ledger-command-rejected');
     expect(() => validateCrownRecordDomain(second.battles[0],first.battles)).toThrow('historical equipment continuation');
   });
   it.each(['sale','remover','upgrade','upgrade-remover-equip','combine-equip'] as const)('accepts legal %s and subsequent re-equipping', kind => {
@@ -757,7 +768,7 @@ describe('M7/S7 combat equipment command replay: direct domain and public reforg
     // Rewrite commands AND matching equip facts while keeping the original,
     // locally valid RNG/children ledger. The historical roll prefix must bind it.
     const forged = {...original.state,resourceProvenance:reordered.state.resourceProvenance};
-    expect(() => validateB8Resources(forged)).not.toThrow();
+    expect(withoutLedger(forged)).toEqual(forged);
     rejectAll(forged,reordered.battles,'历史临时装备收据前缀不一致');
   });
   it('keeps combat equips before terminal resources and crown gold (M9)', () => {
@@ -779,7 +790,7 @@ describe('M7/S7 combat equipment command replay: direct domain and public reforg
     ].map((entry,sequence) => ({...entry,sequence}))}};
     // Still a legal local equipment projection, but it rewrites the historical
     // order across the atomic loot/growth/economy settlement.
-    expect(() => validateB8Resources(moved)).not.toThrow();
+    expect(withoutLedger(moved)).toEqual(moved);
     rejectAll(moved,battles,'历史获得或合成记录不一致');
     const mistimed = structuredClone(state), records = structuredClone(battles);
     Object.assign(mistimed.resourceProvenance.entries[fact.sequence],{tick:battles[0].endTick});

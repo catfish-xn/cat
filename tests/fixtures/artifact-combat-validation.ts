@@ -9,14 +9,18 @@ import { validateMechanisms } from '../../src/simulation/m8/restore';
 import { validateRestoreBoundsPreflight } from '../../src/simulation/restore-bounds-preflight';
 import { validateNeutralCombat } from '../../src/simulation/neutral-restore';
 import { validateM5Runtime } from '../../src/simulation/serialization';
+import { validateMatchStructure } from '../../src/simulation/serialization-structure';
 
 /** Combat-only unit harness, NOT a Match restore or evidence of acquisition.
  * These legacy fixtures equip mechanic-granted artifacts unavailable through the
  * preparation command ledger. Their boundary rejection is tested separately.
  * Recompile the strategy from the original input basis, then call the actual
  * production validators on a detached graph (as the real boundary does), keeping the old downstream positive/negative coverage.
+ * The complete Match structure chain runs first with only the preparation ledger omitted, exactly as
+ * restoreMatch does before its own ledger check; the named combat validators below then run explicitly.
  */
 export function validateArtifactCombatFixture(input: MatchState | string): void {
+  validateMatchStructure(input, () => {});
   const state: MatchState = typeof input === 'string' ? JSON.parse(input) : structuredClone(input);
   const combat = state.combat!, basis = state.combatInputBasis!;
   const strategy = buildStrategySnapshot(basis.inputs), preparation = projectG23Summons(basis.inputs.preparation);

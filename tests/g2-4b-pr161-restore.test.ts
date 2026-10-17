@@ -23,6 +23,7 @@ import {M8_VERSION} from '../src/simulation/m8/version';
 import type {SaveEnvelope} from '../src/m6/contracts';
 import {validateBattleFacts,matchHistoryChecks} from '../src/simulation/battle-record-validation';
 import {validateB8Resources} from '../src/simulation/b8-restore';
+import {validateMatchStructure} from '../src/simulation/serialization-structure';
 import {validateG23Restoration} from '../src/simulation/g2-3-restore';
 import {validateSeatMechanicsState} from '../src/simulation/seat-mechanics/state';
 import {validateMechanicPendingChoice} from '../src/simulation/seat-mechanics/choices';
@@ -36,6 +37,8 @@ function expectSyntheticBoundary(state: MatchState): void {
  expect(()=>serializeMatch(state)).toThrow('preparation-ledger-command-rejected');
 }
 function validateRewardDomain(input: MatchState | string): void {
+ // Complete structure chain with only the preparation ledger omitted, as restoreMatch runs it.
+ validateMatchStructure(input,()=>{});
  const state = (typeof input === 'string' ? JSON.parse(input) : structuredClone(input)) as MatchState;
  validateSeatMechanicsState(state.seatMechanics);
  if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);
@@ -120,7 +123,7 @@ async function expectDuplicatorBoundaryAndDomainHistory(state:MatchState,history
   validateRewardDomain(candidate.match);
   for(const _ of matchHistoryChecks(candidate.match,candidate.battles,candidate.runId,record=>{
    validateRewardDomain(record.context);
-   return validateBattleFacts(record,record.context);
+   return validateBattleFacts(record,validateMatchStructure(record.context,()=>{}));
   })){ /* consume all production history checks */ }
  };
  validateDomainHistory(envelope);
@@ -416,6 +419,7 @@ it('cold Node processes reject synthetic saves and validate tier4/10/14 reward d
   buildSync({stdin:{contents:`import {readFileSync,writeFileSync} from 'node:fs';
    import {restoreMatch} from './src/simulation/serialization';
    import {validateB8Resources} from './src/simulation/b8-restore';
+   import {validateMatchStructure} from './src/simulation/serialization-structure';
    import {validateG23Restoration} from './src/simulation/g2-3-restore';
    import {validateSeatMechanicsState} from './src/simulation/seat-mechanics/state';
    import {validateMechanicPendingChoice} from './src/simulation/seat-mechanics/choices';
@@ -424,6 +428,7 @@ it('cold Node processes reject synthetic saves and validate tier4/10/14 reward d
    const text=readFileSync(process.argv[2],'utf8');
    const input=process.argv[4]==='object'?JSON.parse(text):text;
    throws(()=>restoreMatch(input),/preparation-ledger-command-rejected/);
+   validateMatchStructure(input,()=>{});
    const state=JSON.parse(text);
    validateSeatMechanicsState(state.seatMechanics);
    if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);

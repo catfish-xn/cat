@@ -129,6 +129,7 @@ import {g23BattleFacts} from '../src/simulation/g2-3-settlement';
 import {rollG23BlackMarket} from '../src/simulation/g2-3-progress';
 import {recordedCrownBattle} from './crown-history-helpers';
 import {validateBattleFacts,matchHistoryChecks} from '../src/simulation/battle-record-validation';
+import {validateMatchStructure} from '../src/simulation/serialization-structure';
 import {validateArtifactCombatFixture} from './fixtures/artifact-combat-validation';
 
 it.each([1,3,42])('Match boundaries reject artificial crown acquisition for seed %i',seed=>{
@@ -165,8 +166,10 @@ it('direct crown validators verify combat receipts and Continue never pays the c
   expect(receipt.facts.result).toBe('win');
   expect(()=>validateG23Progress(readG23Progress(after)!,after.seed,after.round)).not.toThrow();
   expect(()=>validateG23MechanicLinks(after)).not.toThrow();
+  // Complete structure chain with only the preparation ledger omitted, as restoreMatch runs it.
+  expect(validateMatchStructure(after,()=>{})).toEqual(after);
   for(const _ of matchHistoryChecks(after,battles,undefined,record=>{
-   const verified=validateBattleFacts(record,record.context);
+   const verified=validateBattleFacts(record,validateMatchStructure(record.context,()=>{}));
    expect(verified.settledMatch).toEqual(after);
    return verified;
   })){ /* Complete the real production crown-history checks. */ }
