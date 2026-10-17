@@ -1,7 +1,7 @@
 import {validateG23Restoration} from './g2-3-restore';
 import {readG23Progress} from './g2-3-state';
 import {g23RadiantRound} from './g2-3-settlement';
-import {g23RadiantDefinitionId} from './g2-3-rewards';
+import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
@@ -296,6 +296,8 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const mechanicBirths = (state.seatMechanics?.receipts ?? []).slice(basis.mechanicReceiptPrefixLength).filter(receipt =>
     receipt.kind === 'item' || receipt.kind === 'unit' && receipt.resolution === 'held'
     || receipt.kind === 'choice' && receipt.itemId !== null);
+  const progress = readG23Progress(state);
+  const rewardAtoms = new Map(progress?.rewards.flatMap(bundle => g23RewardAtoms(bundle,progress.seed).map(atom => [atom.id,atom] as const)));
   let mechanicCursor = 0;
   let resolvedChoices = 0;
   const mechanicBirth = (): boolean => {
@@ -307,6 +309,14 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     const source = {kind:'mechanic' as const,receiptId:receipt.receiptId};
     if (receipt.kind === 'unit') {
       check(birth.kind === 'unit-acquired' && receipt.resolution === 'held', 'mechanic unit birth');
+      const claim = progress?.rewardClaims.find(claim => claim.id === receipt.receiptId);
+      const atom = claim && rewardAtoms.get(claim.atomId);
+      // Match drainG23Rewards at this birth, including heroes granted earlier in
+      // the same bundle. The receipt/final roster cannot authorize its own target.
+      if (atom?.kind === 'duplicator') {
+        const target = atom.options.find(id => preparation.units.some(unit => unit.team === 'player' && unit.definitionId === id));
+        check(target !== undefined && receipt.definitionId === target, 'mechanic duplicator target');
+      }
       survivingPlacements();
       const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor);
       check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
