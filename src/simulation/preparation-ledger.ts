@@ -53,12 +53,30 @@ function requireLedger(value: unknown, reason: string): asserts value {
 }
 /** Exact process-cache reuse is authorized; cold verification still starts at the seed. */
 const verifiedPreparations = new VerifiedRestoreCache<MatchState>();
+// Exact completed history, not arbitrary prefix reuse. The command key only locates
+// an entry; its independently replayed event/result lengths bind the full history.
+// The sole boundary is successful nextRound; all preparation/current combat is replayed.
+const verifiedHistories = new VerifiedRestoreCache<MatchState>();
 export function validatePreparationLedger(state: MatchState): void {
   const key = verifiedRestoreKey(state);
   const verified = verifiedPreparations.get(key);
   if (verified) { comparePreparationState(state, verified); return; }
-  const validate = createPreparationLedgerValidator();
+  const commands = state.preparationLedger?.commands;
+  const boundary = Array.isArray(commands) ? commands.reduce((last, command, index) => command?.name === 'nextRound' ? index + 1 : last, -1) : -1;
+  const historyKey = boundary >= 0
+    ? verifiedRestoreKey({ seed: state.seed, commands: commands.slice(0, boundary) }) : undefined;
+  const candidate = historyKey === undefined ? undefined : verifiedHistories.get(historyKey);
+  const sameHistory = candidate && candidate.round === state.round
+    && Array.isArray(state.preparationLedger.events) && Array.isArray(state.roundResults)
+    && canonicalContent(state.preparationLedger.events.slice(0, candidate.preparationLedger.events.length))
+      === canonicalContent(candidate.preparationLedger.events)
+    && canonicalContent(state.roundResults.slice(0, candidate.roundResults.length))
+      === canonicalContent(candidate.roundResults);
+  const validate = preparationLedgerValidator(false, sameHistory ? candidate : undefined);
   const rebuilt = validate(state);
+  // Only a fully validated candidate admits the independently generated history boundary.
+  const history = validate.history(boundary);
+  if (historyKey !== undefined && history) verifiedHistories.put(historyKey, history);
   verifiedPreparations.put(key, rebuilt);
 }
 /** Explicit call-local scope: only states produced here by public commands are reusable.
@@ -71,9 +89,13 @@ export type PreparationLedgerValidator = ((state: MatchState) => MatchState) & {
   battleProof(context: MatchState, endTick: number): PreparationBattleProof | undefined;
 };
 export function createPreparationLedgerValidator(captureBattles = false): PreparationLedgerValidator {
-  const openings: MatchState[] = [];
-  let latest: MatchState | undefined;
+  return preparationLedgerValidator(captureBattles);
+}
+function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: MatchState) {
+  const openings: MatchState[] = trustedHistory ? [trustedHistory] : [];
+  let latest: MatchState | undefined = trustedHistory;
   const proofs: PreparationBattleProof[] = [];
+  const histories: MatchState[] = trustedHistory ? [trustedHistory] : [];
   const validate = (state: MatchState): MatchState => {
     const ledger = state.preparationLedger;
     requireLedger(ledger && typeof ledger === 'object', 'missing');
@@ -114,6 +136,7 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
         if ('ok' in result && !result.ok) throw new Error('Invalid Match save: preparation-ledger-command-rejected');
         requireLedger(result.state !== rebuilt, 'command-noop');
         rebuilt = result.state;
+        if (command.name === 'nextRound') histories.push(rebuilt);
         if (captureBattles && command.name === 'startMatchCombat' && rebuilt.combat) {
           proofs.push({ context: before, initial: rebuilt.combat,
             events: result.events.filter(event => event.domain === 'combat'), settledMatch: rebuilt });
@@ -132,7 +155,10 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
     latest = rebuilt;
     return structuredClone(rebuilt);
   };
-  return Object.assign(validate, { battleProof(context: MatchState, endTick: number) {
+  return Object.assign(validate, { history(length: number) {
+    const state = histories.find(value => value.preparationLedger.commands.length === length);
+    return state ? structuredClone(state) : undefined;
+  }, battleProof(context: MatchState, endTick: number) {
     const proof = proofs.find(value => value.settledMatch.combat?.tick === endTick
       && value.context.seed === context.seed && value.context.round === context.round
       && canonicalContent(value.context) === canonicalContent(context));
