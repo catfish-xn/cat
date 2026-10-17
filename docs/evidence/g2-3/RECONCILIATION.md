@@ -37,7 +37,9 @@
 | 属性成长 | 外部考证 | 每箱为当前羁绊基础AD/AP加成的5%，不是每箱额外5个百分点；整数定点计算 |
 | 奖励选择 | 源数据 | 每档仅启用权重非零的Option1；其他选项只归档 |
 | 光明转化 | 约定值 | 用户实战记忆与2026-10-16决定；源表只指向`TFT9_RadiantConversion_PlayerBuff`，未发现完整行为说明。开出时只转场上/备战席已穿戴普通成装；此后本局新合成成装自动转光明，库存已有成装/新赠送成装不额外转 |
-| 延后物品折金 | 约定值 | G2-4a（用户2026-10-17）起只剩神器锻造器、辅助装锻造器、指定辅助装（基克的先驱/钢铁烈阳之匣/能量圣杯）、金铲铲冠冕仍延后；删除延后物品，保留已实现奖励，Gold=max(原Gold,map22整档估值)。窃贼手套、成装锻造器、次级英雄复制器按源发放，第4/8/9档恢复原奖励 |
+| 延后物品折金 | 约定值 | G2-4a（用户2026-10-17）起只剩神器锻造器、辅助装锻造器、指定辅助装（基克的先驱/钢铁烈阳之匣/能量圣杯）仍延后；删除延后物品，保留已实现奖励，Gold=max(原Gold,map22整档估值)。窃贼手套、成装锻造器、次级英雄复制器、金铲铲冠冕按源发放，第4/8/9/12/15档恢复原奖励 |
+| 金铲铲冠冕人口 | 源数据+用户定规则 | 源：每顶+MaxArmySizeIncrease(1)人口，unique=false。用户定（2026-10-17）：获得一顶冠冕，人口上限就永久+1，与冠冕装没装、装在场上还是备战席都无关；之后卖掉持冠单位、冠冕回背包、被磁吸移走或因任何方式不再持有，已获得的+1都不收回。计数取自奖励领取记录（不可撤销），不另存字段。本项目没有金铲铲组件，冠冕只能从征服者第12/15档获得。冠冕不进成装锻造器、重铸器、窃贼手套和光明转化池 |
+| 冠冕胜利掉金 | 未实现 | 源描述“赢下战斗时有10%几率掉落1金币”（PercentGoldChance=10）。需要新的随机收据和资源账本条目，按用户决定（2026-10-17）在冠冕PR之后单独做 |
 | 锻造器选项数 | 约定值 | 每个锻造器弹出4个不重复选项（用户2026-10-17）。神器锻造器自Set 11起4选1有外部依据（搜索摘录，页面未能打开）；成装锻造器的4选1为约定值。超时取第一项 |
 | 次级英雄复制器 | 约定值 | 沿用G2-3自动复制（用户2026-10-17）：复制第一个已拥有且≤3费的候选（候选顺序由种子+原子ID派生），走同一卡池policy；无合格英雄则托管，拥有后再发；不做玩家手动选目标。第4档先发三费英雄再结算复制器，同档三费英雄可被这次复制（审查建议） |
 
@@ -54,12 +56,12 @@
 | 7 | 330 | 8 | `{"TwoStarUnit":["FiveCostUnit"]}` | `{"TwoStarUnit":["FiveCostUnit"]}` | `{"TwoStarUnit":["FiveCostUnit"]}` | 源数据：原样保留 |
 | 8 | 440 | 9 | `{"Item":["TFT_Item_ThiefsGloves"]}` | `{"Gold":9}` | `{"Item":["TFT_Item_ThiefsGloves"]}` | 源数据：G2-4a恢复原奖励 |
 | 9 | 550 | 12 | `{"MeepTypeUnit":["TFT_ArmoryKeyCompleted"]}` | `{"Gold":12}` | `{"MeepTypeUnit":["TFT_ArmoryKeyCompleted"]}` | 源数据：G2-4a恢复原奖励（4选1为约定值） |
-| 10 | 650 | 14 | `{"MeepTypeUnit":["TFT_ArmoryKeyOrnn"]}` | `{"Gold":14}` | `{"Gold":14}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
-| 11 | 750 | 15 | `{"MeepTypeUnit":["TFT_ArmoryKeySupport"]}` | `{"Gold":15}` | `{"Gold":15}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
-| 12 | 850 | 20 | `{"Item":["TFT_Item_ForceOfNature"],"Gold":20}` | `{"Gold":20}` | `{"Gold":20}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
-| 13 | 1000 | 50 | `{"Item":["TFT_Item_ZekesHerald","TFT_Item_LocketOfTheIronSolari","TFT_Item_Chalice","TFT_Consumable_ItemRemover"],"Gold":20}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
-| 14 | 1200 | 60 | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":50,"MeepTypeUnit":["TFT_ArmoryKeyOrnn"],"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
-| 15 | 1500 | 200 | `{"Gold":80,"Item":["TFT_Item_ForceOfNature","TFT_Item_ForceOfNature"],"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 10 | 650 | 14 | `{"MeepTypeUnit":["TFT_ArmoryKeyOrnn"]}` | `{"Gold":14}` | `{"Gold":14}` | 约定值：延后物品仍按整档估值折算（待G2-4b） |
+| 11 | 750 | 15 | `{"MeepTypeUnit":["TFT_ArmoryKeySupport"]}` | `{"Gold":15}` | `{"Gold":15}` | 约定值：延后物品仍按整档估值折算（待G2-4b） |
+| 12 | 850 | 20 | `{"Item":["TFT_Item_ForceOfNature"],"Gold":20}` | `{"Gold":20}` | `{"Item":["TFT_Item_ForceOfNature"],"Gold":20}` | 源数据：G2-4a恢复原奖励（冠冕人口规则见上） |
+| 13 | 1000 | 50 | `{"Item":["TFT_Item_ZekesHerald","TFT_Item_LocketOfTheIronSolari","TFT_Item_Chalice","TFT_Consumable_ItemRemover"],"Gold":20}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | 约定值：延后物品仍按整档估值折算（待G2-4b） |
+| 14 | 1200 | 60 | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":50,"MeepTypeUnit":["TFT_ArmoryKeyOrnn"],"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | 约定值：延后物品仍按整档估值折算（待G2-4b） |
+| 15 | 1500 | 200 | `{"Gold":80,"Item":["TFT_Item_ForceOfNature","TFT_Item_ForceOfNature"],"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":80,"Item":["TFT_Item_ForceOfNature","TFT_Item_ForceOfNature"],"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | 源数据：G2-4a恢复原奖励（光明转化仍为约定值，冠冕不转光明） |
 
 已有拆卸器、重铸器不属于本批延后范围，按源表保留；第5档无延后物品，不触发折金。
 
@@ -147,6 +149,7 @@
 - `seatMechanics.seat`持久化六键公开进度，hidden.progress保存种子、RNG与经济重演事实；学院/奖励领取凭通用MechanicReceipt派生，不持久化重复发奖收据。冻结战斗输入中的g23只是编译DTO，不是MatchState根权威。恢复从种子重演经济收据，并比对当前终局Combat事实；缺失G23进度、重复/篡改收据、非法领取副本均拒绝。恢复不发奖、不抽随机数。
 - rules=`s13-g2-3-v2`，content=`s13-14.24b-g2-3-v2`；本次#136后收尾修正升至v2，schema7/save3/replay3不变。旧存档与旧回放输入按版本/digest拒绝，无迁移。
 - G2-4a（征服者第4/8/9档恢复原奖励、锻造器4选1）再升至rules=`s13-g2-3-v3`、content=`s13-14.24b-g2-3-v3`，policy revision `g2-4a-v3`；v2存档与回放输入同样按版本/digest拒绝，G2-3夹具用原录制脚本重录。
+- G2-4a冠冕（第12/15档恢复原奖励、获得冠冕永久+1人口）与#147神器合并后统一升至rules=`s13-g2-3-v5`、content=`s13-14.24b-g2-3-v5`，policy revision `g2-4a-v5`；v3/v4存档与回放输入按版本/digest拒绝。冠冕人口从已有的奖励领取记录推出，存档、开战输入和联机快照都不新增字段。
 - `release-audit.json`与候选夹具已按19aa9f1接入后源码重录，包含源码摘要、旧新字节和恢复证据。历史opening-random夹具原字节保留；新增夹具不覆盖历史归档。全套`npm test`和`test:timing`尚未执行，仅最终head各一次。
 
 开发验证见`development-validation.json`；`live-reveal-audit.json`从真实mage公共命令前缀重跑完整及单留英雄分支，通过公共部署交换Lux/Nami得到tick51双死亡(447/448)，单留Loris保留有掉落失败、单留Zyra并部署(0,4)得到tick152无掉落失败。包含旧/新测试源码字节长度、SHA及首差异位置；没有改造战斗状态来伪造死亡，尚未宣称旧全套通过。
