@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { genericOffer, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
 import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
+import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
 
 describe('generic mechanic choice display', () => {
   it('titles a completed-item forge popup with its 14.24 name and offer count and names ordinary completed items in Chinese', () => {
@@ -15,6 +16,19 @@ describe('generic mechanic choice display', () => {
     expect(offer.name).toBe(itemDisplayName('gunblade'));
     expect(offer.description).toBe(itemDescriptions('gunblade').join('；'));
     expect(offer.description).not.toBe('');
+  });
+  it('titles an artifact forge 神器锻造器 by the rules\' artifact pool (artifacts are completed-kind) and shows their effect lines', () => {
+    const offers = G24_FORGE_POOLS.TFT_ArmoryKeyOrnn.slice(0, 4);
+    const extras = readChoiceExtras({ kind: 'forge', offers, payload: { kind: 'forge', source: 'conqueror', timeoutOption: offers[0] } });
+    expect(extras.title).toBe('神器锻造器 · 4 选 1');
+    for (const id of G24_FORGE_POOLS.TFT_ArmoryKeyOrnn) {
+      const offer = genericOffer(id, extras);
+      expect(offer.name).toBe(itemDisplayName(id));
+      expect(offer.description).toContain('神器：');
+    }
+    // An artifact mixed with an ordinary completed item belongs to neither pool and keeps the plain name.
+    expect(readChoiceExtras({ kind: 'forge', offers: [offers[0], 'gunblade'] }).title).toBe('锻造器 · 2 选 1');
+    expect(readChoiceExtras({ kind: 'forge', offers: G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.slice(0, 4) }).title).toBe('成装锻造器 · 4 选 1');
   });
   it('falls back to the plain anvil name when offers are not one item kind', () => {
     expect(readChoiceExtras({ kind: 'forge', offers: ['gunblade', 'not-an-item'] }).title).toBe('锻造器 · 2 选 1');

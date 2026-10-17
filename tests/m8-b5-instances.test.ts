@@ -40,7 +40,8 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const state = stateWith([item(20, definitionId, 'unit-1'), item(21, definitionId)]);
     rejected(state, s => equipItem(s, 'item-21', 'unit-1', 1), 'unique-conflict');
     const next = accepted(equipItem(state, 'item-21', 'unit-2', 2));
-    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
+    // Synthetic items have no birth fact, so restore rejects their ordered placement fact first.
+    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid resource provenance: equipment ownership/slot');
     // Seed 9 acquires all four real tears by 4-1 through drops and supply picks;
     // seed 17 now needs 4-5 after the expanded-shop route changes.
     const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 9 : undefined);
@@ -53,7 +54,7 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     let state = stateWith([20, 21, 22, 23].map(n => item(n, 'deathblade')));
     for (let slot = 0; slot < 3; slot++) state = accepted(equipItem(state, `item-${20 + slot}`, 'unit-1', slot));
     for (let slot = 0; slot < 3; slot++) rejected(state, s => equipItem(s, 'item-23', 'unit-1', slot), 'item-slot-occupied');
-    expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid B8 Match: current resource fold');
+    expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid resource provenance: equipment ownership/slot');
     // Keep the four-Deathblade capacity mechanism above. Four genuinely acquired
     // swords additionally prove T13 automatic combination without losing other drops.
     // Seed 4 supplies an opening sword, retaining all four real acquisitions.
@@ -80,7 +81,7 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
       rejected(next, s => equipItem(s, 'item-21', 'unit-1', targetSlot), 'exclusive-slots');
       rejected(next, s => equipItem(s, 'item-22', 'unit-1', targetSlot), 'exclusive-slots');
     }
-    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
+    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid resource provenance: equipment ownership/slot');
     // Split the five-component synthetic matrix into two real acquisitions,
     // preserving rejection of both an ordinary item and another TG parent.
     for (const incoming of ['sword', 'thiefs-gloves']) {

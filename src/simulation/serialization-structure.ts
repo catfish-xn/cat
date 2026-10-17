@@ -1,0 +1,513 @@
+import { validatePreparationLedger } from './preparation-ledger';
+import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
+import { validateResistsShields } from './m8/resists-shield-restore';
+import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
+import {getUnitForm} from './seat-mechanics/forms';
+import {countsG23SurvivorDamage} from './g2-3-summons';
+import { g23RoundGold } from './g2-3-settlement';
+import { projectG23Summons } from './g2-3-summons';
+import { validateG23State } from './g2-3-combat';
+import { G23_ABILITIES } from './content/g2-3-abilities';
+import { freezeCombatDeclarations } from './combat-static';
+import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
+import { validateNeutralCombat } from './neutral-restore';
+import { validateB8Loot, validateB8Resources } from './b8-restore';
+import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
+import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
+import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
+import { validateMatchEquipment } from './temporary-equipment';
+import { canonicalSource } from './m8/identity';
+import { asSource } from './m8/s13-definitions';
+import { validateComponentCandidates } from './component-pool';
+import { compileItemCrit } from './m8/item-program';
+import type { MatchState } from './match-types';
+import { CONTENT_DIGEST, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
+import { UNIT_DEFINITIONS } from './units';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { AUGMENT_DEFINITIONS } from './content/augments';
+import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { FINAL_ROUND, ROUND_PREPARATION_RULES, getRoundKind, getRoundSchedule } from './round-schedule';
+import { validateSeed } from './rng';
+import { cloneEffect, effectKey } from './effects';
+import { buildStrategySnapshot } from './strategy-snapshot';
+import { eliminationResult } from './combat-types';
+import { readRoundEnemyProjection } from './round-enemies';
+import { MATCH_RULES, OPENING_INITIAL_STATE, XP_TO_NEXT_LEVEL } from './match-rules';
+import { planCatalogRoundEconomy } from './opening-economy';
+import { getCatalogRoundByOrdinal } from './round-selectors';
+import { freezeContent } from './content/freeze';
+import { grantXp } from './progression';
+import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
+import { M5_UNIT_DEFINITIONS } from './units';
+import { DEFAULT_BOARD, contains } from './board';
+import { validateMechanisms } from './m8/restore';
+import { validateCombatItemGrants } from './m8/combat-item-grants';
+import { validateSpellCrit } from './m8/crit';
+import { M8_VERSION } from './m8/version';
+import { validateSeatMechanicsState } from './seat-mechanics/state';
+import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanics/choices';
+
+// Reuse the pure default-catalog compilation, never any candidate validation.
+// Only local, already authenticated JSON basis inputs enter this byte-keyed map.
+const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean, forSerialization: boolean) {
+  // Keep ordinary object restore's fresh compilation, including callers testing
+  // hypothetical trusted definitions. Serialization owns a validated, detached,
+  // frozen basis from restoreCombatInput; only proven data without -0 can reuse.
+  if (!admittedJson && (!forSerialization || !isImmutableJson(inputs))) return buildStrategySnapshot(inputs);
+  const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
+  if (cached) return cached;
+  const compiled = freezeContent(buildStrategySnapshot(inputs));
+  if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
+  restoredStrategies.set(key, compiled); return compiled;
+}
+
+/** The private clone has no accessors, but structuredClone preserves extra array
+ * properties that canonicalContent ignores. Those can contain cycles or typed
+ * arrays whose legacy freeze throws. Only ordinary finite data may skip it. */
+function canSkipSerializationFreeze(value: unknown, ancestors = new Set<object>()): boolean {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'object' || ancestors.has(value)) return false;
+  const array = Array.isArray(value), keys = Object.keys(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) return false;
+  if (array && (keys.length !== value.length || keys.some((key, i) => key !== String(i)))) return false;
+  ancestors.add(value);
+  const safe = keys.every(key => canSkipSerializationFreeze((value as Record<string, unknown>)[key], ancestors));
+  ancestors.delete(value);
+  return safe;
+}
+
+function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
+const inputValidation = createInputValidation(requireValue);
+const integer: InputValidation['integer'] = inputValidation.integer;
+const id: InputValidation['id'] = inputValidation.id;
+const definitionId: InputValidation['definitionId'] = inputValidation.definitionId;
+const list: InputValidation['list'] = inputValidation.list;
+const record: InputValidation['record'] = inputValidation.record;
+const checkSerial: InputValidation['checkSerial'] = inputValidation.checkSerial;
+function nullableString(value: unknown): void { if (value !== null) id(value); }
+function mechanicCheck(check: () => void, message: string): void { try { check(); } catch { requireValue(false, message); } }
+/** Across preparation, XP can only increase in paid four-XP transactions (or cap). */
+function totalExperience(level:number,xp:number):number {
+  grantXp(level,xp,0); // Validate normalized values before using them as indices.
+  return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
+}
+function validPreparationExperience(before:number,level:number,xp:number):boolean {
+  const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
+  return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
+}
+/** Internal staging validator, NOT a restore/admission API. Callers must check
+ * historical authority before resuming. It validates plain JSON and persistent
+ * references, then reconstructs the command ledger in isolated verification states;
+ * no verification RNG/reward/command effects are committed to the candidate.
+ * Resist-scaled shields are checked by a trusted-input battle replay.
+ */
+export function validateMatchStructure(input: unknown, validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+  return withItemRestoreCache(()=>restoreMatchWithinCall(input, false, validateLedger));
+}
+function restoreMatchWithinCall(input: unknown, forSerialization = false,
+  validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+  const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+  // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
+  // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
+  if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
+  const same = typeof input === 'string' ? equalValidatedContent
+    : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+  record(raw);
+  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
+  requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
+  requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
+  for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
+  for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
+  integer(raw.round, 1);
+  requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
+  requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
+  const state = raw as unknown as MatchState;
+  requireValue(state.round <= FINAL_ROUND, 'round bounds');
+  const roundDefinition = getCatalogRoundByOrdinal(state.round);
+  const enemyProjection = readRoundEnemyProjection(state.round);
+  // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
+  let teamSizeBonus = 0;
+  try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+  record(state.m8); record(state.m8.round); record(state.m8.preparation);
+  requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
+  requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
+  requireValue(same(state.m8.preparation, {
+    version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
+    contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
+  }), 'round preparation freeze');
+  requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
+  record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
+  for (const slot of state.shop.slots) {
+    record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
+    if (slot.status === 'available') definitionId(slot.definitionId, M5_UNIT_DEFINITIONS, 'shop definition');
+  }
+  record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
+  list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
+  for (const augment of state.augments) {
+    record(augment); definitionId(augment.definitionId, AUGMENT_DEFINITIONS, 'augment definition');
+    requireValue(!augmentIds.has(augment.definitionId), 'duplicate augment');
+    augmentIds.add(augment.definitionId); id(augment.choiceId); integer(augment.acquiredRound, 1); requireValue(augment.acquiredRound <= state.round, 'augment round');
+  }
+  if (state.anomalyBinding !== null) {
+    record(state.anomalyBinding); const binding = state.anomalyBinding;
+    definitionId(binding.definitionId, ANOMALY_DEFINITIONS, 'anomaly definition'); id(binding.unitId);
+    requireValue(units.get(binding.unitId)?.team === 'player', 'anomaly binding');
+    id(binding.choiceId); integer(binding.boundRound, 1); requireValue(binding.boundRound <= state.round, 'binding round');
+  }
+  list(raw.roundResults); requireValue(state.roundResults.length === state.round - (state.phase === 'settlement' || state.phase === 'gameOver' || state.pendingChoice?.returnPhase === 'settlement' && getRoundKind(state.round) !== 'supply' ? 0 : 1), 'history length');
+  list(raw.scheduleReceipts); const receipts = new Map<string, MatchState['scheduleReceipts'][number]>();
+  for (const receipt of state.scheduleReceipts) {
+    record(receipt); id(receipt.eventId); integer(receipt.round, 1); requireValue(receipt.round <= state.round, 'receipt future');
+    requireValue(!receipts.has(receipt.eventId), 'duplicate receipt'); receipts.set(receipt.eventId, receipt);
+    const event = getRoundSchedule(receipt.round).find(event => event.id === receipt.eventId);
+    requireValue(event && receipt.kind === event.kind, 'receipt event');
+    if (event.kind === 'reward') {
+      requireValue(receipt.gold === event.gold && receipt.itemIds.length === event.components.length + event.randomComponents && receipt.definitionId === null, 'reward receipt values');
+      requireValue(new Set(receipt.itemIds).size === receipt.itemIds.length, 'reward duplicate items');
+      requireValue(event.recruitIfEmpty || receipt.unitId === null, 'unexpected fallback recruit');
+      if (receipt.unitId !== null) checkSerial(receipt.unitId, 'unit', state.nextUnitSerial);
+    } else if (event.kind === 'component') {
+      definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
+      requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' ? AUGMENT_DEFINITIONS[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === 0, 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
+    nullableString(receipt.unitId); nullableString(receipt.definitionId);
+    if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
+    if (receipt.kind === 'anomaly') definitionId(receipt.definitionId, ANOMALY_DEFINITIONS, 'anomaly receipt');
+  }
+  for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
+  if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
+  if (state.seatMechanics !== undefined) mechanicCheck(() => validateSeatMechanicsState(state.seatMechanics), 'seat mechanics');
+  const lootChoice = validateB8Loot(state, typeof input === 'string');
+  if (state.phase === 'choice' && !lootChoice && isMechanicChoice(state.pendingChoice)) mechanicCheck(() => validateMechanicPendingChoice(state), 'mechanic choice');
+  else if (state.phase === 'choice' && !lootChoice) {
+    record(state.pendingChoice); const choice = state.pendingChoice;
+    id(choice.choiceId); id(choice.eventId); nullableString(choice.targetId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
+    integer(choice.generation); integer(choice.rerollCount); list(choice.offers);
+    requireValue(!receipts.has(choice.eventId), 'choice already completed');
+    const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
+    requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
+    requireValue(choice.returnPhase === (event?.timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' : 'preparation'), 'choice return phase');
+    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
+    else {
+      requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 8 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
+      const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : choice.kind === 'component' ? ITEM_DEFINITIONS : ANOMALY_DEFINITIONS;
+      for (const offer of choice.offers) definitionId(offer, catalog, 'offer definition');
+      if (choice.kind === 'component') { validateComponentCandidates(choice.offers); }
+      if (choice.kind === 'component') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => ITEM_DEFINITIONS[def].kind === 'component'), 'component offers');
+      else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
+      else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
+    }
+  } else if (!lootChoice) requireValue(state.pendingChoice === null, 'pending outside choice');
+  const receiptOrder = state.scheduleReceipts.map(receipt => receipt.eventId);
+  const expectedReceiptOrder: string[] = [];
+  for (let round=1;round<=state.round;round++) for (const event of getRoundSchedule(round)) if (receipts.has(event.id)) expectedReceiptOrder.push(event.id);
+  requireValue(same(receiptOrder, expectedReceiptOrder), 'receipt order');
+  let stopped = false;
+  for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
+    if (state.pendingChoice?.eventId === event.id) stopped = true;
+    if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
+      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= state.gold), 'anomaly recruitment affordability');
+      stopped = true;
+    }
+    if ((event.timing ?? 'before') === 'after' && state.roundResults.length < round || state.outcome !== null && round === state.round && event.timing === 'after') continue;
+    if (!stopped) requireValue(receipts.has(event.id), 'missing schedule receipt');
+    else requireValue(!receipts.has(event.id), 'receipt beyond pending choice');
+  }
+  list(raw.roundResults);
+  const settled = state.roundResults.length === state.round;
+  requireValue(state.roundResults.length === state.round - (settled ? 0 : 1), 'history length');
+  let streak = { kind: null as 'win' | 'loss' | null, count: 0 };
+  let experienceAfter = totalExperience(OPENING_INITIAL_STATE.level,OPENING_INITIAL_STATE.xp);
+  for (const [i, result] of state.roundResults.entries()) {
+    record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
+    for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
+    requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
+    requireValue(same(result.streakBefore, streak), 'history streak before');
+    requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
+    const expected = planCatalogRoundEconomy({ roundId: result.roundId,
+      result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
+      level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
+    requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
+    requireValue(result.baseDamage === expected.baseDamage && result.playerDamage === expected.playerDamage && result.hpAfter === expected.hpAfter && result.hpLost === expected.hpLost, 'history damage');
+    requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && same(result.incomeBreakdown, expected.incomeBreakdown), 'history income');
+    requireValue(same(result.streakAfter, expected.streakAfter), 'history streak'); streak = expected.streakAfter;
+    experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
+    requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
+  }
+  requireValue(same(state.streak, streak), 'current streak');
+  requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
+  requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
+  record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
+  const pump = state.augments.find(a => a.definitionId === 'pumping-up-i'), investment = state.augments.find(a => a.definitionId === 'investment-strategy-i');
+  requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
+  requireValue(state.augmentProgress.investmentHp === (investment ? state.roundResults.filter(r => r.round >= investment.acquiredRound).reduce((n,r) => n + r.incomeBreakdown.interest * 8,0) : 0), 'investment progress');
+  list(state.persistentGrowth); const growthIds = new Set<string>();
+  for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
+    requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
+  requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
+  if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
+  // Equipment history uses these validated round identities and pre/post-settlement level bounds.
+  validateMatchEquipment(state);
+  const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
+  if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
+  // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
+  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
+  if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
+  else {
+    record(state.combat); const combat = state.combat;
+    validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === 1200, 'combat ticks');
+    requireValue(combat.combatId === `round-${state.round}` && combat.startEffectsApplied === true, 'combat identity/start'); integer(combat.nextEventSeq);
+    requireValue(combat.status === 'running' || combat.status === 'finished', 'combat status');
+    requireValue((state.phase === 'combat') === (combat.status === 'running'), 'combat phase');
+    requireValue(combat.status !== 'running' || combat.tick < combat.maxTicks, 'running timeout');
+    requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
+    record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
+    requireValue(basis, 'missing combat input');
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
+    const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    requireValue(same(combat.board, combatPreparation.board), 'combat board');
+    const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
+    requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
+    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>countsG23SurvivorDamage(unit)&&unit.team==='enemy').length, 'combat settlement result'); }
+    const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
+    if (combat.removedUnitIds !== undefined) {
+      list(combat.removedUnitIds);
+      requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
+        && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
+    }
+    // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
+    // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
+    validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
+    validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
+    const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
+    const cells = new Set<string>();
+    for (const unit of combat.units) {
+      record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
+      const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
+      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
+      requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
+      requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
+      const { stats } = resolved;
+      if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
+      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
+      requireValue(same(unit.ability, resolved.ability), 'resolved ability');
+      requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
+      for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || champion(unit) === 'amumu' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
+      requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
+      requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
+      if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
+      requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
+      if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string');
+      record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!);
+      list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
+      const sourceKeys = new Set<string>();
+      for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
+      const triggerKeys = new Set<string>();
+      for (const trigger of unit.triggers) { requireValue(sourceKeys.has(trigger.key) && !triggerKeys.has(trigger.key), 'trigger key'); triggerKeys.add(trigger.key); cloneEffect({ kind: 'trigger', ...trigger }); }
+      requireValue(unit.effectRuntime.length === triggerKeys.size, 'runtime size');
+      const runtimeKeys = new Set<string>();
+      for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
+    }
+    const eliminated = eliminationResult(combat.units);
+    requireValue(combat.status === 'running' ? eliminated === null
+      : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
+  }
+  // JSON.parse already owns an independent graph. Object callers still receive
+  // a detached copy; all validation above is identical for both inputs.
+  const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Verify the detached input, never an earlier getter read or a self-reported balance.
+  validateLedger(detached);
+  // Serialization consumes this private detached graph immediately. Freezing it
+  // would traverse the large metadata twice (freeze + canonical cache admission)
+  // only to discard it. Keep validation and cloning identical to object restore.
+  if (forSerialization && [detached.m8, detached.combatInputBasis, detached.resourceProvenance]
+    .every(value => canSkipSerializationFreeze(value))) return detached;
+  // Exact JSON bytes (including property order) key immutable metadata sharing.
+  // Object inputs retain their independent clone. '-0' conservatively disables
+  // sharing for text inputs because JSON.stringify normalizes its numeric sign.
+  const restored=typeof input === 'string' && !input.includes('-0') ? {
+    ...detached, m8: shareParsedJson(detached.m8),
+    resourceProvenance: shareParsedJson(detached.resourceProvenance),
+    combatInputBasis: detached.combatInputBasis ? (() => {
+      const basis = shareParsedJson(detached.combatInputBasis);
+      // Preserve each restore's independent basis/preparation containers.
+      return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
+    })() : null,
+  } : detached;
+  if (typeof input === 'string' && !input.includes('-0') && restored.combat) {
+    restored.combat.units.forEach(unit => freezeCombatDeclarations(unit, true));
+    if (restored.combat.strategy) Object.assign(restored.combat, { strategy: shareParsedDeclaration(restored.combat.strategy) });
+  }
+  freezeContent(restored.m8);
+  if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
+  freezeContent(restored.resourceProvenance);
+  return restored;
+}
+/** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
+ * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
+export function validateMatchStructureForSerialization(state: MatchState): MatchState {
+  return withItemRestoreCache(() => restoreMatchWithinCall(state, true));
+}
+
+/** Runtime records are checked separately from frozen stats; restoring never executes them.
+ * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
+export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
+  if (unit.ability.kind !== 's13') return;
+  validateG23State(unit,combatUnits,tick,nextActionSeq);
+  requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
+  if (unit.spellCrit !== undefined) {
+    record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);
+    validateSpellCrit(unit.spellCrit);
+    requireValue(same(unit.spellCrit, compileItemCrit(unit)), 'uncompiled spell critical sources');
+  }
+  integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
+  record(unit.runtime);
+  for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
+  requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
+  if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  if (unit.g22 !== undefined) {
+    record(unit.g22); const g = unit.g22;
+    requireValue(typeof g.initialized === 'boolean' && typeof g.rebelTriggered === 'boolean', 'G22 flags');
+    for (const key of ['wantedDeaths','mordeUntilTick','reaveUntilTick','reaveBps','exposureFromTick','exposureUntilTick','exposureBps'] as const) integer(g[key]);
+    list(g.wanted);
+    requireValue(new Set(g.wanted).size === g.wanted.length && g.wanted.length <= mechanic(unit,'enforcer','wanted') && g.wanted.every(id => combatUnits.some(u=>u.id===id && u.team!==unit.team)), 'G22 wanted');
+    requireValue(g.wantedDeaths <= g.wanted.length && g.reaveBps <= 10000 && g.exposureBps <= 10000 && g.exposureFromTick <= tick+1 && g.exposureUntilTick <= tick+81 && g.reaveUntilTick <= tick+200 && g.mordeUntilTick <= tick+200, 'G22 bounds');
+    requireValue(champion(unit)==='mordekaiser' || g.mordeUntilTick===0, 'G22 empowered owner');
+    requireValue(!g.rebelTriggered || mechanic(unit,'rebel','thresholdBps')>0, 'G22 rebel owner');
+  }
+  if (unit.expansion !== undefined) {
+    record(unit.expansion);
+    for (const field of ['damageDealt','damageTaken','crystals','crystalDamage','attacksRemaining','buffUntilTick','lastRetaliationTick','chainUntilTick','chainCastSeq','chainKills'] as const) {
+      integer(unit.expansion[field]); requireValue(unit.expansion[field] <= 100000000, 'G2 counter bound');
+    }
+    requireValue(unit.expansion.crystals < (mechanic(unit, 'automata', 'crystals') || 1), 'G2 crystals');
+    requireValue(unit.expansion.attacksRemaining <= (champion(unit) === 'twitch' ? variable(unit, 'TotalAttacks') : champion(unit) === 'leblanc' ? variable(unit, 'NumAttacks') : 0), 'G2 empowered attack count');
+    requireValue(unit.expansion.lastRetaliationTick <= tick && unit.expansion.buffUntilTick <= tick + 120 && unit.expansion.chainUntilTick <= tick + 100, 'G2 clock bounds');
+    requireValue((champion(unit) === 'nocturne' || unit.expansion.buffUntilTick === 0) && (champion(unit) === 'blitzcrank' || unit.expansion.lastRetaliationTick === 0), 'G2 passive owner');
+    requireValue(champion(unit) === 'leblanc' || unit.expansion.chainCastSeq === 0 && unit.expansion.chainKills === 0, 'G2 chain owner');
+    list(unit.expansion.chainTargets);
+    requireValue(unit.expansion.chainKills <= unit.expansion.chainTargets.length, 'G2 initial kill bound');
+    requireValue(new Set(unit.expansion.chainTargets).size === unit.expansion.chainTargets.length && unit.expansion.chainTargets.every(id => combatUnits.some(u => u.id === id && u.team !== unit.team)) && unit.expansion.chainTargets.length <= (champion(unit) === 'leblanc' ? variable(unit, 'ChainTargets') : 0), 'G2 chain targets');
+  }
+  const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
+  requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
+  const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
+  const actionSpeed = runtime.attackCount * mechanic(unit, 'rageblade', 'attackSpeedBps')
+    + (isKog ? runtime.castCount * Math.round(variable(unit, 'AttackSpeed', .25) * 10000) : 0);
+  requireValue(unit.alive || itemSpeedAt(tick)===0 ? runtime.attackSpeedBps === itemSpeedAt(tick)+actionSpeed : Array.from({length:tick+1},(_,at)=>itemSpeedAt(at)+actionSpeed).includes(runtime.attackSpeedBps), 'derived attack speed');
+  requireValue(runtime.rangeBonus === (isKog ? Math.floor(runtime.castCount / variable(unit, 'RangeIncreaseNumAttacks', 3)) : 0), 'derived range');
+  const archangels = (unit.mechanics ?? []).filter(m => m.mechanic === 'archangel');
+  const maximumAp = archangels.reduce((sum, m) => sum + Math.floor(tick / m.values.periodTicks) * m.values.abilityPower, 0);
+  // A dead unit stops periodic grants at its death tick. Death time is not retained
+  // in this schema, so check the finite set of possible grants rather than invent it.
+  const possibleAp = new Set([0]);
+  for (const source of archangels) for (let at = source.values.periodTicks; at <= tick; at += source.values.periodTicks)
+    possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
+  const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
+  requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
+  requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
+  if (runtime.nextAttackMagic > 0) {
+    requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
+      Math.floor((ap + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic)), 'derived empowered magic');
+  }
+  if (runtime.nextAttackPhysical > 0) {
+    const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
+    requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && [...attackDamageCandidates(unit,tick,combatId)].some(attack=>runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000)), 'derived empowered physical');
+  }
+  requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
+  const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
+  requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + runtime.attackSpeedBps)), 'dynamic arithmetic bound');
+  if (unit.ability.kind === 's13') {
+    const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
+    requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
+  }
+  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false) => {
+    record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
+    requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
+    const owner = combatUnits.find(value => value.id === source.ownerId)!;
+    if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus) && source.parentItemInstanceId == null, 'ability source identity');
+    } else {
+      requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
+        && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
+        && entry.source.sourceInstanceId === source.instanceId && entry.source.effectIndex === source.effectIndex
+        && (entry.source.parentItemInstanceId ?? null) === (source.parentItemInstanceId ?? null)) || declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(source))), 'frozen runtime source');
+    }
+  };
+  list(unit.shieldLayers); const shieldKeys = new Set<string>(); let total = 0;
+  for (const layer of unit.shieldLayers) {
+    record(layer); origin(layer.source); integer(layer.granted); integer(layer.remaining); integer(layer.absorbed); integer(layer.expiresAtTick);
+    requireValue(layer.key === (layer.source.parentItemInstanceId ? layer.m8State?.key : sourceKey(layer.source))
+      && !shieldKeys.has(layer.key) && layer.remaining <= layer.granted && (layer.remaining === 0 || layer.expiresAtTick > tick), 'shield layer');
+    shieldKeys.add(layer.key); total += layer.remaining;
+    if (layer.grantedAtTick !== undefined || layer.decayDurationTicks !== undefined) { integer(layer.grantedAtTick); integer(layer.decayDurationTicks,1); requireValue(layer.grantedAtTick! <= tick && layer.expiresAtTick === layer.grantedAtTick! + layer.decayDurationTicks!, 'shield decay timing'); }
+    if (layer.decayPerTick !== undefined) integer(layer.decayPerTick, 1);
+  }
+  requireValue(total === unit.shield && unit.shieldExpiresAtTick === (total ? Math.max(...unit.shieldLayers.filter(l => l.remaining > 0).map(l => l.expiresAtTick)) : null), 'shield aggregate');
+  list(unit.statuses); const statusKeys = new Set<string>();
+  for (const status of unit.statuses) {
+    record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
+    requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
+    requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
+    requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight' || status.source.definitionId === 'jayce-ranged-ability'), 'unsupported dynamic status source');
+    requireValue(Math.abs(status.amount) <= 1000000, 'status arithmetic bound');
+    if (['damageReduction','armorReduction','redirect'].includes(status.kind)) requireValue(status.amount <= 10000, 'status bps');
+    requireValue(status.key.startsWith(sourceKey(status.source)) || status.contributionKeys?.includes(status.key) && unit.mechanismState!.statuses.some(g=>g.contributions.some(c=>c.key===status.key&&canonicalSource(c.source)===canonicalSource(asSource(status.source)))), 'status key/source'); statusKeys.add(status.key);
+  }
+  list(unit.tasks); const taskKeys = new Set<string>();
+  for (const task of unit.tasks) {
+    record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
+    requireValue(task.attachedDot === (['bleed', 'g2Infection'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
+    const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
+    const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
+      + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
+    requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
+      && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
+    requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    if (task.kind.startsWith('g2')) {
+      const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
+      requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
+      if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
+      // G2-4b over-time restores: one declared item effect owns every pulse.
+      if(task.kind.startsWith('g24')) requireValue(task.source.sourceKind === 'item' && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');
+      if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
+      if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
+      if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
+    }
+    if (task.kind === 'g22Vex') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8, 'G22 zone cell'); }
+    else requireValue(task.cell === undefined, 'Unexpected task zone');
+    if (task.kind === 'tristanaBounce') {
+      record(task.inherited); id(task.inherited.parentPacketId); integer(task.inherited.resolvedAtTick);
+      requireValue(task.inherited.portion === 'overkill' && typeof task.inherited.critical === 'boolean'
+        && task.executeAtTick === task.inherited.resolvedAtTick + 1 && task.inherited.resolvedAtTick <= tick, 'inherited bounce receipt');
+      const tuple: unknown = JSON.parse(task.inherited.parentPacketId);
+      list(tuple);
+      requireValue(tuple.length === 6 && tuple[0] === combatId && tuple[1] === task.inherited.resolvedAtTick && tuple[2] === task.source.ownerId
+        && tuple[3] === task.actionSeq && typeof tuple[4] === 'string' && combatIds.has(tuple[4])
+        && tuple[5] === 0 && JSON.stringify(tuple) === task.inherited.parentPacketId, 'inherited parent packet identity');
+      const parentTarget = combatUnits.find(value => value.id === tuple[4])!;
+      requireValue(champion(owner) === 'tristana' && task.source.sourceKind === 'ability' && task.ordinal === 0
+        && task.total === 1 && !task.cancellable && !parentTarget.alive && parentTarget.team !== owner.team, 'inherited primary kill');
+    } else requireValue(task.inherited === undefined, 'unexpected inherited receipt');
+    requireValue(task.targetId === null || combatIds.has(task.targetId), 'task target'); taskKeys.add(task.key);
+  }
+  list(unit.mechanics);
+  for (const mechanic of unit.mechanics) { record(mechanic); origin(mechanic.source); id(mechanic.mechanic); record(mechanic.values);
+    for (const value of Object.values(mechanic.values)) integer(value);
+    if (mechanic.targetId !== undefined) requireValue(combatIds.has(mechanic.targetId), 'mechanic target'); }
+}

@@ -230,5 +230,6 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     expect(buff).toBeDefined();
     corrupt(s,x=>{x.combat.units.find((u:any)=>u.id===buff.id).mechanismState.statuses.find((g:any)=>g.contributions[0].application.modifier?.stat==='attackSpeed').contributions[0].application.modifier.value.amount=3000;});
     corrupt(s,x=>{const u=x.combat.units.find((u:any)=>u.id===buff.id);u.mechanismState.statuses=[];u.statuses=[];});
-  });
+  // 首次真实恢复要计算历史战斗，用户10-17批准20秒。
+  }, 20_000);
 });

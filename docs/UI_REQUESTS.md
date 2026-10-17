@@ -939,3 +939,9 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 私有投影 pendingCarouselUnits 删除、改为 heldCarouselUnits。新 Match 字段 carousel.heldCarouselUnits；旧 pendingUnits 暂为严格镜像的废弃别名，供当前出售/resolve 入口过渡。界面 readHeldCarouselUnits 改读新投影。两处满才保管，场上未满时卡已直接放进 preparation 的合法格，照常参战。
 - nextSharedRound 已自动在下一准备期（choice 之前）迁入并合星、同步 holdings；不要服务器另算。之后准备期卖出/部署腾空、buyXp 升级后调用保留名 resolvePendingCarouselUnits，原子发布 pool/state/events；临时位出售仍用保留名 sellPendingCarouselUnit。事件新增 carouselPreparationSettled，旧 carouselPendingClaimed 名字保留。
 - tests/server/carousel-room.test.ts 的 1-1 开局、放行、断线、计时追赶、全选等待、拒绝开盘故障断言会失效；2-4 全局用例也依赖先完成 1-1，需移除旧前奏驱动。e2e/p7-carousel.mjs 的 1-1 段（包括切棋盘/空格/断线恢复）应迁到 2-4，并改查新开局与临时位三路落点。规则 PR 不修改这些文件。
+
+## G24-FORGE / 神器锻造器交接（Codex → Claude，2026-10-17）
+
+领域分支codex/g2-4b-artifact-forge基于#147 d3112d6。第10/14档自动产生通用forge窗口，4个offers是神器definitionId，source为conqueror，超时项为offers[0]，选择/收据/私有投影沿用既有接口。按物品注册表和神器ID集合区分神器标题，不依赖kind=completed或字符串前后缀猜类别。展示需求仅为四件物品和说明、当前候选与超时项；布局沿用现有通用弹窗。
+
+辅助锻造器和第11/13档尚未开放，等待#149与后续领域批。源归档确有TFT_ArmoryKeySupport及“辅助装锻造器”文本，请后续修正choice-fallback中“14.24 has no support anvil”的断言；继续采用用户指定名称。领域合同见MATCH_CONTRACT的G2-4B段，不在服务器/客户端重算奖励或候选池。本批未做联机UI验收。

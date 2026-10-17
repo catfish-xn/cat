@@ -41,7 +41,7 @@ import { vi } from 'vitest';
 import { BattleHistory, validateBattleCollection } from '../../src/replay/history';
 import { publicEquipmentPreparation } from '../fixtures/b8-public-equipment';
 import type { SaveEnvelope } from '../../src/m6/contracts';
-it.each([false, true])('collection replays each battle once, including unchanged-combat equipment command: %s', async (equipDuringCombat) => {
+it.each([false, true])('collection reuses plain battle proofs and fully checks equipment command records: %s', async (equipDuringCombat) => {
   let state = createMatch(42);
   const history = new BattleHistory('scope-proof');
   if (equipDuringCombat) {
@@ -79,9 +79,15 @@ it.each([false, true])('collection replays each battle once, including unchanged
     const independent = createMatch(1); Object.assign(independent, { gold: independent.gold + 1 });
     expect(() => restoreMatch(independent)).toThrow('preparation-ledger-gold');
     await pending;
-    expect(spy).toHaveBeenCalledTimes(expected);
+    // Upstream equipmentCommands must be replayed independently, even when the ledger has a proof.
+    expect(spy).toHaveBeenCalledTimes(expected + (equipDuringCombat ? state.combat!.tick : 0));
   }
   finally { spy.mockRestore(); }
+  if (equipDuringCombat) {
+    const omitted = structuredClone(envelope);
+    Reflect.deleteProperty(omitted.battles.at(-1)!, 'equipmentCommands');
+    await expect(validateBattleCollection(omitted)).rejects.toThrow();
+  }
   const forged = structuredClone(envelope);
   Object.assign(forged.battles[0], { stateHash: 'forged' });
   await expect(validateBattleCollection(forged)).rejects.toThrow('内容校验');

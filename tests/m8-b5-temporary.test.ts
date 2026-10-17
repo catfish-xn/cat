@@ -7,6 +7,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { planTemporaryEquipment, validateMatchEquipment, TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equipment';
 import { accepted, emptyBoard, freeze } from './match-helpers';
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { publicGlovesInventory } from './fixtures/t13-public-gloves';
 
 // Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
@@ -24,8 +25,11 @@ function equipped(level = 3, seed = 42): MatchState { return accepted(equipItem(
  * Their same-test full Match controls below use actual paid XP at levelRounds.
  */
 function mechanismInventory(level: number): MatchState {
-  const state = inventory();
-  return { ...state, round: 4, roundDefinitionId: '2-1', roundResults: state.roundResults.slice(0, 3), level, xp: 0 };
+  const state = inventory(), ordinal = getCatalogRoundById('2-1').ordinal;
+  // Ordered resource facts cannot run backwards, so the synthetic 2-1 view keeps only facts through 2-1.
+  const resourceProvenance = { ...state.resourceProvenance,
+    entries: state.resourceProvenance.entries.filter(entry => getCatalogRoundById(entry.roundId).ordinal <= ordinal) };
+  return { ...state, round: 4, roundDefinitionId: '2-1', roundResults: state.roundResults.slice(0, 3), resourceProvenance, level, xp: 0 };
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
@@ -46,7 +50,8 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(otherRng(next)).toEqual(otherRng(state));
     expect(next.nextItemSerial).toBe(state.nextItemSerial);
     expect(next.items).toHaveLength(state.items.length);
-    expect(next.resourceProvenance).toEqual(state.resourceProvenance);
+    expect(next.resourceProvenance.entries.slice(0, -1)).toEqual(state.resourceProvenance.entries);
+    expect(next.resourceProvenance.entries.at(-1)).toMatchObject({ kind: 'item-equipped', itemId: 'item-3', unitId: 'unit-1', roundId: '2-1' });
     expect(next.scheduleReceipts).toEqual(state.scheduleReceipts);
     expect(next.m8.loot).toEqual(state.m8.loot);
     if (!result.ok) throw new Error(result.reason);
@@ -65,7 +70,8 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(otherRng(restoredControl)).toEqual(otherRng(legal));
     expect(restoredControl.nextItemSerial).toBe(legal.nextItemSerial);
     expect(restoredControl.items).toHaveLength(legal.items.length);
-    expect(restoredControl.resourceProvenance).toEqual(legal.resourceProvenance);
+    expect(restoredControl.resourceProvenance.entries.slice(0, -1)).toEqual(legal.resourceProvenance.entries);
+    expect(restoredControl.resourceProvenance.entries.at(-1)).toMatchObject({ kind: 'item-equipped', itemId: legalParent, unitId: 'unit-1', roundId: levelRounds[level] });
     expect(restoredControl.scheduleReceipts).toEqual(legal.scheduleReceipts);
     expect(restoredControl.m8.loot).toEqual(legal.m8.loot);
     expect(restoredControl.temporaryEquipment.map(child => [child.temporaryId, child.parentItemInstanceId, child.slot, child.expiresAfterRoundId]))
