@@ -11,6 +11,8 @@ export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 export interface PlayerBattleSnapshot {
   readonly playerHp?:number;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
+  /** Emissary history from the seat's own settled ledger (1..7); omitted when zero. */
+  readonly priorPvpWins?: number;
   readonly version: typeof PLAYER_BATTLE_SNAPSHOT_VERSION;
   readonly contentDigest: string;
   readonly seatId: string;
