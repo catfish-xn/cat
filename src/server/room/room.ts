@@ -1051,5 +1051,7 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
     settlementEligible: proposal.settlementEligible, result: proposal.result,
     damage: proposal.damage, baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors,
     growth: proposal.growth, combatTicks, combatEventCount,
+    // G23-SERVER-FACTS: the rules' own battle facts, forwarded verbatim (a mirror copy has none and never settles).
+    ...(proposal.g23Facts ? { g23Facts: proposal.g23Facts } : {}),
   };
 }

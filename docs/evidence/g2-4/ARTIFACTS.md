@@ -3,7 +3,7 @@
 - 源：`raw/en_us.json.gz`（14.24，sha256 c1237ba2…）的 `ORNNARTIFACTS_SET6` 共 29 件；中文名取 `zh_cn.tft.stringtable.json.gz`。
   抽取脚本 `extract-artifacts.py` → `src/simulation/content/g2-4-artifact-source.ts`（29 件全量入库，进内容摘要）。
 - 执行：`src/simulation/content/g2-4-artifacts.ts` 登记 21 件；另 8 件要新机制，不登记（`G24_ARTIFACT_PENDING`），约定编号 `G24-ARTIFACT-SUBSET-01`。
-- 版本：`G23_POLICY.revision` 由 `g2-3-followup-v2` 升为 `g2-4b-artifacts-v1`，内容摘要随之变化；用原生成器重录 release / Herald / inputs / live-reveal，事件哈希不变。
+- 版本：`G23_POLICY.revision` 在 G2-4a（`g2-4a-v3`）之上升为 `g2-4b-artifacts-v4`，规则与内容版本号升为 `s13-g2-3-v4` / `s13-14.24b-g2-3-v4`，内容摘要 `fnv1a32-utf16:b58e35ae`；用原生成器重录 release / Herald / inputs / live-reveal，事件哈希不变。
 - 本批物品只是定义，正常对局还拿不到：神器锻造器与征服者第 10/14 档恢复在后续 PR。
 - 14.24b B 补丁没有神器条目，数值一律取 14.24 原档。未命名键用 32 位 FNV-1a（小写）对候选名解码，见 `/mnt/project-files/planning/g2-4b-values-2026-10-17.md` 第 2 节。
 
