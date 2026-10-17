@@ -140,7 +140,7 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
  for(const patch of [{offers:[...c.offers].reverse()},{offers:['warmog',...c.offers.slice(1)]},{choiceId:c.choiceId.replace(':copy:0',':copy:1')},{payload:{...c.payload,source:'black-market'}},{payload:{...c.payload,timeoutOption:c.offers[1]}}]){
   expect(()=>restoreDomain({...state,pendingChoice:{...c,...patch}})).toThrow();
  }
- for(const patch of [{kind:'item',definitionId:c.offers[2]},{source:'black-market'},{choiceKind:'blackMarket'},{price:1},{skipped:true},{timedOut:true},{optionId:'warmog'},{receiptId:c.choiceId.replace(':copy:0',':copy:1')}]){
+ for(const patch of [{itemId:null},{kind:'item',definitionId:c.offers[2]},{source:'black-market'},{choiceKind:'blackMarket'},{price:1},{skipped:true},{timedOut:true},{optionId:'warmog'},{receiptId:c.choiceId.replace(':copy:0',':copy:1')}]){
   const bad={...manual,seatMechanics:{...manual.seatMechanics!,receipts:manual.seatMechanics!.receipts.map(r=>r.receiptId===c.choiceId?{...r,...patch}:r)}};
   expect(()=>restoreDomain(bad)).toThrow();
  }

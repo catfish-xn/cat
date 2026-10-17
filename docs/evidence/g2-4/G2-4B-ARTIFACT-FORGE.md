@@ -39,7 +39,7 @@
 - 第10档choiceId=`g23:conqueror:10:atom:0:copy:0`；第14档choiceId=`g23:conqueror:14:atom:1:copy:0`。第14档atom0为自动光明装备、atom2为自动拆卸器。choiceId同时是唯一收据ID；不新增第二份已选账本或虚构工具库存。
 - `openG23Choice`、`selectChoice`、`forfeitPendingChoice` 复用通用forge。成功领取一件永久库存物品，写 `MechanicReceipt.kind=choice / choiceKind=forge / source=conqueror / price=0 / skipped=false` 和绑定receiptId的资源出生事实；自动发物、工具、金币仍使用各自通用收据。
 - `g2-3-runtime.ts:claimG23Atom` 拒绝多选item原子的直接领取（stale-choice），避免绕过选择收据。失败保持原state且无事件/资源/RNG变化；满席英雄和自动奖励路径不变。
-- `g2-3-state.ts:validateG23MechanicLinks` 核对bundle来源；多选只能有forge选择收据，不能伪装自动发物、黑市、付费或跳过；timedOut只能选首项。进度重演仍验证候选成员、副本序号、发奖轮次和已领取数量，拒绝旧14/60过渡金收据。
+- `g2-3-state.ts:validateG23MechanicLinks` 核对bundle来源；多选只能有forge选择收据，不能伪装自动发物、黑市、付费或跳过；必须绑定非空itemId；timedOut只能选首项。进度重演仍验证候选成员、副本序号、发奖轮次和已领取数量，拒绝旧14/60过渡金收据。
 - 新增 `g2-3-restore.ts:validateG23Restoration`，从 `b8-restore.ts` 提取既有G23恢复链。`validateB8Resources`继续调用它，完整重建pending choice并对比顺序、来源、超时项和ID，进度按种子/历史重演，恢复不发奖。保留已解析JSON的等价比较路径。
 - `completed-reforger`的现有preview/use/恢复均有普通池成员边界，本批只补回归，不改重铸规则代码。
 
@@ -79,7 +79,7 @@ node scripts/record-g2-3-live-reveal.cjs
 
 JS gzip按scripts/m7-budget.cjs同一算法：`dist/assets/*.js`逐文件gzip level9后求和。签署M7基线15313a75c6e74beec739fe52a2875c104c55eae3与当前用同一Node24.21.0、同一工具链构建：
 
-- M7：424,763字节；本批：560,214字节。
-- 倍数：**1.3188860611682278×**，通过既有**1.50×**门槛。未测首次交互时间，未改预算。
+- M7：424,763字节；本批：560,225字节。
+- 倍数：**1.3189119579624402×**，通过既有**1.50×**门槛。未测首次交互时间，未改预算。
 
-最终提交head验收命令：`npm test -- --maxWorkers=2 --reporter=verbose`及`npm run test:timing`。首个head 68ca3a6的全套运行发现旧神器测试将policy revision固定为v4，随后主动结束该轮；该轮不计通过，也不是OOM。只将版本断言同步到v5，生产源码、构建和夹具未变。新head重新完整运行全部测试，fast用两个worker、timing仍串行（可用内存恢复至约4.3GiB）；所有fast/timing测试仍被选择，不改配置、门槛或skip。最终结果、exit code与`/usr/bin/time -v`峰值另随该head交付日志，本文不预先宣称最终全套已通过。若进程被OOM杀死，记录峰值并停止强行重跑。
+最终提交head验收命令：`npm test -- --maxWorkers=2 --reporter=verbose`及`npm run test:timing`。首个head 68ca3a6的全套运行发现旧神器测试将policy revision固定为v4，随后主动结束该轮；该轮不计通过，也不是OOM。第二个head 609b784开始测试后，收据复核补上forge必须绑定非空itemId的约束及负向测试，因此主动结束该轮，并以原脚本重新生成源码审计夹具。两轮中止均不计最终成绩。新head重新完整运行全部测试，fast用两个worker、timing仍串行（可用内存恢复至约4.3GiB）；所有fast/timing测试仍被选择，不改配置、门槛或skip。最终结果、exit code与`/usr/bin/time -v`峰值另随该head交付日志，本文不预先宣称最终全套已通过。若进程被OOM杀死，记录峰值并停止强行重跑。

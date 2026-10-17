@@ -143,7 +143,7 @@
     "src/simulation/g2-3-rewards.ts": "c11b22f1270165904d6d2d81a7dce002fd74b8badd7b7f7f507c98b8fb1e1859",
     "src/simulation/g2-3-runtime.ts": "8a994b619c41491725ee54ffcda40c66a4e6656c093865d7b662ebe4ce3e5989",
     "src/simulation/g2-3-settlement.ts": "90bf061ea9304a42dd1c358f455a3474b1e75932743ee291a14f22e07cf4c152",
-    "src/simulation/g2-3-state.ts": "14944dd131bd07b65bcb58f5668357938bad5c5921ff622d9882d7201de96e3d",
+    "src/simulation/g2-3-state.ts": "26b071f710cf1aacbba48380b963f3d46a921f3913b3f9ef39e9f9ed226b7a8d",
     "src/simulation/g2-3-summons.ts": "5a86dc39718d257e24b090d236f2beb5a627a2b888ccc8804e3f9b687914d11a",
     "src/simulation/g2-3-view.ts": "173df2fc5ae5f82867b8c8ad117b3fb7c480c66dc3dc97d08a7559bf6dcebaa9",
     "src/simulation/game.ts": "24519b5ecfda1d09713acbb3d0dc0ffb31466c19ece07db7b76e7579b32a5156",

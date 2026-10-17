@@ -62,7 +62,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
   const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed).find(a=>a.id===claim.atomId)!;
   check(r.source===bundle.source);
   if(claim.kind==='item'){
-   if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId
+   if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
     &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
    else check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)
     ||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===bundle.id&&!r.skipped&&r.price===0&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
