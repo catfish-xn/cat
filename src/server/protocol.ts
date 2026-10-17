@@ -53,6 +53,11 @@ export interface PublicBoardUnit {
   readonly cell: { readonly col: number; readonly row: number };
   /** Item definition ids held by the unit, in slot order. */
   readonly items: readonly string[];
+  /**
+   * G2-4b (contract §26): set on a movable preparation summon (兹若特传送门's 虚空生物) standing where the rules place it.
+   * `starLevel` is its stage appearance. Not a champion: no trait, no avatar, no items; the holder and item instance stay private.
+   */
+  readonly summon?: true;
 }
 export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
 /**

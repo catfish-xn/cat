@@ -1730,4 +1730,6 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 **界面**：准备阶段且棋盘上没有战斗时，`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
 
-**未做**：他人公开棋盘（`publicBoard`）不含召唤物；机器人不移动召唤物（用规则默认位置）。
+**公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
+
+**机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。

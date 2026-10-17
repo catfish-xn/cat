@@ -38,6 +38,12 @@ export function toPublicBoard(match: MatchState): PublicBoard {
       .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
     units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: held.map(item => item.definitionId) });
   }
+  // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
+  for (const summon of readItemSummons(match)) {
+    const { unit } = summon;
+    if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
+    units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: [], summon: true });
+  }
   units.sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
   return { units };
 }

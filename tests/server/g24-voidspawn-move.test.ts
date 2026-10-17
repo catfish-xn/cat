@@ -6,10 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../../src/server/net/messages';
 import { applySeatCommand, ROOM_COMMAND_GATE } from '../../src/server/room/room';
-import { toSeatPrivateView } from '../../src/server/room/projection';
+import { toPublicBoard, toSeatPrivateView } from '../../src/server/room/projection';
+import { avatarUnit, publicTraits } from '../../src/rendering/online/opponent-board';
 import type { RoomPhase } from '../../src/server/room/types';
 import { makeRoom } from './helpers';
-import { createMatch, deployMatchUnit, equipItem, readItemSummons } from '../../src/server-entry';
+import { createMatch, deployMatchUnit, equipItem, moveItemSummon, readItemSummons } from '../../src/server-entry';
 import type { MatchState } from '../../src/server-entry';
 import { grantMechanicItem } from '../../src/simulation/seat-mechanics';
 import { MatchSession } from '../../src/rendering/match-session';
@@ -95,6 +96,27 @@ describe('G2-4b moveItemSummon room gate, dispatch and state push', () => {
     expect(toSeatPrivateView(plain).itemSummons).toEqual([]);
     const portal = withPortal(createMatch(42));
     expect(toSeatPrivateView({ ...portal, phase: 'settlement' } as MatchState).itemSummons).toEqual([]);
+  });
+});
+
+describe('G2-4b public board (scouting)', () => {
+  it('shows the summon where it stands with its stage appearance, nothing of the holder or the item instance', () => {
+    const state = withPortal(createMatch(42)), [origin] = readItemSummons(state);
+    const moved = moveItemSummon(state, origin!.itemInstanceId, { col: 0, row: 7 });
+    if (!moved.ok) throw Error(moved.reason);
+    const before = toPublicBoard(state), board = toPublicBoard(moved.state);
+    const summons = board.units.filter(unit => unit.summon);
+    expect(summons).toEqual([{ definitionId: 'g24-voidspawn', starLevel: origin!.unit.starLevel, cell: { col: 0, row: 7 }, items: [], summon: true }]);
+    // Exactly the four public fields plus the flag: no owner, item instance, battle id, health or position map.
+    expect(Object.keys(summons[0]!).sort()).toEqual(['cell', 'definitionId', 'items', 'starLevel', 'summon']);
+    const json = JSON.stringify(board);
+    for (const secret of [origin!.itemInstanceId, origin!.ownerId, origin!.unit.id, 'g24ItemPositions', 'healthBps']) expect(json).not.toContain(secret);
+    // Champions are unchanged; the summon counts for no trait and is never the seat avatar.
+    expect(board.units.filter(unit => !unit.summon)).toEqual(before.units.filter(unit => !unit.summon));
+    const layout = state.preparation.board;
+    expect(publicTraits(board, layout)).toEqual(publicTraits({ units: board.units.filter(unit => !unit.summon) }, layout));
+    expect(avatarUnit(board)?.summon).toBeUndefined();
+    expect(toPublicBoard(createMatch(42)).units.some(unit => unit.summon)).toBe(false);
   });
 });
 
