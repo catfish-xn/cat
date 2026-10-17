@@ -113,5 +113,24 @@
     "sourceLineEndings": "Git LF",
     "rawStatesAndTrajectoryUnchanged": true
   },
-  "fullSuiteRun": false
+  "fullSuiteRun": false,
+  "postMergeVerification": {
+    "remoteCommit": "f892e60e23702fb8cebc65e65eba934ea44d86f4",
+    "resolution": "preserved single-player case names and scope documentation; final implementation fingerprints retained",
+    "passed": 16,
+    "failed": 0,
+    "cases": [
+      {
+        "title": "preserves many legitimately acquired rewards in a single-player 6-7 save",
+        "durationMs": 1143.3878000000004,
+        "status": "passed"
+      },
+      {
+        "title": "preserves a single-player 6-7 save at the actual maximum pending-task checkpoint",
+        "durationMs": 815.5316999999995,
+        "status": "passed"
+      }
+    ],
+    "recordedSourceHashesStillMatch": true
+  }
 }

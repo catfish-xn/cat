@@ -149,13 +149,13 @@ describe('public single-player late fight', () => {
     }
   });
 
-  it('preserves many legitimately acquired rewards through late-game saves', () => {
+  it('preserves many legitimately acquired rewards in a single-player 6-7 save', () => {
     expect(initial.m8.loot.receipts.length).toBeGreaterThan(15);
     expect(initial.resourceProvenance.entries.length).toBeGreaterThan(80);
     continueEveryTick(initial, liveSteps);
   });
 
-  it('preserves a save at the actual maximum pending-task checkpoint of a public late fight', () => {
+  it('preserves a single-player 6-7 save at the actual maximum pending-task checkpoint', () => {
     expect(maximum).toBeGreaterThanOrEqual(5);
     continueEveryTick(busiest, liveSteps.slice(busiestIndex));
   });

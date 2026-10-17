@@ -57,9 +57,9 @@
 
 正式回归把这个顺序翻转为拒绝，CI 修订后明确要求原有 `resolved mechanics`，stat 声明生成次数仍为0，并测试反转单位顺序。其他负例分别要求装备声明、mechanism definitions、sampled tick、attackCount、castCount、periodTicks、pulseOrdinal、triggerCount、counter 的具体拒绝原因；新增“前一单位计数超界、后一单位身份错误”的混合负例，证明全部身份认证仍先于计数检查。每个负例覆盖 object、JSON 和 serialize，并断言尚未调用逐单位 `validateMechanisms`。
 
-合法正例来自公开命令：400 tick 的护臂长局、6-7 的多奖励/92条资源账本存档、真实后期战斗中待执行+周期任务最多的检查点（至少5项），以及普通开局。每例先验证 serialize、object restore、JSON restore 与规范化重存，再对两条恢复分支逐 tick 比较完整 step 结果（state、事件和 RNG 都包含在内）直到战斗结束。
+三入口合法正例覆盖的都是**单人存档**，来自公开命令：400 tick 的护臂长局、单人 6-7 的多奖励/92条资源账本存档、单人 6-7 战斗中待执行+周期任务最多的检查点（至少5项），以及普通开局。每例先验证 serialize、object restore、JSON restore 与规范化重存，再对两条恢复分支逐 tick 比较完整 step 结果（state、事件和 RNG 都包含在内）直到战斗结束。
 
-覆盖边界（astro S1）：上述三入口正例覆盖的是**单人存档**。联机加时轮走在线 `restoreBattleInput`（`src/simulation/two-sided-battle.ts:91`）；离线 `restoreMatch` 照旧拒绝含 `multiplayer` 的状态及超过 `FINAL_ROUND` 的状态。因此本次没有加时恢复证据，在本项离线恢复边界内也不需要加时证据。
+覆盖边界（astro S1）：联机加时轮走在线 `restoreBattleInput`（`src/simulation/two-sided-battle.ts:91`）；离线 `restoreMatch` 照旧拒绝含 `multiplayer` 的状态（`serialization.ts:113`）及超过 `FINAL_ROUND` 的状态（`:122`）。因此本次没有加时恢复证据，在本项离线恢复边界内也不需要加时证据；上述单人 6-7 正例不代表加时覆盖。
 
 初版相关回归：**7文件156/156通过**，见 [机器结果](logs/final-targeted.json)：
 
@@ -90,6 +90,8 @@
 | 1 | 1.266s | 0.851s |
 | 2 | 1.270s | 0.888s |
 | 3 | 1.152s | 0.806s |
+
+推送前远端并发增加 `f892e60`（范围说明、指纹与两个正例名称明确化）；以合并提交保留其说明和单人用例名称，指纹采用本轮最终实现的复算结果。重命名没有改变测试逻辑；合并后预检文件再次16/16通过，三轮计时仍对应上表的相同用例。
 
 本轮指定范围为 **5 文件、97 项通过**（重复运行不累加）：预检16、护臂压力2、B5临时装备30、B8实时转移19、B7接线30。Windows / Node 22.17.0 / Vitest 5.0.3；Linux 专用护臂脚本依赖 `python3` 和 `resource.ru_maxrss`，Windows 两项因 `python3 ENOENT` 未能执行，随后将同一份源码复制到已配置 Ubuntu 临时目录，使用 Node 24.21.0 / Python 3.12.3 原样通过两项断言。正常本地权限运行规避了沙箱临时夹具 rename 的 EPERM。机器汇总见 [ci-followup.json](logs/ci-followup.json)。`npm run typecheck` 通过，未跑全套。
 
