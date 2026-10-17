@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 const {run}=createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
 const accept=(result:api.MatchCommandResult)=>{if(!result.ok)throw Error(result.reason);return result.state;};
 /** Actual shop purchase and three battles; never fabricates currency, units, progress or receipts. */
-export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>{
+export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
   let prefix:api.MatchState|undefined;
   const reached=Error('Public5-1 preparation');
   try{
@@ -44,6 +44,11 @@ export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>
     else if(state.phase==='settlement')state=accept(api.nextRound(state,state.round));
     else throw Error('Public Rumble armory phase');
   }
+  return state;
+}
+
+export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>{
+  let state=await publicPendingArmory(seed);
   const menu=g23JunkerMenu(state);
   if(!menu)throw Error('Public Rumble armory missing');
   const upgrade=menu.choices.find(c=>c!=='spare-parts')!;
