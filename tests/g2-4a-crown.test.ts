@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {deployMatchUnit,equipItem,getDeploymentCap,selectChoice,sellUnit,startMatchCombat,useConsumable,type MatchState} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,getDeploymentCap,selectChoice,sellUnit,startMatchCombat,useConsumable,type MatchEvent,type MatchState} from '../src/simulation/match';
 import {getPlayerDeploymentCount} from '../src/simulation/game';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
@@ -9,9 +9,12 @@ import {TEMPORARY_EQUIPMENT_POOL} from '../src/simulation/temporary-equipment';
 import {TACTICIANS_CROWN_ID,crownTeamSizeBonus} from '../src/simulation/deployment-cap';
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
-import {openG23Choice} from '../src/simulation/g2-3-runtime';
+import {drainG23Rewards,openG23Choice} from '../src/simulation/g2-3-runtime';
 import {createInputValidation,validateInputAssets} from '../src/simulation/input-assets';
 import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
+import {restoreCombatInput,type CombatInputAuthority} from '../src/simulation/combat-input';
+import {ROUND_CATALOG} from '../src/simulation/content/round-catalog';
+import {nextRandom} from '../src/simulation/rng';
 import type {G23BattleFacts} from '../src/simulation/g2-3-economy';
 import {accepted,board} from './t10-helpers';
 import {catalogPreparation} from './t5r-helpers';
@@ -92,4 +95,39 @@ it('reforging or removing the crown keeps the granted team slot (user rule)',()=
  const reforger=equipped.consumables.find(c=>c.definitionId==='completed-reforger');
  expect(useConsumable(equipped,reforger!.consumableId,{kind:'item',itemId:crowns(equipped)[0].id})).toMatchObject({ok:false,reason:'invalid-consumable-target'});
  expect(getDeploymentCap(equipped)).toBe(4);
+});
+
+it('a crown grant that fails records no claim and adds no slot; the next drain retries it',()=>{
+ // One battle claims every chest below tier 12; the second crosses tier 12 (the crown) only.
+ const before=crowned(1);expect(crowns(before)).toHaveLength(0);
+ // An instance already holding the next serial makes every permanent item grant refuse (invalid-mechanic-state).
+ const collider={id:`item-${before.nextItemSerial}`,definitionId:'bf-sword',location:{kind:'inventory' as const}};
+ const events:MatchEvent[]=[];
+ const failed=commitG23Settlement({...before,items:[...before.items,collider]},facts(2),undefined,events);
+ expect(events).toContainEqual(expect.objectContaining({type:'mechanicFailed',hook:'rewards'}));
+ expect(crowns(failed)).toHaveLength(0);expect(crownTeamSizeBonus(readG23Progress(failed))).toBe(0);
+ expect(getDeploymentCap(failed)).toBe(3);
+ const retried=drainG23Rewards({...failed,items:failed.items.filter(i=>i.id!==collider.id)});
+ expect(crowns(retried)).toHaveLength(1);expect(getDeploymentCap(retried)).toBe(4);
+ expect(drainG23Rewards(retried)).toEqual(retried);
+});
+
+it('a frozen combat input must carry a prefix of the authoritative reward claims',()=>{
+ const combat=accepted(startMatchCombat(fillBoard(crowned(2))));
+ const frozen=combat.combatInputBasis!,input=frozen.inputs;
+ // The synthetic catalog state skips the real start's battle-seed cursor; re-derive it as restoreCombatInput does.
+ let battleSeed=(combat.seed^0x9e3779b9)>>>0;
+ for(const entry of ROUND_CATALOG){if(entry.ordinal>combat.round)break;if(entry.kind!=='supply')battleSeed=nextRandom(battleSeed).word;}
+ const basis={...frozen,battleSeed};
+ // The authority restoreMatch would fold from this state, taken from the frozen basis where it is a prefix.
+ const authority:CombatInputAuthority={g23:readG23Progress(combat),playerHp:combat.playerHp,seed:combat.seed,round:combat.round,
+  contentDigest:combat.contentDigest,playerLevel:basis.playerLevel,provenancePrefixLength:basis.provenancePrefixLength,
+  resources:{units:input.preparation.units.filter(u=>u.team==='player'),items:input.items,persistentGrowth:input.persistentGrowth,
+   nextUnitSerial:basis.nextUnitSerial,nextItemSerial:basis.nextItemSerial},
+  equipmentRolls:combat.equipmentState.rolls,equipmentRollPrefixLength:basis.equipmentRollPrefixLength,
+  scheduleReceipts:combat.scheduleReceipts,roundResults:combat.roundResults};
+ expect(()=>restoreCombatInput(basis,authority)).not.toThrow();
+ // Authority without the crown claim: the frozen input's extra claim (and its slot) is refused.
+ const crownless={...authority,g23:{...authority.g23!,rewardClaims:authority.g23!.rewardClaims.filter(c=>c.definitionId!==TACTICIANS_CROWN_ID)}};
+ expect(()=>restoreCombatInput(basis,crownless)).toThrow('Invalid combat input basis');
 });
