@@ -916,7 +916,7 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 
 公开 `toPrivateSeatView(state: MatchState): PrivateSeatView`（`src/server-entry` 导出）。输入是服务器可信状态，输出为独立、递归冻结的纯显示对象，不修改输入、不执行命令/抽签/发奖。无正常业务失败枚举；不接收或验证客户端伪造的 Match。字段逐层按 §10.9 构造，新增未知属性不会自动下发；所有 RNG、未来计划、来源账本、combatInputBasis、multiplayer/sharedPool 与整个 combat 均省略。
 
-`PrivateSeatView` 的 MatchState 同名字段保持**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单；另有下述独立的 `revealedLoot` 显示摘要。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；仍不含 settlementId 或执行代次。已揭示掉落摘要按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+`PrivateSeatView` 的 MatchState 同名字段保持**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单；另有下述独立的 `revealedLoot` 显示摘要。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；另新增 `roundResults[].roundKind`（已提交记录的原值，供界面预显示外交官胜场，见 §10.11）；仍不含 settlementId 或执行代次。已揭示掉落摘要按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
 
 **SR-C7-02 本轮掉落摘要。** `toPrivateSeatView` 的签名与失败约定不变，返回值新增可选字段：
 
