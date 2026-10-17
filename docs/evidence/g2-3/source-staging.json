@@ -31,8 +31,8 @@
       "sha256": "563c4d37915d7bc636e13e41ab40684847ddd7b9d5bb258c18ca30f6a161f8df"
     },
     "src/simulation/content/g2-3-special-item-source.ts": {
-      "bytes": 48543,
-      "sha256": "eb34370a6661955b877d3a6557074947d99ee5d9c496454cd8a6e7ed53c4a5c0"
+      "bytes": 48974,
+      "sha256": "c14a36070f08134cabc93fcb439b5e276907523b4e99e09bfbb82c551a40075e"
     }
   }
 }

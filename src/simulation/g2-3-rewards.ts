@@ -18,7 +18,7 @@ function sample(pool:readonly string[],seedText:string,n:number):readonly string
  for(let i=0;i<n&&remaining.length;i++){const draw=nextRandom(seed);seed=draw.state;out.push(...remaining.splice(Math.floor(draw.word*remaining.length/2**32),1));}return out;
 }
 /** Source reward descriptors stay intact; only unresolved choices/bench overflow remain in escrow.
- * 约定值: three distinct anvil choices, and one ordinary component/chemtech roll per item key. */
+ * 约定值: four distinct anvil choices (user 2026-10-17), and one ordinary component/chemtech roll per item key. */
 const atomCache=new Map<string,readonly G23RewardAtom[]>();
 export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23RewardAtom[]{
  const key=canonicalContent([seed,bundle]),cached=atomCache.get(key);if(cached)return cached;
@@ -44,7 +44,7 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23R
   if(['Item','ExactItem','ItemByKey'].includes(key)){for(const api of list())item(api);continue;}
   if(key==='Consumables'){for(const _ of list()){void _;add('duplicator',Object.values(M5_UNIT_DEFINITIONS).filter(u=>u.cost<=3).map(u=>u.id),1,0,60);}continue;}
   if(key==='MeepTypeUnit'){
-   for(const api of list())add('item',api==='TFT_ArmoryKeyCompleted'?ordinary:api==='TFT_ArmoryKeyOrnn'?G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6:G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS,1,0,3);continue;
+   for(const api of list())add('item',api==='TFT_ArmoryKeyCompleted'?ordinary:api==='TFT_ArmoryKeyOrnn'?G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6:G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS,1,0,4);continue;
   }
   if(key==='TwoStarUnit'){for(const cost of list())add('unit',SHOP_CATALOG_BY_COST[cost==='TwoCostUnit'?2:5],3);continue;}
   if(['ThreeCostUnit','FourCostUnit','FiveCostUnit'].includes(key)){for(let n=0;n<(value as number);n++)add('unit',SHOP_CATALOG_BY_COST[key==='ThreeCostUnit'?3:key==='FourCostUnit'?4:5]);continue;}

@@ -1,3 +1,6 @@
+import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
+import { validateResistsShields } from './m8/resists-shield-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -5,10 +8,11 @@ import { projectG23Summons } from './g2-3-summons';
 import { validateG23State } from './g2-3-combat';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
-import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
+import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
-import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
+import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -44,13 +48,32 @@ import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanic
 // Reuse the pure default-catalog compilation, never any candidate validation.
 // Only local, already authenticated JSON basis inputs enter this byte-keyed map.
 const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
-function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean) {
-  if (!admittedJson) return buildStrategySnapshot(inputs);
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean, forSerialization: boolean) {
+  // Keep ordinary object restore's fresh compilation, including callers testing
+  // hypothetical trusted definitions. Serialization owns a validated, detached,
+  // frozen basis from restoreCombatInput; only proven data without -0 can reuse.
+  if (!admittedJson && (!forSerialization || !isImmutableJson(inputs))) return buildStrategySnapshot(inputs);
   const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
   if (cached) return cached;
   const compiled = freezeContent(buildStrategySnapshot(inputs));
   if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
   restoredStrategies.set(key, compiled); return compiled;
+}
+
+/** The private clone has no accessors, but structuredClone preserves extra array
+ * properties that canonicalContent ignores. Those can contain cycles or typed
+ * arrays whose legacy freeze throws. Only ordinary finite data may skip it. */
+function canSkipSerializationFreeze(value: unknown, ancestors = new Set<object>()): boolean {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'object' || ancestors.has(value)) return false;
+  const array = Array.isArray(value), keys = Object.keys(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) return false;
+  if (array && (keys.length !== value.length || keys.some((key, i) => key !== String(i)))) return false;
+  ancestors.add(value);
+  const safe = keys.every(key => canSkipSerializationFreeze((value as Record<string, unknown>)[key], ancestors));
+  ancestors.delete(value);
+  return safe;
 }
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
@@ -73,12 +96,14 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
   return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
 }
 /** Validates plain JSON and all persistent references before returning an independent state.
- * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
+ * Verification combats are isolated: no generated effects, rewards, offers or
+ * random cursor changes are committed to the restored state.
+ * Resist-scaled shields are checked by a trusted-input battle replay.
  */
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
 }
-function restoreMatchWithinCall(input: unknown): MatchState {
+function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -98,7 +123,10 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
-  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
+  // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
+  let teamSizeBonus = 0;
+  try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
@@ -237,7 +265,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
     const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
@@ -250,7 +278,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
     const cells = new Set<string>();
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
@@ -290,6 +320,11 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Serialization consumes this private detached graph immediately. Freezing it
+  // would traverse the large metadata twice (freeze + canonical cache admission)
+  // only to discard it. Keep validation and cloning identical to object restore.
+  if (forSerialization && [detached.m8, detached.combatInputBasis, detached.resourceProvenance]
+    .every(value => canSkipSerializationFreeze(value))) return detached;
   // Exact JSON bytes (including property order) key immutable metadata sharing.
   // Object inputs retain their independent clone. '-0' conservatively disables
   // sharing for text inputs because JSON.stringify normalizes its numeric sign.
@@ -311,7 +346,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   freezeContent(restored.resourceProvenance);
   return restored;
 }
-export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
+export function serializeMatch(state: MatchState): string {
+  return withItemRestoreCache(() => canonicalContent(restoreMatchWithinCall(state, true)));
+}
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
 function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
@@ -366,7 +403,8 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   const possibleAp = new Set([0]);
   for (const source of archangels) for (let at = source.values.periodTicks; at <= tick; at += source.values.periodTicks)
     possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
-  requireValue(unit.alive ? runtime.abilityPowerFlat === maximumAp : possibleAp.has(runtime.abilityPowerFlat), 'derived ability power');
+  const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
+  requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
   requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
     requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
@@ -426,11 +464,13 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g24Heal','g24Mana'].includes(task.kind), 'task kind');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
       if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
+      // G2-4b over-time restores: one declared item effect owns every pulse.
+      if(task.kind.startsWith('g24')) requireValue(task.source.sourceKind === 'item' && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');
       if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
