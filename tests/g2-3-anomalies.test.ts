@@ -3,6 +3,7 @@ import {createMatch} from '../src/simulation/match';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {ANOMALY_DEFINITIONS} from '../src/simulation/content/anomalies';
 import {createCombatWithEvents,stepCombat,type CombatState} from '../src/simulation/combat';
+import {attackDamageCandidates,withItemRestoreCache} from '../src/simulation/m8/item-restore';
 import {validateMechanisms} from '../src/simulation/m8/restore';
 import {packets} from './helpers/replay2-views';
 function start(id:string,definitionId='lux',starLevel:1|2|3=1){
@@ -10,7 +11,7 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
  const strategy=buildStrategySnapshot({...s,preparation,anomalyBinding:{definitionId:id,unitId:'p',choiceId:'test',boundRound:1}});
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
-function validate(state:CombatState){for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);}
+function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
 it('admits thirty historically selected anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(30);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
@@ -63,4 +64,24 @@ it('Protective Shielding restores the exact carried fractional shield at its sec
  const bad=structuredClone(state),layer=bad.units.find(u=>u.id==='p')!.shieldLayers![0];
  Object.assign(layer,{granted:174,remaining:174});Object.assign(layer.m8State!,{granted:174,remaining:174});
  expect(()=>validate(bad)).toThrow();
+});
+it('Power Absorption adds fixed AD after percentage AD, once per dead ally, and restores its contribution',()=>{
+ const base=createMatch(42),preparation={...base.preparation,units:[
+  {id:'p',definitionId:'lux',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}},
+  {id:'ally',definitionId:'darius',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:2,row:4}}},
+  {id:'e',definitionId:'garen',starLevel:3 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:1,row:0}}}]};
+ const strategy=buildStrategySnapshot({...base,preparation,items:[{id:'db',definitionId:'deathblade',location:{kind:'unit',unitId:'p',slot:0}}],anomalyBinding:{definitionId:'power-absorption',unitId:'p',choiceId:'test',boundRound:1}});
+ let state=createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
+ // Lux 30 AD + Deathblade 55% + anomaly 30% = floor(55.5)=55. Darius gives floor(55*9%)=4.
+ state={...state,units:state.units.map(u=>u.id==='ally'?{...u,hp:0,alive:false,mana:0,targetId:null}: {...u,cooldownTicks:1000,moveCooldownTicks:1000,mana:0,maxMana:0})};
+ const initial=readCombatStats(state.units.find(u=>u.id==='p')!,state).attackDamage;
+ const allyAd=readCombatStats(state.units.find(u=>u.id==='ally')!,state).attackDamage;
+ expect(initial).toBe(55);expect(allyAd).toBe(55);
+ state=stepCombat(state).state;
+ expect(readCombatStats(state.units.find(u=>u.id==='p')!,state).attackDamage).toBe(59);
+ validate(state);
+ state=stepCombat(state).state;
+ expect(readCombatStats(state.units.find(u=>u.id==='p')!,state).attackDamage).toBe(59);
+ expect(state.units.find(u=>u.id==='p')!.g23?.absorbed).toHaveLength(1);
+ expect(attackDamageCandidates(state.units.find(u=>u.id==='p')!,state.tick,'g23-anomaly').has(59)).toBe(true);
 });

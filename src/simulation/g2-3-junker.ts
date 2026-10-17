@@ -12,7 +12,7 @@ export function g23JunkerMenu(state:Pick<MatchState,'preparation'|'round'>&Param
  const purchased=new Set(p.junkerPurchases.map(r=>r.upgrade));
  const remaining=G23_JUNKER_PAID.filter(id=>!purchased.has(id)),choices:G23JunkerUpgrade[]=[];
  if(strongest.starLevel===3&&!purchased.has('junkyard-titan'))choices.push('junkyard-titan');
- else if(!remaining.length)choices.push('finishing-touch');
+ else if(purchased.has('junkyard-titan')||!remaining.length)choices.push('finishing-touch');
  else{
   let rng=(p.seed^0x72756d62^p.junkerPurchases.length)>>>0;
   for(let n=0;n<2&&remaining.length;n++){const draw=nextRandom(rng);rng=draw.state;choices.push(...remaining.splice(Math.floor(draw.word*remaining.length/2**32),1));}

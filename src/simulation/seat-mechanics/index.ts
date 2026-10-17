@@ -1,4 +1,4 @@
-/** G2-3 netcode hooks: one import point for rule code (MATCH_CONTRACT §20, MULTIPLAYER_CONTRACT §19). */
+/** G2-3 netcode hooks: one import point for rule code (MATCH_CONTRACT「G2-3 机制通用接口」, MULTIPLAYER_CONTRACT §25). */
 export * from './types';
 export * from './state';
 export * from './grants';

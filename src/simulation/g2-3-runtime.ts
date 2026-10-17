@@ -32,7 +32,7 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
  return {ok:true,state:granted.state,events:granted.events};
 }
 /** Escrow only unresolved item selections and bench-full heroes. A pool-empty hero commits a gold receipt. */
-export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy):MatchState{
+export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
  let state=initial;const p=readG23Progress(state);if(!p)return state;
  for(const bundle of p.rewards)for(const atom of g23RewardAtoms(bundle,p.seed)){
   if(atom.options.length>1&&atom.kind!=='duplicator')continue;
@@ -40,7 +40,7 @@ export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy):Match
    const definitionId=atom.kind==='duplicator'?atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id)):atom.options[0]??'';
    if(definitionId===undefined)break;
    const result=claimG23Atom(state,atom.id,definitionId,policy);
-   if(!result.ok){if(result.reason==='bench-full')break;throw Error(result.reason);}state=result.state;
+   if(!result.ok){if(result.reason==='bench-full')break;events.push({type:'mechanicFailed',hook:'rewards',reason:result.reason});return state;}state=result.state;
   }
  }
  return state;
@@ -54,20 +54,20 @@ export function openG23Choice(state:MatchState):{state:MatchState;events:readonl
  if(offer){
   const reward=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===offer.optionId)!.reward;
   const atom=g23RewardAtoms({id:offer.id,round:offer.round,source:'black-market',tier:offer.tier,reward},p.seed).find(a=>a.kind==='item');
-  {const opened=openMechanicChoice(state,{choiceId:offer.id,returnPhase,offers:atom?.options??[offer.optionId],payload:{kind:'blackMarket',...(atom?{}:{grantItem:false}),source:'black-market',skippable:true,skipReward:{kind:'health-per-skip',amount:1},timeoutOption:'@skip'}});if(!opened.ok)throw Error(opened.reason);return opened;}
+  {const opened=openMechanicChoice(state,{choiceId:offer.id,returnPhase,offers:atom?.options??[offer.optionId],payload:{kind:'blackMarket',...(atom?{}:{grantItem:false}),source:'black-market',skippable:true,skipReward:{kind:'health-per-skip',amount:1},timeoutOption:'@skip'}});if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;}
  }
  const menu=returnPhase==='preparation'?g23JunkerMenu(state):null;
  if(menu){
   const prices=Object.fromEntries(menu.choices.map(c=>[c,(G23_JUNKER_PAID as readonly string[]).includes(c)?5:0]));
   const timeoutOption=menu.choices.find(c=>prices[c]===0)!;
   const opened=openMechanicChoice(state,{choiceId:menu.id,returnPhase,offers:menu.choices,payload:{kind:'armory',source:'junker-king',prices,timeoutOption}});
-  if(!opened.ok)throw Error(opened.reason);return opened;
+  if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;
  }
  for(const b of p.rewards)for(const atom of g23RewardAtoms(b,p.seed)){
   const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
   if(atom.kind!=='item'||atom.options.length<2||copy>=atom.quantity)continue;
   const opened=openMechanicChoice(state,{choiceId:`${atom.id}:copy:${copy}`,returnPhase,offers:atom.options,payload:{kind:'forge',source:b.source,timeoutOption:atom.options[0]}});
-  if(!opened.ok)throw Error(opened.reason);return opened;
+  if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;
  }
  return {state,events:[]};
 }

@@ -20,7 +20,9 @@ import { nextRandom, validateSeed } from './rng';
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
-  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number };
+  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
+  /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
+  & { readonly priorPvpWins?: number };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
@@ -51,7 +53,8 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
   const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
-  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}) };
+  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+    ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
@@ -87,6 +90,8 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     requireBasis(equal(input.g23.itemReceipts,authority.g23.itemReceipts));
   }else requireBasis(input.g23===undefined);
   requireBasis(equal(input.roundResults ?? [], authority.roundResults.filter(r => r.round < input.round)));
+  // Solo reads its Emissary wins from roundResults; the online-only frozen count never appears in a solo basis.
+  requireBasis(input.priorPvpWins===undefined);
   validateSeed(authority.seed); validateSeed(basis.battleSeed);
   let battleSeed = (authority.seed ^ 0x9e3779b9) >>> 0;
   for (const entry of ROUND_CATALOG) {

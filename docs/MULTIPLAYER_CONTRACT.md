@@ -318,6 +318,7 @@ interface PlayerBattleSnapshot {
   anomalyBinding: AnomalyBinding | null;
   persistentGrowth: readonly PersistentGrowth[];
   augmentProgress: { pumpingRounds: number; investmentHp: number };
+  priorPvpWins?: number;                   // 1..7，本席此前 PvP 胜场（外交官）；0 时省略，见 10.11
 }
 interface BattleIdMapping {
   seatId: string; kind: 'unit' | 'item' | 'temporary-item' | 'augment' | 'anomaly';
@@ -493,6 +494,21 @@ T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库
 - **SR-B1-03 → T3 合同 + T4 实现**：定稿目录外加时入口、末阶段基础伤害、经济/商店推进、平局扣血与同轮归零破同分；Claude 在调度层按合同接入，覆盖连续平局/双方空阵容/多席归零的有限终局。
 - **SR-B1-04 → T3**：提供不花资源的空阵容异常节点放弃/应战，以及 unsettled-round 时已赚奖励自动领取或放弃的权威命令，保证不重复发奖和可推进；不让服务器自己改 pendingChoice/奖励账本。
 - **SR-B1-05 → TP**：在排名后、下一轮商店前唯一归还淘汰席位占用；买/刷/卖/升星/奖励的池与席位同事务提交，失败金币/卡池/商店/随机流不变，覆盖八席守恒。
+
+### 10.11 G2-2 外交官胜场历史（2026-10-17）
+
+Ambessa 外交官双抗（每场 2 护甲 + 2 魔抗，最多算 7 场）在联机中与单人同一口径：只数本席**此前**已结算的 PvP 胜场（`roundKind==='pvp'` 且 `result==='playerWin'`；PvE 胜、平局、补给不计）。
+
+```ts
+priorPvpWins(roundResults: readonly Pick<RoundResult,'round'|'roundKind'|'result'>[], round: number): number  // 0..7
+G22_EMISSARY_WIN_CAP = 7
+```
+
+- 纯函数，从 `src/server-entry` 导出；单人编译器读 `roundResults` 时也调用它，单人数值不变。
+- `snapshotForBattle(state, seatId)` 以该席服务器权威 MatchState 的 `roundResults`（T3 收据提交写入的记录）调用它，把结果写入 `PlayerBattleSnapshot.priorPvpWins`；为 0 时省略字段，所以无胜场的冻结输入与改动前逐字节相同，旧冻结输入按 0 恢复。双方各从自己的状态取值；镜像对局的 B 方取被镜像席位自己的历史。服务器只经 `snapshotForBattle` 冻结，不另算、不接受客户端上报。
+- `restorePlayerBattleSnapshot` 校验：存在时为整数 1..7，且不超过该快照轮次之前目录内 PvP 轮数；`restoreBattleInput` 重新编译后逐字段比较，改动冻结胜场而不重编译会以 `battle-input` 拒绝。
+- `compileBattle` 把该值作为编译输入 `CombatStrategyInputs.priorPvpWins`（仅联机）传给策略编译器；单人 `CombatInputBasis.inputs` 永不含此字段，`restoreCombatInput` 遇到即拒绝。
+- 不改内容 digest、版本常量或失败枚举。测试：`tests/g2-2-online-emissary.test.ts`、`tests/server/g2-2-emissary-wins.test.ts`。
 
 ## 11 T3：单席原子结算、整轮发布与超时规则
 
@@ -1674,7 +1690,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 
 ## 25. G2-3 联机通用接口（2026-10-16）
 
-规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；所有新字段只在 G2-3 机制写入后出现，现有对局的线数据逐字节不变。
+规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；G2-3 当前对局会初始化机制容器，并可能增加形态、选择、单位及事件字段；线数据已变化，不承诺与 G2-3 前逐字节相同。兼容性由当前 rules/content/digest 身份及合同字段约束。
 
 **私有视图（toPrivateSeatView）**
 - `seatMechanics?: {version, seat, hidden:{}, receipts}`：整个本席机制容器原样进入视图，不用逐个字段加白名单。`hidden` 永远发空对象。键名与 MatchState 相同，`toDisplayMatch` 直接透传，客户端选择器用 `readSeatMechanic(display, key)` 读。
@@ -1686,7 +1702,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 **推送事件**：`PUSHED_EVENT_TYPES` 加入 `mechanicGranted`（带收据，用于开箱结果、金币来源、军械库购买提示）和 `seatMechanicChanged`（带 key）。只推给本席。
 
 **战斗回放线格式**（`CombatViewEvent` 新增）
-- 动画事件：`unitSpawned{unitId, definitionId, team, cell, sourceId}`、`unitRemoved{unitId, reason}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`、`bindingChanged{unitId, bound, reason}`。
+- 动画事件：`unitSpawned{unitId, definitionId, team, cell, sourceId}`、`unitRemoved{unitId, reason}`、`unitRevived{unitId, hp, sourceId}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`、`bindingChanged{unitId, bound, reason}`。
 - 状态事件：`unitEntered{unit}`（完整单位视图）、`unitLeft{unitId}`，由回放按 tick 比对单位名单自动生成，排在该 tick 的 `unitUpdated` 之前。
 - 单位视图新增可选字段 `form`。
 - 敌方视角镜像：`mirrorCombatReplay` 翻转 `unitEntered.unit` 的格子和阵营，以及 `unitSpawned` 的 `cell` 和 `team`。
@@ -1694,3 +1710,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 **共享卡池**：机制发英雄（征服者宝箱等）借用 PvE 掉落的预留路径，伪掉落 id 为 `["mechanic",receiptId]`；`reconcileHoldings` 认来源 `mechanic` 的出生事实。池空时按英雄费用折成金币。召唤物（`UnitDefinition.summon`）不进卡池，守恒校验的棋盘名单跳过它们。
 
 **本次服务器目录改动**：`src/server/room/projection.ts` 的镜像分支和推送白名单，此外不变。界面仍需按 g2-3-ui-server-needs 盘点逐项接显示；PR #132 的选择弹窗兜底可以用 `payload.skippable` 打开"跳过"按钮。
+
+`CombatInputBasis.inputs.g23`（领域 DTO，亦称 CombatInputBasis.g23）和 `PlayerBattleSnapshot.g23` 重建自权威 `seatMechanics`，包含 `hidden.progress` 中的 seed/rngState/rngDraws/economyReceipts。这些仅用于冻结输入、服务器计算和可信存档/回放校验，**禁止投影到任何私有、公开、观战或战斗视图**；不能因为字段名是 g23 就当成可公开数据。
+
+G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。服务器如需推送提示须将此事件加入本席白名单；本次不修改服务器目录。

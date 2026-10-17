@@ -6,6 +6,7 @@ import type { Effect, ItemDefinition, TraitSnapshot, TraitTier } from './strateg
 import { getUnitStats } from './unit-stats';
 import { readRoundEnemyProjection } from './round-enemies';
 import { G22_CONVENTIONS } from './content/g2-2-traits';
+import { priorPvpWins } from './g2-2-pvp-history';
 export interface G22Equipment { id:string; unitId:string; definitionId:string }
 export function g22Equipment(state:CombatStrategyInputs):G22Equipment[] {
   return [...state.items.flatMap(i=>i.location.kind==='unit'?[{id:i.id,unitId:i.location.unitId,definitionId:i.definitionId}]:[]),
@@ -49,7 +50,7 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
       if(trait.memberDefinitionIds.includes('nami'))result.push({kind:'mechanic',mechanic:'extraAttackMana',values:{amount:e.values.mana}});
       if(trait.memberDefinitionIds.includes('tristana'))result.push({kind:'attackSpeedBps',bps:e.values.starSpeedBps*unit.starLevel});
       if(trait.memberDefinitionIds.includes('ambessa')){
-        const wins=unit.team!=='player'?0:Math.min(7,(state.roundResults??[]).filter(r=>r.round<state.round&&r.roundKind==='pvp'&&r.result==='playerWin').length),amount=wins*e.values.armorPerWin;
+        const wins=unit.team!=='player'?0:state.priorPvpWins??priorPvpWins(state.roundResults??[],state.round),amount=wins*e.values.armorPerWin;
         result.push({kind:'statFlat',stat:'armor',amount},{kind:'statFlat',stat:'magicResist',amount});
       }
       for(const garen of board.filter(u=>u.team===unit.team&&u.definitionId==='garen'&&trait.memberDefinitionIds.includes('garen'))){

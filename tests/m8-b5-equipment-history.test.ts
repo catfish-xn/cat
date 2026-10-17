@@ -1,11 +1,12 @@
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
+import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
 import { initializeStreams, validateEquipmentState } from '../src/simulation/m8/equipment';
 import { TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { BattleHistory, validateBattleCollection } from '../src/replay';
+import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { accepted, emptyBoard } from './match-helpers';
@@ -13,6 +14,10 @@ import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicE
 
 function start(equipped = true, history?: BattleHistory): MatchState {
   let state = publicEquipmentPreparation(['gloves', 'gloves'], { history });
+  if(history){
+    const shared=publicEquipmentPreparation(['gloves','gloves']);
+    expect(shared).toEqual(state); expect(shared).not.toBe(state);
+  }
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
   const parent = `item-${state.nextItemSerial}`;
   state = accepted(combineItems(state, gloves[0].id, gloves[1].id));
@@ -79,7 +84,7 @@ function rejectWithoutRepair(raw: MatchState): void {
 }
 
 describe('B5 audit R1: equipment roll level belongs to its round history', () => {
-  const archiveHistory = new BattleHistory('b5-r1');
+  const archiveHistory = new CompletedBattleHistory('b5-r1');
   let archivedState: MatchState;
   // Generate the public command/history fixture separately from its save assertions.
   beforeAll(() => { archivedState = historicalProgression(true, archiveHistory); });
@@ -168,4 +173,19 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
       expect(JSON.stringify(raw)).toBe(before);
     });
   });
+});
+
+it('completed fixture batching preserves every record byte and rejects live-prefix use',()=>{
+ const ordinary=new BattleHistory('batch-control'),batched=new CompletedBattleHistory('batch-control');
+ let state=createMatch(42);
+ const observe=(result:ReturnType<typeof stepMatch>)=>{
+  const change={before:state,after:result.state,events:result.events.filter(e=>e.domain==='combat'),reason:'tick' as const};
+  ordinary.observe(change);batched.observe(change);state=result.state;
+ };
+ const start=startMatchCombat(state);if(!start.ok)throw Error(start.reason);observe(start);
+ expect(()=>batched.capturePrefix()).toThrow('no live prefix');
+ while(state.phase==='combat')observe(stepMatch(state));
+ expect(batched.completedRecords).toHaveLength(1);
+ expect(JSON.stringify(batched.completedRecords)).toBe(JSON.stringify(ordinary.completedRecords));
+ expect(batched.completedRecords[0].events.length).toBeGreaterThan(0);
 });

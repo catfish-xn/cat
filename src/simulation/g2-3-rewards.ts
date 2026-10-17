@@ -1,3 +1,5 @@
+import {canonicalContent} from './content';
+import {freezeContent} from './content/freeze';
 import {G23_POLICY} from './content/g2-3-policy';
 import {G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './content/g2-3-special-item-source';
 import {ITEM_DEFINITIONS} from './content/g2-3-item-registry';
@@ -17,7 +19,9 @@ function sample(pool:readonly string[],seedText:string,n:number):readonly string
 }
 /** Source reward descriptors stay intact; only unresolved choices/bench overflow remain in escrow.
  * 约定值: four distinct anvil choices (user 2026-10-17), and one ordinary component/chemtech roll per item key. */
+const atomCache=new Map<string,readonly G23RewardAtom[]>();
 export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23RewardAtom[]{
+ const key=canonicalContent([seed,bundle]),cached=atomCache.get(key);if(cached)return cached;
  const out:G23RewardAtom[]=[],add=(kind:G23RewardAtom['kind'],pool:readonly string[],quantity=1,gold=0,choices=1)=>{
  const id=`${bundle.id}:atom:${out.length}`;out.push({id,kind,options:kind==='gold'?[]:sample(pool,`${seed}:${id}`,choices),quantity,gold});
  };
@@ -47,6 +51,7 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23R
   if(key.startsWith('Champions')){const copies=key.includes('3Star')?9:key.includes('2Star')?3:1;for(const api of list()){if(!apiUnits[api])throw new RangeError('Unmapped G23 champion '+api);add('unit',[apiUnits[api]],copies);}continue;}
   throw new RangeError('Unimplemented G23 reward descriptor '+key);
  }
- return out;
+ if(atomCache.size>=128)atomCache.delete(atomCache.keys().next().value!);
+ const result=freezeContent(out);atomCache.set(key,result);return result;
 }
 export function g23RadiantDefinitionId(id:string):string|undefined{return (G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[id];}
