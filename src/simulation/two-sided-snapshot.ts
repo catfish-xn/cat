@@ -10,6 +10,7 @@ import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { getCatalogRoundByOrdinal } from './round-selectors';
 import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { M8_VERSION } from './m8/version';
+import { G22_EMISSARY_WIN_CAP, priorPvpWins } from './g2-2-pvp-history';
 import type { MatchState } from './match-types';
 import { BattleValidationError, PLAYER_BATTLE_SNAPSHOT_VERSION, type PlayerBattleSnapshot } from './two-sided-types';
 
@@ -22,6 +23,12 @@ const integer: typeof validation.integer = validation.integer;
 const list: typeof validation.list = validation.list;
 const record: typeof validation.record = validation.record;
 const ascii = (a: { id: string }, b: { id: string }) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+/** A snapshot cannot claim more wins than PvP rounds before its own round, nor more than the Emissary cap. */
+const priorPvpRoundLimit = (ordinal: number) => {
+  let rounds = 0;
+  for (let i = 1; i < ordinal && rounds < G22_EMISSARY_WIN_CAP; i++) if (getMultiplayerRoundByOrdinal(i).kind === 'pvp') rounds++;
+  return rounds;
+};
 const nextSerial = (ids: readonly string[]) => Math.max(0, ...ids.map(value => Number(value.slice(value.indexOf('-') + 1)))) + 1;
 
 /** Own-format structural validation, not client authentication or asset-history validation. */
@@ -34,6 +41,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     const s = value as unknown as PlayerBattleSnapshot;
     if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
     if(s.g23)validateG23Progress(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
+    if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
@@ -80,6 +88,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
       ...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
+      ...(s.priorPvpWins===undefined?{}:{priorPvpWins:s.priorPvpWins}),
       version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: CONTENT_DIGEST, seatId: s.seatId, roundId: s.roundId, level: s.level,
       units: s.units.map(u => ({ id: u.id, definitionId: u.definitionId, team: 'player', starLevel: u.starLevel,
         location: { kind: 'board', cell: u.location.kind === 'board' ? { col: u.location.cell.col, row: u.location.cell.row } : { col: -1, row: -1 } } })),
@@ -111,8 +120,9 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
+  const wins = priorPvpWins(state.roundResults, state.round);
   return restorePlayerBattleSnapshot({
-    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),seatId, roundId: state.roundDefinitionId, level: state.level,
+    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,

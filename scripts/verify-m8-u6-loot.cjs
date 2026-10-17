@@ -114,30 +114,13 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     async function waitActive(runId) {
       await page.waitForFunction(id => { const s = window.__CAT_DEBUG__.read(); return s.m6?.mode === 'active' && (!id || s.m6.runId === id); }, runId, { timeout: 60000 });
     }
-    async function domPanel() {
-      return page.evaluate(() => {
-        // C18-B: a round with opened orbs renders orb cards (orb-loot); otherwise the plain list (loot-panel).
-        const panel = document.querySelector('[data-debug="loot-panel"],[data-debug="orb-loot"],[data-debug="loot-terminal"]');
-        const button = document.querySelector('[data-debug="mobile:continue"]');
-        if (!panel) return { kind: null, continueDisabled: button?.disabled ?? null, continueReason: button?.dataset.blockedReason ?? null };
-        return { kind: panel.dataset.debug, canContinue: panel.dataset.canContinue ?? null,
-          block: panel.querySelector('.loot-blocked')?.dataset.reason ?? null,
-          buttons: panel.querySelectorAll('button').length,
-          pendingDrop: panel.querySelector('[data-debug="loot-pending-choice"]')?.dataset.dropId ?? null,
-          dialogDrop: document.querySelector('.choice-dialog')?.dataset.dropId ?? null,
-          dialogSource: document.querySelector('.choice-dialog')?.dataset.choiceSource ?? null,
-          dialogText: document.querySelector('.choice-dialog')?.textContent ?? '',
-          continueDisabled: document.querySelector('[data-debug="mobile:continue"]')?.disabled ?? null,
-          continueReason: document.querySelector('[data-debug="mobile:continue"]')?.dataset.blockedReason ?? null,
-          orbs: [...panel.querySelectorAll('[data-debug^="orb:"]')].filter(card => card.dataset.debug !== 'orb:other').map(card => ({ orbId: card.dataset.debug.slice('orb:'.length), tier: card.dataset.tier, status: card.dataset.status })),
-          rows: [...panel.querySelectorAll('[data-debug^="loot-drop:"],[data-debug^="orb-entry:"]')].map(row => ({ dropId: row.dataset.debug.slice(row.dataset.debug.indexOf(':') + 1), status: row.dataset.status, receipt: row.dataset.receipt ?? null })) };
-      });
-    }
+    const {lootPanelSnapshot,hasCombatReveal}=require('./u6-panel-snapshot.cjs');
     /** DOM must equal the domain projection of the page's own state (retried while a render is pending). */
-    async function checkPanel(label, extra = () => {}) {
+    async function checkPanel(label, extra = () => {}, onlyRevealed = false) {
       let last;
       for (let attempt = 0; attempt < 20; attempt++) {
-        const current = await state(), dom = await domPanel();
+        const {current,dom} = await page.evaluate(lootPanelSnapshot);
+        if(onlyRevealed && !hasCombatReveal(current))return null;
         const expectedVisible = current.m8.round.kind === 'pve' && current.phase !== 'preparation';
         try {
           // P2-4: the Continue control follows the authoritative verdict in every phase.
@@ -177,10 +160,9 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     async function finishCombat(label, onRevealed) {
       let sawRevealed = false;
       while ((await state()).phase === 'combat') {
-        const current = await state();
-        if (!sawRevealed && current.m8.loot.direct.some(drop => drop.status === 'revealed')) {
-          await checkPanel(`${label}: mid-combat reveal`, view => assert(view.revealedDrops.some(drop => drop.status === 'revealed')));
-          sawRevealed = true; onRevealed?.();
+        if (!sawRevealed) {
+          const captured=await checkPanel(`${label}: mid-combat reveal`, view => assert(view.revealedDrops.some(drop => drop.status === 'revealed')),true);
+          if(captured){sawRevealed = true; onRevealed?.();}
         }
         await delay(100);
       }

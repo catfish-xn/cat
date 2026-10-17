@@ -90,8 +90,10 @@ function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): Matc
   }
   // Multiplayer trading can upgrade Rumble while its popup is folded away.
   if (state.phase === 'choice' && choice?.kind === 'armory' && choice.choiceId.startsWith('g23:junker:')) {
-    const refreshed = openG23Choice({ ...state, phase: choice.returnPhase, pendingChoice: null } as MatchState).state.pendingChoice;
-    if (refreshed && (JSON.stringify(refreshed.offers) !== JSON.stringify(choice.offers))) {
+    const refresh = openG23Choice({ ...state, phase: choice.returnPhase, pendingChoice: null } as MatchState);
+    choiceEvents.push(...refresh.events.filter(event => event.type === 'mechanicFailed'));
+    const refreshed = refresh.state.pendingChoice;
+    if (refreshed?.kind === 'armory' && refreshed.choiceId === choice.choiceId && (JSON.stringify(refreshed.offers) !== JSON.stringify(choice.offers))) {
       const pendingChoice = { ...refreshed, generation: choice.generation + 1 };
       state = { ...state, pendingChoice };
       choiceEvents.push({ type: 'choiceOpened', choice: pendingChoice });
@@ -269,7 +271,7 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
     preparation:{...state.preparation,units:state.preparation.units.filter(unit=>unit.id!==unitId)} };
   const events: MatchEvent[] = [...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
   if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
-  if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
+  if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
   return acceptEquipment(sold,events);
 }
 export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
@@ -307,7 +309,7 @@ export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   return reason === 'missing-player' ? undefined : reason;
 }
 /** Income, XP, HP, persistent growth and the settlement identity commit once together. */
-function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDelta: readonly import('./match-types').PersistentGrowth[] = [],unitLootPolicy?:UnitLootPolicy): MatchState {
+function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDelta: readonly import('./match-types').PersistentGrowth[] = [],unitLootPolicy?:UnitLootPolicy,hookEvents:MatchEvent[]=[]): MatchState {
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
@@ -339,7 +341,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  return combat?commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy):settled;
+  return combat?commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy,hookEvents):settled;
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   return combat.units.filter(unit=>unit.team==='player' && (unit.runtime?.permanentAdBps??0)>0)
@@ -365,7 +367,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
     state=fallback.state;events.push(...fallback.events);
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
-  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy));
+  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
   const settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') return {state:settled,events};
@@ -574,7 +576,7 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
       const entered=enterScheduledEvents({...current,phase:'settlement',pendingChoice:null} as MatchState,'after');
       current=entered.state; events.push(...entered.events);
     }
-    const drained=drainG23Rewards(current,unitLootPolicy);events.push(...mechanicGrantEvents(current,drained));current=drained;
+    const drained=drainG23Rewards(current,unitLootPolicy,events);events.push(...mechanicGrantEvents(current,drained));current=drained;
     if (current===state && events.length===0) return {ok:true,state,events:[]};
     return acceptEquipment(current,events);
   } catch { return multiplayerFail(state,'invalid-loot'); }
@@ -584,9 +586,10 @@ function completeMechanicChoice(state: MatchState, optionId: string, timedOut: b
   const choice = state.pendingChoice!;
   const resolved = resolveMechanicChoice(state, optionId, timedOut);
   if (!resolved.ok) return fail(state, resolved.reason);
-  const completed=drainG23Rewards(finishG23Choice(state,resolved.state,optionId),unitLootPolicy);
+  const hookEvents:MatchEvent[]=[];
+  const completed=drainG23Rewards(finishG23Choice(state,resolved.state,optionId),unitLootPolicy,hookEvents);
   const entered = enterScheduledEvents(completed, choice.returnPhase === 'settlement' ? 'after' : 'before');
-  return acceptEquipment(entered.state, [...resolved.events,...mechanicGrantEvents(resolved.state,completed), ...entered.events]);
+  return acceptEquipment(entered.state, [...resolved.events,...mechanicGrantEvents(resolved.state,completed), ...hookEvents,...entered.events]);
 }
 export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);

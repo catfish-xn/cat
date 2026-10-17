@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMatch, decideBotAction, BOT_MAX_STEPS, type MatchState, type Unit } from '../src/server-entry';
-import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
+import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { getUnitSellPrice } from '../src/simulation/unit-stats';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -112,6 +112,21 @@ describe('T7 legal equipment and every choice node',()=>{
     const combined=applied(state);expect(combined.action.type).toBe('combine');
     const worn=applied(combined.state);expect(worn.action.type).toBe('equip');
     expect(decision(worn.state).action).toBe('done');
+  });
+  it.each(['TFT5_Item_DeathbladeRadiant', 'TFT13_Crime_Bronze_ChemGrips'])('handles reward-only item %s without throwing', definitionId=>{
+    const definition=ITEM_DEFINITIONS[definitionId];
+    expect(definition).toBeDefined();
+    const base=opening();
+    const state:MatchState={...base,items:[{id:'reward',definitionId,location:{kind:'inventory'}}]};
+    const result=decision(freeze(state),7);
+    expect(result.rng).toBe(7);
+    // A restriction may leave chemtech gear in escrow; the authoritative preview decides.
+    if(definition.restriction)expect(result.action).toBe('done');
+    else expect(result.action).toMatchObject({type:'equip',itemId:'reward'});
+  });
+  it('ignores an unknown inventory definition without spending RNG or mutating state',()=>{
+    const state:MatchState={...opening(),items:[{id:'unknown',definitionId:'not-an-item',location:{kind:'inventory'}}]};
+    expect(decision(freeze(state),7)).toEqual({action:'done',rng:7});
   });
   it('skips an exclusive-slot conflict and leaves unplaceable gear in inventory',()=>{
     const exclusive=Object.values(ITEM_DEFINITIONS).find(d=>d.slotCost===3)!;
