@@ -1,0 +1,172 @@
+{
+  "codeHead": "5f61f70c2ad96de1564604a1beea6614fee467f3",
+  "dirty": [
+    "M scripts/measure-g2-4b-restore.cjs",
+    "?? tests/g2-4b-trench-gold.test.ts"
+  ],
+  "node": "v24.19.0",
+  "npm": "11.9.0",
+  "esbuild": "0.28.2",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "cpuCount": 9,
+  "platform": "linux",
+  "arch": "x64",
+  "validateOnly": true,
+  "method": "Diagnostic only, no acceptance threshold changed. Production restoreMatch bundled for Node22.12. Public create/grant/buyXp/deploy/equip/start/step/choice/nextRound only; no Match or combat state editing to prepare samples. Old six small scenarios and checkpoints preserved; old cold policy is terminal JSON only. New nine-hero two-star gold scenarios use actual opening/midpoint/terminal, each with fresh-process JSON and object restores. Seven warm calls after one untimed equality-checked warmup per input form. Every restore, including cold, checks whole-state equality; assertions/import/preparation excluded from timings. validate-only performs untimed equality checks and no benchmark samples. No assumed 1200-tick, browser responsiveness, or typical-player distribution claim.",
+  "routes": [
+    {
+      "name": "largeGoldMix",
+      "requestedRound": "3-5",
+      "actualRound": "3-5",
+      "preparationLevel": 9,
+      "preparationPlayerUnits": 9,
+      "trace": [
+        {
+          "roundId": "1-2",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 1,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "1-3",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 16,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "1-4",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 17,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-1",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 58,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-2",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 51,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-3",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 58,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-4",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 0,
+          "result": "supply"
+        },
+        {
+          "roundId": "2-5",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 77,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-6",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 76,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "2-7",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 47,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "3-1",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 166,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "3-2",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 157,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "3-3",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 162,
+          "result": "playerWin"
+        },
+        {
+          "roundId": "3-4",
+          "phase": "settlement",
+          "hp": 100,
+          "tick": 0,
+          "result": "supply"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "name": "largeGoldMix",
+      "roundId": "3-5",
+      "tick": 0,
+      "terminal": false,
+      "units": 15,
+      "playerUnits": 10,
+      "enemyUnits": 5,
+      "itemGoldReceipts": 0,
+      "jsonBytes": 159015,
+      "fixture": null,
+      "coldJsonMs": null,
+      "coldObjectMs": null,
+      "invalidTickMs": null
+    },
+    {
+      "name": "largeGoldMix",
+      "roundId": "3-5",
+      "tick": 79,
+      "terminal": false,
+      "units": 15,
+      "playerUnits": 10,
+      "enemyUnits": 5,
+      "itemGoldReceipts": 12,
+      "jsonBytes": 186187,
+      "fixture": null,
+      "coldJsonMs": null,
+      "coldObjectMs": null,
+      "invalidTickMs": null
+    },
+    {
+      "name": "largeGoldMix",
+      "roundId": "3-5",
+      "tick": 159,
+      "terminal": true,
+      "units": 15,
+      "playerUnits": 10,
+      "enemyUnits": 5,
+      "itemGoldReceipts": 25,
+      "jsonBytes": 167880,
+      "fixture": null,
+      "coldJsonMs": null,
+      "coldObjectMs": null,
+      "invalidTickMs": null
+    }
+  ]
+}

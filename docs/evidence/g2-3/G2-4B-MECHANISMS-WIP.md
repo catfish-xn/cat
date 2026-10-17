@@ -363,3 +363,20 @@ After this merge,20related G2-4b files/87tests passed in4.90s; raw output is
 `../g2-4b/direct/after-g2-4a-related.log`. The final full suite has not run.
 The other prerequisite item PRs are not yet in this integration. Fixture
 recording/final revision and final CI await the complete integration tree.
+
+### Real Trench plus gold combination
+
+`tests/g2-4b-trench-gold.test.ts` adds a real public-command seed1 route to2-1,
+three legal slots (coat/Gambler/Collector), actual split at138 and terminal417.
+The original earns1gold; copies earn1Gambler gold and1Collector execution gold.
+All three copies attack. Independent RNG word replay checks each5%/40% result;
+owner-specific ordinals reset while inherited item identities remain unchanged.
+Restoring at the split then continuing matches uninterrupted execution; terminal
+restore, repeated step and repeated G23 settlement never duplicate the3gold.
+This is distinct from the earlier adapter-only payout-selection fixture.
+
+Expanded restore measurement preparation also reaches3-5 through legal commands
+with nine two-star heroes and six gold items (15actual combat entities including
+forge/opponents). Opening/midpoint/terminal JSON and object restore equality pass.
+No timing samples are claimed yet; final fixed-SHA measurements remain pending.
+See `../g2-4b/RESTORE-MEASUREMENT-PROTOCOL.md` and raw route-validation report.
