@@ -37,31 +37,33 @@
 | 属性成长 | 外部考证 | 每箱为当前羁绊基础AD/AP加成的5%，不是每箱额外5个百分点；整数定点计算 |
 | 奖励选择 | 源数据 | 每档仅启用权重非零的Option1；其他选项只归档 |
 | 光明转化 | 约定值 | 用户实战记忆与2026-10-16决定；源表只指向`TFT9_RadiantConversion_PlayerBuff`，未发现完整行为说明。开出时只转场上/备战席已穿戴普通成装；此后本局新合成成装自动转光明，库存已有成装/新赠送成装不额外转 |
-| 延后物品折金 | 约定值 | 仅含神器、辅助装、战术家之冠、窃贼手套、锻造器、复制器的档位调整；删除延后物品，保留已实现奖励，Gold=max(原Gold,map22整档估值)。待下一批补齐后恢复原奖励 |
+| 延后物品折金 | 约定值 | G2-4a（用户2026-10-17）起只剩神器锻造器、辅助装锻造器、指定辅助装（基克的先驱/钢铁烈阳之匣/能量圣杯）、金铲铲冠冕仍延后；删除延后物品，保留已实现奖励，Gold=max(原Gold,map22整档估值)。窃贼手套、成装锻造器、次级英雄复制器按源发放，第4/8/9档恢复原奖励 |
+| 锻造器选项数 | 约定值 | 每个锻造器弹出4个不重复选项（用户2026-10-17）。神器锻造器自Set 11起4选1有外部依据（搜索摘录，页面未能打开）；成装锻造器的4选1为约定值。超时取第一项 |
+| 次级英雄复制器 | 约定值 | 沿用G2-3自动复制（用户2026-10-17）：复制第一个已拥有且≤3费的候选（候选顺序由种子+原子ID派生），走同一卡池policy；无合格英雄则托管，拥有后再发；不做玩家手动选目标 |
 
-下表原奖励与估值为**源数据**；含延后物品的过渡规则逐档标记，不能理解为源逐件价格。
+下表原奖励与估值为**源数据**；含延后物品的过渡规则逐档标记，不能理解为源逐件价格。“G2-4a起奖励”列为当前实现。
 
-| 档 | 阈值 | 整档估值 | 原Option1 | 过渡期奖励 | 分类 |
-| --- | --- | --- | --- | --- | --- |
-| 1 | 10 | 2 | `{"Gold":2}` | `{"Gold":2}` | 源数据：原样保留 |
-| 2 | 35 | 2 | `{"TwoStarUnit":["TwoCostUnit"]}` | `{"TwoStarUnit":["TwoCostUnit"]}` | 源数据：原样保留 |
-| 3 | 65 | 3 | `{"FourCostUnit":1}` | `{"FourCostUnit":1}` | 源数据：原样保留 |
-| 4 | 100 | 4 | `{"Item":["TFT_Consumable_ChampionDuplicator_III"],"ThreeCostUnit":1}` | `{"ThreeCostUnit":1,"Gold":4}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 5 | 150 | 5 | `{"Item":["COMPONENT_NOSPAT","TFT_Consumable_ItemReroller"]}` | `{"Item":["COMPONENT_NOSPAT","TFT_Consumable_ItemReroller"]}` | 源数据：原样保留 |
-| 6 | 200 | 6 | `{"FourCostUnit":1,"FiveCostUnit":1}` | `{"FourCostUnit":1,"FiveCostUnit":1}` | 源数据：原样保留 |
-| 7 | 330 | 8 | `{"TwoStarUnit":["FiveCostUnit"]}` | `{"TwoStarUnit":["FiveCostUnit"]}` | 源数据：原样保留 |
-| 8 | 440 | 9 | `{"Item":["TFT_Item_ThiefsGloves"]}` | `{"Gold":9}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 9 | 550 | 12 | `{"MeepTypeUnit":["TFT_ArmoryKeyCompleted"]}` | `{"Gold":12}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 10 | 650 | 14 | `{"MeepTypeUnit":["TFT_ArmoryKeyOrnn"]}` | `{"Gold":14}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 11 | 750 | 15 | `{"MeepTypeUnit":["TFT_ArmoryKeySupport"]}` | `{"Gold":15}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 12 | 850 | 20 | `{"Item":["TFT_Item_ForceOfNature"],"Gold":20}` | `{"Gold":20}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 13 | 1000 | 50 | `{"Item":["TFT_Item_ZekesHerald","TFT_Item_LocketOfTheIronSolari","TFT_Item_Chalice","TFT_Consumable_ItemRemover"],"Gold":20}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 14 | 1200 | 60 | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":50,"MeepTypeUnit":["TFT_ArmoryKeyOrnn"],"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
-| 15 | 1500 | 200 | `{"Gold":80,"Item":["TFT_Item_ForceOfNature","TFT_Item_ForceOfNature"],"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | 约定值：延后物品按整档估值折算，待下一批补齐后恢复原奖励 |
+| 档 | 阈值 | 整档估值 | 原Option1 | G2-3过渡期奖励 | G2-4a起奖励 | 分类 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 10 | 2 | `{"Gold":2}` | `{"Gold":2}` | `{"Gold":2}` | 源数据：原样保留 |
+| 2 | 35 | 2 | `{"TwoStarUnit":["TwoCostUnit"]}` | `{"TwoStarUnit":["TwoCostUnit"]}` | `{"TwoStarUnit":["TwoCostUnit"]}` | 源数据：原样保留 |
+| 3 | 65 | 3 | `{"FourCostUnit":1}` | `{"FourCostUnit":1}` | `{"FourCostUnit":1}` | 源数据：原样保留 |
+| 4 | 100 | 4 | `{"Item":["TFT_Consumable_ChampionDuplicator_III"],"ThreeCostUnit":1}` | `{"ThreeCostUnit":1,"Gold":4}` | `{"Item":["TFT_Consumable_ChampionDuplicator_III"],"ThreeCostUnit":1}` | 源数据：G2-4a恢复原奖励（复制器自动复制为约定值） |
+| 5 | 150 | 5 | `{"Item":["COMPONENT_NOSPAT","TFT_Consumable_ItemReroller"]}` | `{"Item":["COMPONENT_NOSPAT","TFT_Consumable_ItemReroller"]}` | `{"Item":["COMPONENT_NOSPAT","TFT_Consumable_ItemReroller"]}` | 源数据：原样保留 |
+| 6 | 200 | 6 | `{"FourCostUnit":1,"FiveCostUnit":1}` | `{"FourCostUnit":1,"FiveCostUnit":1}` | `{"FourCostUnit":1,"FiveCostUnit":1}` | 源数据：原样保留 |
+| 7 | 330 | 8 | `{"TwoStarUnit":["FiveCostUnit"]}` | `{"TwoStarUnit":["FiveCostUnit"]}` | `{"TwoStarUnit":["FiveCostUnit"]}` | 源数据：原样保留 |
+| 8 | 440 | 9 | `{"Item":["TFT_Item_ThiefsGloves"]}` | `{"Gold":9}` | `{"Item":["TFT_Item_ThiefsGloves"]}` | 源数据：G2-4a恢复原奖励 |
+| 9 | 550 | 12 | `{"MeepTypeUnit":["TFT_ArmoryKeyCompleted"]}` | `{"Gold":12}` | `{"MeepTypeUnit":["TFT_ArmoryKeyCompleted"]}` | 源数据：G2-4a恢复原奖励（4选1为约定值） |
+| 10 | 650 | 14 | `{"MeepTypeUnit":["TFT_ArmoryKeyOrnn"]}` | `{"Gold":14}` | `{"Gold":14}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 11 | 750 | 15 | `{"MeepTypeUnit":["TFT_ArmoryKeySupport"]}` | `{"Gold":15}` | `{"Gold":15}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 12 | 850 | 20 | `{"Item":["TFT_Item_ForceOfNature"],"Gold":20}` | `{"Gold":20}` | `{"Gold":20}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 13 | 1000 | 50 | `{"Item":["TFT_Item_ZekesHerald","TFT_Item_LocketOfTheIronSolari","TFT_Item_Chalice","TFT_Consumable_ItemRemover"],"Gold":20}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | `{"Item":["TFT_Consumable_ItemRemover"],"Gold":50}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 14 | 1200 | 60 | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":50,"MeepTypeUnit":["TFT_ArmoryKeyOrnn"],"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | `{"ItemByKey":["RADIANTITEMS_SET5"],"Gold":60,"Item":["TFT_Consumable_ItemRemover"]}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
+| 15 | 1500 | 200 | `{"Gold":80,"Item":["TFT_Item_ForceOfNature","TFT_Item_ForceOfNature"],"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | `{"Gold":200,"PlayerBuff":["TFT9_RadiantConversion_PlayerBuff"]}` | 约定值：延后物品仍按整档估值折算（10/11/13/14档待G2-4b，12/15档待冠冕PR） |
 
 已有拆卸器、重铸器不属于本批延后范围，按源表保留；第5档无延后物品，不触发折金。
 
-奖励金币在唯一战斗结算事务内通过通用收据发放；非金币奖励存于`seatMechanics.seat.conqueror.rewards`，自动发放或弹出forge，满席英雄托管。物品走grantMechanicItem、英雄走grantMechanicUnit及同事务policy，池空按合同折金；逐副本MechanicReceipt防重。普通成装锻造器虽能用已有36装备池表达，本批仍按决定延后，不能偷偷发放。
+奖励金币在唯一战斗结算事务内通过通用收据发放；非金币奖励存于`seatMechanics.seat.conqueror.rewards`，自动发放或弹出forge，满席英雄托管。物品走grantMechanicItem、英雄走grantMechanicUnit及同事务policy，池空按合同折金；逐副本MechanicReceipt防重。G2-4a起第8档窃贼手套按普通`thiefs-gloves`入库，第9档成装锻造器从36件普通成装池抽4件弹出forge，第4档复制器按上面的约定自动复制。
 
 ## 学院、炼金男爵、机械公敌与试验格
 
@@ -135,7 +137,7 @@
 
 光明映射36种普通成装到源apiName；新奖励ID使用源apiName。基础属性/暴击/增伤、吸血、盾/保命、回蓝/击杀增伤、护甲穿透、灼烧/重伤、离子光环、连锁闪电、飓风、叠层、团队治疗等由声明式program实现，参数来自`en_us.items.effects`。
 **约定值**：复用本项目已有普通装备的目标选择/伤害顺序/同类取强规则。未还原模型碰撞、客户端特效；光明窃贼手套的随机光明临时件机制属下批，不把它作为本批新掉落（光明随机奖励池从源36项中排除该项，剩35项等权，约定值）。原有普通窃贼手套规则保留。第15档仍将已穿戴普通窃贼手套转为光明id；该转换体占3槽，有限近似保留原TG-01普通临时件及equipment随机流/同轮收据，不升级为光明临时件。此处为约定值，待下一批替换，不能宣称完整光明手套机制。
-黑市附带28个化工装备奖励身份，源基础属性及可表达的通用再生/叠层/盾已接入；专属化工脚本（毒雾、额外投射、递进回收等）是有限近似，完整被动未宣称复刻。神器、辅助装、冠不准入本批征服者物品奖励。
+黑市附带28个化工装备奖励身份，源基础属性及可表达的通用再生/叠层/盾已接入；专属化工脚本（毒雾、额外投射、递进回收等）是有限近似，完整被动未宣称复刻。神器、辅助装、冠仍不准入征服者物品奖励（G2-4b与冠冕PR处理）。
 
 ## 确定性、恢复、版本与证据
 
