@@ -1,4 +1,6 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import * as replayCombat from '../src/simulation/combat';
+import { purchasedThreeHeroMatch } from './match-helpers';
 import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -199,3 +201,50 @@ it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce 
     for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('buddy trigger binding facts');
   }
 }, 30000);
+
+it.each([
+  { label: 'tasks only', items: [] },
+  { label: 'bracer and tasks', items: [BRACER] },
+])(
+  'replays once per restore for $label, without sharing between calls', ({ items }) => {
+    let state = purchasedThreeHeroMatch();
+    for (const [slot, definitionId] of items.entries()) {
+      state = accepted(grantMechanicItem(state, { receiptId: `shared-replay-${slot}`, source: 'test', definitionId }));
+      state = accepted(equipItem(state, state.items.at(-1)!.id, 'unit-1', slot));
+    }
+    state = stepTo(accepted(startMatchCombat(state)), 60);
+    const json = JSON.stringify(state);
+    const create = vi.spyOn(replayCombat, 'createCombatWithEvents');
+    const step = vi.spyOn(replayCombat, 'stepCombat');
+    try {
+      // Repeated object identity and repeated JSON bytes both need fresh evidence.
+      for (const input of [state, state, json, json]) {
+        create.mockClear(); step.mockClear();
+        const restored = restoreMatch(input);
+        expect(restored).toEqual(state);
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(step).toHaveBeenCalledTimes(60);
+        expect(restored.combat).not.toBe(create.mock.results[0].value.state);
+      }
+      expect(JSON.stringify(state)).toBe(json);
+      const owner = state.combat!.units.find(u => u.team === 'player' && u.definitionId !== 'maddie' && u.definitionId !== 'morgana')!;
+      const genuine = owner.tasks;
+      Object.assign(owner, { tasks: [...genuine ?? [], {
+        key: 'shared-replay-forged-maddie', kind: 'maddie', source: {
+          ownerId: owner.id, sourceKind: 'ability', definitionId: owner.ability.id,
+          instanceId: owner.id, effectIndex: 0,
+        }, executeAtTick: 61, targetId: state.combat!.units.find(u => u.team === 'enemy')!.id,
+        amount: 1000000, ordinal: 0, total: 1, cancellable: false, actionSeq: 0,
+      }] });
+      // Mutating the same previously accepted object must never reuse old proof.
+      for (const input of [state, JSON.stringify(state)]) {
+        create.mockClear(); step.mockClear();
+        expect(() => restoreMatch(input)).toThrow('Invalid Match save: task binding facts');
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(step).toHaveBeenCalledTimes(60);
+      }
+      Object.assign(owner, { tasks: genuine });
+      expect(JSON.stringify(state)).toBe(json);
+    } finally { vi.restoreAllMocks(); }
+  },
+);
