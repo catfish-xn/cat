@@ -3,6 +3,7 @@ import { augmentCombatEffects } from '../combat-augment-effects';
 import { M5_UNIT_DEFINITIONS } from '../units';
 import { statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
 import { canonicalSource } from './identity';
+import { grantedMaxHpBasis } from './combat-item-programs';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
 import { canonicalContent, equalValidatedContent } from '../content';
@@ -23,9 +24,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
   validateItemRuntime(unit,combatId,tick,compiled);
   const basis = unit.maxHpBasis;
+  // G2-4b: health of items gained during combat is part of the basis from their grant on.
+  const granted = grantedMaxHpBasis(unit);
   const expectedBasis = { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.startingCell?.row ?? unit.cell.row).health,
-    flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
-    bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 };
+    flat: granted.flat+(unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
+    bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0)+granted.bps, bonusBps: 0 };
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
   const contributions = state.statuses.flatMap(g => g.contributions), covered = new Set<string>();

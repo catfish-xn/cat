@@ -40,6 +40,7 @@ export function selectTargets(selector: TargetSelector, env: TargetEnvironment):
       case'id':return id;
       case'farthest-id':return -d||id;
       case'hp-ratio-id':{const left=integer(a.hp)*integer(b.maxHp,1),right=integer(b.hp)*integer(a.maxHp,1);return (left<right?-1:left>right?1:0)||id;}
+      case'hp-ratio-desc-id':{const left=integer(a.hp)*integer(b.maxHp,1),right=integer(b.hp)*integer(a.maxHp,1);return (left>right?-1:left<right?1:0)||id;}
       case'hp-absolute-distance-id':return a.hp-b.hp||d||id;
       case'not-burned-by-this-instance-distance-id':return burnt(a)-burnt(b)||d||id;
       default:return d||id;

@@ -6,6 +6,7 @@ import type { VampDefinition } from './runtime-types';
 import { authorizeSpellCrit } from './crit';
 import { validateStatusApplication } from './status';
 import { integer, resolveStat } from './stats';
+import { grantedItemPrograms } from './combat-item-programs';
 export type ItemTrigger = Omit<TriggerDefinition, 'source'> & { readonly initialAlso?: true };
 export interface ItemProgram {
   readonly modifiers?: readonly StatModifier[];
@@ -16,9 +17,13 @@ export interface ItemProgram {
   readonly vamp?: readonly Omit<VampDefinition, 'source'>[];
 }
 export interface BoundItemProgram { readonly source: Source; readonly program: ItemProgram }
-export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'>): readonly BoundItemProgram[] { return unit.itemPrograms ?? []; }
+/** Frozen strategy programs, then items gained during this combat (G2-4b chest), which compile exactly like them. */
+export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>): readonly BoundItemProgram[] {
+  const granted = unit.combatItemGrants?.length ? grantedItemPrograms({ id: unit.id!, combatItemGrants: unit.combatItemGrants }) : [];
+  return granted.length ? [...unit.itemPrograms ?? [], ...granted] : unit.itemPrograms ?? [];
+}
 /** Each declaration reserves 32 ordinals for its composed effects/end rewards. */
-export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'>) {
+export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>) {
   return itemPrograms(unit).flatMap(({source,program}) => {
     let ordinal=0;
     const bind = <K extends 'modifier'|'effect'|'trigger'|'survival'|'periodic'|'vamp',T>(kind: K, declaration:T) => ({kind,source:{...source,effectIndex:source.effectIndex+32*ordinal++},declaration});
@@ -27,7 +32,7 @@ export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'>) {
       ...(program.periodic ?? []).map(d=>bind('periodic',d)), ...(program.vamp ?? []).map(d=>bind('vamp',d)) ];
   });
 }
-export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'>) {
+export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'> & Partial<Pick<CombatUnit, 'combatItemGrants'>>) {
   const programs=itemPrograms(unit), modifiers=programs.flatMap(p=>p.program.modifiers ?? []);
   const sources=programEntries(unit).flatMap(e=>e.kind==='effect' && 'kind' in e.declaration && e.declaration.kind==='authorize-spell-crit'?[e.source]:[]);
   const chance=resolveStat('critChance',unit.baseCritChanceBps ?? (unit.ability.kind==='s13'&&unit.ability.championId==='neutral'?0:2500),modifiers,{holder:unit});
@@ -37,7 +42,7 @@ export function validateItemProgram(program: ItemProgram): void {
   const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid combat program');};
   check(program && Object.keys(program).every(k=>['modifiers','effects','triggers','survival','periodic','vamp'].includes(k)));
   const effect=(e:Effect):void=>{
-    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment'].includes(e.kind));
+    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment','grant-combat-item'].includes(e.kind));
     if(e.kind==='apply-status')validateStatusApplication(e.status);
     if(e.kind==='modify-stat') { modifier(e.modifier); if(e.duration.kind==='ticks')integer(e.duration.ticks,1); }
     if('amount' in e) {

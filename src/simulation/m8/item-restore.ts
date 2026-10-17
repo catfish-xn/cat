@@ -11,6 +11,7 @@ import { validateTriggerLedger } from './triggers';
 import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
 import { survivalConsumptionKeys } from './shield';
+import { grantOfSource, grantedMaxHpBasis } from './combat-item-programs';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
 // Lifetime is exactly one synchronous restore. Mutable external objects are
@@ -98,7 +99,7 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
  }
  if([...expected].some(key=>!seen.has(key)))throw new Error('Invalid Match save: incomplete survival consumption');
  const basis=unit.maxHpBasis!;
- const bonuses=unit.itemPrograms?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
+ const bonuses=unit.itemPrograms?.length||unit.combatItemGrants?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
  const uniqueBonuses=new Map(bonuses.map(d=>[canonicalSource(d.source),d]));
  const expectedBonuses=new Set([0]);
  for(const d of uniqueBonuses.values()){
@@ -128,14 +129,17 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
    const bonus=d.effect.bonusBps;bonuses=new Set([...bonuses].flatMap(n=>[n,n+bonus]));
   }
  }
- return new Set([...bonuses].map(n=>Math.floor((basis.base+basis.flat)*(10000+basis.bps+n)/10000)));
+ // G2-4b: a grant after `at` was not yet in the basis; one on that very tick may or may not precede the sample.
+ const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat,bps:basis.bps-all.bps}];
+ for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
+ return new Set(bases.flatMap(b=>[...bonuses].map(n=>Math.floor((basis.base+b.flat)*(10000+b.bps+n)/10000))));
 }
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
- if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.combatItemGrants?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
  let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
@@ -145,7 +149,8 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');
   const initial=compileMechanismDefinitions(unit,combatId).survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
   let options:number[];
-  if(m.value.kind==='constant')options=initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
+  const grant=grantOfSource(unit,d.source);
+  if(m.value.kind==='constant')options=grant&&grant.grantedAtTick>at?[0]:grant&&grant.grantedAtTick===at?[0,m.value.amount]:initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
     if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=values.flatMap(previous=>options.map(v=>({...previous,[field]:previous[field as 'flat'|'bps'|'fixed']+v})));continue;}

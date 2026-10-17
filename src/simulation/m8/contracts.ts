@@ -256,7 +256,8 @@ export interface ManaRequest {
   readonly source: Source;
   readonly targetId: string;
   readonly amount: number;
-  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill';
+  /** item-granted: starting mana of an item gained during combat (G2-4b chest, G24-CHEST-03). */
+  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill' | 'item-granted';
   readonly bypassLock: 'none' | 'this-cast-refund';
   readonly castActionSeq: number | null;
 }
@@ -315,7 +316,7 @@ export interface TargetSelector {
   readonly excludeSelf: boolean;
   readonly excludePrimary: boolean;
   readonly distinct: boolean;
-  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
+  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-ratio-desc-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
   readonly sample: 'combat-start' | 'action-completion' | 'each-tick' | 'each-pulse';
 }
 /** Finite declarative payloads; executors are B3–B5 work. */
@@ -330,7 +331,9 @@ export type Effect =
   | { readonly kind: 'change-max-hp'; readonly bonusBps: Bps; readonly currentHp: 'add-max-delta'; readonly countsAsHeal: false }
   | { readonly kind: 'authorize-spell-crit'; readonly duplicateBonusBps: 1000 }
   | { readonly kind: 'cleanse'; readonly remove: 'removable-hostile-control-dot-debuff'; readonly retarget: true }
-  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' };
+  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' }
+  /** G2-4b Unstable Treasure Chest: the target gains one random pool item for the rest of this combat (G24-CHEST-01). */
+  | { readonly kind: 'grant-combat-item'; readonly policyId: 'G24-CHEST-01'; readonly lifetime: 'combat' };
 export interface TriggerDefinition {
   readonly id: string;
   readonly source: Source;

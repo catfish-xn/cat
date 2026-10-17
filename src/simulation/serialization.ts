@@ -36,6 +36,7 @@ import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
+import { validateCombatItemGrants } from './m8/combat-item-grants';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 import { validateSeatMechanicsState } from './seat-mechanics/state';
@@ -283,6 +284,8 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       const runtimeKeys = new Set<string>();
       for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
     }
+    // G2-4b: items gained mid-combat are receipts of a fired chest; their programs were compiled into each unit above.
+    validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
