@@ -1,0 +1,325 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/verified-restore-cache.test.ts tests/restore-audit/preparation-ledger-scope.test.ts tests/restore-audit/preparation-ledger.test.ts tests/restore-audit/match-authority.test.ts tests/m5-serialization.test.ts tests/m6-replay.test.ts tests/m8-b8-restore-fold-reuse.test.ts tests/m6-persistence.test.ts tests/m5-economy.test.ts tests/m5-command-phases.test.ts tests/m8-b8-restore.test.ts tests/g2-4a-crown.test.ts tests/g2-4b-resists-restore.test.ts tests/m8-b7-match-wiring.test.ts --reporter=default --reporter=json --outputFile=/tmp/batch-b-sync/related.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/m5-serialization.test.ts (33 tests) 1053ms
+ ✓ |fast| tests/restore-audit/match-authority.test.ts (10 tests) 241ms
+ ✓ |fast| tests/restore-audit/verified-restore-cache.test.ts (4 tests) 1418ms
+   ✓ process-local exact verified input cache (4)
+     ✓ cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted 685ms
+     ✓ collection keys include every battle byte and never borrow a standalone-state cache on a miss 721ms
+ ✓ |fast| tests/m8-b8-restore-fold-reuse.test.ts (5 tests) 401ms
+ ✓ |fast| tests/m5-command-phases.test.ts (13 tests) 164ms
+ ✓ |fast| tests/m5-economy.test.ts (42 tests) 23ms
+ ✓ |fast| tests/g2-4a-crown.test.ts (6 tests) 276ms
+ ✓ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests) 2339ms
+   ✓ collection replays each battle once, including unchanged-combat equipment command: false 533ms
+   ✓ collection replays each battle once, including unchanged-combat equipment command: true 1575ms
+ ✓ |fast| tests/m6-persistence.test.ts (44 tests) 3310ms
+   ✓ M6 serial snapshot coordinator (8)
+     ✓ bounds repeated quota failures to one latest fixed pending snapshot 785ms
+     ✓ bounds repeated abort failures to one latest fixed pending snapshot 489ms
+   ✓ exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs 1409ms
+ ✓ |fast| tests/m6-replay.test.ts (9 tests) 3655ms
+   ✓ M6 isolated battle records and replay (9)
+     ✓ captures tick zero, current prefix, and restores an identical terminal without mutating the active match 948ms
+     ✓ validates a running event prefix at ticks 39/40/41 and resumes recording with no repeated tick zero 565ms
+     ✓ owns observed inputs and keeps earlier frozen prefixes unchanged across later ticks and completion 457ms
+     ✓ brands only detached recorder-owned immutable records, not external frozen lookalikes 356ms
+     ✓ rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology 304ms
+     ✓ [T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references 661ms
+ ❯ |fast| tests/g2-4b-resists-restore.test.ts (20 tests | 5 failed) 3857ms
+   × public equipped live shield restores unchanged and continues identically 167ms
+   ✓ rejects small increase through real object and JSON restoration 194ms
+   ✓ rejects small decrease through real object and JSON restoration 139ms
+   ✓ rejects negative through real object and JSON restoration 105ms
+   ✓ rejects fractional through real object and JSON restoration 83ms
+   ✓ rejects coherently rebound target through real object and JSON restoration 91ms
+   ✓ rejects missing shield through real object and JSON restoration 108ms
+   ✓ rejects forged historical tick through real object and JSON restoration 79ms
+   ✓ rejects forged coefficient through real object and JSON restoration 87ms
+   × restores live targeting-dependent resists, refreshes, absorption, expiry and combat end 108ms
+   × restores the holder-death grant after live defenses and periodic history 990ms
+   ✓ rejects an invented resists declaration in a battle without a compiled resists source 30ms
+   ✓ bounds independent resists replay tick -1 26ms
+   ✓ bounds independent resists replay tick 0.5 41ms
+   ✓ bounds independent resists replay tick 1201 30ms
+   ✓ bounds independent resists replay tick 9007199254740991 26ms
+   ✓ does not inspect replay inputs when the trusted strategy has no resists grant 5ms
+   ✓ rejects an extra zero-resists layer claiming a real source on another live target 78ms
+   × restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle 821ms
+   × restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle 645ms
+ ✓ |fast| tests/restore-audit/preparation-ledger.test.ts (16 tests) 3848ms
+   ✓ previous battle plus next preparation seed 42 (5)
+     ✓ accepts the original full collection and file 630ms
+     ✓ rejects only gold +1 through collection/envelope/file, even with an empty history callback 435ms
+   ✓ preparation command ledger invariants (6)
+     ✓ rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick 959ms
+ ✓ |fast| tests/m8-b8-restore.test.ts (7 tests) 4978ms
+   ✓ B8 default Match own restore (7)
+     ✓ round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything 4413ms
+ ❯ |fast| tests/m8-b7-match-wiring.test.ts (30 tests | 16 failed) 298697ms
+   ❯ B7 installed encounters and trusted Match restore (30)
+     ✓ 1-2 freezes, starts, runs to settlement and resumes canonical saves 327ms
+     ✓ 1-3 freezes, starts, runs to settlement and resumes canonical saves 630ms
+     ✓ 1-4 freezes, starts, runs to settlement and resumes canonical saves 946ms
+     × 2-7 freezes, starts, runs to settlement and resumes canonical saves 9311ms
+     × 3-7 freezes, starts, runs to settlement and resumes canonical saves 17670ms
+     × 4-7 freezes, starts, runs to settlement and resumes canonical saves 32302ms
+     × 5-7 freezes, starts, runs to settlement and resumes canonical saves 57994ms
+     × 6-7 freezes, starts, runs to settlement and resumes canonical saves 91545ms
+     × 3-7 separates captured initial events from tick-zero opening moves committed by the first step 5404ms
+     × 6-7 separates captured initial events from tick-zero opening moves committed by the first step 22406ms
+     ✓ replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions 1ms
+     ✓ returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool 3785ms
+     ✓ keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates 6ms
+     ✓ rejects injected or mutated authored inputs, including neutral capabilities placed on a champion 144ms
+     ✓ rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7 3956ms
+     × rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7 7767ms
+     × restores Herald action identity after earlier tick-one aura maintenance: undefined 22023ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 19ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "evenshroud" 9ms
+     × restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark" 9ms
+     × round-trips legal Herald item immunity/cleanup boundaries with quicksilver 11ms
+     × round-trips legal Herald item immunity/cleanup boundaries with edge-of-night 10ms
+     ✓ pins the current catalog assumptions used by pure opening restore, without executing combatStart 2ms
+     ✓ rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts 1643ms
+     × rejects deletion of active Herald control, its receipt, or both, and forged cleanup 7791ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants 503ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants 441ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants 428ms
+     ✓ stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants 530ms
+     × restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption 11080ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 21 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > public equipped live shield restores unchanged and continues identically
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:114:49
+    112|           result = run(rebuilt, ...command.args);
+    113|         } catch { throw new Error('Invalid Match save: preparation-led…
+    114|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    115|         requireLedger(result.state !== rebuilt, 'command-noop');
+    116|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/g2-4b-resists-restore.test.ts:58:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/21]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores live targeting-dependent resists, refreshes, absorption, expiry and combat end
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:114:49
+    112|           result = run(rebuilt, ...command.args);
+    113|         } catch { throw new Error('Invalid Match save: preparation-led…
+    114|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    115|         requireLedger(result.state !== rebuilt, 'command-noop');
+    116|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/g2-4b-resists-restore.test.ts:92:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/21]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores the holder-death grant after live defenses and periodic history
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:114:49
+    112|           result = run(rebuilt, ...command.args);
+    113|         } catch { throw new Error('Invalid Match save: preparation-led…
+    114|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    115|         requireLedger(result.state !== rebuilt, 'command-noop');
+    116|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/g2-4b-resists-restore.test.ts:114:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/21]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:114:49
+    112|           result = run(rebuilt, ...command.args);
+    113|         } catch { throw new Error('Invalid Match save: preparation-led…
+    114|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    115|         requireLedger(result.state !== rebuilt, 'command-noop');
+    116|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/g2-4b-resists-restore.test.ts:174:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/21]⎯
+
+ FAIL  |fast| tests/g2-4b-resists-restore.test.ts > restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle
+Error: Invalid Match save: preparation-ledger-command-rejected
+ ❯ validate src/simulation/preparation-ledger.ts:114:49
+    112|           result = run(rebuilt, ...command.args);
+    113|         } catch { throw new Error('Invalid Match save: preparation-led…
+    114|         if ('ok' in result && !result.ok) throw new Error('Invalid Mat…
+       |                                                 ^
+    115|         requireLedger(result.state !== rebuilt, 'command-noop');
+    116|         rebuilt = result.state;
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:361:54
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ serializeMatch src/simulation/serialization.ts:361:10
+ ❯ tests/g2-4b-resists-restore.test.ts:173:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 2-7 freezes, starts, runs to settlement and resumes canonical saves
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 3-7 freezes, starts, runs to settlement and resumes canonical saves
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 4-7 freezes, starts, runs to settlement and resumes canonical saves
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 5-7 freezes, starts, runs to settlement and resumes canonical saves
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 6-7 freezes, starts, runs to settlement and resumes canonical saves
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:31:56
+     29|
+     30| describe('B7 installed encounters and trusted Match restore',()=>{
+     31|   it.each(COMPILED_NEUTRAL_ENCOUNTERS.map(e=>e.roundId))('%s freezes, …
+       |                                                        ^
+     32|     let s=battleFixture(roundId),steps=0;
+     33|     const compiled=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===rou…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 3-7 separates captured initial events from tick-zero opening moves committed by the first step
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > 6-7 separates captured initial events from tick-zero opening moves committed by the first step
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:52:24
+     50|     expect(s.combat!.units.filter(u=>u.team==='enemy').every(u=>u.mana…
+     51|   });
+     52|   it.each(['3-7','6-7'])('%s separates captured initial events from ti…
+       |                        ^
+     53|     const preparedState=prepared(roundId),start=api.startMatchCombat(p…
+     54|     if(!start.ok) throw new Error('fixture cannot start');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:113:24
+    111|     corrupt(s,x=>{x.combat.companionState={};});
+    112|   });
+    113|   it.each(['3-7','6-7'])('rejects replayed, removed, cancelled and geo…
+       |                        ^
+    114|     const s=api.stepMatch(battleFixture(id)).state;roundTrip(s);
+    115|     corrupt(s,x=>{delete x.combat.openingState;});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: undefined
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:122:75
+    120|   });
+    121|
+    122|   it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshrou…
+       |                                                                           ^
+    123|     const items=ids as string[];
+    124|     // The live branch explicitly returns its legitimately acquired Io…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "evenshroud"
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: "ionic-spark"
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:79:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/m8-b7-match-wiring.test.ts:127:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with quicksilver
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with edge-of-night
+Error: Invalid Match save: preparation-ledger-missing
+ ❯ requireLedger src/simulation/preparation-ledger.ts:52:21
+     50| }
+     51| function requireLedger(value: unknown, reason: string): asserts value {
+     52|   if (!value) throw new Error(`Invalid Match save: preparation-ledger-…
+       |                     ^
+     53| }
+     54| /** Exact process-cache reuse is authorized; cold verification still s…
+ ❯ validate src/simulation/preparation-ledger.ts:79:5
+ ❯ validatePreparationLedger src/simulation/preparation-ledger.ts:61:19
+ ❯ restoreMatchWithinCall src/simulation/serialization.ts:333:3
+ ❯ src/simulation/serialization.ts:105:35
+ ❯ withItemRestoreCache src/simulation/m8/item-restore.ts:23:13
+ ❯ restoreMatch src/simulation/serialization.ts:105:10
+ ❯ tests/m8-b7-match-wiring.test.ts:150:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > rejects deletion of active Herald control, its receipt, or both, and forged cleanup
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:177:3
+    175|     corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].eventSeq++;});
+    176|   });
+    177|   it('rejects deletion of active Herald control, its receipt, or both,…
+       |   ^
+    178|     let s=publicHeraldTarget();
+    179|     s=api.stepMatch(accepted(api.startMatchCombat(s))).state;roundTrip…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/21]⎯
+
+ FAIL  |fast| tests/m8-b7-match-wiring.test.ts > B7 installed encounters and trusted Match restore > restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-match-wiring.test.ts:217:3
+    215|     expect(s.scheduleReceipts).toEqual([]);
+    216|   });
+    217|   it('restores real bird next-tick reactions and rejects changed effec…
+       |   ^
+    218|     let s=battleFixture('4-7');
+    219|     while(s.phase==='combat' && !s.combat.companionState?.reactions.so…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/21]⎯
+
+
+ Test Files  2 failed | 12 passed (14)
+      Tests  21 failed | 222 passed (243)
+   Start at  16:11:10
+   Duration  314.04s (tests 92%, import 5%, transform 3%)
+
+JSON report written to /tmp/batch-b-sync/related.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

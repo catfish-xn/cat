@@ -1,0 +1,1769 @@
+{
+  "testedSha": "fa5c1ac3491147065088358a42dc4b800b593883",
+  "tests": [
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history rejects a historical level5 roll forged as level7 with RNG-consistent two completed items",
+      "status": "passed",
+      "durationMs": 2643.9543870000007,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history rejects a roll below the previous settlement level in a settled supply round",
+      "status": "passed",
+      "durationMs": 39.180718999999954,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history rejects a roll below the previous settlement level in a unsettled current round",
+      "status": "passed",
+      "durationMs": 32.05502499999966,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history rejects a roll above even the T12 post-settlement levelAfter bound",
+      "status": "passed",
+      "durationMs": 32.13792100000137,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history preserves a legal pre-F roll through current, settled and historical save/restore",
+      "status": "passed",
+      "durationMs": 6931.202228,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history allows the first equip after same-round F at the upper bound, not only the starting level",
+      "status": "passed",
+      "durationMs": 5808.358415999999,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history validates round economy before consulting its level bounds for equipment",
+      "status": "passed",
+      "durationMs": 31.73020700000052,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "B5 audit R1: equipment roll level belongs to its round history archived save envelope rejects the forged historical level through full save-envelope validation without changing archived battles",
+      "status": "passed",
+      "durationMs": 100.26116800000091,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "name": "completed fixture batching preserves every record byte and rejects live-prefix use",
+      "status": "passed",
+      "durationMs": 39.14889300000141,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "tiers 12 and 15 grant the sourced crowns and source gold; the crown is reward-only",
+      "status": "passed",
+      "durationMs": 4.632195000000138,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "each granted crown permanently adds one team slot, in the inventory or after its holder is sold",
+      "status": "passed",
+      "durationMs": 121.35836900000004,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "a crown lets the player deploy and start with level + 1 units, and the frozen input and PvP snapshot validate",
+      "status": "passed",
+      "durationMs": 70.70157399999971,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "reforging or removing the crown keeps the granted team slot (user rule)",
+      "status": "passed",
+      "durationMs": 27.770574999999553,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "a crown grant that fails records no claim and adds no slot; the next drain retries it",
+      "status": "passed",
+      "durationMs": 26.373653999999988,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "name": "a frozen combat input must carry a prefix of the authoritative reward claims",
+      "status": "passed",
+      "durationMs": 24.534749000000375,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "public equipped live shield restores unchanged and continues identically",
+      "status": "failed",
+      "durationMs": 166.8688830000001,
+      "error": "Error: Invalid Match save: preparation-ledger-command-rejected"
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects small increase through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 193.7684159999999,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects small decrease through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 138.97246300000006,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects negative through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 105.36116700000002,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects fractional through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 82.65634799999998,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects coherently rebound target through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 91.18270800000028,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects missing shield through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 107.67993299999989,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects forged historical tick through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 78.5744810000001,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects forged coefficient through real object and JSON restoration",
+      "status": "passed",
+      "durationMs": 87.47865999999976,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "restores live targeting-dependent resists, refreshes, absorption, expiry and combat end",
+      "status": "failed",
+      "durationMs": 107.73376400000006,
+      "error": "Error: Invalid Match save: preparation-ledger-command-rejected"
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "restores the holder-death grant after live defenses and periodic history",
+      "status": "failed",
+      "durationMs": 989.9039059999996,
+      "error": "Error: Invalid Match save: preparation-ledger-command-rejected"
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects an invented resists declaration in a battle without a compiled resists source",
+      "status": "passed",
+      "durationMs": 30.161670000000413,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "bounds independent resists replay tick -1",
+      "status": "passed",
+      "durationMs": 25.762494999999944,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "bounds independent resists replay tick 0.5",
+      "status": "passed",
+      "durationMs": 41.20777799999996,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "bounds independent resists replay tick 1201",
+      "status": "passed",
+      "durationMs": 30.410674000000654,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "bounds independent resists replay tick 9007199254740991",
+      "status": "passed",
+      "durationMs": 25.877473000000464,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "does not inspect replay inputs when the trusted strategy has no resists grant",
+      "status": "passed",
+      "durationMs": 4.955160000000433,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "rejects an extra zero-resists layer claiming a real source on another live target",
+      "status": "passed",
+      "durationMs": 77.87915599999997,
+      "error": null
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "restores stacked crest/gargoyle/bracer from object and matches every tick through the next battle",
+      "status": "failed",
+      "durationMs": 821.2847680000004,
+      "error": "Error: Invalid Match save: preparation-ledger-command-rejected"
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "name": "restores stacked crest/gargoyle/bracer from JSON and matches every tick through the next battle",
+      "status": "failed",
+      "durationMs": 644.9812410000004,
+      "error": "Error: Invalid Match save: preparation-ledger-command-rejected"
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain T12 equipment still rejects gameOver",
+      "status": "passed",
+      "durationMs": 3.8622369999998227,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain choice rejects every preparation command",
+      "status": "passed",
+      "durationMs": 3.7035979999996016,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain combat rejects every preparation command",
+      "status": "passed",
+      "durationMs": 4.266084000000319,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain settlement rejects every preparation command",
+      "status": "passed",
+      "durationMs": 18.169990000000325,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain gameOver rejects every preparation command",
+      "status": "passed",
+      "durationMs": 1.2189019999996162,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain preparation rejects every choice command",
+      "status": "passed",
+      "durationMs": 0.7414349999999104,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain combat rejects every choice command",
+      "status": "passed",
+      "durationMs": 4.822871000000305,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain settlement rejects every choice command",
+      "status": "passed",
+      "durationMs": 0.7845600000000559,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain gameOver rejects every choice command",
+      "status": "passed",
+      "durationMs": 0.46770399999968504,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain choice rejects Continue",
+      "status": "passed",
+      "durationMs": 0.4761660000003758,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain preparation rejects Continue",
+      "status": "passed",
+      "durationMs": 0.12888400000019828,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain combat rejects Continue",
+      "status": "passed",
+      "durationMs": 0.31403199999977005,
+      "error": null
+    },
+    {
+      "file": "tests/m5-command-phases.test.ts",
+      "name": "all phase-restricted commands preserve the entire rejected domain gameOver rejects Continue",
+      "status": "passed",
+      "durationMs": 0.2357440000000679,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers 49G first win uses handwritten income, not a production oracle",
+      "status": "passed",
+      "durationMs": 0.5587599999998929,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers 49G first loss uses handwritten income, not a production oracle",
+      "status": "passed",
+      "durationMs": 0.17171800000005533,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers 9G second win uses handwritten income, not a production oracle",
+      "status": "passed",
+      "durationMs": 0.10304499999983818,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers 50G sixth loss uses handwritten income, not a production oracle",
+      "status": "passed",
+      "durationMs": 0.0816130000002886,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 0 advances with payout 0",
+      "status": "passed",
+      "durationMs": 0.21822800000018105,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 1 advances with payout 1",
+      "status": "passed",
+      "durationMs": 0.10101199999962773,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 2 advances with payout 1",
+      "status": "passed",
+      "durationMs": 0.0868609999997716,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 3 advances with payout 2",
+      "status": "passed",
+      "durationMs": 0.08413699999982782,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 4 advances with payout 2",
+      "status": "passed",
+      "durationMs": 0.15818799999988187,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 5 advances with payout 3",
+      "status": "passed",
+      "durationMs": 0.06981500000028973,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers win/loss streak length 6 advances with payout 3",
+      "status": "passed",
+      "durationMs": 0.07827799999995477,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers resets opposite streaks and treats a draw as a loss",
+      "status": "passed",
+      "durationMs": 0.168753999999808,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers pve preserves streak and pays only base and interest",
+      "status": "passed",
+      "durationMs": 0.17003599999998187,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers supply preserves streak and pays only base and interest",
+      "status": "passed",
+      "durationMs": 0.0957140000000436,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers stage 2 has base damage 2 and counts surviving enemy heroes once",
+      "status": "passed",
+      "durationMs": 0.14124300000003132,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers stage 3 has base damage 5 and counts surviving enemy heroes once",
+      "status": "passed",
+      "durationMs": 0.0769759999998314,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers stage 4 has base damage 8 and counts surviving enemy heroes once",
+      "status": "passed",
+      "durationMs": 0.08658099999956903,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers stage 5 has base damage 10 and counts surviving enemy heroes once",
+      "status": "passed",
+      "durationMs": 0.10077199999977893,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers stage 6 has base damage 12 and counts surviving enemy heroes once",
+      "status": "passed",
+      "durationMs": 0.07423100000005434,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers PvE loss and draw deal exactly three regardless of survivors; fatal HP is clamped",
+      "status": "passed",
+      "durationMs": 0.23236899999983507,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers caps interest, advances XP across a boundary and records cap overflow",
+      "status": "passed",
+      "durationMs": 0.21417199999996228,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers is a pure planner, preserving the caller even on rejection",
+      "status": "passed",
+      "durationMs": 12.656770000000051,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"gold\":-1}",
+      "status": "passed",
+      "durationMs": 0.5624159999997573,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"gold\":9007199254740991}",
+      "status": "passed",
+      "durationMs": 0.2547629999999117,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"hp\":101}",
+      "status": "passed",
+      "durationMs": 0.15794800000003306,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"hp\":-1}",
+      "status": "passed",
+      "durationMs": 0.13166799999999057,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"stage\":1}",
+      "status": "passed",
+      "durationMs": 0.11894900000015696,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"stage\":7}",
+      "status": "passed",
+      "durationMs": 0.11504299999978684,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"enemySurvivors\":0.5}",
+      "status": "passed",
+      "durationMs": 0.19330100000024686,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"level\":7,\"xp\":48}",
+      "status": "passed",
+      "durationMs": 0.23323100000015984,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"level\":9,\"xp\":1}",
+      "status": "passed",
+      "durationMs": 0.17688600000019505,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"result\":null}",
+      "status": "passed",
+      "durationMs": 0.12976500000013402,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"streak\":{\"kind\":null,\"count\":1}}",
+      "status": "passed",
+      "durationMs": 0.13865899999973408,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"streak\":{\"kind\":\"win\",\"count\":0}}",
+      "status": "passed",
+      "durationMs": 0.12593900000001668,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"streak\":{\"kind\":\"win\",\"count\":9007199254740991}}",
+      "status": "passed",
+      "durationMs": 0.17423200000030192,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"roundKind\":\"supply\",\"result\":\"draw\"}",
+      "status": "passed",
+      "durationMs": 0.12741100000039296,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 independent economic answers rejects invalid input without producing a plan: {\"roundKind\":\"supply\",\"result\":null,\"enemySurvivors\":1}",
+      "status": "passed",
+      "durationMs": 0.11322999999993044,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 frozen XP and shop uses the complete frozen level 3–9 table",
+      "status": "passed",
+      "durationMs": 0.2810319999998683,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 frozen XP and shop has exactly the 60 selectable heroes in stable code-point order",
+      "status": "passed",
+      "durationMs": 0.17291000000022905,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 frozen XP and shop seed 42 level 3 uses independently tabulated 10-word shop",
+      "status": "passed",
+      "durationMs": 1.7801359999998567,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 frozen XP and shop seed 42 level 9 uses independently tabulated 10-word shop",
+      "status": "passed",
+      "durationMs": 0.14821299999994153,
+      "error": null
+    },
+    {
+      "file": "tests/m5-economy.test.ts",
+      "name": "M5 frozen XP and shop keeps RNG consumption independent of level and allows seed zero",
+      "status": "passed",
+      "durationMs": 0.8936330000001362,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects old schema",
+      "status": "passed",
+      "durationMs": 154.8556490000003,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects unknown digest",
+      "status": "passed",
+      "durationMs": 33.83836799999972,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects protocol",
+      "status": "passed",
+      "durationMs": 39.80362699999978,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects RNG float",
+      "status": "passed",
+      "durationMs": 55.592207000000144,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects gold negative",
+      "status": "passed",
+      "durationMs": 48.999623000000156,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects unbounded XP",
+      "status": "passed",
+      "durationMs": 28.648679999999786,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects unknown round",
+      "status": "passed",
+      "durationMs": 26.283488999999918,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects streak",
+      "status": "passed",
+      "durationMs": 26.254855000000134,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects fake progress",
+      "status": "passed",
+      "durationMs": 33.116371999999956,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects shop lock",
+      "status": "passed",
+      "durationMs": 26.59690099999989,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects shop wrapper",
+      "status": "passed",
+      "durationMs": 28.65739799999983,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects unit wrapper",
+      "status": "passed",
+      "durationMs": 30.360709000000043,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects legacy unit",
+      "status": "passed",
+      "durationMs": 34.29283200000009,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects enemy serial",
+      "status": "passed",
+      "durationMs": 25.02597700000024,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects duplicate unit",
+      "status": "passed",
+      "durationMs": 22.492975000000115,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects item wrapper",
+      "status": "passed",
+      "durationMs": 30.861982999999782,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects duplicate item",
+      "status": "passed",
+      "durationMs": 27.326286999999866,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects duplicate receipt",
+      "status": "passed",
+      "durationMs": 29.81587999999965,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects invented acquisition gold",
+      "status": "passed",
+      "durationMs": 23.746824999999717,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects unknown augment",
+      "status": "passed",
+      "durationMs": 34.88132599999972,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects duplicate offers",
+      "status": "passed",
+      "durationMs": 11.848414999999932,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects invalid choice kind",
+      "status": "passed",
+      "durationMs": 9.879845000000387,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects foreign offer",
+      "status": "passed",
+      "durationMs": 7.830534000000171,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects stale choice",
+      "status": "passed",
+      "durationMs": 9.588406999999734,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects forged early game over even if its finished battle and history are internally consistent",
+      "status": "passed",
+      "durationMs": 125.27430699999968,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat base AD",
+      "status": "passed",
+      "durationMs": 17.928987999999663,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat runtime stat",
+      "status": "passed",
+      "durationMs": 13.946809999999914,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat unknown source",
+      "status": "passed",
+      "durationMs": 8.090233999999782,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat finished running",
+      "status": "passed",
+      "durationMs": 7.047105999999985,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat self target",
+      "status": "passed",
+      "durationMs": 7.982371999999941,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat wrong RNG",
+      "status": "passed",
+      "durationMs": 7.843292999999903,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects rejects combat negative seq",
+      "status": "passed",
+      "durationMs": 11.513570999999956,
+      "error": null
+    },
+    {
+      "file": "tests/m5-serialization.test.ts",
+      "name": "schema5 rejects corrupted domain state without replaying side effects makes an isolated restore and does not issue a new choice, RNG draw or receipt",
+      "status": "passed",
+      "durationMs": 46.95984700000008,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries accepts full uint32 input 0",
+      "status": "passed",
+      "durationMs": 8.39366999999993,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries accepts full uint32 input 42",
+      "status": "passed",
+      "durationMs": 0.41620600000032937,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries accepts full uint32 input 4294967295",
+      "status": "passed",
+      "durationMs": 0.20335599999998522,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries accepts full uint32 input  00042 ",
+      "status": "passed",
+      "durationMs": 0.17694600000004357,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed ",
+      "status": "passed",
+      "durationMs": 0.30251399999997375,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed  ",
+      "status": "passed",
+      "durationMs": 0.15026600000010149,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed -1",
+      "status": "passed",
+      "durationMs": 0.20495800000026065,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed +1",
+      "status": "passed",
+      "durationMs": 0.1537309999998797,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed 1.0",
+      "status": "passed",
+      "durationMs": 0.16926499999999578,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed 1e2",
+      "status": "passed",
+      "durationMs": 0.21594499999991967,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed NaN",
+      "status": "passed",
+      "durationMs": 0.11597400000027847,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed 42abc",
+      "status": "passed",
+      "durationMs": 0.12096100000007937,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed 4294967296",
+      "status": "passed",
+      "durationMs": 0.10031100000014703,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed Infinity",
+      "status": "passed",
+      "durationMs": 0.09906900000032692,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects partial/invalid seed 1 2",
+      "status": "passed",
+      "durationMs": 0.19537399999990157,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries uses one domain-external random word and a separate identity",
+      "status": "passed",
+      "durationMs": 19.444124999999985,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries round-trips UTF8 and invokes isolated history validation after current validation",
+      "status": "passed",
+      "durationMs": 65.18118299999969,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"extra\":true}",
+      "status": "passed",
+      "durationMs": 33.53675499999963,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"kind\":\"wrong\"}",
+      "status": "passed",
+      "durationMs": 61.50165100000004,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":1}",
+      "status": "passed",
+      "durationMs": 9.539573000000019,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":1}",
+      "status": "passed",
+      "durationMs": 3.4804129999997713,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":2}",
+      "status": "passed",
+      "durationMs": 4.005771999999979,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":2}",
+      "status": "passed",
+      "durationMs": 8.431836999999632,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":4}",
+      "status": "passed",
+      "durationMs": 17.37950099999989,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":4}",
+      "status": "passed",
+      "durationMs": 10.580319000000145,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"runId\":\"\"}",
+      "status": "passed",
+      "durationMs": 15.567666999999801,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"createdAt\":\"bad\"}",
+      "status": "passed",
+      "durationMs": 20.870530000000144,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects outer corruption before history {\"currentBattle\":[]}",
+      "status": "passed",
+      "durationMs": 16.13996700000007,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries checks file byte size before reading and bad JSON before history",
+      "status": "passed",
+      "durationMs": 6.197847999999794,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects old domain digest and propagates historical validation failure without touching source",
+      "status": "passed",
+      "durationMs": 52.16970100000026,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 seed and file boundaries rejects a bare M5 state and record/event overflow before history",
+      "status": "passed",
+      "durationMs": 80.21902399999999,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator fixes the queued snapshot and uses only prior committed revision",
+      "status": "passed",
+      "durationMs": 39.685479000000214,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator reports the actual successful in-flight phase before a later queued terminal snapshot",
+      "status": "passed",
+      "durationMs": 57.573345000000245,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator does not report a terminal commit until its failed transaction is successfully retried",
+      "status": "passed",
+      "durationMs": 13.467209000000366,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator stops forever on conflict and preserves token/local capture",
+      "status": "passed",
+      "durationMs": 14.214261999999962,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator retains failed snapshot for retry after quota failure",
+      "status": "passed",
+      "durationMs": 9.86277999999993,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator bounds repeated quota failures to one latest fixed pending snapshot",
+      "status": "passed",
+      "durationMs": 785.2342439999998,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator bounds repeated abort failures to one latest fixed pending snapshot",
+      "status": "passed",
+      "durationMs": 489.0092129999998,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 serial snapshot coordinator fences notification and later queued writes after dispose",
+      "status": "passed",
+      "durationMs": 17.922127000000273,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 owned capture boundaries does not trust shallow frozen inputs and makes every retained child immutable",
+      "status": "passed",
+      "durationMs": 6.621365999999853,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 owned capture boundaries shares only History-owned deeply frozen records, never caller-frozen imitations",
+      "status": "passed",
+      "durationMs": 8.195713000000069,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "M6 owned capture boundaries reuses only branded captures after merge, preserving first immutable history",
+      "status": "passed",
+      "durationMs": 9.306393000000298,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "activation detaches mutable caller data while sharing certified immutable metadata until IDB clones it",
+      "status": "passed",
+      "durationMs": 9.036896999999954,
+      "error": null
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "name": "exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs",
+      "status": "passed",
+      "durationMs": 1408.8667660000006,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay captures tick zero, current prefix, and restores an identical terminal without mutating the active match",
+      "status": "passed",
+      "durationMs": 948.2556910000001,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay validates a running event prefix at ticks 39/40/41 and resumes recording with no repeated tick zero",
+      "status": "passed",
+      "durationMs": 565.4639729999999,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay owns observed inputs and keeps earlier frozen prefixes unchanged across later ticks and completion",
+      "status": "passed",
+      "durationMs": 456.58421,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay brands only detached recorder-owned immutable records, not external frozen lookalikes",
+      "status": "passed",
+      "durationMs": 356.01008100000035,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology",
+      "status": "passed",
+      "durationMs": 304.0370869999997,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay retains frozen units after sale and does not duplicate an ended combat on later choice commands",
+      "status": "passed",
+      "durationMs": 171.9552649999996,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay exposes frozen history/snapshot references after an ordinary completed battle",
+      "status": "passed",
+      "durationMs": 155.4444599999997,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay [T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references",
+      "status": "passed",
+      "durationMs": 661.071629,
+      "error": null
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "name": "M6 isolated battle records and replay records legal empty-roster tick0 defeat exactly once",
+      "status": "passed",
+      "durationMs": 31.509296000000177,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "passed",
+      "durationMs": 326.9920689999999,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "passed",
+      "durationMs": 630.0520159999978,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "passed",
+      "durationMs": 946.4440929999982,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "failed",
+      "durationMs": 9310.997044,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "failed",
+      "durationMs": 17670.382892999998,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "failed",
+      "durationMs": 32302.199827999997,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "failed",
+      "durationMs": 57993.98663099999,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "status": "failed",
+      "durationMs": 91545.026973,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+      "status": "failed",
+      "durationMs": 5403.552479000005,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+      "status": "failed",
+      "durationMs": 22405.522394,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+      "status": "passed",
+      "durationMs": 0.8003139999927953,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+      "status": "passed",
+      "durationMs": 3785.397334999987,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+      "status": "passed",
+      "durationMs": 6.225199999986216,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+      "status": "passed",
+      "durationMs": 143.68982400000095,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+      "status": "passed",
+      "durationMs": 3955.8309420000005,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+      "status": "failed",
+      "durationMs": 7766.620161999977,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+      "status": "failed",
+      "durationMs": 22023.099297999986,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "status": "failed",
+      "durationMs": 18.563950999989174,
+      "error": "Error: Invalid Match save: preparation-ledger-missing"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+      "status": "failed",
+      "durationMs": 9.301944999955595,
+      "error": "Error: Invalid Match save: preparation-ledger-missing"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "status": "failed",
+      "durationMs": 8.835854000004474,
+      "error": "Error: Invalid Match save: preparation-ledger-missing"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+      "status": "failed",
+      "durationMs": 10.75876600004267,
+      "error": "Error: Invalid Match save: preparation-ledger-missing"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+      "status": "failed",
+      "durationMs": 9.68084500002442,
+      "error": "Error: Invalid Match save: preparation-ledger-missing"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+      "status": "passed",
+      "durationMs": 1.5663949999725446,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+      "status": "passed",
+      "durationMs": 1642.9234169999836,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+      "status": "failed",
+      "durationMs": 7790.936657999991,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+      "status": "passed",
+      "durationMs": 503.0165150000248,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+      "status": "passed",
+      "durationMs": 441.4743010000093,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+      "status": "passed",
+      "durationMs": 427.8847240000032,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+      "status": "passed",
+      "durationMs": 529.6318150000297,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "name": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+      "status": "failed",
+      "durationMs": 11079.601878000016,
+      "error": "Error: Test timed out in 5000ms."
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse folds a running full prefix once per restore, never across inputs or calls",
+      "status": "passed",
+      "durationMs": 87.49207399999977,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse retains two full-ledger validations for finished combat with a shorter historical prefix",
+      "status": "passed",
+      "durationMs": 262.5851419999999,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse still rejects a running basis prefix mutation after the complete fold succeeded",
+      "status": "passed",
+      "durationMs": 33.47705500000029,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse preserves object rejection if a persistentGrowth accessor changes the already-read ledger",
+      "status": "passed",
+      "durationMs": 8.970759000000271,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "name": "B8 within-restore complete resource projection reuse preserves object rejection if a preparation accessor changes the already-read ledger",
+      "status": "passed",
+      "durationMs": 8.210135000000264,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything",
+      "status": "passed",
+      "durationMs": 4413.2873070000005,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore resumed combat has identical complete final state and events to uninterrupted combat",
+      "status": "passed",
+      "durationMs": 197.5009740000005,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore retains input and zero-delta commit for immediate empty-board finishes",
+      "status": "passed",
+      "durationMs": 16.441740999999638,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects missing, forged or changed basis and running resources",
+      "status": "passed",
+      "durationMs": 12.311671000000388,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects frozen plan, receipt, birth, evidence, counter and source-delta corruption",
+      "status": "passed",
+      "durationMs": 77.09999500000049,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore keeps receipt schema rejection through the shared lineage validator",
+      "status": "passed",
+      "durationMs": 120.64075000000048,
+      "error": null
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "name": "B8 default Match own restore rejects an unearned choice, wrong offered state and forged post-settlement resources",
+      "status": "passed",
+      "durationMs": 137.21347800000058,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects preparation gold inflation without any command or income receipt",
+      "status": "passed",
+      "durationMs": 33.344364999999925,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects four free experience without spending gold",
+      "status": "passed",
+      "durationMs": 64.34448599999996,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects coordinated free experience and a purported matching gold payment",
+      "status": "passed",
+      "durationMs": 27.214789999999994,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary valid rngState cursor at opening",
+      "status": "passed",
+      "durationMs": 16.875322999999753,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary valid choiceRngState cursor at opening",
+      "status": "passed",
+      "durationMs": 23.00037199999997,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary valid rewardRngState cursor at opening",
+      "status": "passed",
+      "durationMs": 15.94793800000025,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary valid battleSeedRngState cursor at opening",
+      "status": "passed",
+      "durationMs": 16.05850499999997,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary next match event serial",
+      "status": "passed",
+      "durationMs": 16.047967999999855,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed rejects arbitrary shop generation without refresh",
+      "status": "passed",
+      "durationMs": 15.198181000000204,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/match-authority.test.ts",
+      "name": "restore audit: Match authority gaps closed refuses the old format without a command ledger",
+      "status": "passed",
+      "durationMs": 11.667312999999922,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+      "name": "call-local preparation replay boundaries keeps seed, full commands and short prefixes independent",
+      "status": "passed",
+      "durationMs": 102.6049979999998,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+      "name": "call-local preparation replay boundaries does not equate same-length command parameters or compressed tick endpoints",
+      "status": "passed",
+      "durationMs": 124.78645299999971,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+      "name": "collection replays each battle once, including unchanged-combat equipment command: false",
+      "status": "passed",
+      "durationMs": 532.9746369999998,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger-scope.test.ts",
+      "name": "collection replays each battle once, including unchanged-combat equipment command: true",
+      "status": "passed",
+      "durationMs": 1574.585419,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 42 accepts the original full collection and file",
+      "status": "passed",
+      "durationMs": 629.6272600000002,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 42 rejects only gold +1 in object restore with the original history unchanged",
+      "status": "passed",
+      "durationMs": 113.49897200000032,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 42 rejects only gold +1 in json restore with the original history unchanged",
+      "status": "passed",
+      "durationMs": 105.16955400000006,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 42 rejects XP and gold changed together to imitate an unrecorded purchase",
+      "status": "passed",
+      "durationMs": 113.26862600000004,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 42 rejects only gold +1 through collection/envelope/file, even with an empty history callback",
+      "status": "passed",
+      "durationMs": 435.29945799999996,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 1 accepts the original full collection and file",
+      "status": "passed",
+      "durationMs": 255.20713300000034,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 1 rejects only gold +1 in object restore with the original history unchanged",
+      "status": "passed",
+      "durationMs": 46.10691399999996,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 1 rejects only gold +1 in json restore with the original history unchanged",
+      "status": "passed",
+      "durationMs": 63.17674999999963,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 1 rejects XP and gold changed together to imitate an unrecorded purchase",
+      "status": "passed",
+      "durationMs": 34.89223299999958,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "previous battle plus next preparation seed 1 rejects only gold +1 through collection/envelope/file, even with an empty history callback",
+      "status": "passed",
+      "durationMs": 181.34530300000006,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants keeps failed and true no-op commands completely unchanged",
+      "status": "passed",
+      "durationMs": 8.446669999999358,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick",
+      "status": "passed",
+      "durationMs": 958.6523780000007,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants rejects a forged unbounded compressed tick count before any repeated dispatch",
+      "status": "passed",
+      "durationMs": 54.33380399999987,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants rejects gold altered only during final object detachment",
+      "status": "passed",
+      "durationMs": 94.6611240000002,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants rejects preparationLedger altered only during final object detachment",
+      "status": "passed",
+      "durationMs": 46.666745999999875,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/preparation-ledger.test.ts",
+      "name": "preparation command ledger invariants rejects omitted, forged and renamed match events and external grant commands",
+      "status": "passed",
+      "durationMs": 141.65781600000082,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/verified-restore-cache.test.ts",
+      "name": "process-local exact verified input cache bounds entries and bytes, evicts least-recently-used, and copies on ingress/egress",
+      "status": "passed",
+      "durationMs": 4.664122000000134,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/verified-restore-cache.test.ts",
+      "name": "process-local exact verified input cache never treats a hash collision as exact input equality",
+      "status": "passed",
+      "durationMs": 3.0626549999999497,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/verified-restore-cache.test.ts",
+      "name": "process-local exact verified input cache cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted",
+      "status": "passed",
+      "durationMs": 685.0358509999999,
+      "error": null
+    },
+    {
+      "file": "tests/restore-audit/verified-restore-cache.test.ts",
+      "name": "process-local exact verified input cache collection keys include every battle byte and never borrow a standalone-state cache on a miss",
+      "status": "passed",
+      "durationMs": 720.7703729999998,
+      "error": null
+    }
+  ]
+}

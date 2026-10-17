@@ -1,0 +1,25 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/m8-b5-equipment-history.test.ts --reporter=default --reporter=json --outputFile=/tmp/batch-b-sync/b5.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/m8-b5-equipment-history.test.ts (9 tests) 24211ms
+   ✓ B5 audit R1: equipment roll level belongs to its round history (8)
+     ✓ rejects a historical level5 roll forged as level7 with RNG-consistent two completed items 2644ms
+     ✓ preserves a legal pre-F roll through current, settled and historical save/restore 6931ms
+     ✓ allows the first equip after same-round F at the upper bound, not only the starting level 5808ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  16:10:43
+   Duration  26.34s (tests 93%, transform 6%, import 1%)
+
+JSON report written to /tmp/batch-b-sync/b5.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
