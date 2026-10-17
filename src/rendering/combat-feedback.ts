@@ -34,6 +34,7 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${source(event.source)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix} ${source(event.source)} 复活 ${name(event.unitId)}（生命 ${event.hp}）`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'activityChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
       const text = m8EventText(event, name, source); return text && `${prefix} ${text}`;
@@ -48,6 +49,7 @@ export function viewEventLine(event: DisplayCombatEvent, name: UnitNameLookup = 
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${name(event.sourceId)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix} ${name(event.sourceId)} 复活 ${name(event.unitId)}（生命 ${event.hp}）`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'packetDamage': return `${prefix} ${name(event.sourceId)} → ${name(event.targetId)}：${DAMAGE[event.damageType]}实际生命伤害 ${event.hpDamage}，护盾吸收 ${event.absorbed}${event.critical ? ' · 暴击' : ''}`;
     case 'heal': return `${prefix} ${name(event.targetId)} 恢复生命 ${event.actual}`;
