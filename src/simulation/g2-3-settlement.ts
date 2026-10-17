@@ -7,18 +7,22 @@ import type { MatchState,MatchEvent } from './match-types';
 import type { CombatState } from './combat-types';
 import { advanceG23Economy,type G23BattleFacts } from './g2-3-economy';
 import type { Team } from './board';
+import { TACTICIANS_CROWN_ID } from './deployment-cap';
 export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp'):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
  const allies=combat.units.filter(u=>u.team===team&&!u.definitionId.startsWith('g23-'));
+ // 约定值 G24-CROWN-GOLD-01: only crowns bound to units deployed at combat start roll; the holder need not survive.
+ const crowns=allies.reduce((n,u)=>n+(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item'&&p.source.definitionId===TACTICIANS_CROWN_ID).length,0);
  return {battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
  conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive).length,
- rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
+ rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0),...(crowns?{crowns}:{})};
 }
 export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{return g23BattleFacts(combat,'player',state.round,state.m8.round.kind==='pvp'?'pvp':'pve');}
 export function commitG23Settlement(state:MatchState,facts:G23BattleFacts,policy?:import('./loot-runtime').UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
  const p=readG23Progress(state);if(!p||p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId===facts.battleId))return state;
  const planned=advanceG23Economy(p,facts);let committed=writeG23Progress(state,planned.progress);
- for(const payout of g23BattlePayouts(facts,planned.progress.conquest.chestsOpened,p.conquest.chestsOpened)){const granted=grantMechanicGold(committed,payout);if(!granted.ok)throw Error(granted.reason);committed=granted.state;}
+ const receipt=planned.progress.economyReceipts.at(-1) as import('./g2-3-economy').G23EconomyAction;
+ for(const payout of g23BattlePayouts(facts,planned.progress.conquest.chestsOpened,p.conquest.chestsOpened,receipt.crownGold??0)){const granted=grantMechanicGold(committed,payout);if(!granted.ok)throw Error(granted.reason);committed=granted.state;}
  committed=drainG23Rewards(committed,policy,events);
  return !p.conquest.radiantConversion&&planned.progress.conquest.radiantConversion?applyG23Radiant(committed):committed;
 }
@@ -34,11 +38,12 @@ export function g23RadiantRound(state:MatchState):number|undefined{
  return receipt?.kind==='battle'?receipt.facts.round:undefined;
 }
 
-export function g23BattlePayouts(facts:G23BattleFacts,opened:number,before:number){
+export function g23BattlePayouts(facts:G23BattleFacts,opened:number,before:number,crownGold=0){
  const payouts:{receiptId:string;source:string;amount:number}[]=[];
  if(facts.highRollerGold)payouts.push({receiptId:`g23:high-roller:${facts.battleId}`,source:'high-roller',amount:facts.highRollerGold});
  for(const chest of G23_CONQUEROR_CHESTS.slice(before,opened)){
   const amount=Number(g23ConquerorReward(chest).Gold??0);if(amount)payouts.push({receiptId:`g23:conqueror:${chest.tier}:gold`,source:'conqueror-chest',amount});
  }
+ if(crownGold)payouts.push({receiptId:`g23:crown:${facts.battleId}`,source:'tacticians-crown',amount:crownGold});
  return payouts;
 }
