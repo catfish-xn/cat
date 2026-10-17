@@ -3,6 +3,7 @@ import { g23ExperimentEffects } from './g2-3-experiment';
 import { projectG23Summons,g23SionTeam } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { getCatalogRoundByOrdinal } from './round-selectors';
+import { ROUND_CATALOG } from './content/round-catalog';
 import { g23ConversionProgramValues } from './g2-3-combat';
 import { modifier,stat,trigger } from './content/item-programs';
 import { g23FormStats } from './g2-3-forms';
@@ -26,10 +27,14 @@ import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
+/** Overtime ordinals lie past the catalog (after 6-7); they count as the stage after the last catalog stage. */
+function supportStage(ordinal: number): number {
+  return ROUND_CATALOG.find(r => r.ordinal === ordinal)?.stage ?? Math.max(...ROUND_CATALOG.map(r => r.stage)) + 1;
+}
 /** G2-4b stage-scaled artifacts bind one concrete program per snapshot; combat never sees the table. */
 function stageProgram(program: ItemProgram, round: number): ItemProgram {
   const { byStage, ...rest } = structuredClone(program); if (!byStage) return rest;
-  const flat = byStage.flat[Math.min(getCatalogRoundByOrdinal(round).stage, byStage.flat.length) - 1];
+  const flat = byStage.flat[Math.min(supportStage(round), byStage.flat.length) - 1];
   return { ...rest, triggers: (rest.triggers ?? []).map(t => ({ ...t, effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, flat } } : e) })) };
 }
 export interface StrategyCatalog {

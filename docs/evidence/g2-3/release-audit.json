@@ -158,7 +158,7 @@
     "src/simulation/loot-types.ts": "fadf195e8b369fb44a670d21caf7469b7641963f9216ccf86ab74ad13abba029",
     "src/simulation/loot-view.ts": "a08f55cbb24d5ef42fe913da76b70fa6cc3e676b52e11923f026cad5d9652f01",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "b787ffd4930c5add4bada1ce76a2ef8fe65de9a69539c5a7127450c238eac0d0",
+    "src/simulation/m8/contracts.ts": "8e788c57f238c4d0a61893545897ac53145341c4ee5ae3c325a3f82aa97a9ffc",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "85beb9cbfc32df8f4c370e69f8cf081b47962f134b3c37a800890d28e32fb7d7",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -183,7 +183,7 @@
     "src/simulation/m8/triggers.ts": "6c402fa3a345e10514438965bac42576756ea778bd9be614df3746328d0a276a",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "62842614386a7ae400f87bec1cebe52da6e12b3778318f1f83a2337cc2bd8184",
+    "src/simulation/m8/version.ts": "a988218b72d93d773f9656a0b8bb4fb1aa730ca17d06bd25d43f74f740953057",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
     "src/simulation/match.ts": "1709a711808135dff0c85dd7a944e88604ee402a71b352382a8222bf2e32a8c7",
@@ -221,7 +221,7 @@
     "src/simulation/shared-pool.ts": "0e6e2947fb10b638125f80bb6a493d5c770d71ffaa460a5b8a0e94ca41756d17",
     "src/simulation/shop.ts": "60ba064ab8c2a1edab5ce957fc63bdc10e294ca27cdd62d2e6e78c2340314f45",
     "src/simulation/strategy-g2-2.ts": "a265b54894411142e0230795bcea1bf76dc8c28bdbfc8b8fd4a1f1d18a728b39",
-    "src/simulation/strategy-snapshot.ts": "e32c4b57287fc7faec7fb727ad5ad4ec53dfca3d324c93e975910bac3a2168d2",
+    "src/simulation/strategy-snapshot.ts": "3bfde39d5ca53d7873d4dcea324fafdfb058f07384909d342b72a1c34c729ee4",
     "src/simulation/strategy-types.ts": "2d27a001b3b2ebffbfd135543252053b14985fdf72c33ff973f055c1949be571",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
@@ -239,15 +239,15 @@
   "integrationBaseCommit": "19aa9f1",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:27aaca67",
+    "contentDigest": "fnv1a32-utf16:a9047429",
     "lootReplayDigest": "fnv1a32-utf16:42389b9c",
-    "rulesVersion": "s13-g2-3-v2",
-    "contentVersion": "s13-14.24b-g2-3-v2",
+    "rulesVersion": "s13-g2-3-v3",
+    "contentVersion": "s13-14.24b-g2-3-v3",
     "schemaVersion": 7,
     "previousContentDigest": "fnv1a32-utf16:299ec0d0",
     "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
     "traceHashes": {
-      "state": "4e884bad2f90f0d2f5e6397a9311027cfadd6a3f7a29afa208c171413f9e3490",
+      "state": "23b13c041343ea8f446c48dda59deb1ce26637a734b68ef43cf55d3826dfa29a",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
     },
@@ -285,14 +285,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 620004,
-          "currentBytes": 689836,
+          "currentBytes": 689974,
           "previousSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0",
-          "currentSha256": "56c47a3a59453369b6eae4b1b708ace641583cd13aae8f78581950d7a438e330",
+          "currentSha256": "d2d6e891fe974a355a0654f1153817a21015521e1a47cd015b78deaefa9d209b",
           "firstDifferentByte": 11
         },
         "states": 67,
-        "gzipSha256": "56c47a3a59453369b6eae4b1b708ace641583cd13aae8f78581950d7a438e330",
-        "stateUtf8Sha256": "92b1a65c4b5648bc78a1ccce59c6c850aeaeb0f6109d476c735647542e21dd3d",
+        "gzipSha256": "d2d6e891fe974a355a0654f1153817a21015521e1a47cd015b78deaefa9d209b",
+        "stateUtf8Sha256": "94b343b58aad3fa94be4e343d0f7fd94e5e499988a766152e6c7e9821dd42d06",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0"
       },
@@ -1875,14 +1875,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 638531,
-          "currentBytes": 713505,
+          "currentBytes": 713654,
           "previousSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd",
-          "currentSha256": "92489db8f313e21b924d0f52322e160c00f0b2597c02b297cbeff971518c88d1",
+          "currentSha256": "edd8467c5a92fe820b0f2175630f1d5d553249ecd353cfe7872cca2a7a486aed",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "92489db8f313e21b924d0f52322e160c00f0b2597c02b297cbeff971518c88d1",
-        "stateUtf8Sha256": "1f3a285c1425a36dba0cbd2990376844f8bb0a4f94b13301846819e502cf6608",
+        "gzipSha256": "edd8467c5a92fe820b0f2175630f1d5d553249ecd353cfe7872cca2a7a486aed",
+        "stateUtf8Sha256": "fb78055fa67e02a4dd355ccf0b193c0a08c0242e7d07cab8c4d7c505871fa940",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd"
       },
@@ -6578,12 +6578,12 @@
       }
     }
   },
-  "candidateSha256": "1f90afd8f8f101f91d13f26d78d1a0d41afb7525fcb61f8fffe65d965980ef56",
+  "candidateSha256": "d7efe72f018bcc8c5ff3a472471638f14d25315f0f04bfea2fbc0e91fe4e5367",
   "goldenByteEvidence": {
     "previousBytes": 101416,
     "currentBytes": 99700,
     "previousSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-    "currentSha256": "1f90afd8f8f101f91d13f26d78d1a0d41afb7525fcb61f8fffe65d965980ef56",
+    "currentSha256": "d7efe72f018bcc8c5ff3a472471638f14d25315f0f04bfea2fbc0e91fe4e5367",
     "firstDifferentByte": 13
   }
 }

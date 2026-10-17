@@ -15,6 +15,7 @@ import {G23_POLICY} from '../src/simulation/content/g2-3-policy';
 import {healView,packets} from './helpers/replay2-views';
 import {hexDistance} from '../src/simulation/board';
 import {getCatalogRoundByOrdinal} from '../src/simulation/round-selectors';
+import {getMultiplayerRoundById} from '../src/simulation/multiplayer-round';
 
 const IMPLEMENTED=['TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnZhonyasParadox','TFT9_Item_OrnnDeathfireGrasp','TFT_Item_Artifact_Mittens','TFT_Item_Artifact_TalismanOfAscension',
  'TFT_Item_Artifact_RapidFirecannon','TFT_Item_Artifact_SeekersArmguard','TFT_Item_Artifact_SilvermereDawn',
@@ -318,6 +319,10 @@ it.each([['TFT_Item_Artifact_WitsEnd',[42,42,60,75,90,100,100,100]],['TFT_Item_A
  const stages=[1,2,3,4,5,6,7].filter(stage=>{try{roundOfStage(stage);return true;}catch{return false;}});
  expect(stages.length).toBeGreaterThan(3);
  for(const stage of stages)expect(boundFlat(id,roundOfStage(stage))).toEqual([table[stage-1]]);
+});
+it.each([['TFT_Item_Artifact_WitsEnd',100],['TFT_Item_Artifact_LichBane',480]] as const)('%s binds the stage after the catalogue in multiplayer overtime',(id,value)=>{
+ // Overtime ordinals lie past the catalogue (6-7); they read as stage 7, the same rule as G2-4b support items.
+ for(const roundId of ['overtime-1','overtime-5'])expect(boundFlat(id,getMultiplayerRoundById(roundId).ordinal)).toEqual([value]);
 });
 it('Wit\'s End adds stage magic damage to each attack and heals 35% of magic damage dealt',()=>{
  const initial=frozen(start('TFT_Item_Artifact_WitsEnd'),['e']),state={...initial,units:initial.units.map(u=>u.id==='p'?{...u,hp:100,mana:0,maxMana:100000}:u)};
