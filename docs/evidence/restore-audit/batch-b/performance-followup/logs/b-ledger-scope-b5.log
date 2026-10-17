@@ -1,0 +1,92 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/m8-b5-equipment-history.test.ts (9 tests | 6 failed) 67799ms
+   ❯ B5 audit R1: equipment roll level belongs to its round history (8)
+     × rejects a historical level5 roll forged as level7 with RNG-consistent two completed items 5925ms
+     × rejects a roll below the previous settlement level in a settled supply round 5668ms
+     × rejects a roll below the previous settlement level in a unsettled current round 5415ms
+     × preserves a legal pre-F roll through current, settled and historical save/restore 16172ms
+     × allows the first equip after same-round F at the upper bound, not only the starting level 11065ms
+     × validates round economy before consulting its level bounds for equipment 5001ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > rejects a historical level5 roll forged as level7 with RNG-consistent two completed items
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:92:3
+     90|   beforeAll(() => { archivedState = historicalProgression(true, archiv…
+     91|   beforeAll(() => { historicalProgression(false); });
+     92|   it('rejects a historical level5 roll forged as level7 with RNG-consi…
+       |   ^
+     93|     const state = historicalProgression();
+     94|     expect(restoreMatch(serializeMatch(state))).toEqual(state);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > rejects a roll below the previous settlement level in a settled supply round
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > rejects a roll below the previous settlement level in a unsettled current round
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:105:80
+    103|     rejectWithoutRepair(raw);
+    104|   });
+    105|   it.each([['settled supply round', '4-4'], ['unsettled current round'…
+       |                                                                                ^
+    106|     'rejects a roll below the previous settlement level in a %s', (_la…
+    107|       const state = historicalProgression();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > preserves a legal pre-F roll through current, settled and historical save/restore
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:125:3
+    123|     rejectWithoutRepair(raw);
+    124|   });
+    125|   it('preserves a legal pre-F roll through current, settled and histor…
+       |   ^
+    126|     let state = historicalProgression();
+    127|     const roll = structuredClone(state.equipmentState.rolls.find(r => …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > allows the first equip after same-round F at the upper bound, not only the starting level
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:138:3
+    136|     expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    137|   });
+    138|   it('allows the first equip after same-round F at the upper bound, no…
+       |   ^
+    139|     let state = historicalProgression(false);
+    140|     expect(state.equipmentState.rolls).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > validates round economy before consulting its level bounds for equipment
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:148:3
+    146|     expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    147|   });
+    148|   it('validates round economy before consulting its level bounds for e…
+       |   ^
+    149|     const state = historicalProgression();
+    150|     expect(restoreMatch(serializeMatch(state))).toEqual(state);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 3 passed (9)
+   Start at  15:12:51
+   Duration  69.84s (tests 97%, transform 2%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

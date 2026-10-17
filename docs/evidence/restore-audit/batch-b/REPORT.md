@@ -97,3 +97,7 @@
 - 旧 raw fixture 不含新强制账本，最终迁移应由合法公开命令重录；本轮没有重录，不能通过补伪造日志让旧 fixture 看似兼容。
 - 未完成：B5 性能回归、33战与全套、最终版本/夹具迁移、远端 CI、独立签收、合并。不可宣布可合入。
 - 平台推送受限，交接使用 git bundle；不绕过，不把本地提交描述为远端存在。
+
+## 后续性能收尾（追加记录）
+
+见 [performance-followup/REPORT.md](performance-followup/REPORT.md)。局部 collection 顺推及真实战斗 proof 已实现、33 场验证完成，独立恢复多次调用的原 5 秒性能失败仍未闭环；本分支仍为不可签收 WIP。
