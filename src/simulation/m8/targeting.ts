@@ -26,12 +26,12 @@ export function selectTargets(selector: TargetSelector, env: TargetEnvironment):
   integer(selector.maxTargets); if(selector.radius!==null)integer(selector.radius);
   const holder=get(env,env.holderId);if(!holder)return[];
   const primary=get(env,env.primaryId), previous=get(env,env.previousId), actor=get(env,env.eventActorId);
-  const anchor=selector.anchor==='holder'?holder.cell:selector.anchor==='primary-target'?primary?.cell:selector.anchor==='previous-target'?previous?.cell:env.eventActorCell ?? actor?.cell;
+  const anchor=selector.anchor==='holder'?holder.cell:selector.anchor==='primary-target'?primary?.cell:selector.anchor==='previous-target'?previous?.cell:selector.anchor==='event-target'?get(env,env.eventTargetId)?.cell:env.eventActorCell ?? actor?.cell;
   if(!anchor)return[];
   const candidateIds=selector.candidates==='event-actor'?[env.eventActorId]:selector.candidates==='event-target'?[env.eventTargetId]:selector.candidates==='bound-target'?env.boundTargetIds??[]:null;
   const line=selector.geometry==='line-to-primary'&&primary?shortestPath(env.board,holder.cell,primary.cell).slice(0,selector.radius??100):null;
   const qualified=(u:TargetUnit)=>isSelectable(u,holder,env)&&(!line||line.some(c=>sameCell(c,u.cell)))&&(selector.relation==='self'?u.id===holder.id:selector.relation==='ally'?u.team===holder.team:u.team!==holder.team)
-    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludeSummons||!u.summon)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
+    &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludeSummons||!u.summon)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.anchor!=='event-target'||u.id!==env.eventTargetId)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
   let candidates=env.units.filter(u=>(candidateIds===null||candidateIds.includes(u.id))&&qualified(u));
   const burnt=(u:TargetUnit)=>env.source&&u.burnSources?.some(s=>s.ownerId===env.source!.ownerId&&s.sourceKind===env.source!.sourceKind&&s.definitionId===env.source!.definitionId&&s.instanceId===env.source!.instanceId&&s.parentItemInstanceId===env.source!.parentItemInstanceId)?1:0;
   candidates.sort((a,b)=>{

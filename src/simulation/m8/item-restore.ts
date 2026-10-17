@@ -4,7 +4,7 @@ import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
 import type { CombatUnit } from '../combat-types';
 import { MAX_COMBAT_TICKS } from '../combat-types';
-import type { Effect, Source, StatusApplication } from './contracts';
+import type { Effect, Source, StatusApplication, TriggerDefinition } from './contracts';
 import { canonicalContent } from '../content';
 import { canonicalSource, effectIdentity, validateIdentity } from './identity';
 import { compileMechanismDefinitions } from './s13-definitions';
@@ -13,6 +13,7 @@ import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
 import { survivalConsumptionKeys } from './shield';
 import { grantOfSource, grantedMaxHpBasis } from './combat-item-programs';
+import { DEFAULT_BOARD } from '../board';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
 // Lifetime is exactly one synchronous restore. Mutable external objects are
@@ -135,6 +136,22 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
  return new Set(bases.flatMap(b=>[...bonuses].map(n=>Math.floor((basis.base+b.flat)*(10000+b.bps+n)/10000))));
 }
+/** The executor projects immediate, uncapped self AP stacks into the legacy
+ * runtime rather than status contributions. Current growth must match receipts
+ * exactly, even though an earlier spell may have sampled fewer stacks. */
+export function triggeredAbilityPowerGrowth(unit:CombatUnit,combatId:string):number {
+ let total=0;
+ for(const d of compileMechanismDefinitions(unit,combatId).eventTriggers ?? []) {
+  if(d.selector.relation!=='self')continue;
+  const count=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source))?.triggerCount ?? 0;
+  for(const effect of d.effects) {
+   if(effect.kind!=='modify-stat'||effect.duration.kind!=='combat'||effect.activation!=='immediate'||effect.stackPolicy.kind!=='add-stacks'||effect.stackPolicy.cap!==null)continue;
+   const m=effect.modifier;
+   if(m.stat==='abilityPower'&&m.unit==='flat'&&m.value.kind==='constant'&&m.condition.kind==='always')total+=count*m.value.amount;
+  }
+ }
+ return total;
+}
 type SampledStatParts = { fixed: number; flat: number; bps: number };
 /** Merge reachable sums, not equipment histories. Equal parts have identical future
  * transitions; keep all three parts until final rounding so no forged values enter. */
@@ -147,12 +164,39 @@ function mergeSampledStatParts(values: readonly SampledStatParts[], field: keyof
  }
  return [...reachable.values()];
 }
+/** Kill/assist triggers are action-limited. Check their source-bound action
+ * receipts before any count-sized allocation, also for standalone callers.
+ * Match restore independently authenticates these facts from its input basis. */
+function settledSampledStatCount(unit:CombatUnit,d:TriggerDefinition,combatId:string):number {
+ const r=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source));
+ if(!r)return 0;
+ const check=(v:unknown)=>{if(!v)throw new Error('Invalid Match save: sampled stat trigger count');};
+ check(Number.isSafeInteger(r.triggerCount)&&r.triggerCount>=0);
+ if(d.event==='kill-or-assist') {
+  const tick=unit.mechanismState?.sampledAtTick ?? -1;
+  check(Number.isSafeInteger(tick)&&tick>=0&&tick<=MAX_COMBAT_TICKS);
+  // A board has at most one initial life per cell and one Forge revival per
+  // cell per tick. The whole-save validator uses the tighter actual roster.
+  check((tick>0||r.triggerCount===0)&&r.triggerCount<=DEFAULT_BOARD.columns*DEFAULT_BOARD.rows*(tick+1));
+  const key=effectIdentity(combatId,d.source,unit.id).key;let settled=0;
+  for(const [raw,amount] of Object.entries(unit.triggerLedger?.actionCounts ?? {})) {
+   let tuple:unknown;try{tuple=JSON.parse(raw);}catch{check(false);}
+   if(!Array.isArray(tuple)||tuple[0]!==key)continue;
+   check(tuple.length===4&&tuple[1]===d.id&&tuple[2]===unit.id&&Number.isSafeInteger(tuple[3])&&tuple[3]>=0
+    &&Number.isSafeInteger(amount)&&amount>=1&&amount<=d.maxPerAction);
+   settled+=amount;
+  }
+  check(settled===r.triggerCount);
+ }
+ return r.triggerCount;
+}
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
  if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.combatItemGrants?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ const compiled=compileMechanismDefinitions(unit,combatId);
  let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
@@ -162,7 +206,8 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   const key=canonicalSource(d.source);if(seen.has(key))continue;seen.add(key);
   const m=d.effect.modifier;
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');
-  const initial=compileMechanismDefinitions(unit,combatId).survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
+  const initial=compiled.survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
+  const stackingTrigger=m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'?compiled.eventTriggers?.find(t=>t.effects.some((_,i)=>canonicalSource({...t.source,effectIndex:t.source.effectIndex+i})===key)):undefined;
   let options:number[];
   if(periodic) {
    // Live tasks disappear on death. Bound the history by the original schedule
@@ -178,12 +223,20 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
    const n=Math.min(due,periodic.pulseLimit ?? due,d.effect.stackPolicy.cap ?? due);
    const amount=m.value.amount;options=Array.from({length:n+1},(_,i)=>i*amount);
   }
+  else if(m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'&&stackingTrigger) {
+   // A trigger owns a block of effect indices: AP need not be its first effect.
+   // The sample time may be unknown (at = 0), but the settled count is retained.
+   const done=settledSampledStatCount(unit,stackingTrigger,combatId);
+   const runtime=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(stackingTrigger.source));
+   const n=at===0||runtime&&runtime.startsAtTick<=at?Math.min(d.effect.stackPolicy.cap??done,done):0;
+   const amount=m.value.amount;options=Array.from({length:n+1},(_,i)=>i*amount);
+  }
   // G2-4b chest: a granted item may arrive after the sample (or the sample tick is unknown), so it is always [0, amount].
   else if(m.value.kind==='constant')options=grant?[0,m.value.amount]:initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
     if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=mergeSampledStatParts(values,field,options);continue;}
-    const cap=(compileMechanismDefinitions(unit,combatId).eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
+    const cap=(compiled.eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
     if(cap===undefined||cap===null)throw new Error('Unbounded enabled AP counter');
     options=Array.from({length:cap+1},(_,i)=>i*value.perCount);
   } else options=[0];
