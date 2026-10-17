@@ -1,3 +1,4 @@
+import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { deepStrictEqual } from 'node:assert/strict';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, buyUnit, rerollShop, selectChoice, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
@@ -472,9 +473,35 @@ describe('M7/S7 combat equipment command replay', () => {
         return {state:advance(live.finish().state),battles:live.history.completedRecords};
       })();
     let opening = first.state;
-    const inputId = `item-${opening.nextItemSerial}`;
-    if (reforge) opening = accepted(grantMechanicItem(opening,{receiptId:`m10:${mode}`,source:'test',
-      definitionId:mode === 'component-reforger' ? 'sword' : 'deathblade'}));
+    let inputId = '';
+    if (reforge) {
+      // The seed-26 public route already owns the inputs: never inject a target
+      // item outside its preparation command ledger merely to exercise the tool.
+      const inventory = opening.items.filter(item => item.location.kind === 'inventory');
+      if (mode === 'component-reforger') {
+        const item = inventory.find(item => ITEM_DEFINITIONS[item.definitionId]?.kind === 'component');
+        if (!item) throw new Error('Public reforge route has no component input');
+        inputId = item.id;
+      } else {
+        const complete = inventory.find(item => ITEM_DEFINITIONS[item.definitionId]?.recipe);
+        if (complete) inputId = complete.id;
+        else {
+          let inputs: readonly [string, string] | undefined;
+          for (const definition of Object.values(ITEM_DEFINITIONS)) {
+            if (!definition.recipe) continue;
+            const first = inventory.find(item => item.definitionId === definition.recipe![0]);
+            const second = inventory.find(item => item.id !== first?.id && item.definitionId === definition.recipe![1]);
+            if (first && second) { inputs = [first.id, second.id]; break; }
+          }
+          if (!inputs) throw new Error('Public reforge route has no legal completed recipe');
+          const combined = combineItems(opening, inputs[0], inputs[1]);
+          opening = accepted(combined);
+          const event = combined.events.find(event => event.type === 'itemCombined');
+          if (!event || event.type !== 'itemCombined') throw new Error('Public combination emitted no item');
+          inputId = event.itemId;
+        }
+      }
+    }
     const tool = opening.consumables.find(tool => tool.definitionId === (reforge ? mode : 'magnetic-remover'))!;
     expect(tool).toBeDefined();
     const target = reforge ? {kind:'item' as const,itemId:inputId}
