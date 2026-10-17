@@ -24,10 +24,16 @@ export const isKnownChoiceKind = (kind: string): boolean => KNOWN_KINDS.has(kind
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);
 const int = (value: unknown): number | undefined => (Number.isInteger(value) ? value as number : undefined);
 
+/** Popup heading for a mechanic kind the rules send without a display title (client name: 锻造器). */
+function defaultTitle(choice: object): string | undefined {
+  const { kind, offers } = choice as { kind?: unknown; offers?: unknown };
+  return kind === 'forge' && Array.isArray(offers) ? `锻造器 · ${offers.length} 选 1` : undefined;
+}
+
 /** Reads the optional `display` block defensively; malformed fields are dropped, never thrown. */
 export function readChoiceExtras(choice: object): GenericChoiceExtras {
-  const raw = (choice as { display?: unknown }).display;
-  if (!raw || typeof raw !== 'object') return {};
+  const raw = (choice as { display?: unknown }).display, fallbackTitle = defaultTitle(choice);
+  if (!raw || typeof raw !== 'object') return fallbackTitle ? { title: fallbackTitle } : {};
   const display = raw as Record<string, unknown>;
   const offers = Array.isArray(display.offers) ? display.offers.flatMap(entry => {
     if (!entry || typeof entry !== 'object') return [];
@@ -37,7 +43,7 @@ export function readChoiceExtras(choice: object): GenericChoiceExtras {
     return [{ id, name: text(offer.name) ?? id, description: text(offer.description) ?? '', ...(price === undefined ? {} : { price }) }];
   }) : undefined;
   const skip = display.skip && typeof display.skip === 'object' ? { label: text((display.skip as Record<string, unknown>).label) } : display.skip === true ? {} : undefined;
-  return { title: text(display.title), offers, skip };
+  return { title: text(display.title) ?? fallbackTitle, offers, skip };
 }
 
 type Named = { readonly name?: string; readonly description?: string };
