@@ -55,7 +55,9 @@ function payload(id: string): G24CombatItemPayload {
   return { definitionId: id, maxHpFlat, maxHpBps, initialMana, program };
 }
 
-/** G24-CHEST-01: ordinary completed items, Thief's Gloves excluded (its round-roll children cannot exist mid-combat). */
+/** G24-CHEST-01: ordinary completed items, Thief's Gloves excluded (its round-roll children cannot exist mid-combat). Only the
+ * base catalogue (content/items.ts) is read: G2-3 special items, support items and artifacts live in the extended registry
+ * and never enter the pool. A completed item added to the base catalogue changes the pool and the content digest. */
 export const G24_CHEST_POOL: readonly G24CombatItemPayload[] = freezeContent(Object.values(ITEM_DEFINITIONS)
   .filter(item => item.kind === 'completed' && item.id !== 'thiefs-gloves')
   .sort((a, b) => a.apiName! < b.apiName! ? -1 : a.apiName! > b.apiName! ? 1 : 0).map(item => payload(item.id)));

@@ -143,14 +143,24 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
  let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
-  if(unit.mechanismDefinitions?.periodicTasks.some(t=>canonicalSource(t.source)===canonicalSource(d.source)))continue;
+  const grant=grantOfSource(unit,d.source);
+  if(!grant&&unit.mechanismDefinitions?.periodicTasks.some(t=>canonicalSource(t.source)===canonicalSource(d.source)))continue;
+  const periodic=grant?unit.mechanismDefinitions?.periodicTasks.find(t=>t.source.instanceId===d.source.instanceId&&t.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<t.source.effectIndex+32):undefined;
   const key=canonicalSource(d.source);if(seen.has(key))continue;seen.add(key);
   const m=d.effect.modifier;
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');
   const initial=compileMechanismDefinitions(unit,combatId).survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
   let options:number[];
-  const grant=grantOfSource(unit,d.source);
-  if(m.value.kind==='constant')options=grant&&grant.grantedAtTick>at?[0]:grant&&grant.grantedAtTick===at?[0,m.value.amount]:initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
+  if(periodic) {
+   // G2-4b chest: a granted periodic stack (Archangel's) holds 0…n pulses at the sample, n bounded by the pulses due by `at`
+   // (every pulse so far when the sample tick is unknown, at = 0).
+   if(m.value.kind!=='constant'||d.effect.stackPolicy.kind!=='add-stacks')throw new Error('Unsupported granted periodic stat');
+   const done=unit.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(periodic.source))?.pulseOrdinal ?? 0;
+   const n=at>0?Math.min(done,Math.max(0,Math.floor((at-periodic.nextPulseAtTick)/periodic.periodTicks)+1)):done;
+   const amount=m.value.amount;options=Array.from({length:n+1},(_,i)=>i*amount);
+  }
+  // G2-4b chest: a granted item may arrive after the sample (or the sample tick is unknown), so it is always [0, amount].
+  else if(m.value.kind==='constant')options=grant?[0,m.value.amount]:initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
     if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];const field=stat==='attackDamage'&&d.source.definitionId==='power-absorption'?'fixed':m.unit;values=values.flatMap(previous=>options.map(v=>({...previous,[field]:previous[field as 'flat'|'bps'|'fixed']+v})));continue;}

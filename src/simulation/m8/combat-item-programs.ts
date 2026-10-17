@@ -20,15 +20,22 @@ function shifted(program: ItemProgram, at: number): ItemProgram {
   if (!program.periodic) return program;
   return { ...program, periodic: program.periodic.map(p => ({ ...p, startsAtTick: at + (p.startsAtTick ?? p.periodTicks), ...(p.endsAtTick !== undefined ? { endsAtTick: at + p.endsAtTick } : {}) })) };
 }
+/** Saved grants are checked in full by validateCombatItemGrants; this guard only keeps a malformed one an invalid save. */
+function payloadOf(grant: CombatItemGrant) {
+  const payload = grant && typeof grant === 'object' && grant.chest && typeof grant.chest === 'object' && typeof grant.definitionId === 'string'
+    && Object.hasOwn(G24_CHEST_PAYLOADS, grant.definitionId) ? G24_CHEST_PAYLOADS[grant.definitionId] : undefined;
+  if (!payload) throw new Error('Invalid Match save: combat item grant');
+  return payload;
+}
 const cache = new WeakMap<readonly CombatItemGrant[], { unitId: string; bound: readonly BoundItemProgram[] }>();
 export function grantedItemPrograms(unit: Pick<CombatUnit, 'id' | 'combatItemGrants'>): readonly BoundItemProgram[] {
   const grants = unit.combatItemGrants;
+  if (grants !== undefined && !Array.isArray(grants)) throw new Error('Invalid Match save: combat item grants');
   if (!grants?.length) return [];
   const hit = cache.get(grants);
   if (hit && hit.unitId === unit.id) return hit.bound;
   const bound = grants.map(grant => {
-    const payload = Object.hasOwn(G24_CHEST_PAYLOADS, grant.definitionId) ? G24_CHEST_PAYLOADS[grant.definitionId] : undefined;
-    if (!payload) throw new RangeError('Unknown combat item grant');
+    const payload = payloadOf(grant);
     return { source: grantedItemSource(unit.id, grant), program: shifted(payload.program, grant.grantedAtTick) };
   });
   cache.set(grants, { unitId: unit.id, bound });
@@ -38,8 +45,7 @@ export function grantedItemPrograms(unit: Pick<CombatUnit, 'id' | 'combatItemGra
 export function grantedMaxHpBasis(unit: Pick<CombatUnit, 'combatItemGrants'>, at = Number.MAX_SAFE_INTEGER): { flat: number; bps: number } {
   let flat = 0, bps = 0;
   for (const grant of unit.combatItemGrants ?? []) if (grant.grantedAtTick <= at) {
-    const payload = Object.hasOwn(G24_CHEST_PAYLOADS, grant.definitionId) ? G24_CHEST_PAYLOADS[grant.definitionId] : undefined;
-    if (!payload) throw new RangeError('Unknown combat item grant');
+    const payload = payloadOf(grant);
     flat += payload.maxHpFlat; bps += payload.maxHpBps;
   }
   return { flat, bps };

@@ -251,6 +251,9 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
+    // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
+    validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
@@ -284,8 +287,6 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       const runtimeKeys = new Set<string>();
       for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
     }
-    // G2-4b: items gained mid-combat are receipts of a fired chest; their programs were compiled into each unit above.
-    validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');

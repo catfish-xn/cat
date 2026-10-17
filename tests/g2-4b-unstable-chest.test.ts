@@ -7,6 +7,8 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { validateMechanisms } from '../src/simulation/m8/restore';
+import { abilityPowerCandidates, attackDamageCandidates } from '../src/simulation/m8/item-restore';
+import { mechanic, variable } from '../src/simulation/combat-s13-state';
 import { compileItemCrit, validateItemProgram } from '../src/simulation/m8/item-program';
 import { validateCombatItemGrants } from '../src/simulation/m8/combat-item-grants';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
@@ -175,6 +177,62 @@ describe('G2-4b chest in combat', () => {
   });
 });
 
+describe('G2-4b chest restore candidates (sampled stats)', () => {
+  it('every AP and AD a receiver had since the grant is among the restore candidates for that sample', { timeout: 180000 }, () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seen.size < G24_CHEST_POOL.length && seed < 400; seed++) {
+      const { before, after } = untilGranted(chestFight(seed * 7919));
+      const receivers = grantsOf(after).filter(g => !seen.has(g.definitionId));
+      if (!receivers.length) continue;
+      receivers.forEach(g => seen.add(g.definitionId));
+      const history = new Map<string, { tick: number; ap: number; ad: number }[]>(receivers.map(g => [g.unitId, []]));
+      const sample = (state: CombatState) => { for (const g of receivers) { const u = unitOf(state, g.unitId), s = readCombatStats(u, state); history.get(g.unitId)!.push({ tick: state.tick, ap: s.abilityPower, ad: s.attackDamage }); } };
+      sample(before); sample(after);
+      let state = after;
+      for (let i = 0; i < 250 && state.status === 'running'; i++) { state = stepCombat(state).state; if (state.tick % 10 === 0) sample(state); }
+      const parsed = JSON.parse(JSON.stringify(state)) as CombatState;
+      for (const g of receivers) {
+        const u = unitOf(parsed, g.unitId), label = `${g.definitionId} → ${g.unitId}`;
+        const unknownTime = abilityPowerCandidates(u, 0, parsed.combatId!), adNow = attackDamageCandidates(u, parsed.tick, parsed.combatId!);
+        for (const h of history.get(g.unitId)!) {
+          expect(unknownTime.has(h.ap), `${label} AP ${h.ap} @${h.tick} (sample tick unknown)`).toBe(true);
+          if (h.tick > 0) expect(abilityPowerCandidates(u, h.tick, parsed.combatId!).has(h.ap), `${label} AP ${h.ap} @${h.tick}`).toBe(true);
+          expect(adNow.has(h.ad), `${label} AD ${h.ad} @${h.tick}`).toBe(true);
+        }
+      }
+    }
+    expect(seen.size).toBe(G24_CHEST_POOL.length);
+  });
+
+  it('receivers that attack and cast after the grant keep every mid-combat save valid', { timeout: 180000 }, () => {
+    const casters: Place[] = [['c1', 'lux', 0, 7], ['c2', 'irelia', 2, 6], ['c3', 'vander', 4, 6], ['c4', 'lux', 6, 7]];
+    let magic = 0, physical = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const combat = combatOf([['holder', 'leona', 3, 4], ...casters], [['foe', 'garen', 3, 3], ['foe2', 'vi', 1, 1]], [['holder', CHEST]]);
+      const start: CombatState = { ...combat, rngState: seed * 104729, units: combat.units.map(u => u.id === 'holder' ? { ...u, hp: 1, cooldownTicks: 100000, moveCooldownTicks: 100000 }
+        : u.team === 'player' ? { ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 } : u) };
+      const { after } = untilGranted(start);
+      // Wake the receivers, nearly full of mana, so they cast with the item they just gained.
+      let state: CombatState = { ...after, units: after.units.map(u => u.team === 'player' && u.alive ? { ...u, cooldownTicks: 0, moveCooldownTicks: 0, mana: Math.max(u.mana, u.maxMana - 1) } : u) };
+      for (let i = 0; i < 300 && state.status === 'running'; i++) {
+        state = stepCombat(state).state; validate(state);
+        const parsed = JSON.parse(JSON.stringify(state)) as CombatState;
+        for (const u of parsed.units.filter(x => x.combatItemGrants?.length)) {
+          // The Match restore's checks of cast-time stats (serialization.ts: derived empowered magic / physical).
+          if (u.runtime!.nextAttackMagic > 0) { magic++; expect([...abilityPowerCandidates(u, 0, parsed.combatId!)].some(ap => Math.floor(ap * variable(u, 'Damage') / 100) === u.runtime!.nextAttackMagic), `${u.id} magic @${parsed.tick}`).toBe(true); }
+          if (u.runtime!.nextAttackPhysical > 0) {
+            physical++;
+            const coefficient = variable(u, 'PercentAttackDamage') + variable(u, 'BonusDamageADRatio') * mechanic(u, 'lowCostAllies', 'count');
+            expect([...attackDamageCandidates(u, parsed.tick, parsed.combatId!)].some(ad => u.runtime!.nextAttackPhysical === Math.floor(ad * Math.round(coefficient * 10000) / 10000)), `${u.id} physical @${parsed.tick}`).toBe(true);
+          }
+        }
+      }
+    }
+    expect(magic).toBeGreaterThan(0);
+    expect(physical).toBeGreaterThan(0);
+  });
+});
+
 describe('G2-4b chest restore rejects forged grants', () => {
   const opened = untilGranted(chestFight(5)).after;
   type Writable<T> = { -readonly [K in keyof T]: T[K] };
@@ -198,13 +256,27 @@ describe('G2-4b chest restore rejects forged grants', () => {
     ['a living holder', (u: ForgedUnit[]) => { const h = u.find(x => x.id === 'holder')!; h.alive = true; h.hp = 1; return u; }],
     ['an unfired chest', (u: ForgedUnit[]) => { const h = u.find(x => x.id === 'holder')!; h.triggerLedger = { ...h.triggerLedger!, runtimes: [] }; return u; }],
     ['an extra field', (u: ForgedUnit[]) => { grant(u).extra = 1; return u; }],
-  ])('rejects %s', (_name, edit) => { expect(forge(edit)).toThrow(); });
+  ])('rejects %s', (_name, edit) => { expect(forge(edit)).toThrow('Invalid Match save'); });
   it('a Match save whose unit claims an item it never received is rejected', () => {
     const match = itemMatch('warmog');
     expect(() => restoreMatch(JSON.stringify(match))).not.toThrow();
     const forged = structuredClone(match) as MatchState & { combat: CombatState };
     const unit = forged.combat.units.find(u => u.team === 'player')! as CombatUnit & { combatItemGrants?: unknown };
     unit.combatItemGrants = [{ chest: { ownerId: unit.id, sourceKind: 'item', definitionId: CHEST, instanceId: 'item-9', effectIndex: 0, parentItemInstanceId: null }, ordinal: 0, definitionId: 'warmog', grantedAtTick: 0 }];
+    expect(() => restoreMatch(JSON.stringify(forged))).toThrow('Invalid Match save');
+  });
+  const chest = { ownerId: 'unit-1', sourceKind: 'item', definitionId: CHEST, instanceId: 'item-9', effectIndex: 0, parentItemInstanceId: null };
+  it.each([
+    ['not an array', { ordinal: 0 }],
+    ['a null record', [null]],
+    ['an item outside the pool', [{ chest, ordinal: 0, definitionId: 'thiefs-gloves', grantedAtTick: 1 }]],
+    ['an unknown item', [{ chest, ordinal: 0, definitionId: 'no-such-item', grantedAtTick: 1 }]],
+    ['a missing chest', [{ chest: null, ordinal: 0, definitionId: 'warmog', grantedAtTick: 1 }]],
+    ['a text ordinal', [{ chest, ordinal: '0', definitionId: 'warmog', grantedAtTick: 1 }]],
+    ['a fractional tick', [{ chest, ordinal: 0, definitionId: 'warmog', grantedAtTick: 0.5 }]],
+  ])('a Match save with %s as combat item grants is an invalid save', (_name, grants) => {
+    const forged = structuredClone(itemMatch('warmog')) as MatchState & { combat: CombatState };
+    (forged.combat.units.find(u => u.team === 'player')! as unknown as { combatItemGrants?: unknown }).combatItemGrants = grants;
     expect(() => restoreMatch(JSON.stringify(forged))).toThrow('Invalid Match save');
   });
 });
