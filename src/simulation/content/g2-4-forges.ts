@@ -2,11 +2,13 @@ import { freezeContent } from './freeze';
 import { ITEM_DEFINITIONS as ORDINARY } from './items';
 import { G23_SPECIAL_ITEM_POOLS } from './g2-3-special-item-source';
 import { G24_ARTIFACT_ITEMS } from './g2-4-artifacts';
+import { G24_SUPPORT_ITEMS } from './g2-4-support-items';
 
 /** G24-FORGE-03 (user approved): keep the 29 source identities, admit only the 21 executable artifacts.
- * Support stays deferred until #149 and its acquisition follow-up; never fall through to its raw pool. */
+ * Trial: likewise admit only the 13 executable supports from the intact 17-identity source pool. */
 export const G24_FORGE_POOLS = freezeContent({
   TFT_ArmoryKeyCompleted: Object.values(ORDINARY).filter(item => item.kind === 'completed' && item.recipe).map(item => item.id).sort(),
+  TFT_ArmoryKeySupport: G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS.filter(id => Object.hasOwn(G24_SUPPORT_ITEMS, id)).sort(),
   TFT_ArmoryKeyOrnn: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6.filter(id => Object.hasOwn(G24_ARTIFACT_ITEMS, id)).sort(),
 });
 export const G24_FORGE_POLICY = freezeContent({
@@ -14,7 +16,9 @@ export const G24_FORGE_POLICY = freezeContent({
   pools: G24_FORGE_POOLS,
   artifactSource: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6,
   artifactExclusions: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6.filter(id => !Object.hasOwn(G24_ARTIFACT_ITEMS, id)).sort(),
-  deferredSelectors: ['TFT_ArmoryKeySupport'],
+  supportSource: G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS,
+  supportExclusions: G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS.filter(id => !Object.hasOwn(G24_SUPPORT_ITEMS, id)).sort(),
+  deferredSelectors: [],
   sampling: 'sorted-id-uniform-without-replacement', crossOfferExclusions: false, ownedItemExclusions: false,
   timeout: 'first-offer', seed: 'g23-seed-and-atom-id-lcg32-v1',
   conventionIds: ['G24-FORGE-01', 'G24-FORGE-02', 'G24-FORGE-03', 'G24-FORGE-05', 'G24-FORGE-06', 'G24-FORGE-07'],

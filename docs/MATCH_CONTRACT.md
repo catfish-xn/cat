@@ -478,3 +478,16 @@ Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及�
 - `completed-reforger` 仍只允许普通36件成装，拒绝神器/辅助装；无需更改现有池成员保护。辅助锻造器只有计划接口，本批没有装备消耗品、时间参数或第二份选择账本。
 
 来源、约定编号与依赖见 [实施计划](evidence/g2-4/G2-4B-FORGES-PLAN.md)，验证边界见 [交付记录](evidence/g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
+
+## G2-4B 辅助装锻造器预演合同（2026-10-17）
+
+仅适用于 `codex/g2-4b-support-forge-trial`，覆盖上节11/13延后和Support拒绝描述；正式版本与夹具待合并顺序确定后统一更新。
+
+- `resolveG24ForgePool(api: string): readonly string[]` 新准入 `TFT_ArmoryKeySupport`：固定源17件与已实现13件交集。`g23RewardAtoms(bundle, seed)` 沿用现有四选一采样；`openG23Choice(state)` 返回通用forge，不增命令或第二份账本。未知selector抛RangeError；内容初始化时池少于4件或重复ID抛RangeError，不降档、不折金。
+- 第11档750只发辅助装锻造器，choiceId/receiptId=`g23:conqueror:11:atom:0:copy:0`；offers四个不同辅助装ID，超时首项，选择免费且只发一件。`selectChoice` / `forfeitPendingChoice` 参数和失败枚举不变；后者仍要求联机席位（否则 `multiplayer-required`）。多选原子不能用 `claimG23Reward` 绕过（`stale-choice`）。
+- 第13档1000依源字段顺序发 `TFT_Item_ZekesHerald`、`TFT_Item_LocketOfTheIronSolari`、`TFT_Item_Chalice`，item收据依次为 `g23:conqueror:13:atom:0/1/2:copy:0`；拆卸器是atom3的consumable收据，20金为 `g23:conqueror:13:gold`。三件固定辅助装自动发放，不开三个选择窗口。移除11档15金及13档额外30金；其他档位不新增变更。
+- 沿用 `validateG23Restoration(state, parsedJsonInput=false): void` 重建源奖励、选择及收据；旧折金、错池/错来源/错副本/空itemId收据拒绝，重复选择或结算不重发。联机领域恢复测试验证机制账本及G23边界；完整单人 `serializeMatch/restoreMatch` 测试另验证获取、装备、战斗中恢复与后续逐tick状态/事件一致，不放宽单人恢复对联机状态的限制。
+- 普通36件成装重铸器继续拒绝辅助装输入，失败保持原state、资源、事件、RNG。复用G24-FORGE-01…08；界面约定名“辅助装锻造器”，联机和界面仍由Claude接。
+
+详见 [预演记录](evidence/g2-4/G2-4B-SUPPORT-FORGE-TRIAL.md)。

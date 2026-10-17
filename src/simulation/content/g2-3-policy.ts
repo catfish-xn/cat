@@ -14,9 +14,8 @@ export const G23_CONQUEROR_CHESTS = freezeContent(Array.from({length:15}, (_, i)
     table, option, weight:weight as number, reward:objects[option].values,estimatedGold:objects.ArmoryTable_TFT13_Warband_CashoutEstimatedGoldValues.values[table] as number};
 }));
 /** 约定值: user2026-10-16 13:46, narrowed by G2-4a (user 2026-10-17): Thief's Gloves, the completed-item anvil and the
- * lesser duplicator are granted as sourced. G2-4b restores artifact anvils (tiers 10/14). Replace only still-deferred rewards (support anvils, support items,
- * Tactician's Crown); floor total cash at source whole-tier estimate. */
-export const G23_DEFERRED_CONQUEROR_ITEMS=freezeContent(['TFT_ArmoryKeySupport','TFT_Item_ForceOfNature','TFT_Item_ZekesHerald','TFT_Item_Chalice','TFT_Item_LocketOfTheIronSolari']);
+ * lesser duplicator are granted as sourced. G2-4b restores artifact/support anvils and fixed supports (tiers 10/11/13/14). Replace only still-deferred rewards (Tactician's Crown); floor total cash at source whole-tier estimate. */
+export const G23_DEFERRED_CONQUEROR_ITEMS=freezeContent(['TFT_Item_ForceOfNature']);
 export function g23ConquerorReward(chest:typeof G23_CONQUEROR_CHESTS[number]):Readonly<Record<string,unknown>>{
  const reward:Record<string,unknown>={};let deferred=false;
  // 约定值 (G2-4a review): a duplicator resolves after the chest's heroes, so tier 4 can copy the 3-cost hero it grants.

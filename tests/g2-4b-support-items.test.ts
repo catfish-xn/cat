@@ -1,5 +1,6 @@
 /** G2-4b support items: registry, aura geometry at the strategy boundary, in-combat programs and restore validation. */
 import { describe, expect, it } from 'vitest';
+import {getMultiplayerRoundById} from '../src/simulation/multiplayer-round';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
@@ -188,4 +189,42 @@ describe('G2-4b restore', () => {
     });
     expect(checked).toBeGreaterThan(3);
   });
+});
+
+// Trial merge regressions: both branches must share the same stage reader and death signal.
+it('mixed artifact/support holders freeze stage-scaled values together, including overtime', () => {
+  const { state } = setup([['holder','leona',3,4],['ally','lux',2,4]], [['foe','garen',3,3]], [
+    ['holder','TFT_Item_Moonstone'],['holder','TFT_Item_Artifact_WitsEnd'],['holder','TFT_Item_Artifact_LichBane'],
+  ]);
+  for (const [round, moonstone, wits, lich] of [[1,55,42,200],[getMultiplayerRoundById('overtime-1').ordinal,325,100,480]] as const) {
+    // Online snapshots compile each seat independently, without solo catalogue enemies.
+    const programs=buildStrategySnapshot({...state,round,preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.team==='player')}}).units.find(u=>u.unitId==='holder')!.itemPrograms!;
+    const support=programs.find(p=>p.source.definitionId==='TFT_Item_Moonstone'&&isSupportAuraInstance(p.source.instanceId))!.program;
+    expect(support.periodic![0].program.effects[0]).toMatchObject({kind:'grant-shield',amount:{flat:moonstone}});
+    for(const [id,flat] of [['TFT_Item_Artifact_WitsEnd',wits],['TFT_Item_Artifact_LichBane',lich]] as const){
+      const program=programs.find(p=>p.source.definitionId===id)!.program;
+      expect(program.byStage).toBeUndefined();
+      expect(program.triggers!.flatMap(t=>t.effects.flatMap(e=>e.kind==='damage'?[e.amount.flat]:[]))).toEqual([flat]);
+    }
+  }
+});
+it('one holder death dispatches Lightshield, Spite and Virtue exactly once each', () => {
+  const combat=passive(setup([['holder','leona',3,4],['ally','garen',2,4]], [['foe','garen',3,3]], [
+    ['holder','TFT_Item_Artifact_LightshieldCrest'],['holder','TFT_Item_Spite'],['holder','TFT_Item_RadiantVirtue'],
+  ]).combat);
+  const dying={...combat,units:combat.units.map(u=>u.id==='holder'?{...u,hp:0}:u.id==='ally'?{...u,hp:100}:u)};
+  const {state,events}=run(dying,230);
+  expect(events.filter(e=>e.type==='death'&&e.unitId==='holder')).toHaveLength(1);
+  const shields=events.filter(e=>e.type==='shieldLayerChanged'&&e.reason==='granted'&&e.layer.source.definitionId==='TFT_Item_Artifact_LightshieldCrest');
+  expect(shields).toHaveLength(1);
+  expect(shields[0]).toMatchObject({tick:1,layer:{targetId:'ally'}});
+  const heals=events.filter(e=>e.type==='heal'&&e.outcome.targetId==='ally');
+  expect(heals.map(e=>e.tick)).toEqual([101,201]);
+  const stun=events.filter(e=>e.type==='statusChanged'&&e.group.kind==='stun'&&(e.reason==='applied'||e.reason==='refreshed'));
+  expect(stun).toHaveLength(1);
+  const holder=state.units.find(u=>u.id==='holder')!;
+  // A duplicate dispatch would increase triggerCount even where status refresh hides the duplicate effect.
+  const deaths=holder.mechanismDefinitions!.eventTriggers!.filter(d=>d.event==='holder-death');
+  expect(deaths).toHaveLength(3);
+  for(const d of deaths)expect(holder.triggerLedger!.runtimes.find(r=>r.source.instanceId===d.source.instanceId&&r.source.effectIndex===d.source.effectIndex)?.triggerCount).toBe(1);
 });

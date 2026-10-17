@@ -1,10 +1,7 @@
 import {expect,it} from 'vitest';
-import {createMatch,selectChoice,forfeitPendingChoice,claimG23Reward,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,useConsumable,equipItem,type MatchState} from '../src/simulation/match';
-import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../src/simulation/round-settlement';
-import {grantMechanicGold,grantMechanicUnit,grantMechanicItem,openMechanicChoice} from '../src/simulation/seat-mechanics';
-import {validateG23Restoration} from '../src/simulation/g2-3-restore';
-import {validateSeatMechanicsState} from '../src/simulation/seat-mechanics/state';
-import {validateMechanicPendingChoice} from '../src/simulation/seat-mechanics/choices';
+import {createMatch,selectChoice,forfeitPendingChoice,claimG23Reward,nextRound,useConsumable,equipItem,type MatchState} from '../src/simulation/match';
+import {applyRoundSettlement} from '../src/simulation/round-settlement';
+import {grantMechanicItem,openMechanicChoice} from '../src/simulation/seat-mechanics';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {G24_FORGE_POOLS,G24_FORGE_POLICY,resolveG24ForgePool} from '../src/simulation/content/g2-4-forges';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
@@ -17,7 +14,7 @@ import {publicConsumables} from './fixtures/r3r4-public';
 import {digestContent} from '../src/simulation/content';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 
-const accepted=<T extends {ok:boolean;state:MatchState}>(r:T):MatchState=>{if(!r.ok)throw Error(JSON.stringify(r));return r.state;};
+import {accepted,forgeStates,restoreDomain} from './helpers/g24-forge-states';
 const bundle=(tier:number)=>{const {Gold:_gold,...reward}=g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1]);return {id:`g23:conqueror:${tier}`,round:8,source:'conqueror' as const,tier,reward};};
 const artifactIds=[
  'TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnMuramana','TFT4_Item_OrnnZhonyasParadox',
@@ -40,15 +37,13 @@ it('pins the approved 21 IDs separately from the intact 29 source identities and
  // The full admission boundary and algorithm choices are digest inputs, not an unhashed UI list.
  expect(JSON.stringify(changed)).toContain(JSON.stringify(G24_FORGE_POLICY));
  expect(digestContent(changed)).not.toBe(digestContent(JSON.parse(JSON.stringify(changed).replace('g24-forge-v1','g24-forge-v2'))));
- for(const api of ['TFT_ArmoryKeySupport','unknown','toString']){
+ for(const api of ['unknown','toString']){
   expect(()=>resolveG24ForgePool(api)).toThrow('Unadmitted');
   expect(()=>g23RewardAtoms({...bundle(10),reward:{MeepTypeUnit:[api]}},42)).toThrow('Unadmitted');
  }
 });
-it('restores source tiers 10/14 while support tiers 11/13 retain their transitional rewards',()=>{
- for(const tier of [10,14])expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1])).toEqual(G23_CONQUEROR_CHESTS[tier-1].reward);
- expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[10])).toEqual({Gold:15});
- expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[12])).toEqual({Gold:50,Item:['TFT_Consumable_ItemRemover']});
+it('preserves source tiers 10/14 alongside newly admitted support tiers 11/13',()=>{
+ for(const tier of [10,11,13,14])expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1])).toEqual(G23_CONQUEROR_CHESTS[tier-1].reward);
  const atoms=g23RewardAtoms(bundle(14),42);
  expect(atoms.map(a=>[a.kind,a.options.length])).toEqual([['item',1],['item',4],['tool',1]]);
  expect(atoms[0].options[0]).toMatch(/^TFT5_Item_/);
@@ -67,52 +62,6 @@ it('offers four distinct reproducible artifacts and permits overlap between inde
  const pairs=Array.from({length:32},(_,seed)=>[g23RewardAtoms(bundle(10),seed)[0].options,g23RewardAtoms(bundle(14),seed)[1].options]);
  expect(pairs.some(([a,b])=>a.some(id=>b.includes(id)))).toBe(true);
 });
-
-let cached:Map<number,MatchState>|undefined;
-/** Server-authoritative settlement vectors: real opening/history/commands and generic grant provenance.
- * Six heroes are granted explicitly; each PvP receipt supplies 30 distinct takedowns. This tests the
- * domain's trusted receipt boundary, not an assertion that the fixture is a natural combat trajectory. */
-function forgeStates():Map<number,MatchState>{
- if(cached)return cached;
- const states=new Map<number,MatchState>();
- let state=accepted(enableMultiplayerSettlement(createMatch(5),'A')),recruited=false;
- for(let guard=0;guard<15000;guard++){
-  if(state.phase==='choice'){
-   const c=state.pendingChoice!;
-   if(c.choiceId==='g23:conqueror:10:atom:0:copy:0')states.set(10,state);
-   if(c.choiceId==='g23:conqueror:14:atom:1:copy:0'){states.set(14,state);cached=states;return states;}
-   state=accepted(forfeitPendingChoice(state,state.round,c.choiceId,c.generation));continue;
-  }
-  if(state.phase==='combat'){state=stepMatch(state).state;continue;}
-  if(state.phase==='settlement'){state=accepted(claimOrDiscardLoot(state,state.round));if(state.phase==='settlement')state=accepted(nextRound(state,state.round));continue;}
-  if(state.phase!=='preparation')throw Error('Unexpected fixture phase '+state.phase);
-  if(state.round===4&&!recruited){
-   state=accepted(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:150}));
-   while(state.level<6)state=accepted(buyXp(state));
-   for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(deployMatchUnit(state,u.id,{kind:'bench',slot:0}));
-   for(const [col,definitionId] of ['darius','draven','rell','swain','ambessa','mordekaiser'].entries()){
-    const result=grantMechanicUnit(state,{receiptId:'fixture:'+definitionId,source:'fixture',definitionId});state=accepted(result);
-    if(!result.ok||result.receipt.kind!=='unit'||!result.receipt.unitId)throw Error('fixture hero');
-    state=accepted(deployMatchUnit(state,result.receipt.unitId,{kind:'board',cell:{col,row:4}}));
-   }
-   recruited=true;
-  }
-  if(state.m8.round.kind==='pvp'){
-   const battleId='forge-battle-'+state.round;
-   state=accepted(applyRoundSettlement(state,{version:ROUND_SETTLEMENT_VERSION,settlementId:'forge-settlement-'+state.round,battleId,
-    seatId:'A',round:state.round,roundId:state.roundDefinitionId,settlementEligible:true,result:'win',damage:0,
-    baseDamage:state.m8.round.stage===2?2:5,opposingSurvivors:0,growth:[],combatTicks:100,combatEventCount:30,
-    g23Facts:{battleId,round:state.round,roundKind:'pvp',result:'win',conquerorTier:6,conquestTakedowns:Array.from({length:30},(_,i)=>'enemy-'+i),chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0}}));
-   state=openG23Choice(state).state;
-  }else state=accepted(startMatchCombat(state));
- }
- throw Error('forge fixture budget');
-}
-
-function restoreDomain(input:unknown):MatchState{
- const state=JSON.parse(JSON.stringify(input)) as MatchState;
- validateSeatMechanicsState(state.seatMechanics);if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);validateG23Restoration(state);return state;
-}
 
 it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects duplicate grants and edited authority',tier=>{
  const state=forgeStates().get(tier)!,c=state.pendingChoice!;
