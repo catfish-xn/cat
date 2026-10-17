@@ -1,0 +1,39 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-g24b-direct
+
+ ❯ |fast| tests/g2-4b-trench.test.ts (7 tests | 1 failed) 1176ms
+   × starts copied periodic item clocks at birth and removes the replaced Jayce forge 81ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/g2-4b-trench.test.ts > starts copied periodic item clocks at birth and removes the replaced Jayce forge
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/g2-4b-trench.test.ts:98:24
+     96|   const copy=current.units.find(u=>u.id===tracked.id)!;
+     97|   const buffs=copy.mechanismState!.statuses.flatMap(g=>g.contributions…
+     98|   expect(buffs.length).toBe(current.tick===pulse?1:0);
+       |                        ^
+     99|  }
+    100| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 19 passed (20)
+      Tests  1 failed | 86 passed (87)
+   Start at  08:35:15
+   Duration  4.75s (tests 48%, transform 38%, import 12%, setup 1%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

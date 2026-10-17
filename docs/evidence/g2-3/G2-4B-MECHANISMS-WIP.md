@@ -350,3 +350,16 @@ receipt. Production timing was not changed to satisfy this assertion. Preserve
 final full-suite allowance remains unused. Missing G2-4b generated fixture files
 are intentional at this intermediate checkpoint; do not treat transitional CI
 failure as final validation or create placeholder fixture data.
+
+### First predecessor integration
+
+Merged multiplayer `66b724c468fa30588b7fc9f09c4d99ab59c312d0` (including #144)
+into the eleven-item WIP. The sole textual conflict was G23_POLICY: preserve
+G2-4a's restored reward filtering and deferredPolicy v2 together with the full
+G2-4b item policy; increment intermediate revision to wip-v11. UI/server changes
+are unchanged upstream merge content, not new edits by this task.
+
+After this merge,20related G2-4b files/87tests passed in4.90s; raw output is
+`../g2-4b/direct/after-g2-4a-related.log`. The final full suite has not run.
+The other prerequisite item PRs are not yet in this integration. Fixture
+recording/final revision and final CI await the complete integration tree.

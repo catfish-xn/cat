@@ -6,7 +6,7 @@
 
 - 领域PR基于multiplayer #134 /19aa9f1；不修改src/server/、src/rendering/、src/server-entry/。
 - 缺少字段：src/server/room/room.ts约1052行的收据构造把SideProposal转成RoundSettlementReceipt时，需原样转发可选g23Facts。类型和规则均由simulation导出；服务器不计算征服击杀、金币、微光或军械库场次。
-- 当前替代路径：无；丢字段会使在线PvP机制进度停滞。领域真实双边提案与共享settleRound（含池空折金）已测试，但不代表room真实转发已验收。
+- 状态：已由#140接通。`buildReceipt`原样转发可选g23Facts，联机PvP的征服者、化学男爵、军械库与High Roller进度随结算推进；`tests/server/g23-server-facts.test.ts`覆盖原样转发、重复提交只结算一次、镜像不发奖。
 - 验收：真实PvP的两席进度/机制奖励各提交一次，重试和镜像不发奖；服务器从proposal原样传facts，八席仍经runSharedMatchCommand事务；复用#134私有视图和选择超时。无需新增服务器调用签名。确认回放支持unitSpawned、bindingChanged、castOutcome及已有unitRevived。
 
 ## U6 已揭示掉落、领取与结算（静态阶段盘点）
