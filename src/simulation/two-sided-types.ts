@@ -13,8 +13,6 @@ export interface PlayerBattleSnapshot {
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   /** Emissary history from the seat's own settled ledger (1..7); omitted when zero. */
   readonly priorPvpWins?: number;
-  /** G2-4a: team size from crowns held by bench units, which the board-only snapshot omits; omitted when zero. */
-  readonly benchTeamSizeBonus?: number;
   readonly version: typeof PLAYER_BATTLE_SNAPSHOT_VERSION;
   readonly contentDigest: string;
   readonly seatId: string;

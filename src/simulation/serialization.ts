@@ -1,3 +1,5 @@
+import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -98,7 +100,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
-  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus: crownTeamSizeBonus(readG23Progress(state)) }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');

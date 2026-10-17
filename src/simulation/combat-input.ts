@@ -1,4 +1,5 @@
 import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
 import {validateG23Progress} from './g2-3-match-progress';
 import { shareGeneratedJson } from './immutable-json';
 import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
@@ -105,7 +106,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  const units = validateInputAssets(input, basis, readRoundEnemyProjection(authority.round).units, inputValidation);
+  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round).units, inputValidation);
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
   requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.map(({id,definitionId}) => ({id,definitionId})))));

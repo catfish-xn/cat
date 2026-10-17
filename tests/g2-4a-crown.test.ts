@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {autoDeployToCap,deployMatchUnit,equipItem,getDeploymentCap,matchStartFailure,sellUnit,startMatchCombat,type MatchState} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,getDeploymentCap,selectChoice,sellUnit,startMatchCombat,useConsumable,type MatchState} from '../src/simulation/match';
 import {getPlayerDeploymentCount} from '../src/simulation/game';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
@@ -7,18 +7,35 @@ import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {REFORGE_POOLS} from '../src/simulation/content/consumables';
 import {TEMPORARY_EQUIPMENT_POOL} from '../src/simulation/temporary-equipment';
 import {TACTICIANS_CROWN_ID,crownTeamSizeBonus} from '../src/simulation/deployment-cap';
+import {readG23Progress} from '../src/simulation/g2-3-state';
+import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
+import {openG23Choice} from '../src/simulation/g2-3-runtime';
 import {createInputValidation,validateInputAssets} from '../src/simulation/input-assets';
-import {restorePlayerBattleSnapshot,snapshotForBattle} from '../src/simulation/two-sided-snapshot';
+import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
+import type {G23BattleFacts} from '../src/simulation/g2-3-economy';
+import {accepted,board} from './t10-helpers';
 import {catalogPreparation} from './t5r-helpers';
-import {accepted,bench,board,hero,prepared} from './t10-helpers';
 
-const crown=(id:string,location:MatchState['items'][number]['location']={kind:'inventory'})=>({id,definitionId:TACTICIANS_CROWN_ID,location});
-const withCrown=(location:MatchState['items'][number]['location']):MatchState=>{
- const base=prepared();
- return {...base,nextItemSerial:4,items:[...base.items,crown('item-3',location)],
-  preparation:{...base.preparation,units:[...base.preparation.units,hero('unit-4',bench(3)),hero('unit-5',bench(4))]}};
-};
+const facts=(round:number):G23BattleFacts=>({battleId:'crown-battle-'+round,round,roundKind:'pve',result:'win',conquerorTier:9,
+ conquestTakedowns:Array.from({length:30},(_,i)=>'enemy-'+i),chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0});
+/** 20 conquest stacks per takedown at tier 9: two 30-takedown battles cross tier 12 (850), three cross tier 15 (1500). */
+function crowned(battles:number):MatchState{
+ let state:MatchState={...catalogPreparation('2-1'),level:3,gold:100};
+ for(let round=1;round<=battles;round++)state=commitG23Settlement(state,facts(round));
+ state=openG23Choice(state).state;
+ while(state.pendingChoice){const c=state.pendingChoice;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
+ return state;
+}
 const own=(state:MatchState)=>state.preparation.units.filter(u=>u.team==='player');
+const crowns=(state:MatchState)=>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID);
+function fillBoard(state:MatchState):MatchState{
+ const free=[0,2,3,4,5,6].map(col=>board(col));
+ for(const unit of own(state).filter(u=>u.location.kind==='bench')){
+  if(getPlayerDeploymentCount(state.preparation)>=getDeploymentCap(state))break;
+  state=accepted(deployMatchUnit(state,unit.id,free.shift()!));
+ }
+ return state;
+}
 
 it('tiers 12 and 15 grant the sourced crowns and source gold; the crown is reward-only',()=>{
  const atoms=(tier:number)=>{const {Gold:_g,...reward}=g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1]);return g23RewardAtoms({id:`g23:conqueror:${tier}`,round:4,source:'conqueror',tier,reward},42);};
@@ -32,68 +49,47 @@ it('tiers 12 and 15 grant the sourced crowns and source gold; the crown is rewar
  expect(atoms(9)[0].options).not.toContain(TACTICIANS_CROWN_ID);
 });
 
-it('each crown on a player unit, board or bench, adds one team slot; inventory crowns do not',()=>{
- expect(getDeploymentCap(withCrown({kind:'inventory'}))).toBe(3);
- expect(getDeploymentCap(withCrown({kind:'unit',unitId:'unit-2',slot:0}))).toBe(4);
- expect(getDeploymentCap(withCrown({kind:'unit',unitId:'unit-1',slot:0}))).toBe(4);
- const two=withCrown({kind:'unit',unitId:'unit-2',slot:0});
- const stacked={...two,nextItemSerial:5,items:[...two.items,crown('item-4',{kind:'unit',unitId:'unit-2',slot:1})]};
- expect(getDeploymentCap(stacked)).toBe(5);
- expect(crownTeamSizeBonus([hero('enemy-x',board(0))].map(u=>({...u,team:'enemy' as const})),[crown('item-9',{kind:'unit',unitId:'enemy-x',slot:0})])).toBe(0);
+it('each granted crown permanently adds one team slot, in the inventory or after its holder is sold',()=>{
+ expect(getDeploymentCap({...catalogPreparation('2-1'),level:3})).toBe(3);expect(crownTeamSizeBonus(undefined)).toBe(0);
+ const one=crowned(2),three=crowned(3);
+ expect(crowns(one)).toHaveLength(1);expect(crowns(one)[0].location).toEqual({kind:'inventory'});
+ expect(getDeploymentCap(one)).toBe(4);
+ expect(crowns(three)).toHaveLength(3);expect(getDeploymentCap(three)).toBe(6);
+ // Equipping, then selling the holder, returns the crown to the inventory; the slot stays.
+ const holder=own(one).find(u=>u.location.kind==='bench')!;
+ const equipped=accepted(equipItem(one,crowns(one)[0].id,holder.id,0));
+ expect(getDeploymentCap(equipped)).toBe(4);
+ const sold=accepted(sellUnit(equipped,holder.id));
+ expect(crowns(sold)[0].location).toEqual({kind:'inventory'});expect(getDeploymentCap(sold)).toBe(4);
+ // Even with every crown instance gone the granted slot is not taken back.
+ expect(getDeploymentCap({...sold,items:sold.items.filter(i=>i.definitionId!==TACTICIANS_CROWN_ID)})).toBe(4);
+ // Re-reading the same receipts never double counts.
+ expect(crownTeamSizeBonus(readG23Progress(sold))).toBe(1);
 });
 
-it('a bench crown lets the player deploy and start with level + 1 units, and the frozen input validates',()=>{
- const inventory=withCrown({kind:'inventory'});
- let state=accepted(equipItem(inventory,'item-3','unit-2',0));
- expect(getDeploymentCap(state)).toBe(4);
- for(const [id,col] of [['unit-3',2],['unit-4',3],['unit-5',4]] as const)state=accepted(deployMatchUnit(state,id,board(col)));
- expect(getPlayerDeploymentCount(state.preparation)).toBe(3+1);
- expect(own(state).find(u=>u.id==='unit-2')!.location).toEqual(bench(0));
- // Without the crown the fourth unit is refused at the old cap.
- expect(deployMatchUnit(inventory,'unit-3',board(2)).ok).toBe(true);
- const atLevel=[['unit-3',2],['unit-4',3]].reduce((s,[id,col])=>accepted(deployMatchUnit(s,id as string,board(col as number))),inventory);
- expect(deployMatchUnit(atLevel,'unit-5',board(4))).toMatchObject({ok:false,reason:'population-cap'});
- const combat=accepted(startMatchCombat(state));
- const input=combat.combatInputBasis!.inputs;
+it('a crown lets the player deploy and start with level + 1 units, and the frozen input and PvP snapshot validate',()=>{
+ const state=fillBoard(crowned(2));
+ expect(getPlayerDeploymentCount(state.preparation)).toBe(4);
+ const spare=own(state).find(u=>u.location.kind==='bench');
+ expect(deployMatchUnit(state,spare!.id,board(6))).toMatchObject({ok:false,reason:'population-cap'});
+ const combat=accepted(startMatchCombat(state)),basis=combat.combatInputBasis!,input=basis.inputs;
  expect(input.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')).toHaveLength(4);
  const validation=createInputValidation(ok=>{if(!ok)throw new Error('population cap');}),enemies=input.preparation.units.filter(u=>u.team==='enemy');
- const boundary={playerLevel:3,nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial};
- expect(()=>validateInputAssets(input,boundary,enemies,validation)).not.toThrow();
- const stripped={...input,items:input.items.filter(i=>i.definitionId!==TACTICIANS_CROWN_ID)};
- expect(()=>validateInputAssets(stripped,boundary,enemies,validation)).toThrow();
+ const boundary={playerLevel:3,nextUnitSerial:basis.nextUnitSerial,nextItemSerial:basis.nextItemSerial};
+ expect(()=>validateInputAssets(input,{...boundary,teamSizeBonus:crownTeamSizeBonus(input.g23)},enemies,validation)).not.toThrow();
+ expect(()=>validateInputAssets(input,boundary,enemies,validation)).toThrow();
+ const snapshot=snapshotForBattle(state,'A');
+ expect(snapshot.units).toHaveLength(4);expect(crownTeamSizeBonus(snapshot.g23)).toBe(1);
 });
 
-it('losing the crown holder leaves the board over cap: offline start refuses, the online deadline benches the newest unit',()=>{
- let state=withCrown({kind:'unit',unitId:'unit-2',slot:0});
- for(const [id,col] of [['unit-3',2],['unit-4',3],['unit-5',4]] as const)state=accepted(deployMatchUnit(state,id,board(col)));
- const sold=accepted(sellUnit(state,'unit-2'));
- expect(sold.items.find(i=>i.id==='item-3')!.location).toEqual({kind:'inventory'});
- expect(getDeploymentCap(sold)).toBe(3);expect(getPlayerDeploymentCount(sold.preparation)).toBe(4);
- expect(matchStartFailure(sold)).toBe('population-cap');
- const result=autoDeployToCap(sold),deployed=accepted(result);
- expect(own(deployed).find(u=>u.id==='unit-5')!.location).toEqual(bench(0));
- expect(getPlayerDeploymentCount(deployed.preparation)).toBe(3);
- expect(result.ok&&result.events.map(e=>e.type==='unitDeployed'?[e.unitId,e.to]:null)).toEqual([['unit-5',bench(0)]]);
- expect(autoDeployToCap(deployed)).toEqual({ok:true,state:deployed,events:[]});
- expect(accepted(startMatchCombat(deployed)).combatInputBasis).toBeTruthy();
-});
-
-it('a PvP snapshot carries the bench crown team size so the frozen board-only input still validates',()=>{
- const catalog=catalogPreparation('2-1');
- const pvp=(state:MatchState):MatchState=>({...state,round:catalog.round,roundDefinitionId:catalog.roundDefinitionId,m8:catalog.m8});
- let state=withCrown({kind:'unit',unitId:'unit-2',slot:0});
- for(const [id,col] of [['unit-3',2],['unit-4',3],['unit-5',4]] as const)state=accepted(deployMatchUnit(state,id,board(col)));
- const snapshot=snapshotForBattle(pvp(state),'A');
- expect(snapshot.units).toHaveLength(4);expect(snapshot.items.map(i=>i.definitionId)).not.toContain(TACTICIANS_CROWN_ID);
- expect(snapshot.benchTeamSizeBonus).toBe(1);
- const {benchTeamSizeBonus:_b,...without}=snapshot;
- expect(()=>restorePlayerBattleSnapshot(without)).toThrow();
- expect(()=>restorePlayerBattleSnapshot({...snapshot,benchTeamSizeBonus:0})).toThrow();
- // A board holder's crown travels in items; no bench field, identical shape to a crownless snapshot.
- const boardHolder=withCrown({kind:'unit',unitId:'unit-1',slot:0});
- let onBoard=boardHolder;
- for(const [id,col] of [['unit-3',2],['unit-4',3],['unit-5',4]] as const)onBoard=accepted(deployMatchUnit(onBoard,id,board(col)));
- const boardSnapshot=snapshotForBattle(pvp(onBoard),'A');
- expect(boardSnapshot).not.toHaveProperty('benchTeamSizeBonus');expect(boardSnapshot.items.map(i=>i.definitionId)).toContain(TACTICIANS_CROWN_ID);
- expect(snapshotForBattle(pvp(prepared()),'A')).not.toHaveProperty('benchTeamSizeBonus');
+it('reforging or removing the crown keeps the granted team slot (user rule)',()=>{
+ const state=crowned(2),holder=own(state).find(u=>u.location.kind==='bench')!;
+ const equipped=accepted(equipItem(state,crowns(state)[0].id,holder.id,0));
+ const remover=equipped.consumables.find(c=>c.definitionId==='magnetic-remover');
+ const removed=accepted(useConsumable(equipped,remover!.consumableId,{kind:'unit',unitId:holder.id}));
+ expect(crowns(removed)[0].location).toEqual({kind:'inventory'});expect(getDeploymentCap(removed)).toBe(4);
+ expect(remover).toBeTruthy();
+ const reforger=equipped.consumables.find(c=>c.definitionId==='completed-reforger');
+ expect(useConsumable(equipped,reforger!.consumableId,{kind:'item',itemId:crowns(equipped)[0].id})).toMatchObject({ok:false,reason:'invalid-consumable-target'});
+ expect(getDeploymentCap(equipped)).toBe(4);
 });

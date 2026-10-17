@@ -47,11 +47,8 @@ describe('t10-auto-deploy at the online preparation deadline', () => {
       expect(autoDeployToCap(freeze(state))).toEqual({ok:false,state,reason:'wrong-phase'});
       expect(autoDeployToCap(state).state).toBe(state);
     }
-    // G2-4a crown: an over-cap board benches its newest units; only a full bench still refuses.
-    const over={...base,level:1,preparation:{...base.preparation,units:[hero('unit-4',board(0)),hero('unit-5',board(1))]}};
-    expect(own(accepted(autoDeployToCap(over))).map(u=>u.location)).toEqual([board(0),bench(0)]);
-    const full={...over,preparation:{...over.preparation,units:[...over.preparation.units,...Array.from({length:9},(_,slot)=>hero(`unit-${10+slot}`,bench(slot)))]}};
-    expect(autoDeployToCap(full)).toEqual({ok:false,state:full,reason:'population-cap'});
+    const over={...base,level:1,preparation:{...base.preparation,units:[hero('a',board(0)),hero('b',board(1))]}};
+    expect(autoDeployToCap(over)).toEqual({ok:false,state:over,reason:'population-cap'});
   });
   it('only enters frozen PvE/PvP inputs when the server explicitly calls the hook', () => {
     const state=prepared();
