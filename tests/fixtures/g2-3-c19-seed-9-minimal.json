@@ -5,7 +5,7 @@
   "mirrorOfSeatId": null,
   "a": {
     "version": "two-sided-snapshot-v1",
-    "contentDigest": "fnv1a32-utf16:b58e35ae",
+    "contentDigest": "fnv1a32-utf16:a1f4b298",
     "seatId": "s3",
     "roundId": "6-1",
     "level": 9,
@@ -49,7 +49,7 @@
   },
   "b": {
     "version": "two-sided-snapshot-v1",
-    "contentDigest": "fnv1a32-utf16:b58e35ae",
+    "contentDigest": "fnv1a32-utf16:a1f4b298",
     "seatId": "s4",
     "roundId": "6-1",
     "level": 9,
