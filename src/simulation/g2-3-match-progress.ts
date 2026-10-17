@@ -10,6 +10,7 @@ import { nextRandom } from './rng';
 import { G23_POLICY } from './content/g2-3-policy';
 import { G23_ACADEMY_LISTS } from './content/g2-3-academy';
 import { EMPTY_G23_CONQUEST,validateG23Conquest,type G23ConquestProgress } from './g2-3-progress';
+import { freezeContent } from './content/freeze';
 import { deriveTraits } from './trait-snapshot';
 export interface G23ItemReceipt {readonly id:string;readonly kind:'academy';readonly tier:number;readonly round:number;readonly itemId:string;readonly definitionId:string}
 export interface G23MatchProgress {readonly version:'g2-3-progress-v1';readonly seed:number;readonly rngState:number;readonly rngDraws:number;readonly sponsored:readonly string[];readonly conquest:G23ConquestProgress;readonly chem:G23ChemProgress;readonly junkerRounds:number;readonly junkerPurchases:readonly G23JunkerPurchase[];readonly rewards:readonly G23RewardBundle[];readonly economyReceipts:readonly G23EconomyReceipt[];readonly rewardClaims:readonly G23RewardClaim[];readonly itemReceipts:readonly G23ItemReceipt[]}
@@ -25,7 +26,7 @@ export function grantG23Academy(initial:MatchState):{state:MatchState;events:Mat
   const id=`g23:academy:${milestone}`;
   if(tier<milestone||findMechanicReceipt(state,id))continue;
   const granted=grantMechanicItem(state,{receiptId:id,source:'academy',definitionId:readG23Progress(state)!.sponsored[milestone-3]});
-  if(!granted.ok)throw new Error(granted.reason);
+  if(!granted.ok){events.push({type:'mechanicFailed',hook:'academy',reason:granted.reason});return {state,events};}
   state=granted.state;events.push(...granted.events);
  }
  return {state,events};
@@ -34,12 +35,9 @@ export function validateG23Progress(progress:G23MatchProgress,seed:number,round:
  const fail=(v:unknown)=>{if(!v)throw new RangeError('Invalid G2-3 match progression');};
  fail(progress&&Object.keys(progress).length===13&&progress.version==='g2-3-progress-v1'&&progress.seed===seed);
  const initial=createG23Progress(seed);fail(JSON.stringify(progress.sponsored)===JSON.stringify(initial.sponsored));
- let replay=initial;fail(Array.isArray(progress.economyReceipts));
- for(const r of progress.economyReceipts){
-  if(r.kind==='battle'){fail(r.facts.round<=round);replay=advanceG23Economy(replay,r.facts).progress;}
-  else if(r.kind==='market'){fail(r.round<=round);replay=decideG23Market(replay,r.offerId,r.take,r.round);}
-  else fail(false);
- }
+ fail(Array.isArray(progress.economyReceipts));
+ for(const r of progress.economyReceipts)fail(r.kind==='battle'?r.facts.round<=round:r.kind==='market'&&r.round<=round);
+ const replay=replayEconomy(seed,progress.economyReceipts);
  for(const k of ['rngState','rngDraws','chem','junkerRounds','rewards','economyReceipts','conquest'] as const)fail(canonicalContent(progress[k])===canonicalContent(replay[k]));
  fail(Array.isArray(progress.junkerPurchases)&&progress.junkerPurchases.length<=Math.floor(progress.junkerRounds/3));
  const paid=new Set<string>();
@@ -64,4 +62,23 @@ export function validateG23Progress(progress:G23MatchProgress,seed:number,round:
   fail(Object.keys(receipt).length===6&&receipt.kind==='academy'&&receipt.tier===previous+1&&receipt.tier<=5&&receipt.id===`g23:academy:${receipt.tier}`&&Number.isSafeInteger(receipt.round)&&receipt.round>=1&&receipt.round<=round&&/^item-[1-9][0-9]*$/.test(receipt.itemId)&&receipt.definitionId===initial.sponsored[receipt.tier-3]);previous=receipt.tier;
  }
  fail(new Set(progress.itemReceipts.map(r=>r.itemId)).size===progress.itemReceipts.length);
+}
+
+const economyReplayCache=new Map<string,G23MatchProgress>();
+function replayEconomy(seed:number,receipts:readonly G23EconomyReceipt[]):G23MatchProgress{
+ const key=`${seed}:${canonicalContent(receipts)}`,cached=economyReplayCache.get(key);
+ if(cached)return cached;
+ let replay=createG23Progress(seed),start=0;
+ for(let n=receipts.length-1;n>0;n--){
+  const prefix=economyReplayCache.get(`${seed}:${canonicalContent(receipts.slice(0,n))}`);
+  if(prefix){replay=prefix;start=n;break;}
+ }
+ for(const r of receipts.slice(start)){
+  if(r.kind==='battle')replay=advanceG23Economy(replay,r.facts).progress;
+  else if(r.kind==='market')replay=decideG23Market(replay,r.offerId,r.take,r.round);
+  else throw new RangeError('Invalid G2-3 match progression');
+ }
+ if(economyReplayCache.size>=128)economyReplayCache.delete(economyReplayCache.keys().next().value!);
+ // Market reward descriptors can be shared content; never retain caller-owned receipts.
+ const result=freezeContent(structuredClone(replay));economyReplayCache.set(key,result);return result;
 }

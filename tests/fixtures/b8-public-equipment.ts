@@ -119,7 +119,9 @@ export function publicEquipmentPreparation(components: readonly string[],
         state=accepted(sellUnit(state,excess.id));
       }
       state=benchPublicEquipmentPlayers(state);
-      if(!options.history) { preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); } return state;
+      // A recorded route reaches the identical preparation. Publish it for
+      // state-only consumers too, so they do not replay that acquisition again.
+      preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); return state;
     }
     if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
     if(state.phase==='preparation'){

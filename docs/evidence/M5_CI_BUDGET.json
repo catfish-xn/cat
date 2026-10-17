@@ -1149,7 +1149,7 @@
         }
       ],
       "maxSeconds": 1051,
-      "timeoutMinutes": 32
+      "timeoutMinutes": 45
     },
     {
       "name": "browser-preview-cannon",
@@ -1921,13 +1921,14 @@
         }
       ],
       "maxSeconds": 1036,
-      "timeoutMinutes": 31
+      "timeoutMinutes": 45
     }
   ],
   "workflowTimeoutMinutes": {
     "test": 22,
     "browser": 28,
-    "input": 32,
+    "input": 45,
     "comparison": 6
-  }
+  },
+  "budgetUpdate": "2026-10-17: input-dev/input-preview同步ci.yml已采用的45分钟；原测量样本保留，不重算或放宽任何性能/测试门槛。"
 }

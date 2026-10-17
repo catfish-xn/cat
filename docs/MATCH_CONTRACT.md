@@ -456,3 +456,11 @@ castOutcomeEvent(tick, unitId, abilityKey, outcome, subOutcomes?) / bindingChang
 ### 7 新失败原因
 
 `MatchFailure += 'unit-not-sellable' | 'item-restricted' | 'choice-not-skippable' | 'duplicate-mechanic-receipt' | 'invalid-mechanic-state'`；`EquipmentFailure += 'item-restricted'`（界面已有中文）。
+
+### G2-3 收尾修订（v2）
+
+Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及动态贡献）之后相加，不再被放大；来源为14.24官方公告 bugfix，链接及原文见 `docs/evidence/g2-3/EXTERNAL_SOURCES.md`。每个已死友军仍只吸收一次。征服者保持基础羁绊加成 ×(1+5%×箱数) 的线性实现。
+
+取得 Junkyard Titan 后后续军械库只给免费 Finishing Touch，不再付费购买已包含的升级。刷新当前军械库须同时匹配 kind='armory' 和 choiceId；其他待选奖励不能覆盖它。形态统一使用 `seat-mechanics/forms.resolveUnitForm`。
+
+恢复时先校验机制收据结构；损坏统一拒绝为 `Invalid Match save`。`combat.removedUnitIds` 如存在必须为无重复字符串数组，并与现役 combat.units 的 ID 分离。自动钩子失败事件及隐藏输入边界见 MULTIPLAYER_CONTRACT §25。schema/save/replay/protocol 不变；rules/content 升至 G2-3 v2，旧 digest 严格拒绝，不迁移。

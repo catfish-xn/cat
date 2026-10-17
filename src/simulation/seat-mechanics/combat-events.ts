@@ -2,7 +2,7 @@ import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
 
 /**
- * G2-3 combat ledger events (MATCH_CONTRACT §20.3). They join CombatEventData and M8CombatEvent; the engine stamps them
+ * G2-3 combat ledger events (MATCH_CONTRACT「G2-3 机制通用接口」). They join CombatEventData and M8CombatEvent; the engine stamps them
  * like any other event. unitSpawned/unitRemoved must accompany every change of CombatState.units membership.
  */
 export type G23CombatEventData =

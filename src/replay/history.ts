@@ -187,11 +187,11 @@ export class BattleHistory {
     if (!combat) return;
     if (!change.before.combat && combat) {
       const initial = deepFreeze(snapshotData(combat));
-      this.current = { context: deepFreeze(structuredClone(change.before)), initial, terminal: initial,
-        events: change.events.map(event => deepFreeze(structuredClone(event))) };
+      this.current = { context: deepFreeze(snapshotData(change.before)), initial, terminal: initial,
+        events: change.events.map(event => deepFreeze(snapshotData(event))) };
     } else if (this.current && combat.combatId === this.current.terminal.combatId) {
       this.current.terminal = snapshotData(combat);
-      this.current.events.push(...change.events.map(event => deepFreeze(structuredClone(event))));
+      this.current.events.push(...change.events.map(event => deepFreeze(snapshotData(event))));
     }
     if (combat.status === 'finished' && this.current) {
       if (!this.completed.some(record => record.combatId === combat.combatId)) this.completed.push(capture(this.runId, this.current));

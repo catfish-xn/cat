@@ -64,7 +64,7 @@ export function seatMechanicsView(state: MatchState): SeatMechanicsState | undef
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 const count = (value: unknown, min = 0): value is number => Number.isSafeInteger(value) && (value as number) >= min;
 export function validateMechanicReceipt(receipt: MechanicReceipt): void {
-  const ok = nonempty(receipt.receiptId) && count(receipt.round, 1) && nonempty(receipt.roundId) && nonempty(receipt.source) && (() => {
+  const ok = receipt !== null && typeof receipt === 'object' && !Array.isArray(receipt) && nonempty(receipt.receiptId) && count(receipt.round, 1) && nonempty(receipt.roundId) && nonempty(receipt.source) && (() => {
     switch (receipt.kind) {
       case 'gold': return count(receipt.amount, 1);
       case 'unit': return nonempty(receipt.definitionId) && count(receipt.gold)

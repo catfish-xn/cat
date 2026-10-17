@@ -180,6 +180,13 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
     births.set(key, birth); assetIds.add(birth.id);
   };
+  for(const receipt of context.carouselReceipts??[]) {
+    requireValue(receipt.status==='granted'&&receipt.id===`${receipt.carouselId}:${receipt.seatId}`&&receipt.holdingSource===receipt.id&&receipt.unitId!==null&&receipt.itemInstanceId!==null&&!receiptIds.has(receipt.id),'carousel receipt');receiptIds.add(receipt.id);
+    const roundId=receipt.carouselId.slice(receipt.carouselId.lastIndexOf(':')+1),round=getCatalogRoundById(roundId==='1-1'?'1-2':roundId);
+    requireValue(round.ordinal<=context.throughRoundOrdinal&&SHOP_CATALOG.includes(receipt.definitionId)&&Object.hasOwn(ITEM_DEFINITIONS,receipt.itemId),'carousel identity');
+    add(`carousel-unit:${receipt.id}`,{kind:'unit',id:receipt.unitId,definitionId:receipt.definitionId,roundId:round.roundId});
+    add(`carousel-item:${receipt.id}`,{kind:'item',id:receipt.itemInstanceId,definitionId:receipt.itemId,roundId:round.roundId});
+  }
   for (const receipt of context.scheduleReceipts) {
     plainJson(receipt);
     keys(receipt, ['eventId', 'round', 'kind', 'itemIds', 'gold', 'unitId', 'definitionId']);

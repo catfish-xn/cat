@@ -1,7 +1,7 @@
 import type { CombatViewEvent, CombatViewUnit } from '../combat-replay-view';
 
 /**
- * Replay state events for mid-combat membership (MATCH_CONTRACT §20.3). unitEntered carries the complete unit view, so a
+ * Replay state events for mid-combat membership (MATCH_CONTRACT「G2-3 机制通用接口」). unitEntered carries the complete unit view, so a
  * client never waits for the next keyframe; unitLeft removes it. Both come from the per-tick view diff, not from the
  * ledger, so they cannot be forgotten by a mechanic; the ledger's unitSpawned/unitRemoved are the animation facts.
  */

@@ -4,7 +4,7 @@ import { validateEnvelope, validateFile, exportFile } from '../src/persistence/f
 import { SaveCoordinator, type CommittedSnapshotInfo } from '../src/persistence/coordinator';
 import { BattleHistory } from '../src/replay/history';
 import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
-import { SaveError } from '../src/persistence/repository';
+import { SaveError, SaveRepository } from '../src/persistence/repository';
 import { createMatch } from '../src/simulation/match';
 import { MAX_BATTLE_RECORDS, MAX_SAVE_BYTES } from '../src/m6/limits';
 import type { CapturedSave, SaveEnvelope, SaveStatus, SlotToken } from '../src/m6/contracts';
@@ -160,4 +160,64 @@ describe('M6 owned capture boundaries', () => {
     expect(() => { (merged.addedBattles as unknown[]).pop(); }).toThrow();
     expect(fixedCapture(merged)).toBe(merged);
   });
+});
+
+it('activation detaches mutable caller data while sharing certified immutable metadata until IDB clones it',async()=>{
+ const source=envelope(),repository=new SaveRepository('ownership-test');
+ // Intercept the transaction boundary: it receives the fixed call-time values.
+ const write=vi.spyOn(repository as any,'write').mockResolvedValue(token);
+ const pending=repository.activate(null,source);
+ const [, , run, battles]=write.mock.calls[0] as [unknown,unknown,{match:SaveEnvelope['match']},unknown];
+ expect(run.match).not.toBe(source.match);
+ expect(run.match.m8).toBe(source.match.m8);
+ const expected=JSON.stringify(run);
+ (source.match as {gold:number}).gold=999;
+ expect(JSON.stringify(run)).toBe(expected);expect(battles).not.toBe(source.battles);
+ expect(await pending).toBe(token);expect(Object.isFrozen(source.match)).toBe(false);
+});
+
+it('exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs',async()=>{
+ const {BattleHistory}=await import('../src/replay/history');
+ const {startMatchCombat,stepMatch}=await import('../src/simulation/match');
+ const history=new BattleHistory('导出🐟\ud800');let state=createMatch(42);
+ const observe=(result:ReturnType<typeof stepMatch>)=>{history.observe({before:state,after:result.state,events:result.events.filter(e=>e.domain==='combat'),reason:'tick'});state=result.state;};
+ const started=startMatchCombat(state);if(!started.ok)throw Error(started.reason);
+ observe(started);const opening=state,prefix=history.capturePrefix()!;
+ while(state.phase==='combat')observe(stepMatch(state));
+ const original={...envelope(),runId:'导出🐟\ud800',match:state,battles:history.completedRecords};
+ for(const candidate of [original,{...original,match:{...state,gold:999}},{...original,battles:original.battles.slice()}]){
+  const blob=exportFile(candidate);
+  expect(Buffer.from(await blob.arrayBuffer())).toEqual(Buffer.from(JSON.stringify(candidate)));
+  expect(blob.type).toBe('application/json;charset=utf-8');
+ }
+ const importable={...original,runId:'file-owned',battles:original.battles.map(record=>({...record,runId:'file-owned'}))};
+ const fileOwned=await validateFile(exportFile(importable),async()=>{});
+ expect(fileOwned).toEqual(importable);expect(fileOwned.battles[0]).not.toBe(importable.battles[0]);
+ expect(Object.isFrozen(fileOwned.battles[0].events)).toBe(true);
+ const current={...importable,match:opening,battles:[],currentBattle:{...prefix,runId:'file-owned'}};
+ const fileCurrent=await validateFile(exportFile(current),async()=>{});
+ expect(fileCurrent).toEqual(current);expect(Object.isFrozen(fileCurrent.currentBattle!.events)).toBe(true);
+ const isolated={...importable,battles:structuredClone(importable.battles)};
+ await validateEnvelope(isolated,async()=>{});
+ expect(Object.isFrozen(isolated.battles[0])).toBe(false);
+ const repo=new SaveRepository('file-owned');
+ const transaction=vi.spyOn(repo as any,'write').mockResolvedValue(token);
+ await repo.activate(null,fileOwned);
+ expect(transaction.mock.calls[0][3]).not.toBe(fileOwned.battles);
+ expect((transaction.mock.calls[0][3] as SaveEnvelope['battles'])[0]).toBe(fileOwned.battles[0]);
+ const growing={...original,battles:[...original.battles]};
+ const earlier=exportFile(growing);growing.battles.push(original.battles[0]);
+ expect(await exportFile(growing).text()).toBe(JSON.stringify(growing));
+ expect(await earlier.text()).toBe(JSON.stringify(original));
+ expect(await exportFile(original).text()).toBe(JSON.stringify(original));
+ const spoof={...original,battles:structuredClone(original.battles)};
+ exportFile(spoof);Object.assign(spoof.battles[0],{stateHash:'mutated'});Object.freeze(spoof.battles[0]);
+ expect(await exportFile(spoof).text()).toBe(JSON.stringify(spoof));
+ const keyed={...original,extra:{toJSON:(key:string)=>key},absent:undefined};
+ expect(await exportFile(keyed).text()).toBe(JSON.stringify(keyed));
+ const unusual={...original,battles:[...original.battles]};
+ Object.defineProperty(unusual.battles,Symbol.iterator,{value:()=>{throw Error('custom iterator must not run');}});
+ expect(await exportFile(unusual).text()).toBe(JSON.stringify(unusual));
+ const getter={...original,get runId(){return 'getter';}};
+ expect(await exportFile(getter).text()).toBe(JSON.stringify(getter));
 });
