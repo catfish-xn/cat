@@ -3,65 +3,65 @@
   "contentDigest": "fnv1a32-utf16:2490c35a",
   "files": {
     "tests/fixtures/g2-3-c19-seed-9-minimal.json": {
-      "previousBytes": 25171,
+      "previousBytes": 24293,
       "currentBytes": 28248,
-      "previousSha256": "d53f18aec8536efdb868e41f387489d85cb89b50524274ef1fb6132bbae2fa9e",
+      "previousSha256": "352e5466c63d2651fb2864092d59319a19ea57d99e7af284fce7b8387c665e06",
       "currentSha256": "4694c2ca23b99628ec916511dd42e08b6ae9210eb56261b37c7ca5ebf3ced3f0",
-      "firstDifferentByte": 1
+      "firstDifferentByte": 208
     },
     "tests/fixtures/g2-3-b8-fingerprints.json": {
-      "previousBytes": 488,
+      "previousBytes": 474,
       "currentBytes": 474,
-      "previousSha256": "60dc3f16988cd233fca8afb8adcdf1ac882d1fef24987b67eca7f8fdcb7a9bc8",
+      "previousSha256": "40673dd1851b38dd4cd680580fad2bc2755b00fe55d1b67dc51e0ba85645cb6b",
       "currentSha256": "f795490211c4d9072735a900b1a9f3f34026e9973363d865f435d609c2e5f08d",
-      "firstDifferentByte": 1
+      "firstDifferentByte": 17
     },
     "tests/fixtures/g2-3-herald-raw/edge-of-night.json": {
-      "previousBytes": 110949,
+      "previousBytes": 110948,
       "currentBytes": 119117,
-      "previousSha256": "ecf546c292c06e7947ad38be8c68fef7d7a3c16c0b1185a9b8ae5eef238b4d38",
+      "previousSha256": "d68358712964685766ebde61e21d9b62b90c84be95921cb58b4f6f520d9b0232",
       "currentSha256": "5511ca12167d712e60b50f0c75b11a8ba0662bbb0334e53bfd86fb48c84ee1d7",
       "firstDifferentByte": 82
     },
     "tests/fixtures/g2-3-herald-raw/evenshroud.json": {
-      "previousBytes": 110943,
+      "previousBytes": 110942,
       "currentBytes": 119111,
-      "previousSha256": "19d538ce3d133294aa7ced5a071362b4c77fded9f0020d60f9214858a9adcae9",
+      "previousSha256": "ebbeb1ba48cf3f07141a8d024eb46eb9fbacfff950c0142faf7e6988df6aef9d",
       "currentSha256": "b644e9d442c26b4ea17e15d35d1278a66c2ff79f119df4980719fac85ff2391f",
       "firstDifferentByte": 82
     },
     "tests/fixtures/g2-3-herald-raw/ionic-spark--evenshroud.json": {
-      "previousBytes": 111068,
+      "previousBytes": 111067,
       "currentBytes": 119236,
-      "previousSha256": "ccc9466e5ec65cc0fec5b19eb0a140e8245b2327e2e9b1574f121770de478fcb",
+      "previousSha256": "ec47f4d324b355ae5b7d0da25e0fd2bab0f8a821a943ad44f2e431bf264b7b83",
       "currentSha256": "bea18bbf1f21de5fc1e74bb1984bf72eccad4b276e490be1a3fc9ea502a67771",
       "firstDifferentByte": 82
     },
     "tests/fixtures/g2-3-herald-raw/ionic-spark.json": {
-      "previousBytes": 110944,
+      "previousBytes": 110943,
       "currentBytes": 119112,
-      "previousSha256": "e0c648de82394e2a046387aa25352bb28ec6c4df0963f4dee17a29c13b6cb9b7",
+      "previousSha256": "59e9ebd6428dcd43d7297075ed882124e4b2e4302fb644ea55be3b0ce3d918f4",
       "currentSha256": "a390bcaea93882ea7504526c75a7016dca2b017ed74b2bb8386b96f7005efd63",
       "firstDifferentByte": 82
     },
     "tests/fixtures/g2-3-herald-raw/manifest.json": {
-      "previousBytes": 21928,
+      "previousBytes": 21927,
       "currentBytes": 28352,
-      "previousSha256": "dbdf81eb12fb29283d61302431a6658b533ac5e61afb3da81066ab0d344796bb",
-      "currentSha256": "7e25b37ea789fcd7847d26edf4c209785615b0c778d6e9f9c7be1f33766c3952",
+      "previousSha256": "ba1bc8168ebd3ddbcab18c8e4d1864b312d43c12d6e97743bfae03b0fb09a392",
+      "currentSha256": "5048a4675d82b32a9d871797be48d5bff21b9376829da39ca7110ee6b97403a7",
       "firstDifferentByte": 151
     },
     "tests/fixtures/g2-3-herald-raw/quicksilver.json": {
-      "previousBytes": 110947,
+      "previousBytes": 110946,
       "currentBytes": 119115,
-      "previousSha256": "38433f71e05b5914cc8011ddf06db066e913d63fce331523f704f8fb326a4dfd",
+      "previousSha256": "4dee9eead8172d07f37cdb77a82904561b781d1b01a611f50e289f780b61a8dd",
       "currentSha256": "4fc8d3763ced46e528e80f9350a45b0b781864511834baf3e90e8404f34dceb0",
       "firstDifferentByte": 82
     },
     "tests/fixtures/g2-3-herald-raw/trajectory.json": {
-      "previousBytes": 202676,
+      "previousBytes": 202675,
       "currentBytes": 205305,
-      "previousSha256": "44db174f3ea365da952c0993d2b9b1aee7d1809ec3c8cf576e2e407237769f2a",
+      "previousSha256": "3f63165e6868efdf011c8e6009c2e948aed6965e1a1b6948f49d2cd88f8f44d6",
       "currentSha256": "b70fa52dde66c21bc55e6ed977fc21f4fc37e9efd29786044543ba117686b5e8",
       "firstDifferentByte": 42
     }
