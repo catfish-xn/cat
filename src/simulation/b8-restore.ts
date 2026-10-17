@@ -13,6 +13,7 @@ import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } f
 import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
 import { planUnitAcquisition } from './unit-acquisition';
+import { planPermanentItemGrant } from './item-grants';
 import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
 import type { LootChoiceDescriptor, FrozenDirectDrop } from './loot-types';
@@ -289,33 +290,52 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
   committed = true;
-  // Choice receipts have already passed mechanic/G23 authority and provenance
-  // validation. Replay their births in receipt order, including items since
-  // consumed by a later combination/tool; current inventory is not birth proof.
-  const prefixMechanicIds = new Set(entries.slice(0,basis.provenancePrefixLength).flatMap(fact =>
-    fact.kind === 'item-acquired' && fact.source.kind === 'mechanic' ? [fact.source.receiptId] : []));
-  const mechanicChoices = (state.seatMechanics?.receipts ?? []).filter(receipt => receipt.kind === 'choice'
-    && receipt.roundId === state.roundDefinitionId && receipt.itemId !== null && !prefixMechanicIds.has(receipt.receiptId));
+  // Mechanic/G23 authority and provenance have already validated these receipts.
+  // Replay every post-freeze birth in receipt order, even if later consumed.
+  // Automatic rewards commit before loot choices; mechanic choices follow them.
+  const mechanicBirths = (state.seatMechanics?.receipts ?? []).slice(basis.mechanicReceiptPrefixLength).filter(receipt =>
+    receipt.kind === 'item' || receipt.kind === 'unit' && receipt.resolution === 'held'
+    || receipt.kind === 'choice' && receipt.itemId !== null);
   let mechanicCursor = 0;
   let resolvedChoices = 0;
+  const mechanicBirth = (): boolean => {
+    const birth = entries[cursor];
+    if ((birth?.kind !== 'item-acquired' && birth?.kind !== 'unit-acquired') || birth.source.kind !== 'mechanic') return false;
+    const receipt = mechanicBirths[mechanicCursor++];
+    check(receipt && receipt.round === state.round && receipt.roundId === state.roundDefinitionId
+      && receipt.receiptId === birth.source.receiptId, 'mechanic birth order');
+    const source = {kind:'mechanic' as const,receiptId:receipt.receiptId};
+    if (receipt.kind === 'unit') {
+      check(birth.kind === 'unit-acquired' && receipt.resolution === 'held', 'mechanic unit birth');
+      survivingPlacements();
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor);
+      check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
+      for (const fact of plan.facts) take(fact);
+      preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding; nextUnit = plan.nextUnitSerial;
+    } else {
+      check(birth.kind === 'item-acquired' && (receipt.kind === 'item' || receipt.kind === 'choice'
+        && !receipt.skipped && state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length), 'mechanic choice birth order');
+      const definitionId = receipt.kind === 'item' ? receipt.definitionId : receipt.optionId;
+      const plan = planPermanentItemGrant({items,nextItemSerial:nextItem},{definitionId,receiptId:receipt.receiptId},[]);
+      check(plan.ok && receipt.itemId === plan.grantedItemIds[0], 'mechanic item transaction');
+      take({kind:'item-acquired',itemId:plan.grantedItemIds[0],source});
+      items = plan.state.items; nextItem = plan.state.nextItemSerial;
+    }
+    return true;
+  };
+  const continuation = () => {
+    combinations();
+    while (mechanicBirth()) combinations();
+  };
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
-    combinations(); // Between user choices, never inside a grant transaction.
+    continuation(); // Between user choices, never inside a grant transaction.
     if (!loot.choiceResolutions.some(value => value.dropId === choice.dropId)) break;
     resolve(choice); resolvedChoices++;
   }
   while (cursor < entries.length) {
-    combinations();
+    continuation();
     if (cursor === entries.length) break;
     const sale = entries[cursor];
-    if (sale.kind === 'item-acquired' && sale.source.kind === 'mechanic') {
-      const receipt = mechanicChoices[mechanicCursor++], itemId = `item-${nextItem}`;
-      check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
-        && receipt?.kind === 'choice' && !receipt.skipped && receipt.itemId === itemId
-        && receipt.receiptId === sale.source.receiptId, 'mechanic choice birth order');
-      take({kind:'item-acquired',itemId,source:{kind:'mechanic',receiptId:receipt.receiptId}});
-      items = [...items,{id:itemId,definitionId:receipt.optionId,location:{kind:'inventory'}}]; nextItem++;
-      continue;
-    }
     check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
       && [...expectedProgress.values()].includes('pending-capacity') && sale.kind === 'unit-sold'
       && sale.context === 'settlement-capacity', 'capacity sale boundary');
@@ -328,7 +348,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
-  check(mechanicCursor === mechanicChoices.length, 'mechanic choice birth coverage');
+  check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
