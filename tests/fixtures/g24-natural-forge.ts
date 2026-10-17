@@ -9,6 +9,10 @@ export const accepted=<T extends {ok:boolean;state:MatchState}>(result:T):MatchS
  if(!result.ok)throw Error('Fixture command refused');return result.state;
 };
 let cached:Map<number,MatchState>|undefined;
+let tier4Preparation:MatchState|undefined;
+export function naturalTier4Preparation():MatchState{
+ naturalForgeStates();return tier4Preparation!;
+}
 /** Real solo combats, explicit generic grants only: no forged progress/history/settlement. */
 export function naturalForgeStates():Map<number,MatchState>{
  if(cached)return cached;
@@ -22,7 +26,11 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));continue;
   }
-  if(state.phase==='combat'){state=stepMatch(state).state;continue;}
+  if(state.phase==='combat'){
+   state=stepMatch(state).state;
+   if(!states.has(4)&&readG23Progress(state)!.conquest.chestsOpened>=4)states.set(4,state);
+   continue;
+  }
   if(state.phase==='settlement'){state=accepted(nextRound(state,state.round));continue;}
   if(state.phase!=='preparation')throw Error(`Unexpected solo fixture phase ${state.phase} at ${state.round}, stacks ${readG23Progress(state)!.conquest.stacks}`);
   if(state.round===1&&!recruited){
@@ -36,7 +44,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    recruited=true;
   }
-  if(!states.has(4)&&readG23Progress(state)!.conquest.chestsOpened>=4)states.set(4,state);
+  if(state.round===6)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }
  throw Error('Natural forge fixture budget');
