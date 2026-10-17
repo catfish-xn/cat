@@ -6,7 +6,7 @@ import { validateMatchStructure } from '../simulation/serialization-structure';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { needsCrownHistory } from '../simulation/crown-history';
 import { digestContent } from '../simulation/content';
-import { ownBattleRecord as markOwned, deepFreeze, recordVersion, equalContent,
+import { ownBattleRecord as markOwned, deepFreeze, recordVersion, equalContent, isOwnedBattleRecord,
   replayBattleRecord, matchHistoryChecks, validateBattleRecord } from '../simulation/battle-record-validation';
 export { isOwnedBattleRecord, deepFreeze, recordVersion, equalContent, checkRecordCompatibility,
   validateBattleRecord, type VerifiedReplay } from '../simulation/battle-record-validation';
@@ -71,8 +71,10 @@ export class BattleHistory {
   private completed: BattleRecord[];
   private current: WorkingRecord | null;
   constructor(readonly runId: string, battles: readonly BattleRecord[] = [], currentBattle: BattleRecord | null = null) {
-    this.completed = battles.map(record => markOwned(deepFreeze(structuredClone(record))));
-    const owned = currentBattle ? markOwned(deepFreeze(structuredClone(currentBattle))) : null;
+    // Recorder-owned records are already detached and deeply immutable; sharing them keeps their verified replay.
+    const own = (record: BattleRecord) => isOwnedBattleRecord(record) ? record : markOwned(deepFreeze(structuredClone(record)));
+    this.completed = battles.map(own);
+    const owned = currentBattle ? own(currentBattle) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
       terminal: validateBattleRecord(owned, needsCrownHistory(owned.context) ? this.completed : undefined).terminal, events: [...owned.events], equipmentCommands: [...(owned.equipmentCommands ?? [])] } : null;
   }

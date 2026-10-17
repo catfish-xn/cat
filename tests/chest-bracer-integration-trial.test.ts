@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert/strict';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   deployMatchUnit, equipItem, sellUnit, startMatchCombat, stepMatch,
@@ -60,7 +61,8 @@ function finish(from: MatchState, original: MatchState) {
   const continuation: MatchEvent[] = [];
   while (state.phase === 'combat') {
     const result = stepMatch(state), expected = stepMatch(original);
-    expect(result, `continuation tick ${expected.state.combat!.tick}`).toEqual(expected);
+    // Strict deep equality keeps the full per-tick comparison without Vitest's slower matcher.
+    deepStrictEqual(result, expected, `continuation tick ${expected.state.combat!.tick}`);
     original = expected.state; state = result.state; continuation.push(...result.events);
   }
   return { state, events: continuation };

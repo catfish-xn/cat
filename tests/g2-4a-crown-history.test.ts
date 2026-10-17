@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert/strict';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, buyUnit, rerollShop, selectChoice, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -382,15 +383,29 @@ describe('M7/S7 combat equipment command replay', () => {
       else expect(entry).toThrow();
     }
   }
-  function nextBattleMatches(state: MatchState, restored: MatchState) {
-    let original = accepted(startMatchCombat(resolveM5Choices(advance(state))));
-    let resumed = accepted(startMatchCombat(resolveM5Choices(advance(restored))));
-    expect(resumed).toEqual(original);
-    while (original.phase === 'combat') {
-      const expected = stepMatch(original), actual = stepMatch(resumed);
-      expect(actual).toEqual(expected);
-      original = expected.state; resumed = actual.state;
+  // Every restored copy is compared with one original continuation; strict deep
+  // equality per tick keeps the full-state check without Vitest's slower matcher.
+  const continuations = new WeakMap<MatchState, { start: MatchState; steps: ReturnType<typeof stepMatch>[] }>();
+  function continuation(state: MatchState) {
+    let cached = continuations.get(state);
+    if (!cached) {
+      const start = accepted(startMatchCombat(resolveM5Choices(advance(state)))), steps: ReturnType<typeof stepMatch>[] = [];
+      for (let current = start; current.phase === 'combat';) { const step = stepMatch(current); steps.push(step); current = step.state; }
+      continuations.set(state, cached = { start, steps });
     }
+    return cached;
+  }
+  function nextBattleMatches(state: MatchState, restored: MatchState) {
+    const original = continuation(state);
+    let resumed = accepted(startMatchCombat(resolveM5Choices(advance(restored))));
+    deepStrictEqual(resumed, original.start);
+    for (const expected of original.steps) {
+      expect(resumed.phase).toBe('combat');
+      const actual = stepMatch(resumed);
+      deepStrictEqual(actual, expected);
+      resumed = actual.state;
+    }
+    expect(resumed.phase).not.toBe('combat');
   }
   function swords() {
     let state = createMatch(7);
