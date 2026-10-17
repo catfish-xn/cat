@@ -1,3 +1,5 @@
+import { VerifiedRestoreCache, verifiedRestoreKey } from '../simulation/verified-restore-cache';
+import { comparePreparationState } from '../simulation/preparation-ledger';
 import { snapshotData } from './snapshot';
 import type { BattleRecord, BattleRecordVersion, SaveEnvelope, SessionChange } from '../m6/contracts';
 import { M8_VERSION } from '../simulation/m8/version';
@@ -136,7 +138,15 @@ function validateM8Record(record: BattleRecord, restore = restoreMatch,
   return { terminal, settledMatch: state };
 }
 /** Strict archive topology and historical context validation; yields once after each battle. */
-function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
+// A real 33-battle envelope occupies about 58 MiB of canonical UTF-16 payload.
+const verifiedCollections = new VerifiedRestoreCache<MatchState>(2, 64 * 1024 * 1024);
+function* battleCollectionChecks(input: SaveEnvelope): Generator<void, void, void> {
+  // Key and validation read the same owned snapshot across asynchronous yields.
+  canonicalContent(input);
+  const envelope = snapshotData(input);
+  const key = verifiedRestoreKey(envelope);
+  const verified = verifiedCollections.get(key);
+  if (verified) { comparePreparationState(envelope.match, verified); return; }
   const restore = createMatchRestoreSession();
   const match = restore(envelope.match);
   check(Array.isArray(envelope.battles) && envelope.battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
@@ -164,6 +174,7 @@ function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, 
     check(equalContent(verified.terminal, match.combat), '当前战斗与事件前缀不一致');
     check(equalContent(verified.settledMatch, match), '当前会话与开战上下文不一致');
   } else check(envelope.currentBattle === null, '已结束战斗重复前缀');
+  verifiedCollections.put(key, match);
 }
 /** Same checks, yielding to the event loop between battles (import/continue paths). */
 export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {

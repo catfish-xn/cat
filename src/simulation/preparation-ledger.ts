@@ -1,3 +1,4 @@
+import { VerifiedRestoreCache, verifiedRestoreKey } from './verified-restore-cache';
 import type { MatchEvent, MatchState, MatchCommandResult, MatchStep } from './match-types';
 import type { UnitLocation } from './units';
 import type { ConsumableTarget } from './consumable-types';
@@ -50,9 +51,15 @@ export function recordPreparationCommand<K extends PreparationCommandName, T ext
 function requireLedger(value: unknown, reason: string): asserts value {
   if (!value) throw new Error(`Invalid Match save: preparation-ledger-${reason}`);
 }
-/** No restore/serialize calls, saved snapshot seeds, external grants, or cross-call cache. */
+/** Exact process-cache reuse is authorized; cold verification still starts at the seed. */
+const verifiedPreparations = new VerifiedRestoreCache<MatchState>();
 export function validatePreparationLedger(state: MatchState): void {
-  createPreparationLedgerValidator()(state);
+  const key = verifiedRestoreKey(state);
+  const verified = verifiedPreparations.get(key);
+  if (verified) { comparePreparationState(state, verified); return; }
+  const validate = createPreparationLedgerValidator();
+  const rebuilt = validate(state);
+  verifiedPreparations.put(key, rebuilt);
 }
 /** Explicit call-local scope: only states produced here by public commands are reusable.
  * Keep opening boundaries (not every tick) so archived short prefixes remain checkable. */
@@ -60,14 +67,14 @@ export interface PreparationBattleProof {
   readonly context: MatchState; readonly initial: NonNullable<MatchState['combat']>;
   readonly events: readonly MatchEvent[]; readonly settledMatch: MatchState;
 }
-export type PreparationLedgerValidator = ((state: MatchState) => void) & {
+export type PreparationLedgerValidator = ((state: MatchState) => MatchState) & {
   battleProof(context: MatchState, endTick: number): PreparationBattleProof | undefined;
 };
 export function createPreparationLedgerValidator(captureBattles = false): PreparationLedgerValidator {
   const openings: MatchState[] = [];
   let latest: MatchState | undefined;
   const proofs: PreparationBattleProof[] = [];
-  const validate = (state: MatchState): void => {
+  const validate = (state: MatchState): MatchState => {
     const ledger = state.preparationLedger;
     requireLedger(ledger && typeof ledger === 'object', 'missing');
     requireLedger(Object.keys(ledger).sort().join('|') === 'commands|events|version'
@@ -121,28 +128,9 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
         }
       }
     }
-    const equal = (a: unknown, b: unknown) => a === undefined || b === undefined
-      ? a === b : canonicalContent(a) === canonicalContent(b);
-    requireLedger(state.gold === rebuilt.gold, 'gold');
-    requireLedger(state.level === rebuilt.level && state.xp === rebuilt.xp, 'experience');
-    requireLedger(equal(state.shop, rebuilt.shop), 'shop');
-    for (const key of ['rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState'] as const)
-      requireLedger(state[key] === rebuilt[key], `rng-${key}`);
-    requireLedger(equal(ledger.events, rebuilt.preparationLedger.events)
-      && state.nextMatchEventSeq === rebuilt.nextMatchEventSeq
-      && rebuilt.nextMatchEventSeq === rebuilt.preparationLedger.events.length, 'event-history');
-    requireLedger(equal(ledger.commands, rebuilt.preparationLedger.commands), 'command-canonical');
-    const combatPosition = (match: MatchState) => match.combat === null ? null : {
-      combatId: match.combat.combatId, tick: match.combat.tick, status: match.combat.status, result: match.combat.result,
-    };
-    requireLedger(equal(combatPosition(state), combatPosition(rebuilt)), 'combat-position');
-    for (const key of ['round', 'phase', 'roundResults', 'combatInputBasis', 'scheduleReceipts',
-      'resourceProvenance', 'preparation', 'items', 'augments', 'anomalyBinding', 'pendingChoice',
-      'persistentGrowth', 'augmentProgress', 'nextUnitSerial', 'nextItemSerial', 'playerHp',
-      'seatMechanics', 'consumables', 'nextConsumableSerial', 'reforgeState',
-      'equipmentState', 'temporaryEquipment', 'm8'] as const)
-      requireLedger(equal(state[key], rebuilt[key]), `state-${key}`);
+    comparePreparationState(state, rebuilt);
     latest = rebuilt;
+    return structuredClone(rebuilt);
   };
   return Object.assign(validate, { battleProof(context: MatchState, endTick: number) {
     const proof = proofs.find(value => value.settledMatch.combat?.tick === endTick
@@ -150,4 +138,30 @@ export function createPreparationLedgerValidator(captureBattles = false): Prepar
       && canonicalContent(value.context) === canonicalContent(context));
     return proof ? structuredClone(proof) : undefined;
   } });
+}
+
+/** Always run on cache hits too: current economics and every ledger projection remain checked. */
+export function comparePreparationState(state: MatchState, rebuilt: MatchState): void {
+  const ledger = state.preparationLedger;
+  const equal = (a: unknown, b: unknown) => a === undefined || b === undefined
+    ? a === b : canonicalContent(a) === canonicalContent(b);
+  requireLedger(state.gold === rebuilt.gold, 'gold');
+  requireLedger(state.level === rebuilt.level && state.xp === rebuilt.xp, 'experience');
+  requireLedger(equal(state.shop, rebuilt.shop), 'shop');
+  for (const key of ['rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState'] as const)
+    requireLedger(state[key] === rebuilt[key], `rng-${key}`);
+  requireLedger(equal(ledger.events, rebuilt.preparationLedger.events)
+    && state.nextMatchEventSeq === rebuilt.nextMatchEventSeq
+    && rebuilt.nextMatchEventSeq === rebuilt.preparationLedger.events.length, 'event-history');
+  requireLedger(equal(ledger.commands, rebuilt.preparationLedger.commands), 'command-canonical');
+  const combatPosition = (match: MatchState) => match.combat === null ? null : {
+    combatId: match.combat.combatId, tick: match.combat.tick, status: match.combat.status, result: match.combat.result,
+  };
+  requireLedger(equal(combatPosition(state), combatPosition(rebuilt)), 'combat-position');
+  for (const key of ['round', 'phase', 'roundResults', 'combatInputBasis', 'scheduleReceipts',
+    'resourceProvenance', 'preparation', 'items', 'augments', 'anomalyBinding', 'pendingChoice',
+    'persistentGrowth', 'augmentProgress', 'nextUnitSerial', 'nextItemSerial', 'playerHp',
+    'seatMechanics', 'consumables', 'nextConsumableSerial', 'reforgeState',
+    'equipmentState', 'temporaryEquipment', 'm8'] as const)
+    requireLedger(equal(state[key], rebuilt[key]), `state-${key}`);
 }
