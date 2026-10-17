@@ -95,6 +95,7 @@ it('rejects non-Chem-Barons and Silco, retaining escrow until a legal bench targ
 });
 
 it.each(['TFT_Consumable_NeekosHelp','TFT13_Crime_Consumable_ShimmerDuplicator'])('does not admit the unsupported large duplicator %s',id=>{
+ expect(Object.hasOwn(G23_POLICY.duplicators,id)).toBe(false);
  expect(()=>g23RewardAtoms({...bundle,reward:{...bundle.reward,Consumables:[id]}},42)).toThrow('frozen reward descriptor');
 });
 

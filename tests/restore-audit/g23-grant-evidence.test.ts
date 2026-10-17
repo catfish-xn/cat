@@ -15,7 +15,8 @@ beforeAll(async()=>{
  academy=await publicAcademyGrant();
 },30000);
 const evidence=(s:MatchState)=>s.seatMechanics!.hidden.grantEvidence as G23GrantEvidence[];
-const rejects=(s:MatchState,message?:string)=>{for(const input of [s,JSON.stringify(s)])expect(()=>restoreMatch(input)).toThrow(message);};
+// Object, JSON and serializeMatch are all restore entries; each must reject the same save.
+const rejects=(s:MatchState,message?:string)=>{for(const input of [s,JSON.stringify(s)])expect(()=>restoreMatch(input)).toThrow(message);expect(()=>serializeMatch(s)).toThrow(message);};
 it('public commands record a legal armory receipt; selling its holder later retains grant-time authority',()=>{
  expect(evidence(junker).at(-1)?.receiptId).toBe('g23:junker:1');
  expect(restoreMatch(serializeMatch(junker))).toEqual(junker);

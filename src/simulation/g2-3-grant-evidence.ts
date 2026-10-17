@@ -7,7 +7,7 @@ import {getCatalogRoundById} from './round-selectors';
 import {deriveTraits} from './trait-snapshot';
 import {readG23Progress} from './g2-3-state';
 import {replayG23Economy} from './g2-3-match-progress';
-import {g23JunkerMenu} from './g2-3-junker';
+import {g23JunkerMenu,G23_JUNKER_PAID} from './g2-3-junker';
 import {crownTeamSizeBonus} from './deployment-cap';
 
 /** Authority-only grant-time evidence. Locations are historical preparation
@@ -70,7 +70,7 @@ export function validateG23GrantEvidence(state:MatchState,context:ResourceProven
    check(p.junkerPurchases.slice(0,n).every(r=>receipts.findIndex(x=>x.receiptId===r.id)<e.mechanicPrefixLength),'purchase prefix');
    const menu=g23JunkerMenu({preparation,round:e.round,g23:{...progress,junkerPurchases:p.junkerPurchases.slice(0,n)}});
    check(menu&&menu.id===purchase.id&&menu.unitId===purchase.unitId&&menu.choices.includes(purchase.upgrade)
-    &&(!receipt.timedOut||purchase.upgrade===menu.choices.find(c=>!['flamethrower','petricite-rod','repairing-microbots','self-destruct','tankbuster'].includes(c))),'junker menu/unit');
+    &&(!receipt.timedOut||purchase.upgrade===menu.choices.find(c=>!(G23_JUNKER_PAID as readonly string[]).includes(c))),'junker menu/unit');
   }
   previousResource=prefix;previousMechanic=e.mechanicPrefixLength;previousEconomy=e.economyPrefixLength;
  }
