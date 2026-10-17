@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
-import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMatch, enableMultiplayerSettlement, forfeitPendingChoice, selectChoice, toPrivateSeatView, type MatchState } from '../src/server-entry';
 import { decideBotAction } from '../src/simulation/bot';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { g23JunkerMenu } from '../src/simulation/g2-3-junker';
 import { getRoundSchedule } from '../src/simulation/round-schedule';

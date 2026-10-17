@@ -1,5 +1,6 @@
 import { expect } from 'vitest';
 import { createMatch, buyUnit, nextRound, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import type { BattleHistory } from '../src/replay/history';
 
 export function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
@@ -48,11 +49,15 @@ export function emptyBoard(initial = readyMatch()): MatchState {
 }
 
 /** Real public commands reach a semantic node; no resources, heroes or receipts are injected. */
-export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchState {
+export function reachRound(roundId:string, resolveChoices=true, seed=42, history?: BattleHistory): MatchState {
   let state=createMatch(seed);
   while(state.roundDefinitionId!==roundId) {
     state=resolveM5Choices(state);
-    if(state.phase==='preparation') state=accepted(startMatchCombat(emptyBoard(state)));
+    if(state.phase==='preparation') {
+      const before=emptyBoard(state), started=startMatchCombat(before);
+      state=accepted(started);
+      if(started.ok) history?.observe({before,after:state,events:started.events.filter(e=>e.domain==='combat'),reason:'command'});
+    }
     state=resolveM5Choices(state);
     if(state.phase!=='settlement') throw new Error(`Cannot reach ${roundId} from ${state.roundDefinitionId}/${state.phase}`);
     state=accepted(nextRound(state,state.round));

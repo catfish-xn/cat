@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 
+import {CompletedBattleHistory} from './fixtures/completed-battle-history';
+import {historyFor,registerHistory} from './fixtures/history-evidence';
+import {recordedCrownBattle} from './crown-history-helpers';
 function accepted(result: api.MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Cross-round loot fixture: ${result.reason}`);
   return result.state;
@@ -15,6 +18,8 @@ function roundTrip(state: MatchState): MatchState {
 }
 /** Run to the end of combat; restore at the first tick and require identical remaining state/events. */
 function fight(preparation: MatchState): { state: MatchState; events: MatchEvent[] } {
+  const live=recordedCrownBattle(preparation,new CompletedBattleHistory('t13-public',historyFor(preparation)));
+  registerHistory(live.state,live.battles);
   const started = accepted(api.startMatchCombat(preparation));
   const finish = (initial: MatchState) => {
     let state = initial; const events: MatchEvent[] = [];

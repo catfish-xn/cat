@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {createMatch,startMatchCombat,stepMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
+import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {G23_RADIANT_MAPPING} from '../src/simulation/content/g2-3-special-item-source';
@@ -13,8 +13,11 @@ import {getPlayerDeploymentCount} from '../src/simulation/game';
 import {eliminationResult,createCombatWithEvents,stepCombat} from '../src/simulation/combat';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {unit} from './combat-helpers';
+import {recordedCrownBattle} from './crown-history-helpers';
 const ok=<T extends {ok:boolean}>(r:T):Extract<T,{ok:true}>=>{if(!r.ok)throw Error(JSON.stringify(r));return r as Extract<T,{ok:true}>;};
-const settled=(s:MatchState)=>{let state=ok(startMatchCombat(s)).state;while(state.phase==='combat')state=stepMatch(state).state;return state;};
+const archives = new Map<string, ReturnType<typeof recordedCrownBattle>['battles']>();
+const evidence = (s:MatchState) => archives.get(JSON.stringify(s.roundResults)) ?? [];
+const settled=(s:MatchState)=>{const live=recordedCrownBattle(s);archives.set(JSON.stringify(live.state.roundResults),live.battles);return live.state;};
 it('the full registry admits source apiNames to grants, choices, validation and text/object restoration',()=>{
  expect(()=>validateContent()).not.toThrow();
  for(const id of ['TFT13_Crime_Bronze_ChemGrips','TFT5_Item_JeweledGauntletRadiant']){
@@ -45,13 +48,13 @@ it('current content creates one owner-visible mechanism container and never proj
 });
 it('settled restoration counts post-boundary mechanic gold and pool-empty unit gold but never counts preparation grants twice',()=>{
  const before=ok(grantMechanicGold(createMatch(42),{receiptId:'preparation',source:'test',amount:3})).state;
- const initial=settled(before);expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
+ const initial=settled(before);expect(restoreMatch(serializeMatch(initial,evidence(initial)),evidence(initial))).toEqual(initial);
  const gold=ok(grantMechanicGold(initial,{receiptId:'post-settlement',source:'test',amount:3}));
  const fallback=ok(grantMechanicUnit(gold.state,{receiptId:'empty-unit',source:'test',definitionId:'renata'},()=>({kind:'gold',quantity:2})));
  expect(fallback.receipt).toMatchObject({kind:'unit',resolution:'gold',gold:2});
  expect(fallback.state.gold).toBe(initial.gold+5);
- expect(restoreMatch(serializeMatch(fallback.state))).toEqual(fallback.state);
- expect(restoreMatch(structuredClone(fallback.state))).toEqual(fallback.state);
+ expect(restoreMatch(serializeMatch(fallback.state,evidence(fallback.state)),evidence(fallback.state))).toEqual(fallback.state);
+ expect(restoreMatch(structuredClone(fallback.state),evidence(fallback.state))).toEqual(fallback.state);
  expect(()=>restoreMatch({...fallback.state,gold:fallback.state.gold-5})).toThrow();
  const bad=structuredClone(fallback.state);Object.assign(bad.roundResults.at(-1)!,{mechanicReceiptPrefixLength:0});
  expect(()=>restoreMatch(bad)).toThrow();
@@ -147,7 +150,7 @@ it('a paid settlement-return choice is included in post-economy net mechanic gol
  const first=settled(createMatch(42)),funded=ok(grantMechanicGold(first,{receiptId:'armory-funding',source:'test',amount:8})).state;
  const opened=ok(openMechanicChoice(funded,{choiceId:'test-armory',returnPhase:'settlement',offers:['paid','free'],payload:{kind:'armory',source:'test',prices:{paid:5,free:0},timeoutOption:'free'}}));
  const paid=ok(selectChoice(opened.state,'test-armory',0,'paid')).state;
- expect(paid.gold).toBe(first.gold+3);expect(restoreMatch(serializeMatch(paid))).toEqual(paid);
+ expect(paid.gold).toBe(first.gold+3);expect(restoreMatch(serializeMatch(paid,evidence(paid)),evidence(paid))).toEqual(paid);
 });
 import {draftPool,rewardPolicy,reconcileHoldings} from '../src/simulation/shared-pool-ledger';
 import type {SharedPoolEvent} from '../src/simulation/shared-pool-types';

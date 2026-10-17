@@ -8,7 +8,7 @@ import { accepted, resolveM5Choices } from './match-helpers';
 afterEach(() => vi.restoreAllMocks());
 
 it('reuses owned battle proofs but still checks each candidate and only replays a new round', () => {
-  const first = recordedCrownBattle(commands.createMatch(42));
+  const first = recordedCrownBattle(commands.createMatch(12301));
   const start = vi.spyOn(commands, 'startMatchCombat');
   validateMatchHistory(first.state, first.battles);
   expect(start).toHaveBeenCalledTimes(1);
@@ -28,15 +28,16 @@ it('reuses owned battle proofs but still checks each candidate and only replays 
   expect(start).toHaveBeenCalledTimes(1);
 });
 
-it('replays mutable external evidence each time, including after an earlier success', () => {
-  const live = recordedCrownBattle(commands.createMatch(42));
+it('reuses content proofs across cloned external evidence but rejects changes after an earlier success', () => {
+  const live = recordedCrownBattle(commands.createMatch(12302));
   const external = structuredClone(live.battles);
   const start = vi.spyOn(commands, 'startMatchCombat');
   expect(restoreMatch(live.state, external)).toEqual(live.state);
   expect(restoreMatch(live.state, external)).toEqual(live.state);
-  expect(start).toHaveBeenCalledTimes(2);
+  expect(start).toHaveBeenCalledTimes(1);
   Object.assign(external[0].initial, { tick: 1 });
   expect(() => restoreMatch(live.state, external)).toThrow(/tick0/);
+  expect(start).toHaveBeenCalledTimes(2);
 });
 
 it('restoration preserves detachment, continuation, key order and rejection', () => {

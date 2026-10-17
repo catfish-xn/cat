@@ -4,7 +4,6 @@ import type { MatchState } from '../simulation/match-types';
 import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
 import { validateMatchStructure } from '../simulation/serialization-structure';
 import { readG23Progress } from '../simulation/g2-3-state';
-import { needsCrownHistory } from '../simulation/crown-history';
 import { digestContent } from '../simulation/content';
 import { ownBattleRecord as markOwned, deepFreeze, recordVersion, equalContent, isOwnedBattleRecord,
   replayBattleRecord, matchHistoryChecks, validateBattleRecord } from '../simulation/battle-record-validation';
@@ -76,7 +75,7 @@ export class BattleHistory {
     this.completed = battles.map(own);
     const owned = currentBattle ? own(currentBattle) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
-      terminal: validateBattleRecord(owned, needsCrownHistory(owned.context) ? this.completed : undefined).terminal, events: [...owned.events], equipmentCommands: [...(owned.equipmentCommands ?? [])] } : null;
+      terminal: validateBattleRecord(owned, this.completed).terminal, events: [...owned.events], equipmentCommands: [...(owned.equipmentCommands ?? [])] } : null;
   }
   get completedRecords(): readonly BattleRecord[] { return Object.freeze([...this.completed]); }
   capturePrefix(): BattleRecord | null { return this.current ? capture(this.runId, this.current) : null; }

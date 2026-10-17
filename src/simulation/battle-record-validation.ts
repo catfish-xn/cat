@@ -93,12 +93,23 @@ export function checkRecordCompatibility(record: BattleRecord): void {
   check(digestContent(record.events) === record.eventHash, '事件校验值');
 }
 /** Full deterministic validation; never reads an active session. */
-const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
+// Content keys also reuse JSON/cloned records. Neither external freezing nor an
+// object identity grants authority; only a successful deterministic replay does.
+const verifiedRecords = new Map<string, VerifiedReplay>();
+function replayInput(record: BattleRecord): BattleRecord {
+  if (isOwnedBattleRecord(record)) return record;
+  // Preserve the plain finite-data boundary, then detach mutable external input
+  // before computing a key or executing rules. Getters cannot change a proof's
+  // input between cache lookup and the subsequent historical-prefix checks.
+  canonicalContent(record);
+  return ownBattleRecord(deepFreeze(structuredClone(record)));
+}
 export function validateBattleRecord(record: BattleRecord, battles?: readonly BattleRecord[]): VerifiedReplay {
-  const verified = replayBattleRecord(record);
+  record = replayInput(record);
   if (battles !== undefined) validateMatchHistory(record.context, battles);
   else if (needsCrownHistory(record.context)) missingCrownHistory();
-  return verified;
+  else check(!record.context.roundResults.some(result => result.roundKind !== 'supply'), '缺少历史证据：请提供完整 battles 回放');
+  return replayBattleRecord(record);
 }
 /** Internal single-battle reconstruction. Collection admission separately binds
  * its context to the verified historical prefix; this is never a resume API. */
@@ -106,17 +117,20 @@ export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
   const verified = replaySnapshot(record);
   // Public results remain detached and mutable; only the internal history walk
   // may read the private immutable proof without copying every completed Match.
-  return isOwnedBattleRecord(record) ? structuredClone(verified) : verified;
+  return structuredClone(verified);
 }
 function replaySnapshot(record: BattleRecord): VerifiedReplay {
-  const cached = verifiedRecords.get(record);
+  record = replayInput(record);
+  const key = canonicalContent(record);
+  const cached = verifiedRecords.get(key);
   if (cached) return cached;
   const verified = validatorFor(record)(record);
-  // Only recorder-owned, detached immutable records qualify, after full replay.
-  // Reconstruction already owns this detached graph. Freeze it directly;
+  // Reconstruction owns this detached graph. Keep the proof private and bounded;
   // replayBattleRecord copies it at the public boundary, never inside the walk.
-  if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(verified));
-  return verified;
+  if (verifiedRecords.size >= MAX_BATTLE_RECORDS * 2) verifiedRecords.delete(verifiedRecords.keys().next().value!);
+  const proof = deepFreeze(verified);
+  verifiedRecords.set(key, proof);
+  return proof;
 }
 function validateM8Record(record: BattleRecord): VerifiedReplay {
   checkShape(record);
@@ -177,6 +191,15 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   if (!previous) { validateHistoricalEquipment(null, next); return; }
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
+  // Earnings stop changing at combat end, including forfeited slots. Bind every
+  // slot's sourceUnitId to the replay's real death tick/eventSeq, also after the
+  // current combat has been cleared. User choices may still append grants.
+  const completedDropIds = new Set(previous.m8.loot.frozen.rounds
+    .filter(round => round.encounterPlan.roundId === previous.roundDefinitionId
+      || previous.roundResults.some(result => result.roundId === round.encounterPlan.roundId))
+    .flatMap(round => [...round.encounterPlan.drops, ...round.choices].map(slot => slot.dropId)));
+  check(equalContent(next.m8.loot.earnedEvidence.filter(entry => completedDropIds.has(entry.dropId)),
+    previous.m8.loot.earnedEvidence), '历史掉落死亡证据不一致');
   const rolls = previous.equipmentState.rolls;
   check(equalContent(next.equipmentState.rolls.slice(0, rolls.length), rolls), '历史临时装备收据前缀不一致');
   validateHistoricalEquipment(previous, next);
@@ -193,7 +216,7 @@ export function* matchHistoryChecks(match: MatchState, battles: readonly BattleR
   check(results.length === battles.length, '缺少历史证据：历史缺战或重战');
   let previous: MatchState | null = null;
   for (let i = 0; i < battles.length; i++) {
-    const record = battles[i], result = results[i];
+    const record = replayInput(battles[i]), result = results[i];
     check(record.runId === (runId ?? battles[0].runId), '局身份');
     check(record.context.seed === match.seed, '历史种子');
     check(equalContent(record.context.roundResults, match.roundResults.filter(r => r.round < record.context.round)), '历史结算前缀');

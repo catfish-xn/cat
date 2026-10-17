@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'node:assert';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
+import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serializeMatch } from '../fixtures/history-evidence';
 import { stepMatch, startMatchCombat, type MatchState } from '../../src/simulation/match';
 import * as mechanisms from '../../src/simulation/m8/restore';
 import { effectIdentity } from '../../src/simulation/m8/identity';

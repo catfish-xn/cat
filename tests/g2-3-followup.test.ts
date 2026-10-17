@@ -1,6 +1,7 @@
 import {expect,it} from 'vitest';
-import {createMatch,startMatchCombat,stepMatch,type MatchState} from '../src/simulation/match';
-import {restoreMatch} from '../src/simulation/serialization';
+import {createMatch,type MatchState} from '../src/simulation/match';
+import {restoreWithEvidence as restoreMatch,registerHistory} from './fixtures/history-evidence';
+import {recordedCrownBattle} from './crown-history-helpers';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {validateG23Progress,createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
@@ -14,7 +15,7 @@ import {openG23Choice} from '../src/simulation/g2-3-runtime';
 import {choiceTimeoutOption} from '../src/simulation/seat-mechanics';
 import {freezeContent} from '../src/simulation/content/freeze';
 
-const battle=()=>{let state=startMatchCombat(createMatch(42)).state;while(state.phase==='combat')state=stepMatch(state).state;return state;};
+const battle=()=>{const live=recordedCrownBattle(createMatch(42));registerHistory(live.state,live.battles);return live.state;};
 it.each([null,{},'bad',[null],{length:0}])('corrupt mechanic receipts %j reject uniformly before resource validation',receipts=>{
  const state=structuredClone(createMatch(42));Object.assign(state.seatMechanics!,{receipts});
  for(const input of [state,JSON.stringify(state)])expect(()=>restoreMatch(input)).toThrow(/Invalid Match save/);
@@ -26,7 +27,8 @@ it('removed combat ids are strings, unique and disjoint from the active roster',
   for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreMatch(input)).toThrow(/Invalid Match save/);
  }
  const good={...state,combat:{...state.combat!,removedUnitIds:['old-summon']}} as MatchState;
- expect(restoreMatch(JSON.stringify(good))).toEqual(good);
+ expect(restoreMatch(JSON.stringify(state))).toEqual(state);
+ expect(()=>restoreMatch(JSON.stringify(good))).toThrow(/当前终战状态/);
 });
 it('restores the missing carousel unit/item birth authority and rejects duplicate or forged bindings',()=>{
  const receipt={id:'pool:carousel:1-1:A',carouselId:'pool:carousel:1-1',seatId:'A',slot:0,definitionId:'maddie',itemId:'sword',holdingSource:'pool:carousel:1-1:A',unitId:'unit-1',itemInstanceId:'item-1',status:'granted' as const};

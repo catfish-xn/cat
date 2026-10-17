@@ -4,16 +4,21 @@ import dualRaw from './g2-3-herald-raw/ionic-spark--evenshroud.json?raw';
 import quicksilverRaw from './g2-3-herald-raw/quicksilver.json?raw';
 import edgeRaw from './g2-3-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
+import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serializeMatch, registerHistory, historyFor } from './history-evidence';
+import { CompletedBattleHistory } from './completed-battle-history';
 import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
 const preparations = new Map<string, api.MatchState>();
 let equipmentFork: api.MatchState | undefined;
+const recorded = new CompletedBattleHistory('neutral-public');
 // Execute the command-only driver once, retaining only the actual preparation
 // prefixes. No golden, injected result, resource, birth, star or receipt is used.
 // Generate once per test module; consumers restore independent graphs before use.
 const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result, command) {
+  registerHistory(before,recorded.completedRecords);
+  recorded.observe({before,after:result.state,events:('events' in result?result.events:[]).filter(e=>e.domain==='combat'),reason:before.combat?'tick':'command'});
+  registerHistory(result.state,recorded.completedRecords);
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     preparations.set(before.roundDefinitionId, before);
   if (before.roundDefinitionId === '4-4' && before.phase === 'choice') equipmentFork ??= before;
@@ -46,8 +51,15 @@ const equipmentPreparations = new Map<string, api.MatchState>();
 export function publicHeraldEquipment(definitions: readonly string[]): api.MatchState {
   if (!definitions.length) return publicHeraldTarget();
   const key = JSON.stringify(definitions);
-  if (!equipmentPreparations.has(key))
-    equipmentPreparations.set(key, buildRawHeraldEquipment(publicNeutralEquipmentChoice(), definitions));
+  if (!equipmentPreparations.has(key)) {
+    const opening = publicNeutralEquipmentChoice();
+    const history = new CompletedBattleHistory('neutral-public',historyFor(opening));
+    const prepared = buildRawHeraldEquipment(opening, definitions, (before,result) => {
+      history.observe({before,after:result.state,events:('events' in result?result.events:[]).filter(e=>e.domain==='combat'),reason:before.combat?'tick':'command'});
+    });
+    registerHistory(prepared,history.completedRecords);
+    equipmentPreparations.set(key, prepared);
+  }
   return restoreMatch(serializeMatch(equipmentPreparations.get(key)!));
 }
 

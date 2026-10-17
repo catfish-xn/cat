@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match';
 import type { ResourceProvenanceEntry } from '../src/simulation/resource-provenance';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, plan, reserveExcept } from './fixtures/t13-loot-public';
 const copy = <T>(value:T):T => structuredClone(value);
@@ -23,11 +23,15 @@ function bounceFacts(before:MatchState, after:MatchState, events:readonly MatchE
   return {type:'growth' as const,unitId:unit.id,tick:packet.tick,amountBps:GAIN,domain:'combat' as const,combatId:packet.combatId,eventSeq:packet.eventSeq!+2};
  }));
 }
+import {CompletedBattleHistory} from './fixtures/completed-battle-history';
+import {observeHistory} from './fixtures/history-evidence';
+const history=new CompletedBattleHistory('t13-public');
 const priorFacts:ReturnType<typeof bounceFacts>=[];
 let captured:MatchState|undefined;
 const stop=new Error('captured genuine 3-7 preparation');
 try { await run(api,{seed:48,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
+ observeHistory(history,before,result);
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}
 if(!captured)throw Error('Missing genuine preparation');

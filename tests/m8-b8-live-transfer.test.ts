@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, transferPreparation, players, plan } from './fixtures/t13-loot-public';
 const SURVIVOR='unit-9',DONOR='unit-13',REWARD='unit-24',TG='item-9';

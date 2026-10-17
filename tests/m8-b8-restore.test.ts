@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat as start, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { accepted, emptyBoard, finish, resolveM5Choices, reachRound } from './match-helpers';
+import { accepted, emptyBoard, finish, resolveM5Choices, reachRound as reach } from './match-helpers';
+import { recordedCrownBattle } from './crown-history-helpers';
+import { BattleHistory } from '../src/replay/history';
+import type { BattleRecord } from '../src/m6/contracts';
+
+import { canonicalContent } from '../src/simulation/content';
+const histories = new Map<string, readonly BattleRecord[]>();
+const key = (state: MatchState) => canonicalContent([state.seed,state.roundResults.filter(r=>r.roundKind!=='supply')]);
+const evidence = (state: MatchState) => histories.get(key(state)) ?? [];
+function startMatchCombat(state: MatchState) {
+  const recorded = recordedCrownBattle(state, new BattleHistory('b8-restore',evidence(state)));
+  histories.set(key(recorded.state), recorded.battles);
+  return start(state);
+}
+function reachRound(roundId: string, resolveChoices = true) {
+  const history = new BattleHistory('b8-restore');
+  const state = reach(roundId,resolveChoices,42,history);
+  histories.set(key(state),history.completedRecords);
+  return state;
+}
 
 const copy = <T>(value: T): T => structuredClone(value);
 function roundTrip(state: MatchState): MatchState {
-  const before = copy(state), restored = restoreMatch(serializeMatch(state));
+  const before = copy(state), battles = evidence(state), restored = restoreMatch(serializeMatch(state,battles),battles);
   expect(restored).toEqual(before); expect(state).toEqual(before);
   return restored;
 }
@@ -21,7 +40,7 @@ function openingChoice(): MatchState {
 }
 function reject(state: MatchState, change: (value: any) => void): void {
   const bad = copy(state); change(bad);
-  expect(() => restoreMatch(bad),change.toString()).toThrow();
+  expect(() => restoreMatch(bad,evidence(state)),change.toString()).toThrow();
 }
 
 describe('B8 default Match own restore', () => {

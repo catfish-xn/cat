@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 import { revealMatchLoot } from '../src/simulation/loot-runtime';
 import { run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
@@ -8,13 +8,22 @@ import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8
 
 // This is a command-only domain prefix, stopped at the required encounter.
 // No retained JSON, golden state, injected deaths, or invented resource facts.
+import {CompletedBattleHistory} from './fixtures/completed-battle-history';
+import {observeHistory,historyFor,registerHistory} from './fixtures/history-evidence';
+import {recordedCrownBattle} from './crown-history-helpers';
+const history=new CompletedBattleHistory('t13-public');
+function recordedStart(prepared:api.MatchState){
+ const live=recordedCrownBattle(prepared,new CompletedBattleHistory('t13-public',historyFor(prepared)));
+ registerHistory(live.state,live.battles);return api.startMatchCombat(prepared);
+}
 let preparation: api.MatchState | undefined;
 const reached = new Error('Reached actual 4-7 preparation');
 try {
-  await run(api, { build: 'mage', seed: 42, onStep(before, _result, command) {
+  await run(api, { build: 'mage', seed: 42, onStep(before, result, command) {
     if (command?.type === 'start' && before.roundDefinitionId === '4-7') {
       preparation = before; throw reached;
     }
+    observeHistory(history,before,result);
   } });
 } catch (error) { if (error !== reached) throw error; }
 if (!preparation) throw Error('Public mage route did not reach 4-7');
@@ -38,7 +47,7 @@ const clone = (state: api.MatchState): api.MatchState => {
 
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals four orb entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
-    let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
+    let state = accepted(recordedStart(clone(simultaneousB8Preparation(prefix))));
     while (state.phase === 'combat' && state.combat.tick < 50) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
     expect(state.combat!.tick).toBe(50);
@@ -99,7 +108,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     state = clone(state);
     const beforeReceipts = state.m8.loot.receipts.length, beforeItemSerial = state.nextItemSerial;
     const unitSerial = state.nextUnitSerial, frozen = state.m8.loot.frozen;
-    state = accepted(api.startMatchCombat(state));
+    state = accepted(recordedStart(state));
     while (state.phase === 'combat' && state.combat.tick < deathTick) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
     expect(state.combat!.neutralReceipts!.deaths.map(death => [death.unitId, death.tick])).toEqual([

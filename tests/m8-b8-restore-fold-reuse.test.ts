@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
 import * as provenance from '../src/simulation/resource-provenance';
-import { accepted, finish } from './match-helpers';
+import { accepted } from './match-helpers';
+import { recordedCrownBattle } from './crown-history-helpers';
+import { validateMatchHistory } from '../src/simulation/battle-record-validation';
 
 const running = () => accepted(startMatchCombat(createMatch(42)));
 afterEach(() => vi.restoreAllMocks());
@@ -33,11 +35,14 @@ describe('B8 within-restore complete resource projection reuse', () => {
   });
 
   it('retains two full-ledger validations for finished combat with a shorter historical prefix', () => {
-    const state = finish(running()), raw = JSON.parse(JSON.stringify(state));
+    const live = recordedCrownBattle(createMatch(42)), state = live.state, raw = JSON.parse(JSON.stringify(state));
     expect(state.combat?.status).toBe('finished');
     expect(state.combatInputBasis!.provenancePrefixLength).toBeLessThan(state.resourceProvenance.entries.length);
+    // Warm the independently verified battle so these counts isolate the
+    // candidate's complete-ledger fold, rather than its separate replay proof.
+    validateMatchHistory(state,live.battles);
     const fold = vi.spyOn(provenance, 'foldResourceProvenance');
-    expect(restoreMatch(JSON.stringify(raw))).toEqual(state);
+    expect(restoreMatch(JSON.stringify(raw),live.battles)).toEqual(state);
     expect(fold).toHaveBeenCalledTimes(2);
     expect(fold.mock.calls[0][1].prefixLength).toBeUndefined();
     expect(fold.mock.calls[1][1].prefixLength).toBe(state.combatInputBasis!.provenancePrefixLength);

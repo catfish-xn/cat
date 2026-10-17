@@ -31,8 +31,13 @@ async function main() {
     const files = [...sourceFiles('src/simulation'), 'tests/fixtures/record-g2-3-herald.cjs',
       'scripts/generate-m5-route.cjs', 'scripts/m4-evidence.cjs', 'tests/fixtures/m5/oracle.g2.cjs',
       'tests/fixtures/m8-herald-raw/generate.ts', 'tests/fixtures/m8-neutral-public-route.ts',
+      'tests/fixtures/completed-battle-history.ts', 'src/replay/history.ts', 'src/m6/contracts.ts',
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));
+    const { CompletedBattleHistory } = await server.ssrLoadModule('/tests/fixtures/completed-battle-history.ts');
+    const recorded = new CompletedBattleHistory('g23-herald');
+    let prefixRecords;
+    const observe = (history, before, result) => history.observe({before, after:result.state, events:result.events.filter(e => e.domain === 'combat'), reason:before.combat ? 'tick' : 'command'});
     const {Ledger}=require('./m5/oracle.g2.cjs');
     const observedLedger=new Ledger(api.createMatch(42));
     let rawPrefix, prefixLedger;
@@ -40,7 +45,8 @@ async function main() {
     // No restored fixture or saved state is an input to this generation.
     const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: 42,
       onStep(before,result,command) {
-        if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
+        if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);prefixRecords=recorded.completedRecords;}
+        observe(recorded,before,result);
         observedLedger.apply(before,result.state,command,result.events);
       } });
     assert(rawPrefix && route.final.phase === 'gameOver' && route.final.roundDefinitionId === '6-7'
@@ -60,9 +66,11 @@ async function main() {
     const generated = [];
     for (const entry of builder.HERALD_RAW_CASES) {
       const commands = [], battles = [];
+      const history = new CompletedBattleHistory('g23-herald', prefixRecords);
       const ledger=Object.assign(Object.create(Ledger.prototype),structuredClone(prefixLedger));
       let currentBattle;
       const observer = (before, result, operation, commandArgs) => {
+        observe(history,before,result);
         assert.notEqual(result.ok, false, `Rejected public ${operation}: ${result.reason}`);
         const [a,b,c]=commandArgs;
         const command=({startMatchCombat:{type:'start'},nextRound:{type:'continue',round:a},
@@ -105,7 +113,7 @@ async function main() {
       const rawBytes = canonicalContent(rawState) + '\n';
       const trace = { name: entry.name, definitions: [...entry.definitions], commands, battles,
         rawStateSha256: sha256(rawBytes) };
-      generated.push({ entry, rawState, rawBytes, trace });
+      generated.push({ entry, rawState, rawBytes, trace, records:history.completedRecords });
       console.log(JSON.stringify({ phase: 'raw-exported', name: entry.name, battles: battles.length,
         ticks: scenarioTicks, rawBytes: Buffer.byteLength(rawBytes), rawSha256: sha256(rawBytes),
         generationMs: performance.now() - generationStarted }));
@@ -121,17 +129,17 @@ async function main() {
     const validation = [];
     const baselineNames = { 'ionic-spark': 'ionic', evenshroud: 'even', 'ionic-spark--evenshroud': 'dual', quicksilver: 'qss', 'edge-of-night': 'edge' };
     for (const value of generated) {
-      const { entry, rawState, rawBytes } = value;
+      const { entry, rawState, rawBytes, records } = value;
       const rawInput = JSON.parse(rawBytes), before = canonicalContent(rawInput);
-      let state = restoreMatch(rawInput);
+      let state = restoreMatch(rawInput, records);
       assert.notEqual(state, rawInput, 'Restore produces an independent state');
       assert.deepEqual(state, rawState, 'Full regenerated raw state survives production restore unchanged');
       assert.equal(canonicalContent(rawInput), before, 'Restore never mutates raw input');
       const start = api.startMatchCombat(state); assert(start.ok); state = start.state;
       const ticks = [];
       const roundTrip = current => {
-        const saved = serializeMatch(current), restored = restoreMatch(saved);
-        assert.deepEqual(restored, current); assert.equal(serializeMatch(restored), saved);
+        const saved = serializeMatch(current, records), restored = restoreMatch(saved, records);
+        assert.deepEqual(restored, current); assert.equal(serializeMatch(restored, records), saved);
         assert.deepEqual(api.stepMatch(restored), api.stepMatch(current));
       };
       roundTrip(state);

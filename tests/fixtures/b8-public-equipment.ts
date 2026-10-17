@@ -7,6 +7,8 @@ import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simul
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
 import { readLootView } from '../../src/simulation/loot-view';
+import { CompletedBattleHistory } from './completed-battle-history';
+import { historyFor, registerHistory } from './history-evidence';
 
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public B8 equipment fixture: ${result.reason}`);
@@ -95,8 +97,9 @@ export function publicEquipmentPreparation(components: readonly string[],
   const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components]);
   if (!options.history) {
     const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
-    if (cached) { preparations.set(key, cached); return copyFixture(cached); }
+    if (cached && historyFor(cached).length) { preparations.set(key, cached); return copyFixture(cached); }
   }
+  const history = options.history ?? new CompletedBattleHistory('b8-equipment');
   let state=createMatch(seed);
   const missing=()=>{
     const available=state.items.filter(i=>i.location.kind==='inventory').map(i=>i.definitionId);
@@ -121,6 +124,7 @@ export function publicEquipmentPreparation(components: readonly string[],
       state=benchPublicEquipmentPlayers(state);
       // A recorded route reaches the identical preparation. Publish it for
       // state-only consumers too, so they do not replay that acquisition again.
+      registerHistory(state,history.completedRecords);
       preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); return state;
     }
     if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
@@ -136,7 +140,7 @@ export function publicEquipmentPreparation(components: readonly string[],
         const col=[3,2,4,1,5,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
         state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:7}}));
       }
-      state=finishPublicEquipmentBattle(state,options.history);
+      state=finishPublicEquipmentBattle(state,history);
     }
     if(state.phase==='settlement'){
       // Random hero bundles can fill the reserve before all requested components arrive.

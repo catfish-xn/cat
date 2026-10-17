@@ -46,7 +46,8 @@ it('Laboratories share Mundo 120 health and retain unique 60-health kill receipt
  expect(s.units.find(u=>u.id==='z')!.mechanics?.some(m=>m.mechanic==='g23Experiment')).toBe(false);
 });
 import {startMatchCombat,stepMatch} from '../src/simulation/match';
-import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch,registerHistory} from './fixtures/history-evidence';
+import {recordedCrownBattle} from './crown-history-helpers';
 import {publicPaidArmorySettlement} from './fixtures/g2-3-armory-public';
 it('restores a real paid armory purchase after settlement without deducting its preparation cost twice',async()=>{
  const state=await publicPaidArmorySettlement();
@@ -60,9 +61,8 @@ it('restores a real paid armory purchase after settlement without deducting its 
  expect(stepMatch(state).state).toEqual(state);
 },30000);
 it('canonical-text restore retains actual public opening and G23 settlement receipts byte-for-byte',()=>{
- const initial=createMatch(42),started=startMatchCombat(initial);expect(started.ok).toBe(true);if(!started.ok)throw Error(started.reason);
- let state=started.state;
- while(state.phase==='combat')state=stepMatch(state).state;
+ const initial=createMatch(42),live=recordedCrownBattle(initial),state=live.state;
+ registerHistory(state,live.battles);
  expect(readG23Progress(state)?.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId==='round-1')).toBe(true);
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  expect(restoreMatch(serializeMatch(initial))).toEqual(initial);

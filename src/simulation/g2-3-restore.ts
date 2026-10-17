@@ -21,6 +21,9 @@ export function validateG23Restoration(state:MatchState,parsedJsonInput=false):v
   }
   if(readG23Progress(state)){
     validateG23Progress(readG23Progress(state)!,state.seed,state.round);
+    const battleFacts=readG23Progress(state)!.economyReceipts.filter(r=>r.kind==='battle');
+    const results=state.roundResults.filter(r=>r.roundKind!=='supply');
+    check(battleFacts.length===results.length&&results.every(result=>battleFacts.filter(r=>r.kind==='battle'&&r.facts.round===result.round).length===1),'G23 exactly one facts per battle');
     if(!state.multiplayer&&state.combat?.status==='finished'){
      const receipt=readG23Progress(state)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===state.round);
      check(receipt?.kind==='battle'&&equal(receipt.facts,g23SoloFacts(state,state.combat)),'G23 terminal combat facts');

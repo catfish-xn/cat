@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
 
 describe('B8 public equipment fixture provenance', () => {
   it('wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword', () => {
