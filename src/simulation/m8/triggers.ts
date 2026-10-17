@@ -43,6 +43,7 @@ function effectQualifies(effect: Effect, signal: TriggerSignal): boolean {
   const outcomes = signal.facts.damage;
   if (effect.kind === 'damage' && effect.delivery === 'equipment-proc' && outcomes.some(o => o.context.equipmentDepth === 1)) return false;
   if (signal.context.event !== 'damage-dealt' || effect.kind !== 'apply-status') return true;
+  if (effect.anyDamage) return true;
   const permission = effect.status.kind === 'burn' || effect.status.kind === 'wound' ? 'apply-item-burn' : effect.status.kind === 'sunder' ? 'last-whisper' : null;
   return permission === null || outcomes.some(o => o.context.permissions.includes(permission) && o.absorbed + o.hpDamage > 0);
 }

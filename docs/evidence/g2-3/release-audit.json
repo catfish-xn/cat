@@ -62,7 +62,7 @@
     "src/simulation/content/g2-3-traits.ts": "3429e32adcb78d74733d466ecf4cca0ba4d16107aa905e224e4281398b0ad26c",
     "src/simulation/content/g2-3-units.ts": "974fbfc3c127dbd925046135731b9053368ea3194eac7195c43de9981d3b2b4f",
     "src/simulation/content/g2-4-support-item-source.ts": "5e2eac890e17d0cc2a883a97962b84ea13dea49145e1e48728821f691dd90844",
-    "src/simulation/content/g2-4-support-items.ts": "c00a2b3ae2c8ada94e6e4ea1711b9b7c608bb6f3b025dcfa5ac185144360cb18",
+    "src/simulation/content/g2-4-support-items.ts": "6f4237e60677fbdf5b39bfa2d0bdbcc5b704aeb9e90d6499a1c4a6cb68d7aeb4",
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
@@ -159,13 +159,13 @@
     "src/simulation/loot-types.ts": "fadf195e8b369fb44a670d21caf7469b7641963f9216ccf86ab74ad13abba029",
     "src/simulation/loot-view.ts": "a08f55cbb24d5ef42fe913da76b70fa6cc3e676b52e11923f026cad5d9652f01",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "34b10c425606e3acabb152f2e7d357e403af0e5503873bbbb9576d5ab6c9e139",
+    "src/simulation/m8/contracts.ts": "cacb42fef00884f888c5234fb71e7e37aa0723d6ec373fb7592fee6a426e7d60",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "85beb9cbfc32df8f4c370e69f8cf081b47962f134b3c37a800890d28e32fb7d7",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
     "src/simulation/m8/heal.ts": "54f7c5cd4ca47461c0627dc70443a0e5597f624585e984dcd91e3b1f0c6cdfda",
     "src/simulation/m8/identity.ts": "4320828fac9b27ce85eeb89a2bea04ea5038d409d0af24e1309174cb15c80066",
-    "src/simulation/m8/item-program.ts": "c5eba838ed0e15d68317e51b7a6b69f27e6025338a3f2d281fbc8680feae4d3a",
+    "src/simulation/m8/item-program.ts": "1677b71b6d38243f34c99245173e79123c2b8e48547fd3ada7f06f7cbed4cede",
     "src/simulation/m8/item-restore.ts": "4acd10938a9e3e67ea0ea362f9e3cc0c7af75b5a33dad8146f2bc9b6432d4b48",
     "src/simulation/m8/mana.ts": "91478f46feaa2be5a56a59e5c8422695ba12fdef42a3ec9510a6893cb6762f9f",
     "src/simulation/m8/opening.ts": "3d987598b9ca57965eee0abf6afb03796105b51a94e5a52e793a2bac2e4d9ada",
@@ -181,7 +181,7 @@
     "src/simulation/m8/stats.ts": "88866f3f085f10f7dbcd9928f6f1044d996b3079b8a618ea0c2fac206ed49e78",
     "src/simulation/m8/status.ts": "05f2efbfd2bf20ab02ac0bcf7cdf4362dcd89a3d8054105b9856284af0415d28",
     "src/simulation/m8/targeting.ts": "5f19e7b11d03e8bd58c41dc4301bbb0ef3fefe302a95abe3a9cb07967ad3c3c8",
-    "src/simulation/m8/triggers.ts": "4d19a13d8cd6fdda5eaeb63270458cad3fd424fe0f1c984eec41d8f5404b2242",
+    "src/simulation/m8/triggers.ts": "fdb613ccbff58d7b6e0d707db25cda1cac3f1d8802946c6addfbfb4a6ae37034",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
     "src/simulation/m8/version.ts": "a988218b72d93d773f9656a0b8bb4fb1aa730ca17d06bd25d43f74f740953057",
@@ -240,7 +240,7 @@
   "integrationBaseCommit": "19aa9f1",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:b1fc2542",
+    "contentDigest": "fnv1a32-utf16:c4bda1b2",
     "lootReplayDigest": "fnv1a32-utf16:5ec01746",
     "rulesVersion": "s13-g2-3-v3",
     "contentVersion": "s13-14.24b-g2-3-v3",
@@ -248,7 +248,7 @@
     "previousContentDigest": "fnv1a32-utf16:299ec0d0",
     "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
     "traceHashes": {
-      "state": "11a60d454fcdf7b8900507d7cfcf48f5e634e106d2c61152eab3c502781f0236",
+      "state": "a273a31b3b4809f1d9de00f953bfba02b25a83b4d824b56a0af4dc9f37b71d94",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
     },
@@ -286,14 +286,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 620004,
-          "currentBytes": 689905,
+          "currentBytes": 689907,
           "previousSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0",
-          "currentSha256": "cb5bb42442ecad7609779ad3a0b03056e43d932436f31405e8f2dc620a075562",
+          "currentSha256": "c8338d56aee0df3fd6f5df4ea33271be8dd37d31eed02e91bbe54404f1eb1f15",
           "firstDifferentByte": 11
         },
         "states": 67,
-        "gzipSha256": "cb5bb42442ecad7609779ad3a0b03056e43d932436f31405e8f2dc620a075562",
-        "stateUtf8Sha256": "7c8deca0a7fe405dbdb1a22188267b7f1044da00a2687520dd0f0c121231e013",
+        "gzipSha256": "c8338d56aee0df3fd6f5df4ea33271be8dd37d31eed02e91bbe54404f1eb1f15",
+        "stateUtf8Sha256": "cea181ef25e3fa9541ef87c30e1a64dda1626af79df31d756e9e96e3d2721981",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0"
       },
@@ -1876,14 +1876,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 638531,
-          "currentBytes": 713573,
+          "currentBytes": 713571,
           "previousSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd",
-          "currentSha256": "c7a2ebe78fa51bb196d71bd47a4245b4d43c3fc42ef2121901acf015eb7b9a48",
+          "currentSha256": "464c885f5a66f229a584d35b1c3074d4cabb1a0ecbc40370642dda203fca6c36",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "c7a2ebe78fa51bb196d71bd47a4245b4d43c3fc42ef2121901acf015eb7b9a48",
-        "stateUtf8Sha256": "44be8e9ec4912c08cead2be650c3e5c162ee55b82e5489d11b7322bc1c73fc91",
+        "gzipSha256": "464c885f5a66f229a584d35b1c3074d4cabb1a0ecbc40370642dda203fca6c36",
+        "stateUtf8Sha256": "4adb592a13f32a69a567e82e4d2fc3323a85020d7fbad92de89c726ca08cdac0",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd"
       },
@@ -6579,12 +6579,12 @@
       }
     }
   },
-  "candidateSha256": "6fdd24076638a3272710e2705ef8f6c37c8f602ca32a802d9d5af00e80c6d39f",
+  "candidateSha256": "c1ec9f3018581bdb74d6873426d9eaaa24eecd532a171526dd7175fbea4b8e33",
   "goldenByteEvidence": {
     "previousBytes": 101416,
     "currentBytes": 99700,
     "previousSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-    "currentSha256": "6fdd24076638a3272710e2705ef8f6c37c8f602ca32a802d9d5af00e80c6d39f",
+    "currentSha256": "c1ec9f3018581bdb74d6873426d9eaaa24eecd532a171526dd7175fbea4b8e33",
     "firstDifferentByte": 13
   }
 }
