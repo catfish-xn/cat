@@ -9,6 +9,9 @@ const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
 const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-6',SURVIVOR,0)));
 const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'conflicting TG returns',live:conflict,returned:true}];
+// Admit both complete public histories with fixture setup. Every timed boundary
+// below still performs the original serialization, restoration and comparisons.
+for(const {live} of scenarios)restoreMatch(serializeMatch(live.ended));
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 describe('B8 live randomized reward upgrade with equipment, anomaly and G12 transfer',()=>{
  it('pins the real two paid Ezreals, glove recipe, anomaly target and reward identity',()=>{

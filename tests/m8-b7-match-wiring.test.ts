@@ -1,7 +1,8 @@
 import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serializeMatch, historyFor, observeHistory, registerHistory } from './fixtures/history-evidence';
+import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { COMPILED_NEUTRAL_ENCOUNTERS } from '../src/simulation/neutral-encounter-compiler';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { NEUTRAL_DEFINITIONS } from '../src/simulation/content/neutrals';
@@ -13,6 +14,10 @@ import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+
+// Record genuine branch histories before timed raw-input parsing/restoration.
+for(const items of [['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud'],['quicksilver'],['edge-of-night']])
+  publicHeraldEquipment(items);
 
 // Every prefix comes from the complete public command-only acquisition route.
 const prepared=publicNeutralPreparation;
@@ -29,14 +34,19 @@ const corrupt=(s:api.MatchState,mutate:(x:any)=>void)=>{ const saved=serializeMa
 
 describe('B7 installed encounters and trusted Match restore',()=>{
   it.each(COMPILED_NEUTRAL_ENCOUNTERS.map(e=>e.roundId))('%s freezes, starts, runs to settlement and resumes canonical saves',roundId=>{
-    let s=battleFixture(roundId),steps=0;
+    const preparation=prepared(roundId),history=new CompletedBattleHistory('neutral-public',historyFor(preparation));
+    const start=api.startMatchCombat(preparation);observeHistory(history,preparation,start);
+    let s=accepted(start),steps=0;
     const compiled=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===roundId)!;
     expect(s.m8.preparation.enemies).toEqual(compiled.deployment);
     expect(s.combat!.units.filter(u=>u.team==='enemy').map(u=>[u.id,u.maxMana,u.baseCritChanceBps])).toEqual(compiled.units.map(u=>[u.id,0,2500]));
     expect(s.m8.encounterPlan).toBeNull(); // The authoritative B8 plan lives in the independently frozen loot ledger.
     roundTrip(s);
     while(s.phase==='combat') {
-      const step=api.stepMatch(s);s=step.state;steps++;
+      const step=api.stepMatch(s);
+      history.observe({before:s,after:step.state,events:step.events.filter(e=>e.domain==='combat'),reason:'tick'});
+      s=step.state;steps++;
+      if(s.combat?.status==='finished')registerHistory(s,history.completedRecords);
       expect(step.events.some(e=>e.type==='cast' && compiled.units.some(u=>u.id===e.receipt.source.ownerId))).toBe(false);
       if(steps<=2 || steps%25===0 || s.phase!=='combat') roundTrip(s);
     }
@@ -188,9 +198,10 @@ describe('B7 installed encounters and trusted Match restore',()=>{
   });
   it.each([0,1,42,0xffffffff])('stage-one combat clears with random one-star opening heroes, seed %i through actual orb grants',seed=>{
     let s=api.createMatch(seed);
+    const history=new CompletedBattleHistory(`b7-opening-${seed}`);
     for(let i=0;i<3;i++) {
-      s=accepted(api.startMatchCombat(s));
-      while(s.phase==='combat') s=api.stepMatch(s).state;
+      const start=api.startMatchCombat(s);observeHistory(history,s,start);s=accepted(start);
+      while(s.phase==='combat') {const step=api.stepMatch(s);observeHistory(history,s,step);s=step.state;}
       expect(s.combat!.result).toBe('playerWin');expect(s.playerHp).toBe(100);roundTrip(s);
       s=resolveM5Choices(s);roundTrip(s);
       s=accepted(api.nextRound(s,s.round));

@@ -33,9 +33,10 @@ describe('M6 independent route/history/playback/session integration', () => {
       const original = route.rounds.find(round => round.round === record.context.round)!;
       deepStrictEqual(record.events, combatEvents(original.events));
       deepStrictEqual(record.context, original.before);
-      const verified = validateBattleRecord(record);
+      const preceding = history.completedRecords.filter(previous => previous.context.round < record.context.round);
+      const verified = validateBattleRecord(record, preceding);
       deepStrictEqual(verified.settledMatch, original.after);
-      const playback = new PlaybackSession(record);
+      const playback = new PlaybackSession(record, preceding);
       deepStrictEqual(playback.read().combat, record.initial);
       // Event tick is the semantic phase, not the committed-prefix boundary.
       // B3 emits tick-0 opening moves during the first step, after initial capture.

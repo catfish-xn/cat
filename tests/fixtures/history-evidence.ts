@@ -24,8 +24,11 @@ export function registerHistory(state: MatchState, battles: readonly BattleRecor
   histories.set(id,entries);
 }
 export function historyFor(state: MatchState): readonly BattleRecord[] {
-  const entries=histories.get(key(state))??[],resources=state.resourceProvenance.entries;
-  const compatible=entries.filter(entry=>entry.resourcePrefix.every((fact,i)=>i<resources.length&&fact===canonicalContent(resources[i])));
+  const entries=histories.get(key(state))??[],resources=state.resourceProvenance.entries.map(canonicalContent);
+  // A preparation may extend an earlier prefix with equipment transactions.
+  // Prefer the most specific genuine branch instead of its shorter ancestor.
+  const compatible=entries.filter(entry=>entry.resourcePrefix.every((fact,i)=>i<resources.length&&fact===resources[i]))
+    .sort((a,b)=>b.resourcePrefix.length-a.resourcePrefix.length);
   if(state.combat?.status==='finished'){
     const hash=digestContent(state.combat),exact=compatible.find(entry=>entry.battles.at(-1)?.stateHash===hash);
     if(exact)return exact.battles;

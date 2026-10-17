@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serializeMatch, historyFor, observeHistory, registerHistory } from './fixtures/history-evidence';
+import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { battle, unit } from './combat-helpers';
 import { accepted } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+
+publicHeraldEquipment(['ionic-spark']);
 
 /**
  * Independent B7 audit vectors (signed-off audit of 889a2a5). Expected values come from
@@ -129,12 +132,16 @@ describe('B7 audit: Match save/restore of real encounters', () => {
       const remover = initial.consumables.find(c=>c.definitionId==='magnetic-remover')!;
       initial=accepted(api.useConsumable(initial,remover.consumableId,{kind:'unit',unitId:'unit-1'}));
     }
-    let continuous = accepted(api.startMatchCombat(initial)), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
+    const history=new CompletedBattleHistory('neutral-public',historyFor(initial));
+    const start=api.startMatchCombat(initial);observeHistory(history,initial,start);
+    let continuous = accepted(start), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
     expect(continuous.combat!.tick).toBe(0);
     expect(resumed).toEqual(continuous);
     const continuousEvents: unknown[] = [], resumedEvents: unknown[] = [];
     while (continuous.phase === 'combat') {
       const a = api.stepMatch(continuous), b = api.stepMatch(resumed);
+      history.observe({before:continuous,after:a.state,events:a.events.filter(e=>e.domain==='combat'),reason:'tick'});
+      if(a.state.combat?.status==='finished')registerHistory(a.state,history.completedRecords);
       continuous = a.state; continuousEvents.push(...a.events); resumedEvents.push(...b.events);
       // Opening/stun window, every mechanism tick AND its next-tick consumer, and periodic checkpoints.
       const tick = continuous.combat!.tick;

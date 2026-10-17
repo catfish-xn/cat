@@ -1,6 +1,7 @@
 import assert from './fixtures/m5/assert-equal.cjs';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
+import {BattleHistory} from '../src/replay/history';
 import {run,dispatch} from '../scripts/generate-m5-route.cjs';
 
 // T13 random-loot idle single-worker measurements: cannon 161.34s, sniper 243.49s,
@@ -10,6 +11,7 @@ export async function verifyReplay(build: string) {
  const started=performance.now();
  console.log(`M5 replay ${build}: start`);
  let restored=api.createMatch(42),commands=0,ticks=0;
+ const history=new BattleHistory(`m5-replay-${build}`);
  await run(api,{build,seed:42,onStep(before,result,command){
   assert.deepEqual(restored,before);
   const frozen=JSON.stringify(restored);
@@ -18,7 +20,9 @@ export async function verifyReplay(build: string) {
   assert.equal(JSON.stringify(restored),frozen);
   const second=command?dispatch(api,restored,command):api.stepMatch(restored);
   assert.deepEqual(second,result);
-  restored=restoreMatch(JSON.stringify(second.state));assert.deepEqual(restored,second.state);
+  history.observe({before:restored,after:second.state,
+   events:('events' in second?second.events:[]).filter(event=>event.domain==='combat'),reason:command?'command':'tick'});
+  restored=restoreMatch(JSON.stringify(second.state),history.completedRecords);assert.deepEqual(restored,second.state);
   if(command)commands++;else ticks++;
  }});
  assert.equal(restored.phase,'gameOver');assert(commands>100);assert(ticks>1000);

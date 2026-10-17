@@ -26,6 +26,9 @@ const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result
 } });
 if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
+// Admit the complete public fixture through production validation during setup.
+// Timed tests still parse/restore their candidates with the full recorded proof.
+restoreMatch(serializeMatch(route.final));
 
 /** Each consumer receives a provenance-complete, restored independent prefix. */
 export function publicNeutralPreparation(roundId: string): api.MatchState {

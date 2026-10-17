@@ -1,5 +1,5 @@
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
-import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
+import { MAX_BATTLE_RECORDS, MAX_COMPLETED_RUNS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
 import { combineItems, equipItem, useConsumable, startMatchCombat, stepMatch } from './match';
 import type { MatchState } from './match-types';
@@ -96,6 +96,9 @@ export function checkRecordCompatibility(record: BattleRecord): void {
 // Content keys also reuse JSON/cloned records. Neither external freezing nor an
 // object identity grants authority; only a successful deterministic replay does.
 const verifiedRecords = new Map<string, VerifiedReplay>();
+// The application retains three archives plus its active run. This is a proof
+// cache memory bound, independent of the unchanged per-save battle limit.
+const MAX_VERIFIED_RECORDS = MAX_BATTLE_RECORDS * (MAX_COMPLETED_RUNS + 1);
 function replayInput(record: BattleRecord): BattleRecord {
   if (isOwnedBattleRecord(record)) return record;
   // Preserve the plain finite-data boundary, then detach mutable external input
@@ -123,11 +126,14 @@ function replaySnapshot(record: BattleRecord): VerifiedReplay {
   record = replayInput(record);
   const key = canonicalContent(record);
   const cached = verifiedRecords.get(key);
-  if (cached) return cached;
+  if (cached) {
+    verifiedRecords.delete(key); verifiedRecords.set(key, cached);
+    return cached;
+  }
   const verified = validatorFor(record)(record);
   // Reconstruction owns this detached graph. Keep the proof private and bounded;
   // replayBattleRecord copies it at the public boundary, never inside the walk.
-  if (verifiedRecords.size >= MAX_BATTLE_RECORDS * 2) verifiedRecords.delete(verifiedRecords.keys().next().value!);
+  if (verifiedRecords.size >= MAX_VERIFIED_RECORDS) verifiedRecords.delete(verifiedRecords.keys().next().value!);
   const proof = deepFreeze(verified);
   verifiedRecords.set(key, proof);
   return proof;
@@ -210,6 +216,21 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
 /** Reconstruct completed battles in order, carrying only verified prefixes. Each
  * record must continue verified equipment bindings through legal resource facts;
  * and normal combat/settlement reconstructs eligibility, result, RNG and payouts. */
+const initialHistoryCarry = new WeakSet<BattleRecord>();
+const historyCarry = new WeakMap<MatchState, WeakSet<BattleRecord>>();
+function checkRecordCarry(previous: MatchState | null, record: BattleRecord): void {
+  // Only detached, deeply immutable records and private replay results can
+  // reuse a successful edge. The caller's current Match never enters this cache.
+  const context = record.context;
+  if (!isOwnedBattleRecord(record)) { checkHistoryCarry(previous, context); return; }
+  const checked = previous ? historyCarry.get(previous) : initialHistoryCarry;
+  if (checked?.has(record)) return;
+  checkHistoryCarry(previous, record.context);
+  if (previous) {
+    const edges = checked ?? new WeakSet<BattleRecord>();
+    edges.add(record); historyCarry.set(previous, edges);
+  } else initialHistoryCarry.add(record);
+}
 export function* matchHistoryChecks(match: MatchState, battles: readonly BattleRecord[], runId?: string): Generator<void, void, void> {
   check(Array.isArray(battles) && battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
   const results = match.roundResults.filter(result => result.result !== 'supply');
@@ -221,7 +242,7 @@ export function* matchHistoryChecks(match: MatchState, battles: readonly BattleR
     check(record.context.seed === match.seed, '历史种子');
     check(equalContent(record.context.roundResults, match.roundResults.filter(r => r.round < record.context.round)), '历史结算前缀');
     const verified = replaySnapshot(record);
-    checkHistoryCarry(previous, record.context);
+    checkRecordCarry(previous, record);
     check(record.context.round === result.round && record.result !== null && verified.terminal.status === 'finished', '历史身份或完成状态');
     check(equalContent(verified.settledMatch.roundResults.at(-1), result), '历史结算结果');
     if (match.combat?.status === 'finished' && match.combat.combatId === record.combatId) check(equalContent(verified.terminal, match.combat), '当前终战状态');

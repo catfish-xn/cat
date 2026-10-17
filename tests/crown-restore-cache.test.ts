@@ -2,10 +2,40 @@ import { afterEach, expect, it, vi } from 'vitest';
 import * as commands from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
 import { validateMatchHistory } from '../src/simulation/battle-record-validation';
+import * as equipment from '../src/simulation/b8-restore';
+import { MAX_BATTLE_RECORDS, MAX_COMPLETED_RUNS } from '../src/m6/limits';
 import { recordedCrownBattle } from './crown-history-helpers';
-import { accepted, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
 
 afterEach(() => vi.restoreAllMocks());
+
+it('keeps recently used proofs under cache pressure within the same record bound', () => {
+  const live = recordedCrownBattle(emptyBoard(commands.createMatch(12303)));
+  const records = Array.from({length: MAX_BATTLE_RECORDS * (MAX_COMPLETED_RUNS + 1) + 1}, (_, i) =>
+    ({...structuredClone(live.battles[0]), runId: `cache-pressure-${i}`}));
+  for (const record of records.slice(0, -1)) validateMatchHistory(live.state, [record]);
+  validateMatchHistory(live.state, [records[0]]);
+  validateMatchHistory(live.state, [records.at(-1)!]);
+  const start = vi.spyOn(commands, 'startMatchCombat');
+  validateMatchHistory(live.state, [records[0]]);
+  expect(start).not.toHaveBeenCalled();
+  validateMatchHistory(live.state, [records[1]]);
+  expect(start).toHaveBeenCalledTimes(1);
+});
+
+it('reuses immutable historical edges while checking every current candidate', () => {
+  const first = recordedCrownBattle(emptyBoard(commands.createMatch(12304)));
+  const next = accepted(commands.nextRound(resolveM5Choices(first.state), first.state.round));
+  const second = recordedCrownBattle(next, first.history);
+  validateMatchHistory(second.state, second.battles);
+  const carry = vi.spyOn(equipment, 'validateHistoricalEquipment');
+  validateMatchHistory(second.state, second.battles);
+  expect(carry).toHaveBeenCalledTimes(1);
+  expect(carry.mock.calls[0][1]).toBe(second.state);
+  const altered = structuredClone(second.state);
+  Object.assign(altered.resourceProvenance, {entries: altered.resourceProvenance.entries.slice(0, -1)});
+  expect(() => validateMatchHistory(altered, second.battles)).toThrow(/历史获得或合成/);
+});
 
 it('reuses owned battle proofs but still checks each candidate and only replays a new round', () => {
   const first = recordedCrownBattle(commands.createMatch(12301));

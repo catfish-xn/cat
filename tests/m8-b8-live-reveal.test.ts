@@ -28,6 +28,9 @@ try {
 } catch (error) { if (error !== reached) throw error; }
 if (!preparation) throw Error('Public mage route did not reach 4-7');
 const prefix = preparation;
+// Fully admit the source history during fixture setup; timed candidates below
+// still pass through the complete production restore boundary.
+restoreMatch(serializeMatch(prefix));
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
