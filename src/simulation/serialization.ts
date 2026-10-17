@@ -1,4 +1,5 @@
 import { validateResistsShields } from './m8/resists-shield-restore';
+import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
 import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
@@ -273,6 +274,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');

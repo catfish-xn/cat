@@ -1,0 +1,135 @@
+import { expect, it, vi } from 'vitest';
+import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
+import { stepMatch, startMatchCombat, type MatchState } from '../../src/simulation/match';
+import * as mechanisms from '../../src/simulation/m8/restore';
+import { effectIdentity } from '../../src/simulation/m8/identity';
+import { accepted, battle } from '../match-helpers';
+import { itemMatch } from '../fixtures/m8-b4-match';
+import { startBracerFight } from '../fixtures/explorer-bracer-public';
+import { publicNeutralPreparation } from '../fixtures/m8-neutral-public-route';
+import * as expressions from '../../src/simulation/content/item-programs';
+
+function rejected(state: MatchState, reason: string) {
+  const consumer = vi.spyOn(mechanisms, 'validateMechanisms');
+  try {
+    for (const input of [state, JSON.stringify(state)])
+      expect(() => restoreMatch(input)).toThrow(`Invalid Match save: bounds preflight ${reason}`);
+    expect(() => serializeMatch(state)).toThrow(`Invalid Match save: bounds preflight ${reason}`);
+    expect(consumer).not.toHaveBeenCalled();
+  } finally { consumer.mockRestore(); }
+}
+
+// Audit 546d086 describes this as a static ordering risk; its bounds-g22-state
+// characterization tests cover other findings. Reproduce this boundary with
+// small safe counts, then require rejection before the per-unit consumers.
+it.each([false, true])('rejects a later owner before cross-unit declaration expansion (reversed = %s)', reversed => {
+  let legal = itemMatch('ionic-spark');
+  legal = stepMatch(legal).state;
+  expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+  const bad = structuredClone(legal), units = [...bad.combat!.units];
+  const owner = units.find(u => u.id === 'unit-1')!;
+  const target = units.find(u => u.mechanismState?.statuses.some(g => g.contributions.some(c => c.source.ownerId === owner.id)))!;
+  expect(target).toBeDefined();
+  expect(target.id).not.toBe(owner.id);
+  // declaredEffects used to consume this wanted value while validating a
+  // different unit, before reaching the owner's resolved-mechanics check.
+  Object.assign(owner, { mechanics: [...owner.mechanics!, {
+    mechanic: 'enforcer', source: owner.mechanics![0]?.source ?? owner.sources![0].source,
+    values: { wanted: 64, attackSpeedBps: 1 },
+  }] });
+  Object.assign(bad.combat!, { units: reversed ? [...units].reverse() : [target, ...units.filter(u => u !== target)] });
+  const allocation = vi.spyOn(expressions, 'stat');
+  try {
+    rejected(bad, 'mechanics');
+    // The same object/JSON witness on 8db36d0 makes 64 stat declarations
+    // before its later resolved-mechanics rejection (see evidence report).
+    expect(allocation).not.toHaveBeenCalled();
+  } finally { allocation.mockRestore(); }
+});
+
+it('rejects a forged item counter cap before compiling it or enumerating candidates', () => {
+  const legal = itemMatch('titans-resolve');
+  expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+  const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.id === 'unit-1')!;
+  const counter = owner.itemPrograms!.flatMap(p => p.program.triggers ?? []).flatMap(t => t.counters)[0];
+  expect(counter).toBeDefined();
+  Object.assign(counter, { cap: 64 });
+  rejected(bad, 'item programs');
+});
+
+it.each(['sampled tick', 'attackCount', 'castCount', 'mechanism definitions', 'periodTicks', 'pulseOrdinal'])(
+  'rejects %s before any per-unit candidate state construction', field => {
+    const legal = itemMatch('archangel');
+    expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+    const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.id === 'unit-1')!;
+    if (field === 'sampled tick') Object.assign(owner.mechanismState!, { sampledAtTick: 64 });
+    if (field === 'attackCount' || field === 'castCount') Object.assign(owner.runtime!, { [field]: 64 });
+    if (field === 'mechanism definitions') Object.assign(owner.mechanismDefinitions!.periodicTasks[0], { periodTicks: 0.01 });
+    if (field === 'periodTicks') Object.assign(owner.mechanismState!.periodicTasks[0], { periodTicks: 0.01 });
+    if (field === 'pulseOrdinal') Object.assign(owner.mechanismState!.periodicTasks[0], { pulseOrdinal: 64 });
+    rejected(bad, field);
+  });
+
+it('bounds sampled kill triggerCount by trusted roster/lives before the fact replay', () => {
+  const legal = startBracerFight();
+  expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
+  const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.definitionId === 'lux')!;
+  const d = owner.mechanismDefinitions!.eventTriggers!.find(t => t.id === 'kill')!;
+  Object.assign(owner, { triggerLedger: { runtimes: [{ ...effectIdentity(bad.combat!.combatId!, d.source, owner.id),
+    startsAtTick: 0, expiresAtTick: null, triggerCount: 64, stacks: 0, counters: {}, consumedRewards: [],
+    nextEligibleTick: 0, consumed: false, stackPolicy: d.stackPolicy }], processed: {}, actionCounts: {} } });
+  rejected(bad, 'triggerCount');
+});
+
+it('bounds a runtime counter by its authenticated item declaration', () => {
+  const legal = itemMatch('titans-resolve');
+  const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.id === 'unit-1')!;
+  const d = owner.mechanismDefinitions!.eventTriggers!.find(t => t.counters.length > 0)!;
+  const counter = d.counters[0];
+  expect(counter.cap).not.toBeNull();
+  Object.assign(owner, { triggerLedger: { runtimes: [{ ...effectIdentity(bad.combat!.combatId!, d.source, owner.id),
+    startsAtTick: 0, expiresAtTick: null, triggerCount: 0, stacks: counter.cap! + 1,
+    counters: { [counter.id]: counter.cap! + 1 }, consumedRewards: [], nextEligibleTick: 0, consumed: false,
+    stackPolicy: d.stackPolicy }], processed: {}, actionCounts: {} } });
+  rejected(bad, 'counter');
+});
+
+function continueEveryTick(legal: MatchState) {
+  const text = serializeMatch(legal);
+  let object = restoreMatch(structuredClone(legal)), json = restoreMatch(text), live = legal;
+  expect(object).toEqual(live); expect(json).toEqual(live);
+  expect(serializeMatch(object)).toBe(text); expect(serializeMatch(json)).toBe(text);
+  while (live.phase === 'combat') {
+    const next = stepMatch(live), fromObject = stepMatch(object), fromJson = stepMatch(json);
+    expect(fromObject).toEqual(next); expect(fromJson).toEqual(next);
+    live = next.state; object = fromObject.state; json = fromJson.state;
+  }
+  return live;
+}
+
+it('preserves a real long fight with growing trigger counts and resumes every tick', () => {
+  let state = startBracerFight();
+  while (state.phase === 'combat' && state.combat!.tick < 400) state = stepMatch(state).state;
+  expect(state.combat!.tick).toBe(400); expect(state.phase).toBe('combat');
+  continueEveryTick(state);
+});
+
+it('preserves many legitimately acquired rewards through late-game saves', () => {
+  const preparation = publicNeutralPreparation('6-7');
+  expect(preparation.m8.loot.receipts.length).toBeGreaterThan(15);
+  expect(preparation.resourceProvenance.entries.length).toBeGreaterThan(80);
+  continueEveryTick(accepted(startMatchCombat(preparation)));
+});
+
+it('preserves a save at the actual maximum pending-task checkpoint of a public late fight', () => {
+  let state = accepted(startMatchCombat(publicNeutralPreparation('6-7'))), busiest = state, maximum = 0;
+  while (state.phase === 'combat') {
+    const n = state.combat!.units.reduce((sum, u) => sum + (u.tasks?.length ?? 0) + (u.mechanismState?.periodicTasks.length ?? 0), 0);
+    if (n > maximum) { maximum = n; busiest = state; }
+    state = stepMatch(state).state;
+  }
+  expect(maximum).toBeGreaterThanOrEqual(5);
+  continueEveryTick(busiest);
+});
+
+it('keeps the ordinary public opening positive control', () => { continueEveryTick(battle()); });
