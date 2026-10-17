@@ -28,7 +28,10 @@ function roundTrip(s:api.MatchState):api.MatchState {
 const corrupt=(s:api.MatchState,mutate:(x:any)=>void)=>{ const saved=serializeMatch(s);expect(restoreMatch(saved)).toEqual(s);const x=JSON.parse(saved);mutate(x);expect(()=>restoreMatch(x)).toThrow(); };
 
 describe('B7 installed encounters and trusted Match restore',()=>{
-  it.each(COMPILED_NEUTRAL_ENCOUNTERS.map(e=>e.roundId))('%s freezes, starts, runs to settlement and resumes canonical saves',roundId=>{
+  for (const {roundId} of COMPILED_NEUTRAL_ENCOUNTERS) {
+  // 首次冷恢复要真实计算战斗，用户10-17批准20秒；仅限4-7/5-7/6-7。
+  const coldRestoreTimeout = ['4-7','5-7','6-7'].includes(roundId) ? 20_000 : undefined;
+  it(`${roundId} freezes, starts, runs to settlement and resumes canonical saves`,()=>{
     let s=battleFixture(roundId),steps=0;
     const compiled=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===roundId)!;
     expect(s.m8.preparation.enemies).toEqual(compiled.deployment);
@@ -48,7 +51,8 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     }
     expect(['settlement','gameOver']).toContain(s.phase);
     expect(s.combat!.units.filter(u=>u.team==='enemy').every(u=>u.mana===0 && u.maxMana===0)).toBe(true);
-  });
+  }, coldRestoreTimeout);
+  }
   it.each(['3-7','6-7'])('%s separates captured initial events from tick-zero opening moves committed by the first step',roundId=>{
     const preparedState=prepared(roundId),start=api.startMatchCombat(preparedState);
     if(!start.ok) throw new Error('fixture cannot start');
