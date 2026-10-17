@@ -41,6 +41,9 @@ export function conditionHolds(condition: Condition, sample: StatSample): boolea
     case 'enemy-targeting-holder':
       if (!sample.enemiesTargetingHolder) throw new RangeError('Missing current primary targets');
       return sample.enemiesTargetingHolder.length > 0;
+    case 'killing-blow':
+      if (!sample.packet) throw new RangeError('Missing killing packet');
+      return (sample.packet.source.ownerId === sample.holder.id) === (condition.by === 'holder');
   }
 }
 /** Counter dictionaries belong to one source runtime, never to the whole holder. */
@@ -52,7 +55,7 @@ export function modifierValues(stat: Stat, modifiers: readonly BoundModifier[], 
     const counters = 'modifier' in entry ? entry.counters : sample.counters;
     if (modifier.stat !== stat) continue;
     if ((modifier.unit === 'hexes' && stat !== 'range') || (stat === 'range' && modifier.unit !== 'hexes')
-      || (['attackSpeed', 'critChance', 'critMultiplier', 'damageAmp', 'damageReduction', 'omnivamp'].includes(stat) && modifier.unit !== 'bps')) throw new RangeError('Invalid modifier unit');
+      || (['attackSpeed', 'critChance', 'critMultiplier', 'damageAmp', 'damageReduction', 'omnivamp', 'attackSpeedLock'].includes(stat) && modifier.unit !== 'bps')) throw new RangeError('Invalid modifier unit');
     if (stat === 'damageReduction') {
       if (!modifier.damageFilter || !sample.packet) throw new RangeError('Reduction requires explicit filter and packet');
       const f = modifier.damageFilter, c = sample.packet;

@@ -15,6 +15,9 @@ function sourceStats(id:ArtifactId):Effect[]{
  if(n('AS'))effects.push({kind:'attackSpeedBps',bps:Math.round(n('AS')*100)});
  return effects;
 }
+const grow=(m:ReturnType<typeof modifier>)=>({...stat(m),stackPolicy:{kind:'add-stacks' as const,cap:null}});
+const killingBlow=(by:'holder'|'other')=>({kind:'killing-blow' as const,by});
+const num=(x:number)=>Math.round(x*100)/100;
 const ticks=(seconds:number)=>Math.round(seconds*20),pct=(percent:number)=>Math.round(percent*100);
 const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly text:string;readonly omitted?:string}>>={
  TFT4_Item_OrnnAnimaVisage:(()=>{const v=values('TFT4_Item_OrnnAnimaVisage');return {
@@ -39,6 +42,17 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
   text:`受到的伤害降低${v.PercentDR}%。`,
   // {cd951938} decodes to StatDurability 0.25: the stat-bar form of the same 25%, applied once.
   omitted:'移动速度提升不执行（项目移动间隔全局固定）；冰冷免疫无对象（项目没有冰冷）。'};})(),
+ TFT_Item_Artifact_RapidFirecannon:{
+  program:{modifiers:[modifier('range',1,'hexes')],triggers:[trigger({id:'kill-range',event:'kill-or-assist',condition:killingBlow('holder'),effects:[grow(modifier('range',1,'hexes'))]})]},
+  text:'攻击距离+1；携带者每亲手击杀一名敌人，再+1，持续到战斗结束。'},
+ TFT_Item_Artifact_SeekersArmguard:(()=>{const v=values('TFT_Item_Artifact_SeekersArmguard'),gain=(n:number)=>(['armor','magicResist','abilityPower'] as const).map(s=>grow(modifier(s,n)));return {
+  program:{triggers:[trigger({id:'assist',event:'kill-or-assist',condition:killingBlow('other'),effects:gain(v.StatsPerTakedown)}),trigger({id:'kill',event:'kill-or-assist',condition:killingBlow('holder'),effects:gain(v.StatsPerKill)})]},
+  text:`参与击杀后护甲、魔抗、法强各+${v.StatsPerTakedown}；亲手击杀则改为+${v.StatsPerKill}。持续到战斗结束。`};})(),
+ TFT_Item_Artifact_SilvermereDawn:(()=>{const v=values('TFT_Item_Artifact_SilvermereDawn');return {
+  // Combat-long immunity uses the same 1201-tick bound as Deep Roots.
+  program:{modifiers:[modifier('attackSpeedLock',Math.round(v.AttackSpeedCap*10000),'bps')],effects:[status('control-immunity',10000,1201,{activation:'immediate'})],
+   triggers:[trigger({id:'stun',selector:enemies({candidates:'event-target'}),effects:[status('stun',10000,ticks(v.StunDuration),{activation:'immediate'})]})]},
+  text:`免疫眩晕；普攻使目标眩晕${num(v.StunDuration)}秒；攻速锁定为每秒${num(v.AttackSpeedCap)}次。`};})(),
 };
 /** 约定值 G24-ARTIFACT-SUBSET-01: artifacts outside PROGRAMS are not yet executable and are not registered. */
 export const G24_ARTIFACT_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeContent(Object.fromEntries(Object.entries(PROGRAMS).map(([id,entry])=>{

@@ -48,7 +48,8 @@ export function validateItemProgram(program: ItemProgram): void {
     if(e.kind==='grant-shield'){integer(e.durationTicks,1);e.endEffects.forEach(effect);}
   };
   const modifier=(m:StatModifier):void=>{
-    check(['maxHp','attackDamage','abilityPower','armor','magicResist','attackSpeed','range','critChance','critMultiplier','damageAmp','damageReduction','omnivamp'].includes(m.stat));
+    check(['maxHp','attackDamage','abilityPower','armor','magicResist','attackSpeed','range','critChance','critMultiplier','damageAmp','damageReduction','omnivamp','attackSpeedLock'].includes(m.stat));
+    if(m.stat==='attackSpeedLock')check(m.value.kind==='constant'&&m.value.amount>0&&m.condition.kind==='always');
     check(['flat','bps','hexes'].includes(m.unit));
     for(const v of Object.values(m.value))if(typeof v==='number')integer(v,Number.MIN_SAFE_INTEGER);
   };

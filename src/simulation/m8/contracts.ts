@@ -34,14 +34,18 @@ export interface EffectRuntime extends EffectIdentity {
   readonly stackPolicy: StackPolicy;
 }
 export type Stat = 'maxHp' | 'attackDamage' | 'abilityPower' | 'armor' | 'magicResist'
-  | 'attackSpeed' | 'range' | 'critChance' | 'critMultiplier' | 'damageAmp' | 'damageReduction' | 'omnivamp';
+  | 'attackSpeed' | 'range' | 'critChance' | 'critMultiplier' | 'damageAmp' | 'damageReduction' | 'omnivamp'
+  /** G2-4b: attacks per second ×10000; the lowest active lock replaces the computed attack speed. */
+  | 'attackSpeedLock';
 export type Condition =
   | { readonly kind: 'always' }
   | { readonly kind: 'positive-hp-damage' }
   | { readonly kind: 'hp-ratio'; readonly subject: 'holder' | 'target'; readonly op: 'gt' | 'lt' | 'lte'; readonly thresholdBps: Bps }
   | { readonly kind: 'target-max-hp'; readonly op: 'gt'; readonly hp: number }
   | { readonly kind: 'starting-rows'; readonly rows: 'front-two' | 'back-two' }
-  | { readonly kind: 'enemy-targeting-holder' };
+  | { readonly kind: 'enemy-targeting-holder' }
+  /** G2-4b: kill-or-assist only. The killing packet's owner is (or is not) the holder. */
+  | { readonly kind: 'killing-blow'; readonly by: 'holder' | 'other' };
 /** A08: evaluate applicable contributions before selecting strongest reduction. */
 export interface DamageFilter {
   readonly deliveries: readonly DamageDelivery[] | 'all';

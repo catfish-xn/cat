@@ -14,7 +14,8 @@ import {G24_ARTIFACT_ITEMS,G24_ARTIFACT_PENDING} from '../src/simulation/content
 import {G23_POLICY} from '../src/simulation/content/g2-3-policy';
 import {healView,packets} from './helpers/replay2-views';
 
-const IMPLEMENTED=['TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnZhonyasParadox','TFT9_Item_OrnnDeathfireGrasp','TFT_Item_Artifact_Mittens','TFT_Item_Artifact_TalismanOfAscension'];
+const IMPLEMENTED=['TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnZhonyasParadox','TFT9_Item_OrnnDeathfireGrasp','TFT_Item_Artifact_Mittens','TFT_Item_Artifact_TalismanOfAscension',
+ 'TFT_Item_Artifact_RapidFirecannon','TFT_Item_Artifact_SeekersArmguard','TFT_Item_Artifact_SilvermereDawn'];
 const COMBAT='g24-artifact';
 /** Holder p (Lux) faces one 3-star Garen; `item` is equipped on p unless null. */
 function start(item:string|null,patch:{enemyCell?:{col:number;row:number}}={}){
@@ -31,7 +32,7 @@ const unit=(state:CombatState,id:string)=>state.units.find(u=>u.id===id)!;
 it('source records cover the 29-artifact pool; only the existing-vocabulary subset is registered',()=>{
  expect(Object.keys(G24_ARTIFACT_SOURCE)).toEqual([...G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6]);
  expect(Object.keys(G24_ARTIFACT_ITEMS).sort()).toEqual([...IMPLEMENTED].sort());
- expect(G24_ARTIFACT_PENDING).toHaveLength(23);
+ expect(G24_ARTIFACT_PENDING).toHaveLength(29-IMPLEMENTED.length);
  expect(G23_POLICY.revision).toBe('g2-4b-artifacts-v1');
  for(const [id,item] of Object.entries(G24_ARTIFACT_ITEMS)){
   expect(ITEM_DEFINITIONS[id]).toBe(item);
@@ -113,4 +114,55 @@ it('Mittens reduces incoming physical and magic damage by 25%',()=>{
  expect(mittens.hpDamage).toBeLessThan(plain.hpDamage);
  expect(Math.abs(mittens.hpDamage-Math.round(plain.hpDamage*0.75))).toBeLessThanOrEqual(1);
  expect(G24_ARTIFACT_ITEMS.TFT_Item_Artifact_Mittens.effects).toEqual([{kind:'attackSpeedBps',bps:6000}]);
+});
+
+type Spot={id:string;definitionId:string;cell:{col:number;row:number};hp?:number};
+/** Several units per side; `item` sits on p. Optional hp patches let a short fight produce kills and assists. */
+function arena(item:string|null,players:Spot[],enemies:Spot[]){
+ const s=createMatch(42),place=(team:'player'|'enemy')=>(u:Spot)=>({id:u.id,definitionId:u.definitionId,starLevel:1 as const,team,location:{kind:'board' as const,cell:u.cell}});
+ const preparation={...s.preparation,units:[...players.map(place('player')),...enemies.map(place('enemy'))]};
+ const items=item?[{id:'item-1',definitionId:item,location:{kind:'unit' as const,unitId:'p',slot:0}}]:[];
+ const state=createCombatWithEvents(preparation,buildStrategySnapshot({...s,preparation,items}),COMBAT).state;
+ const hp=new Map([...players,...enemies].flatMap(u=>u.hp?[[u.id,u.hp] as const]:[]));
+ return {...state,units:state.units.map(u=>hp.has(u.id)?{...u,hp:hp.get(u.id)!}:u)};
+}
+/** Kills by the holder, and takedowns where it only contributed positive damage (the engine's assist rule). */
+/** Steps while the combat still runs and p lives: combat end clears every status, so growth is read before it. */
+function runLive(initial:CombatState,count=1200){let state=initial;const events:CombatEvent[]=[];for(let n=0;n<count;n++){const r=stepCombat(state);if(r.state.status!=='running'||!unit(r.state,'p').alive)break;state=r.state;events.push(...r.events);}return {state,events};}
+function takedowns(events:readonly CombatEvent[],holder='p'){
+ const hits=packets(events),kills=events.flatMap(e=>e.type==='kill'?[e]:[]);
+ const contributed=(victim:string,tick:number)=>hits.some(h=>h.unitId===victim&&h.source.ownerId===holder&&h.tick<=tick&&h.absorbed+h.hpDamage>0);
+ return {kills:kills.filter(k=>k.source.ownerId===holder).length,assists:kills.filter(k=>k.source.ownerId!==holder&&contributed(k.unitId,k.tick)).length};
+}
+const KILL_FIGHT=[[{id:'p',definitionId:'lux',cell:{col:2,row:4}},{id:'a',definitionId:'garen',cell:{col:3,row:4}}],
+ [{id:'e1',definitionId:'garen',cell:{col:2,row:3},hp:120},{id:'e2',definitionId:'garen',cell:{col:3,row:3},hp:120},{id:'e3',definitionId:'garen',cell:{col:4,row:3},hp:120},{id:'e4',definitionId:'garen',cell:{col:1,row:3},hp:120}]] as const;
+it('Rapid Firecannon adds one range, then one more per killing blow by the holder only',()=>{
+ const initial=arena('TFT_Item_Artifact_RapidFirecannon',[...KILL_FIGHT[0]],[...KILL_FIGHT[1]]),plain=arena(null,[...KILL_FIGHT[0]],[...KILL_FIGHT[1]]);
+ expect(readCombatStats(unit(initial,'p'),initial).attackRange).toBe(readCombatStats(unit(plain,'p'),plain).attackRange+1);
+ const {events,state}=runLive(initial),{kills}=takedowns(events);
+ expect(kills).toBeGreaterThan(0);expect(events.some(e=>e.type==='kill'&&e.source.ownerId!=='p')).toBe(true);
+ expect(readCombatStats(unit(state,'p'),state).attackRange).toBe(readCombatStats(unit(plain,'p'),plain).attackRange+1+kills);
+ validate(state);
+});
+it('Seeker\'s Armguard grows 15 resists/AP per assist and 20 per killing blow',()=>{
+ const initial=arena('TFT_Item_Artifact_SeekersArmguard',[...KILL_FIGHT[0]],[...KILL_FIGHT[1]]);
+ const before=readCombatStats(unit(initial,'p'),initial);
+ const {state,events}=runLive(initial),{kills,assists}=takedowns(events),after=readCombatStats(unit(state,'p'),state),gain=kills*20+assists*15;
+ expect(kills).toBeGreaterThan(0);expect(assists).toBeGreaterThan(0);
+ expect([after.armor-before.armor,after.magicResist-before.magicResist,after.abilityPower-before.abilityPower]).toEqual([gain,gain,gain]);
+ validate(state);
+});
+it('Silvermere Dawn locks attacks to one per 40 ticks, stuns each attack target 16 ticks and grants control immunity',()=>{
+ const plain=start(null),initial=start('TFT_Item_Artifact_SilvermereDawn');
+ expect(readCombatStats(unit(initial,'p'),initial).attackIntervalTicks).toBe(40);
+ expect(readCombatStats(unit(plain,'p'),plain).attackIntervalTicks).toBeLessThan(40);
+ const lux=unit(initial,'p').mechanismState!.statuses.find(g=>g.kind==='control-immunity');
+ expect(lux?.contributions.map(c=>c.source.definitionId)).toEqual(['TFT_Item_Artifact_SilvermereDawn']);
+ const {events,state}=run({...initial,units:initial.units.map(u=>u.id==='p'?{...u,mana:0,maxMana:10000}:u)},200);
+ const attacks=packets(events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='attack').map(p=>p.tick);
+ expect(attacks.length).toBeGreaterThan(2);
+ expect(attacks.slice(1).map((t,i)=>t-attacks[i])).toEqual(Array(attacks.length-1).fill(40));
+ const stuns=events.flatMap(e=>e.type==='statusChanged'&&e.group.kind==='stun'&&e.group.targetId==='e'&&e.reason!=='expired'?e.group.contributions.filter(c=>c.source.definitionId==='TFT_Item_Artifact_SilvermereDawn').map(c=>c.expiresAtTick!-c.appliedAtTick):[]);
+ expect(stuns.length).toBeGreaterThan(0);expect(new Set(stuns)).toEqual(new Set([16]));
+ validate(state);
 });

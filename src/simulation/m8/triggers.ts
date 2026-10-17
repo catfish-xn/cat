@@ -83,7 +83,7 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
     if((processed[seen] ?? -1)>=event.eventSeq) continue;
     processed[seen]=event.eventSeq;
     const target=units.find(u=>u.id===context.targetId);
-    if(!conditionHolds(d.condition,{holder,target,startingRows:holder.startingRows,positiveHpDamage:signal.facts.damage.some(o=>o.hpDamage>0)})) continue;
+    if(!conditionHolds(d.condition,{holder,target,startingRows:holder.startingRows,positiveHpDamage:signal.facts.damage.some(o=>o.hpDamage>0),...(context.event==='kill-or-assist'&&signal.facts.damage[0]?{packet:signal.facts.damage[0].context}:{})})) continue;
     if(old.consumed || event.tick<old.nextEligibleTick || d.maxPerCombat!==null && old.triggerCount>=d.maxPerCombat) continue;
     const gate=d.gate, count=gate.kind==='always'?0:values[gate.counterId] ?? 0;
     if(gate.kind==='every-n' && (count<gate.firstAt || (count-gate.firstAt)%gate.everyN!==0)) continue;
