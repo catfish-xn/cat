@@ -18,9 +18,9 @@ it('G2-4a restores tiers 4, 8 and 9 to their source rewards and keeps the gold f
  expect(g23ConquerorReward(chest(4))).toEqual({Item:['TFT_Consumable_ChampionDuplicator_III'],ThreeCostUnit:1});
  expect(g23ConquerorReward(chest(8))).toEqual({Item:['TFT_Item_ThiefsGloves']});
  expect(g23ConquerorReward(chest(9))).toEqual({MeepTypeUnit:['TFT_ArmoryKeyCompleted']});
- // G2-4b restores artifact tiers 10/14; support tiers 11/13 keep the floor; 12/15 pay source gold with crowns.
- expect([10,11,12,13,14,15].map(t=>g23ConquerorReward(chest(t)).Gold)).toEqual([undefined,15,20,50,50,80]);
- for(const tier of [12,15])expect(g23ConquerorReward(chest(tier))).toEqual(chest(tier).reward);
+ // G2-4b restores artifact tiers 10/14 and support tiers 11/13; 12/13/15 pay source gold.
+ expect([10,11,12,13,14,15].map(t=>g23ConquerorReward(chest(t)).Gold)).toEqual([undefined,undefined,20,20,50,80]);
+ for(const tier of [11,12,13,15])expect(g23ConquerorReward(chest(tier))).toEqual(chest(tier).reward);
  expect(g23ConquerorReward(chest(14)).MeepTypeUnit).toEqual(['TFT_ArmoryKeyOrnn']);
  expect(G23_DEFERRED_CONQUEROR_ITEMS).not.toContain('TFT_ArmoryKeyCompleted');
 });
