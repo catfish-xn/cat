@@ -72,7 +72,7 @@ const facts=(round:number,patch:Partial<G23BattleFacts>={}):G23BattleFacts=>({ba
 it('settlement commits every crossed source chest once, continues past1500 and restores without drawing',()=>{
  let p=createG23Progress(42),gold=0;
  for(let round=1;round<=10;round++){const r=advanceG23Economy(p,facts(round));p=r.progress;gold+=r.gold;expect(advanceG23Economy(p,facts(round))).toEqual({progress:p,gold:0});validateG23Progress(p,42,round);}
- expect(p.conquest.stacks).toBe(1800);expect(p.conquest.chestsOpened).toBe(15);expect(p.rewards.filter(r=>r.source==='conqueror')).toHaveLength(15);expect(p.conquest.radiantConversion).toBe(true);expect(gold).toBe(386+10*3);
+ expect(p.conquest.stacks).toBe(1800);expect(p.conquest.chestsOpened).toBe(15);expect(p.rewards.filter(r=>r.source==='conqueror')).toHaveLength(15);expect(p.conquest.radiantConversion).toBe(true);expect(gold).toBe(361+10*3-(200-80)); // G2-4a: tiers 4/8/9 no longer pay 4/9/12 transitional gold; tier 15 pays source 80 with its crowns
  const forged={...p,conquest:{...p.conquest,stacks:1801}};expect(()=>validateG23Progress(forged,42,10)).toThrow();
 });
 it('source black-market offers sample once, skip once and cash out their exact weighted option',()=>{
@@ -89,19 +89,19 @@ it('all enabled source reward descriptors produce concrete finite atoms; all rew
 });
 
 it('only deferred Conqueror tiers get the whole-tier gold floor, preserving all other source rewards',()=>{
- const affected=[4,8,9,10,11,12,13,14,15];
- const cash=[2,0,0,4,0,0,0,9,12,14,15,20,50,60,200];
+ const affected=[10,11,13,14];
+ const cash=[2,0,0,0,0,0,0,0,0,14,15,20,50,60,80];
  expect(G23_CONQUEROR_CHESTS.map(c=>g23ConquerorReward(c).Gold??0)).toEqual(cash);
  for(const c of G23_CONQUEROR_CHESTS){
   const reward=g23ConquerorReward(c);
   if(!affected.includes(c.tier))expect(reward).toEqual(c.reward);
-  expect(JSON.stringify(reward)).not.toMatch(/ArmoryKey|ForceOfNature|ThiefsGloves|ChampionDuplicator|ZekesHerald|LocketOfTheIronSolari|TFT_Item_Chalice/);
+  expect(JSON.stringify(reward)).not.toMatch(/ArmoryKeyOrnn|ArmoryKeySupport|ZekesHerald|LocketOfTheIronSolari|TFT_Item_Chalice/);
  }
  expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[13])).toEqual({Gold:60,ItemByKey:['RADIANTITEMS_SET5'],Item:['TFT_Consumable_ItemRemover']});
  expect(g23ConquerorReward({...G23_CONQUEROR_CHESTS[13],reward:{Gold:300,MeepTypeUnit:['TFT_ArmoryKeyOrnn']}})).toEqual({Gold:300});
  expect(g23ConquerorReward({...G23_CONQUEROR_CHESTS[0],estimatedGold:200})).toEqual({Gold:2});
  expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[12])).toEqual({Gold:50,Item:['TFT_Consumable_ItemRemover']});
- expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[14])).toEqual({Gold:200,PlayerBuff:['TFT9_RadiantConversion_PlayerBuff']});
+ expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[14])).toEqual({Gold:80,Item:['TFT_Item_ForceOfNature','TFT_Item_ForceOfNature'],PlayerBuff:['TFT9_RadiantConversion_PlayerBuff']});
 });
 it('passing a market grows only Chem-Barons by the active source tier health-per-skip',()=>{
  const state=formation(['renata','renni','singed','darius']);
@@ -126,7 +126,7 @@ it('radiant source identities execute actual crit authorization, attack mana and
  expect(readCombatStats(lux,initial).abilityPower).toBe(230); //100+Shojin35+JG55+Crownguard40
  expect(Object.keys(G23_RADIANT_MAPPING)).toHaveLength(36);
  for(const id of Object.values(G23_RADIANT_MAPPING))expect(G23_SPECIAL_ITEM_SOURCE).toHaveProperty(id);
- for(const id of ['TFT_Item_ForceOfNature','TFT_Item_ZekesHerald','TFT_Item_Chalice'])expect(G23_SPECIAL_ITEMS[id]).toBeUndefined();
+ for(const id of ['TFT_Item_ZekesHerald','TFT_Item_Chalice'])expect(G23_SPECIAL_ITEMS[id]).toBeUndefined();
 });
 it('radiant conversion changes equipped board/bench items once; thereafter only newly combined identities',()=>{
  const state=formation(['lux']);

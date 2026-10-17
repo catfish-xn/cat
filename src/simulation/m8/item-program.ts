@@ -14,6 +14,8 @@ export interface ItemProgram {
   readonly survival?: readonly ItemTrigger[];
   readonly periodic?: readonly { readonly periodTicks: number; readonly startsAtTick?: number; readonly endsAtTick?: number; readonly finalPulse?: 'before-expiry'; readonly condition?: import('./contracts').Condition; readonly program: Omit<PeriodicProgram, 'definitionId'> }[];
   readonly vamp?: readonly Omit<VampDefinition, 'source'>[];
+  /** G2-4b: resolved by the strategy snapshot. Every trigger damage flat becomes flat[min(stage,length)-1]. */
+  readonly byStage?: { readonly flat: readonly number[] };
 }
 export interface BoundItemProgram { readonly source: Source; readonly program: ItemProgram }
 export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'>): readonly BoundItemProgram[] { return unit.itemPrograms ?? []; }
@@ -35,9 +37,11 @@ export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | '
 }
 export function validateItemProgram(program: ItemProgram): void {
   const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid combat program');};
-  check(program && Object.keys(program).every(k=>['modifiers','effects','triggers','survival','periodic','vamp'].includes(k)));
+  check(program && Object.keys(program).every(k=>['modifiers','effects','triggers','survival','periodic','vamp','byStage'].includes(k)));
   const effect=(e:Effect):void=>{
-    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment'].includes(e.kind));
+    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment','over-time','leap'].includes(e.kind));
+    if(e.kind==='over-time'){check(['heal','mana'].includes(e.resource));integer(e.pulses,1);integer(e.periodTicks,1);check(e.pulses*e.periodTicks<=1200);}
+    if(e.kind==='grant-mana'&&e.maxManaBps!==undefined)integer(e.maxManaBps,1);
     if(e.kind==='apply-status'){validateStatusApplication(e.status);check(e.anyDamage===undefined||e.anyDamage===true);}
     if(e.kind==='modify-stat') { modifier(e.modifier); if(e.duration.kind==='ticks')integer(e.duration.ticks,1); }
     if('amount' in e) {
@@ -48,14 +52,17 @@ export function validateItemProgram(program: ItemProgram): void {
     if(e.kind==='grant-shield'){integer(e.durationTicks,1);e.endEffects.forEach(effect);}
   };
   const modifier=(m:StatModifier):void=>{
-    check(['maxHp','attackDamage','abilityPower','armor','magicResist','attackSpeed','range','critChance','critMultiplier','damageAmp','damageReduction','omnivamp'].includes(m.stat));
+    check(['maxHp','attackDamage','abilityPower','armor','magicResist','attackSpeed','range','critChance','critMultiplier','damageAmp','damageReduction','omnivamp','attackSpeedLock','damageAmpPerHex'].includes(m.stat));
+    if(m.stat==='attackSpeedLock'||m.stat==='damageAmpPerHex')check(m.value.kind==='constant'&&m.value.amount>0&&m.condition.kind==='always');
     check(['flat','bps','hexes'].includes(m.unit));
     for(const v of Object.values(m.value))if(typeof v==='number')integer(v,Number.MIN_SAFE_INTEGER);
   };
   (program.modifiers ?? []).forEach(modifier);(program.effects ?? []).forEach(effect);
   for(const d of [...program.triggers ?? [],...program.survival ?? []]) {
-    check(d.id && !('source' in d) && d.effects.length<32); integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
+    check(d.id && !('source' in d) && d.effects.length<32);
+    if(d.gate.kind==='consume-counter'){const id=d.gate.counterId;check(d.counters.some(c=>c.id===id&&c.cap!==null));} integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
   }
   for(const p of program.periodic ?? []){integer(p.periodTicks,1);if(p.endsAtTick!==undefined)integer(p.endsAtTick,1);check(p.program.effects.length<32);p.program.effects.forEach(effect);}
-  for(const v of program.vamp ?? []){modifier(v.modifier);integer(v.allyBps);}
+  for(const v of program.vamp ?? []){modifier(v.modifier);integer(v.allyBps);if(v.damageTypes)check(v.damageTypes.length>0&&v.damageTypes.every(t=>['physical','magic','true'].includes(t)));}
+  if(program.byStage){check(program.byStage.flat.length>0);program.byStage.flat.forEach(n=>integer(n));}
 }
