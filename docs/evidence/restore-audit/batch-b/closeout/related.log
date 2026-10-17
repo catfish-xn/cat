@@ -1,0 +1,51 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/verified-restore-cache.test.ts tests/restore-audit/preparation-ledger-scope.test.ts tests/restore-audit/preparation-ledger.test.ts tests/restore-audit/match-authority.test.ts tests/m5-serialization.test.ts tests/m6-replay.test.ts tests/m8-b8-restore-fold-reuse.test.ts tests/m6-persistence.test.ts tests/m5-economy.test.ts tests/m5-command-phases.test.ts tests/m8-b8-restore.test.ts --reporter=default --reporter=json --outputFile=/tmp/batch-b-closeout/related.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/m8-b8-restore-fold-reuse.test.ts (5 tests) 508ms
+   ✓ B8 within-restore complete resource projection reuse (5)
+     ✓ retains two full-ledger validations for finished combat with a shorter historical prefix 346ms
+ ✓ |fast| tests/restore-audit/match-authority.test.ts (10 tests) 582ms
+ ✓ |fast| tests/m5-economy.test.ts (42 tests) 9ms
+ ✓ |fast| tests/m5-command-phases.test.ts (13 tests) 88ms
+ ✓ |fast| tests/restore-audit/verified-restore-cache.test.ts (4 tests) 806ms
+   ✓ process-local exact verified input cache (4)
+     ✓ cold/warm states and refusals agree; changed ledger never hits; failures and returned mutation are not admitted 477ms
+     ✓ collection keys include every battle byte and never borrow a standalone-state cache on a miss 319ms
+ ✓ |fast| tests/m5-serialization.test.ts (33 tests) 1090ms
+ ✓ |fast| tests/restore-audit/preparation-ledger-scope.test.ts (4 tests) 1688ms
+   ✓ collection replays each battle once, including unchanged-combat equipment command: false 322ms
+   ✓ collection replays each battle once, including unchanged-combat equipment command: true 967ms
+ ✓ |fast| tests/m6-persistence.test.ts (44 tests) 2037ms
+   ✓ M6 serial snapshot coordinator (8)
+     ✓ bounds repeated quota failures to one latest fixed pending snapshot 321ms
+   ✓ exports owned history in identical UTF-8 bytes, with fresh mutable fields and no trust in frozen spoofs 1142ms
+ ✓ |fast| tests/restore-audit/preparation-ledger.test.ts (16 tests) 2835ms
+   ✓ previous battle plus next preparation seed 42 (5)
+     ✓ accepts the original full collection and file 346ms
+   ✓ preparation command ledger invariants (6)
+     ✓ rebuilds paid multi-round trading, refresh and experience, then resumes tick-for-tick 904ms
+ ✓ |fast| tests/m6-replay.test.ts (9 tests) 2908ms
+   ✓ M6 isolated battle records and replay (9)
+     ✓ captures tick zero, current prefix, and restores an identical terminal without mutating the active match 868ms
+     ✓ rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology 307ms
+     ✓ [T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references 619ms
+ ✓ |fast| tests/m8-b8-restore.test.ts (7 tests) 4453ms
+   ✓ B8 default Match own restore (7)
+     ✓ round-trips preparation, running, reveal, finished choice and choice resolution without issuing anything 3907ms
+
+ Test Files  11 passed (11)
+      Tests  187 passed (187)
+   Start at  15:54:01
+   Duration  7.09s (tests 46%, transform 42%, import 11%, setup 1%)
+
+JSON report written to /tmp/batch-b-closeout/related.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
