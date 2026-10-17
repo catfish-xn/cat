@@ -50,6 +50,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  const expectedGold=new Map<string,{amount:number;round:number;source:string}>();
  for(const action of p.economyReceipts)if(action.kind==='battle'){
   if(action.facts.highRollerGold)expectedGold.set(`g23:high-roller:${action.facts.battleId}`,{amount:action.facts.highRollerGold,round:action.facts.round,source:'high-roller'});
+  if(action.crownGold)expectedGold.set(`g23:crown:${action.facts.battleId}`,{amount:action.crownGold,round:action.facts.round,source:'tacticians-crown'});
   for(const bundleId of action.bundles){
    const chest=G23_CONQUEROR_CHESTS[Number(bundleId.split(':').at(-1))-1],amount=Number(g23ConquerorReward(chest).Gold??0);
    if(amount)expectedGold.set(`${bundleId}:gold`,{amount,round:action.facts.round,source:'conqueror-chest'});
@@ -59,7 +60,14 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const claim of p.rewardClaims){
   const r=receipts.find(r=>r.receiptId===claim.id);check(r&&r.round===claim.round);
   if(!r)continue;
-  if(claim.kind==='item')check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)||(r.kind==='choice'&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+  const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed).find(a=>a.id===claim.atomId)!;
+  check(r.source===bundle.source);
+  if(claim.kind==='item'){
+   if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
+    &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
+   else check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)
+    ||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===bundle.id&&!r.skipped&&r.price===0&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+  }
   else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
   else if(claim.kind==='tool')check(r.kind==='consumable'&&r.definitionId===claim.definitionId&&r.consumableId===claim.instanceId);
   else check(r.kind==='gold'&&r.amount===claim.gold);
@@ -67,7 +75,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const purchase of p.junkerPurchases){const r=receipts.find(r=>r.receiptId===purchase.id);check(r?.kind==='choice'&&r.choiceKind==='armory'&&r.optionId===purchase.upgrade&&r.price===purchase.cost&&r.round===purchase.round);}
  for(const r of receipts){
   check(r.round<=state.round&&r.roundId===getMultiplayerRoundByOrdinal(r.round).roundId);
-  if(r.source==='high-roller'||r.source==='conqueror-chest')check(expectedGold.has(r.receiptId));
+  if(r.source==='high-roller'||r.source==='conqueror-chest'||r.source==='tacticians-crown')check(expectedGold.has(r.receiptId));
   if(r.source==='conqueror'||r.source==='black-market')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
  }
 }

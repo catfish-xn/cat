@@ -275,7 +275,8 @@ export interface ManaRequest {
   readonly source: Source;
   readonly targetId: string;
   readonly amount: number;
-  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill';
+  /** item-granted: starting mana of an item gained during combat (G2-4b chest, G24-CHEST-03). */
+  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill' | 'item-granted';
   readonly bypassLock: 'none' | 'this-cast-refund';
   readonly castActionSeq: number | null;
 }
@@ -341,14 +342,17 @@ export interface TargetSelector {
   readonly excludeSelf: boolean;
   readonly excludePrimary: boolean;
   readonly distinct: boolean;
-  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
+  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-ratio-desc-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
   readonly sample: 'combat-start' | 'action-completion' | 'each-tick' | 'each-pulse';
+  /** G24-CHEST-02 (user 2026-10-17 06:25): summons and structures cannot hold items, so they are never chosen. */
+  readonly excludeSummons?: true;
 }
 /** Finite declarative payloads; executors are B3–B5 work. */
 export type Effect =
   | { readonly kind: 'modify-stat'; readonly stackPolicy: StackPolicy; readonly activation: 'immediate' | 'next-tick'; readonly modifier: StatModifier; readonly duration: Duration }
   | { readonly kind: 'damage'; readonly damageType: DamageType; readonly delivery: DamageDelivery; readonly amount: Amount; readonly critEligibility: CritEligibility }
-  | { readonly kind: 'apply-status'; readonly status: StatusApplication }
+  /** anyDamage (G2-4b Obsidian Cleaver): on damage-dealt, qualifies on every positive-damage packet instead of the status kind's proc permission. */
+  | { readonly kind: 'apply-status'; readonly status: StatusApplication; readonly anyDamage?: true }
   | { readonly kind: 'heal'; readonly amount: Amount }
   | { readonly kind: 'transfer-stat'; readonly activation: 'next-tick'; readonly stats: readonly Stat[]; readonly amount: number; readonly duration: Duration; readonly applicationIdentity: 'action-target'; readonly persistAfterTargetDeath: true }
   | { readonly kind: 'grant-shield'; readonly amount: Amount; readonly durationTicks: Tick; readonly decay: ShieldDecayPolicy; readonly onEnd: readonly ShieldEndReason[]; readonly endTiming: 'post-damage' | 'next-action-planning'; readonly endTargeting: AbilityTargeting; readonly endEffects: readonly Effect[] }
@@ -360,7 +364,9 @@ export type Effect =
   | { readonly kind: 'change-max-hp'; readonly bonusBps: Bps; readonly currentHp: 'add-max-delta'; readonly countsAsHeal: false }
   | { readonly kind: 'authorize-spell-crit'; readonly duplicateBonusBps: 1000 }
   | { readonly kind: 'cleanse'; readonly remove: 'removable-hostile-control-dot-debuff'; readonly retarget: true }
-  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' };
+  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' }
+  /** G2-4b Unstable Treasure Chest: the target gains one random pool item for the rest of this combat (G24-CHEST-01). */
+  | { readonly kind: 'grant-combat-item'; readonly policyId: 'G24-CHEST-01'; readonly lifetime: 'combat' };
 export interface TriggerDefinition {
   readonly id: string;
   readonly source: Source;
@@ -469,8 +475,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v4';
-  readonly contentVersion: 's13-14.24b-g2-3-v4';
+  readonly rulesVersion: 's13-g2-3-v8';
+  readonly contentVersion: 's13-14.24b-g2-3-v8';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

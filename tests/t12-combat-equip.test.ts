@@ -421,6 +421,9 @@ it('T12 restore rejects a fabricated cross-unit recipe although births and recip
   const stockStart=accepted(startMatchCombat(base));
   const legal=accepted(equipItem(stockStart,acquired.itemIds[1],'unit-1',0));
   const heldStart=accepted(startMatchCombat(accepted(equipItem(base,acquired.itemIds[1],base.preparation.units.find(u=>u.team==='player'&&u.id!=='unit-1')!.id,0))));
-  const forged={...legal,combat:heldStart.combat,combatInputBasis:heldStart.combatInputBasis};
+  // Equipment placements are ordered facts, so the forged save also carries the held placement before the combat-time combination.
+  const combinedFact=legal.resourceProvenance.entries.at(-1)!; expect(combinedFact.kind).toBe('item-combined');
+  const resourceProvenance={...heldStart.resourceProvenance,entries:[...heldStart.resourceProvenance.entries,{...combinedFact,sequence:heldStart.resourceProvenance.entries.length}]};
+  const forged={...legal,combat:heldStart.combat,combatInputBasis:heldStart.combatInputBasis,resourceProvenance};
   expect(()=>restoreMatch(forged)).toThrow(/combination requires inventory input/);
 });

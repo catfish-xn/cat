@@ -31,7 +31,8 @@ export function createInputValidation(requireValue: InputValidation['requireValu
   return { requireValue, integer, id, definitionId, list, record, checkSerial };
 }
 interface InputAssets { readonly preparation: GameState; readonly items: readonly ItemInstance[] }
-interface AssetBoundary { readonly playerLevel: number; readonly nextUnitSerial: number; readonly nextItemSerial: number }
+/** `teamSizeBonus`: permanent crown team size, from the caller's validated G2-3 progress. */
+interface AssetBoundary { readonly playerLevel: number; readonly nextUnitSerial: number; readonly nextItemSerial: number; readonly teamSizeBonus?: number }
 /** Structural assets only: original combat inputs and current resources remain separate callers.
  * Enemy identities come from the round catalog, never from either candidate's saved projection. */
 export function validateInputAssets(
@@ -68,7 +69,7 @@ export function validateInputAssets(
   const byId = (a: Unit, b: Unit): number => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   requireValue(canonicalContent(input.preparation.units.filter(unit => unit.team === 'enemy').sort(byId))
     === canonicalContent([...enemies].sort(byId)), 'enemy roster identity');
-  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board' && (UNIT_DEFINITIONS[unit.definitionId]?.summon?.countsTowardPopulation??true)).length <= boundary.playerLevel, 'population cap');
+  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board' && (UNIT_DEFINITIONS[unit.definitionId]?.summon?.countsTowardPopulation??true)).length <= boundary.playerLevel + (boundary.teamSizeBonus ?? 0), 'population cap');
   list(input.items); const itemIds = new Set<string>(), equipment = new Set<string>();
   for (const item of input.items) {
     record(item); id(item.id); checkSerial(item.id, 'item', boundary.nextItemSerial);

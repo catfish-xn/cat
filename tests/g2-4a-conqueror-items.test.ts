@@ -18,9 +18,10 @@ it('G2-4a restores tiers 4, 8 and 9 to their source rewards and keeps the gold f
  expect(g23ConquerorReward(chest(4))).toEqual({Item:['TFT_Consumable_ChampionDuplicator_III'],ThreeCostUnit:1});
  expect(g23ConquerorReward(chest(8))).toEqual({Item:['TFT_Item_ThiefsGloves']});
  expect(g23ConquerorReward(chest(9))).toEqual({MeepTypeUnit:['TFT_ArmoryKeyCompleted']});
- // Artifact/support anvils, support items and the crown wait for G2-4b / the crown PR: tiers 10–15 unchanged.
- expect([10,11,12,13,14,15].map(t=>g23ConquerorReward(chest(t)).Gold)).toEqual([14,15,20,50,60,200]);
- expect(g23ConquerorReward(chest(14)).MeepTypeUnit).toBeUndefined();
+ // G2-4b restores artifact tiers 10/14; support tiers 11/13 keep the floor; 12/15 pay source gold with crowns.
+ expect([10,11,12,13,14,15].map(t=>g23ConquerorReward(chest(t)).Gold)).toEqual([undefined,15,20,50,50,80]);
+ for(const tier of [12,15])expect(g23ConquerorReward(chest(tier))).toEqual(chest(tier).reward);
+ expect(g23ConquerorReward(chest(14)).MeepTypeUnit).toEqual(['TFT_ArmoryKeyOrnn']);
  expect(G23_DEFERRED_CONQUEROR_ITEMS).not.toContain('TFT_ArmoryKeyCompleted');
 });
 it('the completed-item anvil offers four distinct ordinary completed items, stable per seed and atom',()=>{

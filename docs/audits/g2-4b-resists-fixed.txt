@@ -1,0 +1,8 @@
+{"CONTENT_DIGEST":"fnv1a32-utf16:b58e35ae","LOOT_REPLAY_DIGEST":"fnv1a32-utf16:8db7fb0a","M8_VERSION":{"schemaVersion":7,"rulesVersion":"s13-g2-3-v4","contentVersion":"s13-14.24b-g2-3-v4","saveFormatVersion":3,"replayFormatVersion":3,"commandProtocolVersion":3,"rngAlgorithm":"lcg32-v1","tickMs":50}}
+positive tick60 {"accepted":true,"ms":34.67462500000002}
+plus-one {"accepted":false,"error":"Error: Invalid Match save: resists shield replay","ms":20.228865000000013}
+minus-one {"accepted":false,"error":"Error: Invalid Match save: resists shield replay","ms":15.621296999999998}
+negative {"accepted":false,"error":"Error: Invalid Match save: resists shield replay","ms":19.833870999999988}
+fraction {"accepted":false,"error":"Error: Invalid Match save: resists shield replay","ms":21.847864000000015}
+rebound-target {"accepted":false,"error":"Error: Invalid Match save: resists shield replay","ms":175.248808}
+seekers tick600 {"tick":600,"stats":{"attackDamage":45,"abilityPower":145,"attackIntervalTicks":34,"attackRange":1,"armor":155,"magicResist":155},"runtime":{"attackCount":18,"castCount":3,"attackSpeedBps":0,"abilityPowerFlat":15,"rangeBonus":0,"nextAttackMagic":0,"nextAttackPhysical":0,"permanentAdBps":0,"buddyTriggered":false},"result":{"accepted":false,"error":"Error: Invalid Match save: derived ability power","ms":200.54333500000007}}
