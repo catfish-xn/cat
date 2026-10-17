@@ -1,0 +1,16 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/restore-audit/preparation-history-cache.test.ts --reporter=default
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/restore-audit/preparation-history-cache.test.ts (1 test) 1409ms
+   ✓ reuses only exact validated completed history; independently replays every current tail and rejects mutations 1406ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:52:52
+   Duration  3.45s (tests 45%, transform 44%, import 10%)
+

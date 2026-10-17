@@ -1,0 +1,15 @@
+import { vi, afterAll } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import * as ledger from '../../src/simulation/preparation-ledger';
+import * as serialization from '../../src/simulation/serialization';
+import '../m8-b7-match-wiring.test';
+const rows: {kind:string;round?:string;tick?:number;ms:number}[]=[];
+const validate=ledger.validatePreparationLedger;
+vi.spyOn(ledger,'validatePreparationLedger').mockImplementation(state=>{
+ const start=performance.now();try{return validate(state);}finally{rows.push({kind:'ledger',round:state.roundDefinitionId,tick:state.combat?.tick,ms:performance.now()-start});}
+});
+const restore=serialization.restoreMatch;
+vi.spyOn(serialization,'restoreMatch').mockImplementation((...args)=>{
+ const start=performance.now();try{return restore(...args);}finally{rows.push({kind:'restore',ms:performance.now()-start});}
+});
+afterAll(()=>writeFileSync('/tmp/b7-profile-segments.json',JSON.stringify(rows,null,2)));

@@ -1,0 +1,23 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/m8-b7-match-wiring.test.ts -t 2-7 freezes --reporter=default --reporter=json --outputFile=/tmp/b7-history-2-7.json
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ✓ |fast| tests/m8-b7-match-wiring.test.ts (30 tests | 29 skipped) 2558ms
+   ✓ B7 installed encounters and trusted Match restore (30)
+     ✓ 2-7 freezes, starts, runs to settlement and resumes canonical saves 2556ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 29 skipped (30)
+   Start at  16:51:28
+   Duration  17.64s (import 76%, tests 15%, transform 9%)
+
+JSON report written to /tmp/b7-history-2-7.json
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

@@ -50,8 +50,9 @@ describe('process-local exact verified input cache',()=>{
       Object.assign(restored,{gold:restored.gold+1});expect(restoreMatch(state)).toEqual(state);
       const bad=structuredClone(state);Object.assign(bad,{gold:bad.gold+1});
       spy.mockClear();const first=errorOf(()=>restoreMatch(bad));expect(first).toBe('Invalid Match save: preparation-ledger-gold');
-      expect(spy).toHaveBeenCalledTimes(steps);
-      spy.mockClear();expect(errorOf(()=>restoreMatch(bad))).toBe(first);expect(spy).toHaveBeenCalledTimes(steps);
+      // The independently verified completed history remains reusable; current gold is still rejected each time.
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockClear();expect(errorOf(()=>restoreMatch(bad))).toBe(first);expect(spy).not.toHaveBeenCalled();
       const ledger=structuredClone(state);Object.assign(ledger.preparationLedger.commands.find(c=>c.name==='stepMatch')!,{repeats:steps-1});
       spy.mockClear();expect(errorOf(()=>restoreMatch(ledger))).not.toBe('accepted');expect(spy.mock.calls.length).toBeGreaterThan(0);
     } finally {spy.mockRestore();}
