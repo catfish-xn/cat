@@ -10,7 +10,8 @@ import { freezeCombatDeclarations } from './combat-static';
 import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
-import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
+import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -75,7 +76,8 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
   return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
 }
 /** Validates plain JSON and all persistent references before returning an independent state.
- * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
+ * Verification combats are isolated: no generated effects, rewards, offers or
+ * random cursor changes are committed to the restored state.
  */
 export function restoreMatch(input: unknown): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input));
@@ -255,6 +257,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
@@ -371,7 +374,8 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   const possibleAp = new Set([0]);
   for (const source of archangels) for (let at = source.values.periodTicks; at <= tick; at += source.values.periodTicks)
     possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
-  requireValue(unit.alive ? runtime.abilityPowerFlat === maximumAp : possibleAp.has(runtime.abilityPowerFlat), 'derived ability power');
+  const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
+  requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
   requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
     requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
