@@ -1,4 +1,5 @@
-import { expect, it, vi } from 'vitest';
+import { deepStrictEqual } from 'node:assert';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { stepMatch, startMatchCombat, type MatchState } from '../../src/simulation/match';
 import * as mechanisms from '../../src/simulation/m8/restore';
@@ -13,8 +14,8 @@ function rejected(state: MatchState, reason: string) {
   const consumer = vi.spyOn(mechanisms, 'validateMechanisms');
   try {
     for (const input of [state, JSON.stringify(state)])
-      expect(() => restoreMatch(input)).toThrow(`Invalid Match save: bounds preflight ${reason}`);
-    expect(() => serializeMatch(state)).toThrow(`Invalid Match save: bounds preflight ${reason}`);
+      expect(() => restoreMatch(input)).toThrow(`Invalid Match save: ${reason}`);
+    expect(() => serializeMatch(state)).toThrow(`Invalid Match save: ${reason}`);
     expect(consumer).not.toHaveBeenCalled();
   } finally { consumer.mockRestore(); }
 }
@@ -40,7 +41,7 @@ it.each([false, true])('rejects a later owner before cross-unit declaration expa
   Object.assign(bad.combat!, { units: reversed ? [...units].reverse() : [target, ...units.filter(u => u !== target)] });
   const allocation = vi.spyOn(expressions, 'stat');
   try {
-    rejected(bad, 'mechanics');
+    rejected(bad, 'resolved mechanics');
     // The same object/JSON witness on 8db36d0 makes 64 stat declarations
     // before its later resolved-mechanics rejection (see evidence report).
     expect(allocation).not.toHaveBeenCalled();
@@ -54,11 +55,17 @@ it('rejects a forged item counter cap before compiling it or enumerating candida
   const counter = owner.itemPrograms!.flatMap(p => p.program.triggers ?? []).flatMap(t => t.counters)[0];
   expect(counter).toBeDefined();
   Object.assign(counter, { cap: 64 });
-  rejected(bad, 'item programs');
+  rejected(bad, 'resolved item programs');
 });
 
-it.each(['sampled tick', 'attackCount', 'castCount', 'mechanism definitions', 'periodTicks', 'pulseOrdinal'])(
-  'rejects %s before any per-unit candidate state construction', field => {
+it.each([
+  ['sampled tick', 'mechanism initialization/namespace'],
+  ['attackCount', 'bounds preflight attackCount'],
+  ['castCount', 'bounds preflight castCount'],
+  ['mechanism definitions', 'uncompiled mechanism definitions'],
+  ['periodTicks', 'periodic program/source binding'],
+  ['pulseOrdinal', 'bounds preflight pulseOrdinal'],
+])('rejects %s before any per-unit candidate state construction', (field, reason) => {
     const legal = itemMatch('archangel');
     expect(restoreMatch(serializeMatch(legal))).toEqual(legal);
     const bad = structuredClone(legal), owner = bad.combat!.units.find(u => u.id === 'unit-1')!;
@@ -67,7 +74,7 @@ it.each(['sampled tick', 'attackCount', 'castCount', 'mechanism definitions', 'p
     if (field === 'mechanism definitions') Object.assign(owner.mechanismDefinitions!.periodicTasks[0], { periodTicks: 0.01 });
     if (field === 'periodTicks') Object.assign(owner.mechanismState!.periodicTasks[0], { periodTicks: 0.01 });
     if (field === 'pulseOrdinal') Object.assign(owner.mechanismState!.periodicTasks[0], { pulseOrdinal: 64 });
-    rejected(bad, field);
+    rejected(bad, reason);
   });
 
 it('bounds sampled kill triggerCount by trusted roster/lives before the fact replay', () => {
@@ -78,7 +85,7 @@ it('bounds sampled kill triggerCount by trusted roster/lives before the fact rep
   Object.assign(owner, { triggerLedger: { runtimes: [{ ...effectIdentity(bad.combat!.combatId!, d.source, owner.id),
     startsAtTick: 0, expiresAtTick: null, triggerCount: 64, stacks: 0, counters: {}, consumedRewards: [],
     nextEligibleTick: 0, consumed: false, stackPolicy: d.stackPolicy }], processed: {}, actionCounts: {} } });
-  rejected(bad, 'triggerCount');
+  rejected(bad, 'sampled stat trigger count bound');
 });
 
 it('bounds a runtime counter by its authenticated item declaration', () => {
@@ -91,17 +98,28 @@ it('bounds a runtime counter by its authenticated item declaration', () => {
     startsAtTick: 0, expiresAtTick: null, triggerCount: 0, stacks: counter.cap! + 1,
     counters: { [counter.id]: counter.cap! + 1 }, consumedRewards: [], nextEligibleTick: 0, consumed: false,
     stackPolicy: d.stackPolicy }], processed: {}, actionCounts: {} } });
-  rejected(bad, 'counter');
+  rejected(bad, 'bounds preflight counter');
 });
 
-function continueEveryTick(legal: MatchState) {
+it('authenticates every owner before checking an earlier owner count', () => {
+  const bad = structuredClone(itemMatch('archangel'));
+  const [earlier, later] = bad.combat!.units;
+  Object.assign(earlier.runtime!, { attackCount: 64 });
+  Object.assign(later, { starLevel: later.starLevel === 1 ? 2 : 1 });
+  rejected(bad, 'combat unit identity');
+});
+
+function continueEveryTick(legal: MatchState, liveSteps?: readonly ReturnType<typeof stepMatch>[]) {
   const text = serializeMatch(legal);
   let object = restoreMatch(structuredClone(legal)), json = restoreMatch(text), live = legal;
   expect(object).toEqual(live); expect(json).toEqual(live);
   expect(serializeMatch(object)).toBe(text); expect(serializeMatch(json)).toBe(text);
+  let index = 0;
   while (live.phase === 'combat') {
-    const next = stepMatch(live), fromObject = stepMatch(object), fromJson = stepMatch(json);
-    expect(fromObject).toEqual(next); expect(fromJson).toEqual(next);
+    const next = liveSteps ? liveSteps[index++] : stepMatch(live), fromObject = stepMatch(object), fromJson = stepMatch(json);
+    // Compare the complete result (including state, events and RNG). Native
+    // equality skips shared immutable metadata instead of walking it each tick.
+    deepStrictEqual(fromObject, next); deepStrictEqual(fromJson, next);
     live = next.state; object = fromObject.state; json = fromJson.state;
   }
   return live;
@@ -114,22 +132,33 @@ it('preserves a real long fight with growing trigger counts and resumes every ti
   continueEveryTick(state);
 });
 
-it('preserves many legitimately acquired rewards through late-game saves', () => {
-  const preparation = publicNeutralPreparation('6-7');
-  expect(preparation.m8.loot.receipts.length).toBeGreaterThan(15);
-  expect(preparation.resourceProvenance.entries.length).toBeGreaterThan(80);
-  continueEveryTick(accepted(startMatchCombat(preparation)));
-});
+describe('public single-player late fight', () => {
+  let initial: MatchState, busiest: MatchState, busiestIndex = 0, maximum = 0;
+  const liveSteps: ReturnType<typeof stepMatch>[] = [];
+  beforeAll(() => {
+    initial = accepted(startMatchCombat(publicNeutralPreparation('6-7')));
+    let state = initial;
+    busiest = initial;
+    // One public fight supplies both the full continuation oracle and the
+    // actual maximum-task checkpoint. Restored branches still step separately.
+    while (state.phase === 'combat') {
+      const n = state.combat!.units.reduce((sum, u) => sum + (u.tasks?.length ?? 0) + (u.mechanismState?.periodicTasks.length ?? 0), 0);
+      if (n > maximum) { maximum = n; busiest = state; busiestIndex = liveSteps.length; }
+      const next = stepMatch(state);
+      liveSteps.push(next); state = next.state;
+    }
+  });
 
-it('preserves a save at the actual maximum pending-task checkpoint of a public late fight', () => {
-  let state = accepted(startMatchCombat(publicNeutralPreparation('6-7'))), busiest = state, maximum = 0;
-  while (state.phase === 'combat') {
-    const n = state.combat!.units.reduce((sum, u) => sum + (u.tasks?.length ?? 0) + (u.mechanismState?.periodicTasks.length ?? 0), 0);
-    if (n > maximum) { maximum = n; busiest = state; }
-    state = stepMatch(state).state;
-  }
-  expect(maximum).toBeGreaterThanOrEqual(5);
-  continueEveryTick(busiest);
+  it('preserves many legitimately acquired rewards through late-game saves', () => {
+    expect(initial.m8.loot.receipts.length).toBeGreaterThan(15);
+    expect(initial.resourceProvenance.entries.length).toBeGreaterThan(80);
+    continueEveryTick(initial, liveSteps);
+  });
+
+  it('preserves a save at the actual maximum pending-task checkpoint of a public late fight', () => {
+    expect(maximum).toBeGreaterThanOrEqual(5);
+    continueEveryTick(busiest, liveSteps.slice(busiestIndex));
+  });
 });
 
 it('keeps the ordinary public opening positive control', () => { continueEveryTick(battle()); });

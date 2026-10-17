@@ -4,11 +4,11 @@
 
 分支 `codex/restore-fix-bounds-preflight`，从开工时最新 `origin/multiplayer` 的 `8db36d009caba60809031313e21db770fbcc6898` 新建。依据为 `546d086` 的 `docs/evidence/restore-audit/SAVE-CONSISTENCY-AUDIT.md` 中 BOUNDS-PREFLIGHT 及其共同修复建议。该项在原审计中是静态顺序风险；原 `tests/restore-audit/bounds-g22-state.test.ts` 的五项针对曝光、破盾、伤害累计，属于另外两项发现，未挪用或修改。此次新增本项复现和拒绝回归。
 
-修复只增加 `src/simulation/restore-bounds-preflight.ts`，在 `serialization.ts` 导入并调用一次。没有改变规则、数值、存档字段、版本、digest，未修改 `src/server/`、`src/rendering/`。G23-ALLOCATION 的奖励描述符展开仍留给 A 批，本单未触及。
+修复增加 `src/simulation/restore-bounds-preflight.ts`，在 `serialization.ts` 导入并调用一次；CI 修订另从 `m8/sampled-stat-facts.ts` 提取并复用原有计数校验。没有改变规则、数值、存档字段、版本、digest，未修改 `src/server/`、`src/rendering/`。G23-ALLOCATION 的奖励描述符展开仍留给 A 批，本单未触及。
 
 预检在 B8 开战输入、strategy、board、roster 认证后，位于 sampled-stat 事实重演、neutral/resists 验证、逐单位恢复及其跨单位读取之前。第一遍认证**全部单位**的身份、ability、mechanics、itemPrograms、sources/triggers、冻结起始格；全部通过后才编译各单位的 mechanismDefinitions 并检查计数。不会用候选 `nextActionSeq`、castCount、alive、triggerCount 或候选声明的 cap/period 作为上界的权威来源。
 
-内部函数签名：`validateRestoreBoundsPreflight(combat: CombatState, preparation: GameState, strategy: StrategySnapshot, same: (a: unknown, b: unknown) => boolean): void`。调用者必须已验证 preparation/strategy/roster；失败抛出 `Invalid Match save: bounds preflight <field>`。`restoreMatch(object)`、`restoreMatch(JSON)`、`serializeMatch` 经过同一入口。具体 field 见下表和测试；本函数不提交状态、不抽 RNG、不截断计数。
+内部函数签名：`validateRestoreBoundsPreflight(combat: CombatState, preparation: GameState, strategy: StrategySnapshot, same: (a: unknown, b: unknown) => boolean): void`。调用者必须已验证 preparation/strategy/roster。身份、声明、周期绑定等认证失败保留原校验的 `Invalid Match save: <reason>`，只有计数超界使用 `bounds preflight <field>`；已有 sampled AP/AD kill 计数校验复用 `validateSampledStatTriggerCount`，仍报 `sampled stat trigger count` / `sampled stat trigger count bound`。`restoreMatch(object)`、`restoreMatch(JSON)`、`serializeMatch` 经过同一入口。具体 field 见下表和测试；本函数不提交状态、不抽 RNG、不截断计数。
 
 ## 每个计数字段及可信上界
 
@@ -47,17 +47,21 @@
 | #157 `codex/g2-4a-crown-win-gold` | `6fa69c0` | `src/simulation/serialization.ts` |
 | B 批 `codex/restore-fix-batch-b` | `f0f060b` | `src/simulation/serialization.ts` |
 
+合并注意（astro S2）：#157 后续提交 `db80d91` 已把恢复主体移到 `src/simulation/serialization-structure.ts`。与其合并时，预检的 import 和调用必须跟随恢复主体迁移，调用放在该提交的 roster 校验（:251）之后、neutral 校验（:259）之前，并继续位于 sampled-stat 重演及逐单位/跨单位候选展开之前。
+
 `serialization.ts` 仅两行增量（import + 验证调用），没有改写这些分支也在施工的资源、账本、task 或候选重演实现。后续合并保持本调用在已验证输入之后、所有逐单位/跨单位候选读取之前即可；本轮没有执行这些分支的集成合并。
 
 ## 复现与测试证据
 
 原基线 witness 以公开 `itemMatch('ionic-spark')` + `stepMatch` 建立合法正控，保留真实的跨单位 aura contribution，再给后面的 owner 加入安全小数 `wanted=64`。spy 观测 `stat()` 声明生成，对象和 JSON 都先生成64条，才报 `resolved mechanics`。见 [witness 源码](baseline-witness.test.ts.txt) 与 [原基线结果](logs/baseline-witness.json)。没有制造 OOM。
 
-正式回归把这个顺序翻转为拒绝，明确要求 `bounds preflight mechanics`，stat 声明生成次数为0，并测试反转单位顺序。其他负例分别要求 `item programs`、`mechanism definitions`、`sampled tick`、`attackCount`、`castCount`、`periodTicks`、`pulseOrdinal`、`triggerCount`、`counter` 的具体拒绝原因。每个负例覆盖 object、JSON 和 serialize，并断言尚未调用逐单位 `validateMechanisms`。
+正式回归把这个顺序翻转为拒绝，CI 修订后明确要求原有 `resolved mechanics`，stat 声明生成次数仍为0，并测试反转单位顺序。其他负例分别要求装备声明、mechanism definitions、sampled tick、attackCount、castCount、periodTicks、pulseOrdinal、triggerCount、counter 的具体拒绝原因；新增“前一单位计数超界、后一单位身份错误”的混合负例，证明全部身份认证仍先于计数检查。每个负例覆盖 object、JSON 和 serialize，并断言尚未调用逐单位 `validateMechanisms`。
 
 合法正例来自公开命令：400 tick 的护臂长局、6-7 的多奖励/92条资源账本存档、真实后期战斗中待执行+周期任务最多的检查点（至少5项），以及普通开局。每例先验证 serialize、object restore、JSON restore 与规范化重存，再对两条恢复分支逐 tick 比较完整 step 结果（state、事件和 RNG 都包含在内）直到战斗结束。
 
-最终相关回归：**7文件156/156通过**，见 [机器结果](logs/final-targeted.json)：
+覆盖边界（astro S1）：上述三入口正例覆盖的是**单人存档**。联机加时轮走在线 `restoreBattleInput`（`src/simulation/two-sided-battle.ts:91`）；离线 `restoreMatch` 照旧拒绝含 `multiplayer` 的状态及超过 `FINAL_ROUND` 的状态。因此本次没有加时恢复证据，在本项离线恢复边界内也不需要加时证据。
+
+初版相关回归：**7文件156/156通过**，见 [机器结果](logs/final-targeted.json)：
 
 | 文件 | 项数 |
 |---|---:|
@@ -69,11 +73,29 @@
 | `tests/m8-b4-integration.test.ts` | 16 |
 | `tests/g2-4b-artifacts.test.ts` | 48 |
 
-`npm run typecheck` 通过。只跑上述相关测试、下述 B7 单文件计时与 typecheck，没有跑全套、build 或 server 测试。Node 22.17.0，Vitest 5.0.3，Windows。
+初版 `npm run typecheck` 通过。初版只跑上述相关测试、下述 B7 单文件计时与 typecheck，没有跑全套、build 或 server 测试。Node 22.17.0，Vitest 5.0.3，Windows。
 
 准备阶段的非产品问题：沙箱临时 fixture rename EPERM，改用正常本地权限执行；最初多奖励正例要求账本>100，但公开路径实际92，改为>80且保留同一公开路径；导出的基线临时放在 artifacts 内时被 Vitest 顺带发现，已移到仓库外，最终156项清单不含这些副本。不把这些初轮准备结果算入最终通过数。
 
-## B7 耗时对比
+## PR #167 CI 修订验证
+
+在 `a463085` 上追加修订，未 rebase。四项旧拒因回归所在的 `explorer-bracer-restore-pressure`、`m8-b5-temporary`、`m8-b8-live-transfer` 文件及 B7 接线文件均未修改，包括断言和时限。第一遍认证全部单位、第二遍展开计数的顺序保留，并新增混合错误顺序回归。
+
+两个慢正例共用一次公开命令取得的 6-7 局面，在 `beforeAll` 完整扫描同一场战斗，同时保留逐 tick 参照和真实最大任务检查点。对象、JSON 两条恢复分支仍分别执行每个后续 tick；完整 step 结果改用原生 `deepStrictEqual` 比较，仍涵盖全部 state、事件、RNG，没有减少轮次、检查点或字段覆盖。全部测试沿用原时限。
+
+串行三个新进程，各以 `--project fast --maxWorkers=1` 跑完整预检文件，均 **16/16** 通过；下表为 Vitest 报告中的单项耗时，不包含模块导入和共享夹具准备：
+
+| 轮次 | 多奖励正例 | 最大待执行任务正例 |
+|---|---:|---:|
+| 1 | 1.266s | 0.851s |
+| 2 | 1.270s | 0.888s |
+| 3 | 1.152s | 0.806s |
+
+本轮指定范围为 **5 文件、97 项通过**（重复运行不累加）：预检16、护臂压力2、B5临时装备30、B8实时转移19、B7接线30。Windows / Node 22.17.0 / Vitest 5.0.3；Linux 专用护臂脚本依赖 `python3` 和 `resource.ru_maxrss`，Windows 两项因 `python3 ENOENT` 未能执行，随后将同一份源码复制到已配置 Ubuntu 临时目录，使用 Node 24.21.0 / Python 3.12.3 原样通过两项断言。正常本地权限运行规避了沙箱临时夹具 rename 的 EPERM。机器汇总见 [ci-followup.json](logs/ci-followup.json)。`npm run typecheck` 通过，未跑全套。
+
+按仓库 LF 字节运行 `node scripts/verify-m8-herald-fixtures.cjs --write`、`node scripts/record-g2-3-inputs.cjs`，随后 `node scripts/record-g2-3-inputs.cjs --check` 和 Herald 默认完整复算校验均通过（Herald 脚本的校验模式不带参数）。源码清单相对旧清单仅预期的 `serialization.ts`、`restore-bounds-preflight.ts`、`m8/sampled-stat-facts.ts` 三项变化；原始夹具、轨迹、规则/内容/存档版本与 digest 均未变化，只更新源码指纹及对应 audit。新源码指纹为 `2b3a5792ba888b13dcca74e344a599ced6e0615767d8261fdc32bf0fe700da72`。
+
+## 初版 B7 耗时对比
 
 命令为 `vitest run --project fast --dir tests --maxWorkers=1 tests/m8-b7-match-wiring.test.ts`，通过 [计时脚本](../../../../scripts/measure-bounds-preflight.cjs) 交替串行运行三组；基线为仓库外的固定8db36d0源码导出，使用同一Node和同一node_modules。计时包括进程启动、transform/import/fixture准备和测试执行，没有其他测试任务并行。
 

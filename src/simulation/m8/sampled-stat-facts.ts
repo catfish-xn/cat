@@ -5,10 +5,16 @@ import type { Effect } from './contracts';
 import { canonicalSource } from './identity';
 import { EMPTY_TRIGGER_LEDGER } from './triggers';
 
-const sampledGrowth = (e: Effect) => e.kind === 'modify-stat' && (e.modifier.stat === 'abilityPower' || e.modifier.stat === 'attackDamage')
+export const sampledGrowth = (e: Effect) => e.kind === 'modify-stat' && (e.modifier.stat === 'abilityPower' || e.modifier.stat === 'attackDamage')
   && e.modifier.value.kind === 'constant' && e.stackPolicy.kind === 'add-stacks';
 function check(value: unknown, label: string): asserts value {
   if (!value) throw new Error(`Invalid Match save: sampled stat trigger ${label}`);
+}
+
+/** Also used before declaration expansion; preserve the original rejection reason. */
+export function validateSampledStatTriggerCount(value: number, deathBound: number): void {
+  check(Number.isSafeInteger(value) && value >= 0, 'count');
+  check(value <= deathBound, 'count bound');
 }
 
 /** The caller has validated the immutable input basis and strategy. Reconstruct
@@ -31,8 +37,8 @@ export function validateSampledStatTriggerFacts(combat: CombatState, basis: Comb
       for (const r of ledger.runtimes) {
         check(r && r.source, 'runtime');
         if (canonicalSource(r.source) !== canonicalSource(d.source)) continue;
-        check(Number.isSafeInteger(r.triggerCount) && r.triggerCount >= 0, 'count');
-        if (d.event === 'kill-or-assist') check(r.triggerCount <= (combat.tick === 0 ? 0 : deathBound), 'count bound');
+        if (d.event === 'kill-or-assist') validateSampledStatTriggerCount(r.triggerCount, combat.tick === 0 ? 0 : deathBound);
+        else check(Number.isSafeInteger(r.triggerCount) && r.triggerCount >= 0, 'count');
       }
     }
   }
