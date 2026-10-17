@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { genericOffer, readChoiceExtras, timeoutOption } from '../../src/presentation/choice-fallback';
+import { genericOffer, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
 import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 
@@ -27,5 +27,12 @@ describe('generic mechanic choice display', () => {
     expect(timeoutOption({ kind: 'forge', payload: { kind: 'forge', timeoutOption: 'gunblade' } })).toBe('gunblade');
     expect(timeoutOption({ kind: 'forge', payload: { timeoutOption: 3 } })).toBeUndefined();
     expect(timeoutOption({ kind: 'forge' })).toBeUndefined();
+  });
+  it('names armory upgrades in Chinese with their declared price, and marks the black-market skip timeout', () => {
+    const armory = { kind: 'armory', offers: ['spare-parts', 'flamethrower'], payload: { kind: 'armory', prices: { 'spare-parts': 0, flamethrower: 5 }, timeoutOption: 'spare-parts' } };
+    const extras = readChoiceExtras(armory);
+    expect(genericOffer('spare-parts', extras)).toMatchObject({ name: '备用零件！', price: 0 });
+    expect(genericOffer('flamethrower', extras)).toMatchObject({ name: '喷火器', price: 5 });
+    expect(timeoutOption({ kind: 'blackMarket', payload: { timeoutOption: '@skip' } })).toBe(SKIP_OPTION);
   });
 });

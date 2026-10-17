@@ -39,7 +39,7 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, readChoiceExtras, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { genericOffer, isKnownChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
@@ -803,7 +803,7 @@ export class StrategyPanel {
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
-    if (fallback) card.append(element('p', `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
+    if (fallback) card.append(element('p', fallback === SKIP_OPTION ? '倒计时结束仍未选择时，自动跳过。' : `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
@@ -853,13 +853,15 @@ export class StrategyPanel {
     const reopen = this.button('choice-reopen', `展开 ${title}`, () => {
       this.dropChoiceReopen(); this.modal.hidden = false; this.focusChoice();
     });
-    reopen.className = 'choice-reopen';
-    document.body.append(reopen); this.choiceReopen = reopen;
+    // On the board under the countdown bar, never over the shop dock or the side panels; without a board frame, top of the page.
+    const frame = document.getElementById('board-frame');
+    reopen.className = frame ? 'choice-reopen' : 'choice-reopen page-top';
+    (frame ?? document.body).append(reopen); this.choiceReopen = reopen;
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
-    const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price} 金币`, offer.description].filter(Boolean).join('\n');
+    const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
       this.actions.choose(choice.choiceId, choice.generation, offer.id);
       const after = this.actions.state().pendingChoice;
