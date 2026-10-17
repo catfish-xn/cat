@@ -55,7 +55,8 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
-  kind:'item',itemId:'item-16',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+  // The support trial grants four earlier items; birth must still use the exact frozen serial.
+  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);
