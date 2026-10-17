@@ -1,3 +1,5 @@
+// Not called by CI since the 2026-10-17 split (ci.yml runs headless and performance
+// as separate test-and-build parts). Kept with its test until a cleanup removes both.
 const {spawn} = require('node:child_process');
 
 /** Independent route generators have separate evidence folders and no wall-clock

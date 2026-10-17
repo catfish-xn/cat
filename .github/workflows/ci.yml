@@ -47,6 +47,7 @@ jobs:
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
       M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
+      M5_JOB_PART: ${{ matrix.part }}
     runs-on: ubuntu-24.04
     timeout-minutes: 22 # Three-sample measured budget; docs/evidence/M5_CI_BUDGET.json.
     steps:
@@ -124,6 +125,7 @@ jobs:
     name: input-${{ matrix.mode }}-${{ matrix.part }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+      M5_JOB_PART: ${{ matrix.part }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45 # Unchanged per-part ceiling; the whole dev chain measured ~36 min on 2026-10-16.
     strategy:
