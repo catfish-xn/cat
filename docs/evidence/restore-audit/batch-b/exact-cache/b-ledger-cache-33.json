@@ -1,0 +1,10 @@
+{
+  "battles": 33,
+  "preparationMs": 10346.721455,
+  "restoreColdMs": 6433.926456999998,
+  "restoreWarmMs": 51.68186300000161,
+  "collectionColdMs": 8649.066918,
+  "collectionWarmMs": 7649.049627,
+  "totalMs": 33130.44632,
+  "collectionCachePayloadBytes": 60593488
+}

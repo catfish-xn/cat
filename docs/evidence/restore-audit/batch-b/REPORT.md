@@ -101,3 +101,7 @@
 ## 后续性能收尾（追加记录）
 
 见 [performance-followup/REPORT.md](performance-followup/REPORT.md)。局部 collection 顺推及真实战斗 proof 已实现、33 场验证完成，独立恢复多次调用的原 5 秒性能失败仍未闭环；本分支仍为不可签收 WIP。
+
+## 本轮新增授权：进程内精确已验证缓存
+
+用户新授权已覆盖历史“禁止跨调用缓存”限制，当前只实现完整输入精确命中，详见 [exact-cache/REPORT.md](exact-cache/REPORT.md)。相关 48/48、typecheck 通过；B5 原文件 7 通过、2 超时仍保留，尚不可签收。

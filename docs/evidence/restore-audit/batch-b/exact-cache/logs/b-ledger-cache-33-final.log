@@ -1,0 +1,11 @@
+{
+  battles: 33,
+  warmSteps: 0,
+  preparationMs: 9798.765225,
+  restoreColdMs: 5460.4750570000015,
+  restoreWarmMs: 33.467038999999204,
+  collectionColdMs: 8804.626203,
+  collectionWarmMs: 454.6119749999998,
+  totalMs: 24551.945499,
+  collectionCachePayloadBytes: 60593488
+}

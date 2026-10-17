@@ -1,0 +1,48 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-restore-b
+
+ ❯ |fast| tests/m8-b5-equipment-history.test.ts (9 tests | 2 failed) 23646ms
+   ❯ B5 audit R1: equipment roll level belongs to its round history (8)
+     × preserves a legal pre-F roll through current, settled and historical save/restore 6516ms
+     × allows the first equip after same-round F at the upper bound, not only the starting level 5735ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > preserves a legal pre-F roll through current, settled and historical save/restore
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:125:3
+    123|     rejectWithoutRepair(raw);
+    124|   });
+    125|   it('preserves a legal pre-F roll through current, settled and histor…
+       |   ^
+    126|     let state = historicalProgression();
+    127|     const roll = structuredClone(state.equipmentState.rolls.find(r => …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > allows the first equip after same-round F at the upper bound, not only the starting level
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:138:3
+    136|     expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    137|   });
+    138|   it('allows the first equip after same-round F at the upper bound, no…
+       |   ^
+    139|     let state = historicalProgression(false);
+    140|     expect(state.equipmentState.rolls).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  15:34:15
+   Duration  25.78s (tests 93%, transform 6%, import 1%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
