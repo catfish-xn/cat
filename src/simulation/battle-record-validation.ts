@@ -129,7 +129,10 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
       const command = commands[equipmentCursor++];
       check(state.phase === 'combat', '战后穿戴命令');
       const equipped = equipItem(state, command.itemId, command.unitId, command.slot);
-      check(equipped.ok && equipped.state.resourceProvenance.entries.at(-1)?.kind === 'item-equipped', '非法穿戴命令');
+      // Production equip may append item-combined and allocate a new instance.
+      // Its placement event proves success; history carry still compares the
+      // complete resource prefix and exact equipment bindings after replay.
+      check(equipped.ok && equipped.events.some(event => event.type === 'itemEquipped'), '非法穿戴命令');
       state = equipped.state; compare(equipped.events);
     }
   };

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { createG23Progress, validateG23Progress } from '../src/simulation/g2-3-match-progress';
 import { advanceG23Economy } from '../src/simulation/g2-3-economy';
-import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
+import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { TACTICIANS_CROWN_ID } from '../src/simulation/deployment-cap';
 import { BattleHistory, validateBattleCollectionSync, validateBattleCollection, validateBattleRecord } from '../src/replay/history';
 import { validateEnvelope, validateFile, exportFile } from '../src/persistence/format';
@@ -342,5 +342,136 @@ describe('M5/M6 ordered equipment across the first battle', () => {
       expect(restored).toEqual(first.state);
       checkNextTicks(first.state,restored);
     }
+  });
+});
+
+describe('M7/S7 combat equipment command replay', () => {
+  function recorder(context: MatchState, history = new BattleHistory('crown-history')) {
+    let state = context;
+    const commit = (result: ReturnType<typeof startMatchCombat> | ReturnType<typeof stepMatch>, reason: 'command' | 'tick') => {
+      const before = state;
+      if ('ok' in result && !result.ok) throw new Error(result.reason);
+      state = result.state;
+      // MatchSession forwards combat events only; resource facts identify equips.
+      history.observe({before,after:state,events:result.events.filter(event => event.domain === 'combat'),reason});
+    };
+    commit(startMatchCombat(state), 'command');
+    return {
+      get state() { return state; }, history, commit,
+      finish() {
+        while (state.phase === 'combat') commit(stepMatch(state), 'tick');
+        return {state,battles:history.completedRecords};
+      },
+    };
+  }
+  function grantBlades(state: MatchState, count: number) {
+    for (let i = 0; i < count; i++) state = accepted(grantMechanicItem(state,
+      {receiptId:`s7:blade:${i}`,source:'test',definitionId:'deathblade'}));
+    return state;
+  }
+  function roundTrip(state: MatchState, battles: readonly BattleRecord[]) {
+    const text = serializeMatch(state,battles);
+    const restored = [restoreMatch(structuredClone(state),battles),restoreMatch(text,battles)];
+    for (const value of restored) expect(value).toEqual(state);
+    return restored;
+  }
+  it.each([0,2])('records in-place sword combination at tick 1 (requested slot %i) and resumes the next battle tick for tick', slot => {
+    let opening = createMatch(7);
+    for (let i = 0; i < 2; i++) opening = accepted(grantMechanicItem(opening,
+      {receiptId:`m7:sword:${i}`,source:'test',definitionId:'sword'}));
+    opening = accepted(equipItem(opening,'item-1','unit-1',0));
+    const live = recorder(opening);
+    live.commit(stepMatch(live.state),'tick');
+    const combined = equipItem(live.state,'item-2','unit-1',slot);
+    expect(combined.ok).toBe(true);
+    if (!combined.ok) throw new Error(combined.reason);
+    expect(combined.events.filter(event => event.domain !== 'combat').map(event => event.type))
+      .toEqual(['itemCombined','itemEquipped']);
+    live.commit(combined,'command');
+    expect(live.state.items.find(item => item.id === 'item-3')).toMatchObject({
+      definitionId:'deathblade',location:{kind:'unit',unitId:'unit-1',slot:0},
+    });
+    const prefix = live.history.capturePrefix()!;
+    expect(prefix.equipmentCommands).toEqual([{tick:1,itemId:'item-2',unitId:'unit-1',slot:0}]);
+    expect(validateBattleRecord(prefix,[]).settledMatch).toEqual(live.state);
+    const {state,battles} = live.finish();
+    expect(validateBattleRecord(battles[0],[]).settledMatch).toEqual(state);
+    for (const restored of roundTrip(state,battles)) {
+      let original = accepted(startMatchCombat(advance(state)));
+      let resumed = accepted(startMatchCombat(advance(restored)));
+      expect(resumed).toEqual(original);
+      while (original.phase === 'combat') {
+        const expected = stepMatch(original), actual = stepMatch(resumed);
+        expect(actual).toEqual(expected);
+        original = expected.state; resumed = actual.state;
+      }
+    }
+    // Omitting the combination must still fail the strict resource-prefix check.
+    const omitted = structuredClone(battles);
+    Object.assign(omitted[0],{equipmentCommands:[]});
+    expect(() => serializeMatch(state,omitted)).toThrow('历史获得或合成记录不一致');
+    for (const input of [state,JSON.stringify(state)])
+      expect(() => restoreMatch(input,omitted)).toThrow('历史获得或合成记录不一致');
+  });
+  it.each(['reordered','duplicated','extra','missing','unknown-target'] as const)('rejects %s commands at all three save/restore entries', mutation => {
+    const live = recorder(grantBlades(createMatch(7),3));
+    live.commit(stepMatch(live.state),'tick');
+    live.commit(equipItem(live.state,'item-1','unit-1',0),'command');
+    live.commit(equipItem(live.state,'item-2','unit-1',1),'command');
+    const {state,battles} = live.finish();
+    roundTrip(state,battles);
+    const commands = battles[0].equipmentCommands!;
+    expect(commands).toEqual([
+      {tick:1,itemId:'item-1',unitId:'unit-1',slot:0},
+      {tick:1,itemId:'item-2',unitId:'unit-1',slot:1},
+    ]);
+    // Same-tick reordering passes the shape check and executes legal equips.
+    // Extra also names a genuinely available item and empty equipment slot.
+    const changed = mutation === 'reordered' ? [commands[1],commands[0]]
+      : mutation === 'duplicated' ? [commands[0],commands[0],commands[1]]
+      : mutation === 'extra' ? [...commands,{tick:1,itemId:'item-3',unitId:'unit-1',slot:2}]
+      : mutation === 'missing' ? [commands[0]]
+      : [commands[0],{...commands[1],unitId:'missing-unit'}];
+    const forged = structuredClone(battles);
+    Object.assign(forged[0],{equipmentCommands:changed});
+    const reason = mutation === 'duplicated' || mutation === 'unknown-target'
+      ? '非法穿戴命令' : '历史获得或合成记录不一致';
+    expect(() => serializeMatch(state,forged)).toThrow(reason);
+    expect(() => restoreMatch(structuredClone(state),forged)).toThrow(reason);
+    expect(() => restoreMatch(JSON.stringify(state),forged)).toThrow(reason);
+  });
+  it('accepts combat equipment targeting a bench unit at all three entries', () => {
+    const opening = grantBlades(accepted(grantMechanicUnit(createMatch(7),
+      {receiptId:'s7:bench',source:'test',definitionId:'lux'})),2);
+    const live = recorder(opening);
+    live.commit(stepMatch(live.state),'tick');
+    expect(live.state.preparation.units.find(unit => unit.id === 'unit-2')!.location.kind).toBe('bench');
+    expect(live.state.combat!.units.some(unit => unit.id === 'unit-2')).toBe(false);
+    live.commit(equipItem(live.state,'item-1','unit-2',0),'command');
+    live.commit(equipItem(live.state,'item-2','unit-2',1),'command');
+    const {state,battles} = live.finish();
+    expect(battles[0].equipmentCommands).toHaveLength(2);
+    roundTrip(state,battles);
+  });
+  it('accepts combat equipment targeting a dead unit at all three entries', () => {
+    let opening = accepted(grantMechanicGold(createMatch(7),{receiptId:'s7:xp',source:'test',amount:4}));
+    opening = accepted(buyXp(opening));
+    opening = accepted(grantMechanicUnit(opening,{receiptId:'s7:front',source:'test',definitionId:'lux'}));
+    opening = accepted(deployMatchUnit(opening,'unit-1',{kind:'board',cell:{col:0,row:7}}));
+    opening = accepted(deployMatchUnit(opening,'unit-2',{kind:'board',cell:{col:3,row:4}}));
+    const history = new BattleHistory('crown-history');
+    // These three genuine opening battles lead to Lux dying during 2-1.
+    for (let i = 0; i < 3; i++) opening = advance(recordedCrownBattle(opening,history).state);
+    opening = grantBlades(resolveM5Choices(opening),2);
+    const blades = opening.items.filter(item => item.definitionId === 'deathblade');
+    const live = recorder(opening,history);
+    while (live.state.phase === 'combat' && live.state.combat!.units.find(unit => unit.id === 'unit-2')!.alive)
+      live.commit(stepMatch(live.state),'tick');
+    expect(live.state.phase).toBe('combat');
+    expect(live.state.combat!.units.find(unit => unit.id === 'unit-2')!.alive).toBe(false);
+    for (const [slot,item] of blades.entries()) live.commit(equipItem(live.state,item.id,'unit-2',slot),'command');
+    const {state,battles} = live.finish();
+    expect(battles.at(-1)!.equipmentCommands).toHaveLength(2);
+    roundTrip(state,battles);
   });
 });

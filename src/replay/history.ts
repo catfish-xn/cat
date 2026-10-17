@@ -89,6 +89,17 @@ export class BattleHistory {
           if (fact.kind === 'item-equipped') this.current.equipmentCommands.push(Object.freeze({
             tick: change.before.combat!.tick, itemId: fact.itemId, unitId: fact.unitId, slot: fact.slot,
           }));
+          else if (fact.kind === 'item-combined') {
+            // In-place equip consumes the incoming inventory component. Replay
+            // that input, not the newly allocated completed item's identity.
+            const incoming = change.before.items.find(item => fact.event.consumedIds.includes(item.id)
+              && item.location.kind === 'inventory');
+            const combined = change.after.items.find(item => item.id === fact.event.itemId);
+            if (incoming && combined?.location.kind === 'unit') this.current.equipmentCommands.push(Object.freeze({
+              tick: change.before.combat!.tick, itemId: incoming.id,
+              unitId: combined.location.unitId, slot: combined.location.slot,
+            }));
+          }
         }
       }
       this.current.terminal = snapshotData(combat);
