@@ -50,6 +50,17 @@
       "copy inheritance and collision rules",
       "Shroud beam width",
       "hidden fields without confirmed semantic names"
-    ]
+    ],
+    "historicalFollowUp": {
+      "ledger": "docs/evidence/g2-3/EXTERNAL_SOURCES.md#official-historical-follow-up-read-2026-10-17",
+      "status": "historical-evidence-only-not-runtime",
+      "patches": [
+        "13.18",
+        "13.20",
+        "14.7",
+        "14.9"
+      ],
+      "unresolved": "Voidspawn stage HP/AD historical values found; complete change chain through 14.24 remains unchecked."
+    }
   }
 }

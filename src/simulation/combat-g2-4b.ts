@@ -22,6 +22,10 @@ export function initializeShroud(units:readonly CombatUnit[]):CombatUnit[] {
  * Actor-ID order reserves each destination before processing the next holder.
  */
 export function advanceSpectralCutlass(ctx: AbilityContext): void {
+  // Most ticks have no teleport. Avoid allocating/sorting the entire army on
+  // those ticks, including battles without this item.
+  if (!ctx.units.some(unit=>unit.alive&&unit.hp>0&&unit.mechanics?.some(m=>
+    m.mechanic==='g24SpectralCutlass'&&(ctx.tick===0||ctx.tick===m.values.durationTicks)))) return;
   for (const unit of [...ctx.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)) {
     const item = unit.mechanics?.find(m=>m.mechanic==='g24SpectralCutlass');
     if (!item || !unit.alive || unit.hp <= 0 || ctx.tick !== 0 && ctx.tick !== item.values.durationTicks) continue;

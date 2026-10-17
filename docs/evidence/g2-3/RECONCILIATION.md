@@ -179,3 +179,5 @@ restoration. Full digest fixture migration and final full-suite run remain pendi
 **G24-CUTLASS-CELL-01 — 约定值，待确认：** 镜像翻转两轴；被占格改选最近空格，等距按行/列，多个携带者按ID依次预留；多件同名只传送/返回一次。死亡不返回。
 
 **G24-SHROUD-BEAM-01 — 约定值，待确认：** 在两席棋盘合并后的初始位置按列差≤1认定三列光束；多个光束取最强，不叠乘；最大法力向上取整，首次施法后恢复。原档确认30%和全队60HP，未说明此六角光束几何。
+
+补证：已取得 Riot 13.18 的虚空生物阶段 HP 表及 14.7 的阶段 AD/升星/双抗/攻速说明，见 [EXTERNAL_SOURCES](EXTERNAL_SOURCES.md#official-historical-follow-up-read-2026-10-17)。这些是对应历史补丁的真实值；截至 14.24 的中间变更链未核完，不能据此宣称目标版本的完整召唤属性已经确定。14.9 风衣与不稳定财宝箱的交互暗示复制装备，但未证明全部继承规则。新增考证暂未改变运行时数值。

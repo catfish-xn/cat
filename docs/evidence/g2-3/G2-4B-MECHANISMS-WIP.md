@@ -38,3 +38,34 @@ remain pending. This branch must remain a draft until complete.
 
 Draft PR creation attempted with gh (normal and approved escalation); both
 returned GitHub GraphQL Forbidden. Git push succeeded.
+
+## Checkpoint after replay and source follow-up
+
+- Added `tests/g2-4b-replay.test.ts`: all three registered items reproduce every
+  compact replay frame; omitting an attack event rejects replay. The Shroud
+  case also checks the restored maximum mana after first cast.
+- Related execution: the previous eight files / 36 tests passed; the added
+  replay file and changed Cutlass adapter were checked together (two files /
+  seven tests passed, including four existing Cutlass tests). Total distinct
+  tests across these checkpoints: 39. No full suite has run.
+- `npm run build` passed, including TypeScript checking. No independent review.
+- Cutlass's inactive ticks now avoid allocating and sorting the whole army.
+  This preserves outcomes and does not change policy values.
+- JS gzip level 9: 552935 bytes, **1.3017494462x** the CI-pinned signed-off M7
+  build (`15313a75c6e74beec739fe52a2875c104c55eae3`, 424763 bytes).
+  Against branch base `0bc011f` (550288 bytes): **1.0048102085x**.
+  See `G2-4B-WIP-JS.json`. This measures size only, not interactive performance;
+  it is not final-PR-head acceptance and does not claim CI is green.
+- Latest fetch still has `origin/multiplayer` at the base above. Predecessor
+  merges are not present. Final synchronization and another revision bump are
+  outstanding. Do not merge this branch.
+
+Remaining implementation boundaries (not claimed as permission blockers):
+gold must connect opportunities to battle state, settlement payouts, economy
+replay and save authority; Gambler additionally needs an authoritative bank
+snapshot. Existing High Roller receipts cannot represent item gold. Deferred
+damage needs shield/redirect ordering and event/restore integration. Zephyr
+needs true absence from action, area-target and passive processing, not merely
+stun/untargetability. Clones need authoritative membership and inherited stat
+compilation without counting additional traits or minting inventory assets.
+Voidspawn requires a verified stage table and spawn/restore integration.
