@@ -84,6 +84,16 @@ function damageRequest(packet: S13Packet, combatId: string, tick: number): Damag
     { stage: 'raw', amount: { flat: packet.raw, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 0, missingHpBps: 0,
       actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'packet', cap: null } } };
 }
+/** G2-4b Prowler's Claw: a charged consume-counter gate adds crit damage to critical basic attacks until spent. */
+function chargedCritBps(owner: S13Unit, packet: S13Packet): number {
+  if (!packet.critical || packet.delivery !== 'basic-attack') return 0;
+  let bonus = 0;
+  for (const d of owner.mechanismDefinitions?.eventTriggers ?? []) if (d.gate.kind === 'consume-counter' && d.gate.critDamageBps) {
+    const runtime = owner.triggerLedger?.runtimes.find(r => canonicalSource(r.source) === canonicalSource(d.source));
+    if ((runtime?.counters[d.gate.counterId] ?? 0) > 0) bonus += d.gate.critDamageBps;
+  }
+  return bonus;
+}
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
   const amplifiers: StatModifier[] = owner ? [...statusModifiers(owner, 'damageAmp', tick)] : [];
   if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
@@ -93,6 +103,9 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
     if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
   }
+  // G2-4b Sniper's Focus: the same per-hex reading as the Sniper trait, sampled at resolution.
+  if (owner) for (const m of statusModifiers(owner, 'damageAmpPerHex', tick)) if (m.value.kind === 'constant')
+    amplifiers.push(constantModifier('damageAmp', m.value.amount * hexDistance(owner.cell, target.cell), 'bps'));
   const reduction = (bps: number): StatModifier => ({ ...constantModifier('damageReduction', bps, 'bps'),
     damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
   const reductions = [...(mechanic(target, 'family', 'damageReductionBps') ? [reduction(mechanic(target, 'family', 'damageReductionBps'))] : []), ...statusModifiers(target, 'damageReduction', tick), ...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
@@ -102,7 +115,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
     ...(champion(target) === 'amumu' ? { flatReduction: variable(target, 'FlatDamageReduction') } : {}),
     amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: packet.critical ?? false,
-    critMultiplierBps: owner ? spellCrit(owner).multiplierBps : S13_COMBAT_RULES.critMultiplierBps,
+    critMultiplierBps: owner ? spellCrit(owner).multiplierBps + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
 /** S13 development resolver; standalone M3/M4 battles keep their original rules. */
@@ -136,6 +149,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
+  ctx.defenses = (unit, armor) => defenses(unit, armor, ctx.tick, units);
   initializeMechanisms(ctx);
   if (state.tick === 0) {
     // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
@@ -278,6 +292,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
     rollPlannedPackets();
   }
+  // G2-4b: each stun applied (or refreshed) on an enemy is one stun-applied occurrence of its source owner.
+  let stunScan = 0;
+  const emitStuns = () => {
+    const from = stunScan; stunScan = events.length;
+    if (!hasMechanismSubscriber(units, 'stun-applied')) return;
+    for (const event of events.slice(from, stunScan)) if (event.type === 'statusChanged' && (event.reason === 'applied' || event.reason === 'refreshed') && event.group.kind === 'stun') for (const c of event.group.contributions) {
+        const actor = units.find(u => u.id === c.source.ownerId), victim = units.find(u => u.id === event.group.targetId);
+        if (actor && victim && actor.team !== victim.team) emitMechanismSignal(ctx, { event: 'stun-applied', tick, actionSeq: actionSeq++, actorId: actor.id, targetId: victim.id, cast: null });
+      }
+  };
+  emitStuns();
   const beforeDamage = units.map(u => ({ id: u.id, hp: u.hp, maxHp: u.maxHp }));
   const positiveDamage = new Set<string>();
   // Virtual health and layered shields give each packet a deterministic actual contribution and killer.
@@ -296,9 +321,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed);
     recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
     recordG2Damage(ctx, units.find(u => u.id === packet.source.ownerId), target, actual, absorbed, packet, Math.max(0, (virtualHp.get(target.id) ?? 0) - actual));
+    const broken: number[] = [];
     target.shieldLayers = result.shields.map(layer => {
       const old = target.shieldLayers.find(s => s.key === layer.key)!;
       const taken = old.remaining - layer.remaining;
+      if (taken > 0 && layer.remaining === 0) broken.push(old.granted);
       const next = shieldProjection(recordShieldAbsorption(frozenShield(old, target), layer.remaining), old.key, old.m8Grant, taken > 0 && layer.remaining === 0 ? 'depleted' : old.endedReason);
       if (taken > 0) {
         events.push({ type: 'shieldLayerChanged', tick, layer: next.m8State!, reason: 'absorbed' });
@@ -338,6 +365,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         }
       }
     }
+    for (const granted of broken) emitMechanismSignal(ctx, { event: 'shield-broken', tick, actionSeq: context.rootActionSeq, actorId: target.id, targetId: null, cast: null }, { ...EMPTY_FACTS, brokenShield: granted });
     const facts = { damage: [outcome], healing: [], shieldDecay: [] };
     const signal = { tick, actionSeq: context.rootActionSeq, actorId: context.source.ownerId, targetId: target.id, cast: null } as const;
     if (context.permissions.includes('incoming-basic-hit') && outcome.hit) emitMechanismSignal(ctx, { ...signal, event: 'incoming-basic-hit' }, facts);
@@ -386,6 +414,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         emitMechanismSignal(ctx, { event: 'damage-dealt', tick, actionSeq: rootSeq, actorId, targetId: damage[0]?.context.targetId ?? null, cast: null }, { ...ctx.resolutionFacts!, damage }, 'action-damage-total');
       }
     }
+    emitStuns();
     if (ctx.packets.length > beforeDerived) {
       const children = ctx.packets.splice(beforeDerived).sort((a,b) => compareText(canonicalSource(asSource(a.source)), canonicalSource(asSource(b.source))) || compareText(a.targetId,b.targetId) || a.ordinal-b.ordinal);
       for (const child of children) child.critical = rollCrit(child.critEligibility, spellCrit(units.find(u => u.id === child.source.ownerId)!), ctx.draw);
@@ -453,6 +482,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (grants.length) unit.runtime.buddyTriggered = true;
     }
   }
+  // G2-4b: on-death item declarations see the dying holder before its statuses and tasks are cleaned.
+  if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
+    emitMechanismSignal(ctx, { event: 'holder-death', tick, actionSeq: actionSeq++, actorId: unit.id, targetId: unit.id, cast: null });
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {

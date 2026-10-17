@@ -5,6 +5,7 @@ import type {Effect,ItemDefinition} from '../strategy-types';
 import type {ItemProgram} from '../m8/item-program';
 import {modifier,periodic,stat,trigger,shield,survival,vamp,amount} from './item-programs';
 import {freezeContent} from './freeze';
+import {G24_ARTIFACT_ITEMS} from './g2-4-artifacts';
 /** 约定值: reward-only special items execute a finite subset; archived text is not an execution claim. */
 export const G23_SPECIAL_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeContent(Object.fromEntries(Object.entries(G23_SPECIAL_ITEM_SOURCE).map(([id,s])=>{
  const v:Readonly<Record<string,number|null>>=s.values,n=(key:string)=>v[key]??0,effects:Effect[]=[],program:{-readonly [K in keyof ItemProgram]:ItemProgram[K]}={};
@@ -35,5 +36,5 @@ export const G23_SPECIAL_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeCon
  return [id,{id,apiName:id,name:s.name,kind:isRadiant?'radiant':'completed',...(isRadiant?{radiantOf:Object.keys(G23_RADIANT_MAPPING).find(k=>(G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[k]===id)!}:{}),...(!isRadiant&&id.includes('TFT13_')?{restriction:{kind:'trait' as const,traitId:'chem-baron'}}:{}),evidenceStatus:'approved-provisional',unique:s.unique,slotCost:gloves?3:1,effects,combatProgram:program,conventionIds:['G23-SPECIAL-FINITE-01'],effectDescriptions:[crown?'获得时队伍人口上限永久+1，与是否装备无关。':'有限奖励装备：源基础属性与部分程序；省略清单见 G2-3 RECONCILIATION。']} satisfies ItemDefinition];
 })));
 /** Acquisition pools/recipes retain the ordinary 44-entry catalogue. Domain ownership admits reward-only identities too. */
-export const ITEM_DEFINITIONS:Readonly<Record<string,ItemDefinition>>=freezeContent({...ORDINARY,...G23_SPECIAL_ITEMS});
+export const ITEM_DEFINITIONS:Readonly<Record<string,ItemDefinition>>=freezeContent({...ORDINARY,...G23_SPECIAL_ITEMS,...G24_ARTIFACT_ITEMS});
 export {COMPONENT_IDS} from './items';

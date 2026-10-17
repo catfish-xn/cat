@@ -1,6 +1,6 @@
 import type { Amount, Condition, EffectRuntime, PeriodicTask, Source, StatModifier, StatusGroup, TriggerDefinition, CombatActivity } from './contracts';
 /** Development input/compiler projections. The frozen G04–G07 records themselves are unchanged. */
-export interface VampDefinition { readonly source: Source; readonly modifier: StatModifier; readonly allyBps: number; readonly allyCondition: Condition }
+export interface VampDefinition { readonly source: Source; readonly modifier: StatModifier; readonly allyBps: number; readonly allyCondition: Condition; /** G2-4b: only these hit types feed this rate. */ readonly damageTypes?: readonly import('./contracts').DamageType[] }
 export interface MechanismDefinitions {
   readonly eventTriggers?: readonly TriggerDefinition[];
   readonly periodicTasks: readonly PeriodicTask[];

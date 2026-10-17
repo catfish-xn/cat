@@ -149,7 +149,7 @@
 - `seatMechanics.seat`持久化六键公开进度，hidden.progress保存种子、RNG与经济重演事实；学院/奖励领取凭通用MechanicReceipt派生，不持久化重复发奖收据。冻结战斗输入中的g23只是编译DTO，不是MatchState根权威。恢复从种子重演经济收据，并比对当前终局Combat事实；缺失G23进度、重复/篡改收据、非法领取副本均拒绝。恢复不发奖、不抽随机数。
 - rules=`s13-g2-3-v2`，content=`s13-14.24b-g2-3-v2`；本次#136后收尾修正升至v2，schema7/save3/replay3不变。旧存档与旧回放输入按版本/digest拒绝，无迁移。
 - G2-4a（征服者第4/8/9档恢复原奖励、锻造器4选1）再升至rules=`s13-g2-3-v3`、content=`s13-14.24b-g2-3-v3`，policy revision `g2-4a-v3`；v2存档与回放输入同样按版本/digest拒绝，G2-3夹具用原录制脚本重录。
-- G2-4a冠冕（第12/15档恢复原奖励、获得冠冕永久+1人口）再升至rules=`s13-g2-3-v4`、content=`s13-14.24b-g2-3-v4`，policy revision `g2-4a-v4`；v3存档与回放输入按版本/digest拒绝。冠冕人口从已有的奖励领取记录推出，存档、开战输入和联机快照都不新增字段。
+- G2-4a冠冕（第12/15档恢复原奖励、获得冠冕永久+1人口）与#147神器合并后统一升至rules=`s13-g2-3-v5`、content=`s13-14.24b-g2-3-v5`，policy revision `g2-4a-v5`；v3/v4存档与回放输入按版本/digest拒绝。冠冕人口从已有的奖励领取记录推出，存档、开战输入和联机快照都不新增字段。
 - `release-audit.json`与候选夹具已按19aa9f1接入后源码重录，包含源码摘要、旧新字节和恢复证据。历史opening-random夹具原字节保留；新增夹具不覆盖历史归档。全套`npm test`和`test:timing`尚未执行，仅最终head各一次。
 
 开发验证见`development-validation.json`；`live-reveal-audit.json`从真实mage公共命令前缀重跑完整及单留英雄分支，通过公共部署交换Lux/Nami得到tick51双死亡(447/448)，单留Loris保留有掉落失败、单留Zyra并部署(0,4)得到tick152无掉落失败。包含旧/新测试源码字节长度、SHA及首差异位置；没有改造战斗状态来伪造死亡，尚未宣称旧全套通过。
