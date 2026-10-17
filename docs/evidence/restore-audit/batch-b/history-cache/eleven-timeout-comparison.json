@@ -1,0 +1,68 @@
+[
+  {
+    "case": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "beforeMs": 9310.997044,
+    "afterMs": 1796.2343470000014,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "beforeMs": 17670.382892999998,
+    "afterMs": 3546.3709679999993,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "beforeMs": 32302.199827999997,
+    "afterMs": 5508.200582999998,
+    "afterStatus": "failed"
+  },
+  {
+    "case": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "beforeMs": 57993.98663099999,
+    "afterMs": 7633.892260999997,
+    "afterStatus": "failed"
+  },
+  {
+    "case": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+    "beforeMs": 91545.026973,
+    "afterMs": 12664.288797000001,
+    "afterStatus": "failed"
+  },
+  {
+    "case": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+    "beforeMs": 5403.552479000005,
+    "afterMs": 361.19798699999956,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+    "beforeMs": 22405.522394,
+    "afterMs": 606.0481730000029,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+    "beforeMs": 7766.620161999977,
+    "afterMs": 797.0239309999961,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+    "beforeMs": 22023.099297999986,
+    "afterMs": 485.23359899999923,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+    "beforeMs": 7790.936657999991,
+    "afterMs": 628.7484729999996,
+    "afterStatus": "passed"
+  },
+  {
+    "case": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+    "beforeMs": 11079.601878000016,
+    "afterMs": 4698.781584999997,
+    "afterStatus": "passed"
+  }
+]
