@@ -41,6 +41,7 @@ import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
+import { validateCombatItemGrants } from './m8/combat-item-grants';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 import { validateSeatMechanicsState } from './seat-mechanics/state';
@@ -279,6 +280,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
+    // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
+    validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
     validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
@@ -352,8 +356,9 @@ export function serializeMatch(state: MatchState): string {
   return withItemRestoreCache(() => canonicalContent(restoreMatchWithinCall(state, true)));
 }
 
-/** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
+/** Runtime records are checked separately from frozen stats; restoring never executes them.
+ * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
+export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');

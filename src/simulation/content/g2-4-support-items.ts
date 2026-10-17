@@ -1,8 +1,8 @@
 /** G2-4b support items (user 2026-10-17). Parameters come from g2-4-support-item-source.ts (en_us 14.24 archive).
  * Combat-start buffs to the holder and nearby allies are compiled at the strategy boundary as auras (g2-4-support.ts);
  * everything that acts during combat is the holder's own declarative item program. Conventions are listed in
- * docs/evidence/g2-4/SUPPORT_ITEMS.md (G24-SUPPORT-01…03). Shroud of Stillness, Zephyr, Zz'Rot Portal and Unstable
- * Treasure Chest need new combat mechanisms and belong to the final new-mechanism batch; they are absent from the registry. */
+ * docs/evidence/g2-4/SUPPORT_ITEMS.md (G24-SUPPORT-01…03, G24-CHEST-01…04). Shroud of Stillness, Zephyr and Zz'Rot Portal
+ * need new combat mechanisms and belong to the final new-mechanism batch; they are absent from the registry. */
 import type { Effect, ItemDefinition } from '../strategy-types';
 import type { ItemProgram } from '../m8/item-program';
 import type { Effect as ProgramEffect } from '../m8/contracts';
@@ -82,11 +82,16 @@ function declare(id: string, v: Readonly<Record<string, number | null>>): G24Sup
     case 'TFT_Item_Spite':
       return { holder: { triggers: [onDeath('spite-death', enemies({ radius: 2, maxTargets: 100, order: 'id' }), [status('stun', 0, ticks('Duration'), { activation: 'immediate' })])] },
         auras: [{ area: 'adjacent', radius: 1, effects: [{ kind: 'statPercentBps', stat: 'attackDamage', bps: ratio('ADIncrease') }, { kind: 'statFlat', stat: 'abilityPower', amount: n('APIncrease') }] }] };
+    case 'TFT_Item_UnstableTreasureChest':
+      // G24-CHEST-02: on death, the ItemsGranted highest-percent-health living allies each gain one random pool item (G24-CHEST-01).
+      return { holder: { triggers: [{ ...onDeath('chest-death', selector({ relation: 'ally', excludeSelf: true, maxTargets: n('ItemsGranted'), order: 'hp-ratio-desc-id', excludeSummons: true }),
+        [{ kind: 'grant-combat-item', policyId: 'G24-CHEST-01', lifetime: 'combat' }]), maxPerCombat: 1 }] }, auras: [] };
     default: return null;
   }
 }
 
-const CONVENTIONS: Readonly<Record<string, readonly string[]>> = { TFT_Item_AegisOfTheLegion: ['G24-SUPPORT-01'], TFT_Item_RadiantVirtue: ['G24-SUPPORT-02'], TFT_Item_Moonstone: ['G24-SUPPORT-03'] };
+const CONVENTIONS: Readonly<Record<string, readonly string[]>> = { TFT_Item_AegisOfTheLegion: ['G24-SUPPORT-01'], TFT_Item_RadiantVirtue: ['G24-SUPPORT-02'], TFT_Item_Moonstone: ['G24-SUPPORT-03'],
+  TFT_Item_UnstableTreasureChest: ['G24-CHEST-01', 'G24-CHEST-02', 'G24-CHEST-03', 'G24-CHEST-04'] };
 const DECLARATIONS = Object.entries(SOURCE).flatMap(([id, s]) => { const d = declare(id, s.values); return d ? [[id, d] as const] : []; });
 export const G24_SUPPORT_DECLARATIONS: Readonly<Record<string, G24SupportDeclaration>> = freezeContent(Object.fromEntries(DECLARATIONS));
 export const G24_SUPPORT_ITEMS: Readonly<Record<string, ItemDefinition>> = freezeContent(Object.fromEntries(DECLARATIONS.map(([id, d]) => {

@@ -13,7 +13,7 @@ import { G23_SPECIAL_ITEM_POOLS } from '../src/simulation/content/g2-3-special-i
 import { inSupportArea, isSupportAuraInstance } from '../src/simulation/g2-4-support';
 import type { CombatState, CombatEvent } from '../src/simulation/combat-types';
 
-const DEFERRED = ['TFT_Item_Shroud', 'TFT_Item_Zephyr', 'TFT5_Item_ZzRotPortalRadiant', 'TFT_Item_UnstableTreasureChest'];
+const DEFERRED = ['TFT_Item_Shroud', 'TFT_Item_Zephyr', 'TFT5_Item_ZzRotPortalRadiant'];
 type Place = readonly [id: string, definitionId: string, col: number, row: number];
 function setup(player: readonly Place[], enemy: readonly Place[], held: readonly (readonly [unitId: string, definitionId: string])[]) {
   const base = createMatch(42);
@@ -39,7 +39,7 @@ const statusesOf = (state: CombatState, unitId: string, kind: string) =>
 describe('G2-4b support item content', () => {
   it('registers the fourteen-minus-deferred support items with their source health and valid programs', () => {
     expect(Object.keys(G24_SUPPORT_ITEM_SOURCE).sort()).toEqual([...G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS].sort());
-    expect(Object.keys(G24_SUPPORT_ITEMS)).toHaveLength(13);
+    expect(Object.keys(G24_SUPPORT_ITEMS)).toHaveLength(14);
     for (const id of DEFERRED) { expect(ITEM_DEFINITIONS[id]).toBeUndefined(); expect(G24_SUPPORT_DECLARATIONS[id]).toBeUndefined(); }
     for (const [id, item] of Object.entries(G24_SUPPORT_ITEMS)) {
       expect(ITEM_DEFINITIONS[id]).toBe(item);
@@ -174,7 +174,7 @@ describe('G2-4b in-combat programs', () => {
 });
 
 describe('G2-4b restore', () => {
-  it('every mid-combat state with all thirteen items passes item-source restore validation', () => {
+  it('every mid-combat state with all fourteen items passes item-source restore validation', () => {
     const ids = Object.keys(G24_SUPPORT_ITEMS);
     const player: Place[] = ['leona', 'lux', 'ezreal', 'heimerdinger', 'garen', 'vi', 'zeri'].map((d, i) => [`p${i}`, d, i, 4 + (i % 2)]);
     const enemy: Place[] = ['garen', 'vi', 'leona'].map((d, i) => [`e${i}`, d, i + 2, 2]);

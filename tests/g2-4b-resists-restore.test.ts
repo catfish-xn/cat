@@ -2,7 +2,7 @@ import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
 import { startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
-import { grantMechanicItem } from '../src/simulation/seat-mechanics';
+import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { accepted, reachRound, purchasedThreeHeroMatch, resolveM5Choices, battle } from './match-helpers';
@@ -192,3 +192,33 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(original.round).toBe(state.round + 1);
   compareBattle();
 }, 20000);
+
+it('restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
+  // Public commands only: crest is equipped at combat start; seed 37 naturally
+  // grants Gargoyle at tick 172, before the next crest pulse at tick 180.
+  let state = reachRound('2-1', true, 37);
+  state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
+  const players = state.preparation.units.filter(u => u.team === 'player');
+  const receiver = players[0].id, chestHolder = players[1].id;
+  for (const [id, col, row] of [[receiver, 1, 7], [chestHolder, 3, 4]] as const)
+    state = accepted(deployMatchUnit(state, id, { kind: 'board', cell: { col, row } }));
+  for (const [unitId, definitionId] of [[receiver, crest], [chestHolder, 'TFT_Item_UnstableTreasureChest']]) {
+    state = accepted(grantMechanicItem(state, { receiptId: `chest-crest-${definitionId}`, source: 'test', definitionId }));
+    state = accepted(equipItem(state, state.items.at(-1)!.id, unitId, 0));
+  }
+  state = accepted(startMatchCombat(state));
+  const openingHolder = state.combat!.units.find(u => u.id === receiver)!;
+  expect(openingHolder.itemPrograms!.some(p => p.source.definitionId === crest)).toBe(true);
+  expect(openingHolder.combatItemGrants ?? []).toEqual([]);
+  while (state.phase === 'combat' && state.combat!.tick < 180) state = stepMatch(state).state;
+  expect(state.combat!.tick).toBe(180);
+  const holder = state.combat!.units.find(u => u.id === receiver)!;
+  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 172 }]);
+  expect(active(state).layer.source.ownerId).toBe(receiver);
+  expect(active(state).layer.m8State.startsAtTick).toBe(180);
+  for (const input of [structuredClone(state), serializeMatch(state)]) expect(restoreMatch(input)).toEqual(state);
+  const candidate = structuredClone(state);
+  changeAmount(candidate, 1);
+  for (const input of [candidate, JSON.stringify(candidate)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save: resists shield replay');
+  expect(() => serializeMatch(candidate)).toThrow('Invalid Match save: resists shield replay');
+});
