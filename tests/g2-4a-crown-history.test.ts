@@ -407,6 +407,41 @@ describe('M7/S7 combat equipment command replay', () => {
       : equipItem(live.state,kind === 'ordinary' ? 'item-1' : 'item-2','unit-1',0),'command');
     return live.finish();
   }
+  function removedEquipment(mode: 'remove' | 'reequip' | 'combine') {
+    const first = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
+    const opening = advance(first.finish().state);
+    const tool = opening.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
+    expect(tool).toBeDefined();
+    const live = recorder(opening,first.history);
+    live.commit(stepMatch(live.state),'tick');
+    live.commit(useConsumable(live.state,tool.consumableId,{kind:'unit',unitId:'unit-1'}),'command');
+    expect(live.history.capturePrefix()!.equipmentCommands).toEqual([
+      {tick:1,consumableId:tool.consumableId,target:{kind:'unit',unitId:'unit-1'}},
+    ]);
+    if (mode === 'reequip') live.commit(equipItem(live.state,'item-1','unit-1',0),'command');
+    if (mode === 'combine') {
+      live.commit(combineItems(live.state,'item-1','item-2'),'command');
+      const item = live.state.items.find(item => item.definitionId === 'deathblade')!;
+      live.commit(equipItem(live.state,item.id,'unit-1',0),'command');
+    }
+    expect(validateBattleRecord(live.history.capturePrefix()!,first.history.completedRecords).settledMatch).toEqual(live.state);
+    return live.finish();
+  }
+  it.each(['remove','reequip','combine'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
+    const {state,battles} = removedEquipment(mode);
+    expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
+    expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
+    for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
+  });
+  it('rejects changing the removal command or resource tick at all three entries (M10)', () => {
+    const {state,battles} = removedEquipment('remove');
+    const records = structuredClone(battles);
+    Object.assign(records[1].equipmentCommands![0],{tick:2});
+    rejectAll(state,records,'历史获得或合成记录不一致');
+    const forged = structuredClone(state);
+    Object.assign(forged.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')!,{tick:2});
+    rejectAll(forged,battles,'历史获得或合成记录不一致');
+  });
   it.each([false,true])('records inventory combination followed by equip=%s and resumes the next battle tick for tick (M8)', equip => {
     const live = recorder(swords());
     live.commit(stepMatch(live.state),'tick');
@@ -476,7 +511,8 @@ describe('M7/S7 combat equipment command replay', () => {
       kind:'item-equipped',itemId:fact.event.itemId,unitId:'unit-1',slot:0,tick:1,sequence:fact.sequence,roundId:fact.roundId,
     }});
     else Object.assign(fact.event,{consumedIds:fact.event.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))});
-    rejectAll(forged,records);
+    rejectAll(forged,records,mutation === 'existing-target' ? '历史获得或合成记录不一致'
+      : mutation === 'ordinary-equip' ? 'equipment ownership/slot' : 'combination inputs');
   });
   it.each(['missing-first','missing-second','ordinary-equip'] as const)('rejects %s inventory combination commands at all three entries', mutation => {
     const {state,battles} = timedEquipment('inventory'), records = structuredClone(battles);
@@ -485,7 +521,16 @@ describe('M7/S7 combat equipment command replay', () => {
     Object.assign(records[0],{equipmentCommands:mutation === 'ordinary-equip'
       ? [{tick:1,itemId:'item-1',unitId:'unit-1',slot:0}]
       : [{tick:1,consumedIds:command.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))}]});
-    rejectAll(state,records);
+    rejectAll(state,records,mutation === 'ordinary-equip' ? '历史获得或合成记录不一致' : '合成命令字段');
+  });
+  it('rejects a structurally valid command with an invalid recipe through production replay', () => {
+    const live = recorder(grantBlades(createMatch(7),2));
+    const {state,battles} = live.finish();
+    const records = structuredClone(battles);
+    // Both distinct items exist in inventory, but two completed deathblades
+    // have no combination recipe. Only production replay rejects this command.
+    Object.assign(records[0],{equipmentCommands:[{tick:1,consumedIds:['item-1','item-2']}]});
+    rejectAll(state,records,'非法合成命令');
   });
   it('binds combat equip order to the temporary item roll prefix (M9)', () => {
     let opening = accepted(grantMechanicUnit(createMatch(7),{receiptId:'m9:bench',source:'test',definitionId:'lux'}));

@@ -89,6 +89,9 @@ export class BattleHistory {
           if (fact.kind === 'item-equipped') this.current.equipmentCommands.push(Object.freeze({
             tick: change.before.combat!.tick, itemId: fact.itemId, unitId: fact.unitId, slot: fact.slot,
           }));
+          else if (fact.kind === 'consumable-used') this.current.equipmentCommands.push(deepFreeze({
+            tick: change.before.combat!.tick, consumableId: fact.record.consumableId, target: snapshotData(fact.record.target),
+          }));
           else if (fact.kind === 'item-combined') {
             // In-place equip consumes the incoming inventory component. Replay
             // that input, not the newly allocated completed item's identity.

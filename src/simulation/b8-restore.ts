@@ -336,7 +336,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
         check(!committed||state.phase!=='gameOver','terminal consumable operation');
-        const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record});
+        const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record,...(tool.tick === undefined ? {} : {tick:tool.tick})});
         items=plan.items;nextItem=plan.nextItemSerial;continue;
       }
       check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');

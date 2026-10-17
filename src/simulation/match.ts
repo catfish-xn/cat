@@ -447,7 +447,7 @@ export function useConsumable(state:MatchState,consumableId:string,target:Consum
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   return acceptEquipment({...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
-    {kind:'consumable-used',record:plan.record})},plan.events);
+    {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' ? {tick:state.combat.tick} : {})})},plan.events);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);

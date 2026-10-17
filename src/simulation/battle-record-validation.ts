@@ -1,7 +1,7 @@
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
-import { combineItems, equipItem, startMatchCombat, stepMatch } from './match';
+import { combineItems, equipItem, useConsumable, startMatchCombat, stepMatch } from './match';
 import type { MatchState } from './match-types';
 import type { CombatState } from './combat-types';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -50,7 +50,14 @@ function checkShape(record: BattleRecord) {
   let equipmentTick = 0;
   for (const command of record.equipmentCommands ?? []) {
     check(command && typeof command === 'object', '穿戴命令字段');
-    if ('consumedIds' in command) {
+    if ('consumableId' in command) {
+      check(equalContent(Object.keys(command).sort(), ['consumableId','target','tick'])
+        && typeof command.consumableId === 'string' && command.consumableId.length > 0, '消耗品命令字段');
+      const target = command.target;
+      check(target && typeof target === 'object' && (target.kind === 'unit'
+        ? equalContent(Object.keys(target).sort(), ['kind','unitId']) && typeof target.unitId === 'string' && target.unitId.length > 0
+        : target.kind === 'item' && equalContent(Object.keys(target).sort(), ['itemId','kind']) && typeof target.itemId === 'string' && target.itemId.length > 0), '消耗品命令目标');
+    } else if ('consumedIds' in command) {
       check(equalContent(Object.keys(command).sort(), ['consumedIds','tick'])
         && Array.isArray(command.consumedIds) && command.consumedIds.length === 2
         && command.consumedIds.every((id: unknown) => typeof id === 'string' && id.length > 0), '合成命令字段');
@@ -134,14 +141,15 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
       const command = commands[equipmentCursor++];
       check(state.phase === 'combat', '战后穿戴命令');
       const inventoryCombination = 'consumedIds' in command;
-      const equipped = inventoryCombination
+      const consumableUse = 'consumableId' in command;
+      const equipped = consumableUse ? useConsumable(state, command.consumableId, command.target) : inventoryCombination
         ? combineItems(state, command.consumedIds[0], command.consumedIds[1])
         : equipItem(state, command.itemId, command.unitId, command.slot);
       // Production commands allocate the result before the next command. Their
       // resource facts include tick; history carry compares every fact, including
       // its order relative to loot and other settlement resources, without filtering.
-      check(equipped.ok && equipped.events.some(event => event.type === (inventoryCombination ? 'itemCombined' : 'itemEquipped')),
-        inventoryCombination ? '非法合成命令' : '非法穿戴命令');
+      check(equipped.ok && equipped.events.some(event => event.type === (consumableUse ? 'consumableUsed' : inventoryCombination ? 'itemCombined' : 'itemEquipped')),
+        consumableUse ? '非法消耗品命令' : inventoryCombination ? '非法合成命令' : '非法穿戴命令');
       state = equipped.state; compare(equipped.events);
     }
   };

@@ -36,7 +36,7 @@ export type ResourceFact =
   | {readonly kind:'g23-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
   | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
-  | {readonly kind:'consumable-used';readonly record:import('./consumable-types').ConsumableUseRecord}
+  | {readonly kind:'consumable-used';readonly tick?:number;readonly record:import('./consumable-types').ConsumableUseRecord}
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
@@ -420,7 +420,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(event.itemId === `item-${nextItemSerial}`, 'combined item serial'); integer(nextItemSerial + 1, 1);
       event.consumedIds.forEach(id => items.delete(id)); items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId }); nextItemSerial++;
     } else if(entry.kind==='consumable-used') {
-      keys(entry,[...common,'record']);const r=entry.record;
+      keys(entry,[...common,'record',...(Object.hasOwn(entry,'tick') ? ['tick'] : [])]);
+      if (Object.hasOwn(entry,'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'consumable tick'); }
+      const r=entry.record;
       keys(r,['consumableId','definitionId','target','effect','affectedItems','output','rngBefore','rngAfter']);
       requireValue(Array.isArray(r.affectedItems)&&r.affectedItems.length>0,'consumable affected items');
       for(const rawItem of r.affectedItems) {
