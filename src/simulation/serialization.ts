@@ -1,6 +1,6 @@
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {projectItemSummons} from './g2-4b-summons';
-import {validateCombatItemGold,validateZephyrCombat} from './g2-4b-gold-restore';
+import {validateCombatItemGold,validateZephyrCombat,validateMirrorOpening} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -271,6 +271,7 @@ function restoreMatchWithinCall(input: unknown): MatchState {
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
     const verifiedZephyr=validateZephyrCombat(combat,basis,expectedStrategy);
+    validateMirrorOpening(combat,basis,expectedStrategy);
     const neutralStatuses = verifiedZephyr?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of verifiedZephyr?[]:combat.units) {

@@ -4,7 +4,9 @@ import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {countsG23SurvivorDamage} from '../src/simulation/g2-3-summons';
-import {createCombatWithEvents} from '../src/simulation/combat';
+import {createCombatWithEvents,stepCombat} from '../src/simulation/combat';
+import {getCatalogRoundById} from '../src/simulation/round-selectors';
+import {snapshotForBattle,compileBattle,restoreBattleInput,startTwoSidedCombat} from '../src/server-entry';
 import type {MatchState} from '../src/simulation/match-types';
 
 function equipped(base=createMatch(42)){
@@ -69,4 +71,51 @@ it('full deployment cells do not overlap or mint an asset; compilation is determ
  expect(state).toEqual(before);
  const reversed={...state,preparation:{...state.preparation,units:[...state.preparation.units].reverse()}};
  expect(buildStrategySnapshot(reversed)).toEqual(strategy);
+});
+
+it.each([
+ ['giant-sized',2990,2093],
+ ['fortified',2070,1449],
+] as const)('copies actual opening HP with equipment/augment growth/%s, retaining naked other stats and restored battle inputs',(anomaly,maxHp,cloneHp)=>{
+ const base=createMatch(42),round=getCatalogRoundById('2-1');
+ let army:MatchState={...base,round:round.ordinal,roundDefinitionId:round.roundId,m8:{...base.m8,round},
+  preparation:{...base.preparation,units:[{id:'unit-1',definitionId:'tristana',starLevel:2,team:'player',location:{kind:'board',cell:{col:3,row:4}}}]},
+  augments:[{definitionId:'investment-strategy-i',choiceId:'test-investment',acquiredRound:1}],augmentProgress:{pumpingRounds:0,investmentHp:80},
+  persistentGrowth:[{unitId:'unit-1',attackDamageBps:1250}],anomalyBinding:{unitId:'unit-1',definitionId:anomaly,choiceId:'test-anomaly',boundRound:1}};
+ army=equipped(army).state;
+ const g=grantMechanicItem(army,{receiptId:'warmog',source:'test',definitionId:'warmog'});if(!g.ok)throw Error(g.reason);
+ const e=equipItem(g.state,g.state.items.at(-1)!.id,'unit-1',1);if(!e.ok)throw Error(e.reason);army=e.state;
+ const input=compileBattle(snapshotForBattle(army,'A'),snapshotForBattle(army,'B'),42);
+ const restored=restoreBattleInput(JSON.parse(JSON.stringify(input)));
+ expect(restored).toEqual(input);
+ let combat=startTwoSidedCombat(restored);
+ const owner=combat.units.find(u=>u.team==='player'&&!u.itemSummon)!;
+ const clone=combat.units.find(u=>u.team==='player'&&u.itemSummon?.kind==='mirror')!;
+ // Tristana2: floor(550*1.8)=990. Warmog600 + investment growth80.
+ // Giant adds1000, then Warmog12%: floor(2670*1.12)=2990; floor(*.7)=2093.
+ // Fortified adds12%: floor(1670*1.24)=2070; floor(*.7)=1449.
+ expect(owner.maxHp).toBe(maxHp);expect(clone.maxHp).toBe(cloneHp);
+ expect(clone.itemSummonOpeningMaxHp).toBe(maxHp);expect(clone.maxMana).toBe(66);
+ expect(clone.attackDamage).toBe(75);expect(owner.attackDamage).toBe(84);
+ expect(clone.runtime!.permanentAdBps).toBe(0);
+ expect(clone.sources!.some(s=>s.source.sourceKind==='augment'||s.source.sourceKind==='anomaly')).toBe(false);
+ expect(clone.itemPrograms?.some(p=>p.source.sourceKind==='item'||p.source.sourceKind==='anomaly')).toBeFalsy();
+ for(let n=0;n<81&&combat.status==='running';n++)combat=stepCombat(combat).state;
+ expect(combat.units.find(u=>u.id===clone.id)!.maxHp).toBe(cloneHp);
+ expect(startTwoSidedCombat(restored)).toEqual(startTwoSidedCombat(input));
+});
+
+it('restores inherited high equipment HP and rejects a forged opening maximum',()=>{
+ let state=equipped().state;
+ const g=grantMechanicItem(state,{receiptId:'large-health',source:'test',definitionId:'warmog'});if(!g.ok)throw Error(g.reason);
+ const owner=state.preparation.units.find(u=>u.team==='player')!;
+ const e=equipItem(g.state,g.state.items.at(-1)!.id,owner.id,1);if(!e.ok)throw Error(e.reason);
+ const started=startMatchCombat(e.state);if(!started.ok)throw Error(started.reason);state=started.state;
+ const clone=state.combat!.units.find(u=>u.itemSummon?.kind==='mirror')!;
+ expect(clone.maxHp).toBe(Math.floor(state.combat!.units.find(u=>u.id===owner.id)!.maxHp*7/10));
+ for(let n=0;n<40&&state.phase==='combat';n++){
+  expect(restoreMatch(serializeMatch(state))).toEqual(state);state=stepMatch(state).state;
+ }
+ const bad=structuredClone(state);Object.assign(bad.combat!.units.find(u=>u.id===clone.id)!,{itemSummonOpeningMaxHp:clone.itemSummonOpeningMaxHp!+100});
+ expect(()=>restoreMatch(bad)).toThrow('authoritative Mirror opening');
 });

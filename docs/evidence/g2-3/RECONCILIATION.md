@@ -244,3 +244,11 @@ The30-page follow-up ledger supports carry-forward as an **inference**, not a
 recovered original script. G24-VOIDSPAWN-STAGES-01 records **约定值** for clamping,
 total-stat interpretation and collision handling. Raw14.24 AS.75/armor30/MR30
 and portal150HP apply directly; SummonedStatReduction25 has no confirmed meaning.
+
+2026-10-17 user approval supersedes pending convention statuses in overrides.
+Mirror HP specifically follows14.24 max Health wording: actual owner opening
+maximum*70%, floor, including items/augments/anomaly/growth. Other inherited
+attributes and counter exclusions are **约定值（用户 10-17 批准）**. Runtime
+no longer computes Mirror HP from the naked clone. Voidspawn preparation movement
+is required, not replaced by the superseded automatic-only placement proposal.
+The chest is assigned to Claude's separate PR and remains outside this scope.

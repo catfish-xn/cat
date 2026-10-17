@@ -4,6 +4,16 @@ import type {CombatInputBasis} from './combat-input';
 import type {StrategySnapshot} from './strategy-types';
 import {canonicalContent} from './content';
 
+/** Opening HP is derived from authenticated inputs, never the saved owner HP. */
+export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
+  const enabled=strategy.units.some(u=>u.itemSummon?.kind==='mirror');
+  const initial=enabled?createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state:null;
+  for(const unit of candidate.units){
+    const expected=initial?.units.find(u=>u.id===unit.id)?.itemSummonOpeningMaxHp;
+    if(unit.itemSummonOpeningMaxHp!==expected)throw new RangeError('Invalid authoritative Mirror opening health');
+  }
+}
+
 /** Banishment suspends mechanism clocks, so the normal per-tick structural
  * validator is not its authority. Require exact reconstruction of the entire
  * combat, not a candidate-supplied absence flag or weaker clock bounds. */

@@ -74,7 +74,7 @@ stun/untargetability. Clones need authoritative membership and inherited stat
 compilation without counting additional traits or minting inventory assets.
 Voidspawn requires a verified stage table and spawn/restore integration.
 
-## 集中待定清单（2026-10-17，未逐项批准）
+## 集中约定清单（用户 2026-10-17 已批准）
 
 ### Scope ownership gap: Unstable Treasure Chest
 
@@ -89,7 +89,7 @@ PR #150's body was updated to distinguish11 source definitions from8 WIP runtime
 entrypoints and completed targeted checks. No tests were rerun for this metadata.
 
 原版明确的常数全部取已固定 hash 的 14.24 原档；下列实现细节缺少原版证据，
-均为 **约定值建议**，不是已经证实的原版行为。最新状态：除迷离风衣外，10 件已有 WIP 运行入口；镜像继承仍有缺口。各条历史 checkpoint 保留原时点结果，不代表最终验收。
+均为 **约定值（用户 10-17 批准）**，不是已经证实的原版行为。历史 checkpoint 的“待批准”保留作时点记录，以本节最新决定为准。最新状态：除迷离风衣外，10 件已有 WIP 运行入口；镜像继承仍有缺口。各条历史 checkpoint 保留原时点结果，不代表最终验收。
 
 | ID / status | Concrete recommendation | Source gap, research, behavior impact |
 | --- | --- | --- |
@@ -301,3 +301,21 @@ not yet re-exported by server-entry or connected to online commands/UI. Claude
 still owns those adapters. This distinction is recorded explicitly in the audit;
 no UI/server implementation was changed. Existing pure strategy/metadata caches
 predate this PR; new combat replay results are never cached across calls.
+
+## User approval and Mirror correction —2026-10-17
+
+All listed conventions were explicitly approved; no further approval is required.
+The chest belongs to Claude's separate PR atop#149, never this eleven-item scope.
+Mirror now uses floor70% of the owner's actual opening maximum HP after initial
+mechanism effects; this includes item, augment, anomaly and accumulated HP inputs.
+Maximum mana is ceil110% of the owner's compiled maximum; external Shroud then
+applies by the clone's cell. Other stats remain naked champion plus active traits;
+no item/anomaly programs or growth counters are copied. Opening HP is independently
+reconstructed on restore, not accepted from the saved owner or clone's claim.
+
+Hand calculations: Tristana2 base990, Warmog+600/+12%, investment growth80,
+Giant-Sized+1000 =>floor2670*1.12=2990, clone2093. Fortified+12% instead yields
+floor1670*1.24=2070, clone1449. Persistent AD growth1250bps gives owner84AD while
+clone retains75; clone mana66. Frozen two-sided input restoration and public Match
+high-HP item save/restore are covered. Six Mirror tests pass; previous checkpoint
+claims of naked-HP inheritance are superseded. Native forge/Trench work continues.

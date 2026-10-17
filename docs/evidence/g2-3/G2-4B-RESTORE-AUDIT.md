@@ -102,3 +102,15 @@ returned authoritative projection. The saved owner-visible map is
 `itemSummonPositions`. Combat/replay already carry derived summon membership.
 Zephyr independently exposes optional `CombatViewUnit.banished`. Presentation
 must not mint units, infer a death from absence, calculate stage stats or pay gold.
+
+## Approved Mirror opening change (2026-10-17)
+
+No preparation movement/read signature, snapshot position field or Claude
+adapter contract changed. CombatUnit adds internal
+`itemSummonOpeningMaxHp?:number` for Mirror's authenticated owner opening HP.
+Mirror maxHP is now floor(owner actual opening maxHP*70%); maxMana is ceil(owner
+compiled maxMana*110%), before the clone's own external Shroud application.
+The initial maximum is rebuilt from validated frozen input during restore.
+This adds an initial-combat reconstruction for Mirror saves; the earlier Gold/
+Zephyr timing measurements remain measurements of the stated older checkpoint,
+not a timing claim for this changed Mirror path. Final performance is pending.
