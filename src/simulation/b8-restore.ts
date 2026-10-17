@@ -1,7 +1,7 @@
 import {openG23Choice} from './g2-3-runtime';
 import {readG23Progress,validateG23MechanicLinks} from './g2-3-state';
 import {g23RadiantRound,g23SoloFacts} from './g2-3-settlement';
-import {g23RadiantDefinitionId} from './g2-3-rewards';
+import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { validateG23Progress } from './g2-3-match-progress';
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
@@ -14,6 +14,7 @@ import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } f
 import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
 import { planUnitAcquisition } from './unit-acquisition';
+import { planPermanentItemGrant } from './item-grants';
 import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
 import type { LootChoiceDescriptor, FrozenDirectDrop } from './loot-types';
@@ -307,14 +308,57 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
   committed = true;
+  // The black-market choice may grant a duplicator and heroes after this battle.
+  // Validate each birth against its receipt and the roster at that exact point.
+  const mechanicBirths = (state.seatMechanics?.receipts ?? []).slice(basis.mechanicReceiptPrefixLength).filter(receipt =>
+    receipt.kind === 'item' || receipt.kind === 'unit' && receipt.resolution === 'held'
+    || receipt.kind === 'choice' && receipt.itemId !== null);
+  const progress = readG23Progress(state);
+  const rewardAtoms = new Map(progress?.rewards.flatMap(bundle => g23RewardAtoms(bundle,progress.seed).map(atom => [atom.id,atom] as const)));
+  let mechanicCursor = 0;
   let resolvedChoices = 0;
+  const mechanicBirth = (): boolean => {
+    const birth = entries[cursor];
+    if ((birth?.kind !== 'item-acquired' && birth?.kind !== 'unit-acquired') || birth.source.kind !== 'mechanic') return false;
+    const receipt = mechanicBirths[mechanicCursor++];
+    check(receipt && receipt.round === state.round && receipt.roundId === state.roundDefinitionId
+      && receipt.receiptId === birth.source.receiptId, 'mechanic birth order');
+    const source = {kind:'mechanic' as const,receiptId:receipt.receiptId};
+    if (receipt.kind === 'unit') {
+      check(birth.kind === 'unit-acquired' && receipt.resolution === 'held', 'mechanic unit birth');
+      const claim = progress?.rewardClaims.find(claim => claim.id === receipt.receiptId);
+      const atom = claim && rewardAtoms.get(claim.atomId);
+      if (atom?.kind === 'duplicator') {
+        const target = atom.options.find(id => preparation.units.some(unit => unit.team === 'player' && unit.definitionId === id));
+        check(target !== undefined && receipt.definitionId === target, 'mechanic duplicator target');
+      }
+      survivingPlacements();
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor);
+      check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
+      for (const fact of plan.facts) take(fact);
+      preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding; nextUnit = plan.nextUnitSerial;
+    } else {
+      check(birth.kind === 'item-acquired' && (receipt.kind === 'item' || receipt.kind === 'choice'
+        && !receipt.skipped && state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length), 'mechanic choice birth order');
+      const definitionId = receipt.kind === 'item' ? receipt.definitionId : receipt.optionId;
+      const plan = planPermanentItemGrant({items,nextItemSerial:nextItem},{definitionId,receiptId:receipt.receiptId},[]);
+      check(plan.ok && receipt.itemId === plan.grantedItemIds[0], 'mechanic item transaction');
+      take({kind:'item-acquired',itemId:plan.grantedItemIds[0],source});
+      items = plan.state.items; nextItem = plan.state.nextItemSerial;
+    }
+    return true;
+  };
+  const continuation = () => {
+    combinations();
+    while (mechanicBirth()) combinations();
+  };
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
-    combinations(); // Between user choices, never inside a grant transaction.
+    continuation(); // Between user choices, never inside a grant transaction.
     if (!loot.choiceResolutions.some(value => value.dropId === choice.dropId)) break;
     resolve(choice); resolvedChoices++;
   }
   while (cursor < entries.length) {
-    combinations();
+    continuation();
     if (cursor === entries.length) break;
     const sale = entries[cursor];
     check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
@@ -329,6 +373,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
+  check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');

@@ -34,6 +34,11 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
 }));
 export const G23_POLICY = freezeContent({
   revision:'g2-4a-v5', rngAlgorithm:'lcg32-v1', seedXor:0x67323370,
+  // User2026-10-17: retain source identity; only the black-market duplicator requires Chem-Baron.
+  duplicators:{
+    TFT_Consumable_ChampionDuplicator_III:{name:'次级英雄复制器',maxCost:3,traitId:null},
+    TFT13_Crime_Consumable_LesserShimmerDuplicator:{name:'次级微光复制器',maxCost:3,traitId:'chem-baron'},
+  },
   conqueror:{radiantPoolExclusions:['TFT5_Item_ThiefsGlovesRadiant'],chests:G23_CONQUEROR_CHESTS,transitionalRewards:G23_CONQUEROR_CHESTS.map(g23ConquerorReward),deferredPolicy:'whole-tier-gold-floor-only-affected-v2', growthPerChestBps:500, progressCap:null,
     stacksPerTakedown:{2:1,4:3,6:6,9:20},radiantConversion:'equipped-board-and-bench-then-new-combinations'},
   highRoller:{first:[3500,3500,2000,1000],triple:[4000,3500,2450,50],mods:['rocket','shield','coin'],tripleMods:['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot'],

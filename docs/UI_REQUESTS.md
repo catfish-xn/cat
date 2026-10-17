@@ -939,3 +939,11 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 私有投影 pendingCarouselUnits 删除、改为 heldCarouselUnits。新 Match 字段 carousel.heldCarouselUnits；旧 pendingUnits 暂为严格镜像的废弃别名，供当前出售/resolve 入口过渡。界面 readHeldCarouselUnits 改读新投影。两处满才保管，场上未满时卡已直接放进 preparation 的合法格，照常参战。
 - nextSharedRound 已自动在下一准备期（choice 之前）迁入并合星、同步 holdings；不要服务器另算。之后准备期卖出/部署腾空、buyXp 升级后调用保留名 resolvePendingCarouselUnits，原子发布 pool/state/events；临时位出售仍用保留名 sellPendingCarouselUnit。事件新增 carouselPreparationSettled，旧 carouselPendingClaimed 名字保留。
 - tests/server/carousel-room.test.ts 的 1-1 开局、放行、断线、计时追赶、全选等待、拒绝开盘故障断言会失效；2-4 全局用例也依赖先完成 1-1，需移除旧前奏驱动。e2e/p7-carousel.mjs 的 1-1 段（包括切棋盘/空格/断线恢复）应迁到 2-4，并改查新开局与临时位三路落点。规则 PR 不修改这些文件。
+# 黑市次级微光复制器显示交接（2026-10-17，Codex → Claude）
+
+用户15:20批准：黑市100微光LootA/LootA4与200微光LootB1发“次级微光复制器”，只复制≤3费炼金男爵。领域继续自动领取/无目标托管，不新增可拖放工具或弹窗；征服者仍发“次级英雄复制器”。
+
+- `G23RewardAtom.duplicatorDefinitionId?`及`readG23MechanismState(state).rewards[*].duplicatorDefinitionId`保留源身份：黑市为`TFT13_Crime_Consumable_LesserShimmerDuplicator`，征服者为`TFT_Consumable_ChampionDuplicator_III`。名称分别在`G23_POLICY.duplicators`中；这是领域元数据，不要求界面自行重算资格或候选。
+- 已有正确名称：`src/presentation/s13-g23-manifest.ts:167`；已有图标：`src/presentation/s13-g23-asset-checks.ts:113`及`public/assets/s13/g23/loot/tft13_crime_consumable_lessershimmerduplicator.png`。不应改成通用小复制器或大微光的名称/图标。
+- 若展示托管奖励，请按上述身份区分名称/图标，并使用服务端返回的候选；现有`src/rendering/online/loot-fields.ts:31`、`src/rendering/strategy-panel.ts:593`、`src/presentation/orb-loot.ts:125`处理的是库存工具，不应为此凭空创建`consumableId`或拖放入口。Codex本次未修改界面目录。
+- 验收：黑市显示“次级微光复制器（≤3费炼金男爵）”，征服者显示“次级英雄复制器（≤3费）”；无合格目标仍保留托管，界面不自行授予英雄。
