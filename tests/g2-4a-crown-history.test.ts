@@ -14,6 +14,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { BattleRecord, SaveEnvelope } from '../src/m6/contracts';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { validateMatchStructure } from '../src/simulation/serialization-structure';
+import { validateMatchHistory } from '../src/simulation/battle-record-validation';
 import { recordedCrownBattle } from './crown-history-helpers';
 
 const envelope = (match: MatchState, battles: readonly BattleRecord[]): SaveEnvelope => ({
@@ -460,7 +461,9 @@ describe('M7/S7 combat equipment command replay', () => {
     reforgerOpening = {state:advance(state),battles:history.completedRecords};
     return reforgerOpening;
   }
-  beforeAll(() => { recordedReforgerOpening(); });
+  // The shared opening is recorded and its battle history verified once here;
+  // each reforger case still validates its own prefix and full history against it.
+  beforeAll(() => { const opening = recordedReforgerOpening(); validateMatchHistory(opening.state, opening.battles); });
   function usedEquipment(mode: ConsumableScenario) {
     const reforge = mode === 'component-reforger' || mode === 'completed-reforger';
     const first = reforge ? recordedReforgerOpening()
