@@ -1,7 +1,7 @@
 import type {MatchState} from './match-types';
 import {canonicalContent,equalValidatedContent} from './content';
 import {openG23Choice} from './g2-3-runtime';
-import {readG23Progress,validateG23MechanicLinks} from './g2-3-state';
+import {readG23Progress,validateG23MechanicLinks,validateG23RewardSources} from './g2-3-state';
 import {g23SoloFacts} from './g2-3-settlement';
 import {validateG23Progress} from './g2-3-match-progress';
 import {isMechanicChoice} from './seat-mechanics/choices';
@@ -11,6 +11,7 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
  const equal=parsedJsonInput?equalValidatedContent:(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
  const check=(value:unknown,message:string)=>{if(!value)throw new RangeError('Invalid G23 restore: '+message);};
+  validateG23RewardSources(state);
   check(!!state.seatMechanics?.hidden.progress&&!!readG23Progress(state), 'G23 progress required');
   validateG23MechanicLinks(state);
   if(state.phase==='choice'){

@@ -1,12 +1,12 @@
 import {expect,it} from 'vitest';
-import {createMatch,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
+import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
 import {G23_CONQUEROR_CHESTS,G23_DEFERRED_CONQUEROR_ITEMS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {readG23Progress,writeG23Progress,validateG23MechanicLinks} from '../src/simulation/g2-3-state';
 import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
-import {openG23Choice,drainG23Rewards} from '../src/simulation/g2-3-runtime';
+import {openG23Choice,drainG23Rewards,claimG23Atom} from '../src/simulation/g2-3-runtime';
 import type {G23BattleFacts} from '../src/simulation/g2-3-economy';
 const ok=<T extends {ok:boolean}>(r:T):Extract<T,{ok:true}>=>{if(!r.ok)throw Error(JSON.stringify(r));return r as Extract<T,{ok:true}>;};
 const chest=(tier:number)=>G23_CONQUEROR_CHESTS[tier-1];
@@ -87,13 +87,16 @@ it('one settlement crossing tier 9 grants the duplicate, Thief\'s Gloves and a f
  expect(timed.items.at(-1)?.definitionId).toBe(choice.offers[0]);
 });
 it('without an eligible hero the duplicator stays in escrow and is claimed once one is owned',()=>{
- const initial=preparedAtRound4(),p0=readG23Progress(initial)!;
- const empty=writeG23Progress({...initial,preparation:{...initial.preparation,units:initial.preparation.units.filter(u=>u.team!=='player')}},{...p0,rewards:[{...bundle(4),reward:{Item:['TFT_Consumable_ChampionDuplicator_III']}}]});
- const waiting=drainG23Rewards(empty);
- expect(readG23Progress(waiting)!.rewardClaims).toHaveLength(0);
+ const initial:MatchState={...preparedAtRound4(),phase:'preparation',combat:null},p0=readG23Progress(initial)!;
+ const empty=writeG23Progress({...initial,preparation:{...initial.preparation,units:initial.preparation.units.filter(u=>u.team!=='player')}},{...p0,rewards:[bundle(4)]});
+ // Retain the real frozen descriptor: resolve its hero, then sell that hero before draining the duplicator.
+ const hero=g23RewardAtoms(bundle(4),p0.seed)[0],granted=ok(claimG23Atom(empty,hero.id,hero.options[0])).state;
+ const holder=granted.preparation.units.find(u=>u.team==='player')!;
+ const waiting=drainG23Rewards(ok(sellUnit(granted,holder.id)).state);
+ expect(readG23Progress(waiting)!.rewardClaims.filter(c=>c.kind==='duplicator')).toHaveLength(0);
  expect(drainG23Rewards(waiting)).toEqual(waiting);
  const claimed=drainG23Rewards({...waiting,preparation:initial.preparation});
- expect(readG23Progress(claimed)!.rewardClaims).toMatchObject([{kind:'duplicator',definitionId:'irelia',copy:0}]);
+ expect(readG23Progress(claimed)!.rewardClaims.filter(c=>c.kind==='duplicator')).toMatchObject([{kind:'duplicator',definitionId:'irelia',copy:0}]);
  expect(claimed.preparation.units.filter(u=>u.definitionId==='irelia')).toHaveLength(2);
  expect(drainG23Rewards(claimed)).toEqual(claimed);
 });

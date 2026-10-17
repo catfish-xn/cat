@@ -1,3 +1,6 @@
+import {g23SoloFacts} from './g2-3-settlement';
+import {canonicalContent} from './content';
+import {replayG23Economy} from './g2-3-match-progress';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from './content/g2-3-policy';
 import {g23RewardAtoms,type G23RewardClaim} from './g2-3-rewards';
 import {UNIT_DEFINITIONS} from './units';
@@ -29,7 +32,7 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
   }
  }
  return {...h,rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
- itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&r.source==='academy'?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
+ itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&(r.source==='academy'||r.receiptId.startsWith('g23:academy:'))?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
 }
 export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(state:T,p:G23MatchProgress):T{
  const m=state.seatMechanics??emptySeatMechanics();
@@ -78,4 +81,27 @@ export function validateG23MechanicLinks(state:MatchState):void{
   if(r.source==='high-roller'||r.source==='conqueror-chest'||r.source==='tacticians-crown')check(expectedGold.has(r.receiptId));
   if(r.source==='conqueror'||r.source==='black-market')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
  }
+}
+
+/** No DTO/atom construction may precede this restore admission. The replay only
+ * reads bounded battle facts and frozen reward tables, never candidate rewards. */
+export function validateG23RewardSources(state:MatchState):void{
+ const m=state.seatMechanics;
+ const h=m?.hidden.progress as {seed:number;economyReceipts:G23MatchProgress['economyReceipts']}|undefined;
+ const c=m?.seat.conqueror as {rewards:G23MatchProgress['rewards']}|undefined;
+ if(!h||h.seed!==state.seed||!Array.isArray(h.economyReceipts)||!c||!Array.isArray(c.rewards))throw new RangeError('Invalid G23 reward authority');
+ for(const r of h.economyReceipts){
+  if(r.kind==='battle'){
+   const f=r.facts,history=state.roundResults.find(h=>h.round===f.round);
+   if(!history||f.round>state.round||history.roundKind==='supply'||f.roundKind!==(history.roundKind==='pvp'?'pvp':'pve')
+    ||f.result!==(history.result==='playerWin'?'win':history.result==='enemyWin'?'loss':'draw'))throw new RangeError('Invalid G23 reward facts');
+   const online=state.multiplayer?.receipts.find(m=>m.round===f.round);
+   if(online?canonicalContent(online.g23Facts)!==canonicalContent(f):f.battleId!==`round-${f.round}`)throw new RangeError('Invalid G23 reward facts');
+   if(!state.multiplayer&&f.round===state.round&&state.combat?.status==='finished'
+    &&canonicalContent(f)!==canonicalContent(g23SoloFacts(state,state.combat)))throw new RangeError('Invalid G23 reward facts');
+  }else if(r.kind!=='market'||!Number.isSafeInteger(r.round)||r.round<1||r.round>state.round)throw new RangeError('Invalid G23 reward facts');
+ }
+ const replay=replayG23Economy(state.seed,h.economyReceipts);
+ if(canonicalContent(h.economyReceipts)!==canonicalContent(replay.economyReceipts))throw new RangeError('Invalid G23 reward facts');
+ if(canonicalContent(c.rewards)!==canonicalContent(replay.rewards))throw new RangeError('Invalid G23 reward authority');
 }

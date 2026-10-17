@@ -67,11 +67,11 @@ it('exact-content economy reuse still validates every aggregate, round bound and
  expect(()=>validateG23Progress(freezeContent(next),42,2)).not.toThrow();
 });
 it('reward atom reuse is immutable and keys the whole descriptor plus seed',()=>{
- const bundle={id:'reward',round:1,source:'conqueror' as const,tier:1,reward:{Gold:3}};
+ const bundle={id:'reward',round:1,source:'conqueror' as const,tier:1,reward:{Gold:2}};
  const atoms=g23RewardAtoms(bundle,42);
  expect(g23RewardAtoms(structuredClone(bundle),42)).toBe(atoms);
  expect(g23RewardAtoms(bundle,43)).not.toBe(atoms);
  expect(Object.isFrozen(atoms[0])).toBe(true);
- bundle.reward.Gold=9;expect(g23RewardAtoms(bundle,42)[0].gold).toBe(9);
- expect(atoms[0].gold).toBe(3);
+ bundle.reward.Gold=9;expect(()=>g23RewardAtoms(bundle,42)).toThrow('frozen reward descriptor');
+ expect(atoms[0].gold).toBe(2);
 });
