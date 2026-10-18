@@ -2,7 +2,7 @@ import { shortestPath, startingRows } from './m8/targeting';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatUnit, CombatOrigin, CombatRuntime, CombatStatus, ShieldLayer, CombatTask, CombatEvent } from './combat-types';
-import { attackInterval, evaluateAmount, resolveStat, type HpSample } from './m8/stats';
+import { attackInterval, evaluateAmount, resolveStat, modifierValues, type HpSample } from './m8/stats';
 import { authorizeSpellCrit, validateSpellCrit } from './m8/crit';
 import type { SpellCritAuthorization, StatModifier, StatusApplication, StatusContribution, StatusGroup, Effect, CombatActivity } from './m8/contracts';
 import { effectIdentity } from './m8/identity';
@@ -114,7 +114,8 @@ export function interval(unit: S13Unit, tick: number): number {
   if (locks.length) return attackInterval(Math.min(...locks), 0);
   const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
   const bankSpeed=gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0;
-  const speedBps = bankSpeed + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  const signedSpeed = modifierValues('attackSpeed', statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  const speedBps = bankSpeed + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }

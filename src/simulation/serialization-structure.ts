@@ -11,6 +11,8 @@ import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
+import { validateP3State } from './s13-p3-combat';
 import { validateG23State } from './g2-3-combat';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
@@ -179,7 +181,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     } else if (event.kind === 'component') {
       definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
       requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
-    } else requireValue(receipt.gold === (receipt.kind === 'augment' ? AUGMENT_DEFINITIONS[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === 0, 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' ? AUGMENT_DEFINITIONS[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
@@ -409,6 +411,7 @@ export function validateMatchStructureForSerialization(state: MatchState): Match
 export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
+  validateP3State(unit,combatUnits,tick,nextActionSeq);
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
   if (unit.spellCrit !== undefined) {
     record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);

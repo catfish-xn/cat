@@ -1,3 +1,4 @@
+import { P3_TIERS } from './s13-p3';
 import { freezeContent } from './freeze';
 /** U: no primary historical offer probabilities found; preserve equal three-word sampling. */
 export const AUGMENT_OFFER_POLICY = freezeContent({version:'aug30-equal-v1',evidence:'U',sampling:'equal-without-replacement',words:3} as const);
@@ -46,6 +47,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  ...P3_TIERS,
   "manaflow-ii": "gold",
   "glass-cannon-ii": "gold",
   "pumping-up-ii": "gold",

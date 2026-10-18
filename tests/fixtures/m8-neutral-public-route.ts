@@ -47,7 +47,7 @@ export function publicHeraldEquipment(definitions: readonly string[]): api.Match
   if (!definitions.length) return publicHeraldTarget();
   const key = JSON.stringify(definitions);
   if (!equipmentPreparations.has(key))
-    equipmentPreparations.set(key, buildRawHeraldEquipment(publicNeutralEquipmentChoice(), definitions));
+    equipmentPreparations.set(key, buildRawHeraldEquipment(publicNeutralEquipmentChoice(), definitions, undefined, true));
   return restoreMatch(serializeMatch(equipmentPreparations.get(key)!));
 }
 

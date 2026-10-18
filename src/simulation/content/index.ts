@@ -1,3 +1,5 @@
+import { S13_P3_SOURCE } from './s13-p3-source';
+import { P3_AUGMENT_ITEMS, P3_CONVENTIONS } from './s13-p3';
 import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
 import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
 import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
@@ -161,5 +163,6 @@ export const CONTENT_DIGEST = digestContent({
   opponents: ROUND_ENEMY_PROJECTIONS,
   economy: { rules: MATCH_RULES, stages: STAGE_PLAYER_DAMAGE, income: ECONOMY_RULES, experience: XP_TO_NEXT_LEVEL },
   componentPool: {version:COMPONENT_POOL_VERSION,entries:COMPONENT_POOL},
+  s13P3: { source: S13_P3_SOURCE, grants: P3_AUGMENT_ITEMS, conventions: P3_CONVENTIONS },
   reference: SOURCE_MANIFEST, combatRules: S13_COMBAT_RULES,
 });

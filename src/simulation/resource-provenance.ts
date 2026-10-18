@@ -1,3 +1,4 @@
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
@@ -207,6 +208,10 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
         && typeof receipt.definitionId === 'string' && ITEM_DEFINITIONS[receipt.definitionId]?.kind === 'component', 'schedule component');
       nonempty(receipt.itemIds[0]);
       add(`schedule:${receipt.eventId}`, { kind: 'item', id: receipt.itemIds[0], definitionId: receipt.definitionId, roundId: round.roundId });
+    } else if (receipt.kind === 'augment' && receipt.definitionId && P3_AUGMENT_ITEMS[receipt.definitionId]) {
+      requireValue(receipt.itemIds.length === 1 && receipt.unitId === null && receipt.gold === 0, 'augment item receipt');
+      nonempty(receipt.itemIds[0]);
+      add(`schedule:${receipt.eventId}`, { kind: 'item', id: receipt.itemIds[0], definitionId: P3_AUGMENT_ITEMS[receipt.definitionId], roundId: round.roundId });
     } else requireValue(receipt.itemIds.length === 0 && receipt.kind !== 'reward', 'unsupported schedule birth');
   }
   for (const receipt of context.lootReceipts) {

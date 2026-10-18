@@ -1,3 +1,5 @@
+import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3Mechanic, settleP3Deaths } from './s13-p3-combat';
+import { p3Values } from './s13-p3-programs';
 import {splitTrenchHolders} from './combat-g2-4b-trench';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
@@ -115,6 +117,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   const reduction = (bps: number): StatModifier => ({ ...constantModifier('damageReduction', bps, 'bps'),
     damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
   const reductions = [...(mechanic(target, 'family', 'damageReductionBps') ? [reduction(mechanic(target, 'family', 'damageReductionBps'))] : []), ...statusModifiers(target, 'damageReduction', tick), ...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
+  if (target.shieldLayers.some(s => s.remaining > 0 && s.expiresAtTick > tick) && p3Mechanic(target, 'defense-call')) reductions.push(reduction(Math.round(p3Values('defense-call').ReducedDamage * 10000)));
   for (const m of target.mechanics ?? []) if (m.mechanic === 'watcher') reductions.push(reduction(
     BigInt(target.hp) * 10000n > BigInt(target.maxHp) * BigInt(m.values.thresholdBps) ? m.values.healthyReductionBps : m.values.reductionBps));
   return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
@@ -277,6 +280,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
     }
   }
+  advanceP3(ctx);
+  const p3ChargedAttacks = new Set<number>();
   // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
   for (const unit of units) {
     const firstPacket = ctx.packets.length;
@@ -295,7 +300,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       for (const packet of planned) {
         const piercing = champion(unit) === 'twitch' && packet.delivery === 'basic-attack';
         const shared = piercing ? piercingCrit.get(packet.actionSeq) : undefined;
-        packet.critical = shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!), ctx.draw));
+        packet.critical = p3ChargedAttacks.has(packet.actionSeq) && packet.delivery === 'basic-attack' ? p3Roll(ctx, unit, packet, true, shared) : shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!), ctx.draw));
         if (piercing) piercingCrit.set(packet.actionSeq, packet.critical);
       }
     };
@@ -319,6 +324,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);
       for (const task of immediate) executeTask(ctx, unit, task);
       hooks(unit, 'onCast', seq);
+      p3Cast(ctx, unit, target, seq, cost.actualManaSpent);
       emitMechanismSignal(ctx, { event: 'cast-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: receipt });
     } else if (inRange && unit.cooldownTicks === 0) {
       const seq = actionSeq++, neutral = champion(unit) === 'neutral';
@@ -336,7 +342,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         }
       }
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
-      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); unit.cooldownTicks = oldInterval;
+      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
       const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
       if(gambler)awardItemGold(unit,gambler,'gamblers-blade',unit.runtime.attackCount-1);
       hooks(unit, 'onAttack', seq);
@@ -393,6 +399,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (outcome.deferred) target.deferredItemDamage=[...target.deferredItemDamage??[],{
       packetId:context.packetId,startedAtTick:tick,amount:outcome.deferred,paid:0,elapsedTicks:0}];
     recordG23SkillDamage(ctx,units.find(u=>u.id===packet.source.ownerId),target,actual,packet);
+    p3Damage(ctx, units.find(u => u.id === packet.source.ownerId), outcome);
     recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed);
     recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
     recordG2Damage(ctx, units.find(u => u.id === packet.source.ownerId), target, actual, absorbed, packet, Math.max(0, (virtualHp.get(target.id) ?? 0) - actual));
@@ -454,7 +461,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       emitMechanismSignal(ctx, { ...signal, event: 'damage-taken' }, facts);
       if (absorbed > 0 && context.permissions.includes('guardbreaker')) emitMechanismSignal(ctx, { ...signal, event: 'shield-hit' }, facts);
     }
-    const collector=owner?.mechanics?.find(m=>m.mechanic==='g24Collector');
+    const itemCollector=owner?.mechanics?.find(m=>m.mechanic==='g24Collector');
+    const finisher=owner&&p3Mechanic(owner,'the-finisher');
+    const collector=finisher&&(!itemCollector||itemCollector.values.executeBps<Math.round(p3Values('the-finisher').ExecutePercent*10000))?{...finisher,values:{executeBps:Math.round(p3Values('the-finisher').ExecutePercent*10000)}}:itemCollector;
     const remaining=virtualHp.get(target.id)!;
     if(collector&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
       &&absorbed+actual>0&&remaining>0&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(collector.values.executeBps)){
@@ -464,7 +473,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
       // Execution bypasses shields and Defiance; death cleanup removes layers.
       commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
-      awardItemGold(owner!,collector,'collector',itemGoldReceipts?.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length??0);
+      if(collector.mechanic==='g24Collector')awardItemGold(owner!,collector,'collector',itemGoldReceipts?.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length??0);
     }
   };
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
@@ -475,9 +484,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (owner) for (const prefix of packet.beforeDamage ?? []) executeMechanismEffect(ctx, owner, prefix.source, target, prefix.effect, packet.actionSeq, prefix.ordinal);
     const damageType = damageTypeForTarget(packet.damageType, targetUnit(target, tick), ctx.resolutionFacts!);
     if (damageType !== packet.damageType) packet = { ...packet, damageType };
+    if (p3BurnRaw(owner, packet) !== packet.raw) packet = { ...packet, raw: p3BurnRaw(owner, packet) };
     const request = damageRequest(packet, state.combatId ?? 'standalone', tick);
     const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
     const prepared = prepareDamage(request, sample);
+    if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
     if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
@@ -594,6 +605,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   // Trench replacement removes a surviving holder and must not emit holder-death.
   if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
     emitMechanismSignal(ctx, { event: 'holder-death', tick, actionSeq: actionSeq++, actorId: unit.id, targetId: unit.id, cast: null });
+  settleP3Deaths(ctx, units.filter(u => u.alive && u.hp === 0));
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {

@@ -66,8 +66,8 @@ async function main() {
         assert.notEqual(result.ok, false, `Rejected public ${operation}: ${result.reason}`);
         const [a,b,c]=commandArgs;
         const command=({startMatchCombat:{type:'start'},nextRound:{type:'continue',round:a},
-          selectChoice:{type:'select',choiceId:a,generation:b,definitionId:c},selectAnomalyTarget:{type:'target',choiceId:a,generation:b,unitId:c},
-          useConsumable:{type:'useConsumable',consumableId:a,target:b},buyXp:{type:'buyXp'},deployMatchUnit:{type:'deploy',id:a,target:b},sellUnit:{type:'sell',id:a},
+          rerollAnomaly:{type:'anomalyReroll',choiceId:a,generation:b},selectChoice:{type:'select',choiceId:a,generation:b,definitionId:c},selectAnomalyTarget:{type:'target',choiceId:a,generation:b,unitId:c},
+          useConsumable:{type:'useConsumable',consumableId:a,target:b},buyUnit:{type:'buy',slot:a,generation:b},rerollShop:{type:'reroll'},buyXp:{type:'buyXp'},deployMatchUnit:{type:'deploy',id:a,target:b},sellUnit:{type:'sell',id:a},
           combineItems:{type:'combine',ids:[a,b]},equipItem:{type:'equip',itemId:a,unitId:b,slot:c}})[operation];
         assert(operation==='stepMatch'||command,`Missing independent oracle command ${operation}`);
         ledger.apply(before,result.state,command,result.events);
@@ -91,7 +91,7 @@ async function main() {
         }
       };
       const generationStarted = performance.now();
-      const rawState = builder.buildRawHeraldEquipment(rawPrefix, entry.definitions, observer);
+      const rawState = builder.buildRawHeraldEquipment(rawPrefix, entry.definitions, observer, true);
       assert.equal(canonicalHash(rawPrefix), prefixHash, 'Generator never mutates the shared raw prefix');
       assert.equal(rawState.roundDefinitionId, '6-7');
       assert.equal(rawState.phase, 'preparation');

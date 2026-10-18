@@ -1,6 +1,8 @@
+import { P3_AUGMENTS } from './s13-p3';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...P3_AUGMENTS,
   "placebo": {
     "id": "placebo",
     "name": "安慰剂",

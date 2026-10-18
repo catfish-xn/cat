@@ -92,3 +92,6 @@ G24-ZEPHYR-ABSENCE-01, not verified original script semantics.
 `CombatViewUnit.banished?:boolean` exposes presence without changing UI code.
 Zephyr save authority is exact independent combat reconstruction from validated
 frozen inputs; it does not accept candidate-supplied clocks as authority.
+# S13 P3 补充合同
+
+当前分支新增7个强化和7个异常，来源、接口、逐项数值证明与两项缺脚本数据的**项目约定**见 [S13_AUGMENTS_P3.md](S13_AUGMENTS_P3.md)。公开战斗入口和伤害管线保持一致；仅增加可序列化的 `CombatUnit.s13P3?` 调度/门控记录，以及伤害准备阶段的只读 `blockedByMitigation` 观察值。版本由合并时统一升级。

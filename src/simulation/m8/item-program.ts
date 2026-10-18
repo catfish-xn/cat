@@ -21,12 +21,12 @@ export interface ItemProgram {
 }
 export interface BoundItemProgram { readonly source: Source; readonly program: ItemProgram }
 /** Frozen strategy programs, then items gained during this combat (G2-4b chest), which compile exactly like them. */
-export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>): readonly BoundItemProgram[] {
-  const granted = unit.combatItemGrants?.length ? grantedItemPrograms({ id: unit.id!, combatItemGrants: unit.combatItemGrants }) : [];
+export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants' | 'mechanics'>>): readonly BoundItemProgram[] {
+  const granted = unit.combatItemGrants?.length ? grantedItemPrograms({ id: unit.id!, combatItemGrants: unit.combatItemGrants, mechanics: unit.mechanics }) : [];
   return granted.length ? [...unit.itemPrograms ?? [], ...granted] : unit.itemPrograms ?? [];
 }
 /** Each declaration reserves 32 ordinals for its composed effects/end rewards. */
-export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>) {
+export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants' | 'mechanics'>>) {
   return itemPrograms(unit).flatMap(({source,program}) => {
     let ordinal=0;
     const bind = <K extends 'modifier'|'effect'|'trigger'|'survival'|'periodic'|'vamp',T>(kind: K, declaration:T) => ({kind,source:{...source,effectIndex:source.effectIndex+32*ordinal++},declaration});
