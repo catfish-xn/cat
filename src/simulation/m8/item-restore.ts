@@ -198,12 +198,7 @@ function settledSampledStatCount(unit:CombatUnit,d:TargetLimitedTrigger,combatId
   check(settled===r.triggerCount);
  }
  return r.triggerCount;
- if(!unit.itemMogulHits?.length)return new Set([...bonuses].map(n=>scaleItemSummonHp(unit,Math.floor((basis.base+basis.flat)*(10000+basis.bps+n)/10000))));
- const hits=unit.itemMogulHits,healthPerStack=unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0;
- const before=hits.filter(h=>h.tick<at).length,through=hits.filter(h=>h.tick<=at).length;
- // A shield can be granted before, between or after same-tick damage packets.
- const flats=Array.from({length:through-before+1},(_,i)=>basis.flat-(hits.length-before-i)*healthPerStack);
- return new Set([...bonuses].flatMap(n=>flats.map(flat=>scaleItemSummonHp(unit,Math.floor((basis.base+flat)*(10000+basis.bps+n)/10000)))));
+
 }
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */

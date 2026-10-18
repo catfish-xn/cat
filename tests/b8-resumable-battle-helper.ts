@@ -1,4 +1,4 @@
-import currentFingerprints from './fixtures/g2-4b-b8-fingerprints.json';
+import currentFingerprints from './fixtures/g2-3-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { beforeAll, describe, expect, it } from 'vitest';

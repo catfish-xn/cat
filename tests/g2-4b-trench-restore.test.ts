@@ -75,7 +75,7 @@ it('keeps pre-split and copy-earned gold receipts once, including after settleme
   combatId:'round-1',status:'finished',result:'playerWin',itemGoldReceipts:ledger.receipts,itemRandomStreams:ledger.streams,
   trenchSplits:[{ownerId:owner,itemInstanceId:'coat',tick:2,maxHp:1000,permanentAdBps:0,copyIds:[copy]}],removedUnitIds:[owner],
  });
- const facts=g23BattleFacts(combat,'player',1,'pve');
+ const facts=g23BattleFacts({...combat,strategy:{traits:[],units:[]}},'player',1,'pve',[{id:owner,team:'player'}]);
  expect(facts.itemGoldPayouts!.map(p=>p.receiptId)).toEqual(ledger.receipts.slice(0,2).map(r=>r.id));
  const settled=commitG23Settlement(initial,facts);
  expect(settled.gold).toBe(initial.gold+2);
