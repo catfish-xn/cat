@@ -69,6 +69,7 @@ export class BattleSummaryPanel {
   private renderHead(): void {
     const shown = this.shown!, result = shown.live ? '' : shown.ranking.result ?? '';
     this.root.dataset.combat = shown.ranking.combatId ?? ''; this.root.dataset.live = String(shown.live);
+    this.root.dataset.round = shown.roundId; this.root.dataset.played = String(shown.played);
     this.title.textContent = `${shown.roundId} 战斗`;
     this.result.textContent = shown.live ? '战斗中' : RESULT_TEXT[result] ?? ''; this.result.dataset.result = shown.live ? 'live' : result;
   }
@@ -100,7 +101,7 @@ export class BattleSummaryPanel {
   /** Acceptance read: what the panel shows now. */
   debug() {
     if (this.root.hidden || !this.shown) return null;
-    return { combatId: this.shown.ranking.combatId, live: this.shown.live, metric: this.metric, rows: this.list.childElementCount };
+    return { combatId: this.shown.ranking.combatId, round: this.shown.roundId, played: this.shown.played, live: this.shown.live, metric: this.metric, rows: this.list.childElementCount };
   }
   dispose(): void { this.root.remove(); this.shown = null; }
 }

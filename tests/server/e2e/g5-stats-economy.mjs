@@ -3,15 +3,13 @@
  *
  *   npm run build:game && node tests/server/e2e/g5-stats-economy.mjs
  *
- * 1. Battle ranking (本场): in every settlement after a battle of mine the right column shows that round's battle, one
- *    row per unit of both sides of the replay the server pushed (rows ≥ both sides' units, each side's count equal);
- *    each row's damage dealt / taken (HP damage + shield absorbed), shield part, healing done (the heal shares by their
- *    source, SR-G5-01) and healing received (by target) equal the replay events' own sums, worked out here independently
- *    of the page's `summarizeBattle`; every heal's shares add up to its actual; the 伤害/承伤/治疗 tabs sort by that metric.
- * 2. Match totals (本局累计): in the same settlement, the rows equal the sum of every battle of mine so far (the replays
- *    of rounds ≤ N), one row per side + unit + star level, with the number of battles it fought in; units no longer
- *    fielded keep their rows.
- * 3. Economy hint (SR-G5-02): in preparation and my battle the strip above the board shows "利息 +N（胜 +M）· 连胜/连败 X ·
+ * 1. Battle stats (TFT's damage chart): while my battle plays back the right column shows that battle only, one row per
+ *    unit of mine in the replay the server pushed, and each row's 输出 (HP damage + shield absorbed), 治疗 (heal shares by
+ *    their source, SR-G5-01) and 防护 (shield granted) equal the replay events' own sums over the ticks shown so far, worked
+ *    out here independently of the page's `summarizeBattle`. So the first read of a new battle counts none of the previous
+ *    one (it starts from zero). After the battle the panel holds that battle's final totals through settlement and the next
+ *    preparation. The 输出/治疗/防护 tabs switch the metric and sort highest first; every heal's shares add up to its actual.
+ * 2. Economy hint (SR-G5-02): in preparation and my battle the strip above the board shows "利息 +N（胜 +M）· 连胜/连败 X ·
  *    再胜/再败 +Y" from the server's `economyPreview`; the streak equals my state's. The last preview before a settlement,
  *    when the settled gold before and streak are the preview's, equals that settlement's `incomeBreakdown` item by item
  *    in the branch of the result (a draw as a loss): interest, victory gold, streak gold, and the streak after equals
@@ -25,78 +23,60 @@ const OUT = outDir('g5-stats');
 const WS_PORT = Number(process.env.G5_WS_PORT ?? 8822);
 const VITE_PORT = Number(process.env.G5_VITE_PORT ?? 5223);
 const { check, finish } = createChecks();
+const METRICS = ['shieldGiven', 'healingDone', 'damageDealt'];
 
 const summary = page => page.evaluate(() => {
   const root = document.querySelector('#battle-summary');
   if (!root || root.hidden) return null;
-  return { round: Number(root.dataset.round), scope: root.dataset.scope, metric: root.dataset.metric,
+  return { combat: root.dataset.combat, round: root.dataset.round, live: root.dataset.live === 'true', played: Number(root.dataset.played), metric: root.dataset.metric,
     rows: [...root.querySelectorAll('.summary-row')].map(node => ({ id: node.dataset.unit, team: node.dataset.team, value: Number(node.dataset.value),
-      battles: node.dataset.battles === undefined ? null : Number(node.dataset.battles),
-      dealt: Number(node.dataset.dealt), taken: Number(node.dataset.taken), absorbed: Number(node.dataset.absorbed), healed: Number(node.dataset.healed), received: Number(node.dataset.received) })) };
+      dealt: Number(node.dataset.dealt), healed: Number(node.dataset.healed), shielded: Number(node.dataset.shielded) })) };
 });
 
-/** Per unit of one replay, from its events, independently of the page. */
-function battleTotals(replay) {
-  const rows = new Map(replay.initial.units.map(unit => [unit.id, { team: unit.team, definitionId: unit.definitionId, starLevel: unit.starLevel, dealt: 0, taken: 0, absorbed: 0, healed: 0, received: 0 }]));
-  for (const frame of replay.ticks) for (const event of frame.events) {
+/** Per unit of one replay, from its events over the first `played` ticks, independently of the page. */
+function battleTotals(replay, played = replay.ticks.length) {
+  const rows = new Map(replay.initial.units.map(unit => [unit.id, { team: unit.team, dealt: 0, healed: 0, shielded: 0 }]));
+  for (const frame of replay.ticks.slice(0, played)) for (const event of frame.events) {
     if (event.type === 'packetDamage') {
-      const damage = event.hpDamage + event.absorbed;
-      if (rows.has(event.sourceId)) rows.get(event.sourceId).dealt += damage;
-      if (rows.has(event.targetId)) { rows.get(event.targetId).taken += damage; rows.get(event.targetId).absorbed += event.absorbed; }
+      if (rows.has(event.sourceId)) rows.get(event.sourceId).dealt += event.hpDamage + event.absorbed;
     } else if (event.type === 'heal') {
-      if (rows.has(event.targetId)) rows.get(event.targetId).received += event.actual;
       for (const share of event.shares) if (rows.has(share.sourceId)) rows.get(share.sourceId).healed += share.actual;
+    } else if (event.type === 'shieldLayerChanged' && event.reason === 'granted') {
+      const owner = JSON.parse(event.key)[1];
+      if (rows.has(owner)) rows.get(owner).shielded += event.remaining;
     }
   }
   return rows;
 }
-/** Side + unit + star level over `replays`, battle by battle. */
-function matchTotals(replays) {
-  const rows = new Map();
-  for (const replay of replays) {
-    const seen = new Set();
-    for (const unit of battleTotals(replay).values()) {
-      const key = `${unit.team}:${unit.definitionId}:${unit.starLevel}`;
-      const row = rows.get(key) ?? { team: unit.team, battles: 0, dealt: 0, taken: 0, absorbed: 0, healed: 0, received: 0 };
-      if (!seen.has(key)) { seen.add(key); row.battles++; }
-      row.dealt += unit.dealt; row.taken += unit.taken; row.absorbed += unit.absorbed; row.healed += unit.healed; row.received += unit.received;
-      rows.set(key, row);
-    }
-  }
-  return rows;
-}
-const same = (shown, want) => want && shown.dealt === want.dealt && shown.taken === want.taken && shown.absorbed === want.absorbed && shown.healed === want.healed && shown.received === want.received;
+const same = (shown, want) => want && shown.dealt === want.dealt && shown.healed === want.healed && shown.shielded === want.shielded;
 /** Every heal's shares add up to its actual healing (SR-G5-01). */
 const sharesAddUp = replay => replay.ticks.every(frame => frame.events.every(event => event.type !== 'heal' || event.shares.reduce((total, share) => total + share.actual, 0) === event.actual));
+const combatOf = replay => replay.terminal.combatId ?? null;
 
 async function sortsByTabs(page, label) {
-  for (const metric of ['damageTaken', 'healingDone', 'damageDealt']) {
+  for (const metric of METRICS) {
     await click(page, `online:summary-tab:${metric}`); await sleep(60);
     const tab = await summary(page), values = tab?.rows.map(row => row.value) ?? [];
-    check(tab?.metric === metric && values.every((value, i) => i === 0 || values[i - 1] >= value), `${label}: tab ${metric} sorts highest first (${values.slice(0, 4).join(' ≥ ')})`);
+    const field = { shieldGiven: 'shielded', healingDone: 'healed', damageDealt: 'dealt' }[metric];
+    check(tab?.metric === metric && values.every((value, i) => i === 0 || values[i - 1] >= value) && tab.rows.every(row => row.value === row[field]),
+      `${label}: tab ${metric} shows that metric, highest first (${values.slice(0, 4).join(' ≥ ')})`);
   }
 }
-async function checkBattle(page, round, replay, label) {
-  await click(page, 'online:summary-scope:battle'); await sleep(60);
-  const shown = await summary(page), expected = battleTotals(replay);
-  check(shown?.round === round && shown.scope === 'battle', `${label}: the ranking shows this round's battle (round ${shown?.round})`);
-  const sides = { player: 0, enemy: 0 }; for (const row of expected.values()) sides[row.team]++;
-  const count = team => shown?.rows.filter(row => row.team === team).length ?? 0;
-  check(shown && shown.rows.length >= sides.player + sides.enemy && count('player') === sides.player && count('enemy') === sides.enemy,
-    `${label}: 本场 rows ${shown?.rows.length} ≥ both sides' units (${sides.player} mine + ${sides.enemy} enemy)`);
-  const wrong = (shown?.rows ?? []).filter(row => !same(row, expected.get(row.id)));
-  check(shown && wrong.length === 0, `${label}: every 本场 row's damage (HP + shield) / taken / shield / healing done / received equals the replay events' sums (${wrong.map(row => row.id).join(' ') || 'all equal'})`);
-  check(sharesAddUp(replay), `${label}: every heal's shares add up to its actual healing`);
-  await sortsByTabs(page, `${label} 本场`);
+/** The panel shows `replay` (its first `played` ticks when live): my units only, each metric equal to the events' sums. */
+function checkRows(shown, replay, label) {
+  const expected = battleTotals(replay, shown.live ? shown.played : replay.ticks.length);
+  const mine = [...expected.values()].filter(row => row.team === 'player').length;
+  check(shown.rows.length === mine && shown.rows.every(row => row.team === 'player'), `${label}: one row per unit of mine (${shown.rows.length} vs ${mine}), no enemy rows`);
+  const wrong = shown.rows.filter(row => !same(row, expected.get(row.id)));
+  check(wrong.length === 0, `${label}: 输出/治疗/防护 of every row equal the replay events' sums${shown.live ? ` over ${shown.played} ticks` : ''} (${wrong.map(row => row.id).join(' ') || 'all equal'})`);
 }
-async function checkMatch(page, replays, label) {
-  await click(page, 'online:summary-scope:match'); await sleep(60);
-  const shown = await summary(page), expected = matchTotals(replays);
-  check(shown?.scope === 'match' && shown.rows.length === expected.size, `${label}: 本局累计 has one row per side + unit + star of ${replays.length} battles (${shown?.rows.length} vs ${expected.size})`);
-  const wrong = (shown?.rows ?? []).filter(row => !same(row, expected.get(row.id)) || row.battles !== expected.get(row.id)?.battles);
-  check(shown && wrong.length === 0, `${label}: every 本局累计 row equals the sum of the first ${replays.length} battles (${wrong.map(row => row.id).join(' ') || 'all equal'})`);
-  await sortsByTabs(page, `${label} 本局累计`);
-  await click(page, 'online:summary-scope:battle');
+async function checkFinal(page, replay, label) {
+  const shown = await summary(page);
+  check(shown?.combat === combatOf(replay) && shown.live === false, `${label}: the stats hold this battle's final totals (${shown?.combat} live=${shown?.live})`);
+  if (!shown) return;
+  checkRows(shown, replay, label);
+  check(sharesAddUp(replay), `${label}: every heal's shares add up to its actual healing`);
+  await sortsByTabs(page, label);
 }
 
 async function main() {
@@ -113,14 +93,17 @@ async function main() {
     await joinOnline(page, onlineUrl(base, wsPort), '统计');
     await waitRead(page, s => s.m6.mode === 'active', 'match start');
 
-    const answered = new Set(), bought = new Set(), summarised = new Set(), streakChecked = new Set();
-    let sellTried = 0, retired = false, interestPositive = 0, bonusChecked = false, chipChecked = false;
+    const answered = new Set(), bought = new Set(), summarised = new Set(), streakChecked = new Set(), held = new Set();
+    let interestPositive = 0, bonusChecked = false, chipChecked = false;
+    /** Live reads per round, and the combat whose final totals were last checked. */
+    const liveReads = new Map(), freshStarts = [];
+    let lastFinal = null, liveMonotonic = true;
     const compared = new Map(); // round → 'equal' | 'differs'
     let quiet = null; // false once a command was sent while the ranking tabs were being clicked
     /** The hint as last read before each settlement: round → EconomyHintRead (preparation and my battle). */
     const hints = new Map();
     const deadline = Date.now() + 12 * 60_000;
-    while (Date.now() < deadline && !(interestPositive > 0 && bonusChecked && compared.size >= 4 && summarised.size >= 4)) {
+    while (Date.now() < deadline && !(interestPositive > 0 && bonusChecked && compared.size >= 4 && summarised.size >= 4 && freshStarts.length >= 2 && held.size >= 2)) {
       const s = await read(page).catch(() => null);
       if (!s?.state || !s.m6?.phase) { await sleep(100); continue; }
       const kind = s.m6.phase.kind, round = s.m6.phase.round;
@@ -145,24 +128,34 @@ async function main() {
         else chipChecked = true;
       }
 
+      // My battle playing back: the stats add up live over the ticks shown so far, from zero at the battle's start.
+      if (kind === 'combat' && s.m6.battleSummary?.live && (liveReads.get(round)?.length ?? 0) < 4) {
+        const shown = await summary(page), replay = replays.get(round);
+        if (shown?.live && replay && shown.combat === combatOf(replay)) {
+          const reads = liveReads.get(round) ?? [];
+          const label = `round ${round} live (tick ${shown.played})`;
+          if (reads.length === 0 && lastFinal && lastFinal !== shown.combat) freshStarts.push(round);
+          checkRows(shown, replay, label);
+          const total = shown.rows.reduce((sum, row) => sum + row.dealt + row.healed + row.shielded, 0);
+          if (reads.length && total < reads[reads.length - 1]) liveMonotonic = false;
+          reads.push(total); liveReads.set(round, reads);
+          if (reads.length === 1) await page.screenshot({ path: `${OUT}/live-${round}.png` });
+        }
+        await sleep(400); continue;
+      }
+
       if (kind === 'preparation' && s.state.phase === 'preparation' && !s.m6.playingBack) {
+        // The last battle's final totals stay on the panel into the next preparation.
+        if (lastFinal && !held.has(round)) {
+          held.add(round);
+          const shown = await summary(page);
+          check(shown?.combat === lastFinal && shown.live === false, `round ${round} preparation: the stats still show the last battle's final totals (${shown?.combat})`);
+        }
         // Buy one unit in each of the first two rounds that sell one, then hoard gold so interest appears.
         const mine = s.state.preparation.units.filter(unit => unit.team === 'player');
         if (!bought.has(round) && bought.size < 2 && mine.length < 3) {
           const slot = s.state.shop.slots.findIndex(entry => entry.status === 'available');
           if (slot >= 0 && s.state.gold >= 1) { bought.add(round); await click(page, `mobile:buy-${slot}`); await sleep(300); continue; }
-        }
-        // Once two battles are ranked, sell a unit of mine: its rows must stay in the match totals.
-        if (!retired && sellTried < 3 && round >= 4 && summarised.size >= 2) {
-          const unit = mine.find(entry => entry.location.kind === 'bench') ?? mine[0];
-          if (unit) {
-            sellTried++;
-            const before = wire.mark();
-            await click(page, 'panel:units'); await click(page, `mobile:unit:${unit.id}`); await click(page, 'mobile:sell');
-            const receipt = await wire.receiptSince(before, 'sell', 5_000);
-            retired = receipt === 'applied';
-            console.log(`note round ${round}: sold ${unit.definitionId} ${unit.starLevel}★ (${receipt})`);
-          }
         }
         await sleep(150); continue;
       }
@@ -185,11 +178,11 @@ async function main() {
         if (!summarised.has(round)) {
           const replay = replays.get(round);
           if (!replay) { await sleep(150); continue; } // a supply round or a seat without a battle
-          await waitRead(page, x => x.m6.battleSummary?.round === round, `ranking of round ${round}`, 5_000).catch(() => null);
+          await waitRead(page, x => x.m6.battleSummary?.combatId === combatOf(replay) && x.m6.battleSummary.live === false, `final stats of round ${round}`, 5_000).catch(() => null);
           const label = `settlement ${s.m6.phase.roundName}`;
           const before = wire.mark();
-          await checkBattle(page, round, replay, label);
-          await checkMatch(page, [...replays].filter(([r]) => r <= round).sort(([a], [b]) => a - b).map(([, value]) => value), label);
+          await checkFinal(page, replay, label);
+          lastFinal = combatOf(replay);
           if ([...wire.sent.keys()].some(id => !before.has(id))) quiet = false; else quiet ??= true;
           summarised.add(round);
           await page.screenshot({ path: `${OUT}/settlement-${round}.png` });
@@ -198,9 +191,12 @@ async function main() {
       }
       await sleep(100);
     }
-    check(summarised.size >= 4, `ranking and match totals checked in ${summarised.size} settlements`);
-    check(retired, 'sold a unit after it had fought (its match rows stay, checked by the totals above)');
-    check(quiet === true, 'using the ranking tabs sends no command');
+    check(summarised.size >= 4, `final stats checked in ${summarised.size} settlements`);
+    check(liveReads.size >= 3, `live stats read during ${liveReads.size} battles (${[...liveReads].map(([r, reads]) => `${r}:${reads.join('→')}`).join(' ')})`);
+    check(liveMonotonic, 'the live totals only grow while a battle plays');
+    check(freshStarts.length >= 2, `a new battle's stats start from zero, not from the last battle's (rounds ${freshStarts.join(' ')})`);
+    check(held.size >= 2, `the final totals stayed into the next preparation in ${held.size} rounds`);
+    check(quiet === true, 'using the stats tabs sends no command');
     const equal = [...compared.values()].filter(value => value === 'equal').length;
     check(equal >= 4, `the preview matched its settlement item by item in ${equal} rounds (${[...compared].map(([round, value]) => `${round}:${value}`).join(' ')})`);
     check(bonusChecked, 'a non-zero streak gold preview matched its settlement');
