@@ -1,3 +1,4 @@
+import {DUAL_WIELDING_POOLS,DUAL_WIELDING_ROLES} from './s13-p1-dual-wielding';
 import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
 import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
 import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
@@ -155,6 +156,7 @@ export const CONTENT_DIGEST = digestContent({
   equipmentRulesVersion: EQUIPMENT_RULES_VERSION, equipmentOperations: EQUIPMENT_OPERATION_RULES_VERSION,
   temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
+  dualWieldingPools:DUAL_WIELDING_POOLS,dualWieldingRoles:DUAL_WIELDING_ROLES,
   augmentPolicy:AUGMENT_OFFER_POLICY, augmentTiers:AUGMENT_TIERS, augmentBronzeThresholds:AUGMENT_BRONZE_THRESHOLDS, augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,

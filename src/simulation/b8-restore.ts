@@ -1,3 +1,4 @@
+import {validateAnomalyAcquisition} from './anomaly-acquisition';
 import {readItemSummonPositions} from './g2-4b-voidspawn';
 import {validateG23GrantEvidence} from './g2-3-grant-evidence';
 import { selectOpeningUnit } from './opening-unit';
@@ -251,6 +252,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   validateG23GrantEvidence(state,context,parsedJsonInput);
+  validateAnomalyAcquisition(state,context,parsedJsonInput);
   check(equal(current,{units:sorted([...state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
     items:sorted(state.items.map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');

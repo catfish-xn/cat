@@ -12,7 +12,7 @@ export interface CombatReplayFacts {
   readonly nextEventSeq: CombatState['nextEventSeq'];
   readonly damageContributors: CombatState['damageContributors'];
   readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
-  readonly units: readonly (Pick<CombatUnit, 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'maxHp' | 'maxHpBasis' | 'currentAnomalyBankGold'> & {
+  readonly units: readonly (Pick<CombatUnit, 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'maxHp' | 'maxHpBasis'> & {
     readonly periodicTasks: NonNullable<CombatUnit['mechanismState']>['periodicTasks'];
     readonly burnStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
     readonly activities: NonNullable<CombatUnit['mechanismState']>['activities'];
@@ -39,7 +39,7 @@ function facts(state: CombatState): CombatReplayFacts {
   return structuredClone({ tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
     nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
     damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
-    id: unit.id, definitionId: unit.definitionId,currentAnomalyBankGold:unit.currentAnomalyBankGold,
+    id: unit.id, definitionId: unit.definitionId,
     curseCaster: unit.ability.kind === 's13' && unit.ability.championId === 'morgana',
     buddyTriggered: unit.runtime?.buddyTriggered, castCount: unit.runtime?.castCount,
     reaveBps: unit.g22?.reaveBps ?? 0, reaveUntilTick: unit.g22?.reaveUntilTick ?? 0,

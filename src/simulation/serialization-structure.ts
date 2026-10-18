@@ -318,9 +318,6 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     for (const unit of verifiedDynamic?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
-      requireValue(unit.openingAnomalyBankGold===resolved.openingAnomalyBankGold,'anomaly opening bank');
-      if(unit.openingAnomalyBankGold===undefined)requireValue(unit.currentAnomalyBankGold===undefined,'unexpected anomaly bank');
-      else requireValue(unit.currentAnomalyBankGold===replay.atSaveTick().units.find(u=>u.id===unit.id)?.currentAnomalyBankGold,'anomaly bank replay');
       requireValue(unit.openingItemBankGold===resolved.openingItemBankGold,'item opening bank');
       if(unit.openingItemBankGold===undefined)requireValue(unit.currentItemBankGold===undefined,'unexpected item bank');
       else{integer(unit.currentItemBankGold);requireValue(unit.currentItemBankGold!>=unit.openingItemBankGold&&unit.currentItemBankGold!<=30,'item bank bounds');}
@@ -522,7 +519,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     // exact source, holder and pulse timing are also checked against live facts.
     requireValue(task.attachedDot === (['bleed', 'g2Infection', 'g22Curse'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
     const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
-    const maximumAmp = mechanic(owner,'avarice','capBps') + mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
+    const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
       + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');

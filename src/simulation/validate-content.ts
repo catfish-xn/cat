@@ -73,7 +73,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   artillery:['everyN','adBps','radius'],sniper:['damageBpsPerHex'],watcher:['reductionBps','healthyReductionBps','thresholdBps'],
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
-  avarice:['baseBps','perStepBps','goldStep','capBps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
+  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
 });
 export function validateEffect(effect:Effect):void {

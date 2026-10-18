@@ -1,4 +1,5 @@
-import { grantAugmentAcquisition, openAugmentForge } from './augment-acquisition';
+import {grantAnomalyAcquisition} from './anomaly-acquisition';
+import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
 import { readAugmentIncome } from './augment-income';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {updateG23Cells} from './g2-3-state';
@@ -646,6 +647,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
+  if(choice.kind==='anomaly'){const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   const forge=openAugmentForge(entered.state);

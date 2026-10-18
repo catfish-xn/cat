@@ -56,7 +56,7 @@ export interface CombatInputAuthority {
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
   const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
-  const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
+  const needsBank=items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
   const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
   const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
