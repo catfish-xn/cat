@@ -10,6 +10,7 @@
 | G-C02 | src/simulation/combat-runtime-facts.ts:44 | :54 | 无触发器持有者分别伪造 processed、actionCounts 的 invented-event 键；trigger ledger binding facts |
 | G-C03 | src/simulation/combat-runtime-facts.ts:46 | :60、:191、:196、:205 | tick 1 在 0/1 间改攻击；改非黑玫瑰施法；协同改 Kogmaw 施法/攻速/射程；改合法上界内的 Tristana 成长；combat runtime binding facts |
 | G-C04 | src/simulation/combat-runtime-facts.ts:19 | :68 | 不存在的 victim/holder、9e8 序号；damage contributors binding facts / trigger event sequence binding facts |
+| G-C04 游标 | src/simulation/combat-runtime-facts.ts:25（审查补充） | :76 | tick 40 的 rngState/rngDraws/nextActionSeq/nextEventSeq 各 +1；combat cursor binding facts |
 | G-C05 | src/simulation/combat-runtime-facts.ts:48 | :76 | 真正受伤的饮血普通盾 remaining+1/absorbed-1，连同 m8State 与 shield 一起改；shield binding facts |
 | G-C06 | src/simulation/combat-runtime-facts.ts:51 | :88 | 真实 Power Absorption 正值收据及正例；value 和状态同时改；G23 absorption binding facts |
 | G-C07 | src/simulation/combat-runtime-facts.ts:55 | :110、:117 | 真实 burn 分数余数分子；burn 组和任务共同改 nextPulse；periodic/burn binding facts |

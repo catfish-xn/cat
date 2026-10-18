@@ -73,6 +73,12 @@ it.each(['victim', 'holder', 'sequence'])('G-C04 binds the contribution map and 
   }, kind === 'sequence' ? 'trigger event sequence binding facts' : 'damage contributors binding facts');
 });
 
+it.each(['rngState', 'rngDraws', 'nextActionSeq', 'nextEventSeq'] as const)('G-C04 binds the combat cursor: %s', field => {
+  // Each drift stays a positive safe integer, so only the replayed cursor can tell it apart.
+  const legal = until(battle(), s => s.combat!.tick >= 40);
+  reject(legal, s => Object.assign(s.combat!, { [field]: s.combat![field]! + 1 }), 'combat cursor binding facts');
+});
+
 it('G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant', () => {
   const legal = until(itemMatch('bloodthirster'), s => s.combat!.units.some(u => u.shieldLayers?.some(l => l.remaining > 0 && l.absorbed > 0)));
   reject(legal, s => {

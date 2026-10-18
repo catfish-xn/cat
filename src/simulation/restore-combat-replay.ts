@@ -7,6 +7,9 @@ import { M8_VERSION } from './m8/version';
 export interface CombatReplayFacts {
   readonly tick: number;
   readonly rngState: CombatState['rngState'];
+  readonly rngDraws: CombatState['rngDraws'];
+  readonly nextActionSeq: CombatState['nextActionSeq'];
+  readonly nextEventSeq: CombatState['nextEventSeq'];
   readonly damageContributors: CombatState['damageContributors'];
   readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
   readonly units: readonly (Pick<CombatUnit, 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'maxHp' | 'maxHpBasis'> & {
@@ -33,7 +36,8 @@ export interface RestoreCombatReplay {
   atSaveTick(): CombatReplayFacts;
 }
 function facts(state: CombatState): CombatReplayFacts {
-  return structuredClone({ tick: state.tick, rngState: state.rngState,
+  return structuredClone({ tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
+    nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
     damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
     id: unit.id, definitionId: unit.definitionId,
     curseCaster: unit.ability.kind === 's13' && unit.ability.championId === 'morgana',

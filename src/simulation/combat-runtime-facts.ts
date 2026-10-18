@@ -20,6 +20,11 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
     throw new Error('Invalid Match save: damage contributors binding facts');
   if (combat.nextTriggerEventSeq !== expected.nextTriggerEventSeq)
     throw new Error('Invalid Match save: trigger event sequence binding facts');
+  // Continuing from a different RNG word or action/event cursor changes every
+  // later roll and identity, so the cursor is a replay fact like the ledgers.
+  if (combat.rngState !== expected.rngState || combat.rngDraws !== expected.rngDraws
+    || combat.nextActionSeq !== expected.nextActionSeq || combat.nextEventSeq !== expected.nextEventSeq)
+    throw new Error('Invalid Match save: combat cursor binding facts');
   for (const unit of combat.units) {
     const settledUnit = expected.units.find(u => u.id === unit.id)!;
     // Sion reuses buddyTriggered for its Black Rose release. Current HP/cast
