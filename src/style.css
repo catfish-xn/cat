@@ -407,6 +407,35 @@ body[data-online] #feedback-root { top: calc(var(--online-countdown-h) + var(--o
 .shop-dock .shop-odds { margin: 2px 0 0 !important; text-align: center; }
 body[data-online] #strategy-root .hud-bar { margin-bottom: var(--space-sm, 8px); }
 body[data-online] #strategy-root .action-bar:empty { display: none; }
+/* Cheap TFT pass (online): the left column keeps titles and tabs; the long rule hint folds away (interest and streak sit in
+   the countdown bar), the enemy stat cards and per-unit slots open on click, and the item bench sits at the board's lower
+   left as a column of icons (name and effect on hover). The board leaves a gutter on both sides so it stays centred. */
+body[data-online] { --item-gutter: 56px; }
+body[data-online] #strategy-root .hud-hint { display: none; }
+body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), calc((100cqw - 2 * var(--item-gutter)) * 520 / 480));
+  width: min(calc(100% - 2 * var(--item-gutter)), calc(max(var(--online-board-h), 360px) * 480 / 520)); }
+.item-dock { position: absolute; z-index: 20; left: 0; width: calc(var(--item-gutter) - 6px); top: calc(var(--online-countdown-h) + var(--online-gap));
+  bottom: calc(var(--online-dock-h) + var(--online-gap) + 8px); display: flex; flex-direction: column-reverse; flex-wrap: wrap-reverse; align-content: flex-start;
+  gap: 4px; pointer-events: none; }
+.item-dock:empty { display: none; }
+.item-dock > * { pointer-events: auto; }
+.item-dock .item-inventory, .item-dock .consumable-row { display: flex; flex-direction: column-reverse; gap: 4px; }
+.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark), .item-dock .consumable-hint { display: none; }
+.item-dock .item-card, .item-dock .consumable-card { width: 44px; height: 44px; min-height: 0; padding: 3px; font-size: 0; line-height: 0; display: grid; place-items: center;
+  border-radius: 7px; background: #0f1a24; border: 1px solid #304653; }
+.item-dock .item-card .item-mark { width: 36px !important; height: 36px !important; margin: 0; }
+.item-dock .item-glyph { font-size: 12px; line-height: 1; }
+.item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
+.item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
+.equip-details, .stats-details { margin: 8px 0; }
+.stats-details:has(> .combat-sources:empty) { display: none; }
+.equip-details > summary, .stats-details > summary { padding: 6px 0; font-weight: 600; cursor: pointer; }
+@media (max-width: 700px) {
+  body[data-online] { --item-gutter: 0px; }
+  .item-dock { position: static; width: auto; flex-direction: row; flex-wrap: wrap; }
+  .item-dock .item-inventory, .item-dock .consumable-row { flex-direction: row; flex-wrap: wrap; }
+  .item-dock > * { min-width: 0; max-width: 100%; }
+}
 /* A room can end during a choice (every other seat eliminated): the ranking, not the stale choice, is what to show. */
 body[data-online-mode="online-ended"] .choice-overlay { display: none !important; }
 /* C3: once the room ended, the left column drops the per-round supply/income leftovers of my own seat (the ranking overlay is the result). */

@@ -208,7 +208,7 @@ export class BoardScene extends Phaser.Scene {
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
-    }, this.inputRouter, mounts?.shopDock ?? null);
+    }, this.inputRouter, mounts?.shopDock ?? null, mounts?.itemDock ?? null);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -780,6 +780,9 @@ export class BoardScene extends Phaser.Scene {
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
   }
   update(_time: number, delta: number) {
+    // Cheap motion (idle bob, lunge, hit flash) offsets each piece's drawing only; tokens keep their positions.
+    const now = performance.now();
+    for (const view of this.views.values()) view.animate?.(now);
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
@@ -878,7 +881,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.renderedCells.get(unit.id) !== key) {
         this.tweens.killTweensOf(token);
         const p = this.layout.center(unit.cell);
-        if (this.renderedCells.has(unit.id) && unit.alive && !reducedMotion()) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 100 });
+        if (this.renderedCells.has(unit.id) && unit.alive && !reducedMotion()) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 220, ease: 'Sine.easeInOut' });
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
@@ -899,7 +902,7 @@ export class BoardScene extends Phaser.Scene {
     this.renderedCastCount += this.fx.casts - casts;
     this.feedback?.push(events, performance.now());
   }
-  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc, duration: number) {
+  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);
     this.tweens.add({ targets: effect, alpha: 0, duration, onComplete: () => { this.effects.delete(effect); effect.destroy(); } });
   }
