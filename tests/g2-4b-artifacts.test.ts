@@ -324,6 +324,15 @@ it.each([['TFT_Item_Artifact_WitsEnd',100],['TFT_Item_Artifact_LichBane',480]] a
  // Overtime ordinals lie past the catalogue (6-7); they read as stage 7, the same rule as G2-4b support items.
  for(const roundId of ['overtime-1','overtime-5'])expect(boundFlat(id,getMultiplayerRoundById(roundId).ordinal)).toEqual([value]);
 });
+it('Moonstone binds 280 shield at 6-7 and 325 in first and later overtime',()=>{
+ for(const [round,flat] of [[38,280],[39,325],[43,325]]){
+  const base=createMatch(42),holder=base.preparation.units.find(u=>u.team==='player')!;
+  const snapshot=buildStrategySnapshot({...base,round,preparation:{...base.preparation,units:[holder]},
+   items:[{id:'item-1',definitionId:'TFT_Item_Moonstone',location:{kind:'unit',unitId:holder.id,slot:0}}]});
+  const effects=snapshot.units[0].itemPrograms!.flatMap(p=>p.program.periodic?.flatMap(t=>t.program.effects)??[]);
+  expect(effects.filter(e=>e.kind==='grant-shield')).toEqual([expect.objectContaining({amount:expect.objectContaining({flat})})]);
+ }
+});
 it('Wit\'s End adds stage magic damage to each attack and heals 35% of magic damage dealt',()=>{
  const initial=frozen(start('TFT_Item_Artifact_WitsEnd'),['e']),state={...initial,units:initial.units.map(u=>u.id==='p'?{...u,hp:100,mana:0,maxMana:100000}:u)};
  const {events,state:after}=runLive(state,300);
