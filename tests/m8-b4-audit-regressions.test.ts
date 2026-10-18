@@ -121,7 +121,7 @@ describe('B4 audit R3: projection semantics and active-effect receipt references
   it('R3b rejects deletion of the entire Bloodthirster receipt while its granted shield is active', () => {
     let s = itemMatch('bloodthirster');
     if (s.phase !== 'combat') throw Error('combat fixture');
-    s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.id === 'unit-1' ? { ...u, hp: 280 } : u) } };
+    // Restore replays the authenticated opening, so reach the 40% threshold through real combat damage.
     for (let i = 0; i < 100 && s.phase === 'combat' && !s.combat.units.find(u => u.id === 'unit-1')!.shield; i++) s = stepMatch(s).state;
     const original = serializeMatch(s); const raw = JSON.parse(original);
     const holder = raw.combat.units.find((u: CombatUnit) => u.id === 'unit-1');
