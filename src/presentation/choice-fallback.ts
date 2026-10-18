@@ -32,11 +32,12 @@ const int = (value: unknown): number | undefined => (Number.isInteger(value) ? v
 /**
  * Anvil names. The rules' forge pools decide the heading (artifacts are `kind: 'completed'` in the catalogue, so the kind
  * alone cannot tell them from ordinary completed items); otherwise the item kind every offer shares; mixed or unknown
- * offers keep the plain client name. 成装锻造器 / 神器锻造器 follow the user-set names; 14.24 lists TFT_ArmoryKeySupport
- * (辅助装锻造器), whose project acquisition is still pending.
+ * offers keep the plain client name. 成装锻造器 / 神器锻造器 / 辅助装锻造器 follow the user-set names (14.24 lists
+ * TFT_ArmoryKeySupport as the support anvil).
  */
 const FORGE_POOL_NAMES: readonly (readonly [readonly string[], string])[] = [
-  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'],
+  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeySupport, '辅助装锻造器'],
+  [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'],
 ];
 const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器锻造器', support: '辅助装锻造器' };
 function forgeName(offers: readonly unknown[]): string {
