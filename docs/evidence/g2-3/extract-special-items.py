@@ -17,6 +17,7 @@ keys=['RADIANTITEMS_SET5','ORNNARTIFACTS_SET6','SUPPORTITEMS']; pools={}
 for key in keys:pools[key]=next(v['mConstants']['Definitions']['mValue'] for v in m.values() if isinstance(v,dict) and v.get('mName')=='ItemKeyDefinition_'+key)
 for tier,prefix in enumerate(['Bronze','Silver','Gold','Prismatic','OmegaPrismatic']):pools['Tier'+str(tier)]=sorted(api for api in records if api.startswith('TFT13_Crime_'+prefix+'_'))
 special=set(pools['RADIANTITEMS_SET5']+sum([pools['Tier'+str(i)] for i in range(5)],[]))
+special.add('TFT_Item_ForceOfNature') # G2-4a: Tactician's Crown is a Conqueror tier 12/15 reward.
 mapaliases={'TFT_Item_UnstableConcoction':'TFT5_Item_HandOfJusticeRadiant','TFT_Item_PowerGauntlet':'TFT5_Item_TrapClawRadiant','TFT_Item_RapidFireCannon':'TFT5_Item_RapidFirecannonRadiant','TFT_Item_MadredsBloodrazor':'TFT5_Item_GiantSlayerRadiant','TFT_Item_RedBuff':'TFT5_Item_SunfireCapeRadiant'}
 radiant={}
 for api,id in ordinary.items():

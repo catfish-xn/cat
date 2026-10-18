@@ -1,28 +1,35 @@
-import { createCombatWithEvents, stepCombat, type CombatState } from '../combat';
+import type { CombatState } from '../combat';
+import { createRestoreCombatReplay } from '../restore-combat-replay';
 import type { CombatInputBasis } from '../combat-input';
 import type { StrategySnapshot } from '../strategy-types';
 import type { Effect } from './contracts';
 import { canonicalSource } from './identity';
 import { EMPTY_TRIGGER_LEDGER } from './triggers';
 
-const sampledGrowth = (e: Effect) => e.kind === 'modify-stat' && (e.modifier.stat === 'abilityPower' || e.modifier.stat === 'attackDamage')
+export const sampledGrowth = (e: Effect) => e.kind === 'modify-stat' && (e.modifier.stat === 'abilityPower' || e.modifier.stat === 'attackDamage')
   && e.modifier.value.kind === 'constant' && e.stackPolicy.kind === 'add-stacks';
 function check(value: unknown, label: string): asserts value {
   if (!value) throw new Error(`Invalid Match save: sampled stat trigger ${label}`);
+}
+
+/** Also used before declaration expansion; preserve the original rejection reason. */
+export function validateSampledStatTriggerCount(value: number, deathBound: number): void {
+  check(Number.isSafeInteger(value) && value >= 0, 'count');
+  check(value <= deathBound, 'count bound');
 }
 
 /** The caller has validated the immutable input basis and strategy. Reconstruct
  * evidence in an isolated combat, never from candidate counters/AP/HP or RNG.
  * No reconstructed state, effects or events are committed to the restored match. */
 export function validateSampledStatTriggerFacts(combat: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot,
-  same: (a: unknown, b: unknown) => boolean): void {
+  same: (a: unknown, b: unknown) => boolean, replay = createRestoreCombatReplay(basis, strategy, combat.tick)): void {
   if (!strategy.units.some(u => u.itemPrograms?.some(p => p.program.triggers?.some(t => t.effects.some(sampledGrowth))))) return;
-  let expected = createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
-  const holders = expected.units.filter(u => u.mechanismDefinitions?.eventTriggers?.some(t => t.effects.some(sampledGrowth)));
+  const opening = replay.opening();
+  const holders = opening.units.filter(u => u.mechanismDefinitions?.eventTriggers?.some(t => t.effects.some(sampledGrowth)));
   // In this content, only Forge can revive, once per Jayce cast, at most once
   // per tick. Other units have one life. This deliberately overestimates deaths
   // on both teams; it never truncates a reachable count, including Forge kills.
-  const deathBound = expected.units.length + combat.tick * expected.units.filter(u => u.definitionId === 'g23-forge').length;
+  const deathBound = opening.units.length + combat.tick * opening.units.filter(u => u.definitionId === 'g23-forge').length;
   for (const owner of holders) {
     const candidate = combat.units.find(u => u.id === owner.id)!;
     const ledger = candidate.triggerLedger ?? EMPTY_TRIGGER_LEDGER;
@@ -31,14 +38,14 @@ export function validateSampledStatTriggerFacts(combat: CombatState, basis: Comb
       for (const r of ledger.runtimes) {
         check(r && r.source, 'runtime');
         if (canonicalSource(r.source) !== canonicalSource(d.source)) continue;
-        check(Number.isSafeInteger(r.triggerCount) && r.triggerCount >= 0, 'count');
-        if (d.event === 'kill-or-assist') check(r.triggerCount <= (combat.tick === 0 ? 0 : deathBound), 'count bound');
+        if (d.event === 'kill-or-assist') validateSampledStatTriggerCount(r.triggerCount, combat.tick === 0 ? 0 : deathBound);
+        else check(Number.isSafeInteger(r.triggerCount) && r.triggerCount >= 0, 'count');
       }
     }
   }
   // tick was validated against MAX_COMBAT_TICKS before entering this function.
   // The work bound depends on that clock and trusted content, never triggerCount.
-  while (expected.tick < combat.tick && expected.status === 'running') expected = stepCombat(expected).state;
+  const expected = replay.atSaveTick();
   check(expected.tick === combat.tick, 'fact tick');
   for (const owner of holders) {
     const candidate = combat.units.find(u => u.id === owner.id)!;

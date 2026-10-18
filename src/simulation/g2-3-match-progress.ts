@@ -1,3 +1,4 @@
+import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {findMechanicReceipt,grantMechanicItem} from './seat-mechanics';
 import {readG23Progress} from './g2-3-state';
 import {canonicalContent} from './content';
@@ -27,7 +28,7 @@ export function grantG23Academy(initial:MatchState):{state:MatchState;events:Mat
   if(tier<milestone||findMechanicReceipt(state,id))continue;
   const granted=grantMechanicItem(state,{receiptId:id,source:'academy',definitionId:readG23Progress(state)!.sponsored[milestone-3]});
   if(!granted.ok){events.push({type:'mechanicFailed',hook:'academy',reason:granted.reason});return {state,events};}
-  state=granted.state;events.push(...granted.events);
+  state=recordG23GrantEvidence(state,granted.state,id);events.push(...granted.events);
  }
  return {state,events};
 }
@@ -37,7 +38,7 @@ export function validateG23Progress(progress:G23MatchProgress,seed:number,round:
  const initial=createG23Progress(seed);fail(JSON.stringify(progress.sponsored)===JSON.stringify(initial.sponsored));
  fail(Array.isArray(progress.economyReceipts));
  for(const r of progress.economyReceipts)fail(r.kind==='battle'?r.facts.round<=round:r.kind==='market'&&r.round<=round);
- const replay=replayEconomy(seed,progress.economyReceipts);
+ const replay=replayG23Economy(seed,progress.economyReceipts);
  for(const k of ['rngState','rngDraws','chem','junkerRounds','rewards','economyReceipts','conquest'] as const)fail(canonicalContent(progress[k])===canonicalContent(replay[k]));
  fail(Array.isArray(progress.junkerPurchases)&&progress.junkerPurchases.length<=Math.floor(progress.junkerRounds/3));
  const paid=new Set<string>();
@@ -65,7 +66,7 @@ export function validateG23Progress(progress:G23MatchProgress,seed:number,round:
 }
 
 const economyReplayCache=new Map<string,G23MatchProgress>();
-function replayEconomy(seed:number,receipts:readonly G23EconomyReceipt[]):G23MatchProgress{
+export function replayG23Economy(seed:number,receipts:readonly G23EconomyReceipt[]):G23MatchProgress{
  const key=`${seed}:${canonicalContent(receipts)}`,cached=economyReplayCache.get(key);
  if(cached)return cached;
  let replay=createG23Progress(seed),start=0;

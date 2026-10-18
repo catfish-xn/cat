@@ -13,6 +13,7 @@
 - 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
 - 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
 - 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
+- 黑市次级微光复制器（用户2026-10-17 15:20）：仅复制本席场上/备战席已拥有的≤3费炼金男爵；100微光LootA/LootA4及200微光LootB1的权重、数量不变。无目标/满席沿用托管，仍透传同事务UnitLootPolicy。复制器奖励原子新增可选`duplicatorDefinitionId`保留源API身份；现有领取收据、选择指令及自动处理方式不变，征服者第4档小英雄复制器不受影响。完整约束见MATCH_CONTRACT顶部同名条款。本分支暂不升版本，合并时取multiplayer当时版本+1。
 - Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。使用 pendingChoice.kind=armory、choose/timeoutChoice；超时始终选择0金项（普通Spare、全购Finishing、三星Titan），余额不足的付费选择拒绝并保持原对象。菜单待选期间拒绝卖出Rumble；联机购买合星改变菜单时刷新offers并增加generation，旧选择失效。
 - Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
 - G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
@@ -476,7 +477,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
 | 本轮已揭示掉落（SR-C7-02） | 可选 `revealedLoot.{roundId,revealedDrops}`；条目仅 `dropId,encounterId,sourceUnitId,roundId,payload,status,receiptId,allowedActions,reason?`，payload 仅 `{kind:'gold',quantity}` 或 `{kind:'unit'\|'item',definitionId,quantity}` | 仅本席当前 PvE 轮已揭示内容，具体门槛、状态及排序见 §14.1；不是 m8.loot 账本，不含计划、未来候选或随机流 |
-| 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 已提交本席轮结果 | `roundResults[].{round,roundId,roundKind,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
 | 本轮已公开 PvE 遭遇预览（SR-B7-02） | `m8.preparation.{roundId,encounterId,enemies}`；enemies 每项按准备单位白名单复制 | 仅 m8.round.kind=pve、轮 ID 与 roundDefinitionId 相同且 preparation.encounterId 与本轮一致时存在；仅 enemy 棋盘单位。相同单位也进入 preparation.units，供站位和 readEncounterPreview 使用；不公开未来计划、掉落或 PvP 模板 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
@@ -508,7 +509,9 @@ G22_EMISSARY_WIN_CAP = 7
 - `snapshotForBattle(state, seatId)` 以该席服务器权威 MatchState 的 `roundResults`（T3 收据提交写入的记录）调用它，把结果写入 `PlayerBattleSnapshot.priorPvpWins`；为 0 时省略字段，所以无胜场的冻结输入与改动前逐字节相同，旧冻结输入按 0 恢复。双方各从自己的状态取值；镜像对局的 B 方取被镜像席位自己的历史。服务器只经 `snapshotForBattle` 冻结，不另算、不接受客户端上报。
 - `restorePlayerBattleSnapshot` 校验：存在时为整数 1..7，且不超过该快照轮次之前目录内 PvP 轮数；`restoreBattleInput` 重新编译后逐字段比较，改动冻结胜场而不重编译会以 `battle-input` 拒绝。
 - `compileBattle` 把该值作为编译输入 `CombatStrategyInputs.priorPvpWins`（仅联机）传给策略编译器；单人 `CombatInputBasis.inputs` 永不含此字段，`restoreCombatInput` 遇到即拒绝。
-- 不改内容 digest、版本常量或失败枚举。测试：`tests/g2-2-online-emissary.test.ts`、`tests/server/g2-2-emissary-wins.test.ts`。
+- 加时轮（`overtime-N`）是 PvP 轮，其 `playerWin` 计入胜场；`priorPvpRoundLimit` 同样把加时轮算作 PvP 轮。
+- 私有席位投影的 `roundResults[]` 带 `roundKind`（2026-10-17 补，`'pvp'|'pve'|'supply'`，只是已提交记录的原值），界面可直接用 `priorPvpWins(view.roundResults, view.round)` 预显示本席外交官胜场，不必按 roundId 查目录；旧客户端忽略该字段即可，不改协议版本。界面只做显示，战斗数值仍以服务器冻结值为准。
+- 不改内容 digest、版本常量或失败枚举。测试：`tests/g2-2-online-emissary.test.ts`、`tests/server/g2-2-emissary-wins.test.ts`、`tests/t5r-private-seat-view.test.ts`。
 
 ## 11 T3：单席原子结算、整轮发布与超时规则
 
@@ -914,7 +917,7 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 
 公开 `toPrivateSeatView(state: MatchState): PrivateSeatView`（`src/server-entry` 导出）。输入是服务器可信状态，输出为独立、递归冻结的纯显示对象，不修改输入、不执行命令/抽签/发奖。无正常业务失败枚举；不接收或验证客户端伪造的 Match。字段逐层按 §10.9 构造，新增未知属性不会自动下发；所有 RNG、未来计划、来源账本、combatInputBasis、multiplayer/sharedPool 与整个 combat 均省略。
 
-`PrivateSeatView` 的 MatchState 同名字段保持**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单；另有下述独立的 `revealedLoot` 显示摘要。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；仍不含 settlementId 或执行代次。已揭示掉落摘要按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+`PrivateSeatView` 的 MatchState 同名字段保持**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单；另有下述独立的 `revealedLoot` 显示摘要。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；另新增 `roundResults[].roundKind`（已提交记录的原值，供界面预显示外交官胜场，见 §10.11）；仍不含 settlementId 或执行代次。已揭示掉落摘要按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
 
 **SR-C7-02 本轮掉落摘要。** `toPrivateSeatView` 的签名与失败约定不变，返回值新增可选字段：
 
@@ -1716,3 +1719,9 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards'|'choice'|'academy',reason:MatchFailure}` 可观测。失败的单次发放保留其输入，不创建收据、不扣资源、不消耗 RNG；已成功的独立收据保留。奖励仍在 escrow，可重试。
 
 **mechanicFailed 推送（2026-10-17）**：服务器已把 `mechanicFailed` 加入 `PUSHED_EVENT_TYPES`（`src/server/room/projection.ts`）。服务器自发的转移（截止自动上阵、结算、回合进入等）里本席产生的该事件随本席 `state` 推送的 `events` 发出；玩家自己的命令里产生的仍照旧随该命令的 `applied` 回执 `events` 发出。线上字段只有 `type:'mechanicFailed'`、`hook`（`'rewards'|'choice'|'academy'`）、`reason`（`MatchFailure` 枚举字符串），加规则统一盖的 `domain:'match'`、`eventSeq`；不带收据、奖励内容、RNG、种子或任何别席数据，`projection-wire` 禁发名单里的键一个都不含。它只进本席私有推送，公共视图 `toPlayerView` 不含此事件，别的席位收不到。界面可据此给本席提示"这次发放失败、奖励保留待重试"。用例：`tests/server/mechanic-failed-push.test.ts`。
+
+## G2-4B / 神器锻造器（领域交接）
+
+本批基于 #147 d3112d6，恢复征服者10/14，11/13等待#149。领域规则/content版本v5；choice数据仍使用既有forge结构和choose/timeout命令，不新增服务器消息。接口、失败语义、收据ID和恢复函数完整约定见 [MATCH_CONTRACT 的 G2-4B 段](MATCH_CONTRACT.md#g2-4b-神器锻造器领域合同2026-10-17)。神器四项来自21件已实现池，不得在服务器再次抽取或替换；超时取payload.timeoutOption。结算g23Facts必须继续由领域提供并原样转发。
+
+本批不修改src/server/与界面，不能将领域交付称为联机端到端上线。服务器恢复应验证外层房间/席位结构；单人restoreMatch仍拒绝multiplayer字段，G23恢复辅助函数不替代整房恢复流程。

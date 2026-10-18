@@ -33,15 +33,21 @@ jobs:
   heap-diagnostics:
     if: ${{ inputs.heap_diagnostics && !inputs.warmup_experiment }}
     uses: ./.github/workflows/m7-heap-diagnostic.yml
+  # Each part runs on its own machine so the wall-clock gates (timing tests,
+  # repeated-route performance) never share CPU with other workloads. All parts
+  # keep the logical M5_JOB_KEY, so compare-evidence still sees one
+  # test-and-build job per sample with every required step.
   test-and-build:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
-    name: test-and-build-sample${{ matrix.sample }}
+    name: test-and-build-${{ matrix.part }}-sample${{ matrix.sample }}
     strategy:
       fail-fast: false
       matrix:
+        part: [tests, timing, headless, performance]
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
       M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
+      M5_JOB_PART: ${{ matrix.part }}
     runs-on: ubuntu-24.04
     timeout-minutes: 22 # Three-sample measured budget; docs/evidence/M5_CI_BUDGET.json.
     steps:
@@ -54,17 +60,23 @@ jobs:
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
       - name: Fast tests (parallel)
+        if: ${{ matrix.part == 'tests' }}
         run: node scripts/ci-m5-step.cjs tests npm test
       - name: Timing tests (one worker, serial files)
+        if: ${{ matrix.part == 'timing' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing
-      - run: node scripts/ci-m5-step.cjs build npm run build
-      # Both route generators are independent; serial wall-clock tests finish above.
-      - name: Headless and repeated route evidence
-        run: node scripts/run-m5-route-evidence.cjs
+      - if: ${{ matrix.part == 'headless' || matrix.part == 'performance' }}
+        run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Headless route evidence
+        if: ${{ matrix.part == 'headless' }}
+        run: node scripts/ci-m5-step.cjs headless npm run test:headless
+      - name: Repeated route performance
+        if: ${{ matrix.part == 'performance' }}
+        run: M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m5-headless-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          name: m5-test-and-build-${{ matrix.part }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-match:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
@@ -104,18 +116,29 @@ jobs:
         with:
           name: m5-browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  # Split by workload so the longest input chain no longer sets the run's wall
+  # clock. Every part keeps the logical M5_JOB_KEY input-<mode>-sample<n>, so
+  # compare-evidence still finds every required step under one input job.
+  # m6-performance (frozen F4 gates) and native input each get their own machine.
   chromium-input:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
-    name: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+    name: input-${{ matrix.mode }}-${{ matrix.part }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+      M5_JOB_PART: ${{ matrix.part }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45 # Native input, a normal-time touch route and (dev) the M6/M8 tail; dev measured ~36 min on 2026-10-16 once every step ran.
+    timeout-minutes: 45 # Unchanged per-part ceiling; the whole dev chain measured ~36 min on 2026-10-16.
     strategy:
       fail-fast: false
       matrix:
         mode: [dev, preview]
+        part: [input, touch, layout, archives, m6-performance]
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+        exclude:
+          - mode: preview
+            part: archives
+          - mode: preview
+            part: m6-performance
     steps:
       - uses: actions/checkout@v4
         with:
@@ -127,29 +150,47 @@ jobs:
       - run: node scripts/ci-m5-step.cjs install npm ci
       - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
       - run: node scripts/ci-m5-step.cjs build npm run build
-      - name: Native input and normal-time touch route
+      - name: Native input
+        if: ${{ matrix.part == 'input' }}
         env:
           MODE: ${{ matrix.mode }}
         run: |
           args=()
           if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs input node scripts/verify-m5-input.cjs "${args[@]}"
+      - name: Normal-time touch route
+        if: ${{ matrix.part == 'touch' }}
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs touch-route node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --touch
+      - name: M6 layout product smoke
+        if: ${{ matrix.part == 'layout' }}
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs m6-layout node scripts/m6-layout-product-smoke.cjs "${args[@]}"
-          if [ "$MODE" = dev ]; then
-            node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
-            node scripts/ci-m5-step.cjs m8-b9-legacy node scripts/verify-m8-b9-legacy.cjs
-            node scripts/ci-m5-step.cjs m8-u7-compat node scripts/verify-m8-u7-compat.cjs
-            node scripts/ci-m5-step.cjs m8-b9-archives node scripts/verify-m8-b9-archives.cjs
-            node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
-            node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
-            node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
-            node scripts/ci-m5-step.cjs m6-application-failures node tests/m6-application-failures.cjs
-          fi
+      - name: M6/M8 storage, archives and application failures (dev)
+        if: ${{ matrix.part == 'archives' }}
+        run: |
+          node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
+          node scripts/ci-m5-step.cjs m8-b9-legacy node scripts/verify-m8-b9-legacy.cjs
+          node scripts/ci-m5-step.cjs m8-u7-compat node scripts/verify-m8-u7-compat.cjs
+          node scripts/ci-m5-step.cjs m8-b9-archives node scripts/verify-m8-b9-archives.cjs
+          node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
+          node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
+          node scripts/ci-m5-step.cjs m6-application-failures node tests/m6-application-failures.cjs
+      - name: M6 performance gates (dev)
+        if: ${{ matrix.part == 'm6-performance' }}
+        run: node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          name: m5-input-${{ matrix.mode }}-${{ matrix.part }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   m8-u3-dynamic:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}

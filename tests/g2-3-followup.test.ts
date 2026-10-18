@@ -35,7 +35,7 @@ it('restores the missing carousel unit/item birth authority and rejects duplicat
  expect(births.get(`carousel-unit:${receipt.id}`)).toEqual({kind:'unit',id:'unit-1',definitionId:'maddie',roundId:'1-2'});
  expect(births.get(`carousel-item:${receipt.id}`)).toEqual({kind:'item',id:'item-1',definitionId:'sword',roundId:'1-2'});
  const entries=[{kind:'unit-acquired',unitId:'unit-1',source:{kind:'carousel',receiptId:receipt.id}},{kind:'item-acquired',itemId:'item-1',source:{kind:'carousel',receiptId:receipt.id}}].map((e,sequence)=>({...e,sequence,roundId:'1-2'}));
- expect(foldResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries},context)).toMatchObject({units:[{id:'unit-1',definitionId:'maddie',starLevel:1}],items:[{id:'item-1',definitionId:'sword'}]});
+ expect(foldResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,equipmentHistory:'ordered',entries},context)).toMatchObject({units:[{id:'unit-1',definitionId:'maddie',starLevel:1}],items:[{id:'item-1',definitionId:'sword'}]});
  expect(()=>validateResourceReceipts({...context,carouselReceipts:[receipt,receipt]})).toThrow();
  expect(()=>validateResourceReceipts({...context,carouselReceipts:[{...receipt,holdingSource:'forged'}]})).toThrow();
 });
@@ -67,11 +67,11 @@ it('exact-content economy reuse still validates every aggregate, round bound and
  expect(()=>validateG23Progress(freezeContent(next),42,2)).not.toThrow();
 });
 it('reward atom reuse is immutable and keys the whole descriptor plus seed',()=>{
- const bundle={id:'reward',round:1,source:'conqueror' as const,tier:1,reward:{Gold:3}};
+ const bundle={id:'reward',round:1,source:'conqueror' as const,tier:1,reward:{Gold:2}};
  const atoms=g23RewardAtoms(bundle,42);
  expect(g23RewardAtoms(structuredClone(bundle),42)).toBe(atoms);
  expect(g23RewardAtoms(bundle,43)).not.toBe(atoms);
  expect(Object.isFrozen(atoms[0])).toBe(true);
- bundle.reward.Gold=9;expect(g23RewardAtoms(bundle,42)[0].gold).toBe(9);
- expect(atoms[0].gold).toBe(3);
+ bundle.reward.Gold=9;expect(()=>g23RewardAtoms(bundle,42)).toThrow('frozen reward descriptor');
+ expect(atoms[0].gold).toBe(2);
 });
