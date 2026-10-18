@@ -2,7 +2,7 @@
 // 能还原：贴图、颜色曲线、缩放曲线、寿命、延迟、数量、初速度、阻力、加速度、
 // 发射形状（圆柱/球/偏移+绕轴随机旋转）、贴地/朝镜头/沿速度/任意朝向的面片、序列帧、
 // 溶解贴图（alpha erosion）、加法/透明混合。
-// 不还原（跳过）：网格粒子（.scb 拿不到）、镜头拖尾、屏幕扭曲、子粒子系统、软粒子、调色板。
+// 网格粒子读取 WAD 提取的 SCB → glTF；仍跳过镜头拖尾、扭曲、子系统等。
 import * as THREE from 'three';
 
 let seed = 1;
@@ -63,15 +63,27 @@ function overLife(field, t, fallback) {
 // ---- 粒子着色器：贴图 × 颜色，序列帧，溶解 ----
 const VERT = /* glsl */`
   varying vec2 vUv;
-  void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+  varying vec4 vColor;
+  void main() {
+    vUv = uv;
+    #ifdef USE_COLOR_ALPHA
+      vColor = color;
+    #elif defined(USE_COLOR)
+      vColor = vec4(color, 1.0);
+    #else
+      vColor = vec4(1.0);
+    #endif
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`;
 const FRAG = /* glsl */`
   uniform sampler2D map; uniform vec4 uvRect; uniform vec4 tint;
   uniform sampler2D erosionMap; uniform vec4 erosionMixer; uniform float erosion; uniform vec2 feather; uniform float useErosion;
   uniform float additive;
   varying vec2 vUv;
+  varying vec4 vColor;
   void main() {
     vec4 tex = texture2D(map, uvRect.xy + vUv * uvRect.zw);
-    vec4 c = tex * tint;
+    vec4 c = tex * tint * vColor;
     if (useErosion > 0.5) {
       float e = dot(texture2D(erosionMap, vUv), erosionMixer);
       c.a *= smoothstep(erosion - feather.x, erosion + feather.y, e);
@@ -80,11 +92,11 @@ const FRAG = /* glsl */`
     gl_FragColor = additive > 0.5 ? vec4(c.rgb * c.a, 1.0) : c;
   }`;
 
-const SUPPORTED = new Set([undefined, 'VfxPrimitiveArbitraryQuad', 'VfxPrimitiveRay']);
+const SUPPORTED = new Set([undefined, 'VfxPrimitiveArbitraryQuad', 'VfxPrimitiveRay', 'VfxPrimitiveMesh']);
 
 export class VfxSystem {
   // def: 原版 JSON；scale: 联盟单位 → 场景单位
-  constructor(def, { baseUrl, scale }) {
+  constructor(def, { baseUrl, scale, geometry = new Map() }) {
     this.def = def;
     this.scale = scale;
     this.emitters = [];
@@ -94,13 +106,14 @@ export class VfxSystem {
     for (const e of all) {
       if (only && !new RegExp(only).test(e.emitterName)) continue;
       const prim = e.primitive?.__type;
-      if (!SUPPORTED.has(prim) || !e.texturePng || e.distortionDefinition) {
+      if (!SUPPORTED.has(prim) || !e.texturePng || e.distortionDefinition || (prim === 'VfxPrimitiveMesh' && !geometry.has(e.meshGlb))) {
         const why = prim === 'VfxPrimitiveMesh' ? '网格' : prim === 'VfxPrimitiveCameraTrail' ? '拖尾' : e.distortionDefinition ? '扭曲' : prim;
         this.skipped.push(`${e.emitterName}（${why}）`);
         continue;
       }
       this.emitters.push({
         def: e,
+        geometry: prim === 'VfxPrimitiveMesh' ? geometry.get(e.meshGlb) : null,
         texture: getTexture(baseUrl + e.texturePng),
         erosion: e.erosionMapPng ? getTexture(baseUrl + e.erosionMapPng, false) : null,
       });
@@ -159,9 +172,10 @@ class VfxInstance {
       },
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      vertexColors: !!em.geometry?.getAttribute('color'),
     });
     if (!em.erosion && ero) mat.uniforms.erosionMixer.value.set(0, 0, 0, 1); // 没有单独溶解图时用本身 alpha
-    const mesh = new THREE.Mesh(PLANE, mat);
+    const mesh = new THREE.Mesh(em.geometry ?? PLANE, mat);
     mesh.renderOrder = 10 + (e.pass ?? 0) / 10000;
 
     // 发射位置与形状
@@ -197,6 +211,7 @@ class VfxInstance {
       birthScale: birthValue(e.birthScale0, [100, 100, 100]),
       rot, rotVel, ground, directional,
       ray: primType === 'VfxPrimitiveRay',
+      meshParticle: primType === 'VfxPrimitiveMesh',
       frame0: e.isRandomStartFrame ? Math.floor(rand() * frames) : 0,
       S,
     });
@@ -229,10 +244,18 @@ class VfxInstance {
       let sx = p.birthScale[0] * sc[0];
       let sy = p.e.isUniformScale ? sx : p.birthScale[1] * (sc[1] ?? sc[0]);
       if (p.ray) { sx = p.birthScale[0] * sc[0] * 0.15; sy = p.birthScale[1] * (sc[1] ?? 1) * 0.5; }
-      p.mesh.scale.set(Math.max(sx, 1e-4) * p.S, Math.max(sy, 1e-4) * p.S, 1);
+      p.mesh.scale.set(Math.max(sx, 1e-4) * p.S, Math.max(sy, 1e-4) * p.S, p.meshParticle ? Math.max(p.birthScale[2] * (sc[2] ?? 1), 1e-4) * p.S : 1);
 
       // 朝向
-      if (p.ground) {
+      if (p.meshParticle) {
+        const rotation = p.rot.map((r, i) => (r + p.rotVel[i] * p.age) * DEG);
+        // SCB X reflection also reflects the authored Y/Z rotation axes.
+        p.mesh.quaternion.setFromEuler(new THREE.Euler(rotation[0], -rotation[1], -rotation[2], 'ZYX'));
+        if (p.e.primitive.AlignYawToCamera) {
+          const yaw = Math.atan2(camera.position.x - this.group.position.x, camera.position.z - this.group.position.z);
+          p.mesh.rotateY(yaw - this.group.rotation.y);
+        }
+      } else if (p.ground) {
         p.mesh.quaternion.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, (p.rot[1] + p.rotVel[1] * p.age) * DEG));
         p.mesh.position.y = BOARD_TOP - this.group.position.y + 0.01 + (p.e.pass ?? 0) * 1e-6;
       } else {

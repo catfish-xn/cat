@@ -2,3 +2,5 @@ node_modules/
 dist/
 # 拳头版权素材：由 tools/fetch-assets.mjs 下载转换，不提交
 public/assets/
+.local/
+shots/

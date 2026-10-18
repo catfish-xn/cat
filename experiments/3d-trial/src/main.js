@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { VfxSystem, setVfxSeed } from './vfx.js';
 
 const BASE = `${import.meta.env.BASE_URL}assets/`;
 const params = new URLSearchParams(location.search);
+let procedural = params.get('animation') === 'procedural';
 // 联盟单位 → 场景单位。一格六边形中心距 ≈ 180 联盟单位
 const LOL = 1 / 92;
 const VFX_SCALE = Number(params.get('vfxScale') ?? 0.6);
@@ -23,7 +25,7 @@ renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1724);
-scene.fog = new THREE.Fog(0x0d1724, 22, 48);
+scene.fog = new THREE.Fog(0x0d1724, 80, 180);
 
 // 云顶镜头：从己方一侧斜俯视，约 55° 俯角，窄视角
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
@@ -31,7 +33,7 @@ const camTarget = new THREE.Vector3(0, 0, 0.9);
 function placeCamera() {
   const zoom = params.has('zoom');
   if (zoom) camTarget.set(0, 0, -3);
-  const pitch = 54 * Math.PI / 180, dist = zoom ? 11 : 22.5;
+  const pitch = 54 * Math.PI / 180, dist = zoom ? 11 : params.get('shot') === 'board' ? 55 : 34;
   camera.position.set(0, Math.sin(pitch) * dist, camTarget.z + Math.cos(pitch) * dist);
   camera.lookAt(camTarget);
 }
@@ -119,7 +121,7 @@ function buildBoard() {
   }
   return g;
 }
-scene.add(buildBoard());
+const proceduralBoard = buildBoard();
 
 // ---------- 英雄 ----------
 const manifest = await (await fetch(`${BASE}manifest.json`)).json().catch(() => null);
@@ -127,20 +129,43 @@ if (!manifest) {
   document.getElementById('missing').hidden = false;
   throw new Error('缺少素材，先运行 npm run fetch-assets');
 }
+procedural ||= !Object.values(manifest.units).every(info => info.rigged);
 const gltfLoader = new GLTFLoader();
 const texLoader = new THREE.TextureLoader();
+let arena = null;
+if (manifest.arena && params.get('board') !== 'procedural') {
+  arena = (await gltfLoader.loadAsync(BASE + manifest.arena.model)).scene;
+  // Map22's authored arena center is (2000, 0, 2000); keep League world scale.
+  arena.scale.setScalar(LOL);
+  arena.position.set(-2000 * LOL, 0, -2000 * LOL);
+  arena.traverse(o => {
+    if (/^Layer[2-8]$/.test(o.name)) o.visible = false;
+    if (o.isLight) o.visible = false;
+    if (o.isMesh) o.receiveShadow = true;
+  });
+  scene.add(arena);
+} else scene.add(proceduralBoard);
+const clips = {};
 async function loadUnitTemplate(id) {
   const info = manifest.units[id];
   const [gltf, tex] = await Promise.all([
-    gltfLoader.loadAsync(BASE + info.model),
+    gltfLoader.loadAsync(BASE + (!procedural && info.rigged ? info.rigged : info.model)),
     texLoader.loadAsync(BASE + info.texture),
   ]);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.flipY = false;
   tex.anisotropy = 4;
   const mat = new THREE.MeshLambertMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.35 });
-  gltf.scene.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = true; } });
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const materials = Array.isArray(o.material) ? o.material : [o.material];
+    // lol2gltf groups Body and Torch into one skinned mesh; hide Torch by material.
+    const replace = m => m.name === 'Torch' ? new THREE.MeshBasicMaterial({ visible: false }) : mat;
+    o.material = Array.isArray(o.material) ? materials.map(replace) : replace(o.material);
+    o.castShadow = true;
+  });
   gltf.scene.scale.setScalar(info.skinScale * LOL);
+  clips[id] = gltf.animations;
   return gltf.scene;
 }
 const templates = { jinx: await loadUnitTemplate('jinx'), vi: await loadUnitTemplate('vi') };
@@ -150,8 +175,10 @@ class Unit {
   constructor(id, col, row, team, star) {
     this.id = id; this.team = team; this.home = hexCenter(col, row);
     this.root = new THREE.Group();
-    this.body = templates[id].clone(true);
-    this.body.traverse((o) => { if (o.isMesh) o.material = o.material.clone(); });
+    this.body = cloneSkeleton(templates[id]);
+    this.body.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); });
+    this.mixer = new THREE.AnimationMixer(this.body);
+    this.actions = Object.fromEntries(clips[id].map(c => [c.name, this.mixer.clipAction(c)]));
     this.root.add(this.body);
     this.root.position.copy(this.home);
     this.root.rotation.y = team === 'ally' ? Math.PI : 0; // 面向对方
@@ -166,11 +193,25 @@ class Unit {
     this.el.innerHTML = `<div class="stars">${'★'.repeat(star)}</div><div class="hp"><i></i></div><div class="mp"><i></i></div>`;
     hud.appendChild(this.el);
     this.flash = 0;
+    this.play('idle');
   }
   setMaterialFlash(v) {
-    this.body.traverse((o) => { if (o.isMesh) { o.material.emissiveIntensity = 0.35 + v * 1.4; } });
+    this.body.traverse((o) => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m.emissive) m.emissiveIntensity = 0.35 + v * 1.4; });
   }
-  play(name, target) { this.anim = name; this.t = 0; this.target = target; this.fired = false; }
+  play(name, target) {
+    if (this.anim === 'death' && name !== 'death') {
+      this.el.style.opacity = '1';
+      this.body.traverse(o => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) { m.opacity = 1; m.transparent = false; } });
+    }
+    this.anim = name; this.t = 0; this.target = target; this.fired = false;
+    this.mixer.stopAllAction();
+    const action = this.actions[name === 'hit' ? 'idle' : name];
+    if (action) {
+      action.reset().setLoop(['idle', 'move', 'hit'].includes(name) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+      action.clampWhenFinished = true;
+      action.play();
+    }
+  }
 }
 
 const units = [
@@ -185,7 +226,13 @@ const [allyJinx, allyVi, enemyVi, enemyJinx] = units;
 async function loadVfx(name) {
   const def = await (await fetch(BASE + manifest.vfx[name])).json();
   // 特效整体尺寸：原版数值直接套用会覆盖约 5 格，这里按 0.6 缩小（换算比例是估计值）
-  return new VfxSystem(def, { baseUrl: BASE, scale: LOL * VFX_SCALE });
+  const geometry = new Map();
+  for (const e of [...(def.complexEmitterDefinitionData ?? []), ...(def.simpleEmitterDefinitionData ?? [])]) {
+    if (!e.meshGlb || geometry.has(e.meshGlb)) continue;
+    const model = await gltfLoader.loadAsync(BASE + e.meshGlb);
+    model.scene.traverse(o => { if (o.isMesh) geometry.set(e.meshGlb, o.geometry); });
+  }
+  return new VfxSystem(def, { baseUrl: BASE, scale: LOL * VFX_SCALE, geometry });
 }
 const vfxTar = await loadVfx('TFT13_Jinx_Base_R_Tar');
 const vfxRocket = await loadVfx('TFT13_Jinx_Base_R_Rocket_Child');
@@ -197,17 +244,16 @@ const vfxRocket = await loadVfx('TFT13_Jinx_Base_R_Rocket_Child');
   info.title = vfxTar.skipped.join('\n');
 }
 const liveVfx = [];
-window.__dbg = { vfxRocket, vfxTar, liveVfx };
+window.__dbg = { vfxRocket, vfxTar, liveVfx, units, scene, camera, arena, procedural };
 const projectiles = [];
 
-// 火箭本体在原版是网格粒子（.scb 拿不到），这里用一个发光胶囊代替；尾焰用原版参数
-const rocketGeo = new THREE.CapsuleGeometry(0.09, 0.35, 4, 10).rotateX(Math.PI / 2);
-const rocketMat = new THREE.MeshBasicMaterial({ color: 0xff6ad5 });
-function spawnRocket(from, to) {
+// 火箭本体和尾焰都使用原版粒子定义；本体几何来自 WAD 中的 SCB。
+const rocketVfx = await loadVfx('TFT13_Jinx_Base_R_Mis');
+function spawnRocket(from, to, target) {
   const start = from.clone().setY(1.3), end = to.clone().setY(0.3);
-  const mesh = new THREE.Mesh(rocketGeo, rocketMat);
-  scene.add(mesh);
-  projectiles.push({ start, end, t: 0, dur: 0.55, trailT: 0, mesh });
+  const mesh = new THREE.Group(); scene.add(mesh);
+  const effect = rocketVfx.spawn(mesh, new THREE.Vector3());
+  projectiles.push({ start, end, t: 0, dur: 0.55, trailT: 0, mesh, effect, target });
 }
 function spawnTracer(from, to, color) {
   const geo = new THREE.CylinderGeometry(0.03, 0.03, 1, 6); geo.rotateX(Math.PI / 2); geo.translate(0, 0, 0.5);
@@ -218,9 +264,10 @@ function spawnTracer(from, to, color) {
   projectiles.push({ tracer: m, t: 0, dur: 0.12 });
 }
 
-// ---------- 程序动画（原版 .anm 动作文件拿不到，这里用位移/旋转代替） ----------
+// ---------- 动画：默认原版骨骼，保留程序动画作同镜头对比 ----------
 const ease = (x) => 1 - Math.pow(1 - x, 3);
 function animate(u, dt) {
+  if (!procedural && u.actions.idle) { animateOriginal(u, dt); return; }
   u.t += dt;
   const b = u.body, r = u.root;
   b.position.set(0, 0, 0); b.rotation.set(0, 0, 0); b.scale.setScalar(templates[u.id].scale.x);
@@ -232,6 +279,11 @@ function animate(u, dt) {
       b.position.y = Math.sin(u.t * 2.2) * 0.03;
       b.scale.y *= 1 + Math.sin(u.t * 2.2 + 1) * 0.015;
       b.rotation.y = Math.sin(u.t * 0.7) * 0.06;
+      break;
+    }
+    case 'move': {
+      r.position.addScaledVector(toTarget.lengthSq() ? toTarget : new THREE.Vector3(0, 0, -1), Math.sin(u.t) * 0.8);
+      b.position.y = Math.abs(Math.sin(u.t * 7)) * 0.08;
       break;
     }
     case 'attack': {
@@ -261,7 +313,7 @@ function animate(u, dt) {
       flash = Math.sin(k * Math.PI) * 0.6;
       if (!u.fired && k > 0.45) {
         u.fired = true;
-        if (u.id === 'jinx') spawnRocket(u.home, u.target.home);
+        if (u.id === 'jinx') spawnRocket(u.home, u.target.home, u.target);
         else { u.target.hit(); liveVfx.push(vfxTar.spawn(scene, u.target.home.clone(), { timeScale: 1 })); }
       }
       if (k >= 1) u.play('idle');
@@ -271,7 +323,7 @@ function animate(u, dt) {
       const k = Math.min(u.t / 1.1, 1);
       b.rotation.x = -ease(Math.min(k * 1.6, 1)) * Math.PI / 2;
       b.position.y = -Math.max(0, k - 0.6) * 1.2;
-      b.traverse((o) => { if (o.isMesh) { o.material.transparent = true; o.material.opacity = 1 - Math.max(0, (k - 0.5) * 2); } });
+      b.traverse((o) => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) { m.transparent = true; m.opacity = 1 - Math.max(0, (k - 0.5) * 2); } });
       u.el.style.opacity = String(1 - k);
       if (u.t > 2.4) { u.reset(); }
       break;
@@ -286,6 +338,28 @@ function animate(u, dt) {
   }
   u.setMaterialFlash(flash);
 }
+function animateOriginal(u, dt) {
+  u.t += dt;
+  u.mixer.update(dt);
+  u.root.position.copy(u.home);
+  const action = u.actions[u.anim];
+  const duration = action?.getClip().duration ?? 0.3;
+  if (u.anim === 'move') {
+    const direction = u.team === 'ally' ? -1 : 1;
+    u.root.position.z += direction * Math.sin(u.t * 0.8) * 1.2;
+  }
+  if (['attack', 'cast'].includes(u.anim) && !u.fired && u.t >= duration * (u.anim === 'cast' ? 0.45 : 0.3)) {
+    u.fired = true;
+    if (u.anim === 'cast' && u.id === 'jinx') spawnRocket(u.home, u.target.home, u.target);
+    else {
+      if (u.id === 'jinx') spawnTracer(u.home, u.target.home, 0xffd27a);
+      u.target?.hit();
+    }
+  }
+  u.setMaterialFlash(u.anim === 'hit' ? Math.max(0, 1 - u.t / 0.3) : 0);
+  if (['attack', 'cast', 'hit'].includes(u.anim) && u.t >= duration) u.play('idle');
+  if (u.anim === 'death') u.el.style.opacity = '0';
+}
 Unit.prototype.hit = function () {
   this.hp = Math.max(0.05, this.hp - 0.18);
   this.hitDir = this.team === 'ally' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 0, -1);
@@ -293,7 +367,7 @@ Unit.prototype.hit = function () {
 };
 Unit.prototype.reset = function () {
   this.play('idle'); this.hp = 1;
-  this.body.traverse((o) => { if (o.isMesh) { o.material.opacity = 1; o.material.transparent = false; } });
+  this.body.traverse((o) => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) { m.opacity = 1; m.transparent = false; } });
   this.el.style.opacity = '1';
 };
 
@@ -316,6 +390,7 @@ function frame(dtOverride, draw = true) {
     const pos = p.start.clone().lerp(p.end, k); pos.y += Math.sin(k * Math.PI) * 1.6;
     const ahead = p.start.clone().lerp(p.end, Math.min(k + 0.02, 1)); ahead.y += Math.sin(Math.min(k + 0.02, 1) * Math.PI) * 1.6;
     p.mesh.position.copy(pos); p.mesh.lookAt(ahead);
+    p.effect?.update(dt, camera);
     p.trailT -= dt;
     if (p.trailT <= 0) {
       p.trailT = 0.03;
@@ -325,8 +400,9 @@ function frame(dtOverride, draw = true) {
     if (k >= 1) {
       projectiles.splice(i, 1);
       p.mesh.removeFromParent();
+      p.effect?.dispose();
       liveVfx.push(vfxTar.spawn(scene, p.end.clone().setY(0.15)));
-      enemyVi.hit();
+      p.target?.hit();
     }
   }
   for (let i = liveVfx.length - 1; i >= 0; i--) { liveVfx[i].update(dt, camera); if (liveVfx[i].done) liveVfx.splice(i, 1); }
@@ -364,6 +440,10 @@ document.querySelectorAll('[data-anim]').forEach((btn) => btn.addEventListener('
 document.getElementById('vfx-only').addEventListener('click', () => {
   liveVfx.push(vfxTar.spawn(scene, enemyVi.home.clone().setY(0.15)));
 });
+document.getElementById('comparison').href = `?animation=${procedural ? 'original' : 'procedural'}`;
+document.getElementById('comparison').textContent = procedural ? '切换原版骨骼动作' : '对比程序动画';
+document.getElementById('note').textContent = `${manifest.wadVersion ?? manifest.version} 素材 · ${procedural ? '程序动作对比' : '原版骨骼与五类动作'} · ${arena ? 'Map22 原版竞技场' : '自建棋盘'}。`;
+window.__trial = { frame, units, scene, camera, manifest, procedural };
 let demo = null;
 document.getElementById('demo').addEventListener('click', (ev) => {
   if (demo) { clearInterval(demo); demo = null; ev.target.textContent = '自动演示'; return; }
@@ -388,7 +468,8 @@ if (shot) {
   const step = (sec) => { for (let i = 0; i < sec * 60; i++) frame(1 / 60, false); };
   step(0.5);
   if (shot === 'cast') { allyJinx.play('cast', enemyVi); step(0.75); }
-  if (shot === 'impact') { allyJinx.play('cast', enemyVi); step(0.45 + 0.55 + 0.2); }
+  if (shot === 'impact') { liveVfx.push(vfxTar.spawn(scene, enemyVi.home.clone().setY(0.15))); step(0.2); }
+  if (shot === 'move') { allyJinx.play('move', enemyVi); allyVi.play('move', enemyVi); step(0.3); }
   if (shot === 'attack') { allyVi.play('attack', enemyVi); enemyJinx.play('attack', allyVi); step(0.22); }
   if (shot === 'death') { enemyVi.play('death'); step(0.75); }
   // 等特效贴图加载完再画最后一帧
