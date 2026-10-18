@@ -105,6 +105,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
   if(owner&&g23Anomaly(owner,'bully')&&target.starLevel<owner.starLevel)amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
+    if(m.mechanic==='avarice')amplifiers.push(constantModifier('damageAmp',Math.min(m.values.capBps,m.values.baseBps+Math.floor((owner.currentAnomalyBankGold??0)/m.values.goldStep)*m.values.perStepBps),'bps'));
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
     if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
@@ -167,7 +168,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       itemInstanceId:item.source.instanceId,kind,tick,ordinal});
     itemRandomStreams=next.streams;itemGoldReceipts=next.receipts;
     if(next.receipts.at(-1)!.gold)for(const holder of fullRoster){
-      if(holder.openingItemBankGold===undefined||holder.team!==owner.team)continue;
+      if(holder.team!==owner.team)continue;
+      if(holder.currentAnomalyBankGold!==undefined)holder.currentAnomalyBankGold++;
+      if(holder.openingItemBankGold===undefined)continue;
       const limit=mechanic(holder,'g24Gambler','goldLimit');
       holder.currentItemBankGold=Math.min(limit,holder.currentItemBankGold!+1);
     }

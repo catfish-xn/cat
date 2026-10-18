@@ -40,6 +40,7 @@ export function createTrenchCopy(holder:CombatUnit,item:CombatMechanic,ordinal:n
   mechanics,shield:0,shieldExpiresAtTick:null,shieldLayers:[],statuses:[],tasks:[],runtime:{...EMPTY_RUNTIME},alive:true,targetId:null,
   ...(mechanics.some(m=>m.mechanic==='g24Mogul')?{itemMogulHits:[]}:{}),
   ...(mechanics.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
+  ...(holder.openingAnomalyBankGold===undefined?{}:{openingAnomalyBankGold:holder.openingAnomalyBankGold,currentAnomalyBankGold:holder.currentAnomalyBankGold}),
   ...(holder.openingItemBankGold===undefined?{}:{openingItemBankGold:holder.openingItemBankGold,currentItemBankGold:holder.currentItemBankGold}),
  };
 }

@@ -1,3 +1,4 @@
+import {S13_P1_ANOMALIES} from './s13-p1-anomalies';
 import { G23_ANOMALIES } from './g2-3-anomalies';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
@@ -46,4 +47,5 @@ export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
     ]
   },
   ...G23_ANOMALIES,
+  ...S13_P1_ANOMALIES,
 });

@@ -1,3 +1,4 @@
+import { investmentGrowth } from './augment-income';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
@@ -55,7 +56,7 @@ export interface CombatInputAuthority {
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
   const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
-  const needsBank=items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
+  const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
   const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
   const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
@@ -142,10 +143,9 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   }
   const history = authority.roundResults.filter(result => result.round < authority.round);
   const pump = input.augments.find(augment => augment.definitionId === 'pumping-up-i');
-  const investment = input.augments.find(augment => augment.definitionId === 'investment-strategy-i');
   requireBasis(equal(input.augmentProgress, {
     pumpingRounds: pump ? history.filter(result => result.round >= pump.acquiredRound).length : 0,
-    investmentHp: investment ? history.filter(result => result.round >= investment.acquiredRound).reduce((sum,result) => sum + result.incomeBreakdown.interest * 8,0) : 0,
+    investmentHp: investmentGrowth(input.augments,history),
   }));
   const rolls = authority.equipmentRolls.slice(0, basis.equipmentRollPrefixLength);
   const expectedChildren = sorted(input.items).filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId])).flatMap(item => {

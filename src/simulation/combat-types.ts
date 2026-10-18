@@ -39,6 +39,8 @@ export interface CombatUnit {
   readonly itemSummonOpeningMaxHp?:number;
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
   readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
+  readonly openingAnomalyBankGold?:number;
+  readonly currentAnomalyBankGold?:number;
   readonly openingItemBankGold?:number;
   readonly currentItemBankGold?:number;
   readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin;

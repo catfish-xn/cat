@@ -1,3 +1,4 @@
+import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
 import {commitG23Settlement} from './g2-3-settlement';
@@ -98,7 +99,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
     const economyInput = {result,gold:state.gold,streak:state.streak,
       level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
-    const plan = resolveRoundEconomy({roundId:r.roundId,...economyInput});
+    const plan = resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput});
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));
@@ -129,7 +130,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     };
     const augmentProgress = {
       pumpingRounds:state.augmentProgress.pumpingRounds+(state.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),
-      investmentHp:state.augmentProgress.investmentHp+(state.augments.some(a=>a.definitionId==='investment-strategy-i')?8*plan.incomeBreakdown.interest:0),
+      investmentHp:state.augmentProgress.investmentHp+readAugmentIncome(state.augments).healthPerInterest*plan.incomeBreakdown.interest,
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
     const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;

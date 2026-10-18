@@ -6,9 +6,9 @@ const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};
 // Literal W4 pool transcribed from the independently reconciled source-selection.json.
 // No production content import; lexical ordering is the public choice contract.
-const AUGMENTS=["backup", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "find-your-center", "glass-cannon-i", "glass-cannon-ii", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii"];
-const AUGMENT_GOLD={'placebo':8,'placebo-plus':15};
-const ANOMALIES=["arcana-overwhelming", "attack-expert", "avalanche-of-armor", "berserker-rage", "bully", "bulwark", "comeback-story", "deep-roots", "defense-expert", "eagle-eye", "energy-absorption", "force-of-friendship", "fortified", "freestyling", "giant-sized", "heavy-hitter", "hypervelocity", "kill-streak", "laser-eyes", "legacy-of-shurima", "mage-armor", "magic-expert", "magic-training", "one-thousand-cuts", "power-absorption", "protective-shielding", "slime-time", "slow-cooker", "strength-training", "titanic-strikes"];
+const AUGMENTS=["blinding-speed","portable-forge","radiant-relics","going-long","hedge-fund","investment-strategy-ii","backup", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "find-your-center", "glass-cannon-i", "glass-cannon-ii", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii"].sort();
+const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5};
+const ANOMALIES=["avarice-incarnate","arcana-overwhelming", "attack-expert", "avalanche-of-armor", "berserker-rage", "bully", "bulwark", "comeback-story", "deep-roots", "defense-expert", "eagle-eye", "energy-absorption", "force-of-friendship", "fortified", "freestyling", "giant-sized", "heavy-hitter", "hypervelocity", "kill-streak", "laser-eyes", "legacy-of-shurima", "mage-armor", "magic-expert", "magic-training", "one-thousand-cuts", "power-absorption", "protective-shielding", "slime-time", "slow-cooker", "strength-training", "titanic-strikes"].sort();
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}
@@ -37,7 +37,9 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  if(roundKind==='pvp'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
  const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=2 /* T11 signed opening: 2/2/2; XP thresholds unchanged */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
- const interest=stage===1?0:Math.min(5,Math.floor(interestBasis/10));
+ const owned=new Set(before.augments.map(a=>a.definitionId));
+ const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;
+ const interest=stage===1?0:Math.min(cap,Math.floor(interestBasis/10));
  const streak=roundKind!=='pvp'?0:streakAfter.count>=6?3:streakAfter.count>=4?2:streakAfter.count>=2?1:0;
  const baseDamage=roundKind==='pvp'?[2,5,8,10,12][stage-2]:roundKind==='pve'?3:0;
  const playerDamage=result==='playerWin'||roundKind==='supply'?0:roundKind==='pve'?3:baseDamage+survivingEnemyCount;
@@ -179,7 +181,7 @@ function validateLootTransition(before,after,command,events){
   else{assert.equal(command?.type,'select','player choice needs command');assert.equal(command.choiceId,choiceId(resolution.dropId));assert.equal(command.generation,0);assert.equal(command.definitionId,receipts.find(r=>r.dropId===resolution.dropId).payload.definitionId);}}
  return receipts;
 }
-function investment(before,record){return {pumpingRounds:before.augmentProgress.pumpingRounds+(before.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),investmentHp:before.augmentProgress.investmentHp+(before.augments.some(a=>a.definitionId==='investment-strategy-i')?8*record.incomeBreakdown.interest:0)};}
+function investment(before,record){return {pumpingRounds:before.augmentProgress.pumpingRounds+(before.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),investmentHp:before.augmentProgress.investmentHp+((before.augments.some(a=>a.definitionId==='investment-strategy-i')?8:0)+(before.augments.some(a=>a.definitionId==='investment-strategy-ii')?9:0))*record.incomeBreakdown.interest};}
 class Ledger {
  constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
