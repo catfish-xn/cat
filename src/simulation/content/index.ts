@@ -35,6 +35,9 @@ export { COMPONENT_IDS } from './items';
 // `var` is intentional: content helpers are called while cyclic content imports
 // initialize. The lazily allocated cache must be available before this module's body.
 var frozenCanonical: WeakMap<object, string> | undefined;
+// Certification is independent of text retention: large frozen ledgers may still
+// cache their small digest without retaining canonical text at every depth.
+var canonicalFrozen: WeakSet<object> | undefined;
 var frozenDigests: WeakMap<object, string> | undefined;
 var canonicalKeys: Map<string, string> | undefined;
 var scalarPrototype: object | undefined;
@@ -52,8 +55,12 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor || !('value' in descriptor)) return false;
     const child: unknown = descriptor.value;
-    return child === null || typeof child !== 'object' || frozenCanonical!.has(child);
-  })) frozenCanonical!.set(value, text);
+    return child === null || typeof child !== 'object' || canonicalFrozen?.has(child);
+  })) {
+    (canonicalFrozen ??= new WeakSet()).add(value);
+    // UTF-16 storage stays below 4 KiB per cached text.
+    if (text.length < 2048) (frozenCanonical ??= new WeakMap()).set(value, text);
+  }
   return text;
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
@@ -129,7 +136,7 @@ export function digestContent(value: unknown): string {
   for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
   const digest = `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
   // canonicalContent certifies the entire frozen data graph, including children.
-  if (value !== null && typeof value === 'object' && frozenCanonical?.has(value)) (frozenDigests ??= new WeakMap()).set(value, digest);
+  if (value !== null && typeof value === 'object' && canonicalFrozen?.has(value)) (frozenDigests ??= new WeakMap()).set(value, digest);
   return digest;
 }
 import { ORB_RULES, ORB_SLOTS } from './orbs';
