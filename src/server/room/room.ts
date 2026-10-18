@@ -83,8 +83,8 @@ export interface RoomOptions extends RoomTimings {
 }
 /** MULTIPLAYER_CONTRACT §21.1: the departure after the carousel's deadline before the round goes on. */
 export const CAROUSEL_DEPARTURE_MS = 2_000;
-/** Ticks per step of a time-budgeted slice (`sliceMs`): small enough that one step stays a few milliseconds. */
-export const SLICE_STEP_TICKS = 10;
+/** Ticks per step of a time-budgeted slice (`sliceMs`): one, since a late-round tick alone can take several milliseconds. */
+export const SLICE_STEP_TICKS = 1;
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
