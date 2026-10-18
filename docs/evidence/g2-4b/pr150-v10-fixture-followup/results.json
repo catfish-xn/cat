@@ -1,0 +1,93 @@
+{
+  "codeSha": "e6ce0b5acb808f1c571ef9a103a9170a89f9a7ad",
+  "tests": [
+    {
+      "file": "tests/g2-2-ability-display.test.ts",
+      "exit": 0,
+      "seconds": 0.814,
+      "passed": 70,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m5-combat.test.ts",
+      "exit": 0,
+      "seconds": 1.91,
+      "passed": 48,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m5-content.test.ts",
+      "exit": 0,
+      "seconds": 1.125,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "exit": 0,
+      "seconds": 16.773,
+      "passed": 138,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "exit": 0,
+      "seconds": 19.628,
+      "passed": 140,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m5-route.test.ts",
+      "exit": 0,
+      "seconds": 38.079,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m6-integration.test.ts",
+      "exit": 0,
+      "seconds": 45.128,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m6-integration-mage.test.ts",
+      "exit": 0,
+      "seconds": 54.489,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m6-integration-sniper.test.ts",
+      "exit": 0,
+      "seconds": 59.652,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+      "exit": 0,
+      "seconds": 59.562,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    }
+  ],
+  "typecheckExit": 0,
+  "g23HeraldVerifyExit": 1,
+  "g23InputsWriteExit": 0,
+  "g23InputsCheckExit": 0,
+  "g24ReleaseExit": 0,
+  "g24HeraldWriteExit": 0,
+  "g24InputsWriteExit": 0,
+  "g24InputsCheckExit": 0
+}
