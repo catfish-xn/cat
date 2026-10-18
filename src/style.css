@@ -16,7 +16,9 @@ button:focus-visible, summary:focus-visible { outline: 3px solid #ffd782; outlin
 .panel-tabs { display: flex; gap: 6px; position: sticky; top: -16px; background: #14212c; padding: 10px 0; z-index: 2; }
 .panel-tabs button { flex: 1; }
 .panel-hud { color: #ffe39b; }
-.panel-status { min-height: 40px; color: #a8c7d5; }
+/* Two 20px lines plus room for a fallback CJK font's taller line box: one- and two-line hints keep the same height,
+   so a drag rewriting the hint never shifts the layout (and the page's scroll anchoring) under the pointer. */
+.panel-status { min-height: 42px; line-height: 20px; color: #a8c7d5; }
 .mobile-controls { display: none; }
 .trait, .equipment-row, .combat-sources { padding: 9px; background: #0f1a24; border-radius: 8px; margin-bottom: 8px; }
 .combat-sources:empty { display: none; }

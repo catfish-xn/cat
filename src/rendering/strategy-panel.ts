@@ -116,6 +116,10 @@ const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
 
 /** Accessible DOM view over the same Match commands; it owns no game state. */
+/** Keys whose default action scrolls the page; within SCROLL_INTENT_MS of one (or of a wheel) a scroll is the player's. */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
+const SCROLL_INTENT_MS = 1_000;
+
 export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
@@ -255,13 +259,24 @@ export class StrategyPanel {
     window.addEventListener('pointerdown', trackPointer, true);
     window.addEventListener('pointercancel', cancelPointer, true); window.addEventListener('resize', cancel);
     window.addEventListener('touchcancel', cancel, true);
-    window.addEventListener('blur', cancel); window.addEventListener('scroll', cancel, true);
+    window.addEventListener('blur', cancel);
+    // A scroll the player asked for (wheel, scroll keys) ends a drag. A layout shift that makes the browser nudge the
+    // scroll position (a status line changing height under scroll anchoring) is not a request: the drop still reads
+    // the geometry where it lands. Touch scrolling already ends the gesture through pointercancel.
+    let scrollIntentAt = -Infinity;
+    const scrollIntent = () => { scrollIntentAt = performance.now(); };
+    const scrollKey = (event: KeyboardEvent) => { if (SCROLL_KEYS.has(event.key)) scrollIntent(); };
+    const scrolled = () => { if (performance.now() - scrollIntentAt <= SCROLL_INTENT_MS) cancel(); };
+    window.addEventListener('wheel', scrollIntent, { capture: true, passive: true });
+    window.addEventListener('keydown', scrollKey, true); window.addEventListener('scroll', scrolled, true);
     this.disposers.push(() => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', release);
       window.removeEventListener('pointerdown', trackPointer, true);
       window.removeEventListener('pointercancel', cancelPointer, true); window.removeEventListener('resize', cancel);
       window.removeEventListener('touchcancel', cancel, true);
-      window.removeEventListener('blur', cancel); window.removeEventListener('scroll', cancel, true);
+      window.removeEventListener('blur', cancel);
+      window.removeEventListener('wheel', scrollIntent, true);
+      window.removeEventListener('keydown', scrollKey, true); window.removeEventListener('scroll', scrolled, true);
     });
     this.modal.addEventListener('pointerdown', event => {
       event.stopPropagation();
