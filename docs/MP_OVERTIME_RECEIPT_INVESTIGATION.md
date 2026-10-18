@@ -45,6 +45,8 @@ FAIL every .4 supply dialog showed exactly the offered components and the pick l
 FAIL in-battle buy/reroll/buyXp ran (no battle with gold, an offer and bench space)
 ```
 
+seed 1 结束并释放端口后，已串行启动第二次原 SHA `C19_SEED=2`，保留原脚本、断言和时限，关闭额外指针跟踪，只记录结算输入和异常栈；本轮结果待补。
+
 原始日志、报告及诊断产物保留在 `artifacts/mp-overtime-receipt/`。诊断仅插桩生成的服务器 bundle，用于记录各 `invalid-receipt` 分支的输入和异常栈，不改源码规则或返回值。
 
 ## C19 成装重铸器：已复现的测试驱动缺陷
@@ -78,7 +80,7 @@ seed 1 在原 SHA 隔离副本的诊断重放中原样复现了上述三条 FAIL
 
 修复仅在测试驱动：新增 `c19-drag-geometry.mjs`，开始手势前把源、目标共同滚进视口，确认两点可以命中，滚动完成后重读坐标；原目标、全部命令/收据/物品消失校验和时限不变。无法同时容纳或被遮挡会明确失败，没有跳过检查。
 新增 `node tests/server/e2e/c19-tool-viewport.mjs` 使用真实 StrategyPanel 和固定合法投影：先复现原拖拽零命令，再验证滚动后同一工具/同一物品恰好一次回调；4 项检查通过。未修改界面或服务器源码。
-完整 seed 1 诊断对局仍按原 75 分钟上限继续，后续结果另行记录。
+完整 seed 1 诊断对局按原 75 分钟上限，在 6-2 正常结束并给出八席排名：退出码 1，耗时 1,842,118 ms。共 4 条 FAIL，三条为上述已取证的重铸器问题，另一条为未遇到供给选择机会。原文在 `c19-seed1-traced.log`，报告在 `c19-seed1-traced/report.json`。
 
 ## 验证
 
@@ -97,3 +99,7 @@ node scripts/record-g2-3-inputs.cjs --check
 Herald 脚本默认即校验模式，不接受 `--check` 参数。未使用 `verify-m8-herald-fixtures.cjs --write`。
 原始 Herald 输入字节及战斗指纹未变化；预期变化只有源码指纹清单及其审计摘要。
 根目录同样完成了上述重录与两项校验，均退出 0。最终分支测试及后续现场结论以保存的日志和权威输入为准。
+
+## 分支交付
+
+已提交修复 `1276fac7f2f5c9d505887de4991f05c0f81ac748` 并推送 `origin/codex/mp-overtime-receipt`，已用 `git ls-remote` 核实。后续证据更新不改变该修复提交的代码。
