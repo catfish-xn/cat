@@ -145,7 +145,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
         }
       }
       const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
-      // G2-3: units may enter (append) or leave mid-combat; the diff then emits unitEntered/unitLeft before updates.
+      // Align by identity; a keyframe below preserves exact order when the roster changes.
       const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
       for (let i = 0; i < view.units.length; i++) {
         const unit = view.units[i], prior = before[i];
@@ -155,7 +155,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
       ticks.push(freezeContent({ tick: state.tick, events,
-        ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
+        ...(!sameMembers || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
       previous = view;
       steps++;
     }
