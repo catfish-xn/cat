@@ -1,7 +1,9 @@
 import { G23_ANOMALIES } from './g2-3-anomalies';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
+import { S13_P2_ANOMALIES } from './s13-augments-p2';
 export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...S13_P2_ANOMALIES,
   "titanic-strikes": {
     "id": "titanic-strikes",
     "name": "泰坦打击",

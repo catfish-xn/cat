@@ -1,6 +1,8 @@
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
+import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...S13_P2_AUGMENTS,
   "placebo": {
     "id": "placebo",
     "name": "安慰剂",

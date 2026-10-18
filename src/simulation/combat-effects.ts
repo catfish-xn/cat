@@ -1,4 +1,6 @@
 import { startG22Traits } from './combat-g2-2';
+import { startP2Combat } from './s13-augments-p2-combat';
+import { nextRandom } from './rng';
 import {initializeMirrorHealth} from './g2-4b-summons';
 import type { CombatEvent, CombatState, CombatStep, CombatUnit } from './combat-types';
 import { compileMechanismDefinitions } from './m8/s13-definitions';
@@ -57,6 +59,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
     return { ...unit, shield, shieldExpiresAtTick: expiry, mana: after, effectRuntime: batch.runtime };
   });
   const mechanismUnits = units.filter(u => u.ability.kind === 's13') as S13Unit[];
+  let rngState=state.rngState!,rngDraws=state.rngDraws??0;
   if (mechanismUnits.length) {
     if(mechanismUnits.some(u=>u.itemSummon?.kind==='mirror')){
       initializeMechanisms({ tick:1,combatId:state.combatId,board:state.board,units:mechanismUnits.filter(u=>u.itemSummon?.kind!=='mirror'),events:shields,packets:[],heals:[],draw:()=>{throw new Error('Mirror opening cannot draw RNG');} });
@@ -66,6 +69,9 @@ export function applyCombatStart(state: CombatState): CombatStep {
     for (const unit of mechanismUnits) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
     startG22Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('G22 starts cannot draw RNG');}});
     refreshMechanismAuras({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Auras cannot draw RNG');}});
+    startP2Combat({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
+      const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
+    }});
   }
-  return stampCombatStep({ ...state, units, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
+  return stampCombatStep({ ...state, units, rngState, rngDraws, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

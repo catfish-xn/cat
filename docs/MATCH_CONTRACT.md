@@ -560,3 +560,13 @@ position disagreement. UI/server command dispatch adapters are not implemented.
 - 普通36件成装重铸器继续拒绝辅助装输入，失败保持原state、资源、事件、RNG。复用G24-FORGE-01…08；界面约定名“辅助装锻造器”，联机和界面仍由Claude接。
 
 详见 [预演记录](evidence/g2-4/G2-4B-SUPPORT-FORGE-TRIAL.md)。
+
+## S13 强化 P2（14.24，B 补丁 raw 数值）
+
+当前强化目录新增 14 项、异常目录新增 3 项；官方 API 身份与中文名对照见 [S13 P2 报告](evidence/s13-augments-p2/REPORT.md)。共 44 强化／33 异常，仍沿用现有三词强化抽样和单词异常抽样。此次不升版本，合并时统一升版；内容 digest 自动包含新增归一化源与赠品声明。
+
+无新增客户端命令。`selectChoice(state, choiceId, generation, definitionId, unitLootPolicy?)` 的成功事务经现有来源账本发放赠品；`unitLootPolicy` 必须与同事务共享池策略相同。赠送物品到库存；赠送英雄正常合星，满席托管、池空按费用折金。后续卖出、领取与既有奖励重试复用同一确定计划，不重抽、不重发。失败命令沿用原对象／无副作用合同，新增内部赠品校验不改变失败枚举。
+
+规则内部导出 `p2GiftPlan(state: Pick<MatchState,'seed'|'augments'|'multiplayer'>): Gift[]`、`drainP2Gifts(state: MatchState, policy?: UnitLootPolicy): MatchState`、`validateP2Gifts(state: MatchState): void`。赠品收据 `source='s13-augments-p2'`，ID 为 `[source,choiceId,'item'|'unit',index]` 的 JSON 编码；校验失败抛出 `Invalid/Missing S13 P2 ... gift ...`。这些不是新的客户端授权入口。
+
+精心赋能、三项赛 II 与分享你的能量只修改战斗副本。联机冻结前的准备棋盘是双方羁绊和结算档位的共同依据；征服者／化学男爵收据仍逐项匹配当前棋盘档位，错误档位仍返回 `invalid-receipt`。服务器继续原样转发已有 `g23Facts`。

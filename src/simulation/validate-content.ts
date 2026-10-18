@@ -43,6 +43,7 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  s13P2Augment:['enabled'],s13P2Anomaly:['enabled'],s13P2ItemAugment:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
   g24SpectralCutlass:['durationTicks'],
@@ -127,7 +128,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30,anomalies:30})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:44,anomalies:33})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

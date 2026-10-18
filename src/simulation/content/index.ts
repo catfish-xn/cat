@@ -138,7 +138,10 @@ import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consu
 import { G24_SUPPORT_DECLARATIONS } from './g2-4-support-items';
 import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
 import { G24_CHEST_POOL } from './g2-4-chest-pool';
+import { S13_P2_SOURCE } from './s13-augments-p2-source';
+import { P2_ITEM_GRANTS } from './s13-augments-p2';
 export const CONTENT_DIGEST = digestContent({
+  s13AugmentsP2: { source:S13_P2_SOURCE, itemGrants:P2_ITEM_GRANTS, acquisitionRng:'fnv1a32-seat-choice-lcg32', openingRng:'combat-after-existing-opening-consumers', sharing:'freeze-all-then-broadcast' },
   g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
   rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
   g24:{artifactSource:G24_ARTIFACT_SOURCE,supportDeclarations:G24_SUPPORT_DECLARATIONS,supportItemSource:G24_SUPPORT_ITEM_SOURCE,chestPool:G24_CHEST_POOL},

@@ -1,4 +1,5 @@
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
+import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
 import { deploymentCapFor } from './deployment-cap';
@@ -633,12 +634,16 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
+  if(choice.kind==='augment'){
+    const gifted=drainP2Gifts(selected,unitLootPolicy);
+    events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
+  }
   if (choice.kind === 'component' && getRoundKind(state.round) === 'supply') {
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
-  return accept(entered.state, [...events, ...entered.events]);
+  return acceptEquipment(entered.state, [...events, ...entered.events]);
 }
 
 /** Compatibility domain entrypoints use the same pending choices and generic receipts. */
