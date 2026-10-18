@@ -3,6 +3,7 @@ import type { PendingCarouselUnit } from './carousel-types';
 import type { GameState } from './game';
 import { sameCell } from './board';
 import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { planDeferredUpgrades, transferUpgradeResources } from './upgrades';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import { canonicalContent } from './content';
@@ -22,7 +23,8 @@ export function validateCarouselMetadata(state: MatchState): void {
   for(const id of settled){
     const receipt=metadata.receipts.find(r=>r.id===id);
     const fact=state.resourceProvenance.entries.find(e=>e.kind==='carousel-preparation-settled'&&e.receiptIds.includes(id));
-    if(!receipt || !fact || getCatalogRoundById(receipt.carouselId.split(':').at(-1)!).ordinal>=getCatalogRoundById(fact.roundId).ordinal) invalid();
+    if(!receipt || !fact || getCatalogRoundById(receipt.carouselId.split(':').at(-1)!).ordinal>=(state.multiplayer
+      ? getMultiplayerRoundById(fact.roundId) : getCatalogRoundById(fact.roundId)).ordinal) invalid();
   }
   const ids=new Set<string>();
   for(const unit of metadata.heldCarouselUnits){

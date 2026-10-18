@@ -39,6 +39,7 @@
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { ROOT, click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
+import { showDragEndpoints } from './c19-drag-geometry.mjs';
 
 const OUT = outDir(process.env.C19_OUT ?? 'c19');
 const VITE_PORT = Number(process.env.C19_VITE_PORT ?? 5208);
@@ -346,7 +347,11 @@ async function play(human, tables, kindOf, role) {
         && now.strategy.bounds[entry.target.kind === 'unit' ? `equipment:${entry.target.unitId}:0` : itemBoundsKey(now.state, entry.target.itemId)]);
       const from = tool && now.strategy.bounds[`consumable:${tool.consumableId}`];
       if (target && from && claim(toolTask.task)) {
-        const to = now.strategy.bounds[target.target.kind === 'unit' ? `equipment:${target.target.unitId}:0` : itemBoundsKey(now.state, target.target.itemId)];
+        const sourceKey = `consumable:${tool.consumableId}`;
+        const targetKey = target.target.kind === 'unit' ? `equipment:${target.target.unitId}:0` : itemBoundsKey(now.state, target.target.itemId);
+        await showDragEndpoints(page, sourceKey, targetKey);
+        const positioned = await read(page);
+        const from = positioned.strategy.bounds[sourceKey], to = positioned.strategy.bounds[targetKey];
         const affected = target.target.kind === 'unit' ? wornBy(now.state, target.target.unitId).map(item => item.id) : [target.target.itemId];
         const before = wire.mark();
         await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();

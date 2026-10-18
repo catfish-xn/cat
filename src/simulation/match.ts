@@ -114,7 +114,9 @@ function affordableOffer(state: MatchState, gold = state.gold): boolean {
 }
 function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before'): { state: MatchState; events: MatchEvent[] } {
   let state = initial; const events: MatchEvent[] = [];
-  for (const event of getRoundSchedule(state.round).filter(event => (event.timing ?? 'before') === timing)) {
+  // Overtime has no catalog schedule; earned mechanic choices still return to their requested phase.
+  const schedule = state.multiplayer && state.round > FINAL_ROUND ? [] : getRoundSchedule(state.round);
+  for (const event of schedule.filter(event => (event.timing ?? 'before') === timing)) {
     if (state.scheduleReceipts.some(receipt => receipt.eventId === event.id)) continue;
     if (state.multiplayer?.forfeitedChoices.includes(event.id)) continue;
     if (state.carousel && event.kind==='component' && getRoundKind(state.round)==='supply') continue;

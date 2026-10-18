@@ -3,6 +3,7 @@ import { planPermanentItemGrant } from '../item-grants';
 import type { MatchEvent, MatchFailure, MatchState } from '../match-types';
 import { appendResourceProvenance } from '../resource-provenance';
 import { getRoundKind } from '../round-schedule';
+import { getMultiplayerRoundByOrdinal } from '../multiplayer-round';
 import type { PendingChoice } from '../strategy-types';
 import { appendMechanicReceipt, findMechanicReceipt } from './state';
 import { CHOICE_SKIP_OPTION, MECHANIC_CHOICE_KINDS, type MechanicChoiceKind, type MechanicChoicePayload, type MechanicChoiceSpec,
@@ -55,7 +56,7 @@ export type MechanicChoiceResult = { readonly ok: true; readonly state: MatchSta
  */
 export function openMechanicChoice(state: MatchState, spec: MechanicChoiceSpec): MechanicChoiceResult {
   const refuse = (reason: MatchFailure): MechanicChoiceResult => ({ ok: false, state, reason });
-  if (state.pendingChoice || state.phase !== spec.returnPhase || getRoundKind(state.round) === 'supply') return refuse('wrong-phase');
+  if (state.pendingChoice || state.phase !== spec.returnPhase || (state.multiplayer ? getMultiplayerRoundByOrdinal(state.round).kind : getRoundKind(state.round)) === 'supply') return refuse('wrong-phase');
   if (!nonempty(spec.choiceId) || findMechanicReceipt(state, spec.choiceId)) return refuse('duplicate-mechanic-receipt');
   try { validateMechanicChoiceSpec(spec.payload?.kind, spec.offers, spec.payload); } catch { return refuse('invalid-mechanic-state'); }
   const pendingChoice: MechanicPendingChoice = { kind: spec.payload.kind, step: 'offer', choiceId: spec.choiceId, eventId: spec.choiceId,

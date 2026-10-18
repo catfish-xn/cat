@@ -6,7 +6,7 @@ import type {StarLevel} from './unit-types';
 import type {ItemSummonOrigin} from './g2-4b-summons';
 import {DEFAULT_BOARD,isDeploymentCell,sameCell} from './board';
 import {g22Equipment} from './strategy-g2-2';
-import {getCatalogRoundByOrdinal} from './round-selectors';
+import {ROUND_CATALOG} from './content/round-catalog';
 import {projectG23Summons} from './g2-3-summons';
 import {nearestItemCell} from './g2-4b-item-kernel';
 import {G24_VOIDSPAWN_POLICY} from './content/g2-4b-voidspawn';
@@ -26,7 +26,8 @@ export function validateItemSummonPositions(value:unknown,nextItemSerial?:number
  }
 }
 export function voidspawnStage(round:number){
- const stage=getCatalogRoundByOrdinal(round).stage,index=Math.max(0,Math.min(4,stage-2));
+ // Overtime ordinals lie past the catalog and count as the stage after the last one (clamped to the final row).
+ const stage=ROUND_CATALOG.find(r=>r.ordinal===round)?.stage??Math.max(...ROUND_CATALOG.map(r=>r.stage))+1,index=Math.max(0,Math.min(4,stage-2));
  return {health:G24_VOIDSPAWN_POLICY.health[index],attack:G24_VOIDSPAWN_POLICY.attack[index],stars:G24_VOIDSPAWN_POLICY.stars[index] as StarLevel};
 }
 /** Preparation projection only: no inventory mint, shop identity or population.

@@ -187,4 +187,21 @@ describe('§19 resumable PvP and replay tasks (C19 item 3)', () => {
     // Cached: a later warm-up of the same battle has nothing left to build.
     expect(startReplayWarmup(battle, ['s2', 's3']).advance(1)).toBe(true);
   });
+
+  it('keeps a refused replay: later pushes and the other side rethrow it without re-running the battle', () => {
+    const real = resolveTwoSidedPvp(envelope(seats, 2, 3));
+    // A terminal the re-execution never reaches: the rules refuse the replay with replay-divergence.
+    const terminal = { ...real.battle.terminal, tick: real.battle.terminal.tick + 1 };
+    const battle = { ...real, battle: { ...real.battle, terminal } } as typeof real;
+    const warmup = startReplayWarmup(battle, ['s2', 's3']);
+    while (!warmup.advance(25)) { /* sliced like the room */ }
+    const room = { battles: [battle] } as unknown as Parameters<typeof toCombatReplayFor>[0];
+    const refusal = (seatId: string) => { try { toCombatReplayFor(room, seatId); } catch (error) { return error; } return expect.unreachable(); };
+    const first = refusal('s2');
+    expect((first as Error).message).toBe('replay-divergence');
+    // The same error object: kept from the warm-up, not rebuilt by a second re-execution.
+    expect(refusal('s2')).toBe(first);
+    expect(refusal('s3')).toBe(first);
+    expect(startReplayWarmup(battle, ['s2', 's3']).advance(1)).toBe(true);
+  });
 });
