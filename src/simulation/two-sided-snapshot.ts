@@ -5,6 +5,7 @@ import { canonicalContent, CONTENT_DIGEST } from './content';
 import { freezeContent } from './content/freeze';
 import { DEFAULT_BOARD } from './board';
 import { createInputValidation, validateInputAssets } from './input-assets';
+import { crownTeamSizeBonus } from './deployment-cap';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
@@ -52,7 +53,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
     const units = validateInputAssets({ preparation: { board: DEFAULT_BOARD, benchSize: 9, units: s.units }, items: s.items },
-      { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)) }, [], validation);
+      { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)), teamSizeBonus: crownTeamSizeBonus(s.g23) }, [], validation);
     const itemIds = new Set(s.items.map(item => item.id)), temporarySlots = new Set<string>();
     for (const child of s.temporaryEquipment) {
       record(child); id(child.temporaryId); requireSnapshot(!itemIds.has(child.temporaryId)); itemIds.add(child.temporaryId);

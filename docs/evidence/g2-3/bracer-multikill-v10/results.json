@@ -1,0 +1,142 @@
+[
+  {
+    "file": "tests/opening-random-identity.test.ts",
+    "exit": 0,
+    "wallSeconds": 18.891,
+    "numTotalTests": 139,
+    "numPassedTests": 139,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-content-equivalence.test.ts",
+    "exit": 0,
+    "wallSeconds": 15.794,
+    "numTotalTests": 138,
+    "numPassedTests": 138,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-contracts.test.ts",
+    "exit": 0,
+    "wallSeconds": 0.65,
+    "numTotalTests": 6,
+    "numPassedTests": 6,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/match-contract.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.65,
+    "numTotalTests": 12,
+    "numPassedTests": 12,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m5-serialization.test.ts",
+    "exit": 0,
+    "wallSeconds": 2.12,
+    "numTotalTests": 33,
+    "numPassedTests": 33,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/bracer-multikill-stacks.test.ts",
+    "exit": 0,
+    "wallSeconds": 10.577,
+    "numTotalTests": 25,
+    "numPassedTests": 25,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/explorer-bracer-restore.test.ts",
+    "exit": 0,
+    "wallSeconds": 3.381,
+    "numTotalTests": 24,
+    "numPassedTests": 24,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/explorer-bracer-restore-pressure.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.962,
+    "numTotalTests": 2,
+    "numPassedTests": 2,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-audit-vectors.test.ts",
+    "exit": 0,
+    "wallSeconds": 23.894,
+    "numTotalTests": 14,
+    "numPassedTests": 14,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-catalog.test.ts",
+    "exit": 0,
+    "wallSeconds": 0.823,
+    "numTotalTests": 5,
+    "numPassedTests": 5,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-cleanup.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.799,
+    "numTotalTests": 5,
+    "numPassedTests": 5,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-known-limitations.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.378,
+    "numTotalTests": 2,
+    "numPassedTests": 2,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "exit": 0,
+    "wallSeconds": 19.52,
+    "numTotalTests": 30,
+    "numPassedTests": 30,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-mechanisms.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.473,
+    "numTotalTests": 21,
+    "numPassedTests": 21,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-serialization-reuse.test.ts",
+    "exit": 0,
+    "wallSeconds": 2.205,
+    "numTotalTests": 6,
+    "numPassedTests": 6,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "command": "npm run typecheck",
+    "exit": 0,
+    "wallSeconds": 10.32
+  }
+]

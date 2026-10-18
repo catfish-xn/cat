@@ -33,6 +33,8 @@ export interface G23State {
   absorbed: {unitId:string;tick:number;value:number}[];
   highRoller: {actionSeq:number;spell:number;mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
 }
+/** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
+export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
   readonly itemSummonOpeningMaxHp?:number;
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
@@ -48,6 +50,8 @@ export interface CombatUnit {
   readonly g22?: G22State;
   readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
+  /** G2-4b: temporary items gained during this combat (Unstable Treasure Chest); their programs are bound from the frozen pool. */
+  readonly combatItemGrants?: readonly CombatItemGrant[];
   readonly startingCell?: HexCell;
   readonly baseCritChanceBps?: number;
   readonly baseCritMultiplierBps?: number;

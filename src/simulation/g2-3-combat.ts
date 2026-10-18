@@ -69,7 +69,7 @@ export function validateG23State(unit:CombatUnit,units:readonly CombatUnit[],tic
   check(!s.absorbed.length||g23Anomaly(unit,'energy-absorption')||g23Anomaly(unit,'power-absorption'));
   check(s.absorbed.every(r=>Object.keys(r).length===3&&integer(r.value)&&integer(r.tick,tick)&&r.tick>0&&units.some(a=>a.id===r.unitId&&a.id!==unit.id&&a.team===unit.team&&!a.alive)));
   check(s.highRoller.length<=(unit.runtime?.castCount??0)&&(!s.highRoller.length||unit.definitionId==='sevika'));
-  check(new Set(s.highRoller.map(r=>r.actionSeq)).size===s.highRoller.length&&s.highRoller.every(r=>Object.keys(r).length===6&&integer(r.actionSeq,nextActionSeq-1)&&integer(r.spell,2)&&typeof r.enhanced==='boolean'&&(r.enhanced?['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot']:['rocket','shield','coin']).includes(r.mod)&&r.gold===(r.mod==='coin'||r.mod==='jackpot'?3:0)));
+  check(new Set(s.highRoller.map(r=>r.actionSeq)).size===s.highRoller.length&&s.highRoller.every(r=>Object.keys(r).sort().join(',')==='actionSeq,enhanced,gold,mod,spell'&&integer(r.actionSeq,nextActionSeq-1)&&integer(r.spell,2)&&typeof r.enhanced==='boolean'&&(r.enhanced?['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot']:['rocket','shield','coin']).includes(r.mod)&&r.gold===(r.mod==='coin'||r.mod==='jackpot'?3:0)));
 }
 /** Flat Laboratory growth retains a unique victim receipt and adjusts current HP by the max delta. */
 export function settleG23ExperimentKills(ctx:AbilityContext,killed:ReadonlyMap<string,CombatOrigin>):void{

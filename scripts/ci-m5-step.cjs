@@ -9,7 +9,10 @@ fs.mkdirSync(folder, {recursive:true});
 const began = Date.now();
 const result = spawnSync(command, args, {stdio:'inherit', env:process.env});
 const ended = Date.now();
-fs.writeFileSync(`${folder}/${step}.json`, JSON.stringify({step, command, args,
+// Parallel parts of one logical job share its folder; the part keeps their
+// install/build records from overwriting each other when artifacts merge.
+const part = process.env.M5_JOB_PART || null;
+fs.writeFileSync(`${folder}/${step}${part ? `.${part}` : ''}.json`, JSON.stringify({step, part, command, args,
   sha:process.env.M5_COMMIT_SHA ?? process.env.GITHUB_SHA ?? null, runId:process.env.GITHUB_RUN_ID ?? null,
   attempt:process.env.GITHUB_RUN_ATTEMPT ?? null, job:process.env.M5_JOB_KEY ?? 'local',
   node:process.version, platform:process.platform, arch:process.arch,

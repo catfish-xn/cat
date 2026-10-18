@@ -1,0 +1,58 @@
+[
+  {
+    "path": "tests/fixtures/g2-3-c19-seed-9-minimal.json",
+    "beforeBytes": 28248,
+    "afterBytes": 28248,
+    "beforeSha256": "a37648cf93b63b7b9a44e50e4dd0a2a2947f8598857dbdd0b44ed99bc52adad0",
+    "afterSha256": "d8320605f76eaa0912ad449ee10cbd8fac4414beb4e5c037b383fcda2ce05b49"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/trajectory.json",
+    "beforeBytes": 205305,
+    "afterBytes": 205305,
+    "beforeSha256": "c087f1c366350467b77bf97563a066afed290059a3a96313d5c8761a92b0d2df",
+    "afterSha256": "5f3add22959e32e0db3eee0531e3f02d5cefe6abe800d4242b9c72bb61bc917c"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/quicksilver.json",
+    "beforeBytes": 119646,
+    "afterBytes": 119646,
+    "beforeSha256": "6bc3480a2f8b96b1a51c8e0630de3fed94abb0738523c8dbbbd1d9fa2d26b17d",
+    "afterSha256": "0bb73a5437cfc57c8b60a2b2975a154d37292e41d6684a5260d479681c298629"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/manifest.json",
+    "beforeBytes": 29872,
+    "afterBytes": 29872,
+    "beforeSha256": "230c2e89e8d2390cd15ed6ec6d6efae491adb0ec22e62ea93921092cf1dc8c47",
+    "afterSha256": "7164f21530f853f4d8a0876ca187b8205664fa3c7fe19e1e4f804313e2a8c877"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/ionic-spark.json",
+    "beforeBytes": 119643,
+    "afterBytes": 119643,
+    "beforeSha256": "ada958770ae7acd52d72e549ae904ec5741190be6d0e2eb97f26f7223b344f9a",
+    "afterSha256": "789cb9c4f96df854a3dc1bd69b5bc1c3328df0b438acff23abd5a5e7e2f52bbe"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/edge-of-night.json",
+    "beforeBytes": 119648,
+    "afterBytes": 119648,
+    "beforeSha256": "d74a8e925219818b081b0d9c99af0d968118aa274158d53b0bb49ba1bf1b5acc",
+    "afterSha256": "fe682b559f487ec45b8ffd64eba51864b2e6b508b73904fda2a2a79bb2a2ea2b"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/evenshroud.json",
+    "beforeBytes": 119642,
+    "afterBytes": 119642,
+    "beforeSha256": "1a0fc3bbe5535dc04f7418dd88d7ef38764adef3ccbb0b77f0102e3f71b1e1d8",
+    "afterSha256": "44c4fbfae207c87109183e0e69f9b11411e2e1b845202d5c0f9565badada7122"
+  },
+  {
+    "path": "tests/fixtures/g2-3-herald-raw/ionic-spark--evenshroud.json",
+    "beforeBytes": 119868,
+    "afterBytes": 119868,
+    "beforeSha256": "1aafd3ccc3db83bdbd8064ad2d4c1e1cecf60b5d24b119d74970ea5f2444f110",
+    "afterSha256": "0530c9f19af00e8e36bcc548db9881ead816c5fe72bb949b1012b76c83c52bf7"
+  }
+]

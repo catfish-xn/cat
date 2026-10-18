@@ -1,12 +1,14 @@
 /** Content declarations composed exclusively from the signed G01–G11 vocabulary.
  * No item ID or display name is inspected by this compiler or the combat executor. */
 import type { CombatUnit } from '../combat-types';
-import type { Effect, PeriodicProgram, StatModifier, TriggerDefinition, Source } from './contracts';
+import type { Effect, PeriodicProgram, StatModifier, Source } from './contracts';
+import type { TargetLimitedTrigger } from './triggers';
 import type { VampDefinition } from './runtime-types';
 import { authorizeSpellCrit } from './crit';
 import { validateStatusApplication } from './status';
 import { integer, resolveStat } from './stats';
-export type ItemTrigger = Omit<TriggerDefinition, 'source'> & { readonly initialAlso?: true };
+import { grantedItemPrograms } from './combat-item-programs';
+export type ItemTrigger = Omit<TargetLimitedTrigger, 'source'> & { readonly initialAlso?: true };
 export interface ItemProgram {
   readonly modifiers?: readonly StatModifier[];
   readonly effects?: readonly Effect[];
@@ -18,9 +20,13 @@ export interface ItemProgram {
   readonly byStage?: { readonly flat: readonly number[] };
 }
 export interface BoundItemProgram { readonly source: Source; readonly program: ItemProgram }
-export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'>): readonly BoundItemProgram[] { return unit.itemPrograms ?? []; }
+/** Frozen strategy programs, then items gained during this combat (G2-4b chest), which compile exactly like them. */
+export function itemPrograms(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>): readonly BoundItemProgram[] {
+  const granted = unit.combatItemGrants?.length ? grantedItemPrograms({ id: unit.id!, combatItemGrants: unit.combatItemGrants }) : [];
+  return granted.length ? [...unit.itemPrograms ?? [], ...granted] : unit.itemPrograms ?? [];
+}
 /** Each declaration reserves 32 ordinals for its composed effects/end rewards. */
-export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'>) {
+export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<Pick<CombatUnit, 'id' | 'combatItemGrants'>>) {
   return itemPrograms(unit).flatMap(({source,program}) => {
     let ordinal=0;
     const bind = <K extends 'modifier'|'effect'|'trigger'|'survival'|'periodic'|'vamp',T>(kind: K, declaration:T) => ({kind,source:{...source,effectIndex:source.effectIndex+32*ordinal++},declaration});
@@ -29,7 +35,7 @@ export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'>) {
       ...(program.periodic ?? []).map(d=>bind('periodic',d)), ...(program.vamp ?? []).map(d=>bind('vamp',d)) ];
   });
 }
-export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'>) {
+export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'> & Partial<Pick<CombatUnit, 'combatItemGrants'>>) {
   const programs=itemPrograms(unit), modifiers=programs.flatMap(p=>p.program.modifiers ?? []);
   const sources=programEntries(unit).flatMap(e=>e.kind==='effect' && 'kind' in e.declaration && e.declaration.kind==='authorize-spell-crit'?[e.source]:[]);
   const chance=resolveStat('critChance',unit.baseCritChanceBps ?? (unit.ability.kind==='s13'&&unit.ability.championId==='neutral'?0:2500),modifiers,{holder:unit});
@@ -39,10 +45,10 @@ export function validateItemProgram(program: ItemProgram): void {
   const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid combat program');};
   check(program && Object.keys(program).every(k=>['modifiers','effects','triggers','survival','periodic','vamp','byStage'].includes(k)));
   const effect=(e:Effect):void=>{
-    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment','over-time','leap'].includes(e.kind));
+    check(['modify-stat','damage','apply-status','heal','grant-shield','grant-mana','change-max-hp','authorize-spell-crit','cleanse','temporary-equipment','grant-combat-item','over-time','leap'].includes(e.kind));
     if(e.kind==='over-time'){check(['heal','mana'].includes(e.resource));integer(e.pulses,1);integer(e.periodTicks,1);check(e.pulses*e.periodTicks<=1200);}
     if(e.kind==='grant-mana'&&e.maxManaBps!==undefined)integer(e.maxManaBps,1);
-    if(e.kind==='apply-status')validateStatusApplication(e.status);
+    if(e.kind==='apply-status'){validateStatusApplication(e.status);check(e.anyDamage===undefined||e.anyDamage===true);}
     if(e.kind==='modify-stat') { modifier(e.modifier); if(e.duration.kind==='ticks')integer(e.duration.ticks,1); }
     if('amount' in e) {
       if(typeof e.amount==='number')integer(e.amount);
@@ -60,7 +66,7 @@ export function validateItemProgram(program: ItemProgram): void {
   (program.modifiers ?? []).forEach(modifier);(program.effects ?? []).forEach(effect);
   for(const d of [...program.triggers ?? [],...program.survival ?? []]) {
     check(d.id && !('source' in d) && d.effects.length<32);
-    if(d.gate.kind==='consume-counter'){const id=d.gate.counterId;check(d.counters.some(c=>c.id===id&&c.cap!==null));} integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
+    if(d.gate.kind==='consume-counter'){const id=d.gate.counterId;check(d.counters.some(c=>c.id===id&&c.cap!==null));} check(d.actionLimitScope===undefined||d.actionLimitScope==='target'&&d.event==='kill-or-assist');integer(d.internalCooldownTicks);integer(d.maxPerAction,1);if(d.maxPerCombat!==null)integer(d.maxPerCombat,1); d.effects.forEach(effect);
   }
   for(const p of program.periodic ?? []){integer(p.periodTicks,1);if(p.endsAtTick!==undefined)integer(p.endsAtTick,1);check(p.program.effects.length<32);p.program.effects.forEach(effect);}
   for(const v of program.vamp ?? []){modifier(v.modifier);integer(v.allyBps);if(v.damageTypes)check(v.damageTypes.length>0&&v.damageTypes.every(t=>['physical','magic','true'].includes(t)));}

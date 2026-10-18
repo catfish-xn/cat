@@ -1,0 +1,97 @@
+[
+  {
+    "file": "tests/bracer-multikill-stacks.test.ts",
+    "exit": 0,
+    "wallSeconds": 10.606,
+    "numTotalTests": 25,
+    "numPassedTests": 25,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/explorer-bracer-restore.test.ts",
+    "exit": 0,
+    "wallSeconds": 3.751,
+    "numTotalTests": 24,
+    "numPassedTests": 24,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/explorer-bracer-restore-pressure.test.ts",
+    "exit": 0,
+    "wallSeconds": 2.139,
+    "numTotalTests": 2,
+    "numPassedTests": 2,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-audit-vectors.test.ts",
+    "exit": 0,
+    "wallSeconds": 24.257,
+    "numTotalTests": 14,
+    "numPassedTests": 14,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-catalog.test.ts",
+    "exit": 0,
+    "wallSeconds": 0.837,
+    "numTotalTests": 5,
+    "numPassedTests": 5,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-cleanup.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.794,
+    "numTotalTests": 5,
+    "numPassedTests": 5,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-known-limitations.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.416,
+    "numTotalTests": 2,
+    "numPassedTests": 2,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-match-wiring.test.ts",
+    "exit": 0,
+    "wallSeconds": 20.301,
+    "numTotalTests": 30,
+    "numPassedTests": 30,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-mechanisms.test.ts",
+    "exit": 0,
+    "wallSeconds": 1.513,
+    "numTotalTests": 21,
+    "numPassedTests": 21,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "file": "tests/m8-b7-serialization-reuse.test.ts",
+    "exit": 0,
+    "wallSeconds": 2.22,
+    "numTotalTests": 6,
+    "numPassedTests": 6,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  {
+    "command": "npm run typecheck",
+    "exit": 0,
+    "wallSeconds": 10.56
+  }
+]

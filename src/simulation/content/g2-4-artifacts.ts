@@ -51,7 +51,7 @@ const PROGRAMS:Partial<Record<ArtifactId,{readonly program?:ItemProgram;readonly
   program:{modifiers:[modifier('range',1,'hexes')],triggers:[trigger({id:'kill-range',event:'kill-or-assist',condition:killingBlow('holder'),effects:[grow(modifier('range',1,'hexes'))]})]},
   text:'攻击距离+1；携带者每亲手击杀一名敌人，再+1，持续到战斗结束。'},
  TFT_Item_Artifact_SeekersArmguard:(()=>{const v=values('TFT_Item_Artifact_SeekersArmguard'),gain=(n:number)=>(['armor','magicResist','abilityPower'] as const).map(s=>grow(modifier(s,n)));return {
-  program:{triggers:[trigger({id:'assist',event:'kill-or-assist',condition:killingBlow('other'),effects:gain(v.StatsPerTakedown)}),trigger({id:'kill',event:'kill-or-assist',condition:killingBlow('holder'),effects:gain(v.StatsPerKill)})]},
+  program:{triggers:[trigger({id:'assist',event:'kill-or-assist',actionLimitScope:'target',condition:killingBlow('other'),effects:gain(v.StatsPerTakedown)}),trigger({id:'kill',event:'kill-or-assist',actionLimitScope:'target',condition:killingBlow('holder'),effects:gain(v.StatsPerKill)})]},
   text:`参与击杀后护甲、魔抗、法强各+${v.StatsPerTakedown}；亲手击杀则改为+${v.StatsPerKill}。持续到战斗结束。`};})(),
  TFT_Item_Artifact_SilvermereDawn:(()=>{const v=values('TFT_Item_Artifact_SilvermereDawn');return {
   // Combat-long immunity uses the same 1201-tick bound as Deep Roots.

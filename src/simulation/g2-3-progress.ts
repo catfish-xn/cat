@@ -47,6 +47,12 @@ export function rollG23BlackMarket(tier:number,rngState:number){
   const draw=nextRandom(rngState),option=market.options[g23WeightedIndex(draw.word,market.options.map(o=>o.weightBps))];
   return {rngState:draw.state,table:market.table,...option};
 }
+/** One lcg32 draw per Tactician's Crown on a won battle; returns the gold dropped (source PercentGoldChance). */
+export function rollG23CrownGold(crowns:number,rngState:number){
+  integer(crowns,1);const {chanceBps,gold}=G23_POLICY.crownGold;let state=rngState,dropped=0;
+  for(let i=0;i<crowns;i++){const draw=nextRandom(state);state=draw.state;if(g23WeightedIndex(draw.word,[chanceBps,10000-chanceBps])===0)dropped+=gold;}
+  return {rngState:state,draws:crowns,gold:dropped};
+}
 /** Triple's conditional second draw is consumed only when the first draw rolls Triple. */
 export type G23HighRollerMod='rocket'|'shield'|'coin'|'blue-flamethrower'|'knockout-punch'|'quadruple-chomp'|'jackpot';
 export function rollG23HighRoller(draw:()=>number):{readonly mod:G23HighRollerMod;readonly enhanced:boolean}{

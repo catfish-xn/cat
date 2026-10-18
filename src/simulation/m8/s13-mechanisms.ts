@@ -18,6 +18,7 @@ import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder
 import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples, survivalConsumptionKeys, remainingSurvivalKeys } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
+import { grantCombatItem } from './combat-item-grants';
 export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
   const tick = environment.tick ?? holder.mechanismState?.sampledAtTick ?? 0;
   const ids = selectTargets(selector, targetingEnvironment(environment.board ?? DEFAULT_BOARD, units, holder, tick,
@@ -189,6 +190,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       ctx.events.push(...endedStatusEvents(ctx.tick, target.id, result.ended, 'cleansed'));
       clearMechanismTarget(ctx, target, seq); break;
     }
+    case 'grant-combat-item': grantCombatItem(ctx, source, target, seq); break;
     default: throw new RangeError(`Effect ${effect.kind} belongs to a later B3 batch`);
   }
 }

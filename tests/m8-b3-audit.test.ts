@@ -88,26 +88,30 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     layer.remaining = layer.m8State.remaining = 0;
     layer.absorbed = layer.m8State.absorbed = 400;
     layer.endedReason = 'depleted'; holder.shield = 0; holder.shieldExpiresAtTick = null;
-    expect(() => restoreMatch(pending)).not.toThrow();
-    expect(packets(stepMatch(restoreMatch(pending)).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
+    // The replayed combat still holds this shield at 400, so every hand-depleted
+    // variant below is rejected at the save entry by the shield comparison. The
+    // shield rules alone (second R2 case) accept pending and consumed zero layers;
+    // stepping the raw states keeps their end-task behaviour pinned.
+    expect(() => restoreMatch(pending)).toThrow(/shield binding facts/);
+    expect(packets(stepMatch(pending).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
     const consumed = structuredClone(pending), consumedHolder = consumed.combat.units.find((u: any) => u.id === holder.id);
     consumedHolder.shieldLayers.find((l: any) => l.key === layer.key).m8State.endRewardConsumed = true;
     consumedHolder.tasks = consumedHolder.tasks.filter((t: any) => t.shieldEndKey !== layer.key);
-    expect(() => restoreMatch(consumed)).not.toThrow();
-    expect(packets(stepMatch(restoreMatch(consumed)).events).filter(e => e.source.ownerId === holder.id)).toEqual([]);
+    expect(() => restoreMatch(consumed)).toThrow(/shield binding facts/);
+    expect(packets(stepMatch(consumed).events).filter(e => e.source.ownerId === holder.id)).toEqual([]);
     const missingTask = structuredClone(pending); missingTask.combat.units.find((u: any) => u.id === holder.id).tasks = [];
-    expect(() => restoreMatch(missingTask)).toThrow(/shield/i);
+    expect(() => restoreMatch(missingTask)).toThrow(/missing\/foreign shield end task/);
     const consumedWithTask = structuredClone(pending); consumedWithTask.combat.units.find((u: any) => u.id === holder.id).shieldLayers[0].m8State.endRewardConsumed = true;
-    expect(() => restoreMatch(consumedWithTask)).toThrow(/shield/i);
+    expect(() => restoreMatch(consumedWithTask)).toThrow(/consumed shield has pending end task/);
     const noReason = structuredClone(pending); delete noReason.combat.units.find((u: any) => u.id === holder.id).shieldLayers[0].endedReason;
-    expect(() => restoreMatch(noReason)).toThrow(/shield/i);
+    expect(() => restoreMatch(noReason)).toThrow(/missing shield end reason/);
     // An initial zero grant has nothing to absorb, but still owns its one pending end task.
     const zeroGrant = structuredClone(noReason), zeroHolder = zeroGrant.combat.units.find((u: any) => u.id === holder.id);
     const zeroLayer = zeroHolder.shieldLayers.find((l: any) => l.key === layer.key);
     zeroLayer.granted = zeroLayer.absorbed = zeroLayer.m8State.granted = zeroLayer.m8State.absorbed = zeroLayer.m8Grant.amount.flat = 0;
     zeroLayer.m8State.decay.basisGranted = 0;
-    expect(() => restoreMatch(zeroGrant)).not.toThrow();
-    expect(packets(stepMatch(restoreMatch(zeroGrant)).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
+    expect(() => restoreMatch(zeroGrant)).toThrow(/shield binding facts/);
+    expect(packets(stepMatch(zeroGrant).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
   });
   it('R2 shield conservation allows active, zero pending and consumed zero but rejects consumed positive', () => {
     const grant: Extract<Effect, { kind: 'grant-shield' }> = { kind: 'grant-shield', amount: amount(400), durationTicks: 60, decay: { kind: 'none' }, onEnd: [], endTiming: 'post-damage', endTargeting: { kind: 'fixed', targetIds: ['u1'], ifMissing: 'skip' }, endEffects: [] };

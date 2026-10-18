@@ -29,15 +29,17 @@ describe('restoreMatch text fast path is exact', () => {
     }
     expect(rejected).toBeGreaterThan(2000); expect(rejected).toBeLessThan(18000);
   });
-  it.each(['cannon', 'sniper'] as const)('recorded %s states: restore from text equals restore from the parsed object', build => {
+  it.each(['cannon', 'sniper'] as const)('recorded %s states: fixture matches the current content baseline', build => {
     expect(byBuild[build].every(raw=>{const state=raw as {contentDigest:string;rulesVersion:string};return state.contentDigest===baseline.contentDigest&&state.rulesVersion===baseline.rulesVersion;})).toBe(true);
     expect(states.length).toBeGreaterThan(100);
     expect(byBuild[build]).toHaveLength(67); // 33 public-route combats, before/after plus final, re-recorded at G2-1.
-    for (const state of byBuild[build]) {
-      const source = JSON.stringify(state);
-      expect(() => assertParsedContent(JSON.parse(source))).not.toThrow();
-      expect(restoreMatch(source)).toEqual(restoreMatch(JSON.parse(source)));
-    }
+  });
+  // One case per state: each settled combat is independently replayed on restore.
+  it.each((['cannon', 'sniper'] as const).flatMap(build => byBuild[build].map((state, index) => ({ build, index, state }))))
+  ('recorded $build state $index: restore from text equals restore from the parsed object', ({ state }) => {
+    const source = JSON.stringify(state);
+    expect(() => assertParsedContent(JSON.parse(source))).not.toThrow();
+    expect(restoreMatch(source)).toEqual(restoreMatch(JSON.parse(source)));
   });
   it('recorded states with a non-finite number injected anywhere: both paths reject identically', () => {
     const rand = lcg(7);

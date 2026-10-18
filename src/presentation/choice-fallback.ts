@@ -12,6 +12,7 @@ import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { catalogEntry, itemDescriptions } from './item-codex';
 import { itemDisplayName } from './g23-display';
 import { G23_LOOT } from './s13-g23-manifest';
+import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
 
 export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number }
 export interface GenericChoiceExtras {
@@ -29,11 +30,18 @@ const text = (value: unknown): string | undefined => (typeof value === 'string' 
 const int = (value: unknown): number | undefined => (Number.isInteger(value) ? value as number : undefined);
 
 /**
- * Anvil names by the item kind every offer shares; mixed or unknown kinds keep the plain client name.
- * 成装锻造器 / 神器锻造器 are the 14.24 zh_cn names; 14.24 has no support anvil, so 辅助装锻造器 is a project convention.
+ * Anvil names. The rules' forge pools decide the heading (artifacts are `kind: 'completed'` in the catalogue, so the kind
+ * alone cannot tell them from ordinary completed items); otherwise the item kind every offer shares; mixed or unknown
+ * offers keep the plain client name. 成装锻造器 / 神器锻造器 follow the user-set names; 14.24 lists TFT_ArmoryKeySupport
+ * (辅助装锻造器), whose project acquisition is still pending.
  */
+const FORGE_POOL_NAMES: readonly (readonly [readonly string[], string])[] = [
+  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'],
+];
 const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器锻造器', support: '辅助装锻造器' };
 function forgeName(offers: readonly unknown[]): string {
+  const pooled = FORGE_POOL_NAMES.find(([pool]) => offers.length > 0 && offers.every(id => typeof id === 'string' && pool.includes(id)));
+  if (pooled) return pooled[1];
   const kinds = new Set(offers.map(id => (typeof id === 'string' ? catalogEntry(id)?.kind : undefined)));
   const [kind] = kinds;
   return kinds.size === 1 && typeof kind === 'string' && Object.hasOwn(FORGE_NAMES, kind) ? FORGE_NAMES[kind] : '锻造器';
@@ -85,7 +93,7 @@ const junkerName = (id: string): string | undefined => {
   const api = Object.hasOwn(JUNKER_API, id) ? JUNKER_API[id] : undefined;
   return api ? G23_LOOT.find(row => row.apiName === api)?.zh ?? undefined : undefined;
 };
-type Named = { readonly name?: string; readonly description?: string };
+type Named = { readonly name?: string; readonly description?: string; readonly effectDescriptions?: readonly string[] };
 /** Name and verbatim description of one offer id: the declared display entry, else any content definition, else the id. */
 export function genericOffer(id: string, extras: GenericChoiceExtras): GenericChoiceOffer {
   const declared = extras.offers?.find(offer => offer.id === id);
@@ -97,6 +105,8 @@ export function genericOffer(id: string, extras: GenericChoiceExtras): GenericCh
   const definition = tables.map(table => (Object.hasOwn(table, id) ? table[id] : undefined)).find(Boolean);
   // Items use the 14.24 zh_cn name, like every other item surface; other content keeps its definition name.
   const name = Object.hasOwn(ITEM_DEFINITIONS, id) ? itemDisplayName(id) : definition?.name ?? catalogEntry(id)?.name ?? id;
-  // Items carry their catalogue effect lines (the same text as the supply popup), so offers can be compared.
-  return { id, name, description: definition?.description || itemDescriptions(id).join('；'), ...price };
+  // Items carry their catalogue effect lines (the same text as the supply popup), so offers can be compared; items outside
+  // the base catalogue (artifacts) show their own registry effect lines.
+  const lines = itemDescriptions(id).length ? itemDescriptions(id) : definition?.effectDescriptions ?? [];
+  return { id, name, description: definition?.description || lines.join('；'), ...price };
 }

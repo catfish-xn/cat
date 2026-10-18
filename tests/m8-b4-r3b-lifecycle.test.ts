@@ -9,9 +9,9 @@ const holder = (s: MatchState) => s.combat!.units.find(u => u.id === 'unit-1')!;
 const receipts = (s: MatchState) => holder(s).mechanismState!.runtimes.filter(r => r.source.definitionId === 'bloodthirster');
 function triggerFirst(s: MatchState): MatchState {
   if (s.phase !== 'combat') throw Error('combat fixture');
-  // Controlled valid HP fixture; only real incoming damage can consume the source.
-  s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.id === 'unit-1' ? { ...u, hp: 280, cooldownTicks: 1000, mana: 0 } : u) } };
-  for (let i = 0; i < 100 && s.phase === 'combat' && !holder(s).shield; i++) s = stepMatch(s).state;
+  // Restore replays the authenticated opening, so only real incoming damage of
+  // the unchanged combat may consume the source.
+  for (let i = 0; i < 200 && s.phase === 'combat' && !holder(s).shield; i++) s = stepMatch(s).state;
   // Bloodthirster gives 25% max HP per independent instance; later public
   // acquisition may include Bulky Buddies, so use the actual frozen max HP.
   expect(holder(s).shield).toBe(Math.floor(holder(s).maxHp / 4) * receipts(s).length);
@@ -22,10 +22,10 @@ function triggerFirst(s: MatchState): MatchState {
 function expireNaturally(s: MatchState): MatchState {
   if (s.phase !== 'combat') throw Error('combat fixture');
   const expiry = Math.max(...holder(s).shieldLayers!.map(l => l.expiresAtTick));
-  // Pause further attacks/casts, then let the production shield maintenance end it.
-  s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => ({ ...u, cooldownTicks: 1000, mana: 0 })) } };
-  while (s.phase === 'combat' && s.combat.tick < expiry) s = stepMatch(s).state;
-  expect(s.phase).toBe('combat'); expect(s.combat!.tick).toBe(expiry);
+  // Let the unchanged combat and production shield maintenance end every layer
+  // (absorbed or expired); restore replays this exact combat.
+  while (s.phase === 'combat' && s.combat.tick < expiry && holder(s).shieldLayers!.length) s = stepMatch(s).state;
+  expect(s.phase).toBe('combat'); expect(s.combat!.tick).toBeLessThanOrEqual(expiry); expect(holder(s).alive).toBe(true);
   expect(holder(s).shieldLayers).toEqual([]); expect(holder(s).shield).toBe(0);
   expect(receipts(s).every(r => r.consumed)).toBe(true);
   expect(restoreMatch(serializeMatch(s))).toEqual(s);
@@ -66,13 +66,18 @@ describe('B4 R3b: compiled consumption partition survives the complete shield li
     let s = expireNaturally(triggerFirst(itemMatch('bloodthirster')));
     rejectMutation(s, u => { (u.mechanismState as any).runtimes = []; }, /incomplete survival consumption/);
     if (s.phase !== 'combat') throw Error('combat fixture');
-    // Resume real enemy attacks; witness positive damage below the threshold.
-    s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.team === 'enemy' ? { ...u, cooldownTicks: 0 } : u) } };
-    const resumed = stepMatch(s);
-    expect(packets(resumed.events).some(e => e.unitId === 'unit-1' && e.hpDamage > 0)).toBe(true);
-    expect(holder(resumed.state).shield).toBe(0);
-    expect(shieldEvents(resumed.events).filter(e => e.unitId === 'unit-1' && e.reason === 'granted')).toEqual([]);
-    expect(stepMatch(restoreMatch(serializeMatch(s)))).toEqual(resumed);
+    // Keep fighting until real enemy damage lands below the threshold; every
+    // step after restore is identical and never grants another shield.
+    let hit = false;
+    for (let i = 0; i < 200 && !hit && s.phase === 'combat'; i++) {
+      const resumed = stepMatch(s);
+      expect(stepMatch(restoreMatch(serializeMatch(s)))).toEqual(resumed);
+      expect(shieldEvents(resumed.events).filter(e => e.unitId === 'unit-1' && e.reason === 'granted')).toEqual([]);
+      hit = packets(resumed.events).some(e => e.unitId === 'unit-1' && e.hpDamage > 0);
+      if (hit) expect(holder(resumed.state).shield).toBe(0);
+      s = resumed.state;
+    }
+    expect(hit).toBe(true);
   });
 
   it('two equipment instances consume independently; one receipt cannot replace the other after both shields end', () => {
