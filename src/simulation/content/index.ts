@@ -1,3 +1,4 @@
+import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
 import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
 import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
 import {G23_TRAIT_SOURCE} from './g2-3-trait-source';
@@ -145,6 +146,7 @@ import { G24_SUPPORT_DECLARATIONS } from './g2-4-support-items';
 import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
 import { G24_CHEST_POOL } from './g2-4-chest-pool';
 export const CONTENT_DIGEST = digestContent({
+  g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
   rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
   g24:{artifactSource:G24_ARTIFACT_SOURCE,supportDeclarations:G24_SUPPORT_DECLARATIONS,supportItemSource:G24_SUPPORT_ITEM_SOURCE,chestPool:G24_CHEST_POOL},
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},

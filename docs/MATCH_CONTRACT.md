@@ -515,3 +515,35 @@ Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及�
 - 新声明词汇：效果 `grant-combat-item`（`policyId: 'G24-CHEST-01'`, `lifetime: 'combat'`），选择器排序 `hp-ratio-desc-id`（生命比从高到低，并列按 id）和选择器开关 `excludeSummons: true`（不选召唤物和建筑），法力请求原因 `item-granted`。
 - 恢复：先核对获得记录（形状、池内装备、tick、持有者已阵亡且宝箱触发过、同一宝箱序号 0…n−1 且受益者不重复、不超过 4 件、不发给召唤物），再按记录重新编译受益者的机制并照常逐项核对；任何损坏统一拒绝为 `Invalid Match save`。
 - 界面与服务器暂不消费此事件；装备图标另做。
+
+### G2-4b WIP item-gold settlement bridge
+
+`G23BattleFacts.itemGoldPayouts?` contains validated positive item receipts with
+`{receiptId, source:'g24-item-gold', amount:1}`. Identity encodes battle, combat
+owner, item instance, trigger kind and ordinal. `advanceG23Economy` accounts for
+these payouts; `commitG23Settlement` grants each through the generic mechanic
+receipt exactly once. `validateG23MechanicLinks` checks both directions between
+facts and grant receipts. Trigger authenticity/RNG reconstruction belongs to
+the combat adapter, still WIP; arbitrary input facts are not an authority.
+
+Gambler adds optional `CombatStrategyInputs.bankGold` and private
+`PlayerBattleSnapshot.bankGold` only when its item is present. The former is
+validated against the current balance or current settlement's goldBefore;
+the latter is captured from the owning seat by snapshotForBattle.
+`StrategyUnitSnapshot.openingItemBankGold` is capped30; combat's current bank
+adds own-side earned receipts up to that cap. No combat payout is spendable
+until the existing settlement transaction commits it.
+
+### G2-4b WIP — movable portal summon
+
+`readItemSummons(state:MatchState):ItemSummonOrigin[]` derives owner-visible
+preparation summons from equipped portals. `moveItemSummon(state,itemInstanceId,
+cell:HexCell):MatchCommandResult` persists a portal's desired cell in the seat
+mechanic `g24ItemPositions`; it accepts only an unlocked live preparation,
+owned active summon and unoccupied friendly cell. Failures return unchanged
+state, no event/RNG: wrong-phase, unknown-unit, outside-deployment-zone, occupied.
+Success emits seatMechanicChanged. Ordinary hero movement into a projected cell
+makes the summon relocate on next projection; a full half omits it. No permanent
+unit or population is minted. Frozen solo inputs and two-sided snapshots capture
+positions; restore rejects invalid/future item identities or frozen/current
+position disagreement. UI/server command dispatch adapters are not implemented.

@@ -13,7 +13,7 @@ const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
 const t13Baseline = require('../tests/g2-augments-content-baseline.json');
-const currentBaseline = require('../tests/g2-3-content-baseline.json');
+const currentBaseline = require('../tests/g2-4b-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
@@ -21,7 +21,7 @@ const randomState = state => ({
   reward: state.rewardRngState, battleSeed: state.battleSeedRngState,
   equipment: state.equipmentState.equipment, reforge: state.reforgeState,
   layout: state.m8.loot.layoutBinding.mode === 'solo' ? state.m8.loot.layoutBinding.layout.rng : null, loot: state.m8.loot.frozen.rng,
-  combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws } : null,
+  combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws, items: state.combat.itemRandomStreams ?? null } : null,
 });
 
 function battle(api) {

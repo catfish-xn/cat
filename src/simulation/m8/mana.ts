@@ -3,7 +3,7 @@ import { integer, safeNumber } from './stats';
 const natural = (n: number) => { integer(n); if (n < 0) throw new RangeError('Negative mana value'); return n; };
 export function validateManaDefinition(value: { initialMana: number; maxMana: number; unitKind?: 'neutral' | 'champion'; abilityId?: string }): void {
   natural(value.initialMana); natural(value.maxMana);
-  if (value.initialMana > value.maxMana || value.maxMana === 0 && value.unitKind !== 'neutral' && value.abilityId !== 'amumu-ability') throw new RangeError('Invalid mana definition');
+  if (value.initialMana > value.maxMana || value.maxMana === 0 && value.unitKind !== 'neutral' && value.abilityId !== 'amumu-ability' && value.abilityId !== 'g24-voidspawn-ability') throw new RangeError('Invalid mana definition');
 }
 export function validateManaState(state: ManaState): void {
   natural(state.current); natural(state.maximum); natural(state.lockedUntilTick);

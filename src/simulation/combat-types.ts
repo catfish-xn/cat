@@ -36,6 +36,14 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly itemSummonOpeningMaxHp?:number;
+  readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
+  readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
+  readonly openingItemBankGold?:number;
+  readonly currentItemBankGold?:number;
+  readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin;
+  readonly deferredItemDamage?: readonly import('./g2-4b-item-kernel').DeferredItemDamage[];
+  readonly unreavedMaxMana?: number;
   /** G2-3 form swapper's form, frozen from its preparation row at combat start (seat-mechanics/forms.ts). */
   readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly g23?: G23State;
@@ -71,6 +79,9 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly trenchSplits?:readonly {readonly ownerId:string;readonly itemInstanceId:string;readonly tick:number;readonly maxHp:number;readonly permanentAdBps:number;readonly copyIds:readonly string[];readonly g23?:Pick<G23State,'conquestTakedowns'|'highRoller'>}[];
+  readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
+  readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
   readonly removedUnitIds?:readonly string[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];

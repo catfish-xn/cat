@@ -29,11 +29,11 @@ const sourceName = (kind: string, id: string) => {
 };
 
 export type FxSpec =
-  | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number }
-  | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean }
+  | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number; sourceId: string }
+  | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean; sourceId: string }
   | { kind: 'cast'; at: HexCell; targets: readonly HexCell[]; color: number; duration: number; label: string }
   | { kind: 'ring'; at: HexCell; color: number; radius: number; duration: number }
-  | { kind: 'death'; at: HexCell; duration: number }
+  | { kind: 'death'; at: HexCell; duration: number; unitId: string }
   | { kind: 'label'; at: HexCell; text: string; dy: number; color: string; background: string; duration: number }
   | { kind: 'flash'; unitId: string }
   | { kind: 'target'; unitId: string; team: 'player' | 'enemy' };
@@ -62,8 +62,8 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
       const source = unit(event.attackerId), target = unit(event.targetId);
       if (!source || !target) continue;
       const color = toNumber(source.team === 'player' ? C.ally : C.enemy);
-      if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200 });
-      else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced });
+      if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200, sourceId: source.id });
+      else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced, sourceId: source.id });
     } else if (event.type === 'cast') {
       const source = unit(event.sourceId);
       if (!source) continue;
@@ -90,7 +90,7 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
       if (!flashed.has(id)) { flashed.add(id); specs.push({ kind: 'flash', unitId: id }); }
     } else if (event.type === 'death') {
       const target = unit(event.unitId);
-      if (target) specs.push({ kind: 'death', at: target.cell, duration: 600 });
+      if (target) specs.push({ kind: 'death', at: target.cell, duration: 600, unitId: target.id });
     } else if (event.type === 'unitRevived') {
       // The unit returns in place (same id); its token reappears from the end-of-tick alive flag.
       const target = unit(event.unitId);

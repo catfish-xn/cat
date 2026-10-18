@@ -32,9 +32,10 @@ function recording(inner: BattleResolver = new TwoSidedBattleResolver()) {
 }
 
 describe('T10 room gate (contract §15.2)', () => {
-  it('passes exactly OPS and CHOICES per room phase', () => {
+  it('passes exactly OPS, CHOICES and the summon move per room phase', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
-      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES], choice: [...OPS, ...CHOICES], frozen: [],
+      // G2-4b (contract §26): the summon move passes only while seats prepare.
+      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...CHOICES, 'moveItemSummon'], frozen: [],
       battle: OPS, 'awaiting-settlement': OPS, settlement: OPS, ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());

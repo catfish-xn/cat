@@ -1,3 +1,4 @@
+import {itemGoldPayouts} from './g2-4b-item-gold';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from './content/g2-3-policy';
 import {grantMechanicGold} from './seat-mechanics';
 import {drainG23Rewards} from './g2-3-runtime';
@@ -15,9 +16,14 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  if(!combat.strategy)throw new RangeError('Missing G23 opening strategy');
  const owners=new Set(openingUnits.filter(u=>u.team===team).map(u=>u.id));
  const crowns=combat.strategy.units.reduce((n,u)=>n+(owners.has(u.unitId)?(u.itemPrograms??[]).filter(p=>p.source.ownerId===u.unitId&&p.source.sourceKind==='item'&&p.source.definitionId===TACTICIANS_CROWN_ID).length:0),0);
- return {battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
- conquestTakedowns:[...new Set(allies.flatMap(u=>u.g23?.conquestTakedowns??[]))].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive).length,
- rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),highRollerGold:allies.reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0),...(crowns?{crowns}:{})};
+ const allyIds=new Set(allies.map(u=>u.id));
+ const splits=(combat.trenchSplits??[]).filter(split=>split.copyIds.some(id=>allyIds.has(id)));
+ for(const split of splits)allyIds.add(split.ownerId);
+ const itemPayouts=combat.itemGoldReceipts&&combat.itemRandomStreams?itemGoldPayouts({receipts:combat.itemGoldReceipts,streams:combat.itemRandomStreams},allyIds):[];
+ return {...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
+ conquestTakedowns:[...new Set([...allies.flatMap(u=>u.g23?.conquestTakedowns??[]),...splits.flatMap(s=>s.g23?.conquestTakedowns??[])])].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
+ rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),...(crowns?{crowns}:{}),highRollerGold:[...allies.map(u=>u.g23),...splits.map(s=>s.g23)].reduce((n,g)=>n+(g?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
+
 }
 export function g23SoloFacts(state:MatchState,combat:CombatState):G23BattleFacts{
  const basis=state.combatInputBasis;if(!basis)throw new RangeError('Missing G23 opening input');
@@ -45,6 +51,7 @@ export function g23RadiantRound(state:MatchState):number|undefined{
 
 export function g23BattlePayouts(facts:G23BattleFacts,opened:number,before:number,crownGold=0){
  const payouts:{receiptId:string;source:string;amount:number}[]=[];
+ payouts.push(...facts.itemGoldPayouts??[]);
  if(facts.highRollerGold)payouts.push({receiptId:`g23:high-roller:${facts.battleId}`,source:'high-roller',amount:facts.highRollerGold});
  for(const chest of G23_CONQUEROR_CHESTS.slice(before,opened)){
   const amount=Number(g23ConquerorReward(chest).Gold??0);if(amount)payouts.push({receiptId:`g23:conqueror:${chest.tier}:gold`,source:'conqueror-chest',amount});

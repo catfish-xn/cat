@@ -88,3 +88,20 @@ export function installImageFallback(root: Document = document): () => void {
   root.addEventListener('error', onError, true);
   return () => root.removeEventListener('error', onError, true);
 }
+
+export const itemTextureKey = (id: string) => `s13-item-${id}`;
+/** Item icons for the board pieces, loaded on first use; callbacks queued per scene until the file arrives. */
+const itemRequests = new WeakMap<Phaser.Scene, Map<string, (() => void)[]>>();
+export function requestItemTexture(scene: Phaser.Scene, id: string, ready: () => void): void {
+  const key = itemTextureKey(id), url = s13AssetUrl('item', id);
+  if (scene.textures.exists(key)) { ready(); return; }
+  if (!url) return;
+  let pending = itemRequests.get(scene);
+  if (!pending) { pending = new Map(); itemRequests.set(scene, pending); }
+  const waiting = pending.get(key);
+  if (waiting) { waiting.push(ready); return; }
+  pending.set(key, [ready]);
+  scene.load.image(key, url);
+  scene.load.once(`filecomplete-image-${key}`, () => { const callbacks = pending.get(key) ?? []; pending.delete(key); if (scene.sys.isActive()) for (const callback of callbacks) callback(); });
+  if (!scene.load.isLoading()) scene.load.start();
+}

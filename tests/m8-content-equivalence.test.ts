@@ -1,6 +1,6 @@
 /** restoreMatch's text fast path is exact: on JSON.parse output, assertParsedContent accepts and rejects exactly what
  * canonicalContent does, and restoreMatch(text) equals restoreMatch(JSON.parse(text)) on recorded and corrupted states. */
-import baseline from './g2-3-content-baseline.json';
+import baseline from './g2-4b-content-baseline.json';
 import { describe, expect, it } from 'vitest';
 import { goldenStates } from './fixtures/m8-golden-states.cjs';
 import { assertParsedContent, canonicalContent } from '../src/simulation/content';

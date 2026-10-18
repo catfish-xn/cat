@@ -17,7 +17,7 @@ import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
-  refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
+  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
@@ -83,8 +83,8 @@ export interface RoomOptions extends RoomTimings {
 }
 /** MULTIPLAYER_CONTRACT §21.1: the departure after the carousel's deadline before the round goes on. */
 export const CAROUSEL_DEPARTURE_MS = 2_000;
-/** Ticks per step of a time-budgeted slice (`sliceMs`): small enough that one step stays a few milliseconds. */
-export const SLICE_STEP_TICKS = 10;
+/** Ticks per step of a time-budgeted slice (`sliceMs`): one, since a late-round tick alone can take several milliseconds. */
+export const SLICE_STEP_TICKS = 1;
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
@@ -110,8 +110,10 @@ interface Resolution {
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
 const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll'];
+/** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
+const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
-  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...CHOICES]), choice: new Set([...OPS, ...CHOICES]),
+  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
   frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
 };
@@ -132,6 +134,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
+    case 'moveItemSummon': return plain(moveItemSummon(state, command.itemInstanceId, command.cell));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     // P7-1: a unit in the carousel holding slot (`carousel.heldCarouselUnits`) is sold through the rules' own entry.
     case 'sell': return heldCarouselUnits(state).some(unit => unit.unitId === command.unitId)

@@ -510,3 +510,45 @@
 3. 异变候选57项不能对外声称完整正式服池；Hivemind等PBE线索先排除，Cosmic禁用，Miniaturize/Essence按社区停用证据保守排除。
 
 机器可读对应文件：[external-sources.json](external-sources.json)。JSON中的`value:null`表示目标问题未查到；`proposed_value`为独立未批准约定，不是已证实数值。
+
+## G2-4b mechanism follow-up (2026-10-17, incomplete research)
+
+- Pinned local 14.24 `en_us.json.gz`, `map22.bin.json.gz`, and
+  `zh_cn.tft.stringtable.json.gz`: all eleven identities and values cross-checked.
+- Additional character archive attempted:
+  `https://raw.communitydragon.org/14.24/game/characters/tft_voidspawn.cdtb.bin.json`;
+  proxy returned HTTP 403; no contents obtained or claimed as evidence.
+- Wiki pages attempted for TFT Zz'Rot Portal, Suspicious Trench Coat and Fishbones:
+  `https://wiki.leagueoflegends.com/en-us/TFT:Zz%27Rot_Portal`,
+  `https://wiki.leagueoflegends.com/en-us/TFT:Suspicious_Trench_Coat`,
+  `https://wiki.leagueoflegends.com/en-us/TFT:Fishbones`.
+  All rejected as restricted URLs. These attempted pages supplied no contents.
+
+### Official historical follow-up (read 2026-10-17)
+
+The following are historical patch evidence, not an assertion that every value
+remained unchanged through 14.24b. Missing intervening evidence is still a gap.
+
+- [Riot 13.18](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-18-notes/),
+  Support Items: Voidspawn HP at stages 2/3/4/5 became 1000/1300/1600/1900.
+  The same section establishes Shroud's 60 team HP. Its old holder HP and
+  Zephyr team AS are superseded by the pinned 14.24 archive; do not copy them.
+- [Riot 13.20](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-20-notes/),
+  Support Items: Voidspawn prefers a front-row spawn and taunt reach is adjusted
+  to the affected champion's attack range. Exact collision tie-breaking is absent.
+- [Riot 14.7](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-7-notes/),
+  Support Items: Voidspawn AS becomes 0.75 and both resistances 30, matching
+  the local 14.24 character fields. Stage AD becomes 80/80/120/180; it gains
+  two stars on stage 4, three on stage 5+, and base AD no longer scales with
+  stage. Bug Fixes also confirms Zephyr bypasses Quicksilver.
+- [Riot 14.9](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-9-notes/),
+  Artifacts/Support Items: release descriptions support Fishbones' random
+  attacks, Cutlass's temporary teleport, and Trench Coat interaction with
+  Unstable Treasure Chest. The last interaction suggests copied equipment but
+  does not establish an exhaustive inheritance rule. Release copy HP differs
+  from pinned 14.24; the archive remains numeric authority.
+
+Still unresolved: the complete Voidspawn HP/AD change chain through 14.24;
+stage 1 and post-stage-5 behavior where unspecified; clone inherited stat,
+equipment, anomaly and growth categories; detailed nonlethal bleeding order.
+No newly found historical table has been silently enabled in runtime.

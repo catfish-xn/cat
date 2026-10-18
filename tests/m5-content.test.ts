@@ -1,3 +1,6 @@
+import { G23_UNITS } from '../src/simulation/content/g2-3-units';
+import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
+import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
 import { G23_HERO_IDS } from './fixtures/g2-3-roster';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -41,7 +44,10 @@ describe('M5 frozen S13 slice',()=>{
     expect(M5_UNIT_DEFINITIONS.caitlyn.baseStats.attack).toBe(82);
   });
   it('retains the historically distinct skills and all their three-star coefficient slots',()=>{
-    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(66);
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS};
+    const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
+    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
+    for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
     expect(S13_ABILITY_DATA['tristana-ability'].variables.PercentAttackDamage).toEqual([5.25,5.25,5.25]);
     expect(S13_ABILITY_DATA['tristana-ability'].variables.ASKillGain).toEqual([1.25,1.25,1.25]);
     expect(S13_ABILITY_DATA['corki-ability'].variables.BaseMissiles).toEqual([21,21,35]);

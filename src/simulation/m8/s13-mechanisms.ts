@@ -1,3 +1,4 @@
+import {scaleItemSummonHp} from '../g2-4b-summons';
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
 import { canonicalContent } from '../content';
 import { emitMechanismSignal } from './s13-triggers';
@@ -173,7 +174,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
     case 'change-max-hp': {
       const basis = target.maxHpBasis ?? { base: target.maxHp, flat: 0, bps: 0, bonusBps: 0 };
       const updated = { ...basis, bonusBps: basis.bonusBps + effect.bonusBps };
-      const max = resolveStat('maxHp', updated.base, [constantModifier('maxHp', updated.flat), constantModifier('maxHp', updated.bps + updated.bonusBps, 'bps')], { holder: hpSample(target) });
+      const max = scaleItemSummonHp(target,resolveStat('maxHp', updated.base, [constantModifier('maxHp', updated.flat), constantModifier('maxHp', updated.bps + updated.bonusBps, 'bps')], { holder: hpSample(target) }));
       const result = changeMaxHp(target.maxHp, target.hp, max); target.maxHp = max; target.hp = result.afterHp; target.maxHpBasis = updated;
       ctx.events.push({ type: 'maxHpChanged', tick: ctx.tick, unitId: target.id, source, ...result }); break;
     }

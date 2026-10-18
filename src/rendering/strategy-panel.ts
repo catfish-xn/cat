@@ -149,11 +149,19 @@ export class StrategyPanel {
   private codex: HTMLElement | null = null;
   /** Enemy-preview open state chosen by the player for the current round only. */
   private previewOpen: { round: number; open: boolean } | null = null;
+  /** Docked (online): the per-unit equipment slots fold away; this keeps the player's own open/closed choice. */
+  private equipOpen = false;
+  private statsOpen = false;
 
-  /** @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel. */
-  constructor(private readonly actions: PanelActions, private readonly router: InputRouter, private readonly shopDock: HTMLElement | null = null) {
+  /**
+   * @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel.
+   * @param itemDock Optional mount for the item bench at the board's lower left (online); null keeps it in the items tab.
+   */
+  constructor(private readonly actions: PanelActions, private readonly router: InputRouter, private readonly shopDock: HTMLElement | null = null,
+    private readonly itemDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     if (this.shopDock) this.shopDock.classList.add('shop-dock');
+    if (this.itemDock) { this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
@@ -282,7 +290,7 @@ export class StrategyPanel {
     }
   }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
@@ -393,7 +401,7 @@ export class StrategyPanel {
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
     const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
-    this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
+    this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
@@ -459,7 +467,8 @@ export class StrategyPanel {
     this.root.append(secondary);
     this.actions.highlight([]);
     const preview = encounterPreviewSection(state, {
-      open: this.previewOpen?.round === state.round ? this.previewOpen.open : null,
+      // Docked (online) the stat cards start folded; the summary line still names the round's enemies.
+      open: this.previewOpen?.round === state.round ? this.previewOpen.open : this.itemDock ? false : null,
       onToggle: open => { this.previewOpen = { round: state.round, open }; },
       onHover: ids => this.actions.highlight(ids),
     });
@@ -486,9 +495,17 @@ export class StrategyPanel {
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
     }
     this.root.append(tabs);
-    this.combatText = element('section', '', 'combat-sources'); this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
+    this.combatText = element('section', '', 'combat-sources');
+    if (this.itemDock) {
+      // Docked (online): the unit stat sheet folds away; the board's hover card already shows a piece's stats.
+      const fold = element('details', '', 'stats-details'); fold.open = this.statsOpen;
+      fold.append(element('summary', '单位属性'), this.combatText);
+      fold.addEventListener('toggle', () => { this.statsOpen = fold.open; });
+      this.root.append(fold);
+    } else this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
     if (this.tab === 'traits') this.renderTraits(state);
-    if (this.tab === 'items') this.renderItems(state, this.itemsOpen());
+    // Docked, the item bench stays on the board whichever tab is open.
+    if (this.tab === 'items' || this.itemDock) this.renderItems(state, this.itemsOpen(), this.tab === 'items');
     if (this.tab === 'units') this.renderUnits(state, ready);
     if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
@@ -568,8 +585,9 @@ export class StrategyPanel {
     this.root.append(list);
   }
   /** `open`: this seat can send commands at all; each combine/equip target's legality comes from the previews. */
-  private renderItems(state: MatchState, open: boolean): void {
-    const section = element('section', '', 'item-panel'); section.dataset.items = 'true'; section.append(element('h3', '物品备战席'));
+  private renderItems(state: MatchState, open: boolean, shown = true): void {
+    const dock = this.itemDock;
+    const section = element('section', '', 'item-panel'); section.dataset.items = 'true'; section.append(element('h3', dock ? '合成与装备' : '物品备战席'));
     const inventory = element('div', '', 'item-inventory');
     for (const item of state.items.filter(item => item.location.kind === 'inventory')) {
       const definition = ITEM_DEFINITIONS[item.definitionId];
@@ -588,13 +606,13 @@ export class StrategyPanel {
       button.addEventListener('keydown', event => { if (event.code === 'Enter' || event.code === 'Space') { event.preventDefault(); this.selectItem(item.id); } });
       inventory.append(button);
     }
-    section.append(inventory);
+    (dock ?? section).append(inventory);
     // C18-B: consumable tools (§18.4); a picked or dragged tool outlines the targets the answers allow (§18.8 01).
     const consumables = readConsumables(state);
     const tool = consumables.find(entry => entry.consumableId === this.selectedConsumable) ?? null;
     if (!tool) this.selectedConsumable = null;
     const usable = (target: ConsumableTarget) => tool !== null && previewConsumable(state, tool.consumableId, target).ok;
-    if (consumables.length) section.append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
+    if (consumables.length) (dock ?? section).append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
       card.disabled = !open;
       card.addEventListener('pointerdown', event => {
         if (!open || event.button !== 0) return;
@@ -619,7 +637,14 @@ export class StrategyPanel {
       if (this.router.current) { this.actions.status('请先结束当前拖拽，再确认合成'); return; }
       this.actions.combine(selected[0], selected[1]);
     }, !open || !combine?.allowed));
-    section.append(element('h3', '单位装备 · 每单位 3 槽'));
+    // Docked: the slot list folds into a details block (opened by the player, or while an item or tool is picked).
+    const equipment = dock ? element('details', '', 'equip-details') : section;
+    if (equipment instanceof HTMLDetailsElement) {
+      equipment.open = this.equipOpen || this.selectedItems.length > 0 || tool !== null;
+      equipment.append(element('summary', '单位装备 · 每单位 3 槽'));
+      equipment.addEventListener('toggle', () => { this.equipOpen = equipment.open; });
+      section.append(equipment);
+    } else section.append(element('h3', '单位装备 · 每单位 3 槽'));
     const chosen = open ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
     const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
@@ -674,10 +699,10 @@ export class StrategyPanel {
       if (loadoutText) { const line = element('p', loadoutText, 'equip-loadout'); line.dataset.debug = `equip-loadout:${unit.id}`; row.append(line); }
       if (previews) row.append(this.equipHint(previews, itemName));
       for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => itemDisplayName(id), itemName(temporary.parentItemInstanceId)), 'temporary-line'));
-      section.append(row);
+      equipment.append(row);
     }
-    section.append(this.codex ??= createItemCodex());
-    this.root.append(section);
+    equipment.append(this.codex ??= createItemCodex());
+    if (shown) this.root.append(section);
   }
   /** C18: a slot whose item is worn now but not in the battle on the board says so, with both loadouts on hover. */
   private markPending(button: HTMLButtonElement, loadout: BattleLoadout): void {
@@ -1055,7 +1080,7 @@ export class StrategyPanel {
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
-    for (const scope of [this.root, this.modal, ...(this.shopDock ? [this.shopDock] : [])]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
+    for (const scope of [this.root, this.modal, ...(this.shopDock ? [this.shopDock] : []), ...(this.itemDock ? [this.itemDock] : [])]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
       const rect = node.getBoundingClientRect(); if (!rect.width || !rect.height || node.closest('[hidden]')) continue;
       bounds[node.dataset.debug!] = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, centerX: rect.x + rect.width / 2, centerY: rect.y + rect.height / 2 };
     }

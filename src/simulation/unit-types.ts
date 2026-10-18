@@ -3,7 +3,7 @@ export type CostTier = 1 | 2 | 3 | 4 | 5;
 export type StarLevel = 1 | 2 | 3;
 export interface UnitDefinition {
   /** G2-3 summon/structure (e.g. Jayce's forge, Sion): sell refused 'unit-not-sellable' unless sellable; board slot free unless countsTowardPopulation. */
-  readonly summon?: { readonly sellable: boolean; readonly countsTowardPopulation: boolean };
+  readonly summon?: { readonly sellable: boolean; readonly countsTowardPopulation: boolean; readonly fixedStarStats?:true };
   /** G2-3 form swapper: current form comes from its deployment row (seat-mechanics/forms.ts), frozen at combat start. */
   readonly formSwap?: true;
   readonly unitKind?: 'champion' | 'neutral';

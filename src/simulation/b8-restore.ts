@@ -1,3 +1,4 @@
+import {readItemSummonPositions} from './g2-4b-voidspawn';
 import {validateG23GrantEvidence} from './g2-3-grant-evidence';
 import { selectOpeningUnit } from './opening-unit';
 import {validateG23Restoration} from './g2-3-restore';
@@ -268,7 +269,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{g23:readG23Progress(state),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -291,8 +292,11 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
     return {basis,saleGold:0};
   }
-  const deltas = combat.units.filter(unit => unit.team === 'player' && (unit.runtime?.permanentAdBps ?? 0) > 0)
-    .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps})).sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
+  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && (unit.runtime?.permanentAdBps ?? 0) > 0)
+    .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
+  for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&basis.inputs.preparation.units.some(u=>u.id===split.ownerId&&u.team==='player'))
+    deltas.push({sourceUnitId:split.ownerId,attackDamageBps:split.permanentAdBps});
+  deltas.sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
   check(commit && equal(commit.sourceDeltas,deltas), 'original combat growth deltas');
   return {basis,saleGold:replayCurrentSuffix(state,basis)};
 }
