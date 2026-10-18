@@ -29,7 +29,7 @@ Node v24.19.0 / npm11.9.0 / Vitest5.0.3。14文件全通过、1文件含失败�
 |tests/s13-p1-acquisition.test.ts|3 passed (3)|3.74s|
 |tests/s13-p1-avarice.test.ts|1 passed (1)|304ms|
 |tests/s13-p1-bound-identity.test.ts|2 passed (2)|243ms|
-|tests/s13-p1-dual-wielding.test.ts|1 failed | 1 passed (2)|7.91s|
+|tests/s13-p1-dual-wielding.test.ts|1 failed / 1 passed (2)|7.91s|
 |tests/s13-p1-income.test.ts|8 passed (8)|2.66s|
 |tests/s13-p1-multiplayer-income.test.ts|2 passed (2)|6.81s|
 |tests/t3-round-settlement.test.ts|10 passed (10)|4.90s|
@@ -52,3 +52,7 @@ Node v24.19.0 / npm11.9.0 / Vitest5.0.3。14文件全通过、1文件含失败�
 - 新共用 `traceBoundUnitIdentity` 只追踪已验证资源事实中的升星和出售，不代表猎头者或其他跨轮异常已完成。
 - UI旧直接利息查询尚需Claude改用已有previewRoundEconomy，已写UI_REQUESTS。forge与G23优先队列逻辑已接线，但本轮没有额外声称覆盖每个G23复合弹窗排列。
 - 本分支不可按整包签收：双刀5秒测试未通过、8项未实现；没有运行全套或远端CI，没有自行升版本。
+
+## 最终轨迹来源复核
+
+在证据提交 d070d5b6917c5bbae69c683f401a43d3776b1870（代码仍为2d13b31cc4e45c48f87759a460f5ec074bd430ef）执行 `node scripts/record-s13-p1-dual-choice.cjs` 默认check，退出0；seed23、4-6、原始序列化84,055字节，公开命令→导出→生产恢复验证16,227.648ms。该来源验证运行的是最终代码，不替代仍失败的5秒专项。日志见 logs/dual-source-final-check.txt。
