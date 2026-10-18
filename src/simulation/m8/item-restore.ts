@@ -138,7 +138,9 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
   }
  }
  // G2-4b: a grant after `at` was not yet in the basis; one on that very tick may or may not precede the sample.
- const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat,bps:basis.bps-all.bps}];
+ // Tick-zero shield declarations execute before P2. Its authenticated flat HP
+ // cannot be used retroactively; later samples include the completed opening.
+ const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat-(at===0?p2Bonus(unit,'health'):0),bps:basis.bps-all.bps}];
  for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
  const hits=unit.itemMogulHits??[],healthPerStack=unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0;
  const before=hits.filter(h=>h.tick<at).length,through=hits.filter(h=>h.tick<=at).length;

@@ -29,13 +29,19 @@ export function p2GiftPlan(state: Pick<MatchState,'seed'|'augments'|'multiplayer
 }
 export function drainP2Gifts(initial: MatchState, policy?: UnitLootPolicy): MatchState {
   let state=initial;
-  for(const gift of p2GiftPlan(state)){
-    if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
-    const request={...gift,source:SOURCE};
-    const result=gift.kind==='item'?grantMechanicItem(state,request):grantMechanicUnit(state,request,policy);
-    if(result.ok)state=result.state;
-    else if(result.reason!=='bench-full')throw new RangeError(`P2 grant: ${result.reason}`);
-  }
+  const gifts=p2GiftPlan(state);
+  // Each successful pass adds a receipt; later merges can unblock an earlier gift.
+  let progressed:boolean;
+  do {
+    progressed=false;
+    for(const gift of gifts){
+      if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
+      const request={...gift,source:SOURCE};
+      const result=gift.kind==='item'?grantMechanicItem(state,request):grantMechanicUnit(state,request,policy);
+      if(result.ok){state=result.state;progressed=true;}
+      else if(result.reason!=='bench-full')throw new RangeError(`P2 grant: ${result.reason}`);
+    }
+  } while(progressed);
   return state;
 }
 /** No candidate receipt selects its own reward, cost or acquisition authority. */

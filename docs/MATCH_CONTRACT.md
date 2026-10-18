@@ -570,3 +570,9 @@ position disagreement. UI/server command dispatch adapters are not implemented.
 规则内部导出 `p2GiftPlan(state: Pick<MatchState,'seed'|'augments'|'multiplayer'>): Gift[]`、`drainP2Gifts(state: MatchState, policy?: UnitLootPolicy): MatchState`、`validateP2Gifts(state: MatchState): void`。赠品收据 `source='s13-augments-p2'`，ID 为 `[source,choiceId,'item'|'unit',index]` 的 JSON 编码；校验失败抛出 `Invalid/Missing S13 P2 ... gift ...`。这些不是新的客户端授权入口。
 
 精心赋能、三项赛 II 与分享你的能量只修改战斗副本。联机冻结前的准备棋盘是双方羁绊和结算档位的共同依据；征服者／化学男爵收据仍逐项匹配当前棋盘档位，错误档位仍返回 `invalid-receipt`。服务器继续原样转发已有 `g23Facts`。
+
+P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循环，直到一整轮没有新增收据，因而后续赠品合星释放容量后会回头补发先前满席的赠品。单机成功部署后立即重试；成功购买后（包括购买合星）立即重试，`buyUnit(state, slotIndex, expectedGeneration, unitLootPolicy?: UnitLootPolicy): MatchCommandResult` 新增可选事务策略，`buySharedUnit` 透传同一次事务的策略。失败命令不重试、不写入。共享池部署目前没有策略入口，因此继续保留待领，不绕过卡池发英雄；需要服务器改为事务入口后才能即时重试。恢复不要求“有空位就必须收据齐全”。赠品恢复校验本次保持原样（M5 暂停）。
+
+本包承诺数值与主要效果对齐；原版互斥（一费奉献 II ↔ 一对4、冕已有卫 ↔ 不是今天）不在本 PR 范围。
+
+购买触发的 P2 重试与卖出入口沿用同一冻结边界：`phase === 'combat'` 或 `isCombatRosterLocked(state)` 时不重试；这些阶段释放的备战席容量不会触发可能合并棋盘英雄的赠品。下一次合法准备操作仍按原计划重试。

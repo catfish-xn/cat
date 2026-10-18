@@ -72,6 +72,8 @@ export function applyCombatStart(state: CombatState): CombatStep {
     startP2Combat({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
       const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
     }});
+    // Final owner HP is frozen only after all P2 random boosts and broadcasts.
+    initializeMirrorHealth(mechanismUnits,shields);
   }
   return stampCombatStep({ ...state, units, rngState, rngDraws, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

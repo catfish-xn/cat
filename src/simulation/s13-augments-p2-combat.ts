@@ -4,6 +4,7 @@ import type { CombatOrigin, CombatUnit, CombatState } from './combat-types';
 import type { AbilityContext } from './combat-s13-abilities';
 import { byDistance, enemies, range, type S13Unit } from './combat-s13-state';
 import { readCombatStats } from './combat-s13';
+import { scaleItemSummonHp } from './g2-4b-summons';
 import { hexDistance } from './board';
 import { p2Values } from './content/s13-augments-p2';
 import { freezeContent } from './content/freeze';
@@ -32,7 +33,7 @@ function addHealth(ctx: AbilityContext,u:S13Unit,amount:number,source:CombatOrig
   if(!amount)return;
   const basis=u.maxHpBasis!,beforeMax=u.maxHp,beforeHp=u.hp;
   const updated={...basis,flat:basis.flat+amount};
-  u.maxHpBasis=updated;u.maxHp=Math.floor((updated.base+updated.flat)*(10000+updated.bps+updated.bonusBps)/10000);
+  u.maxHpBasis=updated;u.maxHp=scaleItemSummonHp(u,Math.floor((updated.base+updated.flat)*(10000+updated.bps+updated.bonusBps)/10000));
   u.hp=Math.min(u.maxHp,beforeHp+u.maxHp-beforeMax);
   ctx.events.push({type:'maxHpChanged',tick:0,unitId:u.id,source:{...source,parentItemInstanceId:source.parentItemInstanceId??null},beforeMax,afterMax:u.maxHp,beforeHp,afterHp:u.hp,countsAsHeal:false});
 }

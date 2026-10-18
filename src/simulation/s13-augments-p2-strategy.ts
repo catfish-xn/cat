@@ -27,7 +27,7 @@ export function p2AugmentEffects(id: string, unit: Unit, board: readonly Unit[],
     case 'pair-of-fours': return UNIT_DEFINITIONS[unit.definitionId].cost===v.Tier && allies.filter(u=>UNIT_DEFINITIONS[u.definitionId].cost===v.Tier).length===v.NumCopies
       ? [flat('maxHp',v.Health),speed(Math.round(v.AttackSpeed*10000))] : [];
     case 'trifecta-ii': return [speed(Math.round(v.TeamAttackSpeed*10000)),...(UNIT_DEFINITIONS[unit.definitionId].cost===v.Tier?[{kind:'mechanic' as const,mechanic:'s13P2Augment',values:{enabled:1}}]:[])];
-    case 'calculated-enhancement': return unit.location.kind==='board' && unit.location.cell.row>=state.preparation.board.deploymentZones.player.lastRow-1
+    case 'calculated-enhancement': return !UNIT_DEFINITIONS[unit.definitionId].summon && unit.location.kind==='board' && unit.location.cell.row>=state.preparation.board.deploymentZones.player.lastRow-1
       ? [{kind:'mechanic',mechanic:'s13P2Augment',values:{enabled:1}}] : [];
     default: return [];
   }

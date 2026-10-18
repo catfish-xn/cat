@@ -1,3 +1,5 @@
+import { applyStatusContribution } from '../src/simulation/m8/status';
+import { effectIdentity } from '../src/simulation/m8/identity';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -145,4 +147,79 @@ it.each([['crown-guarded','crownguard'],['not-today','edge-of-night']])('%s also
   else expect(stats({...state,tick:1}).attackIntervalTicks).toBeLessThan(before.attackIntervalTicks);
   const granted=target.mechanismDefinitions!.survivalTriggers.filter(t=>t.source.instanceId.startsWith('["chest"'));
   if(id==='not-today')expect(granted.some(t=>t.effects.some(e=>e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.modifier.value.amount===3500))).toBe(true);
+});
+
+it.each(['trifecta-ii','share-your-energy'])('opening %s HP does not rewrite the earlier Crown shield sample',id=>{
+  const f=id==='trifecta-ii'
+    ? fixture([id],[unit('p','nami')],[item('c','crownguard')])
+    : fixture([],[unit('p'),unit('ally','lux',1)],[item('c','crownguard','ally')],id);
+  const holder=f.state.units.find(u=>u.id===(id==='trifecta-ii'?'p':'ally'))!;
+  expect(holder.maxHp).toBe(id==='trifecta-ii'?1130:675);
+  expect(holder.shield).toBe(id==='trifecta-ii'?200:150);
+  validate(f.state);validate(JSON.parse(JSON.stringify(f.state)));
+  const forged=structuredClone(f.state),bad=forged.units.find(u=>u.id===holder.id)! as any;
+  const layer=bad.shieldLayers[0],wrong=Math.floor(bad.maxHp*layer.m8Grant.amount.maxHpBps/10000);
+  layer.granted=wrong;layer.remaining=wrong;layer.m8State.granted=wrong;layer.m8State.remaining=wrong;bad.shield=wrong;
+  expect(()=>validate(forged)).toThrow('declared shield sampled amount');
+});
+it('Mirror freezes the Trifecta holder after its +330 opening health',()=>{
+  const {state}=fixture(['trifecta-ii'],[unit('p','nami')],[item('m','TFT9_Item_OrnnTrickstersGlass')]);
+  const owner=state.units.find(u=>u.id==='p')!,copy=state.units.find(u=>u.itemSummon?.kind==='mirror')!;
+  expect(owner.maxHp).toBe(1030);expect(copy.itemSummonOpeningMaxHp).toBe(1030);expect(copy.maxHp).toBe(721);validate(state);
+});
+it('Share health received by a Mirror retains its 70% summon scaling',()=>{
+  // A donor adjacent to the clone, but outside the holder neighbourhood.
+  const plain=fixture([],[unit('owner','lux',0),unit('p','lux',2)],[item('m','TFT9_Item_OrnnTrickstersGlass','owner')]);
+  const copy=plain.state.units.find(u=>u.itemSummon?.kind==='mirror')!;
+  const units=structuredClone(plain.state.units) as S13Unit[],donor=units.find(u=>u.id==='p')!;
+  donor.cell={col:copy.cell.col+1,row:copy.cell.row};
+  donor.mechanics=[...donor.mechanics??[],{mechanic:'s13P2Anomaly',values:{enabled:1},source:{ownerId:'p',sourceKind:'anomaly',definitionId:'share-your-energy',instanceId:'a',effectIndex:0}}];
+  startP2Combat({tick:0,units,combatId:'p2',board:plain.state.board,events:[],packets:[],heals:[],draw:()=>{throw Error('no draw');}});
+  const recipient=units.find(u=>u.id===copy.id)!;
+  expect(p2Bonus(recipient,'health')).toBe(75);expect(recipient.maxHp).toBe(402);
+  validate({...plain.state,units});
+});
+it('Calculated Enhancement excludes Jayce Forge before the four seeded draws',()=>{
+  const {state}=fixture(['calculated-enhancement'],[...Array.from({length:4},(_,i)=>unit(`p${i}`,'lux',i,6)),unit('j','jayce',5,5)]);
+  expect(state.units.find(u=>u.id==='j:g23-forge')!.cell).toEqual({col:5,row:6});
+  expect(state.units.filter(u=>u.s13P2Opening?.selected.includes('calculated-enhancement')).map(u=>u.id).sort()).toEqual(['p0','p1','p2','p3']);
+  expect(state.rngDraws).toBe(4);for(let i=0;i<4;i++)expect(stats(state,`p${i}`).abilityPower).toBe(140);
+});
+it('Cull breaks equal health ratios by unit ID independently of input order',()=>{
+  const {state}=fixture([],undefined,[],'cull-the-weak'),p=structuredClone(state.units.find(u=>u.id==='p')!) as S13Unit;
+  p.cell={col:0,row:4};p.attackRange=3;
+  const e=state.units.find(u=>u.id==='enemy')!;
+  const a={...e,id:'a',cell:{col:1,row:4},hp:100,maxHp:200},z={...e,id:'z',cell:{col:2,row:4},hp:50,maxHp:100};
+  for(const targets of [[z,a],[a,z]])expect(p2Target(p,[p,...targets] as S13Unit[],60)!.id).toBe('a');
+});
+it.each(['stun','channel'] as const)('Cull retargets at tick 60 while %s blocks actions',kind=>{
+  const {state}=fixture([],undefined,[],'cull-the-weak'),p=structuredClone(state.units.find(u=>u.id==='p')!) as S13Unit;
+  p.cell={col:0,row:4};p.attackRange=3;p.targetId='high';
+  const source={ownerId:'enemy',sourceKind:'ability' as const,definitionId:'test-control',instanceId:'control',effectIndex:0,parentItemInstanceId:null};
+  if(kind==='stun')p.mechanismState={...p.mechanismState!,statuses:applyStatusContribution([],effectIdentity('p2',source,p.id),{kind:'stun',magnitudeBps:0,activation:'immediate',duration:{kind:'ticks',ticks:3},stackPolicy:{kind:'independent-instances'},removable:true,polarity:'harmful',damageFilter:null,onEnd:null},59).groups};
+  else {
+    const activity={key:'control',source,targetId:p.id,actionSeq:0,startsAtTick:59,expiresAtTick:62,kind:'channel' as const,blocks:['move','attack','cast'] as const,cancelOnControl:true as const,lifecycle:'active' as const,endedAtTick:null,endReason:null};
+    p.mechanismState={...p.mechanismState!,activities:[activity]};
+    p.statuses=[{key:'control',source,kind,amount:0,startsAtTick:59,expiresAtTick:62,activity}];
+  }
+  const e=state.units.find(u=>u.id==='enemy')!;
+  const high={...e,id:'high',cell:{col:1,row:4},hp:500,maxHp:1000,cooldownTicks:2000,moveCooldownTicks:2000};
+  const low={...high,id:'low',cell:{col:2,row:4},hp:100};
+  const result=stepCombat({...state,tick:59,units:[p,high,low]});
+  expect(result.state.units.find(u=>u.id==='p')!.targetId).toBe('low');
+  expect(result.events.some(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='p')).toBe(false);
+});
+it('the complete opening keeps a Mirror-only share at 402 HP after final owner freezing',()=>{
+  const {state}=fixture([],[unit('owner','lux',0,7),unit('p','lux',0,5)],[item('m','TFT9_Item_OrnnTrickstersGlass','owner')],'share-your-energy');
+  const copy=state.units.find(u=>u.itemSummon?.kind==='mirror')!;
+  expect(copy.cell).toEqual({col:0,row:6});expect(p2Bonus(copy,'health')).toBe(75);
+  expect(state.units.find(u=>u.id==='owner')!.maxHp).toBe(500);
+  expect(copy).toMatchObject({maxHp:402,itemSummonOpeningMaxHp:500,maxHpBasis:{base:500,flat:75}});validate(state);
+});
+it('a Mirror Enforcer shield retains its pre-Trifecta owner health sample',()=>{
+  const {state}=fixture(['trifecta-ii'],[unit('p','loris',0,7),unit('m','maddie',5,7)],[item('mirror','TFT9_Item_OrnnTrickstersGlass')]);
+  const copy=state.units.find(u=>u.itemSummon?.kind==='mirror')!;
+  expect(state.units.find(u=>u.id==='p')!.maxHp).toBe(1180);
+  expect(copy.itemSummonOpeningMaxHp).toBe(1180);expect(copy.maxHp).toBe(826);
+  expect(copy.shieldLayers![0].granted).toBe(71);validate(state);
 });
