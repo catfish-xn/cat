@@ -159,7 +159,7 @@ export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): str
   if (kind === 'champion') return assetUrl('champions', g23ChampionApiName(id));
   if (kind === 'trait') return assetUrl('traits', g23TraitApiName(id));
   const apiName = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id].apiName : undefined;
-  return assetUrl('items', apiName) ?? assetUrl('loot', apiName) ?? assetUrl('artifacts', apiName) ?? assetUrl('support', apiName);
+  return assetUrl('items', apiName) ?? assetUrl('loot', apiName) ?? assetUrl('artifact-items', apiName) ?? assetUrl('support', apiName);
 }
 /** Content unit ids that resolve to a bundled G2-3 portrait (for the board texture loader). */
 export function g23ChampionAssets(): readonly { readonly id: string; readonly path: string }[] {
