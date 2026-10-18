@@ -21,9 +21,9 @@ RangeError: Unknown catalog round ordinal
   openMechanicChoice
 ```
 
-原因在 `src/simulation/seat-mechanics/choices.ts` 的 `openMechanicChoice`：供给轮判断调用仅支持固定目录的 `getRoundKind(state.round)`，ordinal 39 不在目录内。
-当 `applyRoundSettlement` 的 `openG23Choice` 钩子触发新弹窗时，异常被 `src/simulation/round-settlement.ts` 末尾的 catch 映射为 `invalid-receipt`；此路径不代表收据字段校验失败，也没有机器人发送不合法操作。
-此外，选择或超时完成后，`src/simulation/match.ts` 的 `enterScheduledEvents` 也直接查固定目录。只修弹窗打开会把异常推迟到选择完成。
+原因在 `src/simulation/seat-mechanics/choices.ts:59`（原 SHA 第 58 行）的 `openMechanicChoice`：供给轮判断调用仅支持固定目录的 `getRoundKind(state.round)`，ordinal 39 不在目录内。
+当 `applyRoundSettlement` 的 `openG23Choice` 钩子触发新弹窗时，异常被 `src/simulation/round-settlement.ts:148` 的 catch 映射为 `invalid-receipt`；此路径不代表收据字段校验失败，也没有机器人发送不合法操作。
+此外，选择或超时完成后，`src/simulation/match.ts:118` 的 `enterScheduledEvents` 也直接查固定目录。只修弹窗打开会把异常推迟到选择完成。
 
 本分支修复这两处：联机弹窗用联机轮次查询；联机加时没有固定目录事件，保留原有返回阶段及后续奖励钩子。
 回归检查结算打开黑市、手选、超时、返回结算、推进 ordinal 40、一次性收据和篡改伤害拒绝。
@@ -45,7 +45,17 @@ FAIL every .4 supply dialog showed exactly the offered components and the pick l
 FAIL in-battle buy/reroll/buyXp ran (no battle with gold, an offer and bench space)
 ```
 
-seed 1 结束并释放端口后，已串行启动第二次原 SHA `C19_SEED=2`，保留原脚本、断言和时限，关闭额外指针跟踪，只记录结算输入和异常栈；本轮结果待补。
+seed 1 结束并释放端口后，串行重跑第二次原 SHA `C19_SEED=2`，保留原脚本、断言和时限，关闭额外指针跟踪，只对服务器结算作诊断插桩。第二次在 6-1 正常结束并给出八席排名：退出码 1，耗时 1,801,803 ms；同样只有上述两条未遇到检查机会的 FAIL，3-7 重铸器成功。
+日志与报告分别为 `c19-seed2-retry.log`、`c19-seed2-retry/report.json`。两次 seed 2 都没有进入 ordinal 39，也没有触发 `invalid-receipt`，因此没有抓到历史 bot-5 的被拒收据或异常栈。
+
+原 SHA 重跑命令（各轮串行、Node 22、浏览器路径已就绪）：
+
+```sh
+C19_SEED=2 VERBOSE=1 node tests/server/e2e/c19-full-match.mjs
+# 重铸器现场对照使用 C19_SEED=1，其余脚本断言和时限相同。
+```
+
+**未完成：历史 seed 2 / bot-5 那一笔收据的精确根因仍未确认。** 本分支只把已独立复现、原代码必失败而修复后通过的加时弹窗路径认作已修缺陷；不能据此宣称历史整局故障已经验证消除。历史证据未保存权威输入，重跑的淘汰进程不同。未对服务器提出未经证据支持的补丁，未做修复后 C19 完整局验收。
 
 原始日志、报告及诊断产物保留在 `artifacts/mp-overtime-receipt/`。诊断仅插桩生成的服务器 bundle，用于记录各 `invalid-receipt` 分支的输入和异常栈，不改源码规则或返回值。
 
@@ -60,7 +70,7 @@ FAIL 乙 reforger: item-3 is gone from the projection and the cards
 ```
 
 工具确实持有，目标也在服务器允许列表中；`commands: []`、`receipt: null` 表明该次拖拽没有发出 `useConsumable`，不是“没有获得工具机会”，也没有服务器拒绝这个命令的证据。
-`tests/server/e2e/c19-full-match.mjs:333` 起的工具路径只在收到 `refused:wrong-phase` 时释放 claim；无命令时仍记录任务并执行后续检查，因而一次未发命令会产生三条 FAIL。
+`tests/server/e2e/c19-full-match.mjs:349`（原 SHA 第 348 行）起的工具路径只在收到 `refused:wrong-phase` 时释放 claim；无命令时仍记录任务并执行后续检查，因而一次未发命令会产生三条 FAIL。
 原截图拍摄于两次等待结束后，已经到 3-1，不能据此反推拖拽瞬间的命中或阶段。
 
 本次 seed 2 在 3-7 成功使用重铸器，命令一条、`consumable-used`、原物品消失。
@@ -103,3 +113,10 @@ Herald 脚本默认即校验模式，不接受 `--check` 参数。未使用 `ver
 ## 分支交付
 
 已提交修复 `1276fac7f2f5c9d505887de4991f05c0f81ac748` 并推送 `origin/codex/mp-overtime-receipt`，已用 `git ls-remote` 核实。后续证据更新不改变该修复提交的代码。
+
+## 自行决定与交付限制
+
+- 把重铸器问题修在测试驱动：真实目标超出视口，不是产品拒绝，也不是没有获得工具。所有原有校验、目标、视口大小和时限保留。
+- 相关测试按原时限串行复跑，保留首次并发超时原文；没有以加时或跳过用例解决资源竞争。
+- 两次 seed 2 均未自然到加时；不改血量、轮次或计时来强造相同结局，明确保留历史收据未确认的限制。
+- 使用仓库现有 Codex 作者身份，仅对本次提交传入，不修改全局 Git 身份。
