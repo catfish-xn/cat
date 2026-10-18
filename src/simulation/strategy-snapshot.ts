@@ -2,7 +2,6 @@ import {g23JunkerEffects} from './g2-3-junker';
 import { g23ExperimentEffects } from './g2-3-experiment';
 import { projectG23Summons,g23SionTeam } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
-import { getCatalogRoundByOrdinal } from './round-selectors';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { g23ConversionProgramValues } from './g2-3-combat';
 import { modifier,stat,trigger } from './content/item-programs';
@@ -29,13 +28,13 @@ import { compileSupportGrants, type G24HeldItem } from './g2-4-support';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
 /** Overtime ordinals lie past the catalog (after 6-7); they count as the stage after the last catalog stage. */
-function supportStage(ordinal: number): number {
+function strategyStage(ordinal: number): number {
   return ROUND_CATALOG.find(r => r.ordinal === ordinal)?.stage ?? Math.max(...ROUND_CATALOG.map(r => r.stage)) + 1;
 }
 /** G2-4b stage-scaled artifacts bind one concrete program per snapshot; combat never sees the table. */
 function stageProgram(program: ItemProgram, round: number): ItemProgram {
   const { byStage, ...rest } = structuredClone(program); if (!byStage) return rest;
-  const flat = byStage.flat[Math.min(supportStage(round), byStage.flat.length) - 1];
+  const flat = byStage.flat[Math.min(strategyStage(round), byStage.flat.length) - 1];
   return { ...rest, triggers: (rest.triggers ?? []).map(t => ({ ...t, effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, flat } } : e) })) };
 }
 export interface StrategyCatalog {
@@ -71,7 +70,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
   if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
   const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
-    held, supportStage(state.round));
+    held, strategyStage(state.round));
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
@@ -134,7 +133,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
     sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit)));
     if(unit.definitionId==='g23-sion'){
-      const rose=g23SionTeam(state.preparation,unit.team),stage=getCatalogRoundByOrdinal(state.round).stage,index=Math.max(0,Math.min(4,stage-2));
+      const rose=g23SionTeam(state.preparation,unit.team),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
       const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
       sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));

@@ -8,6 +8,8 @@ import {toPrivateSeatView} from '../src/simulation/private-seat-view';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
+import {resolveCarouselPreparation,validateCarouselMetadata} from '../src/simulation/carousel-units';
+import {getMultiplayerRoundByOrdinal} from '../src/simulation/multiplayer-round';
 
 function buyUntil(pool:SharedPoolState,state:MatchState,done:(s:MatchState)=>boolean,want:(id:string)=>boolean=()=>true){
   for(let guard=0;!done(state);guard++){
@@ -40,6 +42,21 @@ function nextPreparation(picked:ReturnType<typeof pick>){
   const advanced=must(nextSharedRound(complete.state.pool,[complete.match],complete.match.round));
   return {pool:advanced.pool,state:advanced.states[0],events:advanced.events.flatMap(e=>e.events),carousel:{...complete.state,pool:advanced.pool}};
 }
+it('an overdue carousel preparation receipt validates in overtime and still rejects invalid boundaries',()=>{
+  const a=atSupply(),picked=pick(a.pool,a.state),round=getMultiplayerRoundByOrdinal(39);
+  // Isolate an overdue receipt's consumption boundary; the natural route is covered separately.
+  const state:MatchState={...picked.state,phase:'preparation',round:39,roundDefinitionId:round.roundId,
+    pendingChoice:null,combat:null,m8:{...picked.state.m8,round}};
+  const resolved=resolveCarouselPreparation(state);
+  expect(resolved.state.resourceProvenance.entries.at(-1)).toMatchObject({kind:'carousel-preparation-settled',roundId:'overtime-1'});
+  expect(()=>validateCarouselMetadata(resolved.state)).not.toThrow();
+  expect(resolveCarouselPreparation(resolved.state)).toEqual({state:resolved.state,events:[]});
+  const bad=structuredClone(resolved.state);
+  Object.assign(bad.resourceProvenance.entries.at(-1)!,{roundId:'2-4'});
+  expect(()=>validateCarouselMetadata(bad)).toThrow();
+  Object.assign(bad.resourceProvenance.entries.at(-1)!,{roundId:'overtime-0'});
+  expect(()=>validateCarouselMetadata(bad)).toThrow();
+});
 it('bench takes priority; a full bench falls back to board and that pick enters the next combat roster',()=>{
   const a=atSupply(),bench=pick(a.pool,a.state),id=bench.state.carousel!.receipts.at(-1)!.unitId!;
   expect(bench.state.preparation.units.find(u=>u.id===id)?.location.kind).toBe('bench');
