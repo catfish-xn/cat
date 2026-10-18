@@ -64,6 +64,13 @@ export interface RoomOptions extends RoomTimings {
    * scheduled on the room clock, so a server can serve other messages in between; default: one slice per battle.
    */
   readonly sliceTicks?: number;
+  /**
+   * Room-clock budget of one slice, in ms. When given, a slice advances its battle in steps of at most
+   * SLICE_STEP_TICKS ticks and ends once the clock has moved past this budget (or `sliceTicks` are spent), so a
+   * late-round slice of heavy ticks cannot hold the single writer for hundreds of milliseconds. Slicing never changes
+   * a result; a clock that does not move during a slice (test clocks) gives exactly the `sliceTicks` slices.
+   */
+  readonly sliceMs?: number;
   /** G1-P6: how recent opponents are avoided; DEFAULT_PAIRING_POLICY (placeholder, S13_RULES_GAP §10) when omitted. */
   readonly pairingPolicy?: PairingPolicy;
   /**
@@ -76,6 +83,8 @@ export interface RoomOptions extends RoomTimings {
 }
 /** MULTIPLAYER_CONTRACT §21.1: the departure after the carousel's deadline before the round goes on. */
 export const CAROUSEL_DEPARTURE_MS = 2_000;
+/** Ticks per step of a time-budgeted slice (`sliceMs`): small enough that one step stays a few milliseconds. */
+export const SLICE_STEP_TICKS = 10;
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
@@ -835,7 +844,7 @@ export class Room {
     const input = this.frozenInputs[resolution.results.length]!;
     try {
       resolution.job ??= startBattleJob(this.options.resolver, input, resolution.pool);
-      const result = resolution.job.advance(this.options.sliceTicks ?? Number.POSITIVE_INFINITY);
+      const result = this.advanceSlice(resolution.job);
       if (result) {
         resolution.results.push(result); resolution.job = null;
         if (result.kind === 'placeholder' && result.pool) resolution.pool = result.pool;
@@ -849,6 +858,19 @@ export class Room {
     if (resolution.results.length < this.frozenInputs.length) return this.scheduleSlice();
     this.resolution = null;
     this.stageResolved(resolution.results, resolution.pool);
+  }
+
+  /** One slice of `job`: `sliceTicks` at once, or, with `sliceMs`, steps of SLICE_STEP_TICKS until the budget runs out. */
+  private advanceSlice(job: BattleJob): BattleResult | null {
+    const ticks = this.options.sliceTicks ?? Number.POSITIVE_INFINITY, budgetMs = this.options.sliceMs;
+    if (budgetMs === undefined) return job.advance(ticks);
+    const clock = this.options.clock, deadline = clock.now() + budgetMs;
+    for (let spent = 0; ;) {
+      const step = Math.min(SLICE_STEP_TICKS, ticks - spent);
+      const result = job.advance(step);
+      spent += step;
+      if (result || spent >= ticks || clock.now() >= deadline) return result;
+    }
   }
 
   private stageResolved(results: readonly BattleResult[], pool: SharedPoolState): void {
