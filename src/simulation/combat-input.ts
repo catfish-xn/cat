@@ -89,6 +89,8 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     requireBasis(equal(input.g23.economyReceipts,authority.g23.economyReceipts.slice(0,input.g23.economyReceipts.length)));
     requireBasis(input.g23.economyReceipts.filter(r=>r.kind==='battle').length===authority.g23.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round<authority.round).length);
     requireBasis(equal(input.g23.itemReceipts,authority.g23.itemReceipts));
+    // Junker purchases only happen in preparation, before this frozen combat.
+    requireBasis(equal(input.g23.junkerPurchases,authority.g23.junkerPurchases));
     // Claims only append, and the crown's team size is read from them: the frozen claims are an authoritative prefix.
     requireBasis(equal(input.g23.rewardClaims,authority.g23.rewardClaims.slice(0,input.g23.rewardClaims.length)));
   }else requireBasis(input.g23===undefined);

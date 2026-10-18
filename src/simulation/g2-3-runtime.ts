@@ -1,3 +1,4 @@
+import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {transferUpgradeResources} from './upgrades';
 import type {MatchState,MatchEvent,MatchFailure} from './match-types';
 import type {UnitLootPolicy} from './loot-runtime';
@@ -79,7 +80,7 @@ export function finishG23Choice(before:MatchState,after:MatchState,optionId:stri
   const menu=g23JunkerMenu(before);if(!menu||menu.id!==choice.choiceId)throw Error('Stale armory');
   const receipt=after.seatMechanics!.receipts.at(-1)!;
   if(receipt.kind!=='choice')throw Error('Armory receipt');
-  return writeG23Progress(after,{...p,junkerPurchases:[...p.junkerPurchases,{id:menu.id,round:before.round,unitId:menu.unitId,upgrade:optionId as G23JunkerUpgrade,cost:receipt.price}]});
+  return recordG23GrantEvidence(before,writeG23Progress(after,{...p,junkerPurchases:[...p.junkerPurchases,{id:menu.id,round:before.round,unitId:menu.unitId,upgrade:optionId as G23JunkerUpgrade,cost:receipt.price}]}),menu.id);
  }
  if(choice.kind==='blackMarket'&&p.chem.offer?.id===choice.choiceId){
   const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round));

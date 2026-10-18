@@ -1,3 +1,4 @@
+import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {afterEach,expect,it,vi} from 'vitest';
 const fault=vi.hoisted(()=>({hook:''}));
 vi.mock('../src/simulation/seat-mechanics',async importOriginal=>{
@@ -16,7 +17,7 @@ import {freeze} from './combat-helpers';
 import type {MatchEvent} from '../src/simulation/match-types';
 afterEach(()=>{fault.hook='';});
 it('a failed reward atom preserves its input resources and emits an observable reason',()=>{
- const base=createMatch(42),state=writeG23Progress(base,{...readG23Progress(base)!,rewards:[{id:'reward',round:1,source:'conqueror',tier:1,reward:{Gold:3}}]});
+ const base=createMatch(42),state=writeG23Progress(base,{...readG23Progress(base)!,rewards:[{id:'reward',round:1,source:'conqueror',tier:1,reward:{Gold:2}}]});
  const before=JSON.stringify(state),events:MatchEvent[]=[];fault.hook='rewards';
  expect(drainG23Rewards(freeze(state),undefined,events)).toBe(state);
  expect(events).toEqual([{type:'mechanicFailed',hook:'rewards',reason:'invalid-mechanic-state'}]);
@@ -39,7 +40,7 @@ it.each(['armory','blackMarket','forge'] as const)('a failed %s open preserves t
  const base=createMatch(42),p=readG23Progress(base)!;
  const state=kind==='armory'?armory():kind==='blackMarket'
   ?writeG23Progress(base,{...p,chem:{...p.chem,offer:{id:'market',tier:1,optionId:'TFT13_Crime_LootA4',round:1}}})
-  :writeG23Progress(base,{...p,rewards:[{id:'forge',round:1,source:'conqueror',tier:1,reward:{MeepTypeUnit:['TFT_ArmoryKeyCompleted']}}]});
+  :writeG23Progress(base,{...p,rewards:[{id:'forge',round:1,source:'conqueror',tier:9,reward:g23ConquerorReward(G23_CONQUEROR_CHESTS[8])}]});
  expect(openG23Choice(state).state.pendingChoice?.kind).toBe(kind);
  fault.hook='choice';
  expect(openG23Choice(freeze(state))).toEqual({state,events:[{type:'mechanicFailed',hook:'choice',reason:'invalid-mechanic-state'}]});

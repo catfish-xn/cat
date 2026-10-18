@@ -28,11 +28,15 @@ function preparation(input:MatchState):MatchState{
  }
  throw Error('Preparation budget');
 }
-const bundle:G23RewardBundle={id:'fixture:shimmer',round:1,source:'black-market',tier:1,reward:{Consumables:[shimmer]}};
+const marketEntry=G23_BLACK_MARKETS[0].options.find(o=>o.id==='TFT13_Crime_LootA')!;
+const bundle:G23RewardBundle={id:marketEntry.id,round:1,source:'black-market',tier:1,reward:marketEntry.reward};
 /** Unit-level reward vector; save tests below use only natural battles and public commands. */
 function rewardVector():MatchState{
  const state=preparation(createMatch(42));
- return writeG23Progress(state,{...readG23Progress(state)!,rewards:[bundle]});
+ const pending=drainG23Rewards(writeG23Progress(state,{...readG23Progress(state)!,rewards:[bundle]}));
+ // Resolve LootA's single sampled item before isolating the duplicator vector.
+ expect(readG23Progress(pending)!.rewardClaims).toMatchObject([{kind:'item'}]);
+ return pending;
 }
 
 it('keeps the official zh_cn identity, the three source packages, quantities and 35%/20% weights',()=>{
@@ -68,7 +72,7 @@ it.each(['singed','renata','renni','smeech'].flatMap(id=>['board','bench'].map(l
  }
  expect(state.preparation.units.find(u=>u.id===unitId)!.location.kind).toBe(location);
  const serial=state.nextUnitSerial;
- const claimed=drainG23Rewards(state),claims=readG23Progress(claimed)!.rewardClaims;
+ const claimed=drainG23Rewards(state),claims=readG23Progress(claimed)!.rewardClaims.filter(c=>c.kind==='duplicator');
  expect(claims).toMatchObject([{kind:'duplicator',definitionId:id,instanceId:`unit-${serial}`}]);
  expect(claimed.preparation.units.find(u=>u.id===`unit-${serial}`)).toMatchObject({definitionId:id,starLevel:1});
  expect(drainG23Rewards(claimed)).toBe(claimed);
@@ -79,19 +83,20 @@ it('rejects non-Chem-Barons and Silco, retaining escrow until a legal bench targ
  state=ok(grantMechanicUnit(state,{receiptId:'fixture:ineligible',source:'fixture',definitionId:'silco'}));
  // Opening Irelia is on board; 4-cost Chem-Baron Silco is on the bench.
  expect(state.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)).toEqual(['irelia','silco']);
- const before=JSON.stringify(state),atom=g23RewardAtoms(bundle,state.seed)[0];
+ const before=JSON.stringify(state),atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
  expect(drainG23Rewards(state)).toBe(state);
  for(const id of ['irelia','silco','renni'])expect(claimG23Reward(state,atom.id,id)).toMatchObject({ok:false,reason:'stale-choice',state});
  expect(JSON.stringify(state)).toBe(before);
  expect(readG23MechanismState(state)!.rewards).toContainEqual(expect.objectContaining({duplicatorDefinitionId:shimmer,remaining:1}));
  state=ok(grantMechanicUnit(state,{receiptId:'fixture:late-target',source:'fixture',definitionId:'renni'}));
  const claimed=drainG23Rewards(state);
- expect(readG23Progress(claimed)!.rewardClaims).toMatchObject([{definitionId:'renni'}]);
+ expect(readG23Progress(claimed)!.rewardClaims.filter(c=>c.kind==='duplicator')).toMatchObject([{definitionId:'renni'}]);
  expect(readG23MechanismState(claimed)!.rewards).toEqual([]);
 });
 
 it.each(['TFT_Consumable_NeekosHelp','TFT13_Crime_Consumable_ShimmerDuplicator'])('does not admit the unsupported large duplicator %s',id=>{
- expect(()=>g23RewardAtoms({...bundle,reward:{Consumables:[id]}},42)).toThrow('Unadmitted G23 item');
+ expect(Object.hasOwn(G23_POLICY.duplicators,id)).toBe(false);
+ expect(()=>g23RewardAtoms({...bundle,reward:{...bundle.reward,Consumables:[id]}},42)).toThrow('frozen reward descriptor');
 });
 
 let pendingMarket:MatchState|undefined;
