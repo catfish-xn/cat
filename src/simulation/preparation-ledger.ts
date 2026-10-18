@@ -3,7 +3,7 @@ import type { MatchEvent, MatchState, MatchCommandResult, MatchStep } from './ma
 import type { UnitLocation } from './units';
 import type { ConsumableTarget } from './consumable-types';
 import { MAX_COMBAT_TICKS } from './combat-types';
-import { canonicalContent } from './content';
+import { canonicalContent, equalValidatedContent } from './content';
 import * as match from './match';
 
 /** Inputs, never caller-supplied balances or grants. A replay starts at the seed. */
@@ -53,31 +53,60 @@ function requireLedger(value: unknown, reason: string): asserts value {
 }
 /** Exact process-cache reuse is authorized; cold verification still starts at the seed. */
 const verifiedPreparations = new VerifiedRestoreCache<MatchState>();
-// Exact completed history, not arbitrary prefix reuse. The command key only locates
-// an entry; its independently replayed event/result lengths bind the full history.
-// The sole boundary is successful nextRound; all preparation/current combat is replayed.
+// Exact completed histories, not arbitrary prefix reuse. Each key binds the seed and the
+// exact command prefix through one successful nextRound; replaying those commands from that
+// seed is deterministic, so the entry is the state any save with that prefix must have reached.
+// Lookup walks back from the latest boundary; everything after the reused boundary, including
+// all preparation and combat, is replayed and the whole save is compared as before.
 const verifiedHistories = new VerifiedRestoreCache<MatchState>();
-export function validatePreparationLedger(state: MatchState): void {
-  const key = verifiedRestoreKey(state);
-  const verified = verifiedPreparations.get(key);
-  if (verified) { comparePreparationState(state, verified); return; }
+/** Recent round boundaries retained per verification, so the next round's save replays one round. */
+const HISTORY_CHECKPOINTS = 4;
+// The current combat's verified progress, keyed by the exact commands before its trailing
+// stepMatch run. A later save of the same combat (including the same save again) continues
+// from it, replaying only its additional ticks; in-combat saves therefore skip the exact-state
+// cache. Entries are replay results no caller ever receives, and replay never mutates them.
+const combatProgress = new Map<string, MatchState>();
+const COMBAT_PROGRESS_ENTRIES = 8;
+const trailingSteps = (commands: readonly PreparationCommand[]) => commands.at(-1)?.name === 'stepMatch' ? commands.at(-1)!.repeats : 0;
+/** parsedJson: the save is a JSON.parse graph already admitted by the restore boundary's
+ * plain-JSON validation, so equalValidatedContent decides exactly what canonical text equality does. */
+export function validatePreparationLedger(state: MatchState, parsedJson = false): void {
+  const same = parsedJson ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const commands = state.preparationLedger?.commands;
-  const boundary = Array.isArray(commands) ? commands.reduce((last, command, index) => command?.name === 'nextRound' ? index + 1 : last, -1) : -1;
-  const historyKey = boundary >= 0
-    ? verifiedRestoreKey({ seed: state.seed, commands: commands.slice(0, boundary) }) : undefined;
-  const candidate = historyKey === undefined ? undefined : verifiedHistories.get(historyKey);
-  const sameHistory = candidate && candidate.round === state.round
+  const steps = Array.isArray(commands) ? trailingSteps(commands) : 0;
+  const progressKey = steps && Number.isSafeInteger(steps)
+    ? verifiedRestoreKey({ seed: state.seed, commands: commands.slice(0, -1) }) : undefined;
+  const key = progressKey === undefined ? verifiedRestoreKey(state) : undefined;
+  const verified = key === undefined ? undefined : verifiedPreparations.get(key);
+  if (verified) { comparePreparationState(state, verified, parsedJson); return; }
+  const boundaries = Array.isArray(commands)
+    ? commands.flatMap((command, index) => command?.name === 'nextRound' ? [index + 1] : []) : [];
+  const historyKey = (end: number) => verifiedRestoreKey({ seed: state.seed, commands: commands.slice(0, end) });
+  const sameHistory = (candidate: MatchState) => candidate.round <= state.round
     && Array.isArray(state.preparationLedger.events) && Array.isArray(state.roundResults)
-    && canonicalContent(state.preparationLedger.events.slice(0, candidate.preparationLedger.events.length))
-      === canonicalContent(candidate.preparationLedger.events)
-    && canonicalContent(state.roundResults.slice(0, candidate.roundResults.length))
-      === canonicalContent(candidate.roundResults);
-  const validate = preparationLedgerValidator(false, sameHistory ? candidate : undefined);
+    && same(state.preparationLedger.events.slice(0, candidate.preparationLedger.events.length), candidate.preparationLedger.events)
+    && same(state.roundResults.slice(0, candidate.roundResults.length), candidate.roundResults);
+  const progress = progressKey === undefined ? undefined : combatProgress.get(progressKey);
+  let trusted = progress && trailingSteps(progress.preparationLedger.commands) <= steps && sameHistory(progress)
+    ? progress : undefined;
+  for (let index = boundaries.length - 1; index >= 0 && !trusted; index--) {
+    const candidate = verifiedHistories.get(historyKey(boundaries[index]));
+    if (candidate && sameHistory(candidate)) trusted = candidate;
+  }
+  const validate = preparationLedgerValidator(false, trusted, false, parsedJson);
   const rebuilt = validate(state);
-  // Only a fully validated candidate admits the independently generated history boundary.
-  const history = validate.history(boundary);
-  if (historyKey !== undefined && history) verifiedHistories.put(historyKey, history);
-  verifiedPreparations.put(key, rebuilt);
+  // Only a fully validated replay admits its independently generated history boundaries;
+  // boundaries at or before the reused state are already retained.
+  const reused = trusted?.preparationLedger.commands.length ?? 0;
+  for (const end of boundaries.slice(-HISTORY_CHECKPOINTS).filter(end => end > reused)) {
+    const history = validate.history(end);
+    if (history) verifiedHistories.put(historyKey(end), history);
+  }
+  if (key !== undefined) verifiedPreparations.put(key, rebuilt);
+  else {
+    combatProgress.delete(progressKey!); combatProgress.set(progressKey!, rebuilt);
+    while (combatProgress.size > COMBAT_PROGRESS_ENTRIES) combatProgress.delete(combatProgress.keys().next().value!);
+  }
 }
 /** Explicit call-local scope: only states produced here by public commands are reusable.
  * Keep opening boundaries (not every tick) so archived short prefixes remain checkable. */
@@ -93,7 +122,9 @@ export type PreparationLedgerValidator = ((state: MatchState) => MatchState) & {
 export function createPreparationLedgerValidator(captureBattles = false): PreparationLedgerValidator {
   return preparationLedgerValidator(captureBattles);
 }
-function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: MatchState) {
+// detach=false only for the process-cache path, whose result is copied into the cache.
+function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: MatchState, detach = true, parsedJson = false) {
+  const same = parsedJson ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const openings: MatchState[] = trustedHistory ? [trustedHistory] : [];
   let latest: MatchState | undefined = trustedHistory;
   const proofs: PreparationBattleProof[] = [];
@@ -117,17 +148,25 @@ function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: Ma
       requireLedger(Number.isSafeInteger(command.repeats) && command.repeats >= 1
         && command.repeats <= (command.name === 'stepMatch' ? MAX_COMBAT_TICKS : 1), 'repeat-bound');
     }
+    // A trusted in-combat state may have run fewer ticks of its final stepMatch command.
+    const partialSteps = (candidate: MatchState) => {
+      const own = candidate.preparationLedger.commands, last = own.length - 1, target = ledger.commands[last];
+      return last >= 0 && own[last].name === 'stepMatch' && target?.name === 'stepMatch'
+        && own[last].repeats < target.repeats ? own[last].repeats : 0;
+    };
     const prefix = (candidate: MatchState) => candidate.seed === state.seed
       && candidate.preparationLedger.commands.length <= ledger.commands.length
       && candidate.preparationLedger.commands.every((command, index) =>
-        canonicalContent(command) === canonicalContent(ledger.commands[index]));
+        same(command, ledger.commands[index])
+        || index === candidate.preparationLedger.commands.length - 1 && partialSteps(candidate) > 0);
     const candidates = latest ? [...openings, latest] : openings;
     let rebuilt = candidates.filter(prefix).sort((a, b) =>
       b.preparationLedger.commands.length - a.preparationLedger.commands.length)[0] ?? match.createMatch(state.seed);
-    const offset = rebuilt.preparationLedger.commands.length;
-    for (const command of ledger.commands.slice(offset) as readonly PreparationCommand[]) {
+    const done = partialSteps(rebuilt);
+    const offset = rebuilt.preparationLedger.commands.length - (done ? 1 : 0);
+    for (const [position, command] of (ledger.commands.slice(offset) as readonly PreparationCommand[]).entries()) {
       if (command.name === 'startMatchCombat' && !openings.some(value => value === rebuilt)) openings.push(rebuilt);
-      for (let count = 0; count < command.repeats; count++) {
+      for (let count = position === 0 ? done : 0; count < command.repeats; count++) {
         const before = rebuilt;
         let result: MatchCommandResult | MatchStep;
         try {
@@ -153,9 +192,9 @@ function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: Ma
         }
       }
     }
-    comparePreparationState(state, rebuilt);
+    comparePreparationState(state, rebuilt, parsedJson);
     latest = rebuilt;
-    return structuredClone(rebuilt);
+    return detach ? structuredClone(rebuilt) : rebuilt;
   };
   return Object.assign(validate, { acceptReplayedBattle(state: MatchState) {
     latest = structuredClone(state);
@@ -171,10 +210,10 @@ function preparationLedgerValidator(captureBattles: boolean, trustedHistory?: Ma
 }
 
 /** Always run on cache hits too: current economics and every ledger projection remain checked. */
-export function comparePreparationState(state: MatchState, rebuilt: MatchState): void {
+export function comparePreparationState(state: MatchState, rebuilt: MatchState, parsedJson = false): void {
   const ledger = state.preparationLedger;
   const equal = (a: unknown, b: unknown) => a === undefined || b === undefined
-    ? a === b : canonicalContent(a) === canonicalContent(b);
+    ? a === b : parsedJson ? equalValidatedContent(a, b) : canonicalContent(a) === canonicalContent(b);
   requireLedger(state.gold === rebuilt.gold, 'gold');
   requireLedger(state.level === rebuilt.level && state.xp === rebuilt.xp, 'experience');
   requireLedger(equal(state.shop, rebuilt.shop), 'shop');

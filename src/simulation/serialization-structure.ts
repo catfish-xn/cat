@@ -106,11 +106,11 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
  * no verification RNG/reward/command effects are committed to the candidate.
  * Resist-scaled shields are checked by a trusted-input battle replay.
  */
-export function validateMatchStructure(input: unknown, validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+export function validateMatchStructure(input: unknown, validateLedger: (state: MatchState, parsedJson?: boolean) => void = validatePreparationLedger): MatchState {
   return withItemRestoreCache(()=>restoreMatchWithinCall(input, false, validateLedger));
 }
 function restoreMatchWithinCall(input: unknown, forSerialization = false,
-  validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+  validateLedger: (state: MatchState, parsedJson?: boolean) => void = validatePreparationLedger): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -335,7 +335,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);
   // Verify the detached input, never an earlier getter read or a self-reported balance.
-  validateLedger(detached);
+  validateLedger(detached, typeof input === 'string');
   // Serialization consumes this private detached graph immediately. Freezing it
   // would traverse the large metadata twice (freeze + canonical cache admission)
   // only to discard it. Keep validation and cloning identical to object restore.
@@ -365,7 +365,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
 export function validateMatchStructureForSerialization(state: MatchState,
-  validateLedger: (state: MatchState) => void = validatePreparationLedger): MatchState {
+  validateLedger: (state: MatchState, parsedJson?: boolean) => void = validatePreparationLedger): MatchState {
   return withItemRestoreCache(() => restoreMatchWithinCall(state, true, validateLedger));
 }
 
