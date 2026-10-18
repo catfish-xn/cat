@@ -38,7 +38,9 @@ describe('B4 composed consumers and restore rejection',()=>{
   const next=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,hp:500}:u.id==='e'?{...u,cooldownTicks:0,attackDamage:100}:u)});expect(next.state.units.find(u=>u.id==='p')!.shield).toBe(359);
   let s=itemMatch(['steraks-gage','bloodthirster']);const u=s.combat!.units.find(u=>u.id==='unit-1')!;
   if(s.phase!=='combat')throw new Error('combat required');
-  s={...s,combat:{...s.combat!,units:s.combat!.units.map(x=>x.id===u.id?{...x,hp:Math.floor(x.maxHp*.5)}:x)}};s=stepMatch(s).state;
+  // Restore replays the authenticated opening, so reach Sterak's sampled HP through real combat damage.
+  while(s.phase==='combat'&&s.combat!.units.find(x=>x.id===u.id)!.maxHp===u.maxHp)s=stepMatch(s).state;
+  expect(s.phase).toBe('combat');expect(s.combat!.units.find(x=>x.id===u.id)!.maxHp).toBeGreaterThan(u.maxHp);
   for(let i=0;i<80&&s.phase==='combat';i++){s=stepMatch(s).state;if(i%10===0)expect(restoreMatch(serializeMatch(s))).toEqual(s);}
  });
  it('Quicksilver stops growing at death; later living units may keep fighting and save',()=>{

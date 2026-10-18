@@ -1,7 +1,7 @@
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatUnit } from './combat';
 import type { CombatInputBasis } from './combat-input';
 import type { StrategySnapshot } from './strategy-types';
-import { digestContent } from './content';
+import { canonicalContent, digestContent } from './content';
 import { M8_VERSION } from './m8/version';
 
 export interface CombatReplayFacts {
@@ -54,10 +54,9 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
   const lookup = () => {
     if (identity !== undefined) return;
     const inputs = { version: M8_VERSION, basis, strategy };
-    // Inputs are already admitted finite JSON. Byte keys deliberately allow a
-    // conservative miss for reordered object keys; native encoding avoids a
-    // second recursive canonicalization of the large strategy on every tick.
-    identity = JSON.stringify(inputs);
+    // Inputs are already admitted finite JSON. Canonical keys make a live state
+    // and its serialized text share evidence; frozen inputs reuse cached text.
+    identity = canonicalContent(inputs);
     if (identity.length > MAX_IDENTITY_LENGTH) return;
     key = digestContent(identity);
     const hit = evidence.get(key);

@@ -93,8 +93,11 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     const consumed = structuredClone(pending), consumedHolder = consumed.combat.units.find((u: any) => u.id === holder.id);
     consumedHolder.shieldLayers.find((l: any) => l.key === layer.key).m8State.endRewardConsumed = true;
     consumedHolder.tasks = consumedHolder.tasks.filter((t: any) => t.shieldEndKey !== layer.key);
-    expect(() => restoreMatch(consumed)).not.toThrow();
-    expect(packets(stepMatch(restoreMatch(consumed)).events).filter(e => e.source.ownerId === holder.id)).toEqual([]);
+    // Restore compares the task queue with the replayed combat, where this end
+    // task is still pending, so the entry rejects the hand-consumed reward. The
+    // shield rules alone accept a consumed zero layer, and it never fires again.
+    expect(() => restoreMatch(consumed)).toThrow(/task binding facts/);
+    expect(packets(stepMatch(consumed).events).filter(e => e.source.ownerId === holder.id)).toEqual([]);
     const missingTask = structuredClone(pending); missingTask.combat.units.find((u: any) => u.id === holder.id).tasks = [];
     expect(() => restoreMatch(missingTask)).toThrow(/shield/i);
     const consumedWithTask = structuredClone(pending); consumedWithTask.combat.units.find((u: any) => u.id === holder.id).shieldLayers[0].m8State.endRewardConsumed = true;
