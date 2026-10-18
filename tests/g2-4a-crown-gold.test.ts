@@ -159,7 +159,8 @@ it('real combat saves restore crown receipts and Continue never pays the complet
    expect(()=>restoreMatch({...after,gold:after.gold+1},battles)).toThrow('current settlement totals');
    const forgedCount=structuredClone(after),progress=readG23Progress(forgedCount)!;
    const action=progress.economyReceipts.at(-1) as G23EconomyAction;
-   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount,battles)).toThrow('Invalid G2-3 match progression');
+   // The finished battle's facts are re-derived before any reward is expanded, so the forged count fails there first.
+   Object.assign(action.facts,{crowns:1});expect(()=>restoreMatch(forgedCount,battles)).toThrow('G23 reward authority');
   }
  }
  expect(paid).toBeGreaterThan(0);
