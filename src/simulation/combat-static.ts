@@ -7,7 +7,8 @@ const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', '
 export function freezeCombatDeclarations(unit: CombatUnit, parsed = false, freshAbility = false): CombatUnit {
   for (const key of fields) {
     const value = unit[key];
-    if (value && typeof value === 'object') Object.assign(unit, { [key]: key === 'ability' && freshAbility ? freezeContent(value) : parsed ? shareParsedDeclaration(value) : shareGeneratedDeclaration(value) });
+    if (value && typeof value === 'object') (unit as unknown as Record<string, unknown>)[key] =
+      key === 'ability' && freshAbility ? freezeContent(value) : parsed ? shareParsedDeclaration(value) : shareGeneratedDeclaration(value);
   }
   return unit;
 }
@@ -16,7 +17,7 @@ export function sharedCombatDeclarations(unit: CombatUnit): Partial<CombatUnit> 
   for (const key of fields) {
     const descriptor = Object.getOwnPropertyDescriptor(unit, key);
     const value = descriptor && 'value' in descriptor ? descriptor.value : undefined;
-    if (value && typeof value === 'object' && isImmutableJson(value)) Object.assign(shared, { [key]: value });
+    if (value && typeof value === 'object' && isImmutableJson(value)) (shared as Record<string, unknown>)[key] = value;
   }
   return shared;
 }
@@ -34,6 +35,18 @@ function immutableTickRecord<T extends object>(value: T): T {
 export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   const shared = sharedCombatDeclarations(unit);
   const copy = { ...unit };
+  // Preserve the native boundary's observable order: enumerate/read every own
+  // field first, then read the three exclusions, before cloning nested data.
+  const omitDefinitions = unit.mechanismDefinitions;
+  const omitState = unit.mechanismState;
+  const omitLedger = unit.triggerLedger;
+  // These are existing own data properties of the detached spread. Assign
+  // directly instead of allocating a computed-key wrapper for every field.
+  const writable = copy as unknown as Record<string, unknown>;
+  Object.assign(copy, shared);
+  if (omitDefinitions) writable.mechanismDefinitions = undefined;
+  if (omitState) writable.mechanismState = undefined;
+  if (omitLedger) writable.triggerLedger = undefined;
   for (const key of Object.keys(copy) as (keyof CombatUnit)[]) {
     const value = copy[key];
     if (value === null || typeof value !== 'object') {
@@ -42,19 +55,22 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
       if (typeof value === 'function' || typeof value === 'symbol') structuredClone(value);
       continue;
     }
-    if (Object.hasOwn(shared, key) || key === 'mechanismDefinitions' || key === 'mechanismState' || key === 'triggerLedger' || key === 'startingCell') continue;
+    if (Object.hasOwn(shared, key) || key === 'startingCell') continue;
     let next: unknown;
-    if (key === 'runtime') next = { ...unit.runtime };
+    if (key === 'runtime') next = { ...value };
     else if (tickRecords.has(key)) next = immutableTickRecord(value);
     else if (tickLists.has(key) && Array.isArray(value)) next = value.map(entry => immutableTickRecord(entry));
     else next = structuredClone(value);
-    Object.assign(copy, { [key]: next });
+    writable[key] = next;
   }
   // Mechanism definitions already follow the resolver's copy-on-write contract;
   // preserve the original reference without freezing a mutable caller input.
-  const mechanisms = copy.mechanismDefinitions;
-  if (mechanisms) Object.assign(copy, { mechanismDefinitions: undefined });
   freezeCombatDeclarations(copy);
-  if (mechanisms) Object.assign(copy, { mechanismDefinitions: mechanisms });
+  Object.assign(copy, shared);
+  // Re-read conditions and values just like the original native-copy overrides;
+  // accessors may return different values after the nested clone has run.
+  if (unit.mechanismDefinitions) writable.mechanismDefinitions = unit.mechanismDefinitions;
+  if (unit.mechanismState) writable.mechanismState = unit.mechanismState;
+  if (unit.triggerLedger) writable.triggerLedger = unit.triggerLedger;
   return copy;
 }
