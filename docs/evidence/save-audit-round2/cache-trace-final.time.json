@@ -1,0 +1,16 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/m8-b8-equipment-fixture.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/cache-trace-final.json"
+  ],
+  "wallSeconds": 8.368,
+  "exitCode": 0,
+  "maxRssKiB": 593080
+}

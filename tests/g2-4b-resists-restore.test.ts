@@ -1,9 +1,9 @@
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
-import { startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from './fixtures/recorded-match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { accepted, reachRound, purchasedThreeHeroMatch, resolveM5Choices, battle } from './match-helpers';
 

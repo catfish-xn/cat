@@ -4,7 +4,16 @@ import baseline from './g2-3-content-baseline.json';
 import { describe, expect, it } from 'vitest';
 import { goldenStates } from './fixtures/m8-golden-states.cjs';
 import { assertParsedContent, canonicalContent } from '../src/simulation/content';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch } from './fixtures/history-evidence';
+import {readRecordedFixture} from './fixtures/recorded-fixture';
+import {verifyRecordedHistories} from './fixtures/verify-recorded-history';
+import type {BattleRecord} from '../src/m6/contracts';
+import type {MatchState} from '../src/simulation/match-types';
+import {deepStrictEqual} from 'node:assert/strict';
+
+const recordings={cannon:readRecordedFixture<{battles:BattleRecord[]}>('checkpoint-cannon').battles,
+ sniper:readRecordedFixture<{battles:BattleRecord[]}>('neutral').battles};
+verifyRecordedHistories('text/object equivalence',[recordings.cannon,recordings.sniper]);
 
 const outcome = (f: () => unknown) => { try { f(); return 'accepted'; } catch (error) { return `${(error as Error).name}:${(error as Error).message}`; } };
 function lcg(seed: number) { let s = seed >>> 0; return () => (s = Math.imul(s, 1664525) + 1013904223 >>> 0) / 2 ** 32; }
@@ -35,8 +44,9 @@ describe('restoreMatch text fast path is exact', () => {
     expect(byBuild[build]).toHaveLength(67); // 33 public-route combats, before/after plus final, re-recorded at G2-1.
     for (const state of byBuild[build]) {
       const source = JSON.stringify(state);
+      const prefix=recordings[build].slice(0,(state as MatchState).roundResults.filter(r=>r.roundKind!=='supply').length);
       expect(() => assertParsedContent(JSON.parse(source))).not.toThrow();
-      expect(restoreMatch(source)).toEqual(restoreMatch(JSON.parse(source)));
+      deepStrictEqual(restoreMatch(source,prefix),restoreMatch(JSON.parse(source),prefix));
     }
   });
   it('recorded states with a non-finite number injected anywhere: both paths reject identically', () => {

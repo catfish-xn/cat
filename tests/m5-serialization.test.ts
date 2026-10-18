@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {startMatchCombat} from '../src/simulation/match';
-import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import {startMatchCombat} from './fixtures/recorded-match';
+import {restoreMatch,serializeMatch} from './fixtures/history-evidence';
 import {accepted,readyMatch,finish,reachRound} from './match-helpers';
 import type {MatchState} from '../src/simulation/match-types';
 const copy=(s:MatchState):any=>JSON.parse(JSON.stringify(s));

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/recorded-fixture-intern.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/intern-collision.json"
+  ],
+  "wallSeconds": 3.042,
+  "exitCode": 0,
+  "maxRssKiB": 301180
+}

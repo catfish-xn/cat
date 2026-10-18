@@ -1,11 +1,13 @@
+import {ROUND_CATALOG} from '../src/simulation/content/round-catalog';
+import {verifyDeferredRecordedHistory} from './fixtures/verify-recorded-history';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { readItemInventory } from '../src/simulation/item-selectors';
-import { buyUnit, combineItems, equipItem, selectChoice, sellUnit, rerollShop } from '../src/simulation/match';
+import { buyUnit, combineItems, equipItem, selectChoice, sellUnit, rerollShop } from './fixtures/recorded-match';
 import { planReward } from '../src/simulation/rewards';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch, historyFor } from './fixtures/history-evidence';
 import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { accepted, freeze, readyMatch, reachRound } from './match-helpers';
@@ -26,6 +28,15 @@ function forgedChain(items: readonly ItemInstance[]): MatchState {
 }
 
 describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
+  let blue:ReturnType<typeof publicInventory>;
+  it('records the genuine single blue-buff acquisition inside the original case budget',()=>{
+    blue=publicInventory(['blue-buff']);
+    expect(blue.state.roundDefinitionId).toBe('3-5');
+    expect(blue.itemIds).toHaveLength(1);
+  });
+  verifyDeferredRecordedHistory('real single-blue-buff prefix',
+    ROUND_CATALOG.filter(r=>r.kind!=='supply'&&r.ordinal<ROUND_CATALOG.find(r=>r.roundId==='3-5')!.ordinal).length,
+    ()=>historyFor(blue.state));
   it.each(['sword', 'gloves', 'blue-buff', 'thiefs-gloves'])('plans exactly one permanent %s with no receipt/economy/RNG work', definitionId => {
     const state = freeze(readyMatch()), before = JSON.stringify(state);
     const plan = planPermanentItemGrant(state, { definitionId, receiptId: 'reward-1' }, []);
@@ -116,6 +127,15 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'],
     ['sword', 'thiefs-gloves'], ['sword', 'rod', 'vest', 'cloak'],
   ]) beforeAll(() => { publicInventory(definitions, true); });
+  let twoGloves: ReturnType<typeof publicInventory>;
+  it('records the genuine two-parent glove acquisition inside its original case budget', () => {
+    twoGloves=publicInventory(['thiefs-gloves','thiefs-gloves']);
+    expect(twoGloves.state.roundDefinitionId).toBe('4-1');
+    expect(twoGloves.itemIds).toHaveLength(2);
+  });
+  const gloveBattleCount=ROUND_CATALOG.filter(round=>round.kind!=='supply'
+    &&round.ordinal<ROUND_CATALOG.find(round=>round.roundId==='4-1')!.ordinal).length;
+  verifyDeferredRecordedHistory('two-parent gloves',gloveBattleCount,()=>historyFor(twoGloves.state));
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;

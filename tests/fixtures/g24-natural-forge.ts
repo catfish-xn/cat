@@ -1,4 +1,5 @@
-import {createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,type MatchState} from '../../src/simulation/match';
+import {historyFor,registerHistory} from './history-evidence';
+import {createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,type MatchState} from './recorded-match';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {readG23Progress,writeG23Progress} from '../../src/simulation/g2-3-state';
 import {createG23Progress} from '../../src/simulation/g2-3-match-progress';
@@ -15,7 +16,11 @@ export function naturalTier4Preparation():MatchState{
 }
 /** Real solo combats, explicit generic grants only: no forged progress/history/settlement. */
 export function naturalForgeStates():Map<number,MatchState>{
- if(cached)return cached;
+ if(cached){
+  for(const state of cached.values())registerHistory(state,historyFor(state));
+  if(tier4Preparation)registerHistory(tier4Preparation,historyFor(tier4Preparation));
+  return cached;
+ }
  const states=new Map<number,MatchState>();let state=createMatch(42),recruited=false;
  for(let guard=0;guard<60000;guard++){
   if(state.phase==='choice'){

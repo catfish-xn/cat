@@ -1,4 +1,4 @@
-import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../../src/simulation/match';
+import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from './recorded-match';
 import { grantMechanicItem, grantMechanicUnit } from '../../src/simulation/seat-mechanics';
 import { publicEquipmentPreparation } from './m8-b4-match';
 

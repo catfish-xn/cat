@@ -1,7 +1,7 @@
 import {beforeAll,expect,it} from 'vitest';
-import type {MatchState} from '../../src/simulation/match';
-import {createMatch,buyXp,deployMatchUnit,startMatchCombat,chooseG23Junker,sellUnit} from '../../src/simulation/match';
-import {restoreMatch,serializeMatch} from '../../src/simulation/serialization';
+import type {MatchState} from '../fixtures/recorded-match';
+import {createMatch,buyXp,deployMatchUnit,startMatchCombat,chooseG23Junker,sellUnit} from '../fixtures/recorded-match';
+import {restoreMatch,serializeMatch,historyFor} from '../fixtures/history-evidence';
 import {readG23Progress} from '../../src/simulation/g2-3-state';
 import type {G23GrantEvidence} from '../../src/simulation/g2-3-grant-evidence';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
@@ -17,6 +17,9 @@ beforeAll(async()=>{
 const evidence=(s:MatchState)=>s.seatMechanics!.hidden.grantEvidence as G23GrantEvidence[];
 // Object, JSON and serializeMatch are all restore entries; each must reject the same save.
 const rejects=(s:MatchState,message?:string)=>{for(const input of [s,JSON.stringify(s)])expect(()=>restoreMatch(input)).toThrow(message);expect(()=>serializeMatch(s)).toThrow(message);};
+import { verifyDeferredRecordedHistory } from '../fixtures/verify-recorded-history';
+verifyDeferredRecordedHistory('junker',24,()=>historyFor(junker));
+verifyDeferredRecordedHistory('academy',21,()=>historyFor(academy));
 it('public commands record a legal armory receipt; selling its holder later retains grant-time authority',()=>{
  expect(evidence(junker).at(-1)?.receiptId).toBe('g23:junker:1');
  expect(restoreMatch(serializeMatch(junker))).toEqual(junker);

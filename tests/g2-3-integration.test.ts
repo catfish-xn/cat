@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
-import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
-import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from './fixtures/recorded-match';
+import {serializeMatch,restoreMatch} from './fixtures/history-evidence';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {G23_RADIANT_MAPPING} from '../src/simulation/content/g2-3-special-item-source';
 import {validateContent} from '../src/simulation/validate-content';
@@ -165,7 +165,7 @@ it.each(['maddie','g23-forge'])('shared reconciliation derives %s birth definiti
  expect(state.preparation.units.find(u=>u.definitionId===definitionId)?.starLevel).toBe(2);
  conserved(draft,[state]);
 });
-import {buyUnit} from '../src/simulation/match';
+import {buyUnit} from './fixtures/recorded-match';
 it('buying Rumble to three stars refreshes a folded armory and invalidates its old generation',()=>{
  const initial=createMatch(42),p=readG23Progress(initial)!;
  const units=[2,2,1,1].map((starLevel,i)=>({id:'rumble-'+i,definitionId:'rumble',starLevel:starLevel as 1|2,team:'player' as const,location:{kind:'bench' as const,slot:i}}));

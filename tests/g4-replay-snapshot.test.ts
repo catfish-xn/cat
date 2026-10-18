@@ -50,6 +50,12 @@ describe('G4 detached replay snapshots', () => {
     deepStrictEqual(validateBattleRecord(record), expected);
     const tampered = structuredClone(record); (tampered.initial as { tick: number }).tick = 1;
     expect(() => validateBattleRecord(deepFreeze(tampered))).toThrow();
+    // A frozen outer upload still has mutable children. A successful earlier
+    // read cannot authorize its later changed graph through an identity key.
+    const shallow = Object.freeze(structuredClone(record));
+    deepStrictEqual(validateBattleRecord(shallow), expected);
+    (shallow.initial as { tick: number }).tick = 1;
+    expect(() => validateBattleRecord(shallow)).toThrow();
   });
 });
 

@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import { CONTENT_DIGEST } from '../src/simulation/content';
 import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
 import { OPENING_ECONOMY_RULES } from '../src/simulation/match-rules';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch } from './fixtures/history-evidence';
 import baseline from './t11-content-baseline.json';
 import t12 from './t12-content-baseline.json';
 import audit from '../docs/evidence/t11/golden-audit.json';

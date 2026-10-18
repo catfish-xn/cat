@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createMatch } from '../src/simulation/match';
+import { createMatch } from './fixtures/recorded-match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -109,9 +109,9 @@ it('rejects missing Climb groups, partial grants, mismatched death times and wro
   c.appliedAtTick=2;u.statuses.find((l:any)=>l.contributionKeys.includes(c.key)).startsAtTick=2;expect(()=>validate(mistimed)).toThrow();
   const changed=structuredClone(s) as any;changed.units.find((u:any)=>u.id==='p0').definitionId='darius';expect(()=>validate(changed)).toThrow();
 });
-import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, type MatchState } from './fixtures/recorded-match';
 import { accepted, reachRound } from './match-helpers';
-import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
+import { serializeMatch, restoreMatch } from './fixtures/history-evidence';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 it.each([
  ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',1],['inspiring-epitaph',18],

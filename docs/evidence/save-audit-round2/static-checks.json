@@ -1,0 +1,35 @@
+{
+  "node": "v24.19.0",
+  "sourceDeltaFromMerge": [
+    "src/simulation/battle-record-validation.ts"
+  ],
+  "cjsSyntaxChecks": [
+    "scripts/generate-m4-route.cjs",
+    "scripts/m6-f1-full-load.cjs",
+    "scripts/m6-f1-load.cjs",
+    "scripts/m6-f1-supplement.cjs",
+    "scripts/record-armory-history.cjs",
+    "scripts/record-g2-1-release.cjs",
+    "scripts/record-g2-2-release.cjs",
+    "scripts/record-g2-3-release.cjs",
+    "scripts/record-g2-augments-economy.cjs",
+    "scripts/record-g2-augments-fixtures.cjs",
+    "scripts/record-p3p4p5-release.cjs",
+    "scripts/record-p7-1-release.cjs",
+    "scripts/record-p7-release.cjs",
+    "scripts/record-save-checkpoint-history.cjs",
+    "scripts/record-t13-fixture-evidence.cjs",
+    "scripts/verify-server-engine-portability.cjs",
+    "scripts/verify-t1-node-entry.cjs",
+    "tests/fixtures/record-g2-3-herald.cjs"
+  ],
+  "cjsSyntaxChecksPassed": true,
+  "vitestConfigChanged": false,
+  "m5CannonTestChanged": false,
+  "rulesDataOrVersionFilesChanged": [],
+  "defaultHeapLimitMiB": 4288,
+  "fullSuiteMaxOldSpaceMiB": 3072,
+  "timeoutReview": "No testTimeout/config or explicit time limits changed; original TG five groups retained.",
+  "fixtureScope": "file-scoped worker-global registry; cleanup handles resetModules",
+  "fixtureInterning": "SHA256 bucket, full canonical equality required on every hit; forced digest collision regression passed"
+}

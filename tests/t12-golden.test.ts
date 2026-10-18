@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {expect,it} from 'vitest';
 import {CONTENT_DIGEST} from '../src/simulation/content';
 import {LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
-import {restoreMatch} from '../src/simulation/serialization';
+import {restoreMatch} from './fixtures/history-evidence';
 import baseline from './t12-content-baseline.json';
 import old from './t11-content-baseline.json';
 import audit from '../docs/evidence/t12/golden-audit.json';

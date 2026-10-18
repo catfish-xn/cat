@@ -1,4 +1,5 @@
-import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, startMatchCombat, combineItems } from '../../src/simulation/match';
+import { copyWithHistory, releaseHistorySeed } from './history-evidence';
+import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, startMatchCombat, combineItems } from './recorded-match';
 import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers } from './b8-public-equipment';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 
@@ -7,13 +8,19 @@ const accepted = (result: MatchCommandResult): MatchState => {
   return result.state;
 };
 const cached = new Map<string, MatchState>();
+/** TG coverage routes have unique seeds and no later consumers. Their real
+ * acquisition and validation already ran inside the caller's timed case. */
+export function releasePublicGlovesInventory(roundId:string,seed:number):void {
+  cached.delete(JSON.stringify([seed,roundId]));
+  releaseHistorySeed(seed);
+}
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,
  * choices and the extra holder are committed by public commands. */
 export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
   const key = JSON.stringify([seed, roundId]);
-  if (cached.has(key)) return structuredClone(cached.get(key)!);
+  if (cached.has(key)) return copyWithHistory(cached.get(key)!);
   let state = createMatch(seed);
   if (roundId !== '4-2') state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
   for (let budget = 0; budget < 40; budget++) {
@@ -35,7 +42,7 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       const gloves = state.items.filter(item => item.definitionId === 'gloves');
       if (gloves.length < 2) throw Error('TG supply route has not acquired two gloves');
       state = accepted(combineItems(state, gloves[0].id, gloves[1].id));
-      cached.set(key, structuredClone(state));
+      cached.set(key, copyWithHistory(state));
       return state;
     }
     if (state.phase === 'preparation') {

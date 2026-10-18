@@ -25,6 +25,8 @@ function bounceFacts(before:MatchState, after:MatchState, events:readonly MatchE
 }
 import {CompletedBattleHistory} from './fixtures/completed-battle-history';
 import {observeHistory} from './fixtures/history-evidence';
+import {historyFor} from './fixtures/history-evidence';
+import {verifyRecordedHistories} from './fixtures/verify-recorded-history';
 const history=new CompletedBattleHistory('t13-public');
 const priorFacts:ReturnType<typeof bounceFacts>=[];
 let captured:MatchState|undefined;
@@ -58,6 +60,7 @@ if(!result.revealed)throw Error('Expected live reveal before natural final tick'
 const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
+verifyRecordedHistories('B8 live growth',[historyFor(live.ended)]);
 describe('B8 live growth plus immediate randomized loot merge',()=>{
  it('pins real seed48 prior stock and original-source current delta independently',()=>{
   expect(prepared.persistentGrowth).toEqual(priorBySource);

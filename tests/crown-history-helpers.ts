@@ -1,4 +1,4 @@
-import { startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { startMatchCombat, stepMatch, type MatchState } from './fixtures/recorded-match';
 import { BattleHistory } from '../src/replay/history';
 
 /** Recorder driven only by committed public commands, just like MatchSession. */

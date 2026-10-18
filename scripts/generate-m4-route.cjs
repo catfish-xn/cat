@@ -5,8 +5,8 @@ module.exports = async function generateRoute() {
   const { createServer } = await import('vite');
   const server = await createServer({ root: path.resolve(__dirname, '..'), server: { middlewareMode: true, ws: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
   try {
-    const api = await server.ssrLoadModule('/src/simulation/match.ts');
-    const { restoreMatch } = await server.ssrLoadModule('/src/simulation/serialization.ts');
+    const api = await server.ssrLoadModule('/tests/fixtures/recorded-match.ts');
+    const { restoreMatch } = await server.ssrLoadModule('/tests/fixtures/history-evidence.ts');
     const { UNIT_DEFINITIONS } = await server.ssrLoadModule('/src/simulation/units.ts');
     const { deriveTraits } = await server.ssrLoadModule('/src/simulation/trait-snapshot.ts');
     const { expectedRound, expectedShop } = require('../tests/fixtures/m4/oracle.cjs');

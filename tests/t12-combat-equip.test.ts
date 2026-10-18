@@ -1,14 +1,14 @@
+import {restoreMatch,serializeMatch} from './fixtures/history-evidence';
+import {combineItems,equipItem,deployMatchUnit,startMatchCombat,stepMatch,nextRound,buyUnit,buyXp,rerollShop,sellUnit,setShopLock,lockMatchCombatRoster,selectChoice} from './fixtures/recorded-match';
 import { deepStrictEqual } from 'node:assert';
 import { syntheticSharedRound } from './tp-helpers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch, nextRound,
-  buyUnit, buyXp, rerollShop, sellUnit, setShopLock,
-  enableMultiplayerSettlement, lockMatchCombatRoster, snapshotForBattle,
+  enableMultiplayerSettlement, snapshotForBattle,
   restorePlayerBattleSnapshot, compileBattle, restoreBattleInput, resolveTwoSidedBattle,
-  serializeMatch, restoreMatch, runSharedMatchCommand, generateSharedShop, buySharedUnit,
+  runSharedMatchCommand, generateSharedShop, buySharedUnit,
   proposeSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VERSION,
-  createMatch, selectChoice, type MatchState, type MatchCommandResult, type RoundSettlementReceipt,
+  createMatch, type MatchState, type MatchCommandResult, type RoundSettlementReceipt,
 } from '../src/server-entry';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { previewCombine, previewEquip } from '../src/simulation/item-selectors';

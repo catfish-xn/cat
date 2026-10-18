@@ -7,7 +7,7 @@ const randomState=state=>({seed:state.seed,shop:state.rngState,choice:state.choi
 async function main(){
  const {createServer}=await import('vite');const server=await createServer({configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'});
  try {
- const api=await server.ssrLoadModule('/src/simulation/match.ts'),ser=await server.ssrLoadModule('/src/simulation/serialization.ts');
+ const api=await server.ssrLoadModule('/tests/fixtures/recorded-match.ts'),ser=await server.ssrLoadModule('/tests/fixtures/history-evidence.ts');
  const {CONTENT_DIGEST}=await server.ssrLoadModule('/src/simulation/content/index.ts');const {LOOT_REPLAY_DIGEST}=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');
  const previous=JSON.parse(fs.readFileSync('tests/t13-content-baseline.json'));
  const identities=[[previous.contentDigest,CONTENT_DIGEST],[previous.lootReplayDigest,LOOT_REPLAY_DIGEST],['s13-rules-gap-v1','s13-rules-gap-v2'],['s13-14.24b-rules-gap-v1','s13-14.24b-rules-gap-v2']];

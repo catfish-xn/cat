@@ -2,33 +2,18 @@ import {expect,it} from 'vitest';
 import {deepStrictEqual} from 'node:assert/strict';
 import {gunzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
-import {createMatch,buyXp,deployMatchUnit,sellUnit,selectChoice,nextRound,startMatchCombat as rawStartMatchCombat,stepMatch as rawStepMatch,claimG23Reward,type MatchState} from '../src/simulation/match';
+import {createMatch,buyXp,deployMatchUnit,sellUnit,selectChoice,nextRound,startMatchCombat,stepMatch,claimG23Reward,type MatchState} from './fixtures/recorded-match';
 import {grantMechanicGold,grantMechanicUnit} from '../src/simulation/seat-mechanics';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,G23_POLICY,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {drainG23Rewards} from '../src/simulation/g2-3-runtime';
-import {serializeWithEvidence as serializeMatch,restoreWithEvidence as restoreMatch,historyFor,observeHistory} from './fixtures/history-evidence';
-import {CompletedBattleHistory} from './fixtures/completed-battle-history';
+import {serializeWithEvidence as serializeMatch,restoreWithEvidence as restoreMatch} from './fixtures/history-evidence';
 import {readG23MechanismState} from '../src/simulation/g2-3-view';
 import type {G23RewardBundle} from '../src/simulation/g2-3-economy';
 import {advanceG23Economy,decideG23Market,type G23BattleFacts} from '../src/simulation/g2-3-economy';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
-
-// Keep the new target-branch vectors on the same complete-history boundary.
-// Each independently resumed branch records only its own committed commands.
-const activeHistories=new WeakMap<MatchState,CompletedBattleHistory>();
-function startMatchCombat(state:MatchState){
- const battles=historyFor(state),history=new CompletedBattleHistory(battles[0]?.runId??'lesser-public',battles);
- const result=rawStartMatchCombat(state);
- if(result.ok){observeHistory(history,state,result);activeHistories.set(result.state,history);}
- return result;
-}
-function stepMatch(state:MatchState){
- const result=rawStepMatch(state),history=activeHistories.get(state);
- if(history){observeHistory(history,state,result);activeHistories.set(result.state,history);}
- return result;
-}
+import * as reference from '../src/simulation/match';
 
 const shimmer='TFT13_Crime_Consumable_LesserShimmerDuplicator';
 const lesser='TFT_Consumable_ChampionDuplicator_III';
@@ -145,16 +130,16 @@ function publicMarket():MatchState{
 
 function expectRoundTripAndNextBattle(state:MatchState):void{
  const saved=serializeMatch(state),copies=[restoreMatch(saved),restoreMatch(state),restoreMatch(JSON.stringify(state))];
- for(const copy of copies)expect(copy).toEqual(state);
+ for(const copy of copies)deepStrictEqual(copy,state);
  let original=preparation(state),restored=copies.map(preparation);
  const start=startMatchCombat(original);original=ok(start);
- restored=restored.map(copy=>{const result=startMatchCombat(copy);expect(result).toEqual(start);return ok(result);});
+ restored=restored.map(copy=>{const result=reference.startMatchCombat(copy);deepStrictEqual(result,start);return ok(result);});
  expect(original.phase).toBe('combat');
  let ticks=0;
  while(original.phase==='combat'&&ticks++<1200){
   const step=stepMatch(original);original=step.state;
   // node:assert compares a full step result several times faster than toEqual.
-  restored=restored.map(copy=>{const next=stepMatch(copy);deepStrictEqual(next,step);return next.state;});
+  restored=restored.map(copy=>{const next=reference.stepMatch(copy);deepStrictEqual(next,step);return next.state;});
  }
  expect(ticks).toBeGreaterThan(0);expect(original.combat?.status).toBe('finished');
 }

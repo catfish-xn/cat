@@ -1,7 +1,7 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
 import {routeSaveFile} from '../src/persistence/compatibility';
 import {legacyRecords,LEGACY_M8_NAMESPACE,M8_NAMESPACE} from '../src/persistence/legacy-records';
-import {restoreMatch} from '../src/simulation/serialization';
+import {restoreMatch} from './fixtures/history-evidence';
 import {readFileSync} from 'node:fs';
 const oldFile=()=>JSON.parse(readFileSync(new URL('./fixtures/t12-herald-raw/edge-of-night.json',import.meta.url)).toString());
 afterEach(()=>vi.unstubAllGlobals());

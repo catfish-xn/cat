@@ -9,7 +9,7 @@ const sha=x=>createHash('sha256').update(typeof x==='string'||Buffer.isBuffer(x)
 const randomState=s=>({seed:s.seed,shop:s.rngState,choice:s.choiceRngState,reward:s.rewardRngState,battleSeed:s.battleSeedRngState,equipment:s.equipmentState.equipment,reforge:s.reforgeState,layout:s.m8.loot.layoutBinding.mode==='solo'?s.m8.loot.layoutBinding.layout.rng:null,loot:s.m8.loot.frozen.rng,combat:s.combat?{state:s.combat.rngState,draws:s.combat.rngDraws}:null});
 async function main(){const {createServer}=await import('vite');const server=await createServer({configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'});
 try{
- const api=await server.ssrLoadModule('/src/simulation/match.ts'),ser=await server.ssrLoadModule('/src/simulation/serialization.ts'),content=await server.ssrLoadModule('/src/simulation/content/index.ts'),loot=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');
+ const api=await server.ssrLoadModule('/tests/fixtures/recorded-match.ts'),ser=await server.ssrLoadModule('/tests/fixtures/history-evidence.ts'),content=await server.ssrLoadModule('/src/simulation/content/index.ts'),loot=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');
  const previous=JSON.parse(fs.readFileSync('tests/g2-2-content-baseline.json')),oldGolden=JSON.parse(fs.readFileSync('tests/fixtures/m5/full-match-golden.g2-2.json'));
  const normalize=s=>JSON.parse(JSON.stringify(s),(_,v)=>v===previous.contentDigest?content.CONTENT_DIGEST:v);
  assert.notEqual(previous.contentDigest,content.CONTENT_DIGEST);assert.equal(previous.lootReplayDigest,loot.LOOT_REPLAY_DIGEST);

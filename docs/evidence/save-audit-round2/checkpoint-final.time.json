@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "scripts/record-save-checkpoint-history.cjs",
+    "--check"
+  ],
+  "wallSeconds": 17.232,
+  "exitCode": 0,
+  "maxRssKiB": 687612
+}

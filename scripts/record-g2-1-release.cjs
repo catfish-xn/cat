@@ -7,7 +7,7 @@ const randomState=s=>({seed:s.seed,shop:s.rngState,choice:s.choiceRngState,rewar
 async function main(){
  const {createServer}=await import('vite');const server=await createServer({configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'});
  try{
-  const api=await server.ssrLoadModule('/src/simulation/match.ts'),ser=await server.ssrLoadModule('/src/simulation/serialization.ts');
+  const api=await server.ssrLoadModule('/tests/fixtures/recorded-match.ts'),ser=await server.ssrLoadModule('/tests/fixtures/history-evidence.ts');
   const {CONTENT_DIGEST,digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts'),{LOOT_REPLAY_DIGEST}=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');
   const oldPath='tests/fixtures/m5/full-match-golden.p3p4p5.json',priorBytes=fs.readFileSync(oldPath),prior=JSON.parse(priorBytes),previous=require('../tests/p3p4p5-content-baseline.json');
   const initial=api.createMatch(42),steps=[];let r=api.startMatchCombat(initial);steps.push(r);while(r.state.phase==='combat'){r=api.stepMatch(r.state);steps.push(r);}

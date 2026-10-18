@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {CONTENT_DIGEST} from '../src/simulation/content';
 import {LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
-import {restoreMatch} from '../src/simulation/serialization';
+import {restoreMatch} from './fixtures/history-evidence';
 import baseline from './g2-2-content-baseline.json';
 import prior from './p7-content-baseline.json';
 import audit from '../docs/evidence/g2-2/release-audit.json';

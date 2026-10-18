@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import { createMatch, createCarouselMatch } from '../src/simulation/match';
+import { createMatch, createCarouselMatch } from './fixtures/recorded-match';
 import { selectOpeningUnit } from '../src/simulation/opening-unit';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { createSharedPool, initializeSharedSeat, assertSharedPoolConservation } from '../src/simulation/shared-pool';
-import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
+import { serializeMatch, restoreMatch } from './fixtures/history-evidence';
 import { prepareMatchLoot } from '../src/simulation/loot-runtime';
 import { validateB8Resources } from '../src/simulation/b8-restore';
 import { generateShop } from '../src/simulation/shop';

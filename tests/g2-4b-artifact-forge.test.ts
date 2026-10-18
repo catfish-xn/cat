@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest';
-import {createMatch,selectChoice,forfeitPendingChoice,claimG23Reward,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,useConsumable,equipItem,type MatchState} from '../src/simulation/match';
+import {createMatch,selectChoice,forfeitPendingChoice,claimG23Reward,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,useConsumable,equipItem,type MatchState} from './fixtures/recorded-match';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../src/simulation/round-settlement';
 import {grantMechanicGold,grantMechanicUnit,grantMechanicItem,openMechanicChoice} from '../src/simulation/seat-mechanics';
 import {validateG23Restoration} from '../src/simulation/g2-3-restore';
 import {validateSeatMechanicsState} from '../src/simulation/seat-mechanics/state';
 import {validateMechanicPendingChoice} from '../src/simulation/seat-mechanics/choices';
-import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {serializeMatch,restoreMatch} from './fixtures/history-evidence';
 import {G24_FORGE_POOLS,G24_FORGE_POLICY,resolveG24ForgePool} from '../src/simulation/content/g2-4-forges';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';

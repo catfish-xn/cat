@@ -1,8 +1,9 @@
+import { historyFor, registerHistory } from './history-evidence';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import {
-  combineItems, deployMatchUnit, equipItem, startMatchCombat,
-} from '../../src/simulation/match';
+  combineItems, deployMatchUnit, equipItem, startMatchCombat, copyRecordedMatch,
+} from './recorded-match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 
 function accepted(result: MatchCommandResult): MatchState {
@@ -17,7 +18,7 @@ const equipmentPreparation=(components:readonly string[])=>acquire(components,{s
 
 // Cache the public route + item compilation. Each caller owns its mutable copy;
 // negative/continuation tests cannot contaminate later test fixtures.
-const compiledItems = new Map<string, MatchState>();
+const compiledItems = new Map<string, {state: MatchState; battles: readonly import('../../src/m6/contracts').BattleRecord[]}>();
 /** Public provenance-complete equipment fixture: combat is 2-1 (one/two
  * components) or 3-5 (three/four), not the old synthetic 1-2 encounter.
  * unit-1 is the original Irelia; unit-3 is the Lux actually dropped in 1-3.
@@ -28,7 +29,8 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
   const requested = typeof id === 'string' ? [id] : [...id];
   const key = JSON.stringify([requested, unitId]), cached = compiledItems.get(key);
   if (cached) {
-    const copy = structuredClone(cached);
+    const copy = copyRecordedMatch(cached.state);
+    registerHistory(copy,cached.battles);
     freezeContent(copy.m8); freezeContent(copy.resourceProvenance);
     if (copy.combatInputBasis) freezeContent(copy.combatInputBasis);
     return copy;
@@ -61,7 +63,7 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
   }
   state = accepted(deployMatchUnit(state, unitId, { kind: 'board', cell: { col: unitId === 'unit-1' ? 1 : 5, row: 4 } }));
   const compiled = accepted(startMatchCombat(state));
-  compiledItems.set(key, structuredClone(compiled));
+  compiledItems.set(key, {state:copyRecordedMatch(compiled),battles:historyFor(compiled)});
   return compiled;
 }
 

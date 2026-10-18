@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "scripts/record-armory-history.cjs",
+    "--check"
+  ],
+  "wallSeconds": 19.636,
+  "exitCode": 0,
+  "maxRssKiB": 854908
+}

@@ -41,7 +41,7 @@ async function main() {
   try {
     for (const directory of [baselineRoot,root]) servers.push(await createServer({root:directory,configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'}));
     const engines=[];
-    for (const s of servers) engines.push({api:await s.ssrLoadModule('/src/simulation/match.ts'),ser:await s.ssrLoadModule('/src/simulation/serialization.ts'),content:await s.ssrLoadModule('/src/simulation/content/index.ts'),loot:await s.ssrLoadModule('/src/simulation/loot-freeze.ts'),battle:await s.ssrLoadModule('/src/server-entry/index.ts'),rounds:(await s.ssrLoadModule('/src/simulation/content/round-catalog.ts')).ROUND_CATALOG});
+    for (const [i,s] of servers.entries()) engines.push({api:await s.ssrLoadModule(i?'/tests/fixtures/recorded-match.ts':'/src/simulation/match.ts'),ser:await s.ssrLoadModule(i?'/tests/fixtures/history-evidence.ts':'/src/simulation/serialization.ts'),content:await s.ssrLoadModule('/src/simulation/content/index.ts'),loot:await s.ssrLoadModule('/src/simulation/loot-freeze.ts'),battle:await s.ssrLoadModule('/src/server-entry/index.ts'),rounds:(await s.ssrLoadModule('/src/simulation/content/round-catalog.ts')).ROUND_CATALOG});
     const [old,now]=engines,previous=old.api.createMatch(42),current=now.api.createMatch(42);
     assert.notEqual(previous.contentDigest,current.contentDigest,'W4 must change content identity');
     assert.notEqual(previous.rulesVersion,current.rulesVersion);assert.notEqual(previous.contentVersion,current.contentVersion);

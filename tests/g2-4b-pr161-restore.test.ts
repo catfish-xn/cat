@@ -4,8 +4,8 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {buildSync} from 'esbuild';
-import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
+import {serializeMatch,restoreMatch,historyFor,carryHistory} from './fixtures/history-evidence';
+import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from './fixtures/recorded-match';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
@@ -141,7 +141,9 @@ function tier14Battle():MatchState{
   const facts=receipt.facts.round===state.round?{...receipt.facts,conquerorTier:9,conquestTakedowns:Array.from({length:28},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
   replay=advanceG23Economy(replay,facts).progress;
  }
+ const genuine=state;
  state=writeG23Progress(state,{...original,...replay});
+ carryHistory(genuine,state);
  const last=replay.economyReceipts.at(-1)!;
  if(last.kind!=='battle')throw Error('Expected final battle');
  for(const payout of g23BattlePayouts(last.facts,replay.conquest.chestsOpened,original.conquest.chestsOpened))state=accepted(grantMechanicGold(state,payout));
@@ -150,7 +152,9 @@ function tier14Battle():MatchState{
  while(state.phase==='choice'){
   const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
  }
- expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ // These edited historical facts are intentionally illegal under full replay.
+ expect(()=>serializeMatch(state)).toThrow();
+ expect(()=>restoreMatch(state)).toThrow();
  state=accepted(startMatchCombat(state));
  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
  expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-3',1214,14]);
@@ -163,20 +167,11 @@ function settlementCases():MatchState[]{
  return [naturalForgeStates().get(4)!,pending,accepted(selectChoice(pending,c.choiceId,c.generation,c.offers[0]))];
 }
 
-/** Keep the earlier chest awards, but move the historical receipt vector to 99
- * stacks so two high-cost Conquerors can earn tier4 in a real solo battle. */
+/** Two high-cost Conquerors earn tier4 through actual battles. No progress edits. */
 function tier4WithoutOwnedTarget(fullBench=false):MatchState{
  let state=naturalTier4Preparation();
- const original=readG23Progress(state)!;let replay=createG23Progress(state.seed);
- for(const receipt of original.economyReceipts){
-  if(receipt.kind!=='battle')throw Error('Unexpected fixture market');
-  const facts=receipt===original.economyReceipts.at(-1)?{...receipt.facts,conquerorTier:4,
-   conquestTakedowns:Array.from({length:(99-replay.conquest.stacks)/3},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
-  replay=advanceG23Economy(replay,facts).progress;
- }
- expect(replay.conquest.stacks).toBe(99);
- expect(replay.rewards).toEqual(original.rewards);
- state=writeG23Progress(state,{...original,...replay});
+ for(let guard=0;guard<40;guard++){
+ state=nextDuplicatorPreparation(state);
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3))
   state=accepted(sellUnit(state,unit.id));
  if(fullBench){
@@ -189,6 +184,8 @@ function tier4WithoutOwnedTarget(fullBench=false):MatchState{
  expect(state.preparation.units.some(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3)).toBe(false);
  state=accepted(startMatchCombat(state));
  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
+ if(readG23Progress(state)!.conquest.chestsOpened>=4)break;
+ }
  expect(state.phase).toBe('settlement');
  expect(state.combat?.status).toBe('finished');
  expect(readG23Progress(state)!.conquest.chestsOpened).toBe(4);
@@ -230,7 +227,7 @@ it('restores the award-round duplicator in escrow when no eligible hero is owned
  expectUnchangedRoundTrip(state);
 },60000);
 
-it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round',()=>{
+it('restores real tier4 automatic births and rejects edited tier14 history pending and selected',()=>{
  const states=settlementCases(),four=states[0];
  expect([four.round,four.roundDefinitionId,readG23Progress(four)!.conquest.stacks]).toEqual([6,'2-3',108]);
  expect(four.combat?.status).toBe('finished');
@@ -243,7 +240,13 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
   kind:'item',itemId:'item-17',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
  });
  for(const state of states){
-  const before=JSON.stringify(state),save=serializeMatch(state);
+  const before=JSON.stringify(state);
+  if(state!==four){
+   for(const input of [state,before,JSON.parse(before)])expect(()=>restoreMatch(input,historyFor(state))).toThrow();
+   expect(()=>serializeMatch(state)).toThrow();
+   continue;
+  }
+  const save=serializeMatch(state);
   expect(restoreMatch(state)).toEqual(state);
   expect(restoreMatch(JSON.parse(save))).toEqual(state);
   expect(restoreMatch(save)).toEqual(state);
@@ -349,7 +352,7 @@ it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected
  expect(()=>restoreMatch({...twice,seatMechanics:{...twice.seatMechanics!,receipts}})).toThrow('mechanic birth order');
 },60000);
 
-it('cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice',()=>{
+it('cold Node accepts actual tiers4/10 with complete history and rejects edited tier14 history',()=>{
  const directory=mkdtempSync(join(tmpdir(),'g24-cold-'));
  try{
   const entry=join(directory,'restore.mjs');
@@ -357,18 +360,22 @@ it('cold Node processes restore actual canonical saves for tiers4/10/14 with the
    import {restoreMatch} from './src/simulation/serialization';
    import {readG23Progress} from './src/simulation/g2-3-state';
    const text=readFileSync(process.argv[2],'utf8');
-   const state=restoreMatch(process.argv[4]==='object'?JSON.parse(text):text);
+   const battles=JSON.parse(readFileSync(process.argv[5],'utf8'));
+   const state=restoreMatch(process.argv[4]==='object'?JSON.parse(text):text,battles);
    writeFileSync(process.argv[3],JSON.stringify({state,progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry});
   for(const tier of [4,10,14]){
    const initial=tier===14?tier14Battle():naturalForgeStates().get(tier)!;
    const states=tier===4?[initial]:[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,tier===10?'TFT_Item_Artifact_SeekersArmguard':initial.pendingChoice!.offers[0]))];
    for(const [index,state] of states.entries()){
     const save=join(directory,`tier${tier}-${index}.json`);
-    writeFileSync(save,serializeMatch(state));
+    writeFileSync(save,tier===14?JSON.stringify(state):serializeMatch(state));
+    const evidence=join(directory,`tier${tier}-${index}-history.json`);
+    writeFileSync(evidence,JSON.stringify(historyFor(state)));
     for(const mode of ['text','object']){
      const output=join(directory,`tier${tier}-${index}-${mode}-restored.json`);
-     const child=spawnSync(process.execPath,[entry,save,output,mode],{encoding:'utf8',timeout:30000});
+     const child=spawnSync(process.execPath,[entry,save,output,mode,evidence],{encoding:'utf8',timeout:30000});
      expect(child.error).toBeUndefined();
+     if(tier===14){expect(child.status).not.toBe(0);expect(child.stderr).toMatch(/历史|history|Battle|battle/);continue;}
      expect(child.status,child.stderr).toBe(0);
      const result=JSON.parse(readFileSync(output,'utf8'));
      expect(result.state).toEqual(state);

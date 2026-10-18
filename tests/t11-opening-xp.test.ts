@@ -11,9 +11,9 @@ vi.mock('../src/simulation/match', async importOriginal => {
 });
 
 import { describe, expect, it } from 'vitest';
-import { createMatch, nextRound, startMatchCombat, stepMatch } from '../src/simulation/match';
+import { createMatch, nextRound, startMatchCombat, stepMatch } from './fixtures/recorded-match';
 import { XP_TO_NEXT_LEVEL } from '../src/simulation/match-rules';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { accepted, finish, resolveM5Choices } from './match-helpers';
 import { makeRoom, runUntil } from './server/helpers';

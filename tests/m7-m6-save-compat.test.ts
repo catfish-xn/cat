@@ -8,7 +8,7 @@ import { load, manifest as readManifest } from './fixtures/m6-saves/load.cjs';
 import { CompatibilityError, validateEnvelope } from '../src/persistence/format';
 import { readCompatibility } from '../src/persistence/compatibility';
 import { PlaybackSession } from '../src/replay';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch } from './fixtures/history-evidence';
 import type { SaveEnvelope } from '../src/m6/contracts';
 
 const manifest = readManifest();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
-import * as api from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import { restoreMatch } from './fixtures/history-evidence';
 import type { LedgerCombatEvent as CombatEvent } from '../src/simulation/combat';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import type { Unit } from '../src/simulation/unit-types';

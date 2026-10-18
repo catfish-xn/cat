@@ -1,6 +1,6 @@
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
-import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
+import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from './recorded-match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices } from './b8-public-equipment';
 

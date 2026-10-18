@@ -4,9 +4,9 @@ import frozen from '../src/simulation/content/source/s13-14.24b/normalized/items
 import { ITEM_DEFINITIONS,COMPONENT_IDS } from '../src/simulation/content/items';
 import { validateContent } from '../src/simulation/validate-content';
 import { validateComponentPool,validateComponentCandidates,COMPONENT_POOL } from '../src/simulation/component-pool';
-import { selectChoice,stepMatch } from '../src/simulation/match';
+import { selectChoice,stepMatch } from './fixtures/recorded-match';
 import { itemMatch, publicEquipmentPreparation } from './fixtures/m8-b4-match';
-import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
+import { serializeMatch,restoreMatch } from './fixtures/history-evidence';
 import { stepCombat } from '../src/simulation/combat';
 import { wearing,run,enemy } from './fixtures/m8-b4-items';
 // Warm the exact public acquisition routes, as in #98; keep combat/restore in each case.

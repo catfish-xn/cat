@@ -8,7 +8,7 @@ const base=path.resolve(arg.slice(16)),sha=x=>createHash('sha256').update(x).dig
 function first(a,b,p='$'){if(json(a)===json(b))return null;if(!a||!b||typeof a!=='object'||typeof b!=='object')return{path:p,previous:a??null,current:b??null};for(const k of new Set([...Object.keys(a),...Object.keys(b)])){const d=first(a[k],b[k],`${p}.${k}`);if(d)return d;}return null;}
 const bytes=x=>({bytes:Buffer.byteLength(json(x)),sha256:sha(json(x))});
 async function capture(server,seed,legacy){
- const api=await server.ssrLoadModule('/src/simulation/match.ts'),ser=await server.ssrLoadModule('/src/simulation/serialization.ts'),units=(await server.ssrLoadModule('/src/simulation/units.ts')).UNIT_DEFINITIONS;
+ const api=await server.ssrLoadModule(legacy?'/src/simulation/match.ts':'/tests/fixtures/recorded-match.ts'),ser=await server.ssrLoadModule(legacy?'/src/simulation/serialization.ts':'/tests/fixtures/history-evidence.ts'),units=(await server.ssrLoadModule('/src/simulation/units.ts')).UNIT_DEFINITIONS;
  const content=await server.ssrLoadModule('/src/simulation/content/index.ts'),loot=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');
  let state=api.createMatch(seed),commands=[{operation:'createMatch',args:[seed]}],events=[],stateRows=[];
  let rawHash=createHash('sha256'),rawBytes=0;

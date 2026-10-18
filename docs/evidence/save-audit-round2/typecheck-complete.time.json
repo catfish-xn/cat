@@ -1,0 +1,10 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "typecheck"
+  ],
+  "wallSeconds": 23.798,
+  "exitCode": 0,
+  "maxRssKiB": 1134292
+}

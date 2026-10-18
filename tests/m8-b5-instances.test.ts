@@ -1,14 +1,17 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { combineItems, equipItem } from '../src/simulation/match';
+import { combineItems, equipItem } from './fixtures/recorded-match';
 import type { MatchCommandResult, MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch, historyFor } from './fixtures/history-evidence';
+import { verifyDeferredRecordedHistory } from './fixtures/verify-recorded-history';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { transferUpgradeResources } from '../src/simulation/upgrades';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';
 
 // Acquire public-route fixtures once, outside the query/constraint case timers.
-beforeAll(() => { publicInventory(['blue-buff', 'blue-buff'], false, 9); });
+let bluePair:ReturnType<typeof publicInventory>;
+beforeAll(() => { bluePair=publicInventory(['blue-buff', 'blue-buff'], false, 9); });
 beforeAll(() => { publicInventory(['last-whisper', 'last-whisper']); });
 beforeAll(() => { publicInventory(['quicksilver', 'quicksilver']); });
 beforeAll(() => { publicInventory(['sword', 'sword', 'sword', 'sword'], false, 4); });
@@ -17,6 +20,9 @@ beforeAll(() => { publicInventory(['thiefs-gloves', 'thiefs-gloves']); });
 beforeAll(() => { publicInventory(['gloves', 'gloves']); });
 beforeAll(() => { publicInventory(['blue-buff', 'blue-buff']); });
 beforeAll(() => { publicInventory(['thiefs-gloves']); });
+verifyDeferredRecordedHistory('real two-blue-buff prefix',
+  ROUND_CATALOG.filter(r=>r.kind!=='supply'&&r.ordinal<ROUND_CATALOG.find(r=>r.roundId==='4-1')!.ordinal).length,
+  ()=>historyFor(bluePair.state));
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },

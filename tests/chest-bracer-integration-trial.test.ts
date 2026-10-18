@@ -1,11 +1,12 @@
 import { deepStrictEqual } from 'node:assert/strict';
+import { stepMatch as continueMatch } from '../src/simulation/match';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   deployMatchUnit, equipItem, sellUnit, startMatchCombat, stepMatch,
   type MatchCommandResult, type MatchEvent, type MatchState,
-} from '../src/simulation/match';
+} from './fixtures/recorded-match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
 import { publicEquipmentPreparation } from './fixtures/b8-public-equipment';
@@ -60,7 +61,9 @@ function finish(from: MatchState, original: MatchState) {
   let state = from;
   const continuation: MatchEvent[] = [];
   while (state.phase === 'combat') {
-    const result = stepMatch(state), expected = stepMatch(original);
+    // Both continuations are comparison-only; their outputs are never saved.
+    // The saved checkpoints above retain the original real recorded history.
+    const result = continueMatch(state), expected = continueMatch(original);
     // Strict deep equality keeps the full per-tick comparison without Vitest's slower matcher.
     deepStrictEqual(result, expected, `continuation tick ${expected.state.combat!.tick}`);
     original = expected.state; state = result.state; continuation.push(...result.events);
@@ -126,11 +129,11 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     const saved = serializeMatch(state);
     for (const input of [saved, structuredClone(state)]) {
       const restored = restoreMatch(input);
-      expect(restored).toEqual(state);
+      deepStrictEqual(restored, state);
       expect(serializeMatch(restored)).toBe(saved);
       // Full Match equality includes outcome/settlement, every unit, grants,
       // sampled-stat receipts, periodic state, RNG counters and all events.
-      expect(finish(restored, state)).toEqual({ state: terminal, events: events.slice(eventOffset) });
+      deepStrictEqual(finish(restored, state), { state: terminal, events: events.slice(eventOffset) });
     }
   });
 });

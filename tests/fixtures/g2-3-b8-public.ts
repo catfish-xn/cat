@@ -1,4 +1,4 @@
-import * as api from '../../src/simulation/match';
+import * as api from './recorded-match';
 
 const accepted = (result: api.MatchCommandResult): api.MatchState => {
   if (!result.ok) throw new Error(result.reason);

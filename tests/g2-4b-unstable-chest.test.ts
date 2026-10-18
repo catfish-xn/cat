@@ -12,6 +12,7 @@ import { mechanic, variable } from '../src/simulation/combat-s13-state';
 import { compileItemCrit, validateItemProgram } from '../src/simulation/m8/item-program';
 import { validateCombatItemGrants } from '../src/simulation/m8/combat-item-grants';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
+import { historyFor } from './fixtures/history-evidence';
 import { restoreMatch, validateM5Runtime } from '../src/simulation/serialization';
 import { canonicalContent } from '../src/simulation/content';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
@@ -405,11 +406,11 @@ describe('G2-4b chest restore rejects forged grants', () => {
   ])('rejects %s', (_name, edit) => { expect(forge(edit)).toThrow('Invalid Match save'); });
   it('a Match save whose unit claims an item it never received is rejected', () => {
     const match = itemMatch('warmog');
-    expect(() => restoreMatch(JSON.stringify(match))).not.toThrow();
+    expect(() => restoreMatch(JSON.stringify(match),historyFor(match))).not.toThrow();
     const forged = structuredClone(match) as MatchState & { combat: CombatState };
     const unit = forged.combat.units.find(u => u.team === 'player')! as CombatUnit & { combatItemGrants?: unknown };
     unit.combatItemGrants = [{ chest: { ownerId: unit.id, sourceKind: 'item', definitionId: CHEST, instanceId: 'item-9', effectIndex: 0, parentItemInstanceId: null }, ordinal: 0, definitionId: 'warmog', grantedAtTick: 0 }];
-    expect(() => restoreMatch(JSON.stringify(forged))).toThrow('Invalid Match save');
+    expect(() => restoreMatch(JSON.stringify(forged),historyFor(match))).toThrow('Invalid Match save');
   });
   const chest = { ownerId: 'unit-1', sourceKind: 'item', definitionId: CHEST, instanceId: 'item-9', effectIndex: 0, parentItemInstanceId: null };
   it.each([

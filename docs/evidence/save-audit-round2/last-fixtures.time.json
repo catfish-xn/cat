@@ -1,0 +1,23 @@
+{
+  "command": [
+    "env",
+    "NODE_OPTIONS=--max-old-space-size=2048",
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/m8-b5-instances.test.ts",
+    "tests/m8-b5-grant-upgrade.test.ts",
+    "tests/m8-b5-temporary.test.ts",
+    "tests/g2-3-netcode-hooks.test.ts",
+    "tests/g2-3-identity.test.ts",
+    "tests/restore-audit/g23-grant-evidence.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/last-fixtures.json"
+  ],
+  "wallSeconds": 104.914,
+  "exitCode": 0,
+  "maxRssKiB": 1801996
+}

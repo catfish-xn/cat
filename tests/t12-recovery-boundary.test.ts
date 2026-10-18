@@ -1,7 +1,8 @@
+import {restoreMatch,serializeMatch} from './fixtures/history-evidence';
 import { describe, expect, it } from 'vitest';
 import {
   createMatch, deployMatchUnit, enableMultiplayerSettlement, startMatchCombat, stepMatch,
-  lockMatchCombatRoster, serializeMatch, restoreMatch, createSharedPool,
+  lockMatchCombatRoster, createSharedPool,
   initializeSharedSeat, assertSharedPoolConservation,
 } from '../src/server-entry';
 import { reachRound } from './match-helpers';

@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { combineItems, equipItem, startMatchCombat } from '../src/simulation/match';
+import { combineItems, equipItem, startMatchCombat } from './fixtures/recorded-match';
 import { previewCombine, previewEquip, readUnitEquipment, readItemCatalog } from '../src/simulation/item-selectors';
 import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';

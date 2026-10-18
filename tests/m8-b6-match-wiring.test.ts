@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, selectChoice, selectAnomalyTarget, setShopLock, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, selectChoice, selectAnomalyTarget, setShopLock, startMatchCombat, stepMatch, type MatchState } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { readRoundInfo, getCatalogRoundById } from '../src/simulation/round-selectors';
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from '../src/simulation/content/round-catalog';
 import { getRoundKind, getRoundSchedule, getStageRound } from '../src/simulation/round-schedule';
@@ -9,6 +9,11 @@ import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import * as enemies from '../src/simulation/round-enemies';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
+import { verifyRecordedHistories } from './fixtures/verify-recorded-history';
+import { readRecordedFixture } from './fixtures/recorded-fixture';
+import type { BattleRecord } from '../src/m6/contracts';
+
+verifyRecordedHistories('B6', [readRecordedFixture<{ battles: BattleRecord[] }>('neutral').battles]);
 
 const roundTrip = (state:MatchState) => {
   const restored=restoreMatch(serializeMatch(state));

@@ -11,8 +11,8 @@ async function main() {
  const {createServer} = await import('vite');
  const server = await createServer({root:path.resolve(__dirname,'..'),configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'});
  try {
-  const api=await server.ssrLoadModule('/src/simulation/match.ts');
-  const serialization=await server.ssrLoadModule('/src/simulation/serialization.ts');
+  const api=await server.ssrLoadModule('/tests/fixtures/recorded-match.ts');
+  const serialization=await server.ssrLoadModule('/tests/fixtures/history-evidence.ts');
   const h=await server.ssrLoadModule('/tests/fixtures/t13-loot-public.ts');
   const {CONTENT_DIGEST}=await server.ssrLoadModule('/src/simulation/content/index.ts');
   const {LOOT_REPLAY_DIGEST}=await server.ssrLoadModule('/src/simulation/loot-freeze.ts');

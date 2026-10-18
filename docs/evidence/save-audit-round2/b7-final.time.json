@@ -1,0 +1,16 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/m8-b7-match-wiring.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/b7-final.json"
+  ],
+  "wallSeconds": 91.878,
+  "exitCode": 0,
+  "maxRssKiB": 2299648
+}

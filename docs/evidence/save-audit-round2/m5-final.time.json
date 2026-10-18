@@ -1,0 +1,15 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "timing",
+    "tests/m5-replay-cannon.test.ts",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/m5-final.json"
+  ],
+  "wallSeconds": 165.996,
+  "exitCode": 0,
+  "maxRssKiB": 1024552
+}

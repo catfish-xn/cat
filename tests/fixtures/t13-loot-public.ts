@@ -1,7 +1,7 @@
-import * as api from '../../src/simulation/match';
-import type { MatchState, MatchCommandResult, MatchEvent } from '../../src/simulation/match';
+import * as api from './recorded-match';
+import type { MatchState, MatchCommandResult, MatchEvent } from './recorded-match';
 import { CompletedBattleHistory } from './completed-battle-history';
-import { historyFor, observeHistory } from './history-evidence';
+import { historyFor, observeHistory, copyWithHistory } from './history-evidence';
 import { createRequire } from 'node:module';
 const { run } = createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
 export function accepted(result: MatchCommandResult): MatchState {
@@ -58,7 +58,7 @@ export async function publicPrefix(roundId:string,seed=42,build='cannon'):Promis
     }});}catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error(`Missing public prefix ${key}`);prefixes.set(key,prefix);
   }
-  return structuredClone(prefixes.get(key)!);
+  return copyWithHistory(prefixes.get(key)!);
 }
 export function fillBench(input:MatchState,excluded:readonly string[]=[]):MatchState {
   let s=input;
@@ -104,7 +104,7 @@ export async function terminalPreparation(keep:string|null,col=1,row=7) {
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }
-  let s=structuredClone(prefixes.get(key)!);
+  let s=copyWithHistory(prefixes.get(key)!);
   if(keep) {const unit=players(s).find(u=>u.id===keep||u.definitionId===keep);if(!unit)throw Error(`Missing terminal target ${keep}`);s=accepted(api.deployMatchUnit(s,unit.id,{kind:'board',cell:{col,row}}));}
   return fillBench(s,['ezreal']);
 }

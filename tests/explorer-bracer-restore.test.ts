@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { stepMatch, type MatchEvent, type MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { stepMatch, type MatchEvent, type MatchState } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { variable } from '../src/simulation/combat-s13-state';
 import { abilityPowerCandidates } from '../src/simulation/m8/item-restore';

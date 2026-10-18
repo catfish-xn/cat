@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import { createMatch, startMatchCombat, stepMatch } from './fixtures/recorded-match';
+import { restoreMatch } from './fixtures/history-evidence';
 import * as provenance from '../src/simulation/resource-provenance';
 import { accepted } from './match-helpers';
 import { recordedCrownBattle } from './crown-history-helpers';

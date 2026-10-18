@@ -4,8 +4,11 @@ import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
-import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, startMatchCombat, stepMatch } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
+import { registerHistory } from './fixtures/history-evidence';
+import { readRecordedFixture } from './fixtures/recorded-fixture';
+import type { BattleRecord } from '../src/m6/contracts';
 import prior from './opening-random-content-baseline.json';
 import previousOpening from './g2-augments-content-baseline.json';
 
@@ -54,8 +57,11 @@ for (const build of ['cannon', 'sniper']) {
   });
   // Each raw checkpoint has its own original five-second limit and full production restore.
   // Only raw inputs are read ahead; no validated runtime object or restore result is cached.
+  const battles = readRecordedFixture<{battles: BattleRecord[]}>(build === 'sniper' ? 'neutral' : 'checkpoint-cannon').battles;
   it.each(Array.from({length:current.length},(_,index)=>index))(`${build}: checkpoint %i survives strict text/object restore`,index=>{
-    const state=structuredClone(current[index]), serialized=serializeMatch(state);
+    const state=structuredClone(current[index]);
+    registerHistory(state, battles.filter(record => record.context.round < state.round || record.context.round === state.round && state.combat?.status === 'finished'));
+    const serialized=serializeMatch(state);
     expect(restoreMatch(serialized)).toEqual(state);
     expect(restoreMatch(JSON.parse(serialized))).toEqual(state);
     expect(serializeMatch(restoreMatch(serialized))).toBe(serialized);

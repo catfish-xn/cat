@@ -6,9 +6,13 @@ import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serialize
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { battle, unit } from './combat-helpers';
 import { accepted } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicHeraldTarget, publicHeraldRawInput, registerHeraldHistory } from './fixtures/m8-neutral-public-route';
 
-publicHeraldEquipment(['ionic-spark']);
+import { verifyRecordedHistories } from './fixtures/verify-recorded-history';
+import { readRecordedFixture } from './fixtures/recorded-fixture';
+import type { BattleRecord } from '../src/m6/contracts';
+verifyRecordedHistories('B7 audit', [readRecordedFixture<{battles:BattleRecord[]}>('neutral').battles,
+  historyFor(registerHeraldHistory(['ionic-spark']))]);
 
 /**
  * Independent B7 audit vectors (signed-off audit of 889a2a5). Expected values come from

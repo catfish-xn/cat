@@ -1,8 +1,8 @@
 import { reachRound } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
-import { createMatch, selectChoice, setShopLock, rerollShop, buyXp, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, selectChoice, setShopLock, rerollShop, buyXp, startMatchCombat, stepMatch, nextRound } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import type { MatchState } from '../src/simulation/match-types';
 function choices(state: MatchState): MatchState {
   while (state.phase === 'choice') {

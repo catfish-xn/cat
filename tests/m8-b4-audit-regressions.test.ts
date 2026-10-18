@@ -6,8 +6,8 @@ import { accepted, emptyBoard } from './match-helpers';
 import { configuredPrefix } from './fixtures/t13-loot-public';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';
-import { startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { startMatchCombat, stepMatch, deployMatchUnit } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 

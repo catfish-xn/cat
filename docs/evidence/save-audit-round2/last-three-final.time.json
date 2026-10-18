@@ -1,0 +1,18 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/chest-bracer-integration-trial.test.ts",
+    "tests/m8-b6-match-wiring.test.ts",
+    "tests/m8-b4-r3b-lifecycle.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/last-three-final.json"
+  ],
+  "wallSeconds": 50.647,
+  "exitCode": 0,
+  "maxRssKiB": 1633768
+}

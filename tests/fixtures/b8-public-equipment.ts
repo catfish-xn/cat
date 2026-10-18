@@ -1,8 +1,9 @@
 import { readRunFixture, writeRunFixture } from './g4-run-cache';
+import { canonicalContent } from '../../src/simulation/content';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import {
   createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, selectAnomalyTarget, sellUnit,
-} from '../../src/simulation/match';
+} from './recorded-match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
@@ -21,8 +22,11 @@ function observe(history: BattleHistory | undefined, before: MatchState, after: 
 }
 
 // Different component requests repeatedly traverse identical public-route prefixes.
-// Cache complete MatchState only; history callers still record every live tick.
-const finishedBattles = new Map<string, MatchState>();
+// Reuse the actual ledger only for an identical complete command input.
+// History callers observe that ledger too; no settlement facts manufacture evidence.
+type RecordedState = { state: MatchState; battles: readonly import('../../src/m6/contracts').BattleRecord[] };
+type RecordedBattle = { state: MatchState; battle: import('../../src/m6/contracts').BattleRecord };
+const finishedBattles = new Map<string, RecordedBattle>();
 function copyFixture(state: MatchState): MatchState {
   const copy = structuredClone(state);
   freezeContent(copy.m8); freezeContent(copy.resourceProvenance);
@@ -31,13 +35,25 @@ function copyFixture(state: MatchState): MatchState {
 }
 /** Record the real opening, including every combat step, when an archive is requested. */
 export function finishPublicEquipmentBattle(input: MatchState, history?: BattleHistory): MatchState {
-  const key = history ? undefined : JSON.stringify(input);
-  const cached = key === undefined ? undefined : finishedBattles.get(key) ?? readRunFixture<MatchState>('battle', key);
-  if (cached) return copyFixture(cached);
+  const key = canonicalContent(input);
+  // Supplied recorders share only this module's real executions, not another
+  // worker/module graph's disk cache (which may run mocked rule dependencies).
+  const cached = finishedBattles.get(key) ?? (!history ? readRunFixture<RecordedBattle>('recorded-battle', key) : undefined);
   const started = startMatchCombat(input);
   let state = accepted(started);
   if (!started.ok) throw new Error(started.reason);
   observe(history, input, state, started.events, 'command');
+  if (cached?.battle && canonicalContent(cached.battle.context) === key
+    && canonicalContent(cached.battle.initial) === canonicalContent(state.combat)) {
+    const copy = copyFixture(cached.state);
+    const prefix=historyFor(input);
+    const observer=history??new CompletedBattleHistory(cached.battle.runId,prefix);
+    if(!history)observe(observer,input,state,started.events,'command');
+    if(state.phase==='combat')observe(observer,state,copy,
+      cached.battle.events.slice(started.events.filter(event=>event.domain==='combat').length),'tick');
+    registerHistory(copy,observer.completedRecords);
+    return copy;
+  }
   for (let tick = 0; tick < 1201 && state.phase === 'combat'; tick++) {
     const next = stepMatch(state);
     observe(history, state, next.state, next.events, 'tick');
@@ -46,10 +62,12 @@ export function finishPublicEquipmentBattle(input: MatchState, history?: BattleH
   if (state.phase !== 'settlement' && state.phase !== 'choice') {
     throw new Error(`Public B8 equipment fixture did not finish ${state.roundDefinitionId}: ${state.phase}`);
   }
-  if (key !== undefined) {
+  const battle=(history?.completedRecords??historyFor(state)).at(-1);
+  if(battle?.context.round===input.round){
     if (finishedBattles.size >= 128) finishedBattles.delete(finishedBattles.keys().next().value!);
-    finishedBattles.set(key, copyFixture(state));
-    writeRunFixture('battle', key, state);
+    const recording={state:copyFixture(state),battle};
+    finishedBattles.set(key,recording);
+    if(!history)writeRunFixture('recorded-battle',key,recording);
   }
   return state;
 }
@@ -84,7 +102,7 @@ export function benchPublicEquipmentPlayers(input: MatchState): MatchState {
   return state;
 }
 
-const preparations = new Map<string, MatchState>();
+const preparations = new Map<string, RecordedState>();
 /** T13: requested assets come from random PvE drops plus the five real supply choices.
  * Extra drops are retained. Route timing and item IDs are discovered, never rewritten.
  * Original Irelia/Lux stay one star for independent equipment stat assertions.
@@ -96,8 +114,8 @@ export function publicEquipmentPreparation(components: readonly string[],
   // glove recipes, leaving real supply choices for their other ingredients.
   const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components]);
   if (!options.history) {
-    const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
-    if (cached && historyFor(cached).length) { preparations.set(key, cached); return copyFixture(cached); }
+    const cached = preparations.get(key) ?? readRunFixture<RecordedState>('recorded-preparation', key);
+    if (cached) { preparations.set(key,cached); registerHistory(cached.state,cached.battles); const copy=copyFixture(cached.state); registerHistory(copy,cached.battles); return copy; }
   }
   const history = options.history ?? new CompletedBattleHistory('b8-equipment');
   let state=createMatch(seed);
@@ -125,7 +143,8 @@ export function publicEquipmentPreparation(components: readonly string[],
       // A recorded route reaches the identical preparation. Publish it for
       // state-only consumers too, so they do not replay that acquisition again.
       registerHistory(state,history.completedRecords);
-      preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); return state;
+      const recording={state:copyFixture(state),battles:history.completedRecords};
+      preparations.set(key,recording); writeRunFixture('recorded-preparation',key,recording); return state;
     }
     if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
     if(state.phase==='preparation'){

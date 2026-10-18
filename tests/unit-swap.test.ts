@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, deployMatchUnit, validateMatchDeployment, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, validateMatchDeployment, startMatchCombat, stepMatch, type MatchState } from './fixtures/recorded-match';
 import { deployUnit, getPlayerDeploymentCount, validateDeployment } from '../src/simulation/game';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { DEPLOYMENT_RULES_VERSION } from '../src/simulation/match-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
 import type { UnitLocation } from '../src/simulation/units';

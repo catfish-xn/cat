@@ -1,7 +1,7 @@
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import type { MatchState } from '../src/simulation/match-types';
 import { initializeStreams, validateEquipmentState } from '../src/simulation/m8/equipment';
 import { TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';

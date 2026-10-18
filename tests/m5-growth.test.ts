@@ -1,6 +1,6 @@
 import {beforeAll,describe,expect,it} from 'vitest';
-import * as api from '../src/simulation/match';
-import {restoreMatch} from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import {restoreMatch} from './fixtures/history-evidence';
 import {accepted,readyMatch} from './match-helpers';
 import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/m8-b5-temporary.test.ts",
+    "tests/m8-content-equivalence.test.ts",
+    "tests/m8-b8-equipment-fixture.test.ts",
+    "tests/restore-audit/g23-grant-evidence.test.ts",
+    "tests/g2-3-netcode-hooks.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/memory-fixtures.json"
+  ],
+  "wallSeconds": 88.595,
+  "exitCode": 1,
+  "maxRssKiB": 2291012
+}

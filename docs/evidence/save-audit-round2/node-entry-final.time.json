@@ -1,0 +1,10 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:server-entry"
+  ],
+  "wallSeconds": 3.387,
+  "exitCode": 0,
+  "maxRssKiB": 122580
+}

@@ -3,11 +3,12 @@ import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
 const BATTLE_COUNT=ROUND_CATALOG.filter(r=>r.kind!=='supply').length;
 import { describe, expect, it } from 'vitest';
-import * as api from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch, historyFor } from './fixtures/history-evidence';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
 
+import {verifyDeferredRecordedHistory} from './fixtures/verify-recorded-history';
 const routes=new Map<string, Awaited<ReturnType<typeof run>>>();
 describe('M5 ordinary three-build routes and independent resource ledger',()=>{
  it('normally buys five-cost Caitlyn and fields her for at least two real battles',async()=>{
@@ -35,6 +36,8 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
   expect(api.stepMatch(end)).toEqual({state:end,events:[]});
   expect(api.createMatch(42)).toEqual(route.initial);
  },120000);
+ for(const build of ['sniper-caitlyn','cannon','sniper','mage'])
+  verifyDeferredRecordedHistory(`M5 ${build}`,BATTLE_COUNT,()=>historyFor(routes.get(build)!.final));
  // Signed R3/R4: 2–3 opening component value + four 2-value PvE packages + five supply choices.
  // Prismatic packages substitute a completed item (value 2); 6-7 grants gold/tool only.
  for(const build of ['sniper-caitlyn','cannon','sniper','mage'])it(`[B8] ${build}: complete-build battles and full component grant chain`,()=>{

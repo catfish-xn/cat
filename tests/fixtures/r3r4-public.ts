@@ -1,4 +1,5 @@
-import { createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound } from '../../src/simulation/match';
+import { copyWithHistory } from './history-evidence';
+import { createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound } from './recorded-match';
 import type { MatchState, MatchCommandResult } from '../../src/simulation/match-types';
 export function accepted(result:MatchCommandResult):MatchState { if(!result.ok) throw Error(result.reason); return result.state; }
 export function finish(state:MatchState):MatchState {
@@ -9,7 +10,7 @@ export function finish(state:MatchState):MatchState {
 const cached = new Map<number,MatchState>();
 /** Seed 26 has a signed 2-7 prismatic package. Every asset is acquired by public commands. */
 export function publicConsumables(seed=26):MatchState {
-  if(cached.has(seed))return structuredClone(cached.get(seed)!);
+  if(cached.has(seed))return copyWithHistory(cached.get(seed)!);
   let state=createMatch(seed);
   while(state.round<=10){
     while(state.phase==='choice'){
@@ -31,5 +32,5 @@ export function publicConsumables(seed=26):MatchState {
     if(state.round===10)break;
     if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
   }
-  cached.set(seed,state);return structuredClone(state);
+  cached.set(seed,state);return copyWithHistory(state);
 }

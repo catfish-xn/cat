@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch } from './fixtures/history-evidence';
 import audit from '../docs/evidence/g2-augments/fixture-migration.json';
 const bytes=(p:string)=>readFileSync(new URL('../'+p,import.meta.url));
 const sha=(p:string)=>createHash('sha256').update(bytes(p)).digest('hex');

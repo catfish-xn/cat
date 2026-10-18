@@ -96,6 +96,16 @@ export function checkRecordCompatibility(record: BattleRecord): void {
 // Content keys also reuse JSON/cloned records. Neither external freezing nor an
 // object identity grants authority; only a successful deterministic replay does.
 const verifiedRecords = new Map<string, VerifiedReplay>();
+// Only constructor-owned, recursively immutable plain JSON can keep its exact
+// canonical text. This memo grants no replay/history authority and is never
+// keyed by a mutable caller input or by a lossy digest.
+const ownedRecordKeys = new WeakMap<BattleRecord, string>();
+function replayKey(record: BattleRecord): string {
+  if (!isOwnedBattleRecord(record)) return canonicalContent(record);
+  let key = ownedRecordKeys.get(record);
+  if (key === undefined) { key = canonicalContent(record); ownedRecordKeys.set(record, key); }
+  return key;
+}
 // The application retains three archives plus its active run. This is a proof
 // cache memory bound, independent of the unchanged per-save battle limit.
 const MAX_VERIFIED_RECORDS = MAX_BATTLE_RECORDS * (MAX_COMPLETED_RUNS + 1);
@@ -109,6 +119,8 @@ function replayInput(record: BattleRecord): BattleRecord {
 }
 export function validateBattleRecord(record: BattleRecord, battles?: readonly BattleRecord[]): VerifiedReplay {
   record = replayInput(record);
+  // Route legacy/unsupported versions before reading current-version history.
+  validatorFor(record);
   if (battles !== undefined) validateMatchHistory(record.context, battles);
   else if (needsCrownHistory(record.context)) missingCrownHistory();
   else check(!record.context.roundResults.some(result => result.roundKind !== 'supply'), '缺少历史证据：请提供完整 battles 回放');
@@ -124,7 +136,7 @@ export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
 }
 function replaySnapshot(record: BattleRecord): VerifiedReplay {
   record = replayInput(record);
-  const key = canonicalContent(record);
+  const key = replayKey(record);
   const cached = verifiedRecords.get(key);
   if (cached) {
     verifiedRecords.delete(key); verifiedRecords.set(key, cached);

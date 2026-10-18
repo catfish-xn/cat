@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "tests/fixtures/record-g2-3-herald.cjs",
+    "--write"
+  ],
+  "wallSeconds": 146.494,
+  "exitCode": 0,
+  "maxRssKiB": 2996348
+}

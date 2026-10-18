@@ -1,7 +1,7 @@
 import { reachRound } from './match-helpers';
 import {describe,expect,it} from 'vitest';
-import * as api from '../src/simulation/match';
-import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import {restoreMatch,serializeMatch} from './fixtures/history-evidence';
 
 function ready(){let state=api.createMatch(42);while(state.phase==='choice'){const c=state.pendingChoice!;const result=api.selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!result.ok)throw Error(result.reason);state=result.state;}return state;}
 const clone=(state:api.MatchState):Record<string,any>=>JSON.parse(JSON.stringify(state));

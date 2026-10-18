@@ -1,13 +1,14 @@
 import {readG23Progress} from '../../src/simulation/g2-3-state';
-import * as api from '../../src/simulation/match';
+import * as api from './recorded-match';
 import {g23JunkerMenu} from '../../src/simulation/g2-3-junker';
 import {createRequire} from 'node:module';
 const {run}=createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
 import {CompletedBattleHistory} from './completed-battle-history';
-import {historyFor,registerHistory} from './history-evidence';
+import {historyFor,registerHistory,copyWithHistory} from './history-evidence';
+import {readRecordedFixture} from './recorded-fixture';
 const accept=(result:api.MatchCommandResult)=>{if(!result.ok)throw Error(result.reason);return result.state;};
 /** Actual shop purchase and three battles; never fabricates currency, units, progress or receipts. */
-export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
+export async function recordPublicPendingArmory(seed=4):Promise<api.MatchState>{
   let prefix:api.MatchState|undefined;
   const history=new CompletedBattleHistory('armory-public');
   const reached=Error('Public5-1 preparation');
@@ -55,6 +56,15 @@ export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
   }
   registerHistory(state,history.completedRecords);
   return state;
+}
+
+/** Raw recording of the same real shop/three-battle route. Validation remains
+ * inside the calling read test; loading never installs a verified flag. */
+export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
+  if(seed!==4)return recordPublicPendingArmory(seed);
+  const recorded=readRecordedFixture<{state:api.MatchState;battles:ReturnType<typeof historyFor>}>('armory-4');
+  registerHistory(recorded.state,recorded.battles);
+  return copyWithHistory(recorded.state);
 }
 
 export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>{

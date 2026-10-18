@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { startMatchCombat, stepMatch } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { startMatchCombat, stepMatch } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { battle, deployed, freeze } from './match-helpers';
 import { BattleHistory, PlaybackSession } from '../src/replay';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
-import {createMatch,startMatchCombat,stepMatch} from '../src/simulation/match';
-import {restoreMatch} from '../src/simulation/serialization';
+import {createMatch,startMatchCombat,stepMatch} from './fixtures/recorded-match';
+import {restoreMatch} from './fixtures/history-evidence';
 type Mutable<T>={-readonly [K in keyof T]:Mutable<T[K]>};
 function started(seed=42){const r=startMatchCombat(createMatch(seed));if(!r.ok)throw Error(r.reason);return r.state;}
 it('warm compilation preserves every restored field and continuation state/event',()=>{

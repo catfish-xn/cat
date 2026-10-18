@@ -9,11 +9,13 @@ import type { SessionChange } from '../src/m6/contracts';
 import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
 import { transferPreparation } from './fixtures/t13-loot-public';
+import {historyFor} from './fixtures/history-evidence';
 
 const SURVIVOR = 'unit-9', DONOR = 'unit-13', TG = 'item-9';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
-  const history = new BattleHistory('b10-temporary'), ticks = new Map<number, MatchState>();
+  const prior=historyFor(prepared);
+  const history = new BattleHistory(prior[0]?.runId??'b10-temporary',prior), ticks = new Map<number, MatchState>();
   // Same projection as MatchSession.record: ledger combat events are the ones carrying a tick.
   const combatEvents = (events: readonly api.MatchEvent[]) => events.filter(event => 'tick' in event) as unknown as SessionChange['events'];
   const start = api.startMatchCombat(prepared);
@@ -26,11 +28,12 @@ function recorded(prepared: MatchState) {
     history.observe({ before, after: state, events: combatEvents(step.events), reason: 'tick' });
     ticks.set(state.combat!.tick, state);
   }
-  return { record: history.completedRecords[0], ticks, terminal: state.combat! };
+  return { record: history.completedRecords.at(-1)!, ticks, terminal: state.combat! };
 }
 
 describe('B10 temporary equipment replay rebuild', async () => {
   const prepared = await transferPreparation();
+  const prior=historyFor(prepared);
   const { record, ticks, terminal } = recorded(prepared);
 
   it('records the temporary children in the battle context and rebuilds the identical terminal', () => {
@@ -39,14 +42,14 @@ describe('B10 temporary equipment replay rebuild', async () => {
       .toEqual([{ parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }, { parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }]);
     expect(record.roundId).toBe('4-7');
     expect(record.context.temporaryEquipment).toEqual(prepared.temporaryEquipment);
-    const verified = validateBattleRecord(record);
+    const verified = validateBattleRecord(record,prior);
     expect(verified.terminal).toEqual(terminal);
     expect(verified.terminal.status).toBe('finished');
   });
 
   it('plays at 1×, 2× and 4× from tick 0 and seeks to the same states as the live battle', () => {
     for (const speed of [1, 2, 4] as const) {
-      const playback = new PlaybackSession(record);
+      const playback = new PlaybackSession(record,prior);
       playback.seek(0); playback.setSpeed(speed); playback.play();
       // 50 ms display time = one 50 ms tick at 1× (fixed tick, AGENTS.md); speed multiplies ticks per frame.
       const after = playback.advance(50);
@@ -58,7 +61,7 @@ describe('B10 temporary equipment replay rebuild', async () => {
       expect(snapshot.events).toEqual(record.events);
       playback.dispose();
     }
-    const playback = new PlaybackSession(record);
+    const playback = new PlaybackSession(record,prior);
     for (const tick of [record.endTick, 0, 39, 40, 41, Math.floor(record.endTick / 2), record.endTick - 1]) {
       expect(playback.seek(tick).combat).toEqual(ticks.get(tick)!.combat);
     }
@@ -78,8 +81,8 @@ describe('B10 temporary equipment replay rebuild', async () => {
       forge(() => []),
       forge(children => children.map(child => ({ ...child, holderId: SURVIVOR }))),
     ]) {
-      expect(() => validateBattleRecord(forged)).toThrow();
-      expect(() => new PlaybackSession(forged)).toThrow();
+      expect(() => validateBattleRecord(forged,prior)).toThrow();
+      expect(() => new PlaybackSession(forged,prior)).toThrow();
     }
   });
 });

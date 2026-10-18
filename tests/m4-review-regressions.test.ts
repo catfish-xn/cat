@@ -1,7 +1,7 @@
 import { reachRound } from './match-helpers';
 import { describe, expect, it } from 'vitest';
-import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, type MatchCommandResult, type MatchState } from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, type MatchCommandResult, type MatchState } from './fixtures/recorded-match';
+import { restoreMatch } from './fixtures/history-evidence';
 import type { UnitLocation } from '../src/simulation/unit-types';
 import { createCombatWithEvents } from '../src/simulation/combat';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';

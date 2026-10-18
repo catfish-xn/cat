@@ -1,8 +1,8 @@
 import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { generateChoices } from '../src/simulation/choices';
-import { selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
-import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
+import { selectChoice,stepMatch,startMatchCombat } from './fixtures/recorded-match';
+import { serializeMatch,restoreMatch } from './fixtures/history-evidence';
 import { accepted,reachRound } from './match-helpers';
 
 describe('W4 thirty-augment public choice and acquisition receipt',()=>{

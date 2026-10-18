@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import * as api from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { stepCombat, type CombatState } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { COMPILED_NEUTRAL_ENCOUNTERS } from '../src/simulation/neutral-encounter-compiler';

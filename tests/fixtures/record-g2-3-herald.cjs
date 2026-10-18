@@ -32,6 +32,8 @@ async function main() {
       'scripts/generate-m5-route.cjs', 'scripts/m4-evidence.cjs', 'tests/fixtures/m5/oracle.g2.cjs',
       'tests/fixtures/m8-herald-raw/generate.ts', 'tests/fixtures/m8-neutral-public-route.ts',
       'tests/fixtures/completed-battle-history.ts', 'src/replay/history.ts', 'src/m6/contracts.ts',
+      'tests/fixtures/recorded-fixture.ts', 'tests/fixtures/history-evidence.ts',
+      'tests/fixtures/recorded-match.ts', 'tests/fixtures/verify-recorded-history.ts',
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));
     const { CompletedBattleHistory } = await server.ssrLoadModule('/tests/fixtures/completed-battle-history.ts');
@@ -41,10 +43,14 @@ async function main() {
     const {Ledger}=require('./m5/oracle.g2.cjs');
     const observedLedger=new Ledger(api.createMatch(42));
     let rawPrefix, prefixLedger;
+    const preparations = {};
     // Use the unchanged driver, including its independent economy/shop oracle.
     // No restored fixture or saved state is an input to this generation.
     const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: 42,
       onStep(before,result,command) {
+        if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
+          preparations[before.roundDefinitionId] = before;
+        if (result.state.phase === 'preparation') preparations[result.state.roundDefinitionId] = result.state;
         if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);prefixRecords=recorded.completedRecords;}
         observe(recorded,before,result);
         observedLedger.apply(before,result.state,command,result.events);
@@ -174,6 +180,18 @@ async function main() {
         ticks: trace.battles.reduce((sum, battle) => sum + battle.ticks, 0) })) };
     const outputs = new Map(generated.map(value => [`${value.entry.name}.json`, value.rawBytes]));
     outputs.set('trajectory.json', traceBytes); outputs.set('manifest.json', canonicalContent(manifest) + '\n');
+    // These are raw public-command recordings, never cached restore results.
+    const historyDirectory = path.join(root, 'tests/fixtures/save-history');
+    const historyOutputs = new Map([
+      ['neutral.json.gz', { preparations, equipmentFork: rawPrefix, battles: recorded.completedRecords }],
+      ...generated.map(value => [`herald-${value.entry.name}.json.gz`, { state: value.rawState, sharedPrefixRounds: prefixRecords.length, battles: value.records.slice(prefixRecords.length) }]),
+    ].map(([name, value]) => [name, require('node:zlib').gzipSync(JSON.stringify(value))]));
+    if (write) {
+      fs.mkdirSync(historyDirectory, { recursive: true });
+      for (const [file, bytes] of historyOutputs) fs.writeFileSync(path.join(historyDirectory, file), bytes);
+    } else {
+      for (const [file, bytes] of historyOutputs) assert.deepEqual(fs.readFileSync(path.join(historyDirectory, file)), bytes);
+    }
     if (write) {
       fs.mkdirSync(directory, { recursive: true });
       for (const [file, bytes] of outputs) fs.writeFileSync(path.join(directory, file), bytes);

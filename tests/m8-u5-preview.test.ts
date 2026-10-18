@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as match from '../src/simulation/match';
+import * as match from './fixtures/recorded-match';
 import type { CombatUnit } from '../src/simulation/combat-types';
 import { DEFAULT_BOARD } from '../src/simulation/board';
 import { createCombatWithEvents } from '../src/simulation/combat';
@@ -17,9 +17,14 @@ import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { getRoundEnemyItems } from '../src/simulation/round-enemies';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { getUnitStats } from '../src/simulation/unit-stats';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { accepted, freeze } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
+import { verifyRecordedHistories } from './fixtures/verify-recorded-history';
+import { readRecordedFixture } from './fixtures/recorded-fixture';
+import type { BattleRecord } from '../src/m6/contracts';
+
+verifyRecordedHistories('U5', [readRecordedFixture<{battles:BattleRecord[]}>('neutral').battles]);
 
 // Independent transcription of M8B_ENCOUNTERS §2–3, not derived from the
 // production content/compiler or from readEncounterPreview's own output.

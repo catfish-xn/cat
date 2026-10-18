@@ -25,7 +25,7 @@ describe('N2-P2-3 activity log consumers', () => {
     expect(live.some(e => e.reason === 'applied')).toBe(true);
     expect(live.some(e => e.reason !== 'applied')).toBe(true);
     // Replay path: the playback session publishes the same validated ledger to the same consumers.
-    const playback = new PlaybackSession(record);
+    const playback = new PlaybackSession(record,history.completedRecords.filter(b=>b.context.round<record.context.round));
     const replayed = playback.seek(record.endTick).events;
     expect(replayed).toEqual(record.events);
     const name = (id: string | null) => id ?? '无';

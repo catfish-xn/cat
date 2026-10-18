@@ -1,0 +1,9 @@
+{
+  "command": [
+    "node",
+    "scripts/verify-server-engine-portability.cjs"
+  ],
+  "wallSeconds": 0.908,
+  "exitCode": 0,
+  "maxRssKiB": 99616
+}

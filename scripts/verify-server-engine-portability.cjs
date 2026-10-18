@@ -40,10 +40,10 @@ while (state.phase === 'combat') {
   if ([39,40,41].includes(state.combat.tick)) checkpoints.set(state.combat.tick, state);
 }
 for (const [tick, checkpoint] of checkpoints) {
-  const text = serializeMatch(checkpoint);
-  const restored = restoreMatch(text);
+  const text = serializeMatch(checkpoint, []);
+  const restored = restoreMatch(text, []);
   assert.deepStrictEqual(restored, checkpoint);
-  assert.deepStrictEqual(restoreMatch(JSON.parse(text)), checkpoint);
+  assert.deepStrictEqual(restoreMatch(JSON.parse(text), []), checkpoint);
   let continued = restored;
   for (let i = tick; i < steps.length; i++) {
     const next = api.stepMatch(continued);
@@ -52,9 +52,9 @@ for (const [tick, checkpoint] of checkpoints) {
   }
   assert.deepStrictEqual(continued, state);
 }
-assert.deepStrictEqual(restoreMatch(serializeMatch(state)), state);
+assert.deepStrictEqual(restoreMatch(serializeMatch(state, history.completedRecords), history.completedRecords), state);
 const bad = structuredClone(start.state); bad.contentDigest = 'forged';
-assert.throws(() => restoreMatch(bad));
+assert.throws(() => restoreMatch(bad, history.completedRecords));
 const record = history.completedRecords[0]; assert(record);
 const verified = validateBattleRecord(record);
 assert.deepStrictEqual(verified.terminal, state.combat);

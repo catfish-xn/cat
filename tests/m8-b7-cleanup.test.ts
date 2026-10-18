@@ -7,8 +7,8 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { COMPILED_NEUTRAL_ENCOUNTERS } from '../src/simulation/neutral-encounter-compiler';
 import { validateNeutralCombat } from '../src/simulation/neutral-restore';
-import { createMatch, startMatchCombat } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, startMatchCombat } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { accepted } from './match-helpers';
 
 // Isolated hypothetical trusted definitions, never changes the production catalog.

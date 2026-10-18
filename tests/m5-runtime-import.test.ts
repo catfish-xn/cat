@@ -1,6 +1,6 @@
 import {beforeAll,describe,expect,it} from 'vitest';
-import * as api from '../src/simulation/match';
-import {restoreMatch} from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import {restoreMatch} from './fixtures/history-evidence';
 import {sourceKey} from '../src/simulation/combat-s13-state';
 import {purchasedThreeHeroMatch,accepted} from './match-helpers';
 import type {MatchState} from '../src/simulation/match-types';

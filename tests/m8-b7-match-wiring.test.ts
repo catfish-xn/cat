@@ -13,11 +13,14 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput, registerHeraldHistory } from './fixtures/m8-neutral-public-route';
 
-// Record genuine branch histories before timed raw-input parsing/restoration.
-for(const items of [['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud'],['quicksilver'],['edge-of-night']])
-  publicHeraldEquipment(items);
+import { verifyRecordedHistories } from './fixtures/verify-recorded-history';
+import { readRecordedFixture } from './fixtures/recorded-fixture';
+import type { BattleRecord } from '../src/m6/contracts';
+const branchItems = [['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud'],['quicksilver'],['edge-of-night']];
+verifyRecordedHistories('B7', [readRecordedFixture<{battles:BattleRecord[]}>('neutral').battles,
+  ...branchItems.map(items => historyFor(registerHeraldHistory(items)))]);
 
 // Every prefix comes from the complete public command-only acquisition route.
 const prepared=publicNeutralPreparation;

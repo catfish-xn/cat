@@ -1,0 +1,9 @@
+{
+  "command": [
+    "node",
+    "/tmp/probe-blue-routes.cjs"
+  ],
+  "wallSeconds": 9.032,
+  "exitCode": 0,
+  "maxRssKiB": 552516
+}

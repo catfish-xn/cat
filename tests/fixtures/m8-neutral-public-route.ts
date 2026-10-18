@@ -3,43 +3,29 @@ import evenshroudRaw from './g2-3-herald-raw/evenshroud.json?raw';
 import dualRaw from './g2-3-herald-raw/ionic-spark--evenshroud.json?raw';
 import quicksilverRaw from './g2-3-herald-raw/quicksilver.json?raw';
 import edgeRaw from './g2-3-herald-raw/edge-of-night.json?raw';
-import * as api from '../../src/simulation/match';
+import * as api from './recorded-match';
 import { restoreWithEvidence as restoreMatch, serializeWithEvidence as serializeMatch, registerHistory, historyFor } from './history-evidence';
-import { CompletedBattleHistory } from './completed-battle-history';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';
-import { run } from '../../scripts/generate-m5-route.cjs';
+import { fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';
 
-const preparations = new Map<string, api.MatchState>();
-let equipmentFork: api.MatchState | undefined;
-const recorded = new CompletedBattleHistory('neutral-public');
-// Execute the command-only driver once, retaining only the actual preparation
-// prefixes. No golden, injected result, resource, birth, star or receipt is used.
-// Generate once per test module; consumers restore independent graphs before use.
-const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result, command) {
-  registerHistory(before,recorded.completedRecords);
-  recorded.observe({before,after:result.state,events:('events' in result?result.events:[]).filter(e=>e.domain==='combat'),reason:before.combat?'tick':'command'});
-  registerHistory(result.state,recorded.completedRecords);
-  if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
-    preparations.set(before.roundDefinitionId, before);
-  if (before.roundDefinitionId === '4-4' && before.phase === 'choice') equipmentFork ??= before;
-  if (result.state.phase === 'preparation') preparations.set(result.state.roundDefinitionId, result.state);
-} });
-if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
-  throw new Error('Public neutral fixture did not complete the actual 33-battle route');
-// Admit the complete public fixture through production validation during setup.
-// Timed tests still parse/restore their candidates with the full recorded proof.
-restoreMatch(serializeMatch(route.final));
-
+import { readRecordedFixture } from './recorded-fixture';
+const route = readRecordedFixture<{ preparations: Record<string, api.MatchState>; equipmentFork: api.MatchState; battles: import('../../src/m6/contracts').BattleRecord[] }>('neutral');
+const preparations = new Map(Object.entries(route.preparations));
+const equipmentFork = route.equipmentFork;
+function publish(state: api.MatchState): void {
+  registerHistory(state, route.battles.filter(record => record.context.round < state.round));
+}
 /** Each consumer receives a provenance-complete, restored independent prefix. */
 export function publicNeutralPreparation(roundId: string): api.MatchState {
   const state = preparations.get(roundId);
   if (!state) throw new Error(`Missing public route preparation: ${roundId}`);
+  publish(state);
   return restoreMatch(serializeMatch(state));
 }
 
 /** A genuine unresolved 4-4 supply choice, before reserving any late items. */
 export function publicNeutralEquipmentChoice(): api.MatchState {
   if (!equipmentFork) throw new Error('Missing public 4-4 equipment prefix');
+  publish(equipmentFork);
   return restoreMatch(serializeMatch(equipmentFork));
 }
 
@@ -49,21 +35,24 @@ export function publicHeraldTarget(initial = publicNeutralPreparation('6-7')): a
 }
 
 const equipmentPreparations = new Map<string, api.MatchState>();
-/** Retain the live command-only builder. The independent source verifier uses
- * its raw counterpart before importing the production serialization module. */
-export function publicHeraldEquipment(definitions: readonly string[]): api.MatchState {
-  if (!definitions.length) return publicHeraldTarget();
+/** Load raw branches recorded by the unchanged command-only builder.
+ * The source verifier independently regenerates them before importing serialization. */
+export function registerHeraldHistory(definitions: readonly string[]): api.MatchState {
   const key = JSON.stringify(definitions);
   if (!equipmentPreparations.has(key)) {
-    const opening = publicNeutralEquipmentChoice();
-    const history = new CompletedBattleHistory('neutral-public',historyFor(opening));
-    const prepared = buildRawHeraldEquipment(opening, definitions, (before,result) => {
-      history.observe({before,after:result.state,events:('events' in result?result.events:[]).filter(e=>e.domain==='combat'),reason:before.combat?'tick':'command'});
-    });
-    registerHistory(prepared,history.completedRecords);
-    equipmentPreparations.set(key, prepared);
+    const entry = HERALD_RAW_CASES.find(entry => JSON.stringify(entry.definitions) === key);
+    if (!entry) throw new Error('No recorded Herald equipment branch');
+    const fixture = readRecordedFixture<{ state: api.MatchState; battles: import('../../src/m6/contracts').BattleRecord[] }>(`herald-${entry.name}`);
+    registerHistory(fixture.state, fixture.battles);
+    equipmentPreparations.set(key, fixture.state);
   }
-  return restoreMatch(serializeMatch(equipmentPreparations.get(key)!));
+  const prepared=equipmentPreparations.get(key)!;
+  registerHistory(prepared,historyFor(prepared));
+  return prepared;
+}
+export function publicHeraldEquipment(definitions: readonly string[]): api.MatchState {
+  if (!definitions.length) return publicHeraldTarget();
+  return restoreMatch(serializeMatch(registerHeraldHistory(definitions)));
 }
 
 const heraldRawText: Readonly<Record<string, string>> = {

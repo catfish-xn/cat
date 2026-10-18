@@ -8,10 +8,10 @@ import { deepStrictEqual } from 'node:assert';
  * The expected terminal is the uninterrupted live battle, not a stored golden. */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
-import * as api from '../src/simulation/match';
-import type { MatchCommandResult, MatchEvent, MatchState } from '../src/simulation/match';
+import * as api from './fixtures/recorded-match';
+import type { MatchCommandResult, MatchEvent, MatchState } from './fixtures/recorded-match';
 import type { SessionChange } from '../src/m6/contracts';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch, historyFor } from './fixtures/history-evidence';
 import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 
@@ -78,7 +78,7 @@ describe('B10 every M8 equipment definition survives record, replay and save/res
     expect(terminal.tick).toBeGreaterThan(41); // ticks 39/40/41 straddle the 40-tick checkpoint inside the battle
     deepStrictEqual(record.context, prepared);
     expect(record.initial.units.some(unit => unit.id === 'unit-1')).toBe(true);
-    const verified = validateBattleRecord(record);
+    const verified = validateBattleRecord(record,historyFor(prepared));
     deepStrictEqual(verified.terminal, terminal);
     deepStrictEqual(verified.settledMatch, settled);
     for (const tick of [0, 39, 40, 41, terminal.tick - 1]) {
@@ -94,6 +94,6 @@ describe('B10 every M8 equipment definition survives record, replay and save/res
     const other = definitionId === 'sword' ? 'bow' : 'sword';
     const context = structuredClone(record.context) as unknown as { items: { id: string; definitionId: string }[] };
     context.items = context.items.map(item => item.id === itemId ? { ...item, definitionId: other } : item);
-    expect(() => validateBattleRecord({ ...structuredClone(record), context } as unknown as typeof record)).toThrow();
+    expect(() => validateBattleRecord({ ...structuredClone(record), context } as unknown as typeof record,historyFor(prepared))).toThrow();
   });
 });

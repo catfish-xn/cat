@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat as start, stepMatch, type MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat as start, stepMatch, type MatchState } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { accepted, emptyBoard, finish, resolveM5Choices, reachRound as reach } from './match-helpers';
 import { recordedCrownBattle } from './crown-history-helpers';
 import { BattleHistory } from '../src/replay/history';

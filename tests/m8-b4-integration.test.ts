@@ -3,8 +3,8 @@ import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
-import { stepMatch } from '../src/simulation/match';
-import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
+import { stepMatch, type MatchState } from './fixtures/recorded-match';
+import { serializeMatch,restoreMatch,historyFor } from './fixtures/history-evidence';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { packets as packetViews } from './helpers/replay2-views';
@@ -41,11 +41,22 @@ describe('B4 composed consumers and restore rejection',()=>{
   s={...s,combat:{...s.combat!,units:s.combat!.units.map(x=>x.id===u.id?{...x,hp:Math.floor(x.maxHp*.5)}:x)}};s=stepMatch(s).state;
   for(let i=0;i<80&&s.phase==='combat';i++){s=stepMatch(s).state;if(i%10===0)expect(restoreMatch(serializeMatch(s))).toEqual(s);}
  });
- it('Quicksilver stops growing at death; later living units may keep fighting and save',()=>{
+ it('Quicksilver death stops growth; genuine terminal saves restore and edited terminals reject',()=>{
   let s=itemMatch('quicksilver');while(s.combat!.tick<45&&s.phase==='combat')s=stepMatch(s).state;
   if(s.phase==='combat'){
+   const before=s, prior=historyFor(before);
+   let control:MatchState=before;
+   while(control.phase==='combat')control=stepMatch(control).state;
+   const genuine=historyFor(control);
+   expect(restoreMatch(serializeMatch(control,genuine),genuine)).toEqual(control);
    const units=s.combat!.units.map(u=>u.id==='unit-1'?{...u,hp:0}:u);s=stepMatch({...s,combat:{...s.combat!,units}}).state;
-   for(let i=0;i<45&&s.phase==='combat';i++)s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+   expect(s.combat!.units.find(u=>u.id==='unit-1')!.hp).toBe(0);
+   for(let i=0;i<45&&s.phase==='combat';i++)s=stepMatch(s).state;
+   if(s.combat?.status==='finished'){
+    // Killing a holder by editing HP is a mechanism vector, not a public save.
+    expect(()=>serializeMatch(s,genuine)).toThrow();
+    expect(()=>restoreMatch(s,genuine)).toThrow();
+   }else expect(restoreMatch(serializeMatch(s,prior),prior)).toEqual(s);
   }
  });
  it('Lux HoJ samples360×130%=468; crossing below50% keeps charged468 through Match save and next attack',()=>{

@@ -1,11 +1,11 @@
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import { describe, expect, it } from 'vitest';
-import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, selectChoice, startMatchCombat } from '../src/simulation/match';
+import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, selectChoice, startMatchCombat } from './fixtures/recorded-match';
 import { accepted, emptyBoard, reachRound } from './match-helpers';
 import { freezeCombatInput, restoreCombatInput, type CombatInputAuthority } from '../src/simulation/combat-input';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { nextRandom } from '../src/simulation/rng';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch } from './fixtures/history-evidence';
 
 function fixture() {
   const state = createMatch(42), draw = nextRandom(state.battleSeedRngState);

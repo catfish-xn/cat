@@ -1,4 +1,4 @@
-import { selectChoice, selectAnomalyTarget, type MatchState } from '../src/simulation/match';
+import { selectChoice, selectAnomalyTarget, type MatchState } from './fixtures/recorded-match';
 import { accepted } from './match-helpers';
 /** Completes actual scheduled choices in old lifecycle regressions; never changes phase directly. */
 export function resolveChoices(initial: MatchState): MatchState {

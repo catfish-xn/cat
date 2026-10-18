@@ -1,7 +1,7 @@
 import { selectOpeningUnit } from '../src/simulation/opening-unit';
 import {must,supplySeats,atSupply} from './p7-carousel-helper';
-import { createMatch } from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import { createMatch } from './fixtures/recorded-match';
+import { restoreMatch } from './fixtures/history-evidence';
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createSharedPool, initializeSharedSeat, assertSharedPoolConservation } from '../src/simulation/shared-pool';
 import { createCarouselMatch, prepareCarouselParticipants, createCarousel, advanceCarousel, pickFromCarousel, autoPickFromCarousel, pickCarouselForSeat, autoPickCarouselForSeat, grantCarouselPick, restoreCarouselSeat, restoreCarousel, schedule, opensCarousel } from '../src/simulation/carousel';

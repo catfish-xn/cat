@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { buyXp, equipItem, sellUnit, startMatchCombat, stepMatch, nextRound, createMatch, combineItems, deployMatchUnit } from '../src/simulation/match';
+import { buyXp, equipItem, sellUnit, startMatchCombat, stepMatch, nextRound, createMatch, combineItems, deployMatchUnit } from './fixtures/recorded-match';
 import { previewCombine, previewEquip, readUnitEquipment } from '../src/simulation/item-selectors';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import type { MatchState } from '../src/simulation/match-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { planTemporaryEquipment, validateMatchEquipment, TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equipment';
 import { accepted, emptyBoard, freeze } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { publicGlovesInventory } from './fixtures/t13-public-gloves';
+import { publicGlovesInventory, releasePublicGlovesInventory } from './fixtures/t13-public-gloves';
+import { deepStrictEqual } from 'node:assert/strict';
+import { stepMatch as referenceStep } from '../src/simulation/match';
 
 // Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
 // Its public control uses level 5, which has the identical <=6 equipment pool.
@@ -212,11 +214,12 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   }
   /** One actual public route: bind, restore at combat start, corrupt any temporary shield, step and resume. */
   function bindRealRoute(matchSeed: number, children: readonly string[]) {
+    try {
     let state = equipped(6, matchSeed);
     expect(pair(state)).toEqual(children);
     const bound = state.temporaryEquipment.map(child => child.definitionId);
     state = accepted(startMatchCombat(state));
-    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    deepStrictEqual(restoreMatch(serializeMatch(state)),state);
     const shield = state.combat?.units.flatMap(unit => unit.shieldLayers ?? []).find(layer => layer.source.parentItemInstanceId);
     if (shield) {
       const corrupt = JSON.parse(serializeMatch(state));
@@ -227,8 +230,12 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     }
     for (let i = 0; i < 3 && state.phase === 'combat'; i++) state = stepMatch(state).state;
     const restored = restoreMatch(serializeMatch(state));
-    expect(stepMatch(restored)).toEqual(stepMatch(state));
+    deepStrictEqual(referenceStep(restored),stepMatch(state));
     return { bound, shieldChild: shield?.source.definitionId ?? null };
+    } finally {
+      // Cleanup is inside the same unchanged 5 s case, after all route checks.
+      releasePublicGlovesInventory(levelRounds[6],matchSeed);
+    }
   }
   it('the fixed TG route plan covers all 43 eligible children in 35 routes, with exactly one shield child', () => {
     const groups = plannedTemporaryRoutes(), routes = groups.flat();

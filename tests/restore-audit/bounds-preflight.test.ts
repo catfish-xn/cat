@@ -9,6 +9,11 @@ import { itemMatch } from '../fixtures/m8-b4-match';
 import { startBracerFight } from '../fixtures/explorer-bracer-public';
 import { publicNeutralPreparation } from '../fixtures/m8-neutral-public-route';
 import * as expressions from '../../src/simulation/content/item-programs';
+import {verifyRecordedHistories} from '../fixtures/verify-recorded-history';
+import {readRecordedFixture} from '../fixtures/recorded-fixture';
+import type {BattleRecord} from '../../src/m6/contracts';
+
+verifyRecordedHistories('late fight bounds',[readRecordedFixture<{battles:BattleRecord[]}>('neutral').battles]);
 
 function rejected(state: MatchState, reason: string) {
   const consumer = vi.spyOn(mechanisms, 'validateMechanisms');

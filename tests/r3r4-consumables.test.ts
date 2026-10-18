@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
-import {useConsumable,equipItem,nextRound,startMatchCombat,stepMatch} from '../src/simulation/match';
+import {useConsumable,equipItem,nextRound,startMatchCombat,stepMatch} from './fixtures/recorded-match';
 import {previewUseConsumable} from '../src/simulation/consumables';
-import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {serializeMatch,restoreMatch} from './fixtures/history-evidence';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import type {MatchState} from '../src/simulation/match-types';
 import type {ConsumableDefinitionId,ConsumableTarget} from '../src/simulation/consumable-types';

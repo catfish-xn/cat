@@ -1,0 +1,31 @@
+{
+  "command": [
+    "./node_modules/.bin/vitest",
+    "run",
+    "--project",
+    "fast",
+    "tests/g2-4a-crown-gold.test.ts",
+    "tests/m5-audit-boundaries.test.ts",
+    "tests/m7-m6-save-compat.test.ts",
+    "tests/m8-b10-item-save-replay.test.ts",
+    "tests/m8-b3-audit.test.ts",
+    "tests/m8-b4-catalog.test.ts",
+    "tests/m8-b4-integration.test.ts",
+    "tests/m8-b5-temporary.test.ts",
+    "tests/m8-b8-live-economy.test.ts",
+    "tests/m8-b8-live-growth.test.ts",
+    "tests/m8-content-equivalence.test.ts",
+    "tests/restore-audit/bounds-preflight.test.ts",
+    "tests/g4-replay-snapshot.test.ts",
+    "tests/m6-replay.test.ts",
+    "tests/m8-b10-temporary-replay.test.ts",
+    "tests/m8-b9-activity-log.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/tmp/fixes-focus.json"
+  ],
+  "wallSeconds": 230.287,
+  "exitCode": 0,
+  "maxRssKiB": 2993552
+}

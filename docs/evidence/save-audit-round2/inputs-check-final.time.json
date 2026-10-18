@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "scripts/record-g2-3-inputs.cjs",
+    "--check"
+  ],
+  "wallSeconds": 5.427,
+  "exitCode": 0,
+  "maxRssKiB": 341304
+}

@@ -3,7 +3,7 @@ import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {expect,it} from 'vitest';
 import {CONTENT_DIGEST} from '../src/simulation/content';
-import {restoreMatch} from '../src/simulation/serialization';
+import {restoreMatch} from './fixtures/history-evidence';
 import baseline from './p7-content-baseline.json';
 import prior from './g2-1-content-baseline.json';
 import audit from '../docs/evidence/p7/release-audit.json';

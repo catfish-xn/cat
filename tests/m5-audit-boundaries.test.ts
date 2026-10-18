@@ -2,8 +2,10 @@ import {G23_ANOMALY_SOURCE as ANOMALY_SOURCE} from '../src/simulation/content/g2
 import { COST } from './fixtures/m5/oracle.g2.cjs';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
-import * as api from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import * as api from './fixtures/recorded-match';
+import { restoreMatch, historyFor } from './fixtures/history-evidence';
+import { verifyDeferredRecordedHistory } from './fixtures/verify-recorded-history';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { accepted, purchasedThreeHeroMatch, finish } from './match-helpers';
 import { describeEffect, describeTraitTier } from '../src/rendering/strategy-panel';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
@@ -18,6 +20,9 @@ beforeAll(async () => {
   before19 = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-5').ordinal && a.command.type === 'start') as any).before;
   anomaly = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-6').ordinal && a.command.type === 'target') as any).before;
 }, 120000);
+verifyDeferredRecordedHistory('M5 empty-roster prefix',
+  ROUND_CATALOG.filter(r=>r.ordinal<getCatalogRoundById('4-5').ordinal&&r.kind!=='supply').length,
+  ()=>historyFor(before19));
 
   it.each([false, true])('sells the real 4-5 roster, recruits at4-6 and completes once (exhausted lock=%s)', exhausted => {
     let s = before19;

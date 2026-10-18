@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
-import { stepMatch, type MatchState } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { stepMatch, type MatchState } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch, historyFor } from './fixtures/history-evidence';
+import { verifyDeferredRecordedHistory } from './fixtures/verify-recorded-history';
 import type { CombatUnit } from '../src/simulation/combat';
 import { packets, shieldEvents } from './helpers/replay2-views';
 
@@ -39,6 +40,13 @@ function rejectMutation(s: MatchState, mutate: (u: CombatUnit) => void, message:
   expect(serializeMatch(s)).toBe(original);
   expect(stepMatch(restoreMatch(original))).toEqual(stepMatch(s));
 }
+
+let doubleInitial: MatchState;
+it('records the genuine two-Bloodthirster public acquisition inside its own unchanged time limit', () => {
+  doubleInitial = itemMatch(['bloodthirster', 'bloodthirster']);
+  expect(doubleInitial.roundDefinitionId).toBe('3-5');
+});
+verifyDeferredRecordedHistory('B4 R3b two-Bloodthirster', 12, () => historyFor(doubleInitial));
 
 describe('B4 R3b: compiled consumption partition survives the complete shield lifecycle', () => {
   it('untriggered legal object/JSON saves retain first use; missing/duplicate unconsumed identities are rejected', () => {

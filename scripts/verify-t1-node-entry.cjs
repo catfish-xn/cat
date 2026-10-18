@@ -24,15 +24,17 @@ const randomState = state => ({
   combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws } : null,
 });
 
-function battle(api) {
+function battle(api, history) {
   const initial = api.createMatch(baseline.seed);
   const start = api.startMatchCombat(initial);
   assert.equal(start.ok, true);
+  history?.observe({before:initial,after:start.state,events:start.events.filter(e=>e.domain==='combat'),reason:'command'});
   const steps = [start], events = [...start.events];
   let state = start.state;
   while (state.phase === 'combat') {
     assert(steps.length <= 1201, 'reference battle exceeded its caller budget');
     const next = api.stepMatch(state);
+    history?.observe({before:state,after:next.state,events:next.events.filter(e=>e.domain==='combat'),reason:'tick'});
     state = next.state; steps.push(next); events.push(...next.events);
   }
   return { initial, state, events, steps };
@@ -80,7 +82,8 @@ async function worker() {
     'applyRoundSettlement', 'enableMultiplayerSettlement', 'ROUND_SETTLEMENT_VERSION', 'forfeitPendingChoice', 'claimOrDiscardLoot',
   ];
   assert.deepStrictEqual(Object.keys(api).sort(), expectedExports.sort());
-  const actual = battle(api), expected = battle(reference);
+  const history = new reference.BattleHistory('t1-node-entry');
+  const actual = battle(api,history), expected = battle(reference);
   assert.equal(actual.steps.length, expected.steps.length);
   const traceHashes = {};
   const originalStateTraceHash = baseline.traceHashes.state;
@@ -138,7 +141,7 @@ async function worker() {
       restored = next.state;
     }
     assert.deepStrictEqual(restored, actual.state);
-    assert.equal(api.serializeMatch(restored), api.serializeMatch(actual.state));
+    assert.equal(api.serializeMatch(restored,history.completedRecords), api.serializeMatch(actual.state,history.completedRecords));
   }
   for (const patch of [{ contentDigest: 'forged' }, { schemaVersion: 'unsupported' }]) {
     assert.throws(() => api.restoreMatch({ ...checkpoint, ...patch }), /Invalid Match save:/);
@@ -168,7 +171,8 @@ async function main() {
   assert(inputs.includes('src/simulation/match.ts'));
   for (const input of inputs) {
     assert(!/src\/(rendering|presentation|persistence|replay|server)\/|node_modules\/phaser\//.test(input), input);
-    assert(/^(src\/(simulation|server-entry)\/|scripts\/run-server-battle.mjs$)/.test(input), `unexpected input: ${input}`);
+    // Strict history admission imports these pure engineering bounds; no UI/storage module is admitted.
+    assert(input === 'src/m6/limits.ts' || /^(src\/(simulation|server-entry)\/|scripts\/run-server-battle.mjs$)/.test(input), `unexpected input: ${input}`);
   }
   for (const output of Object.values(meta.outputs)) {
     assert(output.imports.every(item => !item.external), 'production artifact must have no external packages');

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalContent } from '../src/simulation/content';
-import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { createMatch, startMatchCombat, stepMatch } from './fixtures/recorded-match';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { accepted } from './match-helpers';
 
 const running = () => accepted(startMatchCombat(createMatch(42)));

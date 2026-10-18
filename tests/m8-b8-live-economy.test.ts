@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
-import * as api from '../src/simulation/match';
-import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
+import * as api from './fixtures/recorded-match';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch,historyFor} from './fixtures/history-evidence';
+import {verifyRecordedHistories} from './fixtures/verify-recorded-history';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
@@ -19,6 +20,7 @@ preparation=accepted(api.equipItem(preparation,'item-3','unit-2',0));
 function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 function reject(s:MatchState,change:(s:any)=>void,message:string){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
 // Isolated H=80 arithmetic remains in the independent oracle. This real route has H=128.
+verifyRecordedHistories('B8 live economy',[historyFor(preparation)]);
 describe('B8 live gold before interest, randomized direct loot',()=>{
  it.each([{gold:9,basis:10,interest:1,after:16,hp:136},{gold:49,basis:50,interest:5,after:60,hp:168},{gold:50,basis:51,interest:5,after:61,hp:168}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
   expect(preparation).toMatchObject({gold:65,playerHp:73,level:4,augmentProgress:{investmentHp:128}});

@@ -1,0 +1,54 @@
+{
+  "multiplayer": "7142dc6e7a40129aace7e47a851b712877fba7d2",
+  "files": [
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/edge-of-night.json",
+      "bytes": 110902,
+      "multiplayerSha256": "9c0533b162378469239506a64fe150839264c29c7aac0becb31592b4838fcd5c",
+      "currentSha256": "9c0533b162378469239506a64fe150839264c29c7aac0becb31592b4838fcd5c",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/evenshroud.json",
+      "bytes": 110896,
+      "multiplayerSha256": "aa4ede8d3517574e5bc071f19b7069e186cc02fb258a275d84ae8ca9ae0b6ac9",
+      "currentSha256": "aa4ede8d3517574e5bc071f19b7069e186cc02fb258a275d84ae8ca9ae0b6ac9",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/ionic-spark--evenshroud.json",
+      "bytes": 111021,
+      "multiplayerSha256": "0a7e87876a2cc6804e78019d14927d261f3bb933411fca610e0588f1a193b382",
+      "currentSha256": "0a7e87876a2cc6804e78019d14927d261f3bb933411fca610e0588f1a193b382",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/ionic-spark.json",
+      "bytes": 110897,
+      "multiplayerSha256": "13a1e83ddb37894056ee0bcf4b8b3a2daee94eb9cb8cc5b6045a78a0b754a768",
+      "currentSha256": "13a1e83ddb37894056ee0bcf4b8b3a2daee94eb9cb8cc5b6045a78a0b754a768",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/manifest.json",
+      "bytes": 21804,
+      "multiplayerSha256": "8671022a76d7ff436a83245dc785bd051530b7fadbf09eecd782850676cf3a40",
+      "currentSha256": "8671022a76d7ff436a83245dc785bd051530b7fadbf09eecd782850676cf3a40",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/quicksilver.json",
+      "bytes": 110900,
+      "multiplayerSha256": "d1e68c6a37b7682e8deb5f13b0c732d5fffc85cfcb40f53b7bc308960c4eaa6e",
+      "currentSha256": "d1e68c6a37b7682e8deb5f13b0c732d5fffc85cfcb40f53b7bc308960c4eaa6e",
+      "byteEqual": true
+    },
+    {
+      "file": "tests/fixtures/g2-augments-herald-raw/trajectory.json",
+      "bytes": 202675,
+      "multiplayerSha256": "a72535fd12af8388fa60dd757c4d314175088d6fd761a626f95ca3eacc786a8a",
+      "currentSha256": "a72535fd12af8388fa60dd757c4d314175088d6fd761a626f95ca3eacc786a8a",
+      "byteEqual": true
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { createMatch, buyUnit, nextRound, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { createMatch, buyUnit, nextRound, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from './fixtures/recorded-match';
 import type { BattleHistory } from '../src/replay/history';
 
 export function freeze<T>(value: T): T {

@@ -1,6 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
-import {createMatch,startMatchCombat,stepMatch} from '../../src/simulation/match';
-import {restoreMatch,serializeMatch} from '../../src/simulation/serialization';
+import {createMatch,startMatchCombat,stepMatch} from '../fixtures/recorded-match';
+import {restoreMatch,serializeMatch} from '../fixtures/history-evidence';
 import * as rewards from '../../src/simulation/g2-3-rewards';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../../src/simulation/content/g2-3-policy';
 afterEach(()=>vi.restoreAllMocks());

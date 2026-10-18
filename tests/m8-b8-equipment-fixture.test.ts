@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
-import { stepMatch } from '../src/simulation/match';
-import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch} from './fixtures/history-evidence';
+import { stepMatch, startMatchCombat, nextRound } from './fixtures/recorded-match';
+import { accepted, emptyBoard, readyMatch, resolveM5Choices } from './match-helpers';
+import {restoreWithEvidence as restoreMatch,serializeWithEvidence as serializeMatch,historyFor,registerHistory} from './fixtures/history-evidence';
 
 describe('B8 public equipment fixture provenance', () => {
   it('wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword', () => {
@@ -72,4 +73,27 @@ describe('B8 public equipment fixture provenance', () => {
     expect(serializeMatch(second)).toBe(original);
     expect(restoreMatch(second)).toEqual(second);
   });
+});
+
+it('never publishes an unobserved tick-zero concession prefix under its completed state or next-round clone', () => {
+  const before=emptyBoard(readyMatch()), prior=historyFor(before);
+  const ended=accepted(startMatchCombat(before));
+  expect(ended.combat?.status).toBe('finished');
+  expect(historyFor(ended)).toHaveLength(prior.length+1);
+  registerHistory(ended,prior); // The real prefix immediately before observing the concession.
+  expect(historyFor(ended)).toHaveLength(prior.length+1);
+  expect(restoreMatch(JSON.stringify(ended))).toEqual(ended);
+  const next=resolveM5Choices(accepted(nextRound(ended,ended.round)));
+  expect(restoreMatch(serializeMatch(next))).toEqual(next);
+});
+
+it('keeps cached live observations independent when a caller mutates its returned combat', () => {
+  const first=itemMatch('bloodthirster','unit-2');
+  Object.assign(first.combat!.units.find(u=>u.id==='unit-2')!,{hp:0});
+  let independent=itemMatch('bloodthirster','unit-2');
+  expect(independent.combat!.units.find(u=>u.id==='unit-2')!.hp).toBeGreaterThan(0);
+  while(independent.phase==='combat')independent=stepMatch(independent).state;
+  expect(independent.combat?.status).toBe('finished');
+  expect(historyFor(independent)).toHaveLength(independent.roundResults.filter(r=>r.roundKind!=='supply').length);
+  expect(restoreMatch(serializeMatch(independent))).toEqual(independent);
 });

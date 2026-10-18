@@ -1,4 +1,4 @@
-import * as api from '../../src/simulation/match';
+import * as api from './recorded-match';
 import {createRequire} from 'node:module';
 import {readG23Progress} from '../../src/simulation/g2-3-state';
 const {run}=createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');

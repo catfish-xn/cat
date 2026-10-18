@@ -1,0 +1,9 @@
+{
+  "command": [
+    "node",
+    "/tmp/probe-r3b.cjs"
+  ],
+  "wallSeconds": 6.041,
+  "exitCode": 0,
+  "maxRssKiB": 414820
+}

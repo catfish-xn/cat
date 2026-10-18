@@ -1,7 +1,7 @@
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { describe, expect, it } from 'vitest';
-import { combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
-import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
+import { combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from './fixtures/recorded-match';
+import { serializeMatch, restoreMatch, historyFor } from './fixtures/history-evidence';
 import { BattleHistory, validateBattleRecord } from '../src/replay';
 import type { LedgerCombatEvent } from '../src/simulation/combat';
 import { packets, healView } from './helpers/replay2-views';
@@ -37,7 +37,8 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     state = accepted(combineItems(state, cloaks[0].id, cloaks[1].id));
     state = accepted(equipItem(state, state.items.find(i => i.definitionId === 'dragons-claw')!.id, 'unit-1', 0));
     for (const [i, id] of ['unit-1','unit-2','unit-3'].entries()) state = accepted(deployMatchUnit(state, id, { kind: 'board', cell: { col: 1 + 2 * i, row: 4 } }));
-    const history = new BattleHistory('audit-r1');
+    const prior = historyFor(state), runId = prior[0]?.runId ?? 'audit-r1';
+    const history = new BattleHistory(runId,prior);
     const observe = (next: ReturnType<typeof stepMatch>, reason: 'command' | 'tick') => {
       history.observe({ before: state, after: next.state, events: next.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat'), reason }); state = next.state;
     };
@@ -55,9 +56,9 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     const heal = healIndex < 0 ? undefined : healView(continued.events[healIndex]);
     const hpAtHeal = heal && beforeHeal.hp - packets(continued.events.slice(0, healIndex)).filter(p => p.unitId === 'unit-1').reduce((n, p) => n + p.hpDamage, 0) + heal.actual;
     expect(heal && { ...heal, hp: hpAtHeal }).toMatchObject({ requested: 19, actual: 19, hp: beforeHeal.hp+19 });
-    const resumed = new BattleHistory('audit-r1', [], history.capturePrefix());
+    const resumed = new BattleHistory(runId, prior, history.capturePrefix());
     resumed.observe({ before: restored, after: continued.state, events: continued.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat'), reason: 'tick' });
-    expect(validateBattleRecord(resumed.capturePrefix()!).terminal).toEqual(continued.state.combat);
+    expect(validateBattleRecord(resumed.capturePrefix()!,prior).terminal).toEqual(continued.state.combat);
   });
   it('R1 fallback direct heals also ignore Source property insertion order', () => {
     const started = battle(), units = structuredClone(started.combat!.units) as S13Unit[];

@@ -5,9 +5,9 @@ import { autoDeployToCap, buyUnit, buySharedUnit, buyXp, combineItems, deployMat
   lockMatchCombatRoster, applyRoundSettlement, snapshotForBattle, compileBattle, resolveTwoSidedBattle,
   proposeSettlement, ROUND_SETTLEMENT_VERSION, stepMatch, type MatchState, type RoundSettlementReceipt } from '../src/server-entry';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from './fixtures/history-evidence';
 import { MULTIPLAYER_OPERATION_RULES } from '../src/simulation/operation-policy';
-import { createMatch } from '../src/simulation/match';
+import { createMatch } from './fixtures/recorded-match';
 import { room, accept, conserved, rejected, fullBench } from './tp-helpers';
 import { accepted, bench, board, hero, operating } from './t10-helpers';
 import { catalogPreparation } from './t5r-helpers';

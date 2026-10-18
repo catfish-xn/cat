@@ -3,7 +3,7 @@ import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 /** E-owned cross-module acceptance. Existing golden fixtures remain the route oracle. */
 import { describe, expect, it } from 'vitest';
 import { trajectoryHash } from './m6-integration-oracle.cjs';
-import * as api from '../src/simulation/match';
+import * as api from './fixtures/recorded-match';
 import { run, type Route } from '../scripts/generate-m5-route.cjs';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
