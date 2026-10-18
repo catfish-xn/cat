@@ -52,3 +52,10 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 - 护臂同一动作击杀两个不同目标各算一层，同目标不重复；不改变其数值、其他物品触发或恢复校验。
 - schema/save/replay/command 保持 7/3/3/3，NET_PROTOCOL 保持3。旧规则存档遵循已有不迁移政策。
 - 从公开命令重新生成当前规则四路线 golden、cannon/sniper 录制态、Herald、输入指纹和掉落揭示证据；历史原始目录不改。命令、前后字节证据、实测结果见 `bracer-multikill-v10/REPORT.md`。
+
+## v11：辅助装锻造器与锻造池补齐（G2-4b）
+
+- 起点 multiplayer `0257178`（#180：#150 新机制 11 件 + #152 虚空生物联机）。rules `s13-g2-3-v11`、content `s13-14.24b-g2-3-v11`、policy `g2-4b-support-forge-v11`；content digest `fnv1a32-utf16:601f574f`。
+- 征服者第 11 档按原始数据发辅助装锻造器（`TFT_ArmoryKeySupport`），第 13 档发基克的先驱、钢铁烈阳之匣、能量圣杯、拆卸器和 20 金；不再有延后折金的征服者奖励。锻造器沿用 G24-FORGE-01…08（四选一、等权无放回、超时取第一项、可重复出现、不足 4 件拒绝）。
+- 合入 #150 后 29 件神器、17 件辅助装都有实现，神器锻造池和辅助装锻造池补齐为 29/17，排除表为空。抽取期望由独立 Python uint32 计算得出，同一脚本复现旧 21/13 池的原期望。
+- schema/save/replay/command 保持 7/3/3/3。v10 存档按既有不迁移政策拒绝。G2-4b 录制态、golden、Herald、输入指纹和掉落揭示证据按 `docs/evidence/g2-4b/MIGRATION.md` 顺序重录（baseline `0369a0b`），四项 `--check` 通过；G2-3 历史目录不改。

@@ -116,6 +116,10 @@ const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
 
 /** Accessible DOM view over the same Match commands; it owns no game state. */
+/** Keys whose default action scrolls the page; within SCROLL_INTENT_MS of one (or of a wheel) a scroll is the player's. */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
+const SCROLL_INTENT_MS = 1_000;
+
 export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
@@ -255,13 +259,24 @@ export class StrategyPanel {
     window.addEventListener('pointerdown', trackPointer, true);
     window.addEventListener('pointercancel', cancelPointer, true); window.addEventListener('resize', cancel);
     window.addEventListener('touchcancel', cancel, true);
-    window.addEventListener('blur', cancel); window.addEventListener('scroll', cancel, true);
+    window.addEventListener('blur', cancel);
+    // A scroll the player asked for (wheel, scroll keys) ends a drag. A layout shift that makes the browser nudge the
+    // scroll position (a status line changing height under scroll anchoring) is not a request: the drop still reads
+    // the geometry where it lands. Touch scrolling already ends the gesture through pointercancel.
+    let scrollIntentAt = -Infinity;
+    const scrollIntent = () => { scrollIntentAt = performance.now(); };
+    const scrollKey = (event: KeyboardEvent) => { if (SCROLL_KEYS.has(event.key)) scrollIntent(); };
+    const scrolled = () => { if (performance.now() - scrollIntentAt <= SCROLL_INTENT_MS) cancel(); };
+    window.addEventListener('wheel', scrollIntent, { capture: true, passive: true });
+    window.addEventListener('keydown', scrollKey, true); window.addEventListener('scroll', scrolled, true);
     this.disposers.push(() => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', release);
       window.removeEventListener('pointerdown', trackPointer, true);
       window.removeEventListener('pointercancel', cancelPointer, true); window.removeEventListener('resize', cancel);
       window.removeEventListener('touchcancel', cancel, true);
-      window.removeEventListener('blur', cancel); window.removeEventListener('scroll', cancel, true);
+      window.removeEventListener('blur', cancel);
+      window.removeEventListener('wheel', scrollIntent, true);
+      window.removeEventListener('keydown', scrollKey, true); window.removeEventListener('scroll', scrolled, true);
     });
     this.modal.addEventListener('pointerdown', event => {
       event.stopPropagation();
@@ -490,7 +505,10 @@ export class StrategyPanel {
     this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
-    for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {
+    // Online (docked) drops the battle-record tab: rounds move on by themselves and there is nothing to look back at.
+    const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const;
+    if (this.itemDock && this.tab === 'events') this.tab = 'items';
+    for (const [tab, label] of tabList.filter(([tab]) => !this.itemDock || tab !== 'events')) {
       const button = this.button(`panel:${tab}`, label, () => { this.actions.cancelGesture(); this.tab = tab; this.render(); });
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
     }

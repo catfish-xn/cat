@@ -161,7 +161,11 @@ async function main() {
     check(report.autoCombine !== null, `T13-A auto-combine ran (${report.autoCombine ? report.autoCombine.roundId : 'never a component and a unit wearing one loose component'})`);
     check(report.pending !== null && report.pendingNext !== null, `C18-A next-battle equipment ran and was followed into the next preparation (${report.pending?.roundId ?? 'none'} → ${report.pendingNext?.roundId ?? 'none'})`);
     check(Boolean(report.tools.remover), `a magnetic remover was used (${report.tools.remover ? `${report.tools.remover.human} ${report.tools.remover.roundId}` : 'no human held a remover and a unit wearing items'})`);
-    check(Boolean(report.tools.reforger), `a reforger was used (${report.tools.reforger ? `${report.tools.reforger.human} ${report.tools.reforger.roundId} ${report.tools.reforger.definitionId}` : 'no human held a reforger with an allowed target'})`);
+    // A drag that sent nothing is a failed use, not a use: it needs the server's receipt and exactly one command.
+    // No reforger with an allowed target in this match is a coverage gap, reported apart from gesture failures.
+    const reforger = report.tools.reforger;
+    if (reforger) check(reforger.receipt === 'consumable-used' && reforger.commands.length === 1, `a reforger was used (${reforger.human} ${reforger.roundId} ${reforger.definitionId}: receipt ${reforger.receipt}, ${reforger.commands.length} command(s))`);
+    else check(false, 'coverage gap (检查机会不足): no human held a reforger with an allowed target');
     check(report.reload !== null, `乙 reloaded in a PvE settlement and came back before it ended (${report.reload ? `${report.reload.roundId}, back after ${report.reload.backAfterMs} ms` : 'never'})`);
     if (report.overtime.length > 0) check(report.overtime.every(entry => entry.ok), `overtime after 6-7 was played and shown (${report.overtime.map(entry => `${entry.roundName}${entry.ok ? '' : ' ✗'}`).join(', ')})`);
     else console.log(`skip overtime: the match was decided in ${Object.values(report.ranking)[0]?.roundName ?? 'an unknown round'} (display covered by c19-overtime-display.mjs)`);
