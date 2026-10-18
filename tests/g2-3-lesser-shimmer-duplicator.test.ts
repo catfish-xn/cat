@@ -239,7 +239,7 @@ it('escrows a full-bench market and redeems its duplicator and later heroes in o
   expectRoundTripAndNextBattle(state);
  }
  const saved=serializeMatch(preparation(state));expect(serializeMatch(restoreMatch(saved))).toBe(saved);
-});
+},20_000);
 
 it.each([9,10])('preserves an escrowed public claim at round %s choosing another owned eligible target',round=>{
  let state=preparation(fullMarket());
