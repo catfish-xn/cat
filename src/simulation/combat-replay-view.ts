@@ -6,7 +6,7 @@ import { readCombatStats } from './combat-s13';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
-import { alignReplayUnits, applyReplayMembership } from './seat-mechanics/replay-units';
+import { alignReplayUnits, applyReplayMembership, replayOrderFollowsMembership } from './seat-mechanics/replay-units';
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
@@ -145,8 +145,9 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
         }
       }
       const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
-      // Align by identity; a keyframe below preserves exact order when the roster changes.
+      // Align by identity; a keyframe below carries the exact order when the membership events cannot.
       const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
+      const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
       for (let i = 0; i < view.units.length; i++) {
         const unit = view.units[i], prior = before[i];
         if (!prior) continue;
@@ -155,7 +156,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
       ticks.push(freezeContent({ tick: state.tick, events,
-        ...(!sameMembers || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
+        ...(!ordered || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
       previous = view;
       steps++;
     }

@@ -25,6 +25,14 @@ export function alignReplayUnits(previous: readonly CombatViewUnit[], current: r
   });
 }
 
+/** True when applying the membership events to `previous` already yields `current`'s order: survivors keep their
+ * order and entering units come after them (spawnCombatUnit appends). Otherwise the caller adds a keyframe. */
+export function replayOrderFollowsMembership(previous: readonly CombatViewUnit[], current: readonly CombatViewUnit[]): boolean {
+  const currentIds = new Set(current.map(unit => unit.id)), previousIds = new Set(previous.map(unit => unit.id));
+  const survivors = previous.filter(unit => currentIds.has(unit.id));
+  return survivors.every((unit, i) => current[i].id === unit.id) && current.slice(survivors.length).every(unit => !previousIds.has(unit.id));
+}
+
 /** Display reducer step for one membership event; idempotent for a repeated frame. */
 export function applyReplayMembership(units: CombatViewUnit[], event: ReplayMembershipEvent): CombatViewUnit[] {
   if (event.type === 'unitLeft') return units.filter(unit => unit.id !== event.unitId);
