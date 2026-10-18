@@ -3,13 +3,33 @@ import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
-import { stepMatch } from '../src/simulation/match';
+import { deployMatchUnit,equipItem,sellUnit,startMatchCombat,stepMatch,type MatchCommandResult,type MatchState } from '../src/simulation/match';
+import { grantMechanicItem,grantMechanicUnit } from '../src/simulation/seat-mechanics';
+import { publicEquipmentPreparation } from './fixtures/b8-public-equipment';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { packets as packetViews } from './helpers/replay2-views';
 
 beforeAll(() => { itemMatch(['steraks-gage','bloodthirster']); });
+
+const accepted=(r:MatchCommandResult):MatchState=>{if(!r.ok)throw new Error(r.reason);return r.state;};
+/** Real seed-19 acquisition plus production mechanic grants (source "test"):
+ * the non-Lux holder genuinely dies around tick 140 while Lux keeps fighting.
+ * Restore replays this authenticated opening, so no combat fact is patched. */
+function seatFight(holderItem:string|null,luxItem:string|null,luxStars:1|2){
+ let state=publicEquipmentPreparation(['rod'],{seed:19});
+ const holderId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId!=='lux')!.id;
+ for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.definitionId!=='lux'&&u.id!==holderId))state=accepted(sellUnit(state,u.id));
+ if(!state.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))state=accepted(grantMechanicUnit(state,{receiptId:'seat-lux-base',source:'test',definitionId:'lux'}));
+ if(luxStars===2)for(let i=0;i<2;i++)state=accepted(grantMechanicUnit(state,{receiptId:`seat-lux-${i}`,source:'test',definitionId:'lux'}));
+ const luxId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId==='lux')!.id;
+ for(const [unitId,definitionId] of [[holderId,holderItem],[luxId,luxItem]] as const)if(definitionId){
+  state=accepted(grantMechanicItem(state,{receiptId:`seat-${definitionId}`,source:'test',definitionId}));state=accepted(equipItem(state,state.items.at(-1)!.id,unitId,0));
+ }
+ state=accepted(deployMatchUnit(state,holderId,{kind:'board',cell:{col:3,row:4}}));state=accepted(deployMatchUnit(state,luxId,{kind:'board',cell:{col:6,row:7}}));
+ return {state:accepted(startMatchCombat(state)),holderId,luxId};
+}
 
 describe('B4 composed consumers and restore rejection',()=>{
  it('IE+JG:25+35+35=95% chance,one redundant source makes multiplier1.5;135→202',()=>{
@@ -44,22 +64,35 @@ describe('B4 composed consumers and restore rejection',()=>{
   for(let i=0;i<80&&s.phase==='combat';i++){s=stepMatch(s).state;if(i%10===0)expect(restoreMatch(serializeMatch(s))).toEqual(s);}
  });
  it('Quicksilver stops growing at death; later living units may keep fighting and save',()=>{
-  let s=itemMatch('quicksilver');while(s.combat!.tick<45&&s.phase==='combat')s=stepMatch(s).state;
-  if(s.phase==='combat'){
-   const units=s.combat!.units.map(u=>u.id==='unit-1'?{...u,hp:0}:u);s=stepMatch({...s,combat:{...s.combat!,units}}).state;
-   for(let i=0;i<45&&s.phase==='combat';i++)s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
-  }
+  // Restore replays the authenticated opening, so the holder must die from real combat damage.
+  const fight=seatFight('quicksilver',null,2);let s=fight.state;
+  const holder=()=>s.combat!.units.find(u=>u.id===fight.holderId)!;
+  expect(holder().itemPrograms!.map(p=>p.source.definitionId)).toContain('quicksilver');
+  while(s.phase==='combat'&&holder().alive)s=stepMatch(s).state;
+  expect(s.phase).toBe('combat');const deadAt=structuredClone(holder().mechanismState!.periodicTasks);
+  for(let i=0;i<45&&s.phase==='combat';i++){s=stepMatch(s).state;if(i%15===14){const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);expect(stepMatch(restored)).toEqual(stepMatch(s));}}
+  expect(s.phase).toBe('combat');expect(holder().mechanismState!.periodicTasks).toEqual(deadAt);
  });
- it('Lux HoJ samples360×130%=468; crossing below50% keeps charged468 through Match save and next attack',()=>{
+ it('Lux HoJ samples360×130%=468; crossing below50% keeps charged468 for the next attack; a genuine charge survives Match save',()=>{
   let s=itemMatch('hand-of-justice','unit-3');if(s.phase!=='combat')throw new Error('combat required');
   s=stepMatch({...s,combat:{...s.combat,units:s.combat.units.map(u=>u.id==='unit-3'?{...u,mana:u.maxMana,cooldownTicks:0}:u)}}).state;
   const high=s.combat!.units.find(u=>u.id==='unit-3')!;expect(high.hp*2).toBeGreaterThan(high.maxHp);expect(readCombatStats(high,s.combat!).abilityPower).toBe(130);expect(high.runtime!.nextAttackMagic).toBe(468);
   if(s.phase!=='combat')throw new Error('combat required');
   s=stepMatch({...s,combat:{...s.combat,units:s.combat.units.map(u=>u.id==='unit-3'?{...u,hp:190,mana:0,cooldownTicks:1000}:u)}}).state;
   const low=s.combat!.units.find(u=>u.id==='unit-3')!;expect(low.hp*2).toBeLessThan(low.maxHp);expect(readCombatStats(low,s.combat!).abilityPower).toBe(115);expect(low.runtime!.nextAttackMagic).toBe(468);
-  const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);
   const attack=(state:typeof s)=>{if(state.phase!=='combat')throw new Error('combat required');return stepMatch({...state,combat:{...state.combat,units:state.combat.units.map(u=>u.id==='unit-3'?{...u,cooldownTicks:0}:u)}});};
-  const result=attack(s);expect(attack(restored)).toEqual(result);expect(packetViews(result.events).filter(e=>e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.raw)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
+  const result=attack(s);expect(packetViews(result.events).filter(e=>e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.raw)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
+  // The patched HP/mana above is not a replayable save. Match save of a charge is
+  // proven on a genuine fight: 1★ Lux samples 360×130%=468, then saves before its next attack.
+  const fight=seatFight(null,'hand-of-justice',1);let n=fight.state;const lux=(state:typeof n)=>state.combat!.units.find(u=>u.id===fight.luxId)!;
+  while(n.phase==='combat'&&!lux(n).runtime?.nextAttackMagic)n=stepMatch(n).state;
+  expect(readCombatStats(lux(n),n.combat!).abilityPower).toBe(130);expect(lux(n).runtime!.nextAttackMagic).toBe(468);
+  let restored=restoreMatch(serializeMatch(n));expect(restored).toEqual(n);const discharged:number[]=[];
+  while(n.phase==='combat'&&lux(n).runtime!.nextAttackMagic){
+   const a=stepMatch(n),b=stepMatch(restored);expect(b).toEqual(a);n=a.state;restored=b.state;
+   discharged.push(...packetViews(a.events).filter(e=>e.source.ownerId===fight.luxId&&e.source.sourceKind==='ability').map(e=>e.raw));
+  }
+  expect(discharged).toEqual([468]);expect(lux(n).runtime!.nextAttackMagic).toBe(0);
  });
  it('string restore uses its parsed independent graph;object restore still detaches the input',()=>{
   const source=itemMatch('hand-of-justice'),json=serializeMatch(source),a=restoreMatch(json),b=restoreMatch(json),c=restoreMatch(source);

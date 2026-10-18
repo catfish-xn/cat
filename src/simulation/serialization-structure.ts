@@ -290,7 +290,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick);
     validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
-    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
+    mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy, replay), 'resists shield replay');
     const cells = new Set<string>();
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');

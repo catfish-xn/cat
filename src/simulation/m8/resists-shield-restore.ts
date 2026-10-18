@@ -1,4 +1,5 @@
-import { createCombatWithEvents, stepCombat, type CombatState } from '../combat';
+import type { CombatState } from '../combat';
+import { createRestoreCombatReplay, type RestoreCombatReplay, type CombatReplayFacts } from '../restore-combat-replay';
 import type { CombatInputBasis } from '../combat-input';
 import type { StrategySnapshot } from '../strategy-types';
 import { canonicalContent } from '../content';
@@ -13,7 +14,7 @@ function hasResistsShield(value: unknown): boolean {
   if (object.kind === 'grant-shield' && (object.amount as { resistsBps?: number } | undefined)?.resistsBps) return true;
   return Object.values(object).some(hasResistsShield);
 }
-function projection(combat: CombatState, sources: ReadonlySet<string>) {
+function projection(combat: Pick<CombatState, 'units'> | CombatReplayFacts, sources: ReadonlySet<string>) {
   return combat.units.flatMap(unit => (unit.shieldLayers ?? []).filter(layer => sources.has(canonicalSource(asSource(layer.source))))
     .map(layer => ({ targetId: unit.id, layer }))).sort((a, b) => {
       const x = a.targetId + '\0' + a.layer.key, y = b.targetId + '\0' + b.layer.key;
@@ -27,15 +28,15 @@ function projection(combat: CombatState, sources: ReadonlySet<string>) {
  * amount type, from the validated resource prefix and independently checked seed.
  * No replay state/events are returned or installed into the restored match.
  */
-export function validateResistsShields(combat: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot): void {
+export function validateResistsShields(combat: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot, replay: RestoreCombatReplay = createRestoreCombatReplay(basis, strategy, combat.tick)): void {
   if (!hasResistsShield(strategy)) return;
   if (!Number.isSafeInteger(combat.tick) || combat.tick < 0 || combat.tick > 1200)
     throw new Error('Invalid Match save: resists shield replay tick');
-  let expected = createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
-  const sources = new Set(expected.units.flatMap(unit => declaredEffects(unit, basis.combatId))
+  const opening = replay.opening();
+  const sources = new Set(opening.units.flatMap(unit => declaredEffects(unit, basis.combatId))
     .filter(d => d.effect.kind === 'grant-shield' && d.effect.amount.resistsBps)
     .map(d => canonicalSource(d.source)));
-  while (expected.tick < combat.tick && expected.status === 'running') expected = stepCombat(expected).state;
+  const expected = replay.atSaveTick();
   if (expected.tick !== combat.tick || canonicalContent(projection(expected, sources)) !== canonicalContent(projection(combat, sources)))
     throw new Error('Invalid Match save: resists shield replay');
 }

@@ -7,7 +7,19 @@ import { M8_VERSION } from './m8/version';
 export interface CombatReplayFacts {
   readonly tick: number;
   readonly rngState: CombatState['rngState'];
-  readonly units: readonly {
+  readonly rngDraws: CombatState['rngDraws'];
+  readonly nextActionSeq: CombatState['nextActionSeq'];
+  readonly nextEventSeq: CombatState['nextEventSeq'];
+  readonly damageContributors: CombatState['damageContributors'];
+  readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
+  readonly units: readonly (Pick<CombatUnit, 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'maxHp' | 'maxHpBasis'> & {
+    readonly periodicTasks: NonNullable<CombatUnit['mechanismState']>['periodicTasks'];
+    readonly burnStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
+    readonly activities: NonNullable<CombatUnit['mechanismState']>['activities'];
+    readonly exposureBps: number;
+    readonly exposureFromTick: number;
+    readonly exposureUntilTick: number;
+    readonly expansionDamage: Pick<NonNullable<CombatUnit['expansion']>, 'damageDealt' | 'damageTaken' | 'crystalDamage'> | undefined;
     readonly id: string;
     readonly definitionId: string;
     readonly curseCaster: boolean;
@@ -17,19 +29,30 @@ export interface CombatReplayFacts {
     readonly reaveUntilTick: number;
     readonly tasks: NonNullable<CombatUnit['tasks']>;
     readonly triggerLedger: CombatUnit['triggerLedger'];
-  }[];
+  })[];
 }
 export interface RestoreCombatReplay {
   opening(): CombatState;
   atSaveTick(): CombatReplayFacts;
 }
 function facts(state: CombatState): CombatReplayFacts {
-  return structuredClone({ tick: state.tick, rngState: state.rngState, units: state.units.map(unit => ({
+  return structuredClone({ tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
+    nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
+    damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
     id: unit.id, definitionId: unit.definitionId,
     curseCaster: unit.ability.kind === 's13' && unit.ability.championId === 'morgana',
     buddyTriggered: unit.runtime?.buddyTriggered, castCount: unit.runtime?.castCount,
     reaveBps: unit.g22?.reaveBps ?? 0, reaveUntilTick: unit.g22?.reaveUntilTick ?? 0,
     tasks: unit.tasks ?? [], triggerLedger: unit.triggerLedger,
+    runtime: unit.runtime, shieldLayers: unit.shieldLayers, shield: unit.shield, shieldExpiresAtTick: unit.shieldExpiresAtTick,
+    g23: unit.g23, maxHp: unit.maxHp, maxHpBasis: unit.maxHpBasis,
+    periodicTasks: unit.mechanismState?.periodicTasks ?? [],
+    burnStatuses: unit.mechanismState?.statuses.filter(s => s.kind === 'burn') ?? [],
+    activities: unit.mechanismState?.activities ?? [],
+    exposureBps: unit.g22?.exposureBps ?? 0, exposureFromTick: unit.g22?.exposureFromTick ?? 0,
+    exposureUntilTick: unit.g22?.exposureUntilTick ?? 0,
+    expansionDamage: unit.expansion && { damageDealt: unit.expansion.damageDealt,
+      damageTaken: unit.expansion.damageTaken, crystalDamage: unit.expansion.crystalDamage },
   })) });
 }
 interface Evidence {
