@@ -1,3 +1,4 @@
+import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {transferUpgradeResources} from './upgrades';
 import type {MatchState,MatchEvent,MatchFailure} from './match-types';
 import type {UnitLootPolicy} from './loot-runtime';
@@ -20,6 +21,8 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
  if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
  if(copy>=atom.quantity||atom.kind!=='gold'&&!atom.options.includes(definitionId)||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
+ if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'
+   &&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return {ok:false,state,reason:'stale-choice'};
  const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId};
  if(atom.kind==='tool'){
   const consumableId=`consumable-${state.nextConsumableSerial}`;
@@ -77,7 +80,7 @@ export function finishG23Choice(before:MatchState,after:MatchState,optionId:stri
   const menu=g23JunkerMenu(before);if(!menu||menu.id!==choice.choiceId)throw Error('Stale armory');
   const receipt=after.seatMechanics!.receipts.at(-1)!;
   if(receipt.kind!=='choice')throw Error('Armory receipt');
-  return writeG23Progress(after,{...p,junkerPurchases:[...p.junkerPurchases,{id:menu.id,round:before.round,unitId:menu.unitId,upgrade:optionId as G23JunkerUpgrade,cost:receipt.price}]});
+  return recordG23GrantEvidence(before,writeG23Progress(after,{...p,junkerPurchases:[...p.junkerPurchases,{id:menu.id,round:before.round,unitId:menu.unitId,upgrade:optionId as G23JunkerUpgrade,cost:receipt.price}]}),menu.id);
  }
  if(choice.kind==='blackMarket'&&p.chem.offer?.id===choice.choiceId){
   const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round));

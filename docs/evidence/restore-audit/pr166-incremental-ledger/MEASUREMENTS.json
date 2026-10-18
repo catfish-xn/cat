@@ -1,0 +1,4683 @@
+{
+  "base": "2fd2c5c536caab503d2e1896eba223fdba0d79d4",
+  "sourceFingerprint": "7116e471e7c94fd8d6cfbc3074c76831bdfa651eac04e2dd2f11c503a647bc9f",
+  "handoffPatchSha256": "31882b5c17743285eb913af8336508498942360979d6e40d8e92d3d28fc45b7a",
+  "adopted": "Only the incremental event-ledger hashing idea, integrated with existing verified hash reuse; no whole-patch application",
+  "unchangedSimulation": true,
+  "method": "User confirmed competing task stopped; this task ran all final performance measurements serially with original scripts and budgets. Previous measurements remain historical controls, not newly isolated controls.",
+  "processSnapshot": {
+    "at": "2026-10-17T17:17:24.088Z",
+    "load": [
+      1.47,
+      1.35,
+      1.8
+    ],
+    "processes": [
+      {
+        "pid": "892054",
+        "args": [
+          "/opt/node-v24.21.0-linux-x64/bin/node",
+          "scripts/verify-m6-performance.cjs"
+        ]
+      }
+    ]
+  },
+  "runs": [
+    {
+      "name": "m6-after-1isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 345.106,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 9.400000095367432,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 43,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 382.39999985694885,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 472,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14508.799999952316,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1424.7000000476837,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 63.10000014305115,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.39999985694885254,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "7116e471e7c94fd8d6cfbc3074c76831bdfa651eac04e2dd2f11c503a647bc9f",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "node": "v24.21.0",
+      "browser": "153.0.8010.12",
+      "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+      "cpuCount": 4,
+      "loadAtStart": [
+        0.64,
+        1.13,
+        1.81
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              9.200000047683716,
+              5.799999952316284,
+              5.700000047683716,
+              9.400000095367432,
+              8.700000047683716,
+              8,
+              6,
+              5.699999809265137,
+              6.099999904632568,
+              5.599999904632568,
+              6.700000047683716,
+              7.5
+            ],
+            "p95": 9.400000095367432,
+            "max": 9.400000095367432
+          },
+          "write": {
+            "samples": [
+              34.799999952316284,
+              35.10000014305115,
+              36.799999952316284,
+              42,
+              41.5,
+              43,
+              34.89999985694885,
+              38.700000047683716,
+              27.600000143051147,
+              32.200000047683716,
+              36.89999985694885,
+              34.299999952316284
+            ],
+            "p95": 43,
+            "max": 43
+          },
+          "fullCapture": {
+            "samples": [
+              382.39999985694885,
+              35.799999952316284,
+              13,
+              11.600000143051147,
+              21.799999952316284,
+              6.599999904632568,
+              6.700000047683716,
+              6.200000047683716,
+              5.5,
+              6.200000047683716,
+              5.900000095367432,
+              6.299999952316284
+            ],
+            "p95": 382.39999985694885,
+            "max": 382.39999985694885
+          },
+          "activation": {
+            "samples": [
+              288.90000009536743,
+              472,
+              319.5,
+              306.2999999523163,
+              211.10000014305115,
+              223.20000004768372,
+              219.79999995231628,
+              182.5,
+              244.5,
+              210.60000014305115,
+              187.70000004768372,
+              190.5
+            ],
+            "p95": 472,
+            "max": 472
+          },
+          "completeImport": {
+            "samples": [
+              14508.799999952316,
+              14121.199999809265,
+              14040
+            ],
+            "p95": 14508.799999952316,
+            "max": 14508.799999952316
+          },
+          "firstSeek": {
+            "samples": [
+              1396.1000001430511,
+              1358,
+              1424.7000000476837
+            ],
+            "p95": 1424.7000000476837,
+            "max": 1424.7000000476837
+          },
+          "cachedSeek": {
+            "samples": [
+              63.10000014305115,
+              51.69999980926514,
+              54.10000014305115,
+              35.39999985694885,
+              24.09999990463257,
+              32.799999952316284,
+              22,
+              11.5,
+              2.200000047683716,
+              37.700000047683716,
+              47.09999990463257,
+              28.40000009536743
+            ],
+            "p95": 63.10000014305115,
+            "max": 63.10000014305115
+          },
+          "statsBatch": {
+            "samples": [
+              0.2999999523162842,
+              0.20000004768371582,
+              0.09999990463256836,
+              0.10000014305114746,
+              0,
+              0.09999990463256836,
+              0.39999985694885254,
+              0.10000014305114746,
+              0,
+              0.09999990463256836,
+              0.09999990463256836,
+              0,
+              0
+            ],
+            "p95": 0.39999985694885254,
+            "max": 0.39999985694885254
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 9.400000095367432,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 43,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 382.39999985694885,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 472,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14508.799999952316,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1424.7000000476837,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 63.10000014305115,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.39999985694885254,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12009.200000047684,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 55139472,
+          "totalSize": 56066048,
+          "embedderHeapUsedSize": 862640,
+          "backingStorageSize": 5200010
+        },
+        "after": {
+          "usedSize": 55466344,
+          "totalSize": 56590336,
+          "embedderHeapUsedSize": 773976,
+          "backingStorageSize": 5200010
+        },
+        "heapDeltaBytes": 326872,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 72255.64877800002,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 60345.55400100001
+      }
+    },
+    {
+      "name": "cannon-after-1isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 150.99,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 146667.665621,
+      "tests": [
+        {
+          "title": "M5 cannon restores every command and tick; rejected insertion preserves every field",
+          "status": "passed",
+          "milliseconds": 146667.665621
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 146.660333724,
+        "passed": true
+      }
+    },
+    {
+      "name": "b7-after-1isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 38.587,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 16019.717589000003,
+      "tests": [
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 334.93163000000277
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 287.15373700000055
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 379.2180380000027
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 733.6534470000006
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 901.5605230000001
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1514.4964660000005
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1508.5854230000004
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1689.7446870000022
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 157.92317700000058
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 229.27825200000007
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "milliseconds": 1.1794730000001437
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "milliseconds": 98.87491199999931
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "milliseconds": 12.090861000000587
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "milliseconds": 169.69668100000126
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "milliseconds": 286.3754420000005
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "milliseconds": 527.0589969999965
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "milliseconds": 291.7473269999973
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 316.7643480000006
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "milliseconds": 267.68768999999884
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 286.9970289999983
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "milliseconds": 1162.1121889999995
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "milliseconds": 1132.3655510000026
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "milliseconds": 1.7136170000012498
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "milliseconds": 384.79416299999866
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "milliseconds": 447.47806899999705
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 444.35674100000324
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 451.44894699999713
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 421.68889299999864
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 508.0374210000009
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "milliseconds": 1070.7038580000008
+        }
+      ]
+    },
+    {
+      "name": "m6-after-2isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 344.971,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 9,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 38,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 363.80000019073486,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 440.2000000476837,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14519.200000047684,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1506.3000001907349,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 71.29999995231628,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.5999999046325684,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "7116e471e7c94fd8d6cfbc3074c76831bdfa651eac04e2dd2f11c503a647bc9f",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "node": "v24.21.0",
+      "browser": "153.0.8010.12",
+      "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+      "cpuCount": 4,
+      "loadAtStart": [
+        2.07,
+        1.92,
+        1.92
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              8.099999904632568,
+              9,
+              7,
+              6.299999952316284,
+              6.800000190734863,
+              6.5,
+              6,
+              8.299999952316284,
+              5.6000001430511475,
+              6.200000047683716,
+              7.799999952316284,
+              7.799999952316284
+            ],
+            "p95": 9,
+            "max": 9
+          },
+          "write": {
+            "samples": [
+              37.299999952316284,
+              33,
+              38,
+              32.39999985694885,
+              36.299999952316284,
+              37.5,
+              29.600000143051147,
+              33.200000047683716,
+              28.699999809265137,
+              33.200000047683716,
+              33.60000014305115,
+              31.600000143051147
+            ],
+            "p95": 38,
+            "max": 38
+          },
+          "fullCapture": {
+            "samples": [
+              363.80000019073486,
+              44,
+              13.099999904632568,
+              15.100000143051147,
+              14,
+              5.200000047683716,
+              5.599999904632568,
+              5.700000047683716,
+              5.299999952316284,
+              6.700000047683716,
+              6.799999952316284,
+              11.800000190734863
+            ],
+            "p95": 363.80000019073486,
+            "max": 363.80000019073486
+          },
+          "activation": {
+            "samples": [
+              281.2000000476837,
+              440.2000000476837,
+              302.90000009536743,
+              325.80000019073486,
+              257.5,
+              269.2999999523163,
+              234.80000019073486,
+              182,
+              171.59999990463257,
+              322.09999990463257,
+              300.7000000476837,
+              276.19999980926514
+            ],
+            "p95": 440.2000000476837,
+            "max": 440.2000000476837
+          },
+          "completeImport": {
+            "samples": [
+              14519.200000047684,
+              13911.600000143051,
+              14317.200000047684
+            ],
+            "p95": 14519.200000047684,
+            "max": 14519.200000047684
+          },
+          "firstSeek": {
+            "samples": [
+              1471.2999999523163,
+              1506.3000001907349,
+              1426.0999999046326
+            ],
+            "p95": 1506.3000001907349,
+            "max": 1506.3000001907349
+          },
+          "cachedSeek": {
+            "samples": [
+              67.89999985694885,
+              52.700000047683716,
+              71.29999995231628,
+              41.299999952316284,
+              23.40000009536743,
+              28.299999952316284,
+              13.100000143051147,
+              8.699999809265137,
+              3,
+              49.30000019073486,
+              50.09999990463257,
+              29.09999990463257
+            ],
+            "p95": 71.29999995231628,
+            "max": 71.29999995231628
+          },
+          "statsBatch": {
+            "samples": [
+              0.20000004768371582,
+              0.2999999523162842,
+              0.5999999046325684,
+              0.10000014305114746,
+              0.09999990463256836,
+              0.10000014305114746,
+              0.19999980926513672,
+              0,
+              0.10000014305114746,
+              0,
+              0,
+              0.10000014305114746,
+              0
+            ],
+            "p95": 0.5999999046325684,
+            "max": 0.5999999046325684
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 9,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 38,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 363.80000019073486,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 440.2000000476837,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14519.200000047684,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1506.3000001907349,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 71.29999995231628,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.5999999046325684,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12434.899999856949,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 55145780,
+          "totalSize": 57114624,
+          "embedderHeapUsedSize": 862696,
+          "backingStorageSize": 5200010
+        },
+        "after": {
+          "usedSize": 55476096,
+          "totalSize": 57114624,
+          "embedderHeapUsedSize": 773976,
+          "backingStorageSize": 5200010
+        },
+        "heapDeltaBytes": 330316,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 72498.048957,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 60326.03132499999
+      }
+    },
+    {
+      "name": "cannon-after-2isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 150.745,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 146439.031578,
+      "tests": [
+        {
+          "title": "M5 cannon restores every command and tick; rejected insertion preserves every field",
+          "status": "passed",
+          "milliseconds": 146439.031578
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 146.43326159,
+        "passed": true
+      }
+    },
+    {
+      "name": "b7-after-2isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 38.251,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 15806.715746000013,
+      "tests": [
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 294.8496460000024
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 218.13623399999778
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 380.4610869999997
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 730.1915540000009
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 904.2097570000005
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1544.3287070000006
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1502.4288290000004
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1738.1387560000003
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 141.04512400000021
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 204.94801200000074
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "milliseconds": 1.2451270000019576
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "milliseconds": 100.34902199999851
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "milliseconds": 12.491770000000542
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "milliseconds": 164.59441099999822
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "milliseconds": 319.83961700000145
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "milliseconds": 555.8805869999997
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "milliseconds": 284.5740760000008
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 283.8231459999988
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "milliseconds": 267.2367340000019
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 291.01035000000047
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "milliseconds": 1148.6579290000009
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "milliseconds": 1072.7996520000015
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "milliseconds": 1.4675009999991744
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "milliseconds": 353.7725950000022
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "milliseconds": 394.3083420000039
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 468.6868309999991
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 449.53473700000177
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 412.06892399999924
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 566.3757489999989
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "milliseconds": 999.2609400000001
+        }
+      ]
+    },
+    {
+      "name": "m6-after-3isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 343.662,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 10.5,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 44.39999985694885,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 351.60000014305115,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 414.59999990463257,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14237.900000095367,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1512.4000000953674,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 59.700000047683716,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.5,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "7116e471e7c94fd8d6cfbc3074c76831bdfa651eac04e2dd2f11c503a647bc9f",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "node": "v24.21.0",
+      "browser": "153.0.8010.12",
+      "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+      "cpuCount": 4,
+      "loadAtStart": [
+        1.89,
+        1.97,
+        1.96
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              10.5,
+              5.6000001430511475,
+              6.200000047683716,
+              8.600000143051147,
+              7.599999904632568,
+              7.599999904632568,
+              7.299999952316284,
+              8,
+              7.900000095367432,
+              7.699999809265137,
+              10.5,
+              9.700000047683716
+            ],
+            "p95": 10.5,
+            "max": 10.5
+          },
+          "write": {
+            "samples": [
+              34.09999990463257,
+              30.899999856948853,
+              44.39999985694885,
+              43,
+              43.799999952316284,
+              40.90000009536743,
+              41.799999952316284,
+              40.5,
+              40.700000047683716,
+              39.09999990463257,
+              39.40000009536743,
+              42.59999990463257
+            ],
+            "p95": 44.39999985694885,
+            "max": 44.39999985694885
+          },
+          "fullCapture": {
+            "samples": [
+              351.60000014305115,
+              43,
+              13.699999809265137,
+              10.900000095367432,
+              9.200000047683716,
+              9.5,
+              7.3999998569488525,
+              6.200000047683716,
+              4.299999952316284,
+              4.6000001430511475,
+              5.200000047683716,
+              4.8999998569488525
+            ],
+            "p95": 351.60000014305115,
+            "max": 351.60000014305115
+          },
+          "activation": {
+            "samples": [
+              287.89999985694885,
+              414.59999990463257,
+              309.80000019073486,
+              284.30000019073486,
+              210.79999995231628,
+              200.20000004768372,
+              205.39999985694885,
+              177.79999995231628,
+              181.80000019073486,
+              168.29999995231628,
+              161.20000004768372,
+              164.09999990463257
+            ],
+            "p95": 414.59999990463257,
+            "max": 414.59999990463257
+          },
+          "completeImport": {
+            "samples": [
+              14237.900000095367,
+              13485.799999952316,
+              14058
+            ],
+            "p95": 14237.900000095367,
+            "max": 14237.900000095367
+          },
+          "firstSeek": {
+            "samples": [
+              1507.2999999523163,
+              1512.4000000953674,
+              1454.2000000476837
+            ],
+            "p95": 1512.4000000953674,
+            "max": 1512.4000000953674
+          },
+          "cachedSeek": {
+            "samples": [
+              58.700000047683716,
+              52.299999952316284,
+              50.10000014305115,
+              48.39999985694885,
+              25.799999952316284,
+              30.299999952316284,
+              17.799999952316284,
+              6.200000047683716,
+              3.5,
+              39.40000009536743,
+              59.700000047683716,
+              57.89999985694885
+            ],
+            "p95": 59.700000047683716,
+            "max": 59.700000047683716
+          },
+          "statsBatch": {
+            "samples": [
+              0.5,
+              0.39999985694885254,
+              0.2999999523162842,
+              0.20000004768371582,
+              0.19999980926513672,
+              0.3000001907348633,
+              0.09999990463256836,
+              0,
+              0.09999990463256836,
+              0.09999990463256836,
+              0.10000014305114746,
+              0,
+              0
+            ],
+            "p95": 0.5,
+            "max": 0.5
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 10.5,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 44.39999985694885,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 351.60000014305115,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 414.59999990463257,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14237.900000095367,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1512.4000000953674,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 59.700000047683716,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.5,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12007.700000047684,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 55162536,
+          "totalSize": 56852480,
+          "embedderHeapUsedSize": 862640,
+          "backingStorageSize": 5200010
+        },
+        "after": {
+          "usedSize": 55483100,
+          "totalSize": 57114624,
+          "embedderHeapUsedSize": 875920,
+          "backingStorageSize": 5200010
+        },
+        "heapDeltaBytes": 320564,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 71207.32121400001,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 61673.98392200004
+      }
+    },
+    {
+      "name": "cannon-after-3isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 152.938,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 148710.921042,
+      "tests": [
+        {
+          "title": "M5 cannon restores every command and tick; rejected insertion preserves every field",
+          "status": "passed",
+          "milliseconds": 148710.921042
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 148.704856041,
+        "passed": true
+      }
+    },
+    {
+      "name": "b7-after-3isolated",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 39.14,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 16215.872603999982,
+      "tests": [
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 314.8794319999979
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 218.80657500000234
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 420.22243700000035
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 723.478912999999
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 961.2308650000014
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1616.1235860000015
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1429.8191050000023
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "milliseconds": 1741.9345070000018
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 186.89617699999872
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore 6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "milliseconds": 201.44352000000072
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "milliseconds": 1.4624729999995907
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "milliseconds": 93.39766299999974
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "milliseconds": 12.323880999996618
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "milliseconds": 173.45092799999838
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "milliseconds": 296.6106780000009
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "milliseconds": 532.9853640000001
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "milliseconds": 321.3713029999999
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 267.2986490000003
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "milliseconds": 253.04296299999987
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "milliseconds": 282.7438669999974
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "milliseconds": 1121.5539070000013
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "milliseconds": 1293.0417430000016
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "milliseconds": 1.772845999999845
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "milliseconds": 327.61817199999496
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "milliseconds": 434.94187099999544
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 469.35425699999905
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 431.3883569999962
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 446.20193299999664
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "milliseconds": 558.5161989999979
+        },
+        {
+          "title": "B7 installed encounters and trusted Match restore restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "milliseconds": 1081.9604330000002
+        }
+      ]
+    }
+  ],
+  "focused": {
+    "passed": 21,
+    "failed": 0,
+    "files": [
+      {
+        "name": "/tmp/hex-pr166-fixes/tests/task-mechanism-restore.test.ts",
+        "milliseconds": 19930.29541015625,
+        "assertions": [
+          {
+            "title": "a holder-owned summon kills as itself; holder contribution=false controls only assists, with identical restored ticks",
+            "status": "passed",
+            "milliseconds": 6792.944977000001
+          },
+          {
+            "title": "a holder-owned summon kills as itself; holder contribution=true controls only assists, with identical restored ticks",
+            "status": "passed",
+            "milliseconds": 6251.000249999999
+          },
+          {
+            "title": "saves Morgana curse without a summon or bracer, restores object/JSON, and continues every tick",
+            "status": "passed",
+            "milliseconds": 380.7155390000007
+          },
+          {
+            "title": "rejects altered or invented target reave facts beside the legal seed 3151248 curse",
+            "status": "passed",
+            "milliseconds": 119.85308099999747
+          },
+          {
+            "title": "restores the legal target reave and retains Irelia shielding at tick 104",
+            "status": "passed",
+            "milliseconds": 73.72185300000274
+          },
+          {
+            "title": "rejects forged Black Rose member cast counts, including redistribution with an unchanged team total",
+            "status": "passed",
+            "milliseconds": 860.3460479999994
+          },
+          {
+            "title": "restores legal Black Rose member counts and keeps Sion bound at tick 21",
+            "status": "passed",
+            "milliseconds": 73.70872299999974
+          },
+          {
+            "title": "rejects corrupted curse attachment binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 69.01483599999847
+          },
+          {
+            "title": "rejects corrupted curse source binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 47.54174100000091
+          },
+          {
+            "title": "rejects corrupted curse timing binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 59.97934100000202
+          },
+          {
+            "title": "rejects corrupted curse action binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 52.5465609999992
+          },
+          {
+            "title": "rejects corrupted curse amount binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 52.792960999999195
+          },
+          {
+            "title": "rejects corrupted curse missing binding for object and JSON beside a valid control",
+            "status": "passed",
+            "milliseconds": 50.149053000001004
+          },
+          {
+            "title": "rejects transferring pulses to another real Morgana even with rebuilt source/holder/key identities",
+            "status": "passed",
+            "milliseconds": 103.99493900000016
+          },
+          {
+            "title": "rejects an appended fake bleed while retaining every genuine Morgana curse pulse",
+            "status": "passed",
+            "milliseconds": 45.802974000001996
+          },
+          {
+            "title": "restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge",
+            "status": "passed",
+            "milliseconds": 4359.064846999998
+          },
+          {
+            "title": "compares every restore for tasks only while reusing only exact detached replay evidence",
+            "status": "passed",
+            "milliseconds": 119.85724200000186
+          },
+          {
+            "title": "compares every restore for bracer and tasks while reusing only exact detached replay evidence",
+            "status": "passed",
+            "milliseconds": 136.14262299999973
+          },
+          {
+            "title": "bounds replay evidence, separates complete input contents and detaches every returned graph",
+            "status": "passed",
+            "milliseconds": 55.46583299999838
+          },
+          {
+            "title": "reuses verified hashes and incrementally hashes appended events against the full-ledger oracle",
+            "status": "passed",
+            "milliseconds": 222.2955120000006
+          }
+        ]
+      },
+      {
+        "name": "/tmp/hex-pr166-fixes/tests/restore-audit/combat-accumulators.test.ts",
+        "milliseconds": 32.421142578125,
+        "assertions": [
+          {
+            "title": "rejects an invented Maddie delayed attack belonging to another champion",
+            "status": "passed",
+            "milliseconds": 32.42107000000033
+          }
+        ]
+      }
+    ]
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "code": 0,
+    "signal": null,
+    "seconds": 19.137
+  },
+  "inputsCheck": {
+    "args": [
+      "scripts/record-g2-3-inputs.cjs",
+      "--check"
+    ],
+    "code": 0,
+    "signal": null,
+    "seconds": 5.568
+  },
+  "previousEvidence": "../pr166-m1m2/MEASUREMENTS.json",
+  "previousControls": [
+    {
+      "name": "cannon-baseline-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 179.439,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 173815.322311,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 173815.322265625
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 173.795951558,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-after-1formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 157.744,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 152682.911683,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 152682.91162109375
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 152.67512806300002,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-before-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 207.357,
+      "code": 143,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": true,
+      "passed": 0,
+      "failed": 1,
+      "testMs": 191210
+    },
+    {
+      "name": "b7-baseline-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 36.239,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 11720.744316000004,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 11726.355224609375
+        }
+      ]
+    },
+    {
+      "name": "b7-before-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 52.704,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 29344.011519999996,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 29350.962158203125
+        }
+      ]
+    },
+    {
+      "name": "b7-after-1formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 41.215,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 16856.782409000003,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 16865.357177734375
+        }
+      ]
+    },
+    {
+      "name": "cannon-baseline-2formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 143.046,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 137751.801794,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 137751.8017578125
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 137.74649667000003,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-after-2formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 155.412,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 150142.530063,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 150142.53002929688
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 150.13531827699998,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-before-2formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 209.319,
+      "code": 143,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": true,
+      "passed": 0,
+      "failed": 1,
+      "testMs": 193229
+    },
+    {
+      "name": "b7-baseline-2formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 37.703,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 12670.316092000012,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 12676.515869140625
+        }
+      ]
+    },
+    {
+      "name": "b7-before-2formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 54.86,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 30325.87317899999,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 30332.8330078125
+        }
+      ]
+    },
+    {
+      "name": "b7-after-2formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 40.901,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 16282.640112000008,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 16288.759521484375
+        }
+      ]
+    },
+    {
+      "name": "cannon-baseline-3formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 135.326,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 131354.349579,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 131354.349609375
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 131.348207524,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-after-3formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 150.747,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 1,
+      "failed": 0,
+      "testMs": 146722.99590799998,
+      "files": [
+        {
+          "name": "m5-replay-cannon.test.ts",
+          "passed": 1,
+          "failed": 0,
+          "milliseconds": 146722.99584960938
+        }
+      ],
+      "replay": {
+        "replay": "cannon",
+        "commands": 206,
+        "ticks": 8703,
+        "durationSeconds": 146.716607212,
+        "passed": true
+      }
+    },
+    {
+      "name": "cannon-before-3formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 203.309,
+      "code": 143,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": true,
+      "passed": 0,
+      "failed": 1,
+      "testMs": 188741
+    },
+    {
+      "name": "b7-baseline-3formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 36.478,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 12230.190542999986,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 12235.467529296875
+        }
+      ]
+    },
+    {
+      "name": "b7-before-3formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 53.765,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 29083.85684499999,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 29088.67333984375
+        }
+      ]
+    },
+    {
+      "name": "b7-after-3formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 39.128,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": 30,
+      "failed": 0,
+      "testMs": 16641.706829999996,
+      "files": [
+        {
+          "name": "m8-b7-match-wiring.test.ts",
+          "passed": 30,
+          "failed": 0,
+          "milliseconds": 16653.985595703125
+        }
+      ]
+    },
+    {
+      "name": "m6-before-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 370.184,
+      "code": 1,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": false,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 39.299999952316284,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 54.09999990463257,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 409,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 797.1000001430511,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 16763.400000095367,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1633.6000001430511,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 68.79999995231628,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 8.600000143051147,
+          "ceiling": 5,
+          "passed": false
+        }
+      ],
+      "failure": "AssertionError [ERR_ASSERTION]: Frozen performance budget exceeded: [{\"name\":\"statsBatch\",\"metric\":\"max\",\"actual\":8.600000143051147,\"ceiling\":5,\"passed\":false}]\n\n1 !== 0\n\n    at /tmp/hex-pr166-m1m2/before/scripts/verify-m6-performance.cjs:218:72",
+      "sourceFingerprint": "4af77fe1c6449fccf560c0dd0e9a6b7b2f6f1f882ac7c7cbc31f658f5b1f1066",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 76612.83297399999,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 67713.93070000003
+      },
+      "loadAtStart": [
+        3.3,
+        3.08,
+        3.45
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              24.5,
+              24.09999990463257,
+              21.399999856948853,
+              33.40000009536743,
+              37.700000047683716,
+              20.600000143051147,
+              26,
+              39.299999952316284,
+              18.5,
+              26.799999952316284,
+              19.399999856948853,
+              23.200000047683716
+            ],
+            "p95": 39.299999952316284,
+            "max": 39.299999952316284
+          },
+          "write": {
+            "samples": [
+              31.899999856948853,
+              28.600000143051147,
+              35.40000009536743,
+              54.09999990463257,
+              53.799999952316284,
+              37.89999985694885,
+              41.700000047683716,
+              35.10000014305115,
+              32.200000047683716,
+              34.299999952316284,
+              36.60000014305115,
+              46.60000014305115
+            ],
+            "p95": 54.09999990463257,
+            "max": 54.09999990463257
+          },
+          "fullCapture": {
+            "samples": [
+              409,
+              46.59999990463257,
+              16.100000143051147,
+              20.09999990463257,
+              14.900000095367432,
+              11.799999952316284,
+              6.400000095367432,
+              5.299999952316284,
+              5.599999904632568,
+              5.799999952316284,
+              5.5,
+              5.1000001430511475
+            ],
+            "p95": 409,
+            "max": 409
+          },
+          "activation": {
+            "samples": [
+              304.7000000476837,
+              425.7999999523163,
+              364,
+              797.1000001430511,
+              192.69999980926514,
+              172.89999985694885,
+              167.5,
+              169.80000019073486,
+              236.19999980926514,
+              184.30000019073486,
+              192.5,
+              190.69999980926514
+            ],
+            "p95": 797.1000001430511,
+            "max": 797.1000001430511
+          },
+          "completeImport": {
+            "samples": [
+              15958.200000047684,
+              15283.599999904633,
+              16763.400000095367
+            ],
+            "p95": 16763.400000095367,
+            "max": 16763.400000095367
+          },
+          "firstSeek": {
+            "samples": [
+              1610.5,
+              1551.9000000953674,
+              1633.6000001430511
+            ],
+            "p95": 1633.6000001430511,
+            "max": 1633.6000001430511
+          },
+          "cachedSeek": {
+            "samples": [
+              68.79999995231628,
+              56.40000009536743,
+              63.89999985694885,
+              34.5,
+              34.10000014305115,
+              20.700000047683716,
+              12.700000047683716,
+              13,
+              3.3999998569488525,
+              52.09999990463257,
+              61,
+              29
+            ],
+            "p95": 68.79999995231628,
+            "max": 68.79999995231628
+          },
+          "statsBatch": {
+            "samples": [
+              8.600000143051147,
+              0.40000009536743164,
+              0.39999985694885254,
+              0.3000001907348633,
+              0.09999990463256836,
+              0.09999990463256836,
+              0.20000004768371582,
+              0.20000004768371582,
+              0,
+              0.09999990463256836,
+              0.10000014305114746,
+              0,
+              0.09999990463256836
+            ],
+            "p95": 8.600000143051147,
+            "max": 8.600000143051147
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 39.299999952316284,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 54.09999990463257,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 409,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 797.1000001430511,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 16763.400000095367,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1633.6000001430511,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 68.79999995231628,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 8.600000143051147,
+            "ceiling": 5,
+            "passed": false
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12316.100000143051,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 53882468,
+          "totalSize": 55541760,
+          "embedderHeapUsedSize": 881832,
+          "backingStorageSize": 5183066
+        },
+        "after": {
+          "usedSize": 54208488,
+          "totalSize": 55541760,
+          "embedderHeapUsedSize": 874064,
+          "backingStorageSize": 5183066
+        },
+        "heapDeltaBytes": 326020,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-after-1formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 335.527,
+      "code": 1,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": false,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 11.399999856948853,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 56.90000009536743,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 365,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 598.7999999523163,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 15368.299999952316,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1607.7999999523163,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 83.80000019073486,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.3000001907348633,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "failure": "AssertionError [ERR_ASSERTION]: full-load import/activation roundtrip frozen budget\n    at /tmp/hex-pr166-fixes/scripts/verify-m6-performance.cjs:178:3",
+      "sourceFingerprint": "85b6618975b745a675666dacfdd21c4291170ac46a2cdd02c9283675375b6065",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 77672.50792500001
+      },
+      "loadAtStart": [
+        2.54,
+        2.99,
+        3.28
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              9.799999952316284,
+              5.799999952316284,
+              8.200000047683716,
+              11.399999856948853,
+              7.599999904632568,
+              5.599999904632568,
+              6.200000047683716,
+              6.700000047683716,
+              6.400000095367432,
+              3.799999952316284,
+              7.400000095367432,
+              7.400000095367432
+            ],
+            "p95": 11.399999856948853,
+            "max": 11.399999856948853
+          },
+          "write": {
+            "samples": [
+              35.10000014305115,
+              42.40000009536743,
+              34.5,
+              28.299999952316284,
+              29,
+              37.09999990463257,
+              40.89999985694885,
+              35.59999990463257,
+              56.90000009536743,
+              36.799999952316284,
+              44.89999985694885,
+              54.89999985694885
+            ],
+            "p95": 56.90000009536743,
+            "max": 56.90000009536743
+          },
+          "fullCapture": {
+            "samples": [
+              365,
+              50.19999980926514,
+              14.600000143051147,
+              19.200000047683716,
+              16.699999809265137,
+              10.200000047683716,
+              4.200000047683716,
+              8.799999952316284,
+              4.3999998569488525,
+              4.700000047683716,
+              5.5,
+              4.599999904632568
+            ],
+            "p95": 365,
+            "max": 365
+          },
+          "activation": {
+            "samples": [
+              332.2000000476837,
+              446.2000000476837,
+              520.5999999046326,
+              598.7999999523163,
+              299,
+              291.7000000476837,
+              216.89999985694885,
+              193,
+              186.90000009536743,
+              197.89999985694885,
+              189.5,
+              178.40000009536743
+            ],
+            "p95": 598.7999999523163,
+            "max": 598.7999999523163
+          },
+          "completeImport": {
+            "samples": [
+              15343.799999952316,
+              15135.800000190735,
+              15368.299999952316
+            ],
+            "p95": 15368.299999952316,
+            "max": 15368.299999952316
+          },
+          "firstSeek": {
+            "samples": [
+              1607.7999999523163,
+              1564.5,
+              1597.3000001907349
+            ],
+            "p95": 1607.7999999523163,
+            "max": 1607.7999999523163
+          },
+          "cachedSeek": {
+            "samples": [
+              83.80000019073486,
+              58.89999985694885,
+              47.799999952316284,
+              48.59999990463257,
+              23.799999952316284,
+              28.200000047683716,
+              11.099999904632568,
+              5.799999952316284,
+              2.700000047683716,
+              53.200000047683716,
+              53.60000014305115,
+              30.699999809265137
+            ],
+            "p95": 83.80000019073486,
+            "max": 83.80000019073486
+          },
+          "statsBatch": {
+            "samples": [
+              0.3000001907348633,
+              0.2999999523162842,
+              0.09999990463256836,
+              0.10000014305114746,
+              0.09999990463256836,
+              0.09999990463256836,
+              0.10000014305114746,
+              0.09999990463256836,
+              0,
+              0.10000014305114746,
+              0,
+              0,
+              0.09999990463256836
+            ],
+            "p95": 0.3000001907348633,
+            "max": 0.3000001907348633
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 11.399999856948853,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 56.90000009536743,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 365,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 598.7999999523163,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 15368.299999952316,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1607.7999999523163,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 83.80000019073486,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.3000001907348633,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 47969.700000047684,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-before-2formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 352.388,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 42.90000009536743,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 46.90000009536743,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 349.5,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 428.5,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 15844,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1562.2000000476837,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 57.200000047683716,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.5,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "4af77fe1c6449fccf560c0dd0e9a6b7b2f6f1f882ac7c7cbc31f658f5b1f1066",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 72396.89835200002,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 62530.858213
+      },
+      "loadAtStart": [
+        2.57,
+        3.1,
+        3.39
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              21.5,
+              22.09999990463257,
+              24,
+              25,
+              33.40000009536743,
+              33.700000047683716,
+              32.200000047683716,
+              42.90000009536743,
+              28.59999990463257,
+              20.100000143051147,
+              22.100000143051147,
+              17.600000143051147
+            ],
+            "p95": 42.90000009536743,
+            "max": 42.90000009536743
+          },
+          "write": {
+            "samples": [
+              35.59999990463257,
+              31.600000143051147,
+              31.899999856948853,
+              43.5,
+              45.799999952316284,
+              44.299999952316284,
+              41.799999952316284,
+              46.90000009536743,
+              42.700000047683716,
+              35.40000009536743,
+              32.40000009536743,
+              31
+            ],
+            "p95": 46.90000009536743,
+            "max": 46.90000009536743
+          },
+          "fullCapture": {
+            "samples": [
+              349.5,
+              39.09999990463257,
+              17.59999990463257,
+              10.5,
+              13,
+              8.200000047683716,
+              4.5,
+              4,
+              4.099999904632568,
+              4.900000095367432,
+              5.099999904632568,
+              4.5
+            ],
+            "p95": 349.5,
+            "max": 349.5
+          },
+          "activation": {
+            "samples": [
+              298.39999985694885,
+              428.5,
+              319.7999999523163,
+              347.7000000476837,
+              176.30000019073486,
+              174.10000014305115,
+              179.5,
+              189.09999990463257,
+              199.90000009536743,
+              186.09999990463257,
+              190.29999995231628,
+              200.5
+            ],
+            "p95": 428.5,
+            "max": 428.5
+          },
+          "completeImport": {
+            "samples": [
+              14926.700000047684,
+              13704,
+              15844
+            ],
+            "p95": 15844,
+            "max": 15844
+          },
+          "firstSeek": {
+            "samples": [
+              1453.2999999523163,
+              1330.2999999523163,
+              1562.2000000476837
+            ],
+            "p95": 1562.2000000476837,
+            "max": 1562.2000000476837
+          },
+          "cachedSeek": {
+            "samples": [
+              56.700000047683716,
+              57.200000047683716,
+              51.700000047683716,
+              41.5,
+              23.5,
+              32.69999980926514,
+              12,
+              6,
+              2.5,
+              50.39999985694885,
+              55.60000014305115,
+              31.59999990463257
+            ],
+            "p95": 57.200000047683716,
+            "max": 57.200000047683716
+          },
+          "statsBatch": {
+            "samples": [
+              0.2999999523162842,
+              0.09999990463256836,
+              0.09999990463256836,
+              0,
+              0,
+              0.20000004768371582,
+              0.5,
+              0,
+              0.10000014305114746,
+              0.09999990463256836,
+              0,
+              0,
+              0
+            ],
+            "p95": 0.5,
+            "max": 0.5
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 42.90000009536743,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 46.90000009536743,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 349.5,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 428.5,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 15844,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1562.2000000476837,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 57.200000047683716,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.5,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 10980,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 53883520,
+          "totalSize": 55541760,
+          "embedderHeapUsedSize": 881832,
+          "backingStorageSize": 5183066
+        },
+        "after": {
+          "usedSize": 54225120,
+          "totalSize": 56066048,
+          "embedderHeapUsedSize": 773048,
+          "backingStorageSize": 5183066
+        },
+        "heapDeltaBytes": 341600,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-after-2formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 347.307,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 9.900000095367432,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 49.89999985694885,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 355.90000009536743,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 447.80000019073486,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14247.5,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1557.8000001907349,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 62.799999952316284,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.2999999523162842,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "85b6618975b745a675666dacfdd21c4291170ac46a2cdd02c9283675375b6065",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 72533.35364199999,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 60436.868805999984
+      },
+      "loadAtStart": [
+        1.78,
+        2.65,
+        3.15
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              9.900000095367432,
+              7.799999952316284,
+              7.1000001430511475,
+              6.5,
+              8.200000047683716,
+              7.5,
+              6.700000047683716,
+              6,
+              7.699999809265137,
+              7.5,
+              7.8999998569488525,
+              6
+            ],
+            "p95": 9.900000095367432,
+            "max": 9.900000095367432
+          },
+          "write": {
+            "samples": [
+              45.799999952316284,
+              41.799999952316284,
+              38.60000014305115,
+              32,
+              29.799999952316284,
+              38,
+              37.39999985694885,
+              43,
+              41.80000019073486,
+              49.89999985694885,
+              33.10000014305115,
+              32.700000047683716
+            ],
+            "p95": 49.89999985694885,
+            "max": 49.89999985694885
+          },
+          "fullCapture": {
+            "samples": [
+              355.90000009536743,
+              35.299999952316284,
+              11.299999952316284,
+              13.799999952316284,
+              13.600000143051147,
+              6.599999904632568,
+              4.900000095367432,
+              4.599999904632568,
+              4.200000047683716,
+              3.9000000953674316,
+              4.599999904632568,
+              4.599999904632568
+            ],
+            "p95": 355.90000009536743,
+            "max": 355.90000009536743
+          },
+          "activation": {
+            "samples": [
+              276.40000009536743,
+              447.80000019073486,
+              294,
+              314.90000009536743,
+              219.39999985694885,
+              273.7999999523163,
+              178.5,
+              185.30000019073486,
+              180.89999985694885,
+              169.39999985694885,
+              176.5,
+              182.39999985694885
+            ],
+            "p95": 447.80000019073486,
+            "max": 447.80000019073486
+          },
+          "completeImport": {
+            "samples": [
+              14247.5,
+              13613.799999952316,
+              14174.800000190735
+            ],
+            "p95": 14247.5,
+            "max": 14247.5
+          },
+          "firstSeek": {
+            "samples": [
+              1533.5,
+              1557.8000001907349,
+              1339
+            ],
+            "p95": 1557.8000001907349,
+            "max": 1557.8000001907349
+          },
+          "cachedSeek": {
+            "samples": [
+              58.700000047683716,
+              62.799999952316284,
+              54.299999952316284,
+              36.19999980926514,
+              27.700000047683716,
+              29.5,
+              11.299999952316284,
+              5.8999998569488525,
+              2.5,
+              42.59999990463257,
+              48.30000019073486,
+              29.899999856948853
+            ],
+            "p95": 62.799999952316284,
+            "max": 62.799999952316284
+          },
+          "statsBatch": {
+            "samples": [
+              0.2999999523162842,
+              0.20000004768371582,
+              0,
+              0.09999990463256836,
+              0.10000014305114746,
+              0.09999990463256836,
+              0.10000014305114746,
+              0,
+              0.09999990463256836,
+              0,
+              0.10000014305114746,
+              0,
+              0
+            ],
+            "p95": 0.2999999523162842,
+            "max": 0.2999999523162842
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 9.900000095367432,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 49.89999985694885,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 355.90000009536743,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 447.80000019073486,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14247.5,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1557.8000001907349,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 62.799999952316284,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.2999999523162842,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12567.399999856949,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 55153008,
+          "totalSize": 56590336,
+          "embedderHeapUsedSize": 862640,
+          "backingStorageSize": 5197105
+        },
+        "after": {
+          "usedSize": 55487120,
+          "totalSize": 56590336,
+          "embedderHeapUsedSize": 773976,
+          "backingStorageSize": 5197105
+        },
+        "heapDeltaBytes": 334112,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-before-3formal",
+      "cwd": "/tmp/hex-pr166-m1m2/before",
+      "seconds": 349.366,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 35.10000014305115,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 46.80000019073486,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 387.89999985694885,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 440.5,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14911.599999904633,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1391.2999999523163,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 55.89999985694885,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.3000001907348633,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "4af77fe1c6449fccf560c0dd0e9a6b7b2f6f1f882ac7c7cbc31f658f5b1f1066",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 71717.517842,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 62026.22570099996
+      },
+      "loadAtStart": [
+        2.13,
+        2.22,
+        2.78
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              21.699999809265137,
+              27.700000047683716,
+              22.40000009536743,
+              22.399999856948853,
+              22.5,
+              22.90000009536743,
+              35.10000014305115,
+              31.200000047683716,
+              14.100000143051147,
+              13.900000095367432,
+              19.90000009536743,
+              24.700000047683716
+            ],
+            "p95": 35.10000014305115,
+            "max": 35.10000014305115
+          },
+          "write": {
+            "samples": [
+              36.299999952316284,
+              38.39999985694885,
+              35.799999952316284,
+              36.80000019073486,
+              32.19999980926514,
+              36.19999980926514,
+              46.80000019073486,
+              29,
+              29.899999856948853,
+              33.5,
+              32.700000047683716,
+              34.299999952316284
+            ],
+            "p95": 46.80000019073486,
+            "max": 46.80000019073486
+          },
+          "fullCapture": {
+            "samples": [
+              387.89999985694885,
+              37.5,
+              11.799999952316284,
+              13.700000047683716,
+              10,
+              7.199999809265137,
+              5.8999998569488525,
+              6.800000190734863,
+              5,
+              5.3999998569488525,
+              7,
+              5.400000095367432
+            ],
+            "p95": 387.89999985694885,
+            "max": 387.89999985694885
+          },
+          "activation": {
+            "samples": [
+              306.2999999523163,
+              440.5,
+              346.59999990463257,
+              322.90000009536743,
+              200.70000004768372,
+              187,
+              200.70000004768372,
+              277.90000009536743,
+              179.79999995231628,
+              179.39999985694885,
+              178.90000009536743,
+              171.70000004768372
+            ],
+            "p95": 440.5,
+            "max": 440.5
+          },
+          "completeImport": {
+            "samples": [
+              14799.200000047684,
+              14408.200000047684,
+              14911.599999904633
+            ],
+            "p95": 14911.599999904633,
+            "max": 14911.599999904633
+          },
+          "firstSeek": {
+            "samples": [
+              1391.2999999523163,
+              1327.8999998569489,
+              1326.7999999523163
+            ],
+            "p95": 1391.2999999523163,
+            "max": 1391.2999999523163
+          },
+          "cachedSeek": {
+            "samples": [
+              55.89999985694885,
+              47,
+              55.10000014305115,
+              30.799999952316284,
+              21.799999952316284,
+              26.59999990463257,
+              11.900000095367432,
+              5.799999952316284,
+              2.3999998569488525,
+              37.10000014305115,
+              41.19999980926514,
+              25.5
+            ],
+            "p95": 55.89999985694885,
+            "max": 55.89999985694885
+          },
+          "statsBatch": {
+            "samples": [
+              0.2999999523162842,
+              0.09999990463256836,
+              0.20000004768371582,
+              0,
+              0.20000004768371582,
+              0.19999980926513672,
+              0.3000001907348633,
+              0.09999990463256836,
+              0.09999990463256836,
+              0.10000014305114746,
+              0.09999990463256836,
+              0,
+              0.10000014305114746
+            ],
+            "p95": 0.3000001907348633,
+            "max": 0.3000001907348633
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 35.10000014305115,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 46.80000019073486,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 387.89999985694885,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 440.5,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14911.599999904633,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1391.2999999523163,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 55.89999985694885,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.3000001907348633,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 11672.600000143051,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 53881508,
+          "totalSize": 55279616,
+          "embedderHeapUsedSize": 881832,
+          "backingStorageSize": 5183066
+        },
+        "after": {
+          "usedSize": 54220400,
+          "totalSize": 55803904,
+          "embedderHeapUsedSize": 772728,
+          "backingStorageSize": 5183066
+        },
+        "heapDeltaBytes": 338892,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-after-3formal",
+      "cwd": "/tmp/hex-pr166-fixes",
+      "seconds": 345.404,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 10.600000143051147,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 40.80000019073486,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 343.7000000476837,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 401.19999980926514,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14396.200000047684,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1489.2999999523163,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 64,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.2999999523162842,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "85b6618975b745a675666dacfdd21c4291170ac46a2cdd02c9283675375b6065",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 71503.289841,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "fa9c0326ded76aaa5ac41aa0da719d3e238ac2d7d1d7c3a1eaba3e60499cb598",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 60807.76834699995
+      },
+      "loadAtStart": [
+        2.18,
+        2.26,
+        2.63
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              10.600000143051147,
+              6.400000095367432,
+              7,
+              8.299999952316284,
+              7.799999952316284,
+              7.8999998569488525,
+              7.8999998569488525,
+              8.099999904632568,
+              7.599999904632568,
+              7.400000095367432,
+              8.399999856948853,
+              5.699999809265137
+            ],
+            "p95": 10.600000143051147,
+            "max": 10.600000143051147
+          },
+          "write": {
+            "samples": [
+              34.09999990463257,
+              29.59999990463257,
+              34.799999952316284,
+              38.299999952316284,
+              40.80000019073486,
+              39.59999990463257,
+              38.10000014305115,
+              38.09999990463257,
+              38.40000009536743,
+              31,
+              34.60000014305115,
+              31.59999990463257
+            ],
+            "p95": 40.80000019073486,
+            "max": 40.80000019073486
+          },
+          "fullCapture": {
+            "samples": [
+              343.7000000476837,
+              51.39999985694885,
+              13.900000095367432,
+              19,
+              6.900000095367432,
+              5.299999952316284,
+              6,
+              4.6000001430511475,
+              4.699999809265137,
+              4.700000047683716,
+              4.700000047683716,
+              4.700000047683716
+            ],
+            "p95": 343.7000000476837,
+            "max": 343.7000000476837
+          },
+          "activation": {
+            "samples": [
+              301.90000009536743,
+              401.19999980926514,
+              338.2000000476837,
+              282,
+              223.40000009536743,
+              260.7999999523163,
+              187.30000019073486,
+              197.70000004768372,
+              211.29999995231628,
+              209.70000004768372,
+              177,
+              171.59999990463257
+            ],
+            "p95": 401.19999980926514,
+            "max": 401.19999980926514
+          },
+          "completeImport": {
+            "samples": [
+              13828,
+              14162.900000095367,
+              14396.200000047684
+            ],
+            "p95": 14396.200000047684,
+            "max": 14396.200000047684
+          },
+          "firstSeek": {
+            "samples": [
+              1489.2999999523163,
+              1409.7999999523163,
+              1464.2000000476837
+            ],
+            "p95": 1489.2999999523163,
+            "max": 1489.2999999523163
+          },
+          "cachedSeek": {
+            "samples": [
+              60.40000009536743,
+              64,
+              62.59999990463257,
+              38.200000047683716,
+              24.90000009536743,
+              27.399999856948853,
+              12.100000143051147,
+              5.799999952316284,
+              2.6999998092651367,
+              37.5,
+              40.700000047683716,
+              33
+            ],
+            "p95": 64,
+            "max": 64
+          },
+          "statsBatch": {
+            "samples": [
+              0.2999999523162842,
+              0.2999999523162842,
+              0.20000004768371582,
+              0,
+              0.09999990463256836,
+              0.20000004768371582,
+              0.09999990463256836,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "p95": 0.2999999523162842,
+            "max": 0.2999999523162842
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 10.600000143051147,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 40.80000019073486,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 343.7000000476837,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 401.19999980926514,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14396.200000047684,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1489.2999999523163,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 64,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.2999999523162842,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 12599.399999856949,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 55153332,
+          "totalSize": 56590336,
+          "embedderHeapUsedSize": 862640,
+          "backingStorageSize": 5197105
+        },
+        "after": {
+          "usedSize": 55479032,
+          "totalSize": 56590336,
+          "embedderHeapUsedSize": 773976,
+          "backingStorageSize": 5197105
+        },
+        "heapDeltaBytes": 325700,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    },
+    {
+      "name": "m6-baseline-1formal",
+      "cwd": "/tmp/hex-pr166-m1m2/baseline",
+      "seconds": 343.687,
+      "code": 0,
+      "signal": null,
+      "stoppedAfterOriginalTimeout": false,
+      "passed": true,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 23.299999952316284,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 42.5,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 370.09999990463257,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 400.80000019073486,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 14175,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 1482.6000001430511,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 62.5,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 1,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "sourceFingerprint": "a8a047a57538aceb741712abaddf9a67d74e2e4e07d00484c386a0d848dc7f18",
+      "scriptHash": "e7cac4af038bb25f83013b5b6dd9be27eb2edd2f313acdd58de508b08875c307",
+      "fixtureTransport": {
+        "method": "three native Playwright groups; delete staging and release handles before original callback",
+        "helperHash": "dc313c61060121d65dee6c34a0ee2ce4e71ef24c9ad142b286e4ea4f70a37b42",
+        "groups": [
+          {
+            "fields": [
+              "complete"
+            ],
+            "encodedArgumentBytes": 59941813,
+            "uniqueObjects": 290515
+          },
+          {
+            "fields": [
+              "fullLoad"
+            ],
+            "encodedArgumentBytes": 39698113,
+            "uniqueObjects": 199716
+          },
+          {
+            "fields": [
+              "current",
+              "record"
+            ],
+            "encodedArgumentBytes": 44955088,
+            "uniqueObjects": 220675
+          }
+        ],
+        "sharedReferences": 2242,
+        "capacityBytes": 104857600,
+        "commandReserveBytes": 1048576,
+        "expected": {
+          "jsonBytes": 113536256,
+          "valueSha256": "a45a11922f786478fd42fee87006f6336f10ac5f07371e93b9c50c263443c1ab",
+          "uniqueObjects": 706420,
+          "aliasCount": 79359,
+          "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+          "specialCount": 0,
+          "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "setupMs": 70748.107405,
+        "verification": {
+          "received": {
+            "jsonBytes": 113536256,
+            "valueSha256": "a45a11922f786478fd42fee87006f6336f10ac5f07371e93b9c50c263443c1ab",
+            "uniqueObjects": 706420,
+            "aliasCount": 79359,
+            "aliasSha256": "48bd8199717488c0fe028cc5773fdebe44c057a0b66fc6207aa3c5f091ffff77",
+            "specialCount": 0,
+            "specialSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "passed": true,
+          "scope": "independent page after all original timed callbacks"
+        },
+        "verificationMs": 62467.46872100001
+      },
+      "loadAtStart": [
+        2.25,
+        2.11,
+        2.43
+      ],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              23.299999952316284,
+              17.899999856948853,
+              19.09999990463257,
+              17.299999952316284,
+              21.5,
+              20.799999952316284,
+              18.100000143051147,
+              19.700000047683716,
+              19.09999990463257,
+              16.600000143051147,
+              19.700000047683716,
+              22.100000143051147
+            ],
+            "p95": 23.299999952316284,
+            "max": 23.299999952316284
+          },
+          "write": {
+            "samples": [
+              38.200000047683716,
+              34.80000019073486,
+              27.299999952316284,
+              35.90000009536743,
+              42.5,
+              34.5,
+              31.299999952316284,
+              31.40000009536743,
+              36.60000014305115,
+              25.799999952316284,
+              36.299999952316284,
+              35.59999990463257
+            ],
+            "p95": 42.5,
+            "max": 42.5
+          },
+          "fullCapture": {
+            "samples": [
+              370.09999990463257,
+              38,
+              13.099999904632568,
+              19.600000143051147,
+              11.599999904632568,
+              4.5,
+              4.599999904632568,
+              5.200000047683716,
+              5.1000001430511475,
+              8,
+              6.799999952316284,
+              5.299999952316284
+            ],
+            "p95": 370.09999990463257,
+            "max": 370.09999990463257
+          },
+          "activation": {
+            "samples": [
+              307.5,
+              400.80000019073486,
+              328,
+              318.19999980926514,
+              183.10000014305115,
+              216.20000004768372,
+              194.5,
+              170.70000004768372,
+              183.90000009536743,
+              199.09999990463257,
+              172.70000004768372,
+              165.60000014305115
+            ],
+            "p95": 400.80000019073486,
+            "max": 400.80000019073486
+          },
+          "completeImport": {
+            "samples": [
+              14175,
+              13744.400000095367,
+              13504.599999904633
+            ],
+            "p95": 14175,
+            "max": 14175
+          },
+          "firstSeek": {
+            "samples": [
+              1482.6000001430511,
+              1396.1000001430511,
+              1402.3000001907349
+            ],
+            "p95": 1482.6000001430511,
+            "max": 1482.6000001430511
+          },
+          "cachedSeek": {
+            "samples": [
+              62.5,
+              50.5,
+              52.799999952316284,
+              38.200000047683716,
+              28.299999952316284,
+              44.5,
+              11.900000095367432,
+              5.599999904632568,
+              2.3000001907348633,
+              39.19999980926514,
+              47.40000009536743,
+              28.40000009536743
+            ],
+            "p95": 62.5,
+            "max": 62.5
+          },
+          "statsBatch": {
+            "samples": [
+              0.20000004768371582,
+              0.20000004768371582,
+              0.10000014305114746,
+              0.09999990463256836,
+              0.09999990463256836,
+              1,
+              0,
+              0.09999990463256836,
+              0,
+              0.10000014305114746,
+              0,
+              0.09999990463256836,
+              0.09999990463256836
+            ],
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 23.299999952316284,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 42.5,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 370.09999990463257,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 400.80000019073486,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 14175,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 1482.6000001430511,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 62.5,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 1,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "skipped": [],
+        "fullLoadRoundTrip": {
+          "milliseconds": 11270.299999952316,
+          "verified": true,
+          "battles": 33
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 33,
+        "incrementalBattleCount": 29,
+        "completedHistoryWrittenOnIncrementalSave": null,
+        "deferredMetrics": [],
+        "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 53906664,
+          "totalSize": 55279616,
+          "embedderHeapUsedSize": 869920,
+          "backingStorageSize": 5196618
+        },
+        "after": {
+          "usedSize": 54254368,
+          "totalSize": 55541760,
+          "embedderHeapUsedSize": 868840,
+          "backingStorageSize": 5196618
+        },
+        "heapDeltaBytes": 347704,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "browser": "153.0.8010.12",
+      "errors": []
+    }
+  ],
+  "historicalHerald": {
+    "reference": "1d1a07edd774f7e796635edda96e7a9cd0b19fad",
+    "tree": "17047371cc4e93e7d99b27a656f839176b234801",
+    "fileCount": 7,
+    "namesEqual": true,
+    "allBlobsEqual": true
+  }
+}

@@ -1,0 +1,2006 @@
+{
+  "targetStart": "4e6fb6a44cfd27d3b6d0622d641bfea1ffaef0d1",
+  "baseline": "311017e3b10e0f244287cb8716fc52c831310cc4",
+  "outcome": "No m8-b7 speedup established. Only regression tests and measurement evidence are shipped; the sharing candidate and upstream merge are not shipped.",
+  "environment": {
+    "node": "v24.21.0",
+    "vitest": "5.0.3",
+    "logicalCpus": 4,
+    "ownWorkloadsSerial": true,
+    "workerCount": 1,
+    "timeoutsOverridden": false
+  },
+  "scopeCheck": {
+    "oldTestBodiesUnchanged": true,
+    "productionDiffEmpty": true
+  },
+  "timingDefinition": "subprocess wall clock including transform/import/fixtures; testSeconds sums test case duration",
+  "normalTimingRuns": [
+    {
+      "name": "original-4e6fb6a4-1",
+      "exit": 0,
+      "wallSeconds": 48.83,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 27.142,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 611.4380539999984
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 338.8209989999996
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 872.1600160000016
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1229.8280980000018
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1729.835490999998
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3020.954859999998
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2945.3097339999986
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3804.9485239999995
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 154.4492309999987
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 222.32377600000473
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.3107810000001336
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 139.53560399999697
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 13.017295999998169
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 189.52715099999477
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 342.0194279999996
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 701.4690039999987
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 307.2692030000035
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 282.7498869999981
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 332.108951000002
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 307.24070600000414
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1410.304572999994
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1128.4955840000039
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 2.170665999998164
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 923.6541960000031
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 563.8545809999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 865.9898840000023
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 794.5780169999998
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 723.4684239999988
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 937.5654460000005
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2245.622623999996
+        }
+      ]
+    },
+    {
+      "name": "baseline-clean-311017e-1",
+      "exit": 0,
+      "wallSeconds": 33.104,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 11.474,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 225.69243700000152
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 160.59456099999807
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 262.4048909999983
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 475.0708229999982
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 641.3138609999987
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 962.3448600000011
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 966.6311519999981
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1245.9314639999975
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 123.76365699999951
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 202.8373169999977
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.1764059999986785
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 91.20927100000335
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 13.357271000000765
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 154.08591700000034
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 252.46732000000338
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 503.7666160000008
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 250.62993800000186
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 295.2319319999988
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 243.35695199999827
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 236.90334500000245
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 947.9930359999998
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1003.6215590000029
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.5633259999995062
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 236.0029510000022
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 342.22472899999775
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 325.19185300000026
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 245.74356400000033
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 220.03892600000108
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 255.00618499999837
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 588.2470969999995
+        }
+      ]
+    },
+    {
+      "name": "baseline-clean-311017e-2",
+      "exit": 0,
+      "wallSeconds": 32.946,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 11.15,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 243.97964199999842
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 147.03781100000197
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 252.585196
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 412.8799859999999
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 603.8571340000017
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 884.6545430000006
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 948.6489220000003
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1176.1421240000018
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 145.26943000000028
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 197.84924300000057
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.558296999999584
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 97.62348000000202
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 13.176800000001094
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 150.4499709999982
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 228.3148149999979
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 488.1425410000011
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 249.80802699999913
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 289.4356480000024
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 228.099424
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 245.75528100000156
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 950.8986380000024
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 991.1646049999981
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.8544240000010177
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 221.7751619999981
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 347.6818139999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 341.71290600000066
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 228.84029799999917
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 212.9927699999971
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 245.73572400000194
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 602.5360050000018
+        }
+      ]
+    },
+    {
+      "name": "baseline-clean-311017e-3",
+      "exit": 0,
+      "wallSeconds": 33.026,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 11.401,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 225.44376900000134
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 166.88583300000028
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 258.9840289999993
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 431.2691440000017
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 623.6196369999998
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1012.9214790000005
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1000.4891840000018
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1158.3076690000016
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 116.07048999999824
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 182.86605599999893
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.1370139999999083
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 86.46564299999955
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 11.833054999999149
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 149.93648799999937
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 233.39756200000193
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 497.32410900000104
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 252.5390789999983
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 308.3748850000011
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 241.32314100000076
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 245.57954299999983
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 922.7684900000022
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 942.8274400000009
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 2.155858000001899
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 239.09744000000137
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 361.6737770000036
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 385.1384629999993
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 249.14507400000002
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 225.0509779999993
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 255.0583880000013
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 613.3406749999958
+        }
+      ]
+    },
+    {
+      "name": "integrated-before-1",
+      "exit": 0,
+      "wallSeconds": 47.255,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 25.537,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 556.3206170000012
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 335.05560200000036
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 853.9033420000014
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1140.8215939999973
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1722.9465710000004
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2867.0400700000027
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2856.567225999999
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3648.5518410000004
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 152.44098000000668
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 209.48782799999753
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.2236180000036256
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 92.87119099999836
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 11.61375300000509
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 174.6443350000045
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 349.24871999999596
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 636.6580890000041
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 264.93028200000117
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 258.5839529999939
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 253.83335400000215
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 262.4115290000045
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1032.3302479999984
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1051.3426959999997
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.5761770000026445
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 784.7043770000018
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 461.1253710000019
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 828.7540539999973
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 922.3834379999971
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 708.8417499999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 911.3063430000038
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2185.4362860000037
+        }
+      ]
+    },
+    {
+      "name": "optimized-1",
+      "exit": 0,
+      "wallSeconds": 46.949,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 25.423,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 580.9448949999969
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 326.10109300000113
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 855.2377909999996
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1131.4099719999977
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1649.4299040000005
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2928.162311
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2905.8217750000003
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3661.591988
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 158.05927200000588
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 222.9763779999994
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.009345000005851
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 92.0071059999973
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 12.804684000002453
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 176.30765700000484
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 304.3324240000002
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 644.2296580000038
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 276.2084939999986
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 260.3458829999945
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 249.28331899999466
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 282.61348899999575
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1126.675267999999
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1013.8546470000001
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.6753509999980452
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 765.1655380000011
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 482.45455100000254
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 796.8496890000024
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 761.5483209999948
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 694.9952540000013
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 850.910956000007
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2210.464387
+        }
+      ]
+    },
+    {
+      "name": "optimized-2",
+      "exit": 0,
+      "wallSeconds": 47.324,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 26.152,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 578.6546149999995
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 325.03584799999953
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 835.4433320000026
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1175.0039109999998
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1664.8532180000002
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2907.5175789999994
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2755.683668999998
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3812.5143069999976
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 148.06386799999746
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 223.73483600000327
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.482587999998941
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 116.63393899999937
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 12.022461000000476
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 181.70748399999866
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 286.55390700000135
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 677.9958629999965
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 268.7555790000042
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 261.1269659999962
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 257.28486399999383
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 246.67542900000262
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1097.4748610000024
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 984.2491700000028
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.772569000000658
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 791.2411030000003
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 498.5411729999978
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 1058.7414930000014
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 829.6199479999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 730.8527800000011
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 1037.9830129999973
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2384.652872999999
+        }
+      ]
+    },
+    {
+      "name": "optimized-3",
+      "exit": 0,
+      "wallSeconds": 47.794,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 25.958,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 577.5474490000015
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 339.29879000000074
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 822.0052679999972
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1172.1456409999992
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1674.413231999999
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2983.2170970000006
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 2816.2195610000017
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3848.841212999996
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 137.59634100000403
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 206.93997200000013
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.1931670000049053
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 85.20400299999892
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 12.076098999998067
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 178.0762889999969
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 288.44350900000427
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 693.3580789999978
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 258.07069699999556
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 273.54778200000146
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 261.3979309999995
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 272.4250150000007
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1117.4532670000044
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1087.094143000002
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.8368229999978212
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 884.42929
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 421.73818900000333
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 933.5318269999989
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 829.5804960000023
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 712.8152649999975
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 889.1949679999962
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2178.758673000004
+        }
+      ]
+    },
+    {
+      "name": "target-4e6-final-2",
+      "exit": 0,
+      "wallSeconds": 49.038,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 27.189,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 569.3846329999978
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 339.3082539999996
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 864.1040470000007
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1252.9302480000006
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1651.1305309999989
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3023.9794580000016
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3098.763697999999
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3918.0243770000016
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 156.4450629999992
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 217.57508499999676
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.0702460000029532
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 142.82547499999782
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 13.105277000002388
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 193.74080700000195
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 299.12023999999656
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 760.4396160000033
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 301.99238799999875
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 268.9631010000012
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 323.12325299999793
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 288.2490420000031
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1236.2091290000026
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1143.4270860000033
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.6650139999983367
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 837.2031620000052
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 535.6303800000023
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 841.3489320000008
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 883.6000459999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 751.833501000001
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 915.180266000003
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2358.4083889999965
+        }
+      ]
+    },
+    {
+      "name": "target-4e6-final-3",
+      "exit": 0,
+      "wallSeconds": 48.692,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 27.058,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 596.8849779999982
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 333.4452060000003
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 823.6450040000018
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1409.704598999997
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1779.6392979999982
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3087.6149149999983
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3123.2621149999977
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3836.2566160000024
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 154.73450400000002
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 218.11033399999724
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.2954140000001644
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 149.62883500000316
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 16.226339000000735
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 194.36629399999947
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 304.33651899999677
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 688.205366000002
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 287.84562200000073
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 296.79953899999964
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 351.91539499999635
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 267.264267999999
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1146.8640430000014
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1135.244427000005
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.8692289999962668
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 780.3476530000044
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 522.0523869999961
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 807.3571869999942
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 782.7147069999992
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 724.0562280000013
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 897.9911840000059
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2338.813613999999
+        }
+      ]
+    }
+  ],
+  "targetAndBaselineChecks": [
+    {
+      "name": "target-4e6-final-2",
+      "exit": 0,
+      "wallSeconds": 49.038,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 27.189,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 569.3846329999978
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 339.3082539999996
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 864.1040470000007
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1252.9302480000006
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1651.1305309999989
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3023.9794580000016
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3098.763697999999
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3918.0243770000016
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 156.4450629999992
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 217.57508499999676
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.0702460000029532
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 142.82547499999782
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 13.105277000002388
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 193.74080700000195
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 299.12023999999656
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 760.4396160000033
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 301.99238799999875
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 268.9631010000012
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 323.12325299999793
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 288.2490420000031
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1236.2091290000026
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1143.4270860000033
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.6650139999983367
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 837.2031620000052
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 535.6303800000023
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 841.3489320000008
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 883.6000459999996
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 751.833501000001
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 915.180266000003
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2358.4083889999965
+        }
+      ]
+    },
+    {
+      "name": "target-4e6-final-3",
+      "exit": 0,
+      "wallSeconds": 48.692,
+      "passed": 30,
+      "failed": 0,
+      "testSeconds": 27.058,
+      "cases": [
+        {
+          "title": "1-2 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 596.8849779999982
+        },
+        {
+          "title": "1-3 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 333.4452060000003
+        },
+        {
+          "title": "1-4 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 823.6450040000018
+        },
+        {
+          "title": "2-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1409.704598999997
+        },
+        {
+          "title": "3-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 1779.6392979999982
+        },
+        {
+          "title": "4-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3087.6149149999983
+        },
+        {
+          "title": "5-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3123.2621149999977
+        },
+        {
+          "title": "6-7 freezes, starts, runs to settlement and resumes canonical saves",
+          "status": "passed",
+          "ms": 3836.2566160000024
+        },
+        {
+          "title": "3-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 154.73450400000002
+        },
+        {
+          "title": "6-7 separates captured initial events from tick-zero opening moves committed by the first step",
+          "status": "passed",
+          "ms": 218.11033399999724
+        },
+        {
+          "title": "replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions",
+          "status": "passed",
+          "ms": 1.2954140000001644
+        },
+        {
+          "title": "returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool",
+          "status": "passed",
+          "ms": 149.62883500000316
+        },
+        {
+          "title": "keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates",
+          "status": "passed",
+          "ms": 16.226339000000735
+        },
+        {
+          "title": "rejects injected or mutated authored inputs, including neutral capabilities placed on a champion",
+          "status": "passed",
+          "ms": 194.36629399999947
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+          "status": "passed",
+          "ms": 304.33651899999677
+        },
+        {
+          "title": "rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+          "status": "passed",
+          "ms": 688.205366000002
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: undefined",
+          "status": "passed",
+          "ms": 287.84562200000073
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 296.79953899999964
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "status": "passed",
+          "ms": 351.91539499999635
+        },
+        {
+          "title": "restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "status": "passed",
+          "ms": 267.264267999999
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+          "status": "passed",
+          "ms": 1146.8640430000014
+        },
+        {
+          "title": "round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+          "status": "passed",
+          "ms": 1135.244427000005
+        },
+        {
+          "title": "pins the current catalog assumptions used by pure opening restore, without executing combatStart",
+          "status": "passed",
+          "ms": 1.8692289999962668
+        },
+        {
+          "title": "rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+          "status": "passed",
+          "ms": 780.3476530000044
+        },
+        {
+          "title": "rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+          "status": "passed",
+          "ms": 522.0523869999961
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 0 through actual orb grants",
+          "status": "passed",
+          "ms": 807.3571869999942
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 1 through actual orb grants",
+          "status": "passed",
+          "ms": 782.7147069999992
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 42 through actual orb grants",
+          "status": "passed",
+          "ms": 724.0562280000013
+        },
+        {
+          "title": "stage-one combat clears with random one-star opening heroes, seed 4294967295 through actual orb grants",
+          "status": "passed",
+          "ms": 897.9911840000059
+        },
+        {
+          "title": "restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+          "status": "passed",
+          "ms": 2338.813613999999
+        }
+      ]
+    },
+    {
+      "name": "target-focused",
+      "exit": 0,
+      "wallSeconds": 31.685,
+      "passed": 39,
+      "failed": 0,
+      "testSeconds": 27.339
+    },
+    {
+      "name": "baseline-shields",
+      "exit": 0,
+      "wallSeconds": 12.147,
+      "passed": 20,
+      "failed": 0,
+      "testSeconds": 8.328
+    },
+    {
+      "name": "target-m8-profile",
+      "exit": 0,
+      "wallSeconds": 49.914
+    },
+    {
+      "name": "target-typecheck",
+      "exit": 0,
+      "wallSeconds": 18.229
+    }
+  ],
+  "targetM8ReplayProfile": {
+    "profiledRestores": 605,
+    "byValidator": {
+      "sampled": {
+        "calls": 605,
+        "creates": 0,
+        "steps": 0,
+        "ms": 11.794499000050564
+      },
+      "tasks": {
+        "calls": 555,
+        "creates": 555,
+        "steps": 27462,
+        "ms": 15049.004837999979
+      }
+    },
+    "replaysPerRestore": {
+      "1": 555,
+      "0": 50
+    },
+    "maximumReplaysPerRestore": 1,
+    "maximumStepsMinusSavedTick": 0
+  },
+  "replayProfileHasInstrumentationOverhead": true,
+  "roundTripRestoreValidationsPerCheckpoint": 3,
+  "targetDistinctPassingTests": 69,
+  "baselineOnlyShieldTests": 20,
+  "candidateFocusedTests": 60,
+  "candidateSupplementaryTestsAndGC01": 5,
+  "candidateTypecheckPassed": true,
+  "candidatePatchSha256": "479333e4110c45a403f67a343fe90842653b84162d26c6250f711331da3f9e52",
+  "commands": {
+    "normalM8": "node node_modules/vitest/vitest.mjs run --project fast tests/m8-b7-match-wiring.test.ts --maxWorkers=1 --reporter=json --outputFile=<run>.json",
+    "targetFocused": "node node_modules/vitest/vitest.mjs run --project fast tests/task-mechanism-restore.test.ts tests/explorer-bracer-restore.test.ts tests/restore-audit/combat-accumulators.test.ts --maxWorkers=1 --reporter=json --outputFile=<run>.json",
+    "baselineShields": "node node_modules/vitest/vitest.mjs run --project fast tests/g2-4b-resists-restore.test.ts --maxWorkers=1 --reporter=json --outputFile=<run>.json",
+    "typecheck": "npm run typecheck"
+  },
+  "limits": "No full suite. Target does not contain resist-shield validator/test; those were checked on 311017e and on an isolated unshipped integration candidate. Local serial passing results do not establish CI concurrency margin."
+}

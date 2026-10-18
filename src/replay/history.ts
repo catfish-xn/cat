@@ -65,9 +65,34 @@ export function validateBattleCollectionSync(envelope: SaveEnvelope): void {
   for (const _ of battleCollectionChecks(envelope)) { /* drain */ }
 }
 
-interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[]; equipmentCommands: NonNullable<BattleRecord['equipmentCommands']>[number][] }
+interface WorkingRecord {
+  context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[];
+  equipmentCommands: NonNullable<BattleRecord['equipmentCommands']>[number][];
+  hashes?: { state: string; events: string };
+  // Only this recorder appends to the detached, deeply frozen event ledger.
+  eventHashPrefix?: { count: number; hash: number };
+}
+function captureEventHash(working: WorkingRecord): string {
+  // Keep the FNV state before the closing bracket so the next capture only
+  // encodes newly appended events. This is exactly digestContent(events).
+  const prefix = working.eventHashPrefix ??= { count: 0, hash: Math.imul(0x811c9dc5 ^ 91, 0x01000193) >>> 0 };
+  const append = (text: string) => {
+    for (let i = 0; i < text.length; i++) prefix.hash = Math.imul(prefix.hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
+  };
+  while (prefix.count < working.events.length) {
+    if (prefix.count > 0) append(',');
+    append(canonicalContent(working.events[prefix.count]));
+    prefix.count++;
+  }
+  const hash = Math.imul(prefix.hash ^ 93, 0x01000193) >>> 0;
+  return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
+}
 function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events, equipmentCommands } = working;
+  // This recorder owns every input. A restored prefix's two hashes have already
+  // been verified by validateBattleRecord. Normal observation invalidates both;
+  // repeated capture of an unchanged private prefix need not hash it again.
+  const hashes = working.hashes ??= { state: digestContent(terminal), events: captureEventHash(working) };
   // Context, initial state and individual events are already owned and deeply frozen.
   // Snapshot the growing arrays; combat hashes cover state/events, while commands
   // are validated through production replay and strict resource-prefix comparison.
@@ -75,7 +100,7 @@ function capture(runId: string, working: WorkingRecord): BattleRecord {
     // Omitted when empty so records without combat equipment commands keep the earlier shape.
     ...(equipmentCommands.length ? { equipmentCommands: Object.freeze([...equipmentCommands]) } : {}), events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
-    stateHash: digestContent(terminal), eventHash: digestContent(events) }));
+    stateHash: hashes.state, eventHash: hashes.events }));
 }
 /** Observes already committed steps; never advances or settles the active match. */
 export class BattleHistory {
@@ -87,7 +112,12 @@ export class BattleHistory {
     this.completed = battles.map(own);
     const owned = currentBattle ? own(currentBattle) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
-      terminal: validateBattleRecord(owned, needsCrownHistory(owned.context) ? this.completed : undefined).terminal, events: [...owned.events], equipmentCommands: [...(owned.equipmentCommands ?? [])] } : null;
+      terminal: validateBattleRecord(owned, needsCrownHistory(owned.context) ? this.completed : undefined).terminal,
+      events: [...owned.events], equipmentCommands: [...(owned.equipmentCommands ?? [])],
+      hashes: { state: owned.stateHash, events: owned.eventHash } } : null;
+    // Full validation above remains mandatory. Build the append cursor during
+    // restore so the next capture does not re-encode the verified old ledger.
+    if (this.current) captureEventHash(this.current);
   }
   get completedRecords(): readonly BattleRecord[] { return Object.freeze([...this.completed]); }
   capturePrefix(): BattleRecord | null { return this.current ? capture(this.runId, this.current) : null; }
@@ -99,6 +129,7 @@ export class BattleHistory {
       this.current = { context: deepFreeze(snapshotData(change.before)), initial, terminal: initial,
         equipmentCommands: [], events: change.events.map(event => deepFreeze(snapshotData(event))) };
     } else if (this.current && combat.combatId === this.current.terminal.combatId) {
+      this.current.hashes = undefined;
       if (change.before.phase === 'combat') {
         for (const fact of change.after.resourceProvenance.entries.slice(change.before.resourceProvenance.entries.length)) {
           if (fact.kind === 'item-equipped') this.current.equipmentCommands.push(Object.freeze({

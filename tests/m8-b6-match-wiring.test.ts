@@ -122,7 +122,9 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(CONTENT_DIGEST).toMatch(/^fnv1a32-utf16:/);
     expect(digestContent(OPENING_ECONOMY_RULES)).not.toBe(digestContent({...OPENING_ECONOMY_RULES,rounds:{...OPENING_ECONOMY_RULES.rounds,'1-4':{baseGold:5,naturalXp:0}}}));
   });
-  it('restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration',()=>{
+  // One case per late round: restoring a settled combat independently replays
+  // it, so each case round-trips only its own round of the same public route.
+  it.each(['6-5','6-6','6-7'])('restores %s preparation/combat/settlement; the match ends only at 6-7 with no regeneration',restoredRound=>{
     // The full public driver has already fought the preceding battles, bought
     // and upgraded the army, and earned/combined every item in this prefix.
     let state=publicNeutralPreparation('6-5');
@@ -133,20 +135,26 @@ describe('B6 installed round, opening and restore transactions',()=>{
         state=accepted(c.step==='target'?selectAnomalyTarget(state,c.choiceId,c.generation,'unit-1'):
           selectChoice(state,c.choiceId,c.generation,c.offers.find(id=>id!=='glass-cannon-i')!));
       }
-      if(state.phase==='settlement') {state=accepted(nextRound(state,state.round));continue;}
+      if(state.phase==='settlement') {
+        if(seen.at(-1)===restoredRound&&restoredRound!=='6-7') break;
+        state=accepted(nextRound(state,state.round));continue;
+      }
       const late=state.round>=getCatalogRoundById('6-5').ordinal;
-      if(late) {seen.push(state.roundDefinitionId);roundTrip(state);lateRestoreCount++;}
+      if(late) seen.push(state.roundDefinitionId);
+      const restore=late&&state.roundDefinitionId===restoredRound;
+      if(restore) {roundTrip(state);lateRestoreCount++;}
       state=accepted(startMatchCombat(state));
-      if(late) {
+      if(restore) {
         const generation=vi.spyOn(enemies,'createRoundEnemies'),items=vi.spyOn(enemies,'getRoundEnemyItems');
         try {roundTrip(state);lateRestoreCount++;expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
         finally {generation.mockRestore();items.mockRestore();}
       }
       while(state.phase==='combat') state=stepMatch(state).state;
-      if(late) {roundTrip(state);lateRestoreCount++;}
+      if(restore) {roundTrip(state);lateRestoreCount++;}
     }
-    expect(lateRestoreCount).toBe(9);
-    expect(seen).toEqual(['6-5','6-6','6-7']);
+    expect(lateRestoreCount).toBe(3);
+    expect(seen).toEqual(['6-5','6-6','6-7'].slice(0,['6-5','6-6','6-7'].indexOf(restoredRound)+1));
+    if(restoredRound!=='6-7') {expect(state.phase).toBe('settlement');return;}
     expect(state).toMatchObject({roundDefinitionId:'6-7',outcome:'victory'});
     expect(state.roundResults).toHaveLength(ROUND_CATALOG.length);
     expect(state.roundResults.filter(r=>r.roundKind!=='supply')).toHaveLength(33);

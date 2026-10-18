@@ -44,7 +44,7 @@ it('pins the approved 21 IDs separately from the intact 29 source identities and
  expect(digestContent(changed)).not.toBe(digestContent(JSON.parse(JSON.stringify(changed).replace('g24-forge-v1','g24-forge-v2'))));
  for(const api of ['TFT_ArmoryKeySupport','unknown','toString']){
   expect(()=>resolveG24ForgePool(api)).toThrow('Unadmitted');
-  expect(()=>g23RewardAtoms({...bundle(10),reward:{MeepTypeUnit:[api]}},42)).toThrow('Unadmitted');
+  expect(()=>g23RewardAtoms({...bundle(10),reward:{MeepTypeUnit:[api]}},42)).toThrow('frozen reward descriptor');
  }
 });
 it('restores source tiers 10/14 while support tiers 11/13 retain their transitional rewards',()=>{

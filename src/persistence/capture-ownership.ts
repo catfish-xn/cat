@@ -1,11 +1,13 @@
 import { isOwnedBattleRecord } from '../replay/history';
+import { snapshotData } from '../replay/snapshot';
+import { isImmutableJson } from '../simulation/immutable-json';
 import type { BattleRecord, CapturedSave } from '../m6/contracts';
 
 // A frozen outer object supplied by a caller is not evidence of owned children.
 // Only this module can brand a recursively frozen, detached capture.
 const owned = new WeakSet<object>();
 function freezeTree(value: unknown, seen: WeakSet<object>): void {
-  if (value === null || typeof value !== 'object' || seen.has(value)) return;
+  if (value === null || typeof value !== 'object' || seen.has(value) || isImmutableJson(value)) return;
   seen.add(value);
   for (const key of Object.keys(value)) freezeTree((value as Record<string, unknown>)[key], seen);
   Object.freeze(value);
@@ -13,7 +15,10 @@ function freezeTree(value: unknown, seen: WeakSet<object>): void {
 export function fixedCapture(source: CapturedSave): CapturedSave {
   if (owned.has(source)) return source;
   const detach = <T>(value: T): T => {
-    const copy = structuredClone(value);
+    // Live matches carry certified immutable content; parsed/external graphs
+    // keep the native clone path instead of an expensive speculative JS copy.
+    const copy = value === source.match && isImmutableJson(source.match.m8)
+      ? snapshotData(value) : structuredClone(value);
     freezeTree(copy, new WeakSet());
     return copy;
   };

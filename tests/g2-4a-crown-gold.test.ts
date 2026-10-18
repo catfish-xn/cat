@@ -192,7 +192,8 @@ it('direct crown validators verify combat receipts and Continue never pays the c
    const action=progress.economyReceipts.at(-1) as G23EconomyAction;
    Object.assign(action.facts,{crowns:1});
    expect(()=>validateG23Progress(progress,forgedCount.seed,forgedCount.round)).toThrow('Invalid G2-3 match progression');
-   expect(()=>restoreMatch(forgedCount,battles)).toThrow('Invalid G2-3 match progression');
+   // The finished battle's facts are re-derived before any reward is expanded, so the forged count fails there first.
+   expect(()=>restoreMatch(forgedCount,battles)).toThrow('G23 reward authority');
   }
  }
  expect(paid).toBeGreaterThan(0);

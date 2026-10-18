@@ -1,5 +1,5 @@
 import { validatePreparationLedger } from './preparation-ledger';
-import {readG23Progress} from './g2-3-state';
+import {readG23Progress,validateG23RewardSources} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
 import { validateResistsShields } from './m8/resists-shield-restore';
 import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
@@ -15,6 +15,8 @@ import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
+import { validateTaskAndSummonFacts } from './combat-runtime-facts';
+import { createRestoreCombatReplay } from './restore-combat-replay';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
@@ -129,6 +131,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
+  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
+  mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
@@ -140,7 +144,6 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
-  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -287,7 +290,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
     validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
-    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same);
+    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick);
+    validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy), 'resists shield replay');
     const cells = new Set<string>();
@@ -322,6 +326,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false,
       const runtimeKeys = new Set<string>();
       for (const counter of unit.effectRuntime) { requireValue(triggerKeys.has(counter.key) && !runtimeKeys.has(counter.key), 'runtime key'); runtimeKeys.add(counter.key); integer(counter.count); const trigger = unit.triggers.find(t => t.key === counter.key)!; requireValue(counter.count <= (trigger.hook === 'combatStart' ? 1 : combat.tick), 'runtime count'); }
     }
+    validateTaskAndSummonFacts(combat, basis, expectedStrategy, same, replay);
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
@@ -429,7 +434,9 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
     requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && [...attackDamageCandidates(unit,tick,combatId)].some(attack=>runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000)), 'derived empowered physical');
   }
-  requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
+  // Sion release and Bulky Buddies are historical one-time facts. A buddy may
+  // since have revived; validateTaskAndSummonFacts checks the actual trigger.
+  if (unit.definitionId !== 'g23-sion') requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies'), 'derived buddy trigger');
   const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
   requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + runtime.attackSpeedBps)), 'dynamic arithmetic bound');
   if (unit.ability.kind === 's13') {
@@ -472,7 +479,9 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {
     record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
-    requireValue(task.attachedDot === (['bleed', 'g2Infection'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
+    // Morgana schedules an attached curse, just like bleed/infection; the
+    // exact source, holder and pulse timing are also checked against live facts.
+    requireValue(task.attachedDot === (['bleed', 'g2Infection', 'g22Curse'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
     const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
     const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
       + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
