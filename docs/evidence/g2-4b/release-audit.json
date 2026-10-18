@@ -6,7 +6,7 @@
     "scripts/measure-g2-4b-restore.cjs": "7197c30995abcab508d482169259791d29f79d020fd8354a53743249eda9dd5a",
     "scripts/record-g2-4b-inputs.cjs": "e8ca736c7db5ee0db5b55f1db9e09b073bc2233e4e26637417166fbfcbfeb6c5",
     "scripts/record-g2-4b-live-reveal.cjs": "2a4fecd05ab0cefb3271673a1bc763be7df22a9a9006471542b4c9b9c71dcd65",
-    "scripts/record-g2-4b-release.cjs": "ffb402b7d4a7b2e76627b074c7639b1712e29058ffe4a9829a7aaa19ec22333c",
+    "scripts/record-g2-4b-release.cjs": "3532d2f7f1d43156d6c8b99369b9688aace25fcb4359590e0f127074285469d5",
     "src/server-entry/index.ts": "12574f5f339b6cf9cff71fcc72572761c5a8a7e27182fce6b251c1eee8140f6c",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "c903ed0f463a1cf5d3fc382c069e42da19f27e71ed969e4bb5f813b7d8b0c77d",
@@ -53,7 +53,7 @@
     "src/simulation/consumables.ts": "62fe0f3c511520294b81dbbbbbde5e368b29e05cf2aaed9cf5ad1ebbf7e8e773",
     "src/simulation/content/abilities.ts": "61cbc39ebd9b34719316f2363853a9bf68756338a9f17175e86c8e8117e9a5d0",
     "src/simulation/content/anomalies.ts": "69c4550189b9a855d321fe6b44d258674548078577954cec6aae2c2807b48e56",
-    "src/simulation/content/augment-policy.ts": "b1282504fa5f9f02b676c04003bffed80bbe64570c4d420e9a253f2493dc5ab7",
+    "src/simulation/content/augment-policy.ts": "0edb26c3e2bb6ae3bee1a7f1c47a71e568e056677772b74aa1581740e3c103bb",
     "src/simulation/content/augments.ts": "e54a973e9c64681be44fda24f0ef486d15409a2046d1a9a6a6a1f75275c73879",
     "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
     "src/simulation/content/freeze.ts": "91965b7be2e8c0b75bb403d632dce45b8f272d57781c52f3e6f319ff911e11ab",
@@ -66,7 +66,7 @@
     "src/simulation/content/g2-3-anomaly-source.ts": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1",
     "src/simulation/content/g2-3-item-registry.ts": "87f2eec38dea8037d62ef981e90f21bd20566415903bc13760bea3a63ad71055",
     "src/simulation/content/g2-3-loot-source.ts": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459",
-    "src/simulation/content/g2-3-policy.ts": "c3655d0d2c56f607e37411e8d1e5a7b2f152326478823f72c442092203c9ad96",
+    "src/simulation/content/g2-3-policy.ts": "97235611e25d010b8e375bd71fa1ce434f256c3a91e5ac8f901ca9fe5aa366ce",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-source.ts": "c14a36070f08134cabc93fcb439b5e276907523b4e99e09bfbb82c551a40075e",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
@@ -157,7 +157,7 @@
     "src/simulation/g2-3-grant-evidence.ts": "69abacc338580ab1f43aae4ed27d1d57b4197d457a5ba64fd6857f5526cc0c08",
     "src/simulation/g2-3-junker.ts": "984653e96e620221e4ab0325bf041205a449a8590e95fc858ab9af9ce366bb04",
     "src/simulation/g2-3-match-progress.ts": "0271d4cac211bd2325d425f15e02171dacb56aabe11daf77e7407db8e0f240ae",
-    "src/simulation/g2-3-programs.ts": "6ea090ae2e0e94d4c6cdfbd56980b9f37986805c26b67b50d05faddf728eabef",
+    "src/simulation/g2-3-programs.ts": "daa50ff2ee05361e171a6e5e6dd429df139fe20c00ff01efed5d1d09af939dcd",
     "src/simulation/g2-3-progress.ts": "67fe4ce581703594d61b5d94b531494c30ff365bbaf28f73601888c259fb53a9",
     "src/simulation/g2-3-radiant.ts": "a6e81641114f8ae5fa042e3fb050c362bb4c1bbf7f043d0b3173bd862d0497cf",
     "src/simulation/g2-3-restore.ts": "7ccbf0119bae7fc122e8a3b985f5b4e549fbcf35a17ed093f4318f3b385c8aee",
@@ -189,7 +189,7 @@
     "src/simulation/m8/combat-item-grants.ts": "4ad713d018038ab2537d2ffb2eba3eb5ff90f6dc1bacead966af64937794485e",
     "src/simulation/m8/combat-item-programs.ts": "95312a7e9a21578ed01e5f257c763f7c212b9f5320097d855c08a4529bfe4734",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "4363de5b864e75095f46c549b0c0f6225273364ba5a39a4331f0995409114b94",
+    "src/simulation/m8/contracts.ts": "d64e7fcb36ee5028f127fcb0026bf3d69a721020aacea812fb039cac33fd0fb1",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "62f2091444a93abb63af395df3508b36a123dde776862524f0027e52a38570ce",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -216,7 +216,7 @@
     "src/simulation/m8/triggers.ts": "0d329e8ae7109be23b4bec9c7c48978008de5289d44f485b96530cb142996847",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "4a73747134948ce983c921ec16d5b802bc9e25d51d5d39f73956a687982bd7b7",
+    "src/simulation/m8/version.ts": "8633d076982ca0a97ad40dacba3b17fb8a1e51b9e8c89db3c9c4a2263828fb61",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
     "src/simulation/match.ts": "7a38e691a33b623359c4f3351cd19b7cffcf0b46aaed5e59f14efd06c1e99458",
@@ -274,17 +274,17 @@
     "tests/fixtures/m5/oracle.g2.cjs": "066edb21bfdddccf46401fe50deed96c29065dc216736edc649c90f37832373a",
     "tests/fixtures/record-g2-4b-herald.cjs": "a6cd232d913d30e1b7d8db408574a2d9680e5fd74eaf2e1a5398b9d0b3bfbd56"
   },
-  "baseCommit": "0369a0b664d9975372926e8795d785267ad3fd54",
+  "baseCommit": "075e9a494758b13620c8ae36e55364cc214fd364",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:601f574f",
-    "lootReplayDigest": "fnv1a32-utf16:d5da64e8",
-    "rulesVersion": "s13-g2-3-v11",
-    "contentVersion": "s13-14.24b-g2-3-v11",
+    "contentDigest": "fnv1a32-utf16:9535ffff",
+    "lootReplayDigest": "fnv1a32-utf16:498a92d1",
+    "rulesVersion": "s13-g2-3-v12",
+    "contentVersion": "s13-14.24b-g2-3-v12",
     "schemaVersion": 7,
     "previousContentDigest": "fnv1a32-utf16:4bf7fe15",
     "previousLootReplayDigest": "fnv1a32-utf16:c11d2d0c",
     "traceHashes": {
-      "state": "493812b69451a81e7fbe250b53152257ebf104f7c9796145315f70b97b54a0ac",
+      "state": "3bd8426a20e2a1cf1f3d0c4bb5d85c90be764912bde8749556c777c829f908b5",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
     },
@@ -296,7 +296,7 @@
       "stateHash": "fnv1a32-utf16:1db5b9e9",
       "eventHash": "fnv1a32-utf16:cf452d32"
     },
-    "reason": "G2-4b support anvil release v11: tiers 11/13 granted as sourced, artifact/support anvil pools complete at 29/17."
+    "reason": "G2-4b release v12: Slow Cooker uses holder max HP; Bronze For Life counts all nine later S13 bronze traits."
   },
   "previousGoldenSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
   "driverSha256": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
@@ -322,14 +322,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 695191,
-          "currentBytes": 695174,
+          "currentBytes": 695165,
           "previousSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27",
-          "currentSha256": "5b240611fed443defe237ae57344d339e78de6663a167438aaf24d894caff15c",
-          "firstDifferentByte": 119
+          "currentSha256": "d8c7da8db383b884e09f4ec3eba4917b1c0d590998ab6826c03b6f484dd1473a",
+          "firstDifferentByte": 43
         },
         "states": 67,
-        "gzipSha256": "5b240611fed443defe237ae57344d339e78de6663a167438aaf24d894caff15c",
-        "stateUtf8Sha256": "4f8d14ac8786bf5bf40d0e1ac1e048fc127b48221f1571703b8521f042b58463",
+        "gzipSha256": "d8c7da8db383b884e09f4ec3eba4917b1c0d590998ab6826c03b6f484dd1473a",
+        "stateUtf8Sha256": "a0c655a3a0f85d15753756dc0c8c317efbc0fcf7a870b515cfed53a10937bb40",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27"
       },
@@ -1890,14 +1890,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 718824,
-          "currentBytes": 718803,
+          "currentBytes": 718801,
           "previousSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e",
-          "currentSha256": "d5541b413a37fc2265091594737ad0742dd3dc590856aa1bc2a9d3967ca0d35f",
+          "currentSha256": "741b21aaa28b183c825c84954f2dba8b873d5edfea4dccd6fab10d693dd8ac58",
           "firstDifferentByte": 42
         },
         "states": 67,
-        "gzipSha256": "d5541b413a37fc2265091594737ad0742dd3dc590856aa1bc2a9d3967ca0d35f",
-        "stateUtf8Sha256": "2af44a06f8618234eef3820532e183665081b6e90c3f28610ee925965701f473",
+        "gzipSha256": "741b21aaa28b183c825c84954f2dba8b873d5edfea4dccd6fab10d693dd8ac58",
+        "stateUtf8Sha256": "2c48bd215ebfc37b3a2e872bb4c2ef354623ea562eed1337904eeb1bcaeb5d2b",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e"
       },
@@ -6549,12 +6549,12 @@
       }
     }
   },
-  "candidateSha256": "da73550906a8d7255f9bfb418e3af89cfcb18a5825a81336f61ba8fa61a6225e",
+  "candidateSha256": "6e639941194b20ae3eb38bb9ffce0f6341a95eb48500d5f1244123693f1ed26e",
   "goldenByteEvidence": {
     "previousBytes": 99708,
     "currentBytes": 99709,
     "previousSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
-    "currentSha256": "da73550906a8d7255f9bfb418e3af89cfcb18a5825a81336f61ba8fa61a6225e",
+    "currentSha256": "6e639941194b20ae3eb38bb9ffce0f6341a95eb48500d5f1244123693f1ed26e",
     "firstDifferentByte": 16
   }
 }
