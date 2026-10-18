@@ -85,6 +85,15 @@ export const G23_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_StrengthTraining", "en": "Strength Training", "zh": "力量训练"},
 ];
 /**
+ * Anomalies added after G2-3 by the S13 augment batches (s13-augments-p2.ts); kept apart from the 30 G2-3 rows above.
+ * Names from the archived 14.24 stringtables (`tft13_goopbuff_<name>_title` in raw/zh_cn and raw/en_us).
+ */
+export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
+  {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
+  {"apiName": "TFT13_GoopBuff_CullTheWeak", "en": "Cull The Weak", "zh": "剔除弱者"},
+  {"apiName": "TFT13_GoopBuff_Stoneskin", "en": "Stoneskin", "zh": "石头皮肤"},
+];
+/**
  * Radiant (光明) version of each of the 36 completed items, keyed by the base item apiName. Five base items use an older
  * internal name, so their radiant apiName does not follow `TFT5_Item_<base>Radiant`; each of those pairings was checked
  * against the radiant description (e.g. Willbreaker = TrapClawRadiant carries the Guardbreaker text with doubled values).
