@@ -237,10 +237,11 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
- // multiplayer G2-4a restored the tier-12 crown, which takes item-16 before tier 14.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-16',definitionId:'TFT_Item_ForceOfNature'});
+ // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-17',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
-  kind:'item',itemId:'item-17',definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+  // The support trial grants four earlier items; birth must still use the exact frozen serial.
+  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);
@@ -327,14 +328,16 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
 it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
  expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([26,'5-2',654]);
- const picked=accepted(selectChoice(state,choice.choiceId,choice.generation,'TFT_Item_Artifact_SeekersArmguard'));
+ // Pick a non-timeout offer; the 29-artifact pool (v11) changed the natural seed42 offers.
+ const pick=choice.offers[1];
+ const picked=accepted(selectChoice(state,choice.choiceId,choice.generation,pick));
  expect(picked.phase).toBe('settlement');
  expect(restoreMatch(picked)).toEqual(picked);
  const save=serializeMatch(picked);
  expect(restoreMatch(JSON.parse(save))).toEqual(picked);
  expect(restoreMatch(save)).toEqual(picked);
  const receipt=picked.seatMechanics!.receipts.find(r=>r.receiptId===choice.choiceId)!;
- expect(receipt).toMatchObject({kind:'choice',itemId:`item-${state.nextItemSerial}`,optionId:'TFT_Item_Artifact_SeekersArmguard'});
+ expect(receipt).toMatchObject({kind:'choice',itemId:`item-${state.nextItemSerial}`,optionId:pick});
  // Serial and provenance order remain authenticated, not just the final inventory.
  const birth=picked.resourceProvenance.entries.at(-1)!;
  expect(birth).toMatchObject({kind:'item-acquired',itemId:`item-${state.nextItemSerial}`,source:{kind:'mechanic',receiptId:choice.choiceId}});
@@ -361,7 +364,7 @@ it('cold Node processes restore actual canonical saves for tiers4/10/14 with the
    writeFileSync(process.argv[3],JSON.stringify({state,progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry});
   for(const tier of [4,10,14]){
    const initial=tier===14?tier14Battle():naturalForgeStates().get(tier)!;
-   const states=tier===4?[initial]:[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,tier===10?'TFT_Item_Artifact_SeekersArmguard':initial.pendingChoice!.offers[0]))];
+   const states=tier===4?[initial]:[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,tier===10?initial.pendingChoice!.offers[1]:initial.pendingChoice!.offers[0]))];
    for(const [index,state] of states.entries()){
     const save=join(directory,`tier${tier}-${index}.json`);
     writeFileSync(save,serializeMatch(state));

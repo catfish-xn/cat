@@ -3,6 +3,7 @@ import { genericOffer, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../.
 import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
+import { G24_ARTIFACT_ITEMS } from '../../src/simulation/content/g2-4-artifacts';
 
 describe('generic mechanic choice display', () => {
   it('titles a completed-item forge popup with its 14.24 name and offer count and names ordinary completed items in Chinese', () => {
@@ -24,11 +25,24 @@ describe('generic mechanic choice display', () => {
     for (const id of G24_FORGE_POOLS.TFT_ArmoryKeyOrnn) {
       const offer = genericOffer(id, extras);
       expect(offer.name).toBe(itemDisplayName(id));
-      expect(offer.description).toContain('神器：');
+      // The 21 G2-4b artifacts carry a '神器：' line; the 8 mechanism artifacts (#150) carry their own effect text.
+      expect(offer.description).not.toBe('');
+      if (Object.hasOwn(G24_ARTIFACT_ITEMS, id)) expect(offer.description).toContain('神器：');
     }
     // An artifact mixed with an ordinary completed item belongs to neither pool and keeps the plain name.
     expect(readChoiceExtras({ kind: 'forge', offers: [offers[0], 'gunblade'] }).title).toBe('锻造器 · 2 选 1');
     expect(readChoiceExtras({ kind: 'forge', offers: G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.slice(0, 4) }).title).toBe('成装锻造器 · 4 选 1');
+  });
+  it('titles a support forge 辅助装锻造器 by the rules\' support pool and names every support item in Chinese', () => {
+    const offers = G24_FORGE_POOLS.TFT_ArmoryKeySupport.slice(0, 4);
+    const extras = readChoiceExtras({ kind: 'forge', offers, payload: { kind: 'forge', source: 'conqueror', timeoutOption: offers[0] } });
+    expect(extras.title).toBe('辅助装锻造器 · 4 选 1');
+    for (const id of G24_FORGE_POOLS.TFT_ArmoryKeySupport) {
+      const offer = genericOffer(id, extras);
+      expect(offer.name).toMatch(/^[一-鿿]/);
+      expect(offer.description).not.toBe('');
+    }
+    expect(genericOffer('TFT_Item_BansheesVeil', extras).name).toBe('女妖面纱');
   });
   it('falls back to the plain anvil name when offers are not one item kind', () => {
     expect(readChoiceExtras({ kind: 'forge', offers: ['gunblade', 'not-an-item'] }).title).toBe('锻造器 · 2 选 1');

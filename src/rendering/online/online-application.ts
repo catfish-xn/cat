@@ -197,15 +197,16 @@ export class OnlineApplication implements SceneApplication {
     this.hooks.status(notice?.kind === 'offline' ? notice.text : NON_RULE_REFUSALS[result.reason as ReceiptFailure] ?? `选秀未成功：${result.reason}`);
   }
   /**
-   * G5: the ranking of my last battle (and the match totals) shows from its end (settlement) through the next
-   * preparation, until my next battle starts. The economy hint shows whenever the server sends a preview (preparation
-   * and my battle).
+   * G5: the stats of my battle add up live while it plays back, then hold its final totals until my next battle starts.
+   * The economy hint shows whenever the server sends a preview (preparation and my battle).
    */
+  private syncSummary() {
+    const playing = this.mode === 'active' && !this.spectating, live = playing ? this.session.liveBattle : null, battle = this.session.lastBattle;
+    if (live && battle) this.summary.live(live, battle.roundId); else this.summary.show(battle, playing);
+  }
   private syncBattleViews() {
     const state = this.session.state, playing = this.mode === 'active' && !this.spectating;
-    const battle = this.session.lastBattle;
-    const show = playing && battle !== null && !this.session.inBattle && state.phase !== 'combat' && (state.round === battle.round || state.round === battle.round + 1);
-    this.summary.show(this.session.battleHistory, show);
+    this.syncSummary();
     this.economy.render(state, playing);
     // A held unit is sold in the room's preparation or choice window; the seat stays in preparation through the x-4 carousel
     // and under the PvP roster lock, where the server refuses it, so the button follows the room phase too.
@@ -258,7 +259,7 @@ export class OnlineApplication implements SceneApplication {
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
-    this.sidebar.tick(); this.carousel.tick();
+    this.sidebar.tick(); this.carousel.tick(); this.syncSummary();
     if (this.ignoreNextDelta) { this.ignoreNextDelta = false; return false; }
     if (delta > 1000) return false; // a long stall: let the next frame continue from the current state
     return this.isActive;

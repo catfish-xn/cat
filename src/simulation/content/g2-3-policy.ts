@@ -15,9 +15,9 @@ export const G23_CONQUEROR_CHESTS = freezeContent(Array.from({length:15}, (_, i)
     table, option, weight:weight as number, reward:objects[option].values,estimatedGold:objects.ArmoryTable_TFT13_Warband_CashoutEstimatedGoldValues.values[table] as number};
 }));
 /** 约定值: user2026-10-16 13:46, narrowed by G2-4a (user 2026-10-17): Thief's Gloves, the completed-item anvil, the
- * lesser duplicator and Tactician's Crown are granted as sourced. G2-4b restores artifact anvils (tiers 10/14). Replace
- * only still-deferred rewards (support anvils, support items); floor total cash at source whole-tier estimate. */
-export const G23_DEFERRED_CONQUEROR_ITEMS=freezeContent(['TFT_ArmoryKeySupport','TFT_Item_ZekesHerald','TFT_Item_Chalice','TFT_Item_LocketOfTheIronSolari']);
+ * lesser duplicator and Tactician's Crown are granted as sourced. G2-4b restores artifact/support anvils and the fixed
+ * supports (tiers 10/11/13/14), so no Conqueror reward is deferred; the whole-tier cash floor stays for any future deferral. */
+export const G23_DEFERRED_CONQUEROR_ITEMS=freezeContent<string[]>([]);
 export function g23ConquerorReward(chest:typeof G23_CONQUEROR_CHESTS[number]):Readonly<Record<string,unknown>>{
  const reward:Record<string,unknown>={};let deferred=false;
  // 约定值 (G2-4a review): a duplicator resolves after the chest's heroes, so tier 4 can copy the 3-cost hero it grants.
@@ -35,7 +35,7 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
   return {tier:i+1,table,options:Object.entries(objects[table].values).map(([id,weight]) => ({id,weightBps:Math.round((weight as number)*10000),reward:objects[id].values}))};
 }));
 export const G23_POLICY = freezeContent({
-  revision:'g2-4b-bracer-multikill-v10', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
+  revision:'g2-4b-support-forge-v11', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
   // User2026-10-17: retain source identity; only the black-market duplicator requires Chem-Baron.
   duplicators:{
     TFT_Consumable_ChampionDuplicator_III:{name:'次级英雄复制器',maxCost:3,traitId:null},

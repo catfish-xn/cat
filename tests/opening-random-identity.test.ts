@@ -41,12 +41,12 @@ it('binds G2-4b to fresh public rules and preserved G2-3 byte evidence', () => {
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
-  // User-approved pre-merge integration keeps v10; the content digest must still change.
+  // The support anvil release (v11) moves both version strings and the content digest off G2-3 v10.
   expect(recorded.contentDigest).not.toBe(previous.contentDigest);
-  expect(recorded.rulesVersion).toBe('s13-g2-3-v10');
-  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v10');
-  expect(recorded.rulesVersion).toBe(previous.rulesVersion);
-  expect(recorded.contentVersion).toBe(previous.contentVersion);
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v11');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v11');
+  expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
+  expect(recorded.contentVersion).not.toBe(previous.contentVersion);
   expect(recorded.previousContentDigest).toBe(previous.contentDigest);
   expect(recorded.previousLootReplayDigest).toBe(previous.lootReplayDigest);
   const audit = load('docs/evidence/g2-4b/release-audit.json');
@@ -87,9 +87,10 @@ it('rejects each old release identity without migration shortcuts', () => {
   const fresh = createMatch(42);
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const)
     expect(() => restoreMatch({ ...fresh, [key]: prior[key] })).toThrow();
-  // G2-3 and this candidate intentionally share v10 strings, never their digest.
+  // G2-3 v10 identities are old releases now: neither its digest nor its version strings restore.
   expect(() => restoreMatch({ ...fresh, contentDigest: g23().contentDigest })).toThrow();
-  expect(restoreMatch({ ...fresh, rulesVersion: g23().rulesVersion, contentVersion: g23().contentVersion })).toEqual(fresh);
+  expect(() => restoreMatch({ ...fresh, rulesVersion: g23().rulesVersion })).toThrow();
+  expect(() => restoreMatch({ ...fresh, contentVersion: g23().contentVersion })).toThrow();
 });
 for (const build of ['cannon', 'sniper']) {
   const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;

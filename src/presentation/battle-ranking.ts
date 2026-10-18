@@ -6,7 +6,7 @@
  * Display only: nothing here is a rule, nothing flows back.
  */
 import { summarizeBattle } from '../simulation/combat-summary';
-import type { CombatReplay, CombatViewUnit } from '../simulation/combat-replay-view';
+import type { CombatReplay, CombatViewState, CombatViewUnit } from '../simulation/combat-replay-view';
 
 export interface RankTotals {
   readonly damageDealt: number;
@@ -33,6 +33,8 @@ export interface BattleRanking {
   readonly result: string | null;
   /** One row per unit of either side in the replay, in the replay's unit order. */
   readonly rows: readonly BattleRankRow[];
+  /** 防护 by unit id: the shield each unit granted, read from the shield's effect key (absent = none). */
+  readonly shieldGiven: ReadonlyMap<string, number>;
 }
 /** One unit kind of one side over the match: every battle's rows of that team, definition and star level added up. */
 export interface MatchRankRow extends RankTotals {
@@ -49,10 +51,35 @@ const rankings = new WeakMap<CombatReplay, BattleRanking>();
 export function rankBattle(replay: CombatReplay): BattleRanking {
   let ranking = rankings.get(replay);
   if (!ranking) {
-    ranking = { combatId: replay.terminal.combatId ?? null, result: replay.terminal.result ?? null, rows: summarizeBattle(replay) };
+    ranking = summarize(replay);
     rankings.set(replay, ranking);
   }
   return ranking;
+}
+function summarize(replay: CombatReplay): BattleRanking {
+  return { combatId: replay.terminal.combatId ?? null, result: replay.terminal.result ?? null, rows: summarizeBattle(replay), shieldGiven: shieldsGiven(replay) };
+}
+/**
+ * A battle still being played back: the rules' summary of the ticks shown so far (`played` records), with the view on
+ * screen as its end state. Not memoised; the caller decides how often to ask.
+ */
+export function rankLiveBattle(replay: CombatReplay, played: number, view: CombatViewState): BattleRanking {
+  if (played >= replay.ticks.length) return rankBattle(replay);
+  return summarize({ initial: replay.initial, ticks: replay.ticks.slice(0, played), terminal: view });
+}
+/**
+ * 防护: each granted shield layer counted once for the unit that owns its effect. The wire event carries the layer's
+ * key (contract EffectKeyTuple, owner id second) and its size at grant; nothing else is derived.
+ */
+function shieldsGiven(replay: CombatReplay): Map<string, number> {
+  const given = new Map<string, number>();
+  for (const frame of replay.ticks) for (const event of frame.events) {
+    if (event.type !== 'shieldLayerChanged' || event.reason !== 'granted') continue;
+    let owner: unknown;
+    try { owner = (JSON.parse(event.key) as unknown[])[1]; } catch { continue; }
+    if (typeof owner === 'string') given.set(owner, (given.get(owner) ?? 0) + event.remaining);
+  }
+  return given;
 }
 
 export const matchRankKey = (row: Pick<BattleRankRow, 'team' | 'definitionId' | 'starLevel'>) => `${row.team}:${row.definitionId}:${row.starLevel}`;
