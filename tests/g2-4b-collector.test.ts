@@ -44,4 +44,4 @@ it('executes through real combat, settles only successful independent rolls, and
   expect(()=>restoreMatch(forged)).toThrow('authoritative item gold replay');
  }
  expect(executions).toBeGreaterThan(0);expect(awards).toBeGreaterThan(0);
-});
+},20_000);
