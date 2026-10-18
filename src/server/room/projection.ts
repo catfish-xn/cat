@@ -169,10 +169,18 @@ export interface SeatReplay { readonly battleId: string; readonly replay: Combat
  */
 const replays = new WeakMap<object, CombatReplay>();
 const mirroredReplays = new WeakMap<object, CombatReplay>();
+/**
+ * A replay the rules refused, kept with the same key: the refusal is a pure function of the immutable battle, so it is
+ * rethrown as is instead of re-running the whole battle inside every later push, resume or second participant.
+ */
+const failedReplays = new WeakMap<object, unknown>();
 function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => CombatReplay): CombatReplay {
   const hit = cache.get(key);
   if (hit) return hit;
-  const replay = build();
+  if (failedReplays.has(key)) throw failedReplays.get(key);
+  let replay: CombatReplay;
+  try { replay = build(); }
+  catch (error) { failedReplays.set(key, error); throw error; }
   cache.set(key, replay);
   return replay;
 }
@@ -212,7 +220,7 @@ function ownUnitIds(battle: Extract<BattleResult, { kind: 'two-sided' }>, seatId
 /**
  * Builds and caches the replays of one freshly resolved battle for the given seats ahead of the push (B8), so the
  * re-execution runs in its own slice instead of inside the push of the whole round. A failure is not reported here:
- * nothing is cached and the push reports it as before.
+ * its refusal is kept and the push reports it as before.
  */
 export function warmCombatReplays(battle: BattleResult, seatIds: Iterable<string>): void {
   for (const seatId of seatIds) {
@@ -226,14 +234,14 @@ export interface ReplayWarmup { advance(maxTicks: number): boolean }
  * warmCombatReplays cut into slices (§19): one `startCombatReplay` task per replay the given seats will be pushed and
  * the cache does not hold yet, advanced by at most `maxTicks` per call and never recreated; a finished replay goes into
  * the same cache toCombatReplayFor reads. Side B's mirror is still derived from that replay, never re-run. A task that
- * throws is dropped: nothing is cached and the push rebuilds and reports it as before.
+ * throws is dropped and its refusal kept: the push reports it as before, without re-running the battle.
  */
 export function startReplayWarmup(battle: BattleResult, seatIds: Iterable<string>): ReplayWarmup {
   const wanted = [...seatIds];
   const pending: { readonly key: object; readonly input: CombatReplayInput; task: CombatReplayTask | null }[] = [];
   if (battle.kind === 'placeholder') {
-    for (const outcome of battle.outcomes) if (wanted.includes(outcome.seatId) && outcome.combat && !replays.has(outcome)) pending.push({ key: outcome, input: outcome.combat, task: null });
-  } else if (battle.participants.some(seatId => wanted.includes(seatId)) && !replays.has(battle)) pending.push({ key: battle, input: battle.battle, task: null });
+    for (const outcome of battle.outcomes) if (wanted.includes(outcome.seatId) && outcome.combat && !replays.has(outcome) && !failedReplays.has(outcome)) pending.push({ key: outcome, input: outcome.combat, task: null });
+  } else if (battle.participants.some(seatId => wanted.includes(seatId)) && !replays.has(battle) && !failedReplays.has(battle)) pending.push({ key: battle, input: battle.battle, task: null });
   return {
     advance(maxTicks: number): boolean {
       const head = pending[0];
@@ -244,7 +252,7 @@ export function startReplayWarmup(battle: BattleResult, seatIds: Iterable<string
           const replay = head.task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
           if (!replay) return false;
           replays.set(head.key, replay);
-        } catch { /* reported by the push */ }
+        } catch (error) { failedReplays.set(head.key, error); /* reported by the push, which rethrows it without re-running */ }
         pending.shift();
         if (pending.length) return false;
       }

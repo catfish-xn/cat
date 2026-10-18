@@ -60,6 +60,8 @@ export interface GameServerOptions {
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
+  /** Wall budget of one resolution slice in ms (RoomOptions.sliceMs); default DEFAULT_SLICE_MS, `null` slices by ticks only. */
+  readonly sliceMs?: number | null;
   /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
   readonly logger?: Logger;
   /** Older one-line text sink, still accepted (scripts/loadtest-room.cjs). */
@@ -127,6 +129,11 @@ export interface ServerRetained {
 }
 /** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
 export const DEFAULT_SLICE_TICKS = 100;
+/**
+ * Default wall budget of one slice: late-round ticks cost several milliseconds each, so 100 of them could hold the
+ * single writer for hundreds of milliseconds and every command queued behind them waited as long.
+ */
+export const DEFAULT_SLICE_MS = 20;
 
 /**
  * Resolver wrapper (B8, §19): once a battle's job finished, the following slices build the replays its attended seats
@@ -195,7 +202,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   };
   const resolver = options.resolver ?? new TwoSidedBattleResolver();
   const lobby = new Lobby({
-    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
+    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS,
+    ...(options.sliceMs === null ? {} : { sliceMs: options.sliceMs ?? DEFAULT_SLICE_MS }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
     ...(options.carousel ? { carousel: options.carousel } : {}),

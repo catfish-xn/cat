@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { Lobby } from '../../src/server/room/lobby';
-import type { Room, RoomRetained } from '../../src/server/room/room';
+import { SLICE_STEP_TICKS, type Room, type RoomRetained } from '../../src/server/room/room';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { RoomState } from '../../src/server/room/types';
 import { DamageResolver, TIMINGS, makeRoom, runUntil } from './helpers';
@@ -142,6 +142,30 @@ describe('B8 sliced resolution', () => {
     const ticks = room.state.battles.map(battle => battle.kind === 'two-sided' ? battle.battle.terminal.tick : 0);
     expect(slices).toBe(ticks.reduce((sum, tick) => sum + Math.max(1, Math.ceil(tick / 50)), 0));
     expect(slices).toBeGreaterThan(4);
+  }, 60_000);
+
+  it('ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round', () => {
+    // Every clock read during resolution costs 1 ms, as if each step of rules work took that long.
+    class BusyClock extends ManualClock { busy = false; override now(): number { if (this.busy) this.advance(1); return super.now(); } }
+    const oneShot = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
+    const clock = new BusyClock();
+    const { room } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50, sliceMs: 1, clock });
+    for (const { room: each } of [oneShot, { room }]) each.start();
+    const prepared = (current: RoomState) => current.round === 4 && current.phase === 'preparation';
+    runUntil(oneShot.room, oneShot.clock, prepared); runUntil(room, clock, prepared);
+    oneShot.clock.fireNext(); clock.fireNext();
+    expect(room.state.phase).toBe('frozen');
+    clock.busy = true;
+    let slices = 0;
+    while (room.state.phase === 'frozen') { expect(clock.fireNext()).toBe(true); slices++; }
+    clock.busy = false;
+    while (oneShot.room.state.phase === 'frozen') oneShot.clock.fireNext();
+    expect(room.state.fault).toBeNull();
+    // A 1 ms budget is spent by the first step: one slice per started SLICE_STEP_TICKS of each battle, not per 50.
+    const ticks = room.state.battles.map(battle => battle.kind === 'two-sided' ? battle.battle.terminal.tick : 0);
+    expect(slices).toBe(ticks.reduce((sum, tick) => sum + Math.max(1, Math.ceil(tick / SLICE_STEP_TICKS)), 0));
+    expect(slices).toBeGreaterThan(ticks.reduce((sum, tick) => sum + Math.max(1, Math.ceil(tick / 50)), 0));
+    expect(JSON.stringify(room.state.battles)).toBe(JSON.stringify(oneShot.room.state.battles));
   }, 60_000);
 
   it('stops resolving and publishes nothing once disposed in the middle of a frozen round', () => {
