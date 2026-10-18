@@ -1,4 +1,4 @@
-import {readG23Progress} from './g2-3-state';
+import {readG23Progress,validateG23RewardSources} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
 import { validateResistsShields } from './m8/resists-shield-restore';
 import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
@@ -128,6 +128,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
+  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
+  mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
@@ -139,7 +141,6 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
-  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
