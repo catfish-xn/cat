@@ -56,7 +56,7 @@
     "src/simulation/content/g2-3-anomaly-source.ts": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1",
     "src/simulation/content/g2-3-item-registry.ts": "db92b85b039297a29fc13a199f56934a4b77846caa34a8395bade6b70b83b9bf",
     "src/simulation/content/g2-3-loot-source.ts": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459",
-    "src/simulation/content/g2-3-policy.ts": "cfc7cec421abd9d36b24d65bfe41c365d500e059640bc8ac715fbb3aba34ddca",
+    "src/simulation/content/g2-3-policy.ts": "f15107139bc70000dcd0fa862077a0699c892e86016a25b8dca9b4efc0f624da",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-source.ts": "c14a36070f08134cabc93fcb439b5e276907523b4e99e09bfbb82c551a40075e",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
@@ -64,7 +64,7 @@
     "src/simulation/content/g2-3-traits.ts": "3429e32adcb78d74733d466ecf4cca0ba4d16107aa905e224e4281398b0ad26c",
     "src/simulation/content/g2-3-units.ts": "974fbfc3c127dbd925046135731b9053368ea3194eac7195c43de9981d3b2b4f",
     "src/simulation/content/g2-4-artifact-source.ts": "786b8fa7f6e3f92f5516eb80e428edaa0e9d120eb4fc8d283d643a6f7be4dbe3",
-    "src/simulation/content/g2-4-artifacts.ts": "402c1a233815881f22e7f745c8bee367a450f3c24a4e170b3e199475e084528f",
+    "src/simulation/content/g2-4-artifacts.ts": "da9e3237f2d10fbe23030fb08dd1dfcc6f06d1d2dfe50499c0c26179596eb1f6",
     "src/simulation/content/g2-4-chest-pool.ts": "3a0c0c830e8668d02ca8ab529dc92a06abeec94900fa55b7d8f359aa31781a50",
     "src/simulation/content/g2-4-forges.ts": "26a9bfd48e5dd15750ff708ec1618f0e5cfcd409cc7e4b5cf5593bd6826b79c5",
     "src/simulation/content/g2-4-support-item-source.ts": "5e2eac890e17d0cc2a883a97962b84ea13dea49145e1e48728821f691dd90844",
@@ -171,14 +171,14 @@
     "src/simulation/m8/combat-item-grants.ts": "4ad713d018038ab2537d2ffb2eba3eb5ff90f6dc1bacead966af64937794485e",
     "src/simulation/m8/combat-item-programs.ts": "95312a7e9a21578ed01e5f257c763f7c212b9f5320097d855c08a4529bfe4734",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "e329272eb049606d94b633c322d39057f68b151c23c1293da967b14f0a7d639e",
+    "src/simulation/m8/contracts.ts": "4f188af54bdf123c171357adeca1b451d742392b85a21f02b8a5fc4b0ae733e9",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "85beb9cbfc32df8f4c370e69f8cf081b47962f134b3c37a800890d28e32fb7d7",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
     "src/simulation/m8/heal.ts": "e5ed8bb09ebbb7db9396a7c367bc3914d3730a356e1eaaf7013f86f63b94f639",
     "src/simulation/m8/identity.ts": "4320828fac9b27ce85eeb89a2bea04ea5038d409d0af24e1309174cb15c80066",
-    "src/simulation/m8/item-program.ts": "919ec21fa0ffffe02621a0d90cc24e234ae8412a0b68e76595421410f224eb89",
-    "src/simulation/m8/item-restore.ts": "09d6ab20b8091ff83a6de4774e388ebfb50ad0c447c4f355e03133c12cecbffc",
+    "src/simulation/m8/item-program.ts": "27b7e4e0d93f5fc26edcfa5429731b2ad0840e5bf46be1e7fd44e03fa41c9027",
+    "src/simulation/m8/item-restore.ts": "e4f9152e0eaefcff16ce3782e038820b0921088610046bfd5e174acf89aebfbe",
     "src/simulation/m8/mana.ts": "91478f46feaa2be5a56a59e5c8422695ba12fdef42a3ec9510a6893cb6762f9f",
     "src/simulation/m8/opening.ts": "3d987598b9ca57965eee0abf6afb03796105b51a94e5a52e793a2bac2e4d9ada",
     "src/simulation/m8/periodic.ts": "c2d8551c2161f8093c0fe4d94cae58923ce0c818ae79f718ab4b6ae6304f099d",
@@ -195,10 +195,10 @@
     "src/simulation/m8/stats.ts": "f097965efeb4b7c4306d10b80c28dfcd3a677652198fe539df25e10b48d749e8",
     "src/simulation/m8/status.ts": "05f2efbfd2bf20ab02ac0bcf7cdf4362dcd89a3d8054105b9856284af0415d28",
     "src/simulation/m8/targeting.ts": "ba3f66e910c1521cc03ddb7aa8889978111356ad5b7bed73715304023ab57b4c",
-    "src/simulation/m8/triggers.ts": "7e1c0a3897b28ba95a0d2d2a7f7166232eeb30f0e6f0de88a4d66feb75169b63",
+    "src/simulation/m8/triggers.ts": "0d329e8ae7109be23b4bec9c7c48978008de5289d44f485b96530cb142996847",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "c85faf93dae56f4ce23ae43500028239525a7f6ba865e8763924c964caced401",
+    "src/simulation/m8/version.ts": "64a127f52272ed112d995ffcb317d8d5f03e5e4754e216454560712a7af06031",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
     "src/simulation/match.ts": "50944a7470725675b6b5a0a6b3b7e18673456a1eeb2926b6bb6024df886ddd77",
@@ -257,15 +257,15 @@
   "integrationBaseCommit": "19aa9f1",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:d6c9bf1b",
-    "lootReplayDigest": "fnv1a32-utf16:224f1f96",
-    "rulesVersion": "s13-g2-3-v9",
-    "contentVersion": "s13-14.24b-g2-3-v9",
+    "contentDigest": "fnv1a32-utf16:4bf7fe15",
+    "lootReplayDigest": "fnv1a32-utf16:c11d2d0c",
+    "rulesVersion": "s13-g2-3-v10",
+    "contentVersion": "s13-14.24b-g2-3-v10",
     "schemaVersion": 7,
     "previousContentDigest": "fnv1a32-utf16:299ec0d0",
     "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
     "traceHashes": {
-      "state": "02511424cd6c1866c7033d6c2b7fde2379a44cc01bcd0efa452bcfe457a028d7",
+      "state": "bb09c043e226db932e3eab2b018d0aba4b0f87090d8042a33ede7bff781ab469",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
     },
@@ -303,14 +303,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 620004,
-          "currentBytes": 695153,
+          "currentBytes": 695191,
           "previousSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0",
-          "currentSha256": "b356c8b7f07714575573928c18ad01028427e1ba6f35021266366e7f5411df49",
+          "currentSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "b356c8b7f07714575573928c18ad01028427e1ba6f35021266366e7f5411df49",
-        "stateUtf8Sha256": "215973d0927f8cc5ab51ecebd575b1dac5a340f2dafff85247e5aca59f14a487",
+        "gzipSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27",
+        "stateUtf8Sha256": "e6f6c021da31c5ad229fafd5f0f244c70f7b8048750835b9ba454c7256feaada",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0"
       },
@@ -1893,14 +1893,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 638531,
-          "currentBytes": 718793,
+          "currentBytes": 718824,
           "previousSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd",
-          "currentSha256": "e573a2841132ccd35869ffe9f4d84005cf6c119ad1a4a5529b7de1e84ea0dae0",
+          "currentSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "e573a2841132ccd35869ffe9f4d84005cf6c119ad1a4a5529b7de1e84ea0dae0",
-        "stateUtf8Sha256": "9517305c7847d1a7b7bf493a68ec7ead4f15ce50cf24c0e20445d10824e9180e",
+        "gzipSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e",
+        "stateUtf8Sha256": "3bc9a935da834a2f1bebf04f4f0fb2f1be81401a0df973b25ae76da07b2e62fb",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd"
       },
@@ -6596,12 +6596,12 @@
       }
     }
   },
-  "candidateSha256": "311b740edcc8ab8af15de14044974e68c398621d89a7bcf87338bfa3c858ce83",
+  "candidateSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
   "goldenByteEvidence": {
     "previousBytes": 101416,
-    "currentBytes": 99700,
+    "currentBytes": 99708,
     "previousSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-    "currentSha256": "311b740edcc8ab8af15de14044974e68c398621d89a7bcf87338bfa3c858ce83",
+    "currentSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
     "firstDifferentByte": 13
   }
 }

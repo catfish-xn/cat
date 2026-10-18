@@ -45,3 +45,10 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 ## PR #170：次级微光复制器 v9
 
 从 `f0f1d99` merge multiplayer `d6156ab`，再 merge 最新 `0719ced`（#162，仅界面及其测试增量），保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。
+
+## PR #164 v10：护臂多杀计层规则身份与夹具迁移
+
+- 起点 `f2b7c39`，已合 multiplayer `563a7f9`；本轮将已批准的逐目标参与击杀计层登记为 rules `s13-g2-3-v10`、content `s13-14.24b-g2-3-v10`、policy `g2-4b-bracer-multikill-v10`。
+- 护臂同一动作击杀两个不同目标各算一层，同目标不重复；不改变其数值、其他物品触发或恢复校验。
+- schema/save/replay/command 保持 7/3/3/3，NET_PROTOCOL 保持3。旧规则存档遵循已有不迁移政策。
+- 从公开命令重新生成当前规则四路线 golden、cannon/sniper 录制态、Herald、输入指纹和掉落揭示证据；历史原始目录不改。命令、前后字节证据、实测结果见 `bracer-multikill-v10/REPORT.md`。

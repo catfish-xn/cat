@@ -1,0 +1,26 @@
+{
+  "cannon": {
+    "countsByLeaf": {
+      "replayDigest": 67,
+      "contentDigest": 101,
+      "rulesVersion": 67,
+      "contentVersion": 67
+    },
+    "beforeBytes": 695153,
+    "afterBytes": 695191,
+    "beforeSha256": "b356c8b7f07714575573928c18ad01028427e1ba6f35021266366e7f5411df49",
+    "afterSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27"
+  },
+  "sniper": {
+    "countsByLeaf": {
+      "replayDigest": 67,
+      "contentDigest": 101,
+      "rulesVersion": 67,
+      "contentVersion": 67
+    },
+    "beforeBytes": 718793,
+    "afterBytes": 718824,
+    "beforeSha256": "e573a2841132ccd35869ffe9f4d84005cf6c119ad1a4a5529b7de1e84ea0dae0",
+    "afterSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e"
+  }
+}
