@@ -8,10 +8,12 @@
  *
  * Icons: CommunityDragon 14.24 mirror (Riot Games assets, free non-commercial fan use; see README), downloaded
  * 2026-10-16 by a one-off script outside the repo; scripts/fetch-s13-assets.cjs and s13-asset-manifest.ts are untouched.
+ * G2-4b artifacts (21) and support items (11) were added the same way on 2026-10-18, from the icon paths in
+ * cdragon/tft/zh_cn.json 14.24 (kinds `artifacts` and `support`).
  * Per-file byte counts and SHA-256 checks: s13-g23-asset-checks.ts.
  */
 export interface G23Name { readonly apiName: string; readonly en: string; readonly zh: string | null }
-export type G23IconKind = 'champions' | 'traits' | 'items' | 'anomalies' | 'loot';
+export type G23IconKind = 'champions' | 'traits' | 'items' | 'anomalies' | 'loot' | 'artifacts' | 'support';
 export type G23LootGroup = 'conqueror' | 'chembaron' | 'junkerking';
 /** 12 heroes, then summons / form units (cost 11 in the client, or absent from the set list). */
 export const G23_CHAMPIONS: readonly (G23Name & { readonly summon: boolean })[] = [
@@ -204,6 +206,24 @@ export const G23_LOOT: readonly (G23Name & { readonly group: G23LootGroup })[] =
   {"apiName": "TFT13_JunkerKing_SuperPass", "en": "Finishing Touch!", "zh": "画龙点睛！", "group": "junkerking"},
   {"apiName": "TFT13_JunkerKing_Tankbuster", "en": "Tankbuster", "zh": "坦克克星", "group": "junkerking"},
 ];
+/**
+ * G2-4b support items whose content name is still the English client string (g2-4-support-items.ts); the UI shows the
+ * 14.24 zh_cn client name instead. Artifacts need no table: their content names already equal the zh_cn client names.
+ * Names from cdragon/tft/zh_cn.json and en_us.json 14.24.
+ */
+export const G24_SUPPORT_ITEMS: readonly G23Name[] = [
+  {"apiName": "TFT4_Item_OrnnRanduinsSanctum", "en": "Randuin's Omen", "zh": "兰顿之兆"},
+  {"apiName": "TFT4_Item_OrnnObsidianCleaver", "en": "Obsidian Cleaver", "zh": "黑曜石切割者"},
+  {"apiName": "TFT_Item_AegisOfTheLegion", "en": "Aegis of the Legion", "zh": "军团圣盾"},
+  {"apiName": "TFT_Item_RadiantVirtue", "en": "Virtue of the Martyr", "zh": "殉道美德"},
+  {"apiName": "TFT7_Item_ShimmerscaleHeartOfGold", "en": "Needlessly Big Gem", "zh": "无用大宝石"},
+  {"apiName": "TFT_Item_BansheesVeil", "en": "Banshee's Veil", "zh": "女妖面纱"},
+  {"apiName": "TFT_Item_EternalFlame", "en": "The Eternal Flame", "zh": "永恒烈焰"},
+  {"apiName": "TFT_Item_SupportKnightsVow", "en": "Knight's Vow", "zh": "骑士之誓"},
+  {"apiName": "TFT_Item_Moonstone", "en": "Moonstone Renewer", "zh": "月石再生器"},
+  {"apiName": "TFT_Item_Spite", "en": "Spite", "zh": "恶意"},
+  {"apiName": "TFT_Item_UnstableTreasureChest", "en": "Unstable Treasure Chest", "zh": "不稳定的财宝箱"},
+];
 /** apiNames that ship an icon, per kind; the file is public/assets/s13/g23/<kind>/<apiName lowercased>.png (see g23IconPath).
  * Byte counts and SHA-256 per file live in s13-g23-asset-checks.ts, which only tests import, so they stay out of the bundle. */
 export const G23_ICONS: Readonly<Record<G23IconKind, readonly string[]>> = {
@@ -212,6 +232,8 @@ export const G23_ICONS: Readonly<Record<G23IconKind, readonly string[]>> = {
   items: ["TFT5_Item_BloodthirsterRadiant", "TFT5_Item_GuardianAngelRadiant", "TFT5_Item_InfinityEdgeRadiant", "TFT5_Item_GiantSlayerRadiant", "TFT5_Item_SteraksGageRadiant", "TFT5_Item_LastWhisperRadiant", "TFT5_Item_LeviathanRadiant", "TFT5_Item_RapidFirecannonRadiant", "TFT5_Item_RunaansHurricaneRadiant", "TFT5_Item_StatikkShivRadiant", "TFT5_Item_TitansResolveRadiant", "TFT5_Item_CrownguardRadiant", "TFT5_Item_IonicSparkRadiant", "TFT5_Item_JeweledGauntletRadiant", "TFT5_Item_MorellonomiconRadiant", "TFT5_Item_AdaptiveHelmRadiant", "TFT5_Item_BlueBuffRadiant", "TFT5_Item_FrozenHeartRadiant", "TFT5_Item_RedemptionRadiant", "TFT5_Item_HandOfJusticeRadiant", "TFT5_Item_BrambleVestRadiant", "TFT5_Item_NightHarvesterRadiant", "TFT5_Item_SunfireCapeRadiant", "TFT5_Item_QuicksilverRadiant", "TFT5_Item_SpectralGauntletRadiant", "TFT5_Item_TrapClawRadiant", "TFT5_Item_ThiefsGlovesRadiant", "TFT5_Item_GuinsoosRagebladeRadiant", "TFT5_Item_DeathbladeRadiant", "TFT5_Item_SpearOfShojinRadiant", "TFT5_Item_ArchangelsStaffRadiant", "TFT5_Item_RabadonsDeathcapRadiant", "TFT5_Item_WarmogsArmorRadiant", "TFT5_Item_DragonsClawRadiant", "TFT5_Item_GargoyleStoneplateRadiant", "TFT5_Item_HextechGunbladeRadiant"],
   anomalies: ["TFT13_GoopItem_Icon"],
   loot: ["TFT11_Item_ThiefsGlovesSupport", "TFT_Item_ForceOfNature", "TFT_Item_Chalice", "TFT_Item_LocketOfTheIronSolari", "TFT_Item_ZekesHerald", "TFT_Consumable_ChampionDuplicator_III", "TFT_Consumable_ItemRemover", "TFT_Consumable_ItemReroller", "TFT_Consumable_MasterworkUpgrade", "TFT_ArmoryKeyCompleted", "TFT_ArmoryKeyOrnn", "TFT_ArmoryKeySupport", "TFT13_ChampionItem_Chainsaw", "TFT13_ChampionItem_Chainsaw_2Star", "TFT13_ChampionItem_Chainsaw_3Star", "TFT13_ChampionItem_Gremlin", "TFT13_ChampionItem_Gremlin_2Star", "TFT13_ChampionItem_Gremlin_3Star", "TFT13_ChampionItem_Lieutenant", "TFT13_ChampionItem_Lieutenant_2Star", "TFT13_ChampionItem_Lieutenant_3Star", "TFT13_ChampionItem_RenataGlasc", "TFT13_ChampionItem_RenataGlasc_2Star", "TFT13_ChampionItem_RenataGlasc_3Star", "TFT13_ChampionItem_Silco", "TFT13_ChampionItem_Silco_2Star", "TFT13_ChampionItem_Silco_3Star", "TFT13_ChampionItem_Singed", "TFT13_ChampionItem_Singed_2Star", "TFT13_ChampionItem_Singed_3Star", "TFT13_Crime_Bronze_ChemGrips", "TFT13_Crime_Bronze_MageGuard", "TFT13_Crime_Bronze_MiningGauntlet", "TFT13_Crime_Consumable_LesserShimmerDuplicator", "TFT13_Crime_Consumable_PerfectedShimmer", "TFT13_Crime_Consumable_ShimmerDuplicator", "TFT13_Crime_Gold", "TFT13_Crime_Gold_DestabilizedChemtank", "TFT13_Crime_Gold_ExecutionersVorpalblade", "TFT13_Crime_Gold_FleshRipper", "TFT13_Crime_Gold_PiltovenHexplating", "TFT13_Crime_Gold_ShimmerBloom", "TFT13_Crime_Gold_UnleashedToxins", "TFT13_Crime_Gold_VirulentVirus", "TFT13_Crime_Gold_VoltaicSaber", "TFT13_Crime_OmegaPrismatic_DimensionalHeirloom", "TFT13_Crime_Prismatic_DestabilizedChemtank", "TFT13_Crime_Prismatic_ExecutionersVorpalblade", "TFT13_Crime_Prismatic_FleshRipper", "TFT13_Crime_Prismatic_PiltovenHexplating", "TFT13_Crime_Prismatic_ShimmerBloom", "TFT13_Crime_Prismatic_UnleashedToxins", "TFT13_Crime_Prismatic_VirulentVirus", "TFT13_Crime_Prismatic_VoltaicSaber", "TFT13_Crime_Silver_DestabilizedChemtank", "TFT13_Crime_Silver_ExecutionersVorpalblade", "TFT13_Crime_Silver_FleshRipper", "TFT13_Crime_Silver_PiltovenHexplating", "TFT13_Crime_Silver_ShimmerBloom", "TFT13_Crime_Silver_UnleashedToxins", "TFT13_Crime_Silver_VirulentVirus", "TFT13_Crime_Silver_VoltaicSaber", "TFT13_Item_Crime_ArmoryCashout", "TFT13_Item_Crime_ArmoryContinue", "TFT13_JunkerKing_3Star", "TFT13_JunkerKing_Flamethrower", "TFT13_JunkerKing_Pass", "TFT13_JunkerKing_PertriciteRod", "TFT13_JunkerKing_RepairingMicrobots", "TFT13_JunkerKing_SelfDestructButton", "TFT13_JunkerKing_SuperPass", "TFT13_JunkerKing_Tankbuster", "TFT_Assist_Gold"],
+  artifacts: ["TFT4_Item_OrnnAnimaVisage", "TFT4_Item_OrnnInfinityForce", "TFT4_Item_OrnnZhonyasParadox", "TFT9_Item_OrnnDeathfireGrasp", "TFT_Item_Artifact_TalismanOfAscension", "TFT_Item_Artifact_Mittens", "TFT_Item_Artifact_RapidFirecannon", "TFT_Item_Artifact_SeekersArmguard", "TFT_Item_Artifact_SilvermereDawn", "TFT9_Item_OrnnHorizonFocus", "TFT9_Item_OrnnHullbreaker", "TFT_Item_Artifact_HorizonFocus", "TFT_Item_Artifact_UnendingDespair", "TFT_Item_Artifact_InnervatingLocket", "TFT4_Item_OrnnMuramana", "TFT_Item_Artifact_LudensTempest", "TFT_Item_Artifact_BlightingJewel", "TFT_Item_Artifact_LightshieldCrest", "TFT_Item_Artifact_ProwlersClaw", "TFT_Item_Artifact_WitsEnd", "TFT_Item_Artifact_LichBane"],
+  support: ["TFT4_Item_OrnnRanduinsSanctum", "TFT4_Item_OrnnObsidianCleaver", "TFT_Item_AegisOfTheLegion", "TFT_Item_RadiantVirtue", "TFT7_Item_ShimmerscaleHeartOfGold", "TFT_Item_BansheesVeil", "TFT_Item_EternalFlame", "TFT_Item_SupportKnightsVow", "TFT_Item_Moonstone", "TFT_Item_Spite", "TFT_Item_UnstableTreasureChest"],
 };
 export const g23IconPath = (kind: G23IconKind, apiName: string): string => `assets/s13/g23/${kind}/${apiName.toLowerCase()}.png`;
 

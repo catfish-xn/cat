@@ -17,7 +17,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));
@@ -76,7 +76,7 @@ const ANOMALY_BY_ID = bridge(G23_ANOMALIES, row => [...apiForms(row.apiName), ..
 const ANOMALY_BY_ZH = new Map(G23_ANOMALIES.map(row => [row.zh, row]));
 const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
 const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
-const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT].map(row => [row.apiName, row]));
+const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_ITEMS].map(row => [row.apiName, row]));
 
 /** apiName of a G2-3 hero or summon by content id; undefined for everything else. */
 export function g23ChampionApiName(id: string): string | undefined {
@@ -128,8 +128,8 @@ export function anomalyIconHtml(size: number, className = 'anomaly-icon'): strin
 }
 
 /**
- * Item label: client name for the G2-3 radiant and reward items (matched by the content `apiName`), else the content
- * name. Existing items keep their content names, which already follow the client.
+ * Item label: client name for the G2-3 radiant and reward items and the G2-4b support items (matched by the content
+ * `apiName`), else the content name. Existing items keep their content names, which already follow the client.
  */
 export function itemDisplayName(id: string): string {
   const definition = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id] : undefined;
@@ -154,12 +154,12 @@ export function lootEntry(apiName: string): { readonly name: string; readonly ic
 /** Shared gold coin icon for black market gold rewards (TFT_Assist_Gold_N, named N金币 in the client). */
 export const lootGoldIconUrl = (): string | null => assetUrl('loot', 'TFT_Assist_Gold');
 
-/** Icon for a content id of a G2-3 hero/summon, trait or item; null when not bundled. */
+/** Icon for a content id of a G2-3 hero/summon, trait or item (G2-4b artifacts and support items included); null when not bundled. */
 export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): string | null {
   if (kind === 'champion') return assetUrl('champions', g23ChampionApiName(id));
   if (kind === 'trait') return assetUrl('traits', g23TraitApiName(id));
   const apiName = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id].apiName : undefined;
-  return assetUrl('items', apiName) ?? assetUrl('loot', apiName);
+  return assetUrl('items', apiName) ?? assetUrl('loot', apiName) ?? assetUrl('artifacts', apiName) ?? assetUrl('support', apiName);
 }
 /** Content unit ids that resolve to a bundled G2-3 portrait (for the board texture loader). */
 export function g23ChampionAssets(): readonly { readonly id: string; readonly path: string }[] {
