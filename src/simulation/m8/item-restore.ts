@@ -1,10 +1,11 @@
+import type { TargetLimitedTrigger } from './triggers';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
 import type { CombatUnit } from '../combat-types';
 import { MAX_COMBAT_TICKS } from '../combat-types';
-import type { Effect, Source, StatusApplication, TriggerDefinition } from './contracts';
+import type { Effect, Source, StatusApplication } from './contracts';
 import { canonicalContent } from '../content';
 import { canonicalSource, effectIdentity, validateIdentity } from './identity';
 import { compileMechanismDefinitions } from './s13-definitions';
@@ -15,7 +16,7 @@ import { survivalConsumptionKeys } from './shield';
 import { grantOfSource, grantedMaxHpBasis, withGrantedItemRestoreCache } from './combat-item-programs';
 import { DEFAULT_BOARD } from '../board';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
-type Declaration= {source:Source;effect:Effect;survivalSource?:Source};
+type Declaration= {source:Source;effect:Effect;survivalSource?:Source;trigger?:TargetLimitedTrigger};
 // Lifetime is exactly one synchronous restore. Mutable external objects are
 // never trusted between calls, even when their object identity is unchanged.
 let restoreDeclarations:WeakMap<CombatUnit,Map<string,Declaration[]>>|undefined;
@@ -23,15 +24,15 @@ export function withItemRestoreCache<T>(run:()=>T):T{
  const previous=restoreDeclarations;restoreDeclarations=new WeakMap();
  try{return withGrantedItemRestoreCache(run);}finally{restoreDeclarations=previous;}
 }
-export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect;survivalSource?:Source}[] {
+export function declaredEffects(unit:CombatUnit,combatId:string):Declaration[] {
  const cached=restoreDeclarations?.get(unit)?.get(combatId);if(cached)return cached;
- const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect;survivalSource?:Source}[]=[];
- const collect=(source:Source,effects:readonly Effect[],survivalSource?:Source)=>effects.forEach((effect,i)=>{
-  const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect,survivalSource});
-  if(effect.kind==='grant-shield')collect({...bound,effectIndex:bound.effectIndex+1},effect.endEffects,survivalSource);
-  if(effect.kind==='apply-status'&&effect.status.onEnd)collect({...bound,effectIndex:bound.effectIndex+1},effect.status.onEnd.effects,survivalSource);
+ const compiled=compileMechanismDefinitions(unit,combatId),result:Declaration[]=[];
+ const collect=(source:Source,effects:readonly Effect[],survivalSource?:Source,trigger?:TargetLimitedTrigger)=>effects.forEach((effect,i)=>{
+  const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect,survivalSource,trigger});
+  if(effect.kind==='grant-shield')collect({...bound,effectIndex:bound.effectIndex+1},effect.endEffects,survivalSource,trigger);
+  if(effect.kind==='apply-status'&&effect.status.onEnd)collect({...bound,effectIndex:bound.effectIndex+1},effect.status.onEnd.effects,survivalSource,trigger);
  });
- for(const d of compiled.eventTriggers ?? [])collect(d.source,d.effects);
+ for(const d of compiled.eventTriggers ?? [])collect(d.source,d.effects,undefined,d);
  for(const d of compiled.survivalTriggers)collect(d.source,d.effects,d.source);
  for(const p of compiled.periodicTasks)collect(p.source,p.program.effects);
  for(const m of unit.mechanics??[]) {
@@ -60,8 +61,11 @@ export function isDeclaredStatus(source:Source,app:StatusApplication,units:reado
   const expected=statusDeclaration(d.effect,owner,d.source);if(same(expected,app))return true;
   if(!expected||d.effect.kind!=='modify-stat'||d.effect.stackPolicy.kind!=='add-stacks'||expected.modifier?.value.kind!=='constant'||app.modifier?.value.kind!=='constant')return false;
   const per=expected.modifier.value.amount,total=app.modifier.value.amount;
-  const runtime=owner.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(source));
-  const limit=Math.min(d.effect.stackPolicy.cap??Number.MAX_SAFE_INTEGER,runtime?.triggerCount??Math.floor((owner.mechanismState?.sampledAtTick??0)/40));
+  // Effect offsets belong to their compiled trigger, whose runtime retains the
+  // block's base source. Match the complete source, including owner and instance;
+  // event stacks come from settled receipts, never elapsed combat time.
+  const count=d.trigger?settledSampledStatCount(owner,d.trigger,combatId):Math.floor((owner.mechanismState?.sampledAtTick??0)/40);
+  const limit=Math.min(d.effect.stackPolicy.cap??Number.MAX_SAFE_INTEGER,count);
   return per!==0&&Number.isInteger(total/per)&&total/per>=1&&total/per<=limit&&same({...expected,modifier:{...expected.modifier,value:{kind:'constant',amount:total}}},app);
  });
 }
@@ -167,7 +171,7 @@ function mergeSampledStatParts(values: readonly SampledStatParts[], field: keyof
 /** Kill/assist triggers are action-limited. Check their source-bound action
  * receipts before any count-sized allocation, also for standalone callers.
  * Match restore independently authenticates these facts from its input basis. */
-function settledSampledStatCount(unit:CombatUnit,d:TriggerDefinition,combatId:string):number {
+function settledSampledStatCount(unit:CombatUnit,d:TargetLimitedTrigger,combatId:string):number {
  const r=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source));
  if(!r)return 0;
  const check=(v:unknown)=>{if(!v)throw new Error('Invalid Match save: sampled stat trigger count');};
@@ -182,7 +186,7 @@ function settledSampledStatCount(unit:CombatUnit,d:TriggerDefinition,combatId:st
   for(const [raw,amount] of Object.entries(unit.triggerLedger?.actionCounts ?? {})) {
    let tuple:unknown;try{tuple=JSON.parse(raw);}catch{check(false);}
    if(!Array.isArray(tuple)||tuple[0]!==key)continue;
-   check(tuple.length===4&&tuple[1]===d.id&&tuple[2]===unit.id&&Number.isSafeInteger(tuple[3])&&tuple[3]>=0
+   check(tuple.length===(d.actionLimitScope==='target'?5:4)&&(d.actionLimitScope!=='target'||typeof tuple[4]==='string'&&tuple[4].length>0)&&tuple[1]===d.id&&tuple[2]===unit.id&&Number.isSafeInteger(tuple[3])&&tuple[3]>=0
     &&Number.isSafeInteger(amount)&&amount>=1&&amount<=d.maxPerAction);
    settled+=amount;
   }
@@ -207,7 +211,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   const m=d.effect.modifier;
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');
   const initial=compiled.survivalTriggers.some(t=>t.event==='combat-start'&&t.condition.kind==='always'&&canonicalSource(t.source)===key);
-  const stackingTrigger=m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'?compiled.eventTriggers?.find(t=>t.effects.some((_,i)=>canonicalSource({...t.source,effectIndex:t.source.effectIndex+i})===key)):undefined;
+  const stackingTrigger=m.value.kind==='constant'&&d.effect.stackPolicy.kind==='add-stacks'?d.trigger:undefined;
   let options:number[];
   if(periodic) {
    // Live tasks disappear on death. Bound the history by the original schedule

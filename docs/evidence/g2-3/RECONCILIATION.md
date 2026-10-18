@@ -194,3 +194,9 @@
 ## PR #170：次级微光复制器 v9
 
 从 `f0f1d99` merge multiplayer `d6156ab`，再 merge 最新 `0719ced`（#162，仅界面及其测试增量），保留 #161 的出生顺序/神器奖励校验与复制器出生时目标、冻结前缀校验。黑市次级微光复制器仅复制≤3费炼金男爵；征服者次级英雄复制器仍复制≤3费英雄，沿用已批准规则，不改数值。规则版本 `s13-g2-3-v9`，内容版本 `s13-14.24b-g2-3-v9`，policy revision `g2-3-lesser-shimmer-duplicator-v9`；schema7/save3/replay3 不变。按 release → herald → inputs → live-reveal 重录，当前 digest 见 `tests/g2-3-content-baseline.json`；旧 g2-augments Herald 原始夹具保持与 multiplayer 逐字节一致。
+
+## PR #164：探索者护臂逐目标计层 v10（2026-10-18）
+
+在已审查的 `f2b7c39`（合入 multiplayer `563a7f9`）上登记规则身份：rules/content 为 `s13-g2-3-v10` / `s13-14.24b-g2-3-v10`，policy revision 为 `g2-4b-bracer-multikill-v10`。仅登记此前用户批准并已实现的护臂规则：每个参与击杀目标各计一次；同一动作击杀多个不同目标逐目标计层，同一目标不重复；亲自击杀与助攻仍使用冻结源既有数值。来源与原文见 [BRACER-MULTIKILL-STACKS](BRACER-MULTIKILL-STACKS.md)。本轮没有再改触发机制或数值。
+
+schema7/save3/replay3、command3 和 NET_PROTOCOL3 不变；v9 及更早规则身份由现有版本/digest 校验隔离，不迁移玩家存档。重录顺序为 release → 当前规则 Herald `--write` → inputs → live-reveal；当前内容摘要和逐文件实测见本轮发布验证报告。历史 `tests/fixtures/g2-augments-herald-raw/` 保持与所合 multiplayer 逐字节一致。
