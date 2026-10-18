@@ -1,0 +1,39 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/s13-p1-dual-wielding.test.ts --reporter=verbose
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+ ✓ |fast| tests/s13-p1-dual-wielding.test.ts > raw role pools are eight actual completed items and all sixty real heroes have explicit roles 13ms
+ × |fast| tests/s13-p1-dual-wielding.test.ts > public anomaly selection grants two role items once, keeps equipment, restores after target sale and rejects altered grant 5661ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/s13-p1-dual-wielding.test.ts > public anomaly selection grants two role items once, keeps equipment, restores after target sale and rejects altered grant
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/s13-p1-dual-wielding.test.ts:24:1
+     22|  expect(expected.every(id=>DUAL_WIELDING_POOLS.APCASTER.includes(id)))…
+     23| });
+     24| it('public anomaly selection grants two role items once, keeps equipme…
+       | ^
+     25|  const trace=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/s1…
+     26|  expect(trace.seed).toBe(23);expect(trace.contentDigest).toBe(CONTENT_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  18:38:03
+   Duration  7.91s (tests 74%, transform 21%, import 4%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
