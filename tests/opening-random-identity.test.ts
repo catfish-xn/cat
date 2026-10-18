@@ -41,8 +41,12 @@ it('binds G2-4b to fresh public rules and preserved G2-3 byte evidence', () => {
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
-  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const)
-    expect(recorded[key]).not.toBe(previous[key]);
+  // User-approved pre-merge integration keeps v10; the content digest must still change.
+  expect(recorded.contentDigest).not.toBe(previous.contentDigest);
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v10');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v10');
+  expect(recorded.rulesVersion).toBe(previous.rulesVersion);
+  expect(recorded.contentVersion).toBe(previous.contentVersion);
   expect(recorded.previousContentDigest).toBe(previous.contentDigest);
   expect(recorded.previousLootReplayDigest).toBe(previous.lootReplayDigest);
   const audit = load('docs/evidence/g2-4b/release-audit.json');
@@ -81,9 +85,11 @@ it('binds G2-4b to fresh public rules and preserved G2-3 byte evidence', () => {
 
 it('rejects each old release identity without migration shortcuts', () => {
   const fresh = createMatch(42);
-  for (const previous of [prior, g23()])
-    for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const)
-      expect(() => restoreMatch({ ...fresh, [key]: previous[key] })).toThrow();
+  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const)
+    expect(() => restoreMatch({ ...fresh, [key]: prior[key] })).toThrow();
+  // G2-3 and this candidate intentionally share v10 strings, never their digest.
+  expect(() => restoreMatch({ ...fresh, contentDigest: g23().contentDigest })).toThrow();
+  expect(restoreMatch({ ...fresh, rulesVersion: g23().rulesVersion, contentVersion: g23().contentVersion })).toEqual(fresh);
 });
 for (const build of ['cannon', 'sniper']) {
   const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
