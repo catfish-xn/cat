@@ -35,6 +35,12 @@ function resolved(id: string, state = fixture(), target = 'lux') {
 const history = (round: number, hpAfter = 100): RoundResult => ({ round, hpAfter } as RoundResult);
 
 const expected: Record<string, Effect[]> = {
+  'blinding-speed':[mech('acquisitionBundle',{enabled:1})],
+  'portable-forge':[mech('acquisitionBundle',{enabled:1})],
+  'radiant-relics':[mech('acquisitionBundle',{enabled:1})],
+  'going-long':[mech('acquisitionGold',{amount:15}),mech('incomePolicy',{interestDisabled:1,interestCap:0,roundXp:4})],
+  'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
+  'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
   'placebo': [speed(100), mech('acquisitionGold', { amount: 8 })],
   'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
@@ -66,8 +72,8 @@ const expected: Record<string, Effect[]> = {
   'climb-the-ladder-ii': [mech('climbLadder', { adBps: 500, abilityPower: 5, armor: 5, magicResist: 5 })],
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
-describe('G2 thirty augments: independent exact source parameters', () => {
-  it('contains exactly the thirty audited definitions', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(Object.keys(expected).sort()));
+describe('G2 plus P1 augments: independent exact source parameters', () => {
+  it('contains exactly the existing thirty and six implemented P1 definitions', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(Object.keys(expected).sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

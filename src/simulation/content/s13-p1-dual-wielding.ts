@@ -2,7 +2,7 @@ import {freezeContent} from './freeze';
 /** 14.24 raw CHARACTERROLE pools and champion roles. Using these pools for Dual Wielding,
  * two distinct uniform draws, inventory placement, and roleless summons/legacy assignments are project conventions. */
 export const DUAL_WIELDING_POOLS:Readonly<Record<string,readonly string[]>>=freezeContent({
-  "ADCASTERMana": [
+  "ADCASTERMANA": [
     "blue-buff",
     "shojin",
     "adaptive-helm",
@@ -32,7 +32,7 @@ export const DUAL_WIELDING_POOLS:Readonly<Record<string,readonly string[]>>=free
     "guardbreaker",
     "nashors-tooth"
   ],
-  "APCASTERHighMana": [
+  "APCASTERHIGHMANA": [
     "shojin",
     "archangel",
     "deathcap",
@@ -42,7 +42,7 @@ export const DUAL_WIELDING_POOLS:Readonly<Record<string,readonly string[]>>=free
     "nashors-tooth",
     "adaptive-helm"
   ],
-  "ADCARRYCrit": [
+  "ADCARRYCRIT": [
     "infinity-edge",
     "last-whisper",
     "guardbreaker",
@@ -62,7 +62,7 @@ export const DUAL_WIELDING_POOLS:Readonly<Record<string,readonly string[]>>=free
     "shojin",
     "adaptive-helm"
   ],
-  "APCARRYHighMana": [
+  "APCARRYHIGHMANA": [
     "rageblade",
     "jeweled-gauntlet",
     "archangel",

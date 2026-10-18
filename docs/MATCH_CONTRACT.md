@@ -560,3 +560,16 @@ position disagreement. UI/server command dispatch adapters are not implemented.
 - 普通36件成装重铸器继续拒绝辅助装输入，失败保持原state、资源、事件、RNG。复用G24-FORGE-01…08；界面约定名“辅助装锻造器”，联机和界面仍由Claude接。
 
 详见 [预演记录](evidence/g2-4/G2-4B-SUPPORT-FORGE-TRIAL.md)。
+
+## S13 P1 增补（部分交付，版本在集成时统一升）
+
+本分支只增加六个强化和双刀流；余项未完成且不进入候选池，见
+[evidence/s13-p1/RECONCILIATION.md](evidence/s13-p1/RECONCILIATION.md)。
+
+- `readAugmentIncome(augments)` 纯查询返回 `{interestCap,roundXp,healthPerInterest}`；无利息优先于提高上限，提高上限取最大。遥遥领先选择一次15G，下一轮开始4XP，结算仍只发原自然XP，终局不提前支付未来轮次。
+- `investmentGrowth(augments,roundResults)` 只累计获取后已结算的利息乘对应生命系数。I与II共用一份真实累计生命，不重复编译两次。
+- `grantAugmentAcquisition(state,ownedAugment)` 返回状态与真实授予事件；重复调用固定收据不重复授予。便携4选1、光明5选1，经现有真实forge选择路由。未解决forge阻塞开战，G23既有待选优先，解决后再开forge。
+- `augmentForgeOffers(seed,ownedAugment)` 使用独立显式派生LCG，不消费原三字强化选择流。池和抽样为项目既定有限目录约定，无新增官方分层概率。
+- `grantAnomalyAcquisition(state)` 对双刀流授予两个真实成装；按原始目标角色固定候选、独立拒绝采样且无放回。项目约定：物品入库存、不改原装备。完整来源、额外legacy/召唤物角色约定及恢复边界见对账表。
+- `traceBoundUnitIdentity(originalId,verifiedFacts)` 返回最终幸存者id或售出后的null。调用方必须先认证全部事实；它不独立证明击杀或增长，也不增加跨调用缓存。
+- 失败命令保留原对象、ID、事件、金币与RNG；获取收据和资源出生同事务。新目录改变CONTENT digest，规则/内容版本仍按用户要求由Claude集成时统一升级。
