@@ -4,6 +4,8 @@ import {createMatch,equipItem,startMatchCombat,stepMatch,readItemSummons,moveIte
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
+import {voidspawnStage} from '../src/simulation/g2-4b-voidspawn';
+import {ROUND_CATALOG} from '../src/simulation/content/round-catalog';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import type {MatchState} from '../src/simulation/match-types';
 
@@ -77,4 +79,14 @@ it('freezes both seats placement and mirrors only the opposing coordinates',()=>
  expect(combat.units.find(u=>u.team==='enemy'&&u.itemSummon?.kind==='voidspawn')!.cell).toEqual({col:0,row:0});
  const forged=structuredClone(a);Object.assign(forged,{itemSummonPositions:{'item-999':{col:0,row:7}}});
  expect(()=>restorePlayerBattleSnapshot(forged)).toThrow();
+});
+
+it('uses the final stage row on multiplayer overtime ordinals instead of throwing',()=>{
+ const last=ROUND_CATALOG.at(-1)!,state=equipped();
+ expect(voidspawnStage(ROUND_CATALOG[0].ordinal)).toEqual(voidspawnStage(getCatalogRoundById('2-1').ordinal));
+ expect(voidspawnStage(last.ordinal+1)).toEqual({health:3000,attack:180,stars:3});
+ // Overtime is PvP-only: no catalog PvE enemies stand on the preparation board.
+ const pvp={...state,round:last.ordinal+1,preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.team==='player')}};
+ const summon=buildStrategySnapshot(pvp).units.find(u=>u.itemSummon?.kind==='voidspawn')!;
+ expect(summon.itemSummon!.unit.starLevel).toBe(3);expect(summon.stats.health).toBe(3000);expect(summon.stats.attack).toBe(180);
 });
