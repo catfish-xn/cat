@@ -21,6 +21,8 @@ const supportIds=[
  'TFT_Item_ZekesHerald','TFT_Item_Chalice','TFT4_Item_OrnnRanduinsSanctum','TFT_Item_LocketOfTheIronSolari',
  'TFT4_Item_OrnnObsidianCleaver','TFT_Item_AegisOfTheLegion','TFT_Item_RadiantVirtue','TFT7_Item_ShimmerscaleHeartOfGold',
  'TFT_Item_BansheesVeil','TFT_Item_EternalFlame','TFT_Item_SupportKnightsVow','TFT_Item_Moonstone','TFT_Item_Spite',
+ // Unstable chest (#153) and the G2-4b mechanism supports (#150) complete the 17-identity source pool.
+ 'TFT_Item_UnstableTreasureChest','TFT5_Item_ZzRotPortalRadiant','TFT_Item_Shroud','TFT_Item_Zephyr',
 ].sort();
 const fixed13=['TFT_Item_ZekesHerald','TFT_Item_LocketOfTheIronSolari','TFT_Item_Chalice'];
 const bundle=(tier:number,id=`g23:conqueror:${tier}`)=>{
@@ -28,10 +30,10 @@ const bundle=(tier:number,id=`g23:conqueror:${tier}`)=>{
  return {id,round:8,source:'conqueror' as const,tier,reward};
 };
 
-it('admits exactly 13 supports, retains all 17 source IDs and includes the support boundary in the digest input',()=>{
+it('admits all 17 executable supports against the 17 source IDs and includes the support boundary in the digest input',()=>{
  expect(resolveG24ForgePool('TFT_ArmoryKeySupport')).toEqual(supportIds);
  expect(G24_FORGE_POLICY.supportSource).toHaveLength(17);
- expect(G24_FORGE_POLICY.supportExclusions).toEqual(['TFT5_Item_ZzRotPortalRadiant','TFT_Item_Shroud','TFT_Item_UnstableTreasureChest','TFT_Item_Zephyr']);
+ expect(G24_FORGE_POLICY.supportExclusions).toEqual([]);
  expect([...supportIds,...G24_FORGE_POLICY.supportExclusions].sort()).toEqual([...G24_FORGE_POLICY.supportSource].sort());
  expect(Object.isFrozen(G24_FORGE_POOLS.TFT_ArmoryKeySupport)).toBe(true);
  expect(JSON.stringify(RULES_GAP_MANIFEST)).toContain(JSON.stringify(G24_FORGE_POLICY));
@@ -55,7 +57,7 @@ it('takes tier 11/13 rewards and thresholds directly from raw, with fixed suppor
 
 it('offers four distinct uniformly sampled supports; previous offers and owned items are not exclusions',()=>{
  // Independent Python uint32 oracle for seed42, tier11 atom0, sorted list and shrinking-pool selection.
- expect(g23RewardAtoms(bundle(11),42)[0].options).toEqual(['TFT_Item_SupportKnightsVow','TFT_Item_Moonstone','TFT_Item_AegisOfTheLegion','TFT_Item_ZekesHerald']);
+ expect(g23RewardAtoms(bundle(11),42)[0].options).toEqual(['TFT_Item_ZekesHerald','TFT_Item_RadiantVirtue','TFT_Item_AegisOfTheLegion','TFT_Item_Zephyr']);
  let overlap=false;
  for(let seed=0;seed<64;seed++){
   const first=g23RewardAtoms(bundle(11),seed)[0].options;
@@ -164,6 +166,7 @@ it('full single-player save restores pending/manual support choices and equipped
 it('rejects a configured support admission pool smaller than four instead of issuing a partial offer',async()=>{
  vi.resetModules();
  vi.doMock('../src/simulation/content/g2-4-support-items',()=>({G24_SUPPORT_ITEMS:Object.fromEntries(supportIds.slice(0,3).map(id=>[id,{}]))}));
+ vi.doMock('../src/simulation/content/g2-4b-mechanism-items',()=>({G24_MECHANISM_ITEMS:{}}));
  try{await expect(import('../src/simulation/content/g2-4-forges')).rejects.toThrow('Invalid G24 forge pool');}
- finally{vi.doUnmock('../src/simulation/content/g2-4-support-items');vi.resetModules();}
+ finally{vi.doUnmock('../src/simulation/content/g2-4-support-items');vi.doUnmock('../src/simulation/content/g2-4b-mechanism-items');vi.resetModules();}
 });

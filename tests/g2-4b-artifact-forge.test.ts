@@ -24,12 +24,15 @@ const artifactIds=[
  'TFT_Item_Artifact_LudensTempest','TFT_Item_Artifact_SilvermereDawn','TFT_Item_Artifact_ProwlersClaw',
  'TFT_Item_Artifact_BlightingJewel','TFT_Item_Artifact_WitsEnd','TFT_Item_Artifact_LichBane',
  'TFT_Item_Artifact_LightshieldCrest','TFT_Item_Artifact_SeekersArmguard',
+ // G2-4b mechanism artifacts (#150) complete the 29-identity source pool.
+ 'TFT4_Item_OrnnDeathsDefiance','TFT4_Item_OrnnTheCollector','TFT9_Item_OrnnTrickstersGlass','TFT7_Item_ShimmerscaleGamblersBlade',
+ 'TFT7_Item_ShimmerscaleMogulsMail','TFT_Item_Artifact_Fishbones','TFT_Item_Artifact_SuspiciousTrenchCoat','TFT_Item_Artifact_SpectralCutlass',
 ].sort();
 
-it('pins the approved 21 IDs separately from the intact 29 source identities and hashes the acquisition policy',()=>{
+it('pins all 29 executable IDs against the intact 29 source identities and hashes the acquisition policy',()=>{
  expect(G24_FORGE_POOLS.TFT_ArmoryKeyOrnn).toEqual(artifactIds);
  expect(G24_FORGE_POLICY.artifactSource).toHaveLength(29);
- expect(G24_FORGE_POLICY.artifactExclusions).toHaveLength(8);
+ expect(G24_FORGE_POLICY.artifactExclusions).toEqual([]);
  expect([...artifactIds,...G24_FORGE_POLICY.artifactExclusions].sort()).toEqual([...G24_FORGE_POLICY.artifactSource].sort());
  expect(G24_FORGE_POOLS.TFT_ArmoryKeyCompleted).toHaveLength(36);
  expect(Object.isFrozen(G24_FORGE_POOLS.TFT_ArmoryKeyOrnn)).toBe(true);
@@ -53,7 +56,7 @@ it('offers four distinct reproducible artifacts and permits overlap between inde
  const first=g23RewardAtoms(bundle(10),42)[0],again=g23RewardAtoms(bundle(10),42)[0];
  expect(again).toEqual(first);
  // Independent uint32 integer oracle (Python), pinned to seed42 and tier10 atom0.
- expect(first.options).toEqual(['TFT_Item_Artifact_LightshieldCrest', 'TFT9_Item_OrnnHullbreaker', 'TFT_Item_Artifact_SeekersArmguard', 'TFT_Item_Artifact_UnendingDespair']);
+ expect(first.options).toEqual(['TFT_Item_Artifact_InnervatingLocket', 'TFT9_Item_OrnnHorizonFocus', 'TFT_Item_Artifact_SilvermereDawn', 'TFT_Item_Artifact_TalismanOfAscension']);
  for(let seed=0;seed<32;seed++){
   const options=g23RewardAtoms(bundle(10),seed)[0].options;
   expect(options).toHaveLength(4);expect(new Set(options).size).toBe(4);

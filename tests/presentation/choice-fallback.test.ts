@@ -3,6 +3,7 @@ import { genericOffer, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../.
 import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
+import { G24_ARTIFACT_ITEMS } from '../../src/simulation/content/g2-4-artifacts';
 
 describe('generic mechanic choice display', () => {
   it('titles a completed-item forge popup with its 14.24 name and offer count and names ordinary completed items in Chinese', () => {
@@ -24,7 +25,9 @@ describe('generic mechanic choice display', () => {
     for (const id of G24_FORGE_POOLS.TFT_ArmoryKeyOrnn) {
       const offer = genericOffer(id, extras);
       expect(offer.name).toBe(itemDisplayName(id));
-      expect(offer.description).toContain('神器：');
+      // The 21 G2-4b artifacts carry a '神器：' line; the 8 mechanism artifacts (#150) carry their own effect text.
+      expect(offer.description).not.toBe('');
+      if (Object.hasOwn(G24_ARTIFACT_ITEMS, id)) expect(offer.description).toContain('神器：');
     }
     // An artifact mixed with an ordinary completed item belongs to neither pool and keeps the plain name.
     expect(readChoiceExtras({ kind: 'forge', offers: [offers[0], 'gunblade'] }).title).toBe('锻造器 · 2 选 1');
