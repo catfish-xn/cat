@@ -1,5 +1,5 @@
 {
-  "baseCommit": "0ad9ed77ea7ed5f5728c2c7ae31bf36cfa10f019",
+  "baseCommit": "b46d4f2d04e9b1752d6b27864e03ceeb95359a86",
   "sourceDigests": {
     "scripts/g2-4b-fixture-audit.cjs": "d450e2434e6a707afafea87e968dbf466cfd707f3e337eec69211cd0414367ae",
     "scripts/generate-m5-route.cjs": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
@@ -8,7 +8,7 @@
     "scripts/record-g2-4b-inputs.cjs": "e8ca736c7db5ee0db5b55f1db9e09b073bc2233e4e26637417166fbfcbfeb6c5",
     "scripts/record-g2-4b-live-reveal.cjs": "2a4fecd05ab0cefb3271673a1bc763be7df22a9a9006471542b4c9b9c71dcd65",
     "scripts/record-g2-4b-release.cjs": "9264517ab24512fe36329508c5c57661b941df10ca4002795107a75b8eb3f4fd",
-    "src/server-entry/index.ts": "04c0ed9b7bc57e6c68ebd105ea4fdbb46f2ff0b1a98d942b0b1f22e7dbc4e001",
+    "src/server-entry/index.ts": "12574f5f339b6cf9cff71fcc72572761c5a8a7e27182fce6b251c1eee8140f6c",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "c903ed0f463a1cf5d3fc382c069e42da19f27e71ed969e4bb5f813b7d8b0c77d",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
@@ -22,7 +22,7 @@
     "src/simulation/bot/types.ts": "9aa6dffaf870c09aeb719d727fca86ad5bb860a65dba7d6181366bd09975234b",
     "src/simulation/carousel-policy.ts": "28f1b5912b2cc7590d974d68ae773b6702d8d855b438527c5264b5aa62730d5f",
     "src/simulation/carousel-types.ts": "b37b74c206373cd3f2e5760867f3d722208fa10fb5bab49a4345982e83ce804e",
-    "src/simulation/carousel-units.ts": "e3a6d05a22b8fc28323be5fb4fcb4d06d0c3ada077ecbf41d65b2b341fc6707b",
+    "src/simulation/carousel-units.ts": "867a855aa54f89941c0896f55594121d8a23ac6210b771279c2ebf40088f4e20",
     "src/simulation/carousel.ts": "65ba9116eeb99248e78d489758ca306ee9bcc129daffbcada2bfb417f9db0d6d",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "6c2626a28ea30605c3e008d446a3ae34b8b45f1a30861d150cdf1d7e403a45dd",
@@ -173,7 +173,7 @@
     "src/simulation/g2-4b-item-gold.ts": "307a9663191a882777d97bb6959624b156b4552fcdde713ce543cf00000b873e",
     "src/simulation/g2-4b-item-kernel.ts": "a7d2bcbf394fe7ac753cd4424c575cad216b23aad7f115c36e7bcfafea4448e2",
     "src/simulation/g2-4b-summons.ts": "a66be4970a15eb54e40f0b42fdaab5761ca5a5050dd7dee9d807b707baffebec",
-    "src/simulation/g2-4b-voidspawn.ts": "8f0ea4d19588c2d4e1c0690891ebceeebe2323a6927857a22d972ea02bb5a945",
+    "src/simulation/g2-4b-voidspawn.ts": "d7ab151527e615a9c45083a9b44fe3c5ff5856e3d22c0d60e396237a6b89c856",
     "src/simulation/game.ts": "24519b5ecfda1d09713acbb3d0dc0ffb31466c19ece07db7b76e7579b32a5156",
     "src/simulation/immutable-json.ts": "01f0ab2a0ed8be03f74bb3d220a0dcb108eb602bd011db87110689922a2a2416",
     "src/simulation/input-assets.ts": "24222e36d242d152c649d02c40c715ce76b819bc12afb9de32636d71666970e2",
@@ -220,7 +220,7 @@
     "src/simulation/m8/version.ts": "64a127f52272ed112d995ffcb317d8d5f03e5e4754e216454560712a7af06031",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
-    "src/simulation/match.ts": "860fa73976d172bf45291f46b852414f18acea9262a7cb2c31d487bc22edcb2c",
+    "src/simulation/match.ts": "7a38e691a33b623359c4f3351cd19b7cffcf0b46aaed5e59f14efd06c1e99458",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
@@ -242,7 +242,7 @@
     "src/simulation/round-selectors.ts": "927b08f1f456bc2400e9674c80349abf2e8b3ffced7817035702d6474e92fbd8",
     "src/simulation/round-settlement.ts": "b03d8f0c0e94b87735dc688d27ca6587ed99af41a1d633c1c50ea201707c6236",
     "src/simulation/s13-rules.ts": "e8a4c70e9b01ad88fdd70af35fb627b1d7b2dfe976d231f8d57b8d050a672e4c",
-    "src/simulation/seat-mechanics/choices.ts": "05d069bb4688b36aa8b2482715f9c9396988564b8543f65aab8e8e2833df5837",
+    "src/simulation/seat-mechanics/choices.ts": "4a39be6af333edcfd7f747940540b74e04b3e2727b3d2c93e278b68cc39a1e74",
     "src/simulation/seat-mechanics/combat-events.ts": "68016312cbfd01dbc87d2819a99ff6acc57f732bb6763923acf1993e27ffe632",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
     "src/simulation/seat-mechanics/grants.ts": "a55d5e158d9a27343df9812bee996634f2f7f0fbe449ee81639fc575319b733b",
@@ -258,7 +258,7 @@
     "src/simulation/shared-pool.ts": "0e6e2947fb10b638125f80bb6a493d5c770d71ffaa460a5b8a0e94ca41756d17",
     "src/simulation/shop.ts": "60ba064ab8c2a1edab5ce957fc63bdc10e294ca27cdd62d2e6e78c2340314f45",
     "src/simulation/strategy-g2-2.ts": "a265b54894411142e0230795bcea1bf76dc8c28bdbfc8b8fd4a1f1d18a728b39",
-    "src/simulation/strategy-snapshot.ts": "df622a5f9bdd39c34da1075fda4a267056f8cae6f2749a2d29ad4b5496be60f4",
+    "src/simulation/strategy-snapshot.ts": "1e1df36e2556faa341a18555e3a9046e0ab1bb0207ea758dfd9f80e77060208c",
     "src/simulation/strategy-types.ts": "4b72b103d764fe27186bc237dfe64f44795d5f8137dfa4c8b1d03b551075cf49",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
@@ -327,11 +327,11 @@
       "firstDifferentByte": null
     },
     "tests/fixtures/g2-4b-herald-raw/manifest.json": {
-      "previousBytes": 30975,
+      "previousBytes": 29874,
       "currentBytes": 30976,
-      "previousSha256": "ffb7032f911929616677ee9804eb5150a5ec942231d7e785c3830d0973c8b8f5",
-      "currentSha256": "9af30e2a5e9eebaa5294881eef50b48feaddc2732092cb65ea49e6f8502ad056",
-      "firstDifferentByte": 1648
+      "previousSha256": "f76d874a352a1b156ff97dbc7e59f64c6e8f1865656328de3b6fc633ebd6fd72",
+      "currentSha256": "f4c756cec6efa019fb2ba6c5faec01ace060ebaf79af743ad71efd5595ae8b0d",
+      "firstDifferentByte": 169
     },
     "tests/fixtures/g2-4b-herald-raw/trajectory.json": {
       "previousBytes": 205305,
