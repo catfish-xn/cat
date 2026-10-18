@@ -1,3 +1,4 @@
+import {scaleItemSummonHp} from './g2-4b-summons';
 import {hexDistance} from './board';
 import type { CombatUnit,G23State,CombatOrigin } from './combat-types';
 import type { AbilityContext,S13Packet } from './combat-s13-abilities';
@@ -77,7 +78,7 @@ export function settleG23ExperimentKills(ctx:AbilityContext,killed:ReadonlyMap<s
   if(!u||!m?.values.mundo||g23State(u).experimentTakedowns.includes(id))continue;
   g23State(u).experimentTakedowns.push(id);
   const basis=u.maxHpBasis??{base:u.maxHp,flat:0,bps:0,bonusBps:0},updated={...basis,flat:basis.flat+m.values.mundo};
-  const afterMax=Math.floor((updated.base+updated.flat)*(10000+updated.bps+updated.bonusBps)/10000),beforeMax=u.maxHp,beforeHp=u.hp;
+  const afterMax=scaleItemSummonHp(u,Math.floor((updated.base+updated.flat)*(10000+updated.bps+updated.bonusBps)/10000)),beforeMax=u.maxHp,beforeHp=u.hp;
   u.maxHpBasis=updated;u.maxHp=afterMax;u.hp=Math.min(afterMax,beforeHp+afterMax-beforeMax);
   ctx.events.push({type:'maxHpChanged',tick:ctx.tick,unitId:u.id,source:asSource(m.source),beforeMax,afterMax,beforeHp,afterHp:u.hp,countsAsHeal:false});
  }

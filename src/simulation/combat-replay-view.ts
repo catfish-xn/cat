@@ -14,6 +14,7 @@ const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'm
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
+    ...(unit.itemBanish?{banished:state.tick<unit.itemBanish.untilTick}:{}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
 export function toCombatViewState(state: CombatState) {

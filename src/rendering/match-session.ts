@@ -5,11 +5,14 @@ import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
   combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, setShopLock,
+  moveItemSummon, readItemSummons,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { ConsumableTarget } from '../simulation/consumable-types';
 import type { SessionChange } from '../m6/contracts';
+import type { HexCell } from '../simulation/board';
+import type { ItemSummonView } from '../server/protocol';
 
 /** Frame time belongs to rendering. Every game rule and transition belongs to Match. */
 export class MatchSession {
@@ -93,6 +96,20 @@ export class MatchSession {
   choose(choiceId: string, generation: number, definitionId: string) { return this.paused ? this.blocked() : this.commit(selectChoice(this.matchState, choiceId, generation, definitionId)); }
   anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.paused ? this.blocked() : this.commit(selectAnomalyTarget(this.matchState, choiceId, generation, unitId)); }
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }
+  /** G2-4b: move the preparation summon of one item instance (兹若特传送门); the rules check phase, ownership and the cell. */
+  moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.paused ? this.blocked() : this.commit(moveItemSummon(this.matchState, itemInstanceId, cell)); }
+  private summonCache: { readonly state: MatchState; readonly summons: readonly ItemSummonView[] } | null = null;
+  /**
+   * G2-4b: my movable preparation summons where the rules place them now (empty outside preparation). Offline the rules'
+   * `readItemSummons` of my state, in the same fields the server sends online (RemoteSession reads its push instead).
+   */
+  get itemSummons(): readonly ItemSummonView[] {
+    const state = this.matchState;
+    if (this.summonCache?.state !== state) this.summonCache = { state, summons: state.phase !== 'preparation' ? [] : readItemSummons(state)
+      .filter(origin => origin.unit.team === 'player')
+      .map(origin => ({ kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId, unit: structuredClone(origin.unit) })) };
+    return this.summonCache.summons;
+  }
 
   advance(delta: number): readonly LedgerCombatEvent[] {
     if (this.disposed || this.paused || this.phase !== 'combat' || !Number.isFinite(delta) || delta < 0) return [];

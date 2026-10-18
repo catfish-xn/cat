@@ -1,4 +1,5 @@
 import type { TargetLimitedTrigger } from './triggers';
+import {scaleItemSummonHp} from '../g2-4b-summons';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
@@ -119,7 +120,7 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
  const rebelBonus=unit.g22?.rebelTriggered?(unit.mechanics??[]).find(m=>m.mechanic==='rebel')?.values.bonusHpBps??0:0;
  if(!expectedBonuses.has(basis.bonusBps-rebelBonus))throw new Error('Invalid Match save: item max HP consumption');
  const maximum=resolveStat('maxHp',basis.base,[{stat:'maxHp',unit:'flat',value:{kind:'constant',amount:basis.flat},condition:{kind:'always'},damageFilter:null},{stat:'maxHp',unit:'bps',value:{kind:'constant',amount:basis.bps+basis.bonusBps},condition:{kind:'always'},damageFilter:null}],{holder:unit});
- if(unit.maxHp!==maximum)throw new Error('Invalid Match save: current max HP');
+ if(unit.maxHp!==scaleItemSummonHp(unit,maximum))throw new Error('Invalid Match save: current max HP');
 }
 export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<number> {
  const basis=unit.maxHpBasis!;let bonuses=new Set([0]);const seen=new Set<string>();
@@ -138,7 +139,11 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  // G2-4b: a grant after `at` was not yet in the basis; one on that very tick may or may not precede the sample.
  const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat,bps:basis.bps-all.bps}];
  for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
- return new Set(bases.flatMap(b=>[...bonuses].map(n=>Math.floor((basis.base+b.flat)*(10000+b.bps+n)/10000))));
+ const hits=unit.itemMogulHits??[],healthPerStack=unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0;
+ const before=hits.filter(h=>h.tick<at).length,through=hits.filter(h=>h.tick<=at).length;
+ // Combine grant timing with per-packet Mogul growth; preserve final rounding and summon scaling.
+ const offsets=Array.from({length:through-before+1},(_,i)=>(hits.length-before-i)*healthPerStack);
+ return new Set(bases.flatMap(b=>[...bonuses].flatMap(n=>offsets.map(offset=>scaleItemSummonHp(unit,Math.floor((basis.base+b.flat-offset)*(10000+b.bps+n)/10000))))));
 }
 /** The executor projects immediate, uncapped self AP stacks into the legacy
  * runtime rather than status contributions. Current growth must match receipts
@@ -193,6 +198,7 @@ function settledSampledStatCount(unit:CombatUnit,d:TargetLimitedTrigger,combatId
   check(settled===r.triggerCount);
  }
  return r.triggerCount;
+
 }
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */

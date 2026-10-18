@@ -1,3 +1,7 @@
+import { G23_UNITS } from '../src/simulation/content/g2-3-units';
+import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
+import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
+import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatMechanic, type CombatOrigin, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -40,7 +44,10 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all admitted abilities as integer-only isolated snapshots', () => {
-    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(66);
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS};
+    const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
+    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
+    for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
     for (const id of Object.keys(S13_ABILITY_DATA)) for (const star of [1, 2, 3] as const) {
       const ability = resolveAbility(id, star);
       expect(ability.kind).toBe('s13');

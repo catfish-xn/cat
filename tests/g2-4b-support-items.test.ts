@@ -8,6 +8,7 @@ import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateItemProgram } from '../src/simulation/m8/item-program';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { G24_SUPPORT_DECLARATIONS, G24_SUPPORT_ITEMS } from '../src/simulation/content/g2-4-support-items';
+import { G24_MECHANISM_ITEMS } from '../src/simulation/content/g2-4b-mechanism-items';
 import { G24_SUPPORT_ITEM_SOURCE } from '../src/simulation/content/g2-4-support-item-source';
 import { G23_SPECIAL_ITEM_POOLS } from '../src/simulation/content/g2-3-special-item-source';
 import { inSupportArea, isSupportAuraInstance } from '../src/simulation/g2-4-support';
@@ -40,7 +41,8 @@ describe('G2-4b support item content', () => {
   it('registers the fourteen-minus-deferred support items with their source health and valid programs', () => {
     expect(Object.keys(G24_SUPPORT_ITEM_SOURCE).sort()).toEqual([...G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS].sort());
     expect(Object.keys(G24_SUPPORT_ITEMS)).toHaveLength(14);
-    for (const id of DEFERRED) { expect(ITEM_DEFINITIONS[id]).toBeUndefined(); expect(G24_SUPPORT_DECLARATIONS[id]).toBeUndefined(); }
+    for (const id of DEFERRED) { expect(G24_SUPPORT_ITEMS[id]).toBeUndefined(); expect(G24_SUPPORT_DECLARATIONS[id]).toBeUndefined(); expect(G24_MECHANISM_ITEMS[id]).toBeDefined(); expect(ITEM_DEFINITIONS[id]).toBe(G24_MECHANISM_ITEMS[id]); }
+    expect(Object.keys(G24_SUPPORT_ITEMS).filter(id => Object.hasOwn(G24_MECHANISM_ITEMS,id))).toEqual([]);
     for (const [id, item] of Object.entries(G24_SUPPORT_ITEMS)) {
       expect(ITEM_DEFINITIONS[id]).toBe(item);
       expect(item.effects).toEqual([{ kind: 'statFlat', stat: 'maxHp', amount: G24_SUPPORT_ITEM_SOURCE[id as keyof typeof G24_SUPPORT_ITEM_SOURCE].values.Health }]);

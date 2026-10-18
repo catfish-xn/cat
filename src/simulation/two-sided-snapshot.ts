@@ -1,3 +1,4 @@
+import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
 import { validateG23Progress } from './g2-3-match-progress';
 import { canonicalContent, CONTENT_DIGEST } from './content';
@@ -40,11 +41,14 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     if (value.version !== PLAYER_BATTLE_SNAPSHOT_VERSION) throw new BattleValidationError('snapshot-version');
     if (value.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
     const s = value as unknown as PlayerBattleSnapshot;
+    if(s.itemSummonPositions)validateItemSummonPositions(s.itemSummonPositions);
+    if(s.bankGold!==undefined)integer(s.bankGold);
     if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
     if(s.g23)validateG23Progress(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
+    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
@@ -88,7 +92,8 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
       && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
-      ...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
+      ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
+      ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
       ...(s.priorPvpWins===undefined?{}:{priorPvpWins:s.priorPvpWins}),
       version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: CONTENT_DIGEST, seatId: s.seatId, roundId: s.roundId, level: s.level,
       units: s.units.map(u => ({ id: u.id, definitionId: u.definitionId, team: 'player', starLevel: u.starLevel,
@@ -122,7 +127,10 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
   const wins = priorPvpWins(state.roundResults, state.round);
+  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   return restorePlayerBattleSnapshot({
+    ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
+    ...(state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),

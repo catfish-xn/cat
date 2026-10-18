@@ -953,3 +953,27 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 领域分支codex/g2-4b-artifact-forge基于#147 d3112d6。第10/14档自动产生通用forge窗口，4个offers是神器definitionId，source为conqueror，超时项为offers[0]，选择/收据/私有投影沿用既有接口。按物品注册表和神器ID集合区分神器标题，不依赖kind=completed或字符串前后缀猜类别。展示需求仅为四件物品和说明、当前候选与超时项；布局沿用现有通用弹窗。
 
 辅助锻造器和第11/13档尚未开放，等待#149与后续领域批。源归档确有TFT_ArmoryKeySupport及“辅助装锻造器”文本，请后续修正choice-fallback中“14.24 has no support anvil”的断言；继续采用用户指定名称。领域合同见MATCH_CONTRACT的G2-4B段，不在服务器/客户端重算奖励或候选池。本批未做联机UI验收。
+
+
+### G2-4b WIP — Zephyr combat presence (Codex data contract)
+
+`toCombatViewState` / compact replay units expose optional `banished:boolean`.
+Absent means ordinary presence. `true` means the unit is alive but temporarily
+outside combat; `false` marks its return. Combat frames already carry this
+field as ordinary unitUpdated changes. Claude's display adapter should consume
+it without changing HP, death, targeting, or economy. Acceptance: tick0–99
+shows the temporary absence; tick100 returns at the authoritative cell; no death
+or new inventory unit is inferred. Codex has not changed UI/server files.
+
+### G2-4b WIP — movable preparation Voidspawn (domain API ready)
+
+`simulation/match` exports `readItemSummons(state)` and
+`moveItemSummon(state,itemInstanceId,cell)`. Read returns derived origin records
+with the owning item/unit and projected Unit location. Use this for preparation
+summon presence; it is not an inventory unit and takes no population. Movement
+returns the standard MatchCommandResult and is locked with the combat roster.
+The same item retains its chosen cell across rounds/save; stage changes update
+combat stats. Claude needs to wire presentation and server-entry/command dispatch
+without computing stage values, creating assets or changing economy. Acceptance:
+move during preparation, freeze for battle, restore the position, mirror seat B
+once, reject movement while roster locked. Codex changed no UI/server files.

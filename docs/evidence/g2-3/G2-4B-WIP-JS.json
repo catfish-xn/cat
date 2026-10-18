@@ -1,0 +1,17 @@
+{
+  "status": "WIP-not-final-PR-head",
+  "method": "scripts/m7-budget.cjs jsGzip: sum assets/*.js gzip level 9; sizes only, not interaction performance",
+  "baselineCommit": "15313a75c6e74beec739fe52a2875c104c55eae3",
+  "branchBaseCommit": "0bc011fa1c3a2b4947c86b24c4367a90268cc10d",
+  "jsGzipBytes": {
+    "m7": 424763,
+    "branchBase": 550288,
+    "current": 560695
+  },
+  "jsRatio": 1.3200184573515112,
+  "branchDeltaRatio": 1.0189119152153054,
+  "jsBudget": 1.5,
+  "jsSizeWithinBudget": true,
+  "interactionMeasured": false,
+  "measuredCodeHead": "930a821239c8f21985002bf291df0b018e490c96"
+}
