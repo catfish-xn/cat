@@ -25,7 +25,7 @@ export function g23AnomalyProgram(id:string,maxMana:number):ItemProgram{
     case 'eagle-eye':return {modifiers:[modifier('range',v.BonusRange,'hexes')],triggers:[trigger({id:'stationary',event:'counter-updated',effects:[stack(modifier('attackDamage',b('BonusAD'),'bps'))]})]};
     case 'slime-time':return {periodic:[periodic(Math.round(v.Period*20),[proc('magic',{abilityPowerBps:b('APRatio')})],enemies({radius:1,maxTargets:100}))]};
     case 'laser-eyes':return {periodic:[periodic(20,[proc('magic',{abilityPowerBps:b('PercentAP')}),...burn(Math.round(v.BurnDuration*20))],enemies({radius:3,maxTargets:100,geometry:'line-to-primary'}))]};
-    case 'slow-cooker':return {periodic:Array.from({length:11},(_,i)=>periodic(20,[proc('magic',{maxHpBps:b('HealthRatio'),hpBasis:'target'})],enemies({radius:v.HexRadiusBase+i,maxTargets:100}),{startsAtTick:Math.max(20,i*Math.round(v.Period*20)),endsAtTick:(i+1)*Math.round(v.Period*20)}))};
+    case 'slow-cooker':return {periodic:Array.from({length:11},(_,i)=>periodic(20,[proc('magic',{maxHpBps:b('HealthRatio'),hpBasis:'holder'})],enemies({radius:v.HexRadiusBase+i,maxTargets:100}),{startsAtTick:Math.max(20,i*Math.round(v.Period*20)),endsAtTick:(i+1)*Math.round(v.Period*20)}))};
     case 'protective-shielding':{
       const ticks=Math.round(v.ShieldDuration*20),effects=[shield(b('PercentHealth'),ticks)],allies=selector({relation:'ally',excludeSelf:true,maxTargets:v.AlliesNumber,order:'hp-absolute-distance-id'});
       // Shield samples the holder's maximum health for both the holder and allies.
