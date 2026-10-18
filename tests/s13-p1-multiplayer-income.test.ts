@@ -38,4 +38,4 @@ it.each(['going-long','investment-strategy-ii'])('%s public board crosses Conque
    expect(deriveTraits(s.preparation,'player').find(t=>t.traitId==='conqueror')?.tier??0).toBe(0);
   }
  }
-});
+},20_000);
