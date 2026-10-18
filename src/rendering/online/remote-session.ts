@@ -78,6 +78,10 @@ export class RemoteSession extends MatchSession {
   get lastBattle(): FinishedBattle | null { return this.finished.at(-1) ?? null; }
   /** G5: every battle of this match a replay was received for, one per round, oldest first. */
   get battleHistory(): readonly FinishedBattle[] { return this.finished; }
+  /** The battle on the board while it plays back: its replay, how many tick records are shown and the view on screen. */
+  get liveBattle(): { readonly replay: CombatReplay; readonly played: number; readonly view: CombatViewState } | null {
+    return this.replay && this.view && this.playingBack ? { replay: this.replay, played: this.nextTick, view: this.view } : null;
+  }
   /** Forgets the match's battles (back to the lobby). */
   forgetBattles(): void { this.finished = []; }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
