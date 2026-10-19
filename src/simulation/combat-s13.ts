@@ -625,7 +625,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
-  settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive));
+  settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive), state.strategy?.traits);
   const anomalyRemoved=removeBoundAnomalySummons(ctx,fullRoster);
   if(hasBanish&&anomalyRemoved.length)for(let i=fullRoster.length-1;i>=0;i--)if(anomalyRemoved.includes(fullRoster[i].id))fullRoster.splice(i,1);
   if (companionState) {

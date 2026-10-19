@@ -127,3 +127,9 @@ export function isCombatTraitMember(unit: Pick<import('../combat-types').CombatU
   return unit.sources === undefined ? (UNIT_DEFINITIONS[unit.definitionId]?.traits.includes(traitId) ?? false)
     : unit.sources.some(s => s.source.sourceKind==='trait' && s.source.sourceDefinitionId===traitId && s.effect.kind==='mechanic' && s.effect.mechanic==='g23Trait');
 }
+
+/** A frozen row may distinguish copies; definition ids are only the native fallback. */
+export function isTraitSnapshotMember(trait: TraitSnapshot, unit: Pick<Unit,'id'|'definitionId'|'team'>): boolean {
+  return trait.team === unit.team && (trait.memberUnitIds !== undefined
+    ? trait.memberUnitIds.includes(unit.id) : trait.memberDefinitionIds.includes(unit.definitionId));
+}

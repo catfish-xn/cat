@@ -1,3 +1,5 @@
+import { isTraitSnapshotMember } from './traits/effective-membership';
+import type { TraitSnapshot } from './strategy-types';
 import { isAttackProxy } from './anomalies/availability';
 /** Combat-only augment effects. Every grant is a frozen, serializable contribution. */
 import type { CombatMechanic } from './combat-types';
@@ -52,14 +54,20 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
     }
   }
 }
+/** The opening strategy, including inactive rows, owns runtime membership.
+ * Plain standalone callers without a strategy retain native eligibility. */
+export function shareAugmentTraits(a: Pick<S13Unit,'id'|'definitionId'|'team'>,
+  b: Pick<S13Unit,'id'|'definitionId'|'team'>, traits?: readonly TraitSnapshot[]): boolean {
+  return traits !== undefined ? traits.some(t => isTraitSnapshotMember(t,a) && isTraitSnapshotMember(t,b))
+    : (M5_UNIT_DEFINITIONS[a.definitionId]?.traits ?? []).some(t => (M5_UNIT_DEFINITIONS[b.definitionId]?.traits ?? []).includes(t));
+}
 /** All deaths settle first: a simultaneously dying unit cannot receive a reward. */
-export function settleAugmentDeaths(ctx: AbilityContext, dead: readonly S13Unit[]): void {
+export function settleAugmentDeaths(ctx: AbilityContext, dead: readonly S13Unit[], traits?: readonly TraitSnapshot[]): void {
   for (const fallen of [...dead].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) {
     const survivors = ctx.units.filter(u => u.team === fallen.team && u.alive && u.hp > 0 && !isAttackProxy(u));
     for (const m of fallen.mechanics ?? []) {
       if (m.mechanic === 'climbLadder') {
-        const traits = M5_UNIT_DEFINITIONS[fallen.definitionId]?.traits ?? [];
-        for (const survivor of survivors) if ((M5_UNIT_DEFINITIONS[survivor.definitionId]?.traits ?? []).some(t => traits.includes(t)))
+        for (const survivor of survivors) if (shareAugmentTraits(fallen,survivor,traits))
           augmentCombatEffects(m).forEach((effect, index) => grant(ctx, fallen, survivor, m, effect, JSON.stringify(['climbLadder', fallen.id, index])));
       }
       if (m.mechanic === 'inspiringEpitaph') {
