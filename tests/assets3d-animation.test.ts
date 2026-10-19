@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Pure Node build utility.
 import { decodeAnm, quaternion48, sampleSpline } from '../scripts/assets3d/animation.mjs';
+// @ts-expect-error Pure Node build utility.
+import { assertAnimationBudget, MAX_ANIMATION_FRAMES, MAX_ANIMATION_ELEMENTS } from '../scripts/assets3d/animation-budget.mjs';
 function packedQuaternion(q: number[]) {
     const largest = q.map(Math.abs).indexOf(Math.max(...q.map(Math.abs))), sign = q[largest] < 0 ? -1 : 1;
     const parts = q.filter((_, i) => i !== largest).map(n => Math.round((n * sign / Math.SQRT2 + 0.5) * 32767));
@@ -33,12 +35,12 @@ function compressed(flags = 0) {
     b.writeUInt32LE(123, 178);
     return b;
 }
-function uncompressed() {
-    const b = Buffer.alloc(134);
+function uncompressed(frameCount = 2) {
+    const b = Buffer.alloc(122 + frameCount * 6);
     b.write('r3d2anmd');
     b.writeUInt32LE(5, 8);
     b.writeUInt32LE(1, 28);
-    b.writeUInt32LE(2, 32);
+    b.writeUInt32LE(frameCount, 32);
     b.writeFloatLE(0.5, 36);
     b.writeUInt32LE(106, 40);
     b.writeUInt32LE(64, 52);
@@ -51,7 +53,83 @@ function uncompressed() {
     b.writeUInt16LE(2, 128);
     return b;
 }
+function expectBeforeKeyAllocation(bytes: Buffer, reason: string) {
+    const push = Array.prototype.push;
+    let keys = 0, failure: unknown;
+    // Both decoders append {time, value} keys. Stop at the first allocation so a
+    // regression cannot expand a large fixture, and restore before using matchers.
+    Array.prototype.push = function (...items: unknown[]) {
+        for (const item of items)
+            if (item && typeof item === 'object' && 'time' in item && 'value' in item) {
+                keys++;
+                throw new Error('unexpected-key-allocation');
+            }
+        return Reflect.apply(push, this, items);
+    };
+    try { decodeAnm(bytes); }
+    catch (error) { failure = error; }
+    finally { Array.prototype.push = push; }
+    expect(failure).toEqual(new Error(reason));
+    expect(keys).toBe(0);
+}
 describe('raw ANM decoding', () => {
+    it('rejects the 108,128-byte v5 / 18,001-frame regression before creating any key', () => {
+        const b = uncompressed(MAX_ANIMATION_FRAMES + 1);
+        expect(b.length).toBe(108_128);
+        expectBeforeKeyAllocation(b, 'animation-frame-budget');
+    });
+    it('rejects declared v5 TRS components before reading tables or creating any key', () => {
+        const b = uncompressed().subarray(0, 64);
+        b.writeUInt32LE(23, 28);
+        b.writeUInt32LE(MAX_ANIMATION_FRAMES, 32); // 18,000 * 23 * (4 + 3 + 3) > 4M.
+        expectBeforeKeyAllocation(b, 'animation-elements-budget');
+    });
+    it.each([MAX_ANIMATION_FRAMES + 1, 1_000_000_000])('rejects compressed v1 declaring %s sampled frames before any key', frames => {
+        const b = compressed();
+        b.writeFloatLE(frames, 36);
+        b.writeFloatLE(1, 40);
+        expectBeforeKeyAllocation(b, 'animation-frame-budget');
+    });
+    it('preflights compressed control components from the header before reading tables', () => {
+        const b = compressed().subarray(0, 44);
+        b.writeUInt32LE(Math.floor(MAX_ANIMATION_ELEMENTS / 3) + 1, 28);
+        expectBeforeKeyAllocation(b, 'animation-elements-budget');
+    });
+    it('counts compressed quaternion widths before expanding controls', () => {
+        const keyCount = MAX_ANIMATION_ELEMENTS / 4 + 1, b = Buffer.alloc(132 + keyCount * 10);
+        compressed().copy(b, 0, 0, 128);
+        b.writeUInt32LE(keyCount, 28);
+        b.writeUInt32LE(b.length - 16, 124); // Hash table after the controls.
+        // Zero-filled controls are rotation keys: 4M + 4 components, although
+        // the header's minimum of three components per control fits the budget.
+        expectBeforeKeyAllocation(b, 'animation-elements-budget');
+    });
+    it('preflights sampled compressed tracks while preserving sparse track acceptance', () => {
+        const joints = 75, b = Buffer.alloc(128 + joints * 10 + joints * 4);
+        compressed().copy(b, 0, 0, 128);
+        b.writeUInt32LE(joints, 24);
+        b.writeUInt32LE(joints, 28);
+        b.writeFloatLE(MAX_ANIMATION_FRAMES, 36);
+        b.writeFloatLE(1, 40);
+        b.writeUInt32LE(128 + joints * 10 - 12, 124);
+        for (let j = 0; j < joints; j++)
+            b.writeUInt16LE(16384 + j, 128 + j * 10 + 2);
+        // 75 translation tracks * 3 * 18,000 > 4M, even with only 75 keys.
+        expectBeforeKeyAllocation(b, 'animation-elements-budget');
+        b.writeUInt32LE(1, 28);
+        expect(decodeAnm(b).tracks).toHaveLength(1); // One active track fits.
+    });
+    it('accepts the inclusive shared frame and scalar-component limits', () => {
+        expect(() => assertAnimationBudget(MAX_ANIMATION_FRAMES, 0)).not.toThrow();
+        expect(() => assertAnimationBudget(1, MAX_ANIMATION_ELEMENTS)).not.toThrow();
+        expect(() => assertAnimationBudget(1, MAX_ANIMATION_ELEMENTS + 1)).toThrow('animation-elements-budget');
+    });
+    it.each([['r3d2canm', 2], ['r3d2canm', 3], ['r3d2anmd', 3], ['r3d2anmd', 4]] as const)('keeps unsupported %s v%s allocation-free', (magic, version) => {
+        const b = Buffer.alloc(12);
+        b.write(magic);
+        b.writeUInt32LE(version, 8);
+        expectBeforeKeyAllocation(b, `unsupported-anm-decoder:${magic === 'r3d2canm' ? 'compressed' : 'uncompressed'}:${version}`);
+    });
     it('decodes all four omitted quaternion components with unit norm', () => {
         for (const q of [[0.9, 0.1, 0.2, Math.sqrt(0.14)], [0.1, 0.9, 0.2, Math.sqrt(0.14)], [0.1, 0.2, 0.9, Math.sqrt(0.14)], [0.1, 0.2, Math.sqrt(0.14), 0.9]]) {
             const out = quaternion48(packedQuaternion(q), 0);

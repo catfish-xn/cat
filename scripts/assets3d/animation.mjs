@@ -1,4 +1,5 @@
 import { BinaryReader, inspectAnm } from './inspect-source.mjs';
+import { assertAnimationBudget, assertAnimationElements } from './animation-budget.mjs';
 const paths = ['rotation', 'translation', 'scale'];
 export function quaternion48(bytes, offset) {
     new BinaryReader(bytes).range(offset, 6);
@@ -55,6 +56,11 @@ export function decodeAnm(bytes) {
         const duration = r.f32(), fps = r.f32();
         if (duration <= 0 || fps <= 0)
             throw new Error('invalid-anm-timing');
+        const frameCount = Math.round(duration * fps);
+        assertAnimationBudget(frameCount, 0);
+        // Every encoded control has at least three scalar components. Reject an
+        // oversized declaration before even reading its tables or allocating keys.
+        assertAnimationElements(keyCount * 3);
         r.seek(68);
         const bounds = Array.from({ length: 4 }, () => [r.f32(), r.f32(), r.f32()]);
         const keyOffset = r.u32() + 12;
@@ -62,6 +68,23 @@ export function decodeAnm(bytes) {
         const hashOffset = r.u32() + 12;
         r.range(keyOffset, keyCount * 10);
         r.range(hashOffset, jointCount * 4);
+        // Compressed clips may omit TRS tracks. Count their exact widths without
+        // constructing keys, rather than rejecting sparse clips using jointCount * 10.
+        const trackIds = new Set();
+        let sourceComponents = 0, componentsPerFrame = 0;
+        for (let i = 0; i < keyCount; i++) {
+            const id = bytes.readUInt16LE(keyOffset + i * 10 + 2), joint = id & 0x3fff, type = id >>> 14;
+            if (joint >= jointCount || type > 2)
+                throw new Error('invalid-anm-track');
+            const width = type === 0 ? 4 : 3;
+            sourceComponents += width;
+            if (!trackIds.has(id)) {
+                trackIds.add(id);
+                componentsPerFrame += width;
+            }
+        }
+        assertAnimationElements(sourceComponents);
+        assertAnimationBudget(frameCount, componentsPerFrame);
         const hashes = Array.from({ length: jointCount }, (_, i) => bytes.readUInt32LE(hashOffset + i * 4));
         const tracks = new Map();
         for (let i = 0; i < keyCount; i++) {
@@ -90,6 +113,8 @@ export function decodeAnm(bytes) {
         const vectorOffset = r.u32() + 12, rotationOffset = r.u32() + 12, frameOffset = r.u32() + 12;
         if (frameCount < 1 || step <= 0)
             throw new Error('invalid-anm-timing');
+        // v5 expands rotation (4), translation (3) and scale (3) for every joint.
+        assertAnimationBudget(frameCount, jointCount * 10);
         r.range(hashOffset, jointCount * 4);
         r.range(frameOffset, frameCount * jointCount * 6);
         const tracks = [];

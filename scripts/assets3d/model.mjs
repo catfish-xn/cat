@@ -2,13 +2,11 @@ import { Matrix4, Quaternion, Vector3 } from 'three';
 import { BinaryReader, inspectSkn, inspectSkl } from './inspect-source.mjs';
 import { writeGlb, readGlb } from './glb.mjs';
 import { decodeAnm } from './animation.mjs';
+import { assertAnimationBudget, MAX_ACCESSOR_ELEMENTS } from './animation-budget.mjs';
+export { MAX_ANIMATION_FRAMES, MAX_ACCESSOR_ELEMENTS, MAX_ANIMATION_ELEMENTS } from './animation-budget.mjs';
 const mirrorVector = v => [-v[0], v[1], v[2]];
 const mirrorRotation = q => [q[0], -q[1], -q[2], q[3]];
 const quat = q => new Quaternion(...q).normalize().toArray();
-// Offline conversion budgets; declarations are checked before sampling/allocation.
-export const MAX_ANIMATION_FRAMES = 18_000;
-export const MAX_ACCESSOR_ELEMENTS = 1_000_000; // Scalar components, including vectors/matrices.
-export const MAX_ANIMATION_ELEMENTS = 4_000_000; // All sampled track components in one clip.
 export function makeModel(skn, skl, animationSources, textures) {
     const mesh = inspectSkn(skn), rig = inspectSkl(skl), r = new BinaryReader(skn);
     const positions = [], normals = [], uv = [], joints = [], weights = [];
@@ -118,10 +116,7 @@ export function makeModel(skn, skl, animationSources, textures) {
     const animationReport = [];
     for (const { name, bytes } of animationSources) {
         const animation = decodeAnm(bytes), step = Math.fround(1 / animation.fps), count = animation.format === 'compressed' ? Math.round(animation.duration * animation.fps) : animation.tracks[0].keys.length;
-        if (!Number.isSafeInteger(count) || count < 1 || count > MAX_ANIMATION_FRAMES)
-            throw new Error('animation-frame-budget');
-        if (animation.tracks.reduce((sum, track) => sum + count * (track.path === 'rotation' ? 4 : 3), 0) > MAX_ANIMATION_ELEMENTS)
-            throw new Error('animation-elements-budget');
+        assertAnimationBudget(count, animation.tracks.reduce((sum, track) => sum + (track.path === 'rotation' ? 4 : 3), 0));
         const times = Array.from({ length: count }, (_, i) => Math.fround(i * step)), input = accessor(times, 'SCALAR', 5126, undefined, true), channels = [], samplers = [];
         const byHash = new Map(rig.joints.map((j, i) => [j.nameHash, i + 1]));
         for (const track of animation.tracks) {
