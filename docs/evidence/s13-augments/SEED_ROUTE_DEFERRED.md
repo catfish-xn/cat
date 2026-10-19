@@ -102,3 +102,16 @@ m8-b4-r3b、m8-b8-live-capacity、m8-b8-live-growth、task-mechanism-restore ›
 
 计时类（R2，不挡合并）：`tests/t12-combat-equip.test.ts` › T12 supply choice 在一次本地全套里 5656 ms，超过默认 5 秒；
 `m6-performance` capture p95 546.7（门槛 50），本地 4 核并发跑全套时出现。
+
+## v13 收口（P1–P4 + multiplayer `bc49cac`）
+
+升 v13 并按 MIGRATION.md 重录 G2-4b 证据后，全套 41 条失败与 P1 节相同，没有新增。处理结果：
+
+- 39 条只改路线输入修好，断言未动。改法是换种子，或让路线跳过会额外发装备、开锻造器的强化。逐条见各测试提交：
+  - m8-b5 / g2-3 / g2-4b / cd-replay：`e0a4b485`
+  - 服务器 5 个文件：`7d51beb9`
+  - 护臂与任务机制：`0e428c6f`、`6febce7e`
+  - m8-b8：`a35e8c35`、`df33cd94`、`a5b3db50`、`a09988b8`
+- 2 条换种子保不住原期望，需用户确认后改期望：
+  - `tests/m8-b8-live-transfer.test.ts`：异常 mage-armor → slime-time。原值要重掷 133 次（133 金），路线只有 32 金。
+  - `tests/m8-b8-live-reveal.test.ts` 同 tick 双死亡：tick 51 → 44，eventSeq 447/448 → 382/383。所需强化在 v13 下刷不出；60 个保留原强化的候选种子里 eventSeq 最高约 310。同 tick 双死亡和四个掉落归属不变。
