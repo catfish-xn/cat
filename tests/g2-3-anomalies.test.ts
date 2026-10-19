@@ -44,10 +44,28 @@ it('One Thousand Cuts counts hits separately for each target',()=>{
  for(let i=0;i<65&&state.status==='running';i++){const step=stepCombat(state);state=step.state;damage.push(...packets(step.events).filter(p=>p.source.definitionId==='one-thousand-cuts').map(p=>p.raw));}
  expect(damage.slice(0,2)).toEqual([30,42]);
 });
-it('Hypervelocity stacking survives generic program restoration after multiple casts',()=>{
+it('Hypervelocity adds exactly fifteen percent speed per completed cast and validates both stacks',()=>{
  let state=start('hypervelocity');
- for(let i=0;i<2;i++){state={...state,units:state.units.map(u=>u.id==='p'?{...u,mana:u.maxMana}:u)};state=stepCombat(state).state;validate(state);}
- expect(readCombatStats(state.units.find(u=>u.id==='p')!,state).attackIntervalTicks).toBeLessThan(33);
+ const holder=()=>state.units.find(u=>u.id==='p')!;
+ // Lux base 0.70 attacks/s, +10% at start, then +15% per completed cast.
+ expect(holder().runtime!.castCount).toBe(0);
+ expect(holder().baseAttackSpeedBps).toBe(7000);
+ expect(readCombatStats(holder(),state).attackIntervalTicks).toBe(26);
+ for(const [count,interval] of [[1,23],[2,21]] as const){
+   state={...state,units:state.units.map(u=>u.id==='p'?{...u,mana:u.maxMana}:u)};
+   let casts=0;
+   for(let steps=0;steps<100&&holder().runtime!.castCount<count;steps++){
+     const result=stepCombat(state);state=result.state;
+     casts+=result.events.filter(e=>e.type==='cast'&&('receipt' in e?e.receipt.source.ownerId==='p':e.sourceId==='p')).length;
+   }
+   expect(casts).toBe(1);
+   expect(holder().runtime!.castCount).toBe(count);
+   // Newly queued stats become effective on the next tick.
+   state=stepCombat(state).state;
+   expect(readCombatStats(holder(),state).attackIntervalTicks).toBe(interval);
+   validate(state);
+   const copy=structuredClone(state);validate(copy);expect(copy).toEqual(state);
+ }
 });
 it('Comeback Story uses the frozen player HP, not unit health',()=>{
  const s=createMatch(42),preparation={...s.preparation,units:[{id:'p',definitionId:'lux',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}}]};
@@ -84,4 +102,18 @@ it('Power Absorption adds fixed AD after percentage AD, once per dead ally, and 
  expect(readCombatStats(state.units.find(u=>u.id==='p')!,state).attackDamage).toBe(59);
  expect(state.units.find(u=>u.id==='p')!.g23?.absorbed).toHaveLength(1);
  expect(attackDamageCandidates(state.units.find(u=>u.id==='p')!,state.tick,'g23-anomaly').has(59)).toBe(true);
+});
+
+it('Slow Cooker uses the holder maximum HP, not the target HP, at each one-second pulse',()=>{
+ let state=start('slow-cooker');
+ // Unequal HP makes a target-basis implementation observably wrong: Lux 500 vs three-star Garen.
+ const holder=state.units.find(u=>u.id==='p')!;
+ expect(holder.maxHp).toBe(500);
+ expect(state.units.find(u=>u.id==='e')!.maxHp).toBeGreaterThan(500);
+ state={...state,units:state.units.map(u=>({...u,cooldownTicks:1000,moveCooldownTicks:1000,attackDamage:0,mana:0,maxMana:0}))};
+ const pulses:{tick:number;raw:number}[]=[];
+ for(let tick=0;tick<40;tick++){const result=stepCombat(state);state=result.state;pulses.push(...packets(result.events).filter(p=>p.source.definitionId==='slow-cooker').map(p=>({tick:state.tick,raw:p.raw})));}
+ // Independent source arithmetic: floor(500 * 3 / 100) = 15, at 20 and 40 ticks.
+ expect(pulses).toEqual([{tick:20,raw:15},{tick:40,raw:15}]);
+ validate(state);
 });

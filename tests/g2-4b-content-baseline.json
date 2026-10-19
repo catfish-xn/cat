@@ -1,13 +1,13 @@
 {
-  "contentDigest": "fnv1a32-utf16:bef09e1d",
-  "lootReplayDigest": "fnv1a32-utf16:d5da64e8",
-  "rulesVersion": "s13-g2-3-v11",
-  "contentVersion": "s13-14.24b-g2-3-v11",
+  "contentDigest": "fnv1a32-utf16:9535ffff",
+  "lootReplayDigest": "fnv1a32-utf16:498a92d1",
+  "rulesVersion": "s13-g2-3-v12",
+  "contentVersion": "s13-14.24b-g2-3-v12",
   "schemaVersion": 7,
   "previousContentDigest": "fnv1a32-utf16:4bf7fe15",
   "previousLootReplayDigest": "fnv1a32-utf16:c11d2d0c",
   "traceHashes": {
-    "state": "fb190a25b672920c2a3a7c79eb6a1ec0b06af568ea200d62cd78988ca49bcc2c",
+    "state": "3bd8426a20e2a1cf1f3d0c4bb5d85c90be764912bde8749556c777c829f908b5",
     "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
     "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
   },
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "G2-4b support anvil release v11: tiers 11/13 granted as sourced, artifact/support anvil pools complete at 29/17."
+  "reason": "G2-4b release v12: Slow Cooker uses holder max HP; Bronze For Life counts all nine later S13 bronze traits."
 }
