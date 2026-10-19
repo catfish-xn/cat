@@ -1,6 +1,6 @@
 # D7 素材管线
 
-当前入口为**第 2 步：原始 SKN/SKL/ANM、TEX/DDS 与粒子源 JSON 离线转换**，支持 `jinx,vi`。
+当前包括**第 2 步：Jinx/Vi 原始资源离线转换**和**第 3 步（a）：定向下载器与 60 单位批量构建代码**，后者用法和前置条件见文末。
 第一阶段的整理、核验和盘点工具保留可用，历史说明见下方。
 
 本目录只放代码。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
@@ -142,13 +142,13 @@ Khronos `gltf-validator@2.0.0-dev.3.10`：分别 0 error / 0 warning。
 发射器数量不是最终渲染粒子数量。真实数据含位置、非等比尺寸、概率表、持续发射及特殊寿命等，
 D8 v1 未完整支持，不能丢弃字段后宣称还原。这些源 JSON 与盘点输出仍只在忽略目录。
 
-## 当前范围外的工作
+## 第 2 步交付时保留的后续工作
 
 上方第 2 步已实现 jinx/vi 的原始模型、动作、贴图转换、严格粒子文档/旁路报告、统一入口与离线下载计划；其余工作另行安排：
 
 - 其余 58 英雄的实际获取、转换及独立对照。
 - 在可证明语义等价的前提下扩展粒子合同与真实可见特效；v1 不支持的源发射器仍拒绝或跳过。
-- 生产 WAD subchunk 解包、RMAN 网络定向获取，以及跨 WAD 传递依赖的精确下载预算（本步只做本地保守计划）。
+- 生产 WAD subchunk 解包及跨 WAD 传递依赖的精确下载预算；RMAN 定向下载器代码已在下述第 3 步（a）提供，实际下载交由调度方执行。
 - D8 浏览器接线、截图及视觉验收。
 
 格式参考：[LTK SKN](https://wiki.leaguetoolkit.dev/reference/file-formats/skn/)、
@@ -156,3 +156,61 @@ D8 v1 未完整支持，不能丢弃字段后宣称还原。这些源 JSON 与�
 [LTK ANM](https://wiki.leaguetoolkit.dev/reference/file-formats/anm/)、
 [CommunityDragon WAD](https://www.communitydragon.org/docs/wad)。
 旧试验脚本只作来源与接口参考，未执行它的 Windows EXE 安装流程。
+## D7 第 3 步（a）：定向下载与批量构建
+
+下载器只读取本地 plan 和 RMAN，不下载 manifest，不执行旧 Python 工具或任何外部转换程序。需要带内置 `zstdDecompressSync` 的 Node（本次离线验证为 22.17.0），沿用现有依赖，不执行 `npm ci`。
+
+```powershell
+# 离线预检；不请求网络、不写报告、不改缓存，逐块验证已有缓存
+node scripts/assets3d/fetch-chunks.mjs --dry-run
+
+# 交给调度方在沙箱外执行的实际下载命令
+node scripts/assets3d/fetch-chunks.mjs --max-bytes 125829120 --concurrency 4
+
+# 有效缓存自动跳过；重复运行同一命令即可续传
+```
+
+默认输入是 `assets3d-local/out/fetch-plan.json` 和 `assets3d-local/trial/local/14.24.manifest`，缓存写到 `assets3d-local/trial/local/chunks/<大写16位ID>.zst`。可以用 `--plan`、`--manifest`、`--cache`、`--out` 指定本地路径，但全部写入仍必须通过 `safe-path.mjs`，限于仓库的 `assets3d-local/`；符号链接、目录联接和 `..` 不能绕过边界。实际运行覆盖 `out/fetch-report.json`，dry-run 仅向 stdout 打印汇总。
+
+下载边界：
+
+- plan 的 manifest SHA-256 必须与本地文件一致；块必须存在于 manifest，ID、bundle、偏移及两种长度必须匹配。只下载 `plan.chunks`，不遍历下载其他 bundle 内容。
+- URL 仅由 manifest 的 bundle ID 构造，固定 HTTPS 主机 `lol.secure.dyn.riotcdn.net`、固定 bundle 路径；禁止重定向、其他主机、凭证、端口和查询参数。注入的 fetch 同样受到地址检查。
+- 同 bundle 内相邻的缺失块合并为一个 Range，最大 16 MiB；不夹带间隙。响应必须是 206，Content-Range 和实际长度必须精确匹配。
+- 默认并发 4（可设 1–16）；单次请求含流式读 body 超时 45 秒；默认额外重试 2 次，上限 5。`--timeout-ms`、`--retries`、`--backoff-ms` 可调整。网络异常、429、5xx、短响应采用指数退避；块校验、重定向及协议错误不盲目重试。
+- `--max-bytes` 默认 125,829,120（120 MiB），预检按去重且缓存验证失败/缺失的压缩块长度计算，超限时请求数为零。运行中计入失败响应和重试的实际已读取 body 字节；超过硬上限即 abort 所有请求，停止派发。报告可能包含触发停止的最后一个网络片段造成的超出量；它记录收到的实际值，不把计数截成上限。该上限不计 TLS/HTTP 头等传输开销。
+- 每块检查压缩长度、解压长度及 manifest 的块 ID，校验后才写临时文件并 rename。14.24 的 Riot 派生哈希实现参考 [rman 的块校验实现](https://github.com/moonshadow565/rman/blob/master/lib/rlib/rchunk.cpp)，用 Node crypto 实现，也支持 SHA-256/SHA-512 的前 8 字节小端 ID；未知方案严格失败，不降为仅校验长度。现有缓存也做同样校验，损坏缓存实跑时丢弃并重新获取，dry-run 只报告。
+- 报告包含 requests、downloadBytes、skipped、invalidCache、downloaded、failed（逐块原因）、elapsedMs 及 WAD/英雄汇总。正常完成退出 0，预检拒绝或部分失败退出 1。配置/输入文件非法会直接退出 1 并输出原因；此时不会覆盖上次下载报告。进程被强制终止时，已经 rename 的有效块仍可续传，临时文件不会当作有效缓存。
+
+网络层 API 为 `fetchChunks({ plan, manifest, fetchFn, ...options })`，其中 `manifest` 是 `readRman()` 的结果，`fetchFn(url, RequestInit)` 返回 WHATWG Response（必须提供可流式读取的 body）。文件入口 `fetchFromFiles()` 额外执行 manifest SHA-256 固定检查。测试只注入假 fetch 和合成压缩块。
+
+本次真实 plan 的离线结果：全局待下载 **6,107 块 / 75,636,001 字节**；TFTSet13 **5,460 块 / 67,051,523 字节**；TFTCommon **720 块 / 9,024,106 字节**。每个 WAD/英雄内部去重，跨 WAD/英雄可共享块，不能把分项相加当成总下载量。
+
+批量构建使用独立入口，每个单位写自己的目录，失败不阻断下一单位：
+
+```powershell
+node scripts/assets3d/build-all.mjs --units all --cost 1,2 --out assets3d-local/out/batch-cost12
+node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-local/out/batch-cost345
+# 重建已有输出时追加 --force；也支持 --units jinx,vi 和 --source <本地目录>
+```
+
+`all` 严格取 `src/simulation/units.ts` 的 `M5_UNIT_DEFINITIONS` 60 个键；按费用再按 ID 排序，1–2 费 27 个、3–5 费 33 个。各批次顶层 `build-report.json` 逐单位记录 status/reason、顶点、骨骼、转换的动作原名、已确认动作绑定及缺失动作、成功贴图数、材质贴图绑定数、粒子 mapped/skipped/rejected、产物总字节（含单位报告及 sidecar）。失败而未取得的指标为 null；缺少源 JSON 时粒子计数为 null 并附原因，不声称已完成粒子转换。报告随单位完成更新；顶层 phase 完成不等于全部成功，ready 仅表示所选单位的转换和结构检查均通过。单个单位失败或 missing 时最终退出 1，其他单位仍继续构建。
+
+每个单位的产物位于 `units/<id>/`，包含自己的 manifest 和详细报告；读取该 manifest 时，以该单位目录为 asset root。批次汇总不是合并运行时 manifest。本步不改表现层或自动发布资源。
+
+**构建前置条件和目前覆盖范围：**
+
+- 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`。批量构建沿用第 2 步的已解包原始资源和 SHA-256 提取记录；下载后的 WAD subchunk 解包及其生产验证仍需后续步骤。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
+- `unit-map.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。Corki 的 mesh/skeleton 分别是 `tft13_corkifixedskin` / `tft13_corkifixedskeleton`，Illaoi 的 mesh 使用 `_13` 后缀；不套用臆测的文件名。找不到配置或显式 missing 的单位进入报告的 mapping.missing，不调用构建器。
+- 其余 58 单位的材质与运行时动作绑定尚无确认依据，配置保持空，不凭文件名猜测材质或把任意 spell 绑定成 cast。原始动作目录已列出，batch 模式尝试按原名转换全部列出的 ANM；未确认的动作按 idle/move/attack/cast/hit/death 六项报告缺失。严格模型转换仍拒绝 `missing-material-texture:<材质>`，需要后续源材料信息补齐绑定；仅下载缓存不会消除这类失败。
+- Jinx/Vi 保留第 2 步确认的贴图和动作绑定。普通 `build.mjs` 的双单位入口保留独立参考对照和离线 fetch-plan 行为；batch 模式不为每个单位重复生成 fetch-plan，没有独立参考 GLB 时明确报告 unavailable，结构检查仍执行。有参考时照常比较。缺少源 JSON 的单位明确报告粒子不可用，不伪造效果或动作语义。
+
+验证命令（不用完整游戏回归）：
+
+```powershell
+npx.cmd tsc --noEmit
+# 逐个执行各 tests/assets3d-*.test.ts；runner 避免调用 esbuild 配置加载程序
+npx.cmd vitest run tests/assets3d-fetch.test.ts --configLoader runner --project fast
+npx.cmd vitest run tests/assets3d-batch.test.ts --configLoader runner --project fast
+node scripts/assets3d/fetch-chunks.mjs --dry-run
+```
