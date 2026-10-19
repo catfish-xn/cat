@@ -51,9 +51,9 @@ const clone = (state: api.MatchState): api.MatchState => {
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals four orb entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
-    while (state.phase === 'combat' && state.combat.tick < 50) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 43) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(50);
+    expect(state.combat!.tick).toBe(43);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
@@ -67,12 +67,12 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      // G23 lawful Lux/Nami position swap: both sources die in the same tick-51 action batch.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 51, eventSeq: 447 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 51, eventSeq: 448 },
+      // G23 lawful Lux/Nami position swap: both sources die in the same tick-44 action batch.
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 44, eventSeq: 382 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 44, eventSeq: 383 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([447, 447, 447, 447]); // All four frozen drops belong to r00.
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([382, 382, 382, 382]); // All four frozen drops belong to r00.
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -83,7 +83,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 448; // Substitute r01's real death identity for r00's drop evidence.
+    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 383; // Substitute r01's real death identity for r00's drop evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: source death conflict');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {

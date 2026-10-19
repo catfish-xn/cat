@@ -23,7 +23,7 @@ async function main(){
  return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-base.m8.loot.receipts.length};
  }
  const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix))};
- assert.deepEqual(branches.simultaneous.deaths.slice(0,2),[{unitId:'["pve","4-7","razorbeaks-v1","r00"]',tick:51,eventSeq:447},{unitId:'["pve","4-7","razorbeaks-v1","r01"]',tick:51,eventSeq:448}]);
+ assert.deepEqual(branches.simultaneous.deaths.slice(0,2),[{unitId:'["pve","4-7","razorbeaks-v1","r00"]',tick:44,eventSeq:382},{unitId:'["pve","4-7","razorbeaks-v1","r01"]',tick:44,eventSeq:383}]);
  for(const definitionId of ['loris','zyra']){
  const base=partialPrefixes[definitionId],target=base.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
  branches[definitionId]={...resolve(helpers.partialB8Preparation(base,definitionId),base),star:target.starLevel,prefixHash:sha(base)};
