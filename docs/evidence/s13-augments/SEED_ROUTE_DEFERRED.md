@@ -62,3 +62,43 @@ P3 合包时另有两条按种子挑强化的测试，已在合并提交里换�
 | `tests/server/projection-wire.test.ts` › runs a match past 6-7 into overtime-N… | 打到 6-7 后进入加时 | 对局在 6-7 之前结束 |
 
 另外 `scripts/record-g2-4b-live-reveal.cjs` 的录制断言（同批死亡 tick 51）同样失败，`docs/evidence/g2-4b/live-reveal-audit.json` 暂未重录，收口时和 m8-b8-live-reveal 一起处理。
+
+## P1 合入后（P1 + P2 + P3：强化 57 个，异常 52 个）
+
+P1 合包时换种子修好、断言未动的：
+
+- `tests/s13-augments-p2-choice.test.ts` › public Crown + Trifecta…：种子 2734 改成 182。
+- 同文件 Trifecta 娜美：种子 14 改成 18（标题改为 "seed 18 Trifecta Nami"）。
+- `tests/g2-augments-combat.test.ts` › climb-the-ladder-i…：种子 11 改成 28。
+- `tests/fixtures/s13-p1-dual-commands.json.gz` 重录。
+
+合包时当场修的表外问题（不是种子路线）：P3 穿刺莲花（piercing-lotus）恢复校验误拒。
+后一次暴击刷新同一状态时，`status.ts` 保留 `appliedAtTick`、把到期改为该次命中 + 60；
+原校验要求到期必须等于 `appliedAtTick + 60`，种子 42 在 tick 138 读档被拒（applied 103、到期 198）。
+`src/simulation/m8/restore.ts` 改为接受到期在 `applied + 60` 到 `tick + 60` 之间，并要求刷新时触发次数至少 2。没有放宽其他条件。
+
+P3 表中以下条目在此树上已通过：chest-bracer 三个检查点恢复、g2-4b-resists-restore、m5-growth、
+m8-b4-r3b、m8-b8-live-capacity、m8-b8-live-growth、task-mechanism-restore › Black Rose。其余 P3 条目仍失败。另外新增的 22 条：
+
+| 测试 | 原期望 | 现结果 |
+| --- | --- | --- |
+| `tests/bracer-multikill-stacks.test.ts` › Lux 层数 | 143 | 140 |
+| `tests/bracer-multikill-stacks.test.ts` › dead holder | 指定阵亡持有者记录 | 记录不同 |
+| `tests/bracer-multikill-stacks.test.ts` › contribution 来源 | `combat` | `settlement` |
+| `tests/chest-bracer-integration-trial.test.ts` › rejects in-place grant edit（2 条） | 宝箱发 archangel | 发 warmog |
+| `tests/explorer-bracer-restore.test.ts`（2 条） | 410 | 340 |
+| `tests/g2-4b-pr161-restore.test.ts` › tier4 | 征服者第 4 档路线 | 路线不同 |
+| `tests/m8-b5-grant-upgrade.test.ts` › returns unique conflicts… | 不经过异常选择 | 遇到异常选择 |
+| `tests/m8-b5-temporary.test.ts` › TG route group 1 / 4（2 条） | 能绑定子装备 | 绑定失败 |
+| `tests/m8-b8-combat-input.test.ts` | 指定战斗输入 | 不同 |
+| `tests/restore-audit/bounds-preflight.test.ts` | 400 | 360 |
+| `tests/restore-audit/cd-replay-facts.test.ts` › G-C08 rejects invented Experiment | 指定拒绝原因 | 另一条校验先触发 |
+| `tests/server/carousel-room.test.ts` › P7-1（4 条） | 座位 [9,5]、持有槽有单位 | [9,4]、持有槽为空 |
+| `tests/server/room.test.ts` › choice window | 选完 offers[0] 后离开 choice | 又开锻造器选择，仍在 choice |
+| `tests/server/t10-combat-ops.test.ts` › deferred merge | 延迟合成发生 | 未发生 |
+| `tests/task-mechanism-restore.test.ts`（2 条） | contribution 为 combat；杰斯复活 | settlement；未复活 |
+
+全部 22 条判断为种子路线变化（推断：报价、商店或战斗走向不同），收口时逐条核实。
+
+计时类（R2，不挡合并）：`tests/t12-combat-equip.test.ts` › T12 supply choice 在一次本地全套里 5656 ms，超过默认 5 秒；
+`m6-performance` capture p95 546.7（门槛 50），本地 4 核并发跑全套时出现。

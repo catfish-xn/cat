@@ -977,3 +977,11 @@ combat stats. Claude needs to wire presentation and server-entry/command dispatc
 without computing stage values, creating assets or changing economy. Acceptance:
 move during preparation, freeze for battle, restore the position, mirror seat B
 once, reject movement while roster locked. Codex changed no UI/server files.
+
+## S13-P1：收入显示与未完成接线（2026-10-18）
+
+- 已有 `previewRoundEconomy` 已按遥遥领先/对冲基金/投资策略II返回真实利息预估；`src/rendering/strategy-panel.ts` 直接使用旧 `getInterestGold` 的展示仍需Claude切到此查询，避免无利息显示5G或100G只显示5G。领域结算已正确，界面未改。
+- 双刀流是一次获得2件库存成装，沿用物品投影。无自动穿戴或覆盖旧装备。其余未实现异常不得展示为可选。
+- 双排待接：满席时选择事务须创建真实单位所有权、占共享池；腾位后的领取/升星需要shared command事务。当前room的plain deploy与PvP锁定不经过该事务，原型未注册。
+- 贪财化身待接：联机冻结战斗必须接纳战中合法买卖/刷新/买XP的真实经济事件，恢复须重演同一事件输入。当前仅开战余额快照不能表示原版实时持有金币效果，原型未注册。
+- 进入未知、终极英雄待接：需跨轮暂离持有者及4星单位完整投影/共享池/恢复，当前不提供半实现选择。

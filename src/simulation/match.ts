@@ -1,3 +1,6 @@
+import {grantAnomalyAcquisition} from './anomaly-acquisition';
+import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
+import { readAugmentIncome } from './augment-income';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
@@ -72,6 +75,7 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
+  const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
@@ -321,7 +325,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
-  const plan = resolveRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
+  const plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const delta of pendingDelta) growth.set(delta.unitId,(growth.get(delta.unitId)??0)+delta.attackDamageBps);
@@ -339,7 +343,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
     persistentGrowth: [...growth].map(([unitId,attackDamageBps]) => ({unitId,attackDamageBps})).sort((a,b)=>a.unitId.localeCompare(b.unitId)),
     augmentProgress: {
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
-      investmentHp: state.augmentProgress.investmentHp + (state.augments.some(a => a.definitionId === 'investment-strategy-i') ? 8 * plan.incomeBreakdown.interest : 0),
+      investmentHp: state.augmentProgress.investmentHp + readAugmentIncome(state.augments).healthPerInterest * plan.incomeBreakdown.interest,
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
@@ -369,7 +373,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
   const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
-  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
+  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&countsG23SurvivorDamage(unit)).length}).hpAfter===0;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
@@ -418,6 +422,9 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  // Round-start XP is granted only after the previous round has settled; retries fail above.
+  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+  state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
@@ -429,6 +436,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
 export function advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MultiplayerCommandResult {
+  const initial=state;
   if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
   if (state.sharedPool) return multiplayerFail(state, 'shared-pool-required');
@@ -445,12 +453,14 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+    state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
       : generateShop(state.rngState, state.shop.generation + 1, state.level);
     return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);
-  } catch { return multiplayerFail(state, 'invalid-round'); }
+  } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
@@ -628,7 +638,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
-  const acquisitionGold = choice.kind === 'augment' ? AUGMENT_DEFINITIONS[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
+  const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? (choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
@@ -647,8 +657,11 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
+  if(choice.kind==='anomaly'){const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
+  if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
-  return acceptEquipment(entered.state, [...events, ...entered.events]);
+  const forge=openAugmentForge(entered.state);
+  return acceptEquipment(forge.state, [...events, ...entered.events,...forge.events]);
 }
 
 /** Compatibility domain entrypoints use the same pending choices and generic receipts. */

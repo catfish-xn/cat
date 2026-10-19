@@ -114,7 +114,7 @@ import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 it.each([
- ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',11],['inspiring-epitaph',18],
+ ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',28],['inspiring-epitaph',18],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  let s=reachRound('2-1',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);

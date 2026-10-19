@@ -81,8 +81,8 @@ beforeAll(async () => {
     // Independently include the anomaly rows (the rows without an augment tier).
     const ids = [...Object.keys(ANOMALY_SOURCE), ...Object.values(P4_SOURCE).map(d => d.id), ...Object.entries(S13_P2_SOURCE)
       .filter(([, source]) => !('tier' in source)).map(([id]) => id),
-      // P3 anomaly literals, independent from production registration.
-      'the-finisher', 'touch-of-frost', 'fireball', 'dragonsoul', 'nothing-wasted', 'thornskin', 'knockout'].sort();
+      // P1 and P3 anomaly literals, independent from production registration.
+      'dual-wielding', 'the-finisher', 'touch-of-frost', 'fireball', 'dragonsoul', 'nothing-wasted', 'thornskin', 'knockout'].sort();
     expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * BigInt(ids.length) / 4294967296n)]);
     const seen = new Set(s.pendingChoice!.offers);
     for (let i = 0; i < 400; i++) {

@@ -1,3 +1,4 @@
+import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
@@ -182,7 +183,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     } else if (event.kind === 'component') {
       definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
       requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
-    } else requireValue(receipt.gold === (receipt.kind === 'augment' ? AUGMENT_DEFINITIONS[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? (receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
@@ -237,8 +238,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
-    const expected = planCatalogRoundEconomy({ roundId: result.roundId,
+    requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp),result.levelBefore,result.xpBefore), 'history XP preparation chain');
+    const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
@@ -252,14 +253,14 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
   requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
   record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
-  const pump = state.augments.find(a => a.definitionId === 'pumping-up-i'), investment = state.augments.find(a => a.definitionId === 'investment-strategy-i');
+  const pump = state.augments.find(a => a.definitionId === 'pumping-up-i');
   requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
-  requireValue(state.augmentProgress.investmentHp === (investment ? state.roundResults.filter(r => r.round >= investment.acquiredRound).reduce((n,r) => n + r.incomeBreakdown.interest * 8,0) : 0), 'investment progress');
+  requireValue(state.augmentProgress.investmentHp === investmentGrowth(state.augments,state.roundResults), 'investment progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
+  if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp),state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
   validateMatchEquipment(state);
