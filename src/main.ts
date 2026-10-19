@@ -6,12 +6,14 @@ import { BOARD_LAYOUT } from './rendering/layout-config';
 import { applyThemeVariables } from './presentation/theme';
 import { installImageFallback } from './presentation/s13-assets';
 import { mountBuildBadge } from './rendering/build-badge';
+import { mountThreeMode } from './rendering/three-mode/three-loader';
 applyThemeVariables();
 const removeImageFallback = installImageFallback();
 const removeBuildBadge = mountBuildBadge(document.body);
 const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
+const threeMode = mountThreeMode(board);
 new Phaser.Game({
   type: Phaser.AUTO, parent: 'board-root', width: BOARD_LAYOUT.width, height: BOARD_LAYOUT.height, backgroundColor: '#101923',
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
@@ -50,7 +52,7 @@ new Phaser.Game({
         for (const type of mouseEvents) game.canvas.removeEventListener(type, ignoreTouchMouse, true);
         for (const type of geometryEvents) game.canvas.removeEventListener(type, updateInputBounds, true);
         window.removeEventListener('scroll', updateInputBounds, true);
-        observer.disconnect(); shell.dispose(); removeImageFallback(); removeBuildBadge();
+        observer.disconnect(); shell.dispose(); removeImageFallback(); removeBuildBadge(); threeMode.dispose();
         if (frame !== null) cancelAnimationFrame(frame);
       });
     },
