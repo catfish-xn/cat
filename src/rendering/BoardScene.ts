@@ -7,7 +7,8 @@ import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToN
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
-import type { DisplayCombat, SceneCombatEvent } from '../presentation/combat-display';
+import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
+import { boardFeedActive, publishBoardFrame, publishCombatEvents, type BoardFrame } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -783,6 +784,7 @@ export class BoardScene extends Phaser.Scene {
     // Cheap motion (idle bob, lunge, hit flash) offsets each piece's drawing only; tokens keep their positions.
     const now = performance.now();
     for (const view of this.views.values()) view.animate?.(now);
+    if (boardFeedActive()) publishBoardFrame(() => this.boardFrame());
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
@@ -895,6 +897,7 @@ export class BoardScene extends Phaser.Scene {
     if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
     this.recentCombatEvents.push(...structuredClone(events));
+    publishCombatEvents(() => asDisplayEvents(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     const casts = this.fx.casts;
     // The engine state, when there is one, adds ability colors; positions and teams are the same as the view's.
@@ -907,6 +910,15 @@ export class BoardScene extends Phaser.Scene {
     this.tweens.add({ targets: effect, alpha: 0, duration, onComplete: () => { this.effects.delete(effect); effect.destroy(); } });
   }
 
+  /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
+  private boardFrame(): BoardFrame {
+    const board = this.state.board;
+    return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
+      bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
+      pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
+        starLevel: token.getData('starLevel'), x: token.x, y: token.y, visible: token.visible && token.alpha > 0 })),
+      fighting: this.session.combatView !== null };
+  }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {
     const rect = this.game.canvas.getBoundingClientRect();

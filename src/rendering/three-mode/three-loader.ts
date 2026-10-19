@@ -5,6 +5,7 @@
  */
 import { readAssetBase3d, readRenderMode, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
+import { subscribeBoardFeed } from '../board-feed';
 
 export interface ThreeModeHandle { dispose(): void }
 
@@ -41,9 +42,9 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
     history.replaceState(history.state, '', withoutRenderParam(window.location.href));
   });
 
-  // The only reference to the 3D chunk. When src/rendering3d/ ships, point this import at its entry.
+  // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
-    .then(module => module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }))
+    .then(module => { module.useBoardFeed?.(subscribeBoardFeed); return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }
       renderer = mounted;
