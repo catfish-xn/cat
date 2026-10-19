@@ -34,9 +34,8 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
     });
   }
 }
-// Seed 3151248's 2-1 offer no longer contains a Manaflow augment. Back-row-only
-// Glass Cannon II is equally inert for these front-row (row 4) holders. Seed 120
-// still offers Manaflow I, which the back-row contribution=false board needs.
+// Seed 3151248's v14 fallback is High Voltage; its gifted Spark stays in inventory.
+// Seed 77 offers Manaflow I, which the back-row contribution=false board needs.
 const frontRowRod = () => acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 beforeAll(() => {
@@ -391,7 +390,7 @@ it.each([
   { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = contribution ? frontRowRod() : acquireEquipment(['rod'], { seed: 120 });
+  let state = contribution ? frontRowRod() : acquireEquipment(['rod'], { seed: 77 });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;

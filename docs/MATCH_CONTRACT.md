@@ -1,5 +1,24 @@
 # M5 Match contract v5
 
+## 强化等级与刷新：v14 用户约定（2026-10-19）
+
+本节覆盖历史“精选混合池”和强化不可刷新描述。来源为用户 2026-10-19 08:15 原话：“海克斯每次提供的必须是同一等级比如所有人都是银色，所有人都是金色或者彩色，必须等级一致，海克斯默认可以刷新一次。”不声称这是已核实的原版 14.24b 同轮或锁级规则。
+
+- 每个节点（2-1、3-2、4-2）确定一次 silver/gold/prismatic，同次三个候选同级，联机同轮八席同级。AUGMENT_TIERS 只有等级身份，没有概率/权重；三等级等权是项目约定、待用户确认，不还原历史等级组合分布。
+- deriveAugmentTier(seed, choiceId)：choiceId 按 UTF-16 code unit 计算 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32）；lcg32-v1 输入为 (seed xor 0x61756774 xor nodeHash) >>> 0，只取一个词，按 word % 3 对应 [silver,gold,prismatic]。单人用 Match.seed，联机用 SharedPoolState.seed（房间 options.seed），由 initializeSharedSeat 绑定到 augmentTierSeed；派生不读写席位 RNG。
+- 发放按等级过滤并排除已持有 ID，generateChoices 仍按 ID 排序、等权无放回抽三项，只消耗 choiceRngState 的三个词。商店、奖励、战斗等流不变。augmentOffers 保存各已打开节点 {choiceId,tier,rerollCount}，选择后保留。
+- 每次新提供额度为 augmentRerollLimit(此前已持有强化)，默认免费 1 次。rerollCount 表示已用次数，generation 从 0 开始，成功刷新均加 1；rerollsRemaining 为额度减已用次数。额度不跨节点积存，下一节点重置。
+- 刷新免费、整组三项重抽、锁级，同时排除当前三项和已持有 ID。仅排除当前一代；以后获得额外额度时，隔代可再出现。过滤后不足三项则 augment-pool-too-small，原子拒绝，不跨级、降级或保留旧项回退。现有各等级池即使排除两项已持有及三项当前候选仍足够。
+- 原始 map22 的 Maps/Shipping/Map22/Sets/TFTSet13.ScriptData.NumAugmentRerollsPerPlayer.mValue=1；en_us 的 TFT_Augment_BeggarsCanBeChoosers 为其余提供额外 ExtraRolls=3。该强化未注册，本次不新增内容。额度扩展接口为定义效果 mechanic:'augmentRerolls',values:{extraRolls:非负整数}；augmentRerollLimit 将此前已获取的效果逐项叠加，只增加其余节点额度，不补当前提供；新增定义仍需正常内容准入、版本与验证。
+- 未找到能证明 S13 逐槽（per-slot）刷新的原版证据。raw 其他赛季的 NumRerollsPerAugmentSlot 不能作为 S13 证明；本项目明确按整组刷新实现。
+
+公开命令：rerollAugment(state: MatchState, choiceId: string, generation: number): MatchCommandResult，由 match.ts 与 server-entry 导出。失败顺序：wrong-phase（非强化 offer）、stale-choice（ID/代次不符）、augment-rerolls-exhausted（额度用尽）、augment-pool-too-small（不足三项）。失败保持原 state 引用，返回 reason，无 events、资源或 RNG 变化。成功发 choiceOpened，含最新完整提供和正常 eventSeq。deriveAugmentTier(seed:number,choiceId:string):AugmentTier 与 augmentRerollLimit(augments:readonly OwnedAugment[]):number 也由 server-entry 导出。
+
+私有席位视图 pendingChoice 增加 augmentTier?:'silver'|'gold'|'prismatic' 与 rerollsRemaining?:number，强化提供时存在；保留 offers/generation/rerollCount。视图不公布其他席候选、seed、未来节点等级或重推账本。
+
+读档：仅支持 v14 身份。augmentTierSeed 必须等于单人 seed。validateAugmentOfferHistory 从 seed 初始 choice 流重放各强化节点，核对节点顺序、等级、额度、所有代次抽取、当前候选和已选 ID；异常尚未抽取前还核对 choiceRngState。篡改等级、候选、计数、代次、剩余额度、节点记录或随机流均拒绝，不以保存的候选/RNG 检查点作重推依据。当前日程全部强化先于异常；联机完整 Match 存档仍不支持。schema7/save3/replay3/command3 不变；规则/内容升为 s13-g2-3-v14 / s13-14.24b-g2-3-v14，digest 从 manifest 自然重算，旧身份拒绝，不迁移。
+
+
 ## G2-3 当前实现与接入合同（2026-10-16）
 
 本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。

@@ -95,7 +95,7 @@ export function toPrivateSeatView(state: MatchState) {
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),
     augmentProgress: pick(state.augmentProgress, ['pumpingRounds', 'investmentHp']),
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
-      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount']),
+      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount', 'augmentTier', 'rerollsRemaining']),
       offers: [...state.pendingChoice.offers],
       ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,

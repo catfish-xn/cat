@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { S13_P2_SOURCE } from '../src/simulation/content/s13-augments-p2-source';
 import { S13_P2_AUGMENTS, S13_P2_ANOMALIES, S13_P2_TIERS, P2_ITEM_GRANTS } from '../src/simulation/content/s13-augments-p2';
-import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { generateChoices } from '../src/simulation/choices';
+import { augmentCandidates, deriveAugmentTier } from '../src/simulation/augment-offers';
 import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, stepMatch, sellUnit, buyUnit, nextRound, equipItem } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { drainP2Gifts, p2GiftPlan, validateP2Gifts } from '../src/simulation/s13-augments-p2-grants';
@@ -27,7 +27,7 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
     expect((S13_P2_AUGMENTS[id]??S13_P2_ANOMALIES[id]).description).not.toMatch(/@[a-z0-9_*]+@/i);
   }
 });
-function seedFor(id:string){for(let seed=0;seed<1000;seed++)if(generateChoices(Object.keys(AUGMENT_DEFINITIONS),createMatch(seed).choiceRngState).offers.includes(id))return seed;throw Error('seed budget');}
+function seedFor(id:string){for(let seed=0;seed<1000;seed++)if(generateChoices(augmentCandidates(deriveAugmentTier(seed,'round:2-1:augment'),[]),createMatch(seed).choiceRngState).offers.includes(id))return seed;throw Error('seed budget');}
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   let s=reachRound('2-1',false,seedFor(id));const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
@@ -95,7 +95,7 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  let s=reachRound('2-1',false,182),c=s.pendingChoice!;
+  let s=reachRound('2-1',false,1837),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
     s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));

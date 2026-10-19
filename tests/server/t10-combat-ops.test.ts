@@ -15,7 +15,7 @@ import { makeRoom, runUntil } from './helpers';
 import { readLootView } from '../../src/simulation/match';
 
 const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
-const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll'];
+const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** Gold the rules granted from this round's revealed orbs (granted receipts only; 0 for PvP). */
 const lootGold = (match: MatchState, round: number) => match.round !== round ? 0 : readLootView(match).revealedDrops
   .reduce((sum, drop) => sum + (drop.status === 'granted' && drop.payload.kind === 'gold' ? drop.payload.quantity : 0), 0);

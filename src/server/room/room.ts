@@ -9,7 +9,7 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAugment, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
@@ -109,7 +109,7 @@ interface Resolution {
 
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
 const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
-const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll'];
+const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
@@ -147,6 +147,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
+    case 'rerollAugment': return plain(rerollAugment(state, command.choiceId, command.generation));
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
     // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
     case 'useConsumable': return useSeatConsumable(pool, state, command);

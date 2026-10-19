@@ -194,9 +194,9 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
 }, 20000);
 
 it('restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
-  // Public commands only: crest is equipped at combat start; seed 37 naturally
+  // Public commands only: crest is equipped at combat start; v14 seed 26 naturally
   // grants Gargoyle at tick 172, before the next crest pulse at tick 180.
-  let state = reachRound('2-1', true, 37);
+  let state = reachRound('2-1', true, 26);
   state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
   const players = state.preparation.units.filter(u => u.team === 'player');
   const receiver = players[0].id, chestHolder = players[1].id;

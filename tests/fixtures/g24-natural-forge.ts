@@ -25,8 +25,9 @@ export function naturalForgeStates():Map<number,MatchState>{
    if(c.kind==='anomaly'&&c.step==='target'){
     state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));c=state.pendingChoice!;
    }
-   // Keep the forge item serials: skip augments that grant a permanent item.
-   const id=c.kind==='augment'?c.offers.find(id=>!(id in P2_ITEM_GRANTS))??c.offers[0]:c.offers[0];
+   // Prefer Going Long over Radiant Relics at seed42's v14 4-2 node to keep the forge item serials.
+   const augmentPriorities=['going-long'];
+   const id=c.kind==='augment'?augmentPriorities.find(id=>c.offers.includes(id))??c.offers.find(id=>!(id in P2_ITEM_GRANTS))??c.offers[0]:c.offers[0];
    state=accepted(selectChoice(state,c.choiceId,c.generation,id));continue;
   }
   if(state.phase==='combat'){

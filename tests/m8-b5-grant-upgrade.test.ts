@@ -113,7 +113,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
   // Match #98's public-fixture setup: warm the exact paid acquisition routes,
   // while every upgrade/restore assertion and its original timeout stays in the case.
   for (const [definitions, seed] of [
-    [['blue-buff', 'blue-buff'], 1], [['thiefs-gloves', 'sword']],
+    [['blue-buff', 'blue-buff'], 11], [['thiefs-gloves', 'sword']],
     [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak']],
   ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
@@ -155,8 +155,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(() => restoreMatch(serializeMatch(forgedNext))).toThrow('Invalid resource provenance: unit serial');
   });
   it.each([
-    // Seed 1: the default unique route now meets an anomaly choice before its ninth purchase.
-    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 1],
+    // Seed 11 funds all nine purchases at 4-5; seed 1 now reaches the anomaly first.
+    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 11],
     ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1], undefined],
     ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1], undefined],
     ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], undefined],

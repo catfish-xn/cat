@@ -1,3 +1,4 @@
+import { validateAugmentOfferHistory } from './augment-offers';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
@@ -209,10 +210,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       for (const offer of choice.offers) definitionId(offer, catalog, 'offer definition');
       if (choice.kind === 'component') { validateComponentCandidates(choice.offers); }
       if (choice.kind === 'component') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => ITEM_DEFINITIONS[def].kind === 'component'), 'component offers');
-      else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
+      else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
       else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
     }
   } else if (!lootChoice) requireValue(state.pendingChoice === null, 'pending outside choice');
+  validateAugmentOfferHistory(state);
   const receiptOrder = state.scheduleReceipts.map(receipt => receipt.eventId);
   const expectedReceiptOrder: string[] = [];
   for (let round=1;round<=state.round;round++) for (const event of getRoundSchedule(round)) if (receipts.has(event.id)) expectedReceiptOrder.push(event.id);
