@@ -13,6 +13,8 @@ import { catalogEntry, itemDescriptions } from './item-codex';
 import { itemDisplayName } from './g23-display';
 import { G23_LOOT } from './s13-g23-manifest';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
+import { augmentDisplayName, augmentPlayerDescription } from './augment-display';
+import { describeEffect } from './effect-text';
 
 export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number }
 export interface GenericChoiceExtras {
@@ -102,7 +104,12 @@ export function genericOffer(id: string, extras: GenericChoiceExtras): GenericCh
   const price = extras.prices && Object.hasOwn(extras.prices, id) ? { price: extras.prices[id]! } : {};
   const junker = junkerName(id);
   if (junker) return { id, name: junker, description: '', ...price };
-  const tables: readonly Readonly<Record<string, Named>>[] = [ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS];
+  // Augments use the same zh name and player text as the augment choice card (the W4 `name`/`description` are English and implementation notes).
+  if (Object.hasOwn(AUGMENT_DEFINITIONS, id)) {
+    const description = [augmentPlayerDescription(id), AUGMENT_DEFINITIONS[id]!.effects.map(describeEffect).join('；')].filter(Boolean).join(' ');
+    return { id, name: augmentDisplayName(id), description, ...price };
+  }
+  const tables: readonly Readonly<Record<string, Named>>[] = [ITEM_DEFINITIONS, ANOMALY_DEFINITIONS];
   const definition = tables.map(table => (Object.hasOwn(table, id) ? table[id] : undefined)).find(Boolean);
   // Items use the 14.24 zh_cn name, like every other item surface; other content keeps its definition name.
   const name = Object.hasOwn(ITEM_DEFINITIONS, id) ? itemDisplayName(id) : definition?.name ?? catalogEntry(id)?.name ?? id;
