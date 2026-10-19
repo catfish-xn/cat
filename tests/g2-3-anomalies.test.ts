@@ -12,12 +12,13 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
+// Non-P4 anomalies: 30 historical + 7 P3; the 11 P4 IDs use the TFT13_GoopBuff_ prefix.
 it('admits thirty historical and seven P3 anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
- expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(37);
+ expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(37);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
  expect(ANOMALY_DEFINITIONS['defense-expert'].name).toBeTruthy();
 });
-it.each(Object.keys(ANOMALY_DEFINITIONS))('%s compiles and validates its detached combat-start program',id=>{
+it.each(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_')))('%s compiles and validates its detached combat-start program',id=>{
  const state=start(id);expect(()=>validate(state)).not.toThrow();const text=JSON.stringify(state);stepCombat(state);expect(JSON.stringify(state)).toBe(text);
 });
 it('Fortified applies twelve percent health at start and again at four seconds',()=>{

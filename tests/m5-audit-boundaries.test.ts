@@ -1,4 +1,5 @@
 import {G23_ANOMALY_SOURCE as ANOMALY_SOURCE} from '../src/simulation/content/g2-3-anomaly-source';
+import { P4_SOURCE } from '../src/simulation/anomalies/source';
 import { COST } from './fixtures/m5/oracle.g2.cjs';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -76,7 +77,8 @@ beforeAll(async () => {
     const c = s.pendingChoice!, target = s.preparation.units.find(u => u.team === 'player')!;
     let word = (BigInt(seed) * 1664525n + 1013904223n) % 4294967296n;
     s = accepted(api.selectAnomalyTarget(s, c.choiceId, c.generation, target.id));
-    const ids = Object.keys(ANOMALY_SOURCE).sort();
+    // The offer pool is the G2-3 anomalies plus the eleven S13 P4 anomalies (keyed by client apiName).
+    const ids = [...Object.keys(ANOMALY_SOURCE), ...Object.values(P4_SOURCE).map(d => d.id)].sort();
     expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * BigInt(ids.length) / 4294967296n)]);
     const seen = new Set(s.pendingChoice!.offers);
     for (let i = 0; i < 400; i++) {

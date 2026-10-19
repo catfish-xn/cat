@@ -1,3 +1,4 @@
+import { isAttackProxy } from './anomalies/availability';
 /** Combat-only augment effects. Every grant is a frozen, serializable contribution. */
 import type { CombatMechanic } from './combat-types';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -46,7 +47,7 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
     for (const m of unit.mechanics ?? []) {
       if (m.mechanic === 'clockworkAccelerator' && ctx.tick > 0 && ctx.tick % m.values.periodTicks === 0)
         grant(ctx, unit, unit, m, augmentCombatEffects(m)[0], JSON.stringify(['clockwork', ctx.tick]));
-      if (m.mechanic === 'loneHero' && ctx.units.filter(u => u.team === unit.team && u.alive && u.hp > 0).length === 1)
+      if (m.mechanic === 'loneHero' && ctx.units.filter(u => u.team === unit.team && u.alive && u.hp > 0 && !isAttackProxy(u)).length === 1)
         augmentCombatEffects(m).forEach((effect, index) => grant(ctx, unit, unit, m, effect, JSON.stringify(['loneHero', index])));
     }
   }
@@ -54,7 +55,7 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
 /** All deaths settle first: a simultaneously dying unit cannot receive a reward. */
 export function settleAugmentDeaths(ctx: AbilityContext, dead: readonly S13Unit[]): void {
   for (const fallen of [...dead].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) {
-    const survivors = ctx.units.filter(u => u.team === fallen.team && u.alive && u.hp > 0);
+    const survivors = ctx.units.filter(u => u.team === fallen.team && u.alive && u.hp > 0 && !isAttackProxy(u));
     for (const m of fallen.mechanics ?? []) {
       if (m.mechanic === 'climbLadder') {
         const traits = M5_UNIT_DEFINITIONS[fallen.definitionId]?.traits ?? [];
@@ -68,7 +69,7 @@ export function settleAugmentDeaths(ctx: AbilityContext, dead: readonly S13Unit[
     }
   }
   // Lone Hero becomes visible at the death boundary, before next-tick actions.
-  for (const unit of ctx.units) if (unit.alive && unit.hp > 0 && ctx.units.filter(u => u.team === unit.team && u.alive && u.hp > 0).length === 1)
+  for (const unit of ctx.units) if (unit.alive && unit.hp > 0 && ctx.units.filter(u => u.team === unit.team && u.alive && u.hp > 0 && !isAttackProxy(u)).length === 1)
     for (const m of unit.mechanics ?? []) if (m.mechanic === 'loneHero')
       augmentCombatEffects(m).forEach((effect, index) => grant(ctx, unit, unit, m, effect, JSON.stringify(['loneHero', index])));
 }

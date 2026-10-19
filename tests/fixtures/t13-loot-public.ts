@@ -71,7 +71,8 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
 export async function transferPreparation() {
-  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
+  // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.

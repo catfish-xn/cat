@@ -11,7 +11,8 @@ import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8
 let preparation: api.MatchState | undefined;
 const reached = new Error('Reached actual 4-7 preparation');
 try {
-  await run(api, { build: 'mage', seed: 42, onStep(before, _result, command) {
+  // Keep the original defensive anomaly; spend the 4-7 shop budget to complete the roster.
+  await run(api, { build: 'mage', seed: 42, goldReserves: { '4-7': 0 }, anomalyDefinitionId: 'protective-shielding', onStep(before, _result, command) {
     if (command?.type === 'start' && before.roundDefinitionId === '4-7') {
       preparation = before; throw reached;
     }
