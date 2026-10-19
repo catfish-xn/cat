@@ -17,7 +17,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, S13_EXTRA_ANOMALIES, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));

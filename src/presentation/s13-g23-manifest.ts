@@ -84,11 +84,19 @@ export const G23_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_Hypervelocity", "en": "Hypervelocity", "zh": "超高速"},
   {"apiName": "TFT13_GoopBuff_StrengthTraining", "en": "Strength Training", "zh": "力量训练"},
 ];
-/**
- * Anomalies added after G2-3 by the S13 augment batches (s13-augments-p2.ts); kept apart from the 30 G2-3 rows above.
- * Names from the archived 14.24 stringtables (`tft13_goopbuff_<name>_title` in raw/zh_cn and raw/en_us).
- */
+/** S13 anomalies added after G2-3 (zh_CN client names); kept apart so the G2-3 table stays at its 30 rows. */
 export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
+  {"apiName": "TFT13_GoopBuff_CenteroftheUniverse", "en": "Center of the Universe", "zh": "星原之准"},
+  {"apiName": "TFT13_GoopBuff_CertainDeath", "en": "Diving In", "zh": "深入敌阵"},
+  {"apiName": "TFT13_GoopBuff_DeftHands", "en": "Mini Mees", "zh": "小我多多"},
+  {"apiName": "TFT13_GoopBuff_DramaticEntrance", "en": "Dramatic Entrance", "zh": "震撼登场"},
+  {"apiName": "TFT13_GoopBuff_EvenInDeath", "en": "Last Chance", "zh": "最后机会"},
+  {"apiName": "TFT13_GoopBuff_HungerForPower", "en": "Hunger For Power", "zh": "渴望能量"},
+  {"apiName": "TFT13_GoopBuff_Invisibility", "en": "Invisibility", "zh": "隐形"},
+  {"apiName": "TFT13_GoopBuff_Repulsor", "en": "Repulsor", "zh": "斥力发生器"},
+  {"apiName": "TFT13_GoopBuff_ScuttleFamiliar", "en": "Scuttle Familiar", "zh": "真的会蟹"},
+  {"apiName": "TFT13_GoopBuff_UnstoppableForce", "en": "Unstoppable Force", "zh": "势不可挡"},
+  {"apiName": "TFT13_GoopBuff_WolfFamiliars", "en": "Wolf Familiars", "zh": "双狼佣兽"},
   {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
   {"apiName": "TFT13_GoopBuff_CullTheWeak", "en": "Cull The Weak", "zh": "剔除弱者"},
   {"apiName": "TFT13_GoopBuff_Stoneskin", "en": "Stoneskin", "zh": "石头皮肤"},

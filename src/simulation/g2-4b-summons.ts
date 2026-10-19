@@ -38,8 +38,9 @@ export interface ItemSummonOrigin {
   readonly formCell:HexCell;
   readonly healthBps:number;
 }
-export function scaleItemSummonHp(unit:{readonly itemSummon?:ItemSummonOrigin}, health:number):number {
-  return unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health;
+export function scaleItemSummonHp(unit:{readonly itemSummon?:ItemSummonOrigin;readonly anomalyState?:import('./anomalies/contracts').AnomalyRuntime}, health:number):number {
+  return (unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health)
+    + (unit.anomalyState?.consumed?.health??0);
 }
 
 /** Approved convention: other stats use naked same-star/form + active traits.

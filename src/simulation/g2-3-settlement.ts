@@ -11,7 +11,7 @@ import type { Team } from './board';
 import { TACTICIANS_CROWN_ID } from './deployment-cap';
 export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp',openingUnits:readonly {readonly id:string;readonly team:Team}[]):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
- const allies=combat.units.filter(u=>u.team===team&&!u.definitionId.startsWith('g23-'));
+ const allies=combat.units.filter(u=>u.team===team&&!u.anomalySummon&&!u.definitionId.startsWith('g23-'));
  // 约定值 G24-CROWN-GOLD-01: only crowns bound to units deployed at combat start roll; the holder need not survive.
  if(!combat.strategy)throw new RangeError('Missing G23 opening strategy');
  const owners=new Set(openingUnits.filter(u=>u.team===team).map(u=>u.id));

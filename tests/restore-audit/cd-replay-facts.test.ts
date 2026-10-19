@@ -92,12 +92,12 @@ it('G-C05 binds a genuinely damaged ordinary shield even when both projections c
 });
 
 it('G-C06 binds the real absorption value even when its status is forged coherently', async () => {
-  // Reproducible public offer after the 33-anomaly pool expansion; no injected binding or extra gold.
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 3, anomalyDefinitionId: 'power-absorption' });
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 4, anomalyDefinitionId: 'power-absorption' });
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
-  // Keep the same isolated owner/new-ally scenario after this public route acquires a larger bench.
-  for(const u of prep.preparation.units.filter(u=>u.team==='player'&&u.id!==ownerId))prep=accepted(sellUnit(prep,u.id));
+  // Public bench sales leave room to move the seeded roster off the board.
+  for (const unit of prep.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench' && u.id !== ownerId))
+    prep = accepted(sellUnit(prep, unit.id));
   prep = emptyBoard(prep);
   prep = accepted(deployMatchUnit(prep, ownerId, { kind: 'board', cell: { col: 3, row: 7 } }));
   prep = accepted(grantMechanicUnit(prep, { receiptId: 'cd-absorb-ally', source: 'test', definitionId: 'zyra' }));
@@ -219,7 +219,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 0 : 42, anomalyDefinitionId });
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 3 : 42, anomalyDefinitionId });
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;

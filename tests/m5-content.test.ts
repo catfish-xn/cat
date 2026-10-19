@@ -1,6 +1,7 @@
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
 import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
+import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
 import { G23_HERO_IDS } from './fixtures/g2-3-roster';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -44,7 +45,7 @@ describe('M5 frozen S13 slice',()=>{
     expect(M5_UNIT_DEFINITIONS.caitlyn.baseStats.attack).toBe(82);
   });
   it('retains the historically distinct skills and all their three-star coefficient slots',()=>{
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS};
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
     for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
@@ -60,8 +61,8 @@ describe('M5 frozen S13 slice',()=>{
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });
-  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 44 augments and 33 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,44,33]);
+  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 44 augments and 44 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,44,44]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);
