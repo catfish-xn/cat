@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import { posix as path } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
 
 // Execute the unchanged production script end-to-end with synthetic chunks and
 // deterministic browser timings. No real browser, network, builds or assets.
+// Both the synthetic FS and the script-injected node:path use POSIX semantics,
+// regardless of the host OS (including Windows); the real script is unchanged.
 const source = readFileSync(new URL('../scripts/m7-budget.cjs', import.meta.url), 'utf8');
 const root = '/synthetic-rendering3d-budget';
 const dirs = { base: `${root}/base`, current: `${root}/current`, jsBase: `${root}/js-base`, out: `${root}/out` };
@@ -103,6 +105,7 @@ describe('3D gzip column and unchanged 2D/interaction budgets', () => {
   it('reports zero when the optional 3D directory is absent', async () => {
     const { report, exitCode } = await runBudget();
     expect(report.js3dGzipBytes).toBe(0); expect(report.jsRatio).toBe(1); expect(exitCode).toBe(0);
+    expect(report.baselineDirectories).toEqual({ js: '/synthetic-rendering3d-budget/base', interactive: '/synthetic-rendering3d-budget/base' });
   });
   it('adding 3D chunks changes only the separate column, leaving both 2D budgets and decisions unchanged', async () => {
     const before = await runBudget(), after = await runBudget({ current: { 'assets/current.js': payload, 'assets/3d/only.js': payload.repeat(100) } });
@@ -148,6 +151,7 @@ describe('3D gzip column and unchanged 2D/interaction budgets', () => {
   });
   it('still errors when mandatory 2D assets are missing rather than treating the build as zero bytes', async () => {
     await expect(runBudget({ current: {} })).rejects.toThrow('ENOENT');
+    await expect(runBudget({ base: {} })).rejects.toThrow('ENOENT');
     await expect(runBudget({ jsBase: { 'index.html': 'no assets directory' } })).rejects.toThrow('ENOENT');
   });
 });

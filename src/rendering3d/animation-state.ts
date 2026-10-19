@@ -5,7 +5,8 @@ export type AnimationEvent =
   | { type: 'movement' | 'death' | 'unitRevived'; unitId: string }
   | { type: 'attack'; attackerId: string }
   | { type: 'cast'; sourceId: string }
-  | { type: 'packetDamage'; targetId: string; hit: boolean; hpDamage: number; absorbed: number };
+  | { type: 'heal'; targetId: string }
+  | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number };
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number }
 export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>> }
 const defaults = { move: 0.2, attack: 0.45, cast: 0.7, hit: 0.15 };
@@ -31,8 +32,14 @@ export class UnitActionState {
     this.remaining = state === 'death' ? Infinity : state === 'idle' ? 0 : this.durations[state];
   }
   consume(event: AnimationEvent): ActionOutput {
-    const id = 'unitId' in event ? event.unitId : 'attackerId' in event ? event.attackerId
-      : 'sourceId' in event ? event.sourceId : event.targetId;
+    // Ownership follows replay event semantics, not the presence of sourceId.
+    let id: string;
+    switch (event.type) {
+      case 'movement': case 'death': case 'unitRevived': id = event.unitId; break;
+      case 'attack': id = event.attackerId; break;
+      case 'cast': id = event.sourceId; break;
+      case 'packetDamage': case 'heal': id = event.targetId; break;
+    }
     if (id !== this.unitId) return this.output;
     if (event.type === 'unitRevived') { if (this.state === 'death') this.enter('idle'); return this.output; }
     if (this.state === 'death') return this.output;
@@ -42,6 +49,7 @@ export class UnitActionState {
       case 'attack': this.enter('attack'); break;
       case 'cast': this.enter('cast'); break;
       case 'packetDamage': if (event.hit && event.hpDamage + event.absorbed > 0) this.enter('hit'); break;
+      case 'heal': break; // Healing has no dedicated action and does not interrupt one.
     }
     return this.output;
   }

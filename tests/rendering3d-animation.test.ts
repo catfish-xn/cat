@@ -26,7 +26,8 @@ describe('pure 3D animation state and optional mixer', () => {
   });
   it('shows hit only for effective damage; death locks until actual unitRevived', () => {
     const state = new UnitActionState('u');
-    const damage = { type: 'packetDamage' as const, targetId: 'u', hit: true, hpDamage: 0, absorbed: 1 };
+    const damage = { type: 'packetDamage', tick: 1, eventSeq: 0, sourceId: 'v', targetId: 'u', damageType: 'physical',
+      hit: true, hpDamage: 0, absorbed: 1, critical: false, killingPacket: false } satisfies CombatAnimationEvent;
     expect(state.consume({ ...damage, hit: false }).state).toBe('idle');
     expect(state.consume({ ...damage, absorbed: 0 }).state).toBe('idle');
     expect(state.consume(damage).state).toBe('hit'); expect(state.update(0.15).state).toBe('idle');
@@ -37,6 +38,28 @@ describe('pure 3D animation state and optional mixer', () => {
     expect(state.consume(damage).state).toBe('death'); expect(state.update(100).state).toBe('death');
     const revive = { type: 'unitRevived', tick: 4, eventSeq: 3, unitId: 'u', hp: 1, sourceId: 'v' } satisfies CombatAnimationEvent;
     expect(state.consume(revive).state).toBe('idle'); expect(state.consume({ type: 'movement', unitId: 'u' }).state).toBe('move');
+  });
+  it('routes complete replay attack/cast to the source and packetDamage to the target', () => {
+    const source = new UnitActionState('source'), target = new UnitActionState('target');
+    const attack = { type: 'attack', tick: 1, eventSeq: 0, attackerId: 'source', targetId: 'target' } satisfies CombatAnimationEvent;
+    expect(source.consume(attack).state).toBe('attack'); expect(target.consume(attack).state).toBe('idle');
+    const cast = { type: 'cast', tick: 1, eventSeq: 1, sourceId: 'source', actionSeq: 0, completed: true,
+      actualManaSpent: 0, refundedMana: 0, targetIds: ['target'], completionCell: { row: 0, col: 0 } } satisfies CombatAnimationEvent;
+    expect(source.consume(cast).state).toBe('cast'); expect(target.consume(cast).state).toBe('idle');
+    const damage = { type: 'packetDamage', tick: 1, eventSeq: 2, sourceId: 'source', targetId: 'target', damageType: 'physical',
+      hit: true, hpDamage: 1, absorbed: 0, critical: false, killingPacket: false } satisfies CombatAnimationEvent;
+    expect(source.consume(damage).state).toBe('cast'); expect(target.consume(damage).state).toBe('hit');
+    const revive = { type: 'unitRevived', tick: 1, eventSeq: 3, sourceId: 'source', unitId: 'target', hp: 1 } satisfies CombatAnimationEvent;
+    target.consume({ type: 'death', unitId: 'target' });
+    expect(source.consume(revive).state).toBe('cast'); expect(target.consume(revive).state).toBe('idle');
+  });
+  it('accepts target-owned healing without creating hit or interrupting either unit action', () => {
+    const source = new UnitActionState('source'), target = new UnitActionState('target');
+    source.consume({ type: 'attack', attackerId: 'source' }); target.consume({ type: 'movement', unitId: 'target' });
+    const beforeSource = source.output, beforeTarget = target.output;
+    const heal = { type: 'heal', tick: 2, eventSeq: 0, targetId: 'target', actual: 5,
+      shares: [{ sourceId: 'source', actual: 5 }] } satisfies CombatAnimationEvent;
+    expect(source.consume(heal)).toEqual(beforeSource); expect(target.consume(heal)).toEqual(beforeTarget);
   });
   it('validates visual durations and delta without domain clock dependency', () => {
     expect(() => new UnitActionState('u', { durations: { cast: -1 } })).toThrow();

@@ -85,7 +85,9 @@ D7 不能通过丢弃必需语义把此类源发射器标成普通 v1 sprite，�
 `UnitActionState(unitId, {blendSeconds?,durations?})` 只消费对应单位的动画事实：
 `movement.unitId -> move`、`attack.attackerId -> attack`、`cast.sourceId -> cast`、
 有效 `packetDamage.targetId -> hit`、`death.unitId -> death`、`unitRevived.unitId -> idle`。
-字段对应 `combat-replay-view.ts`；宿主先筛选这六类事件，其余完整账本保留在宿主。
+字段对应 `combat-replay-view.ts`；按事件 type 明确归属：伤害/治疗属于 targetId，攻击属于
+attackerId，施法属于 sourceId，移动/死亡/复活属于 unitId。heal 可接收但不产生动作或中断
+当前动作；没有治疗动作状态。宿主筛选上述事件，其余完整账本保留在宿主。
 同动作重复事件增加 revision，支持普攻重新播放；非死亡状态按事件顺序切换。
 死亡锁定直到复活。`update(seconds)` 结束短动作回待机，死亡不自动恢复。
 默认视觉时长 move=.2、attack=.45、cast=.7、hit=.15，混合 .12 秒；均可配置，
@@ -111,9 +113,9 @@ origin={x:242,y:146}，奇数行偏移半列，边界采用相同逐行优先次
 没有浏览器/WebGL 视觉或真实资产验收；shader 片元结果和真实 D7 资产兼容性待交叉验货。
 未下载、合并或复制 #186 试验素材；不操作 D3–D6，不自行签收，不合并。
 
-依赖固定 `three@0.186.1` 和同系列 `@types/three@0.186.0`：采用安装时 registry 的当前版本，
-使用 ESM GLTFLoader/SkeletonUtils、AnimationMixer、ShaderMaterial 和 Raycaster；精确固定版本
-减少解码/类型漂移。类型包的间接开发依赖不引入产品物理系统，也没有接入 2D 静态依赖图。
+D10 独立评审修复将依赖统一固定为 `three@0.180.0` 和 `@types/three@0.180.0`，与 #213
+已有版本一致。所用 ESM GLTFLoader/SkeletonUtils、AnimationMixer、ShaderMaterial 和 Raycaster
+无必须升级至 0.186 的 API 需求；原 0.186.1/类型 0.186.0 的验证记录仅属于历史提交。类型包的间接开发依赖不引入产品物理系统，也没有接入 2D 静态依赖图。
 
 初次交付起点：`9c3c7a9319333d24e456a9c808e18d4afc47589e`（fetch 得到的 origin/3d）。
 初次提交 `7764aea08cc8cb93ea2e8667799f414cff21b6fe` 的验证记录（每条测试命令均加 `--no-file-parallelism`，依次运行）：
@@ -136,3 +138,30 @@ origin={x:242,y:146}，奇数行偏移半列，边界采用相同逐行优先次
 其余原始测试未重跑；#213 的追加测试仍待父会话确认合入，不属于本次完成项。
 CI 入口：`.github/workflows/ci.yml` 的 pull_request 事件（未修改配置或手动触发全套），
 检查页为 https://github.com/catfish-xn/cat/pull/212/checks；此记录不表示 CI 已通过。
+
+D10 独立评审问题响应（受审提交 `1ca6729d3349836c7fb9beb5507fd1d0380b06e2`）：
+
+- P1：原 packetDamage 样本缺少 sourceId，补完整 replay 字段后旧实现出现 2 项真实失败
+  （7 项中失败 2 项，262 ms）；修复后按事件 type 分派，伤害属于 targetId，不会触发来源的 hit。
+  新回归同时断言两方状态，治疗事件保持当前动作，复活仍属于 unitId。
+- P2：合成 FS 与 VM 中脚本拿到的 node:path 均使用 path.posix；固定斜线命名空间并断言
+  脚本报告的规范路径，避免 Windows 原生分隔符混入。未运行原生 Windows runner。
+- 依赖：没有必须使用 0.186 的需求，three 与 @types/three 一起对齐 #213 的 0.180.0，
+  package 和 lock 已更新，npm ls 确认实际安装版本。
+- 缺失 2D assets：生产 jsGzip 使用 readdirSync，未将缺失目录当 0；只有可选 assets/3d
+  缺失返回 0。复用原缺失目录回归并增加交互基线场景，current/base/js-base 三处均报 ENOENT。
+  未修改生产预算脚本、表现层、模拟规则或 mountRenderer3d 接线。
+
+在 0.180.0 下逐文件串行运行（均带 --no-file-parallelism），共 94 项通过：
+
+| 文件/检查 | 结果 | 耗时 |
+| --- | --- | --- |
+| rendering3d-assets.test.ts | 8/8 | 341 ms |
+| rendering3d-animation.test.ts | 8/8 | 275 ms |
+| rendering3d-particles.test.ts | 48/48 | 335 ms |
+| rendering3d-picking.test.ts | 9/9 | 266 ms |
+| rendering3d-mode.test.ts | 10/10 | 263 ms |
+| rendering3d-budget.test.ts | 11/11 | 191 ms |
+| npm run typecheck | 通过 | 12.717 s wall |
+
+仅相关测试，未跑全套、未改时限、未 skip 或放宽既有断言；上述旧版本证据按原 SHA 保留。
