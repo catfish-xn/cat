@@ -6,14 +6,15 @@
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
  * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
- * Display only: it never issues a command, and the 2D board keeps running (and receiving input) underneath.
+ * Pointer input on the 3D board is replayed through BoardControls (pick() for units, the board plane for drop points):
+ * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
 import {
   AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, RingGeometry, Scene, SphereGeometry, Vector3, WebGLRenderer, type Object3D,
+  PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
-import { ModelCache, UnitActionState, UnitAnimationMixer, hexCenter, type AnimationEvent, type ModelLease } from '../../rendering3d';
-import type { BoardFrame, BoardPiece, subscribeBoardFeed } from '../board-feed';
+import { ModelCache, UnitActionState, UnitAnimationMixer, hexCenter, pick, type AnimationEvent, type HexGrid, type ModelLease } from '../../rendering3d';
+import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 
@@ -24,11 +25,16 @@ const PIECE_HEIGHT = 56, PIECE_WIDTH = 40;
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
 const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal']);
+/** CSS pixels before a press becomes a drag; BoardScene's own threshold is 6. */
+const DRAG_THRESHOLD = 6;
+/** The dragged piece floats this far above the board. */
+const DRAG_LIFT = 10;
+const DROP_COLOR = { allowed: '#68ddd0', refused: '#f08080' } as const;
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
-let subscribe: typeof subscribeBoardFeed | null = null;
-export function useBoardFeed(next: typeof subscribeBoardFeed): void { subscribe = next; }
+let feed: BoardFeed | null = null;
+export function useBoardFeed(next: BoardFeed): void { feed = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string } | { cache: null; status: 'placeholder'; detail: string };
 
@@ -176,6 +182,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
+    grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
+    // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
+    if (dragging && frame.dragging !== dragging) endDrag();
     if (fighting !== null && fighting !== frame.fighting) for (const [id, view] of pieces) resetAction(view, id);
     fighting = frame.fighting;
     const seen = new Set<string>();
@@ -201,7 +210,91 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
     }
   };
-  const unsubscribe = subscribe?.({ frame: onFrame, events: onEvents }) ?? (() => {});
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, unitAt: client => pickUnit(client, true) ?? undefined }) ?? (() => {});
+
+  // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
+  // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
+  const canvas = renderer.domElement;
+  const marker = new Mesh(own(new RingGeometry(26, 33, 6, 1, Math.PI / 2)), own(new MeshStandardMaterial({ color: DROP_COLOR.allowed,
+    emissive: DROP_COLOR.allowed, emissiveIntensity: 0.6, transparent: true, opacity: 0.85 })));
+  marker.rotation.x = -Math.PI / 2; marker.position.y = 1; marker.visible = false;
+  scene.add(marker);
+  const groundPlane = new Plane(new Vector3(0, 1, 0), 0), ray = new Raycaster();
+  let grid: HexGrid | null = null;
+  let press: { id: string; pointerId: number; x: number; y: number } | null = null, dragging: string | null = null;
+  const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
+  /** pick() over the drawn pieces: my units for board gestures, any team for item drops (BoardScene judges the target). */
+  const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
+    const area = viewport();
+    if (!grid || area.width <= 0 || area.height <= 0) return null;
+    const units = [...pieces].filter(([, view]) => anyTeam || view.team === 'player').map(([unitId, view]) => ({ unitId, object: view.root }));
+    const hit = pick(client, area, camera, grid, units);
+    return hit?.kind === 'unit' ? hit.unitId : null;
+  };
+  const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
+  const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
+    const area = viewport();
+    if (area.width <= 0 || area.height <= 0) return null;
+    ray.setFromCamera(new Vector2((event.clientX - area.left) / area.width * 2 - 1, 1 - (event.clientY - area.top) / area.height * 2), camera);
+    const point = ray.ray.intersectPlane(groundPlane, new Vector3());
+    return point ? { x: point.x, y: point.z } : null;
+  };
+  const showHint = (hint: BoardDropHint) => {
+    marker.visible = !!hint.target;
+    if (!hint.target) return;
+    marker.position.set(hint.target.x, 1, hint.target.y);
+    const color = hint.allowed ? DROP_COLOR.allowed : DROP_COLOR.refused;
+    const material = marker.material as MeshStandardMaterial;
+    material.color.set(color); material.emissive.set(color);
+  };
+  const endDrag = () => {
+    if (press && canvas.hasPointerCapture(press.pointerId)) canvas.releasePointerCapture(press.pointerId);
+    dragging = null; press = null; marker.visible = false; canvas.style.cursor = '';
+  };
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || press) return;
+    const id = unitAt(event);
+    if (!id) return;
+    press = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+  const onPointerMove = (event: PointerEvent) => {
+    const controls = feed?.controls();
+    if (!press || event.pointerId !== press.pointerId) {
+      if (press) return;
+      const id = unitAt(event);
+      controls?.hover(id);
+      canvas.style.cursor = id ? 'grab' : '';
+      return;
+    }
+    if (!dragging && Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
+    if (!dragging) {
+      if (!controls?.dragStart(press.id)) { endDrag(); return; }
+      dragging = press.id; canvas.style.cursor = 'grabbing';
+    }
+    const point = boardPoint(event);
+    if (point && controls) showHint(controls.dragMove(point));
+  };
+  const onPointerUp = (event: PointerEvent) => {
+    if (!press || event.pointerId !== press.pointerId) return;
+    const controls = feed?.controls();
+    if (dragging) controls?.dragEnd(boardPoint(event), { x: event.clientX, y: event.clientY });
+    else controls?.select(press.id);
+    endDrag();
+  };
+  const onPointerCancel = (event: PointerEvent) => {
+    if (!press || event.pointerId !== press.pointerId) return;
+    if (dragging) feed?.controls()?.dragCancel();
+    endDrag();
+  };
+  const onPointerLeave = () => { if (!press) { feed?.controls()?.hover(null); canvas.style.cursor = ''; } };
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerCancel);
+  canvas.addEventListener('lostpointercapture', onPointerCancel);
+  canvas.addEventListener('pointerleave', onPointerLeave);
 
   let width = 0, frameId = 0, last = performance.now();
   const resize = (w: number, h: number) => {
@@ -217,11 +310,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
-    for (const view of pieces.values()) {
-      const step = view.target.clone().sub(view.root.position);
-      if (step.lengthSq() > 0.25) view.root.rotation.y = Math.atan2(step.x, step.z);
-      else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
-      view.root.position.addScaledVector(step, follow);
+    for (const [id, view] of pieces) {
+      if (id === dragging) view.root.position.copy(view.target).setY(DRAG_LIFT); // follows the pointer exactly
+      else {
+        view.root.position.y = 0;
+        const step = view.target.clone().sub(view.root.position);
+        if (step.lengthSq() > 0.25) view.root.rotation.y = Math.atan2(step.x, step.z);
+        else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
+        view.root.position.addScaledVector(step, follow);
+      }
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
     }
@@ -234,6 +331,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     status: models.status, detail: models.detail, resize,
     dispose() {
       cancelAnimationFrame(frameId); unsubscribe();
+      if (dragging) feed?.controls()?.dragCancel();
+      feed?.controls()?.hover(null); endDrag();
+      for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
+        ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
+        canvas.removeEventListener(type, handler as EventListener);
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose();

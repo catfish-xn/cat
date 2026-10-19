@@ -26,7 +26,39 @@ export interface ParticleEmitter {
   dissolve?: Curve;
   blend?: 'normal' | 'additive' | 'multiply';
 }
-export interface ParticleDocument { schemaVersion: 1; emitters: readonly ParticleEmitter[] }
+export interface ParticleDocumentV1 { schemaVersion: 1; emitters: readonly ParticleEmitter[] }
+export type ParticleBlend = NonNullable<ParticleEmitter['blend']>;
+/** Uniform scalar, or independent uniform draws per axis. Degrees for rotation. */
+export type BirthValue = number | Vec3 | { min: number; max: number } | { min: Vec3; max: Vec3 };
+export type ParticleEmission = { mode: 'burst'; count: number }
+  | ({ mode: 'continuous'; rate: number; burst?: number } &
+    ({ duration: number; loop?: false } | { loop: true }));
+export interface ParticleLimits { maxParticles: number; maxDuration: number }
+export interface ParticleEmitterV2Base extends Omit<ParticleEmitter, 'kind' | 'count' | 'lifetime'> {
+  emission: ParticleEmission;
+  /** infinite lives until the document's hard maxDuration, only with loop:true. */
+  lifetime: number | 'infinite';
+  position?: Vec3;
+  size0?: BirthValue;
+  /** Scalar = local Z rotation; vector = local XYZ Euler degrees. */
+  rotation0?: BirthValue;
+}
+export type ParticleEmitterV2 = ParticleEmitterV2Base & (
+  | { kind: 'quad' }
+  | { kind: 'mesh'; mesh: string }
+  | { kind: 'trail'; trail: { width: Curve; lifetime: number; segments: number;
+      uvMode: 'stretch' | 'repeat'; tileLength?: number } }
+  | { kind: 'ray'; direction: Vec3 }
+  | { kind: 'arbitraryQuad' }
+  | { kind: 'screenDistortion'; distortion: { normalMap: string; strength: number } }
+);
+export interface ParticleDocumentV2 {
+  schemaVersion: 2;
+  /** Hard effect-wide live count and playback time, including delays and trail tails. */
+  limits: ParticleLimits;
+  emitters: readonly ParticleEmitterV2[];
+}
+export type ParticleDocument = ParticleDocumentV1 | ParticleDocumentV2;
 export const DEFAULT_ASSET_ROOT = 'assets3d-local/';
 
 /** Manifest paths stay below a configurable root; roots may be CDN URLs. */

@@ -4,7 +4,123 @@
 `await import('./rendering3d')` 建立异步 chunk；纯动作逻辑也可单独从
 `animation-state.ts` 导入，它没有 three、Phaser、DOM 或模拟层运行时依赖。
 
-## D7 素材契约 v1
+## 粒子格式 v2（2026-10-19，第 1 段）
+
+`ParticleDocument = ParticleDocumentV1 | ParticleDocumentV2`，manifest 仍为 v1。
+`index.ts` 导出两版类型、`BirthValue/ParticleEmission/ParticleLimits/ParticleEmitterV2`、
+`parseParticleDocument(unknown): ParticleDocument`、`ParticleEffect` 和 `loadParticleEffect`。
+校验先于资源加载及 GPU 分配。v2 从文档到每层嵌套记录均严格拒绝多余字段，
+包括暂不渲染的 screenDistortion；不接收原始 CDragon 字段包。
+v1 sprite 的严格拒绝规则保持不变，另外三类仍按原有规则 opaque 跳过；
+`{schemaVersion:2,emitters:[]}` 缺少预算仍拒绝。v1 不受 v2 时长限制影响。
+
+| v2 字段 | 类型、范围及语义 |
+| --- | --- |
+| `schemaVersion / emitters` | `2` / `ParticleEmitterV2[]`，最多 1024 个发射器 |
+| `limits`（必填） | `{maxParticles,maxDuration}`；存活整数上限 1–10000；总时长 `(0,3600]` 秒，含 delay 与拖尾；到时立即清空，禁止继续发射 |
+| `kind` | `quad / mesh / trail / ray / arbitraryQuad / screenDistortion`；v2 不用 v1 名称 sprite |
+| `emission` | `{mode:'burst',count}`（整数 0–10000），或 `{mode:'continuous',rate,duration,burst?,loop?:false}`，或 `{mode:'continuous',rate,loop:true,burst?}`；duration 与 loop:true 互斥 |
+| `rate / duration / burst` | `(0,10000]` 个/秒，支持小数；duration `(0,3600]` 秒；初始 burst 整数 0–10000，默认 0，delay 结束时仅发一次 |
+| `lifetime` | 粒子寿命 `(0,3600]` 秒，或字面量 `'infinite'`；后者仅 continuous + loop:true，必须受文档 limits 约束；不接收数字 -1 |
+| `position` | 相对挂点的 `[x,y,z]`，默认零；League 原生单位，+Y 向上、右手系 |
+| `size0` | 非负标量、三轴向量或 `{min,max}` 同型范围，默认 1；随机标量各轴同值，随机向量各轴独立均匀抽样；允许零轴，拒绝反向范围、负数、非有限值 |
+| `rotation0` | 标量、三轴向量或同型 `{min,max}`，单位为度，默认零；标量只绕局部 Z，向量为 XYZ Euler；范围语义同 size0，允许负角度 |
+| `texture / color / opacity / size / frames / dissolve / blend` | 完全沿用下节 v1 的路径、线性 RGB、曲线、图集、程序噪声溶解、混合约定；最终尺寸为 size0 × size 曲线 |
+| `delay / velocity / gravity / drag / shape` | 沿用 v1；position + shape 出生点 + 解析运动位移；整体仍由 Group scale（默认 0.6）缩放 |
+| `mesh`（mesh 必填） | 相对根 `.glb` 路径，遵守 assetUrl；调用方提供静态、带 UV 的 BufferGeometry；材质取公共 texture/color/blend 等，不继承 GLB 原生材质 |
+| `trail`（trail 必填） | `{width:Curve,lifetime,segments,uvMode,tileLength?}`；width 按采样点年龄 / trail.lifetime 取值并乘 size0.x 与 size 曲线；尾寿命 `(0,3600]`，分段整数 2–256 |
+| `trail.uvMode` | `stretch` 把整条尾带映射到 U=0..1；`repeat` 按局部累计长度 / 必填正 tileLength 计算 U，shader 周期采样；stretch 不接收 tileLength |
+| `direction`（ray 必填） | 非零有限三轴向量；单位平面从局部 Y=0 延伸到 Y=1，旋转使 +Y 对齐 direction，随后应用 rotation0；size0.x 是宽、size0.y 是长 |
+| `arbitraryQuad` | 平面位于局部 XY，中心为出生点，应用 rotation0，保持朝向；不追随相机。quad 则先面向相机，再应用 rotation0 |
+| `distortion`（screenDistortion 必填） | `{normalMap:string,strength:number}`，路径同 assetUrl，强度 `[0,1]`；类型保留并严格校验，运行时计数跳过，不加载贴图 |
+
+continuous 的周期出生时刻为 `delay + n/rate`（n 从 1 起）；duration 的末时刻包含在内，
+但所有出生时刻必须严格早于 effect 的 maxDuration。跨帧保留时间，不按帧四舍五入；
+浮点比较容忍 8 ULP。全局按出生时刻推进，同刻按文档顺序，先回收再尝试出生。
+超过存活上限立即丢弃，不补发，`droppedParticles` 累计数量；存活数量包括尾巴仍在的 trail。
+一次 effect 最多处理 100000 次出生尝试（包括超额丢弃），用尽后停止后续发射并报告原因，
+已出生粒子继续到寿命或总时限。宿主 `maxParticles/maxDuration` 只能收紧文档限制。
+无限寿命粒子不归一化到有限寿命：所有公共年龄曲线固定采样 t=0，图集仍按真实年龄推进。
+
+trail 是有界、按 update 采样的世界位置带状网格，可跟随挂点平移/旋转；
+最多保留 segments+1 个点，超龄点移除。宽带朝相机（无相机用局部 -Z 视线），
+rotation0 额外旋转宽带方向；size0.y/z 不改变路径，路径只由运动和挂点决定。
+头部停止后保留 tail.lifetime，公共材质曲线固定到头部寿命末点；
+不做源引擎的平滑插值、速度驱动发射和子帧挂点轨迹重建。update 步长会影响拖尾采样密度。
+ray 与 arbitraryQuad 是上述明确的平面子集；仅凭源 primitive 类型标记无法证明 League
+引擎中的射线镜头对齐、轴约定、bindWeight 或朝向模式等价，转换器应逐项确认，不能强转。
+
+`new ParticleEffect(document,{texture?,mesh?,random?,scale?,maxParticles?,maxDuration?})`
+不做 I/O；`mesh(path): BufferGeometry|undefined` 与 `texture(path)` 均为借用资源。
+`loadParticleEffect(manifest,id,{root?,readTexture?,readMesh?,...options})` 先校验整份文档，
+再按路径去重、依次 await 加载网格及贴图；`readMesh(url):Promise<BufferGeometry>`
+由转换器/宿主提供（本段不解析 .sco、附着模型子网格或任意 GLB 场景）。没有 readMesh 时
+按缺失网格跳过，且不读取其贴图；screenDistortion 同样不读 normalMap。
+加载器拥有它加载的纹理和几何，任何阶段失败均释放已成功返回的资源；
+直接构造只释放自有平面/拖尾几何及所有自有材质。dispose 幂等、脱离 parent、清空对象，
+过期粒子及时释放材质及专有尾带几何；借用资源始终由调用方释放。
+公共 API 保留 `object/update(dt,camera?)/finished/dispose/skipped`，无须改外壳；
+新增 `particleCount`（v1 为分配数，v2 为含尾巴的存活数）、`droppedParticles` 和
+`skippedReasons: readonly {emitterIndex,kind,reason}[]`。skipped 仍按未渲染发射器计数：
+
+| reason | 行为 |
+| --- | --- |
+| `mesh-resource-unavailable` | v2 mesh 缺少提供的几何，skipped.mesh 加一 |
+| `screen-distortion-requires-scene-color` | 缺少宿主场景颜色/深度采样输入，无法做真实折射；skipped.screenDistortion 加一 |
+| `total-birth-attempt-budget-exceeded` | 剩余发射器各记录一次，停止后续出生；不增加未渲染发射器的 skipped 计数 |
+| `v1-runtime-skips-mesh/trail/screenDistortion` | v1 原行为，新加可读原因；skipped 计数与原来相同 |
+
+严格校验的失败原因保留 `unsupported-particle-field:<字段路径>` 和 v1 公共字段的
+`invalid-curve/invalid-color/invalid-texture/invalid-vector/...:<字段路径>`；
+v2 专有字段失败为 `invalid-particle-v2:<字段路径>`。非法输入整份拒绝，不作静默降级。
+
+### 第 2 段转换建议与覆盖边界
+
+只读参考为 `assets3d-local/reference/{jinx,vi}-particle-inventory.json`、
+`source-json/{jinx,vi}.json` 以及 reports 的 originalFields；测试全部为独立合成样本。
+以下是合同表达能力，不能视为 299 个实际发射器已经转换成功：
+
+| 旁路拒绝原因（数量）/源字段 | v2 覆盖与转换建议 |
+| --- | --- |
+| continuous-emission（76） | 支持常量 rate → continuous.rate；源 emitter lifetime → duration，已确认循环语义的 -1 → loop:true；isSingleParticle → burst（数量另据源语义）；动态 rate/概率表不等价时仍拒绝 |
+| v1-runtime-skips-mesh（59） | 部分：VfxPrimitiveMesh.mMesh.mSimpleMeshName 另转静态 GLB + mesh 路径，贴图/颜色/混合用公共字段；AttachedMesh 的骨骼绑定、mSubmeshesToDraw、mLockMeshToAttachment 未实现；缺资源计数跳过 |
+| unsupported-primitive:VfxPrimitiveArbitraryQuad（49） | 部分：固定朝向 XY quad + XYZ 出生旋转可表达；源中 primitive 本身只有 __type，须核对局部轴与朝向标志，其余模式不推断 |
+| unsupported-primitive:VfxPrimitiveRay（39） | 部分：显式 direction + 长条平面可表达；源中 primitive 只有 __type，射线相机约束/方向推导须转换器确认 |
+| unrepresentable-semantics:birthScale0（27） | 支持常量标量/向量及独立均匀 min/max → size0；观测到零轴，因此允许 0；非均匀概率表、随发射时间变化的出生尺寸仍不能无损转成范围 |
+| v1-runtime-skips-trail（21） | 部分：CameraTrail/ArbitraryTrail → trail 宽度曲线、尾寿命、分段、UV；mTrail.mBirthTilingSize 可经单位/轴确认后映射 tileLength；mMode、平滑模式、速度发射、UV 滚动不自动丢弃 |
+| unrepresentable-semantics:EmitterPosition（20） | 支持 constantValue 向量 → position；动态偏移或概率偏移未定义，仍拒绝 |
+| v1-runtime-skips-screen-distortion（4） | 仍不支持渲染；保留严格类型与原因。没有场景颜色采样的半透明 quad 不是折射，不能用它冒充 |
+| unrepresentable-semantics:birthRotation0（3） | 支持标量/三轴常量或独立均匀范围 → rotation0；源 probabilityTables 只有确认为均匀独立范围时才可转换，角速度等不覆盖 |
+| unrepresentable-semantics:lifetime（1） | 部分：须先区别 emitter lifetime 与 particleLifetime；前者 -1 代表循环时映射 loop:true，后者仅在确认为无限粒子且 loop 时映射 'infinite'；两者始终要求 limits，不直接传入 -1 |
+
+源 birthColor/color 的 RGB/alpha 应分别折合 color 与 opacity，保持 v1 线性颜色、曲线及
+混合规则；源 particleLifetime 常量才映射粒子 lifetime，不能误把 emitter lifetime 当粒子寿命。
+birthScale0 的 min/max 仅表示均匀分布，非均匀 probabilityTables 仍报告拒绝；
+scale0 的非等比随龄曲线、向量 drag、旋转速度、bindWeight、源 erosion 贴图、
+子发射器、材质 pass/depthBias/navmesh 等尚无 v2 等价字段，禁止静默丢失。
+
+### 本段验证
+
+`npx.cmd tsc --noEmit` 通过；以下每个文件均独立串行执行
+`npx.cmd vitest run tests/<文件名> --project fast --configLoader runner --no-file-parallelism`：
+
+| 文件 | 通过条数 |
+| --- | --- |
+| rendering3d-animation.test.ts | 8 |
+| rendering3d-assets.test.ts | 8 |
+| rendering3d-budget.test.ts | 11 |
+| rendering3d-isolation.test.ts | 1 |
+| rendering3d-mode.test.ts | 10 |
+| rendering3d-particles.test.ts（既有断言原样保留） | 48 |
+| rendering3d-particles-v2.test.ts（合成样本） | 112 |
+| rendering3d-picking.test.ts | 9 |
+| 合计 | 207 |
+
+这里只验证合同、three 对象/几何/uniforms、资源生命周期及生产构建的 2D 隔离，
+没有浏览器 WebGL 画面验收，也没有转换或提交真实参考素材；第 2 段仍须做真实素材视觉核对。
+本段未修改外壳、依赖、既有测试断言或时限。
+
+## D7 素材契约 v1（保留）
 
 权威类型位于 `contracts.ts`。manifest 必须是 `schemaVersion: 1`，包括：
 
