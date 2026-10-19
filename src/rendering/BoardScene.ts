@@ -507,7 +507,7 @@ export class BoardScene extends Phaser.Scene {
     const messages: Partial<Record<MatchFailure, string>> = {
       'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
         : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
-        : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
+        : this.session.phase === 'choice' ? '请先完成当前强化 / 异常选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
         : this.session.phase === 'settlement' ? (this.online ? '本轮已结算 · 稍后自动进入下一回合' : '本轮已结算 · 点击 继续进入下一回合')
         : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
