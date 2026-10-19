@@ -125,6 +125,37 @@ describe('particle v2 interpreter', () => {
     for (let i = 0; i < 10; i++) decimal.update(0.1);
     expect(decimal.particleCount).toBe(10); decimal.dispose();
   });
+  it('includes the last duration birth despite division rounding, across update sizes', () => {
+    const input = { ...doc(quad({ lifetime: 10, emission: { mode: 'continuous', rate: 2.8, duration: 7.5 } })),
+      limits: { maxParticles: 32, maxDuration: 10 } };
+    for (const steps of [[7.5], new Array<number>(15).fill(0.5)]) {
+      const effect = new ParticleEffect(input);
+      try {
+        for (const dt of steps) effect.update(dt);
+        expect(effect.particleCount).toBe(21); expect(effect.droppedParticles).toBe(0);
+        effect.update(0.1); expect(effect.particleCount).toBe(21);
+      } finally { effect.dispose(); }
+    }
+  });
+  it('reclaims a rounded lifetime boundary before checking capacity for the next birth', () => {
+    const effect = new ParticleEffect({ ...doc(quad({ lifetime: 0.2,
+      emission: { mode: 'continuous', rate: 10, loop: true } })), limits: { maxParticles: 2, maxDuration: 10 } });
+    try {
+      for (let i = 0; i < 3; i++) effect.update(0.1);
+      expect(effect.particleCount).toBe(2); expect(effect.droppedParticles).toBe(0);
+    } finally { effect.dispose(); }
+  });
+  it.each([
+    { rate: 2.8, duration: 0.3571428571428571, expected: 1 }, // First birth is one rounding step past duration.
+    { rate: 10000, duration: 0.0001 * (1 - 32 * Number.EPSILON), expected: 0 }, // Outside relative tolerance even at small times.
+  ])('checks the first duration boundary relative to its time scale: $rate', ({ rate, duration, expected }) => {
+    const effect = new ParticleEffect(doc(quad({ emission: { mode: 'continuous', rate, duration } })));
+    try {
+      expect(effect.particleCount).toBe(0);
+      effect.update(1 / rate);
+      expect(effect.particleCount).toBe(expected); expect(effect.droppedParticles).toBe(0);
+    } finally { effect.dispose(); }
+  });
   it('expires before spawning at the same time, caps live counts and drops without backlog', () => {
     const input = { ...doc(quad({ lifetime: 0.5, emission: { mode: 'continuous', rate: 10, loop: true, burst: 3 } })), limits: { maxParticles: 2, maxDuration: 2 } };
     const effect = new ParticleEffect(input);

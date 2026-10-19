@@ -26,6 +26,8 @@ interface Live {
 const finite = (n: number) => Number.isFinite(n);
 /** Bounded total birth attempts as well as live GPU objects, including cap drops. */
 const MAX_BIRTH_ATTEMPTS = 100000;
+// Shared 8 ULP time boundary: scale tolerance to the compared times, never to a
+// fixed epsilon. Strictly-before is !reached(end, at); inclusive is reached(at, end).
 const reached = (at: number, time: number) => at <= time + Number.EPSILON * Math.max(Math.abs(at), Math.abs(time)) * 8;
 // Repeat inside the atlas cell without mutating a borrowed texture's wrap mode.
 const v2FragmentShader = fragmentShader.replace('uniform vec2 tiles;', 'uniform bool repeatU; uniform vec2 tiles;')
@@ -78,7 +80,7 @@ export class ParticleEffectV2 {
         const ordinal = em.mode === 'continuous' && burstLeft === 0 ? 1 : 0;
         const next = (emitter.delay ?? 0) + (em.mode === 'continuous' ? ordinal / em.rate : 0);
         this.sources.push({ emitter, index, geometry, next: (em.mode === 'burst' && burstLeft === 0)
-          || (em.mode === 'continuous' && em.loop !== true && next > (emitter.delay ?? 0) + em.duration) ? Infinity : next,
+          || (em.mode === 'continuous' && em.loop !== true && !reached(next, (emitter.delay ?? 0) + em.duration)) ? Infinity : next,
           burstLeft, ordinal });
       }
       this.update(0);
@@ -87,7 +89,7 @@ export class ParticleEffectV2 {
   }
   get particleCount(): number { return this.live.length; }
   get finished(): boolean {
-    return this.closed || this.elapsed >= this.duration || (this.live.length === 0 && this.sources.every(s => s.next === Infinity));
+    return this.closed || reached(this.duration, this.elapsed) || (this.live.length === 0 && this.sources.every(s => s.next === Infinity));
   }
   private draw(): number {
     const n = this.random();
@@ -145,7 +147,7 @@ export class ParticleEffectV2 {
   private expire(time: number): void {
     this.live = this.live.filter(p => {
       const tail = p.source.emitter.kind === 'trail' ? p.source.emitter.trail.lifetime : 0;
-      if (time >= p.death + tail || time >= this.duration) { this.remove(p); return false; }
+      if (reached(p.death + tail, time) || reached(this.duration, time)) { this.remove(p); return false; }
       return true;
     });
   }
@@ -163,10 +165,10 @@ export class ParticleEffectV2 {
     // world-space tail at the unattached constructor origin.
     if (this.initializing) return;
     const end = Math.min(time, p.death);
-    if (!p.history.length || p.history[p.history.length - 1].time < end) {
+    if (!p.history.length || !reached(end, p.history[p.history.length - 1].time)) {
       p.history.push({ time: end, world: this.object.localToWorld(this.position(p, end - p.birth)) });
     }
-    p.history = p.history.filter(h => h.time > time - e.trail.lifetime).slice(-e.trail.segments - 1);
+    p.history = p.history.filter(h => !reached(h.time, time - e.trail.lifetime)).slice(-e.trail.segments - 1);
     const points = p.history.map(h => this.object.worldToLocal(h.world.clone()));
     const positions = p.mesh.geometry.getAttribute('position'), uv = p.mesh.geometry.getAttribute('uv');
     const view = camera ? camera.getWorldDirection(new Vector3()).transformDirection(this.object.matrixWorld.clone().invert()) : new Vector3(0, 0, -1);
@@ -194,11 +196,12 @@ export class ParticleEffectV2 {
       // Global chronological order; ties use document emitter order. No frame-rate based rate rounding.
       while (true) {
         let source: Source | undefined;
-        for (const s of this.sources) if (s.next !== Infinity && reached(s.next, target) && s.next < this.duration && (!source || s.next < source.next)) source = s;
+        for (const s of this.sources) if (s.next !== Infinity && reached(s.next, target) && !reached(this.duration, s.next)
+          && (!source || !reached(source.next, s.next))) source = s;
         if (!source) break;
         const em = source.emitter.emission, at = source.next, start = source.emitter.delay ?? 0;
         if (em.mode === 'burst' && source.burstLeft === 0) { source.next = Infinity; continue; }
-        if (em.mode === 'continuous' && em.loop !== true && at > start + em.duration) { source.next = Infinity; continue; }
+        if (em.mode === 'continuous' && em.loop !== true && !reached(at, start + em.duration)) { source.next = Infinity; continue; }
         if (this.attempts >= MAX_BIRTH_ATTEMPTS) {
           for (const s of this.sources) {
             if (s.next !== Infinity) this.skippedReasons.push({ emitterIndex: s.index, kind: s.emitter.kind, reason: 'total-birth-attempt-budget-exceeded' });
@@ -214,7 +217,7 @@ export class ParticleEffectV2 {
         else if (em.mode === 'burst') source.next = Infinity;
         else {
           source.ordinal++; source.next = start + source.ordinal / em.rate;
-          if (em.loop !== true && source.next > start + em.duration) source.next = Infinity;
+          if (em.loop !== true && !reached(source.next, start + em.duration)) source.next = Infinity;
         }
       }
       this.elapsed = target;
