@@ -19,11 +19,14 @@ function attribute(tag: string, name: string): string | undefined {
 
 test('the 2D HTML entry loads 3D implementation only through dynamic imports', async () => {
   const started = performance.now();
+  const previousNodeEnv = process.env.NODE_ENV;
   try {
+    process.env.NODE_ENV = 'production';
     // Load the real production config, including its plugins and manualChunks.
     // Runner avoids generating a temporary bundled config; no dist is written.
     const result = await build({
       root,
+      mode: 'production',
       configFile: fileURLToPath(new URL('../vite.config.ts', import.meta.url)),
       configLoader: 'runner',
       build: { write: false },
@@ -87,6 +90,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       chunk: chunk.fileName, chain: staticPaths.get(chunk.fileName),
     })), 'every path from the 2D entry to 3D must cross a dynamic import').toEqual([]);
   } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
     console.info(`2D entry isolation build and assertions: ${Math.round(performance.now() - started)} ms`);
   }
 }, 60_000);
