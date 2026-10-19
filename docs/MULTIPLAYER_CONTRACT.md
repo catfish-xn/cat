@@ -1744,3 +1744,16 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 **公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
 
 **机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。
+
+### First-pass replay capture supplement
+
+`startTwoSidedBattle(input, { captureReplay: true })` returns BattleReplayTask with
+an independent `replay(): CombatReplay | null` accessor. Capture defaults off and
+BattleResult is unchanged. PvE callers can use the public
+`createCombatReplayRecorder(initialState, initialEvents)` once per battle and
+record each tick. Signatures, sequencing, errors and freeze guarantees are specified
+in [COMBAT_CONTRACT.md](COMBAT_CONTRACT.md#first-pass-combat-replay-capture-optional-pvp--pve).
+First-pass output and re-executed replay have byte-identical canonicalContent;
+startCombatReplay retains re-execution and divergence checks for spot audits.
+This supplement allows capture in place of SR-B3-02's second frame-generation run;
+server integration and spot-check policy are implemented separately.

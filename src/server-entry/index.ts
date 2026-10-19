@@ -25,7 +25,7 @@ export { snapshotForBattle, restorePlayerBattleSnapshot } from '../simulation/tw
 export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-history';
 export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
   startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement } from '../simulation/two-sided-battle';
-export type { BattleTask } from '../simulation/two-sided-battle';
+export type { BattleTask, BattleReplayTask, BattleReplayOptions } from '../simulation/two-sided-battle';
 export { stepCombat } from '../simulation/combat';
 export type { CombatStep } from '../simulation/combat';
 export { PLAYER_BATTLE_SNAPSHOT_VERSION, TWO_SIDED_BATTLE_VERSION, BattleValidationError } from '../simulation/two-sided-types';
@@ -45,8 +45,8 @@ export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
 export type { PrivateSeatView, ConsumableTargetView } from '../simulation/private-seat-view';
-export { toCombatViewState, toCombatViewEvents, startCombatReplay, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
-export type { CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';
+export { createCombatReplayRecorder, toCombatViewState, toCombatViewEvents, startCombatReplay, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
+export type { CombatReplayRecorder, CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';
 
 export { createOrbLayout, freezeOrbLayoutThroughRound } from '../simulation/orb-layout';
 export type { OrbLayoutLedger, OrbRoundLayout, OrbTier, LootInitialization, OrbLayoutResult, OrbLayoutFailure } from '../simulation/orb-layout';

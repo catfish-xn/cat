@@ -1,3 +1,4 @@
+import { createCombatReplayRecorder, type CombatReplay } from './combat-replay-view';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
@@ -153,6 +154,11 @@ function validateDynamicResult(result:BattleResult):void {
     ||canonicalContent(events)!==canonicalContent(result.events.slice(result.initial.nextEventSeq??0)))throw new BattleValidationError('invalid-result');
 }
 
+export interface BattleReplayOptions { readonly captureReplay?: boolean; }
+export interface BattleReplayTask extends BattleTask {
+  replay(): CombatReplay | null;
+}
+
 export interface BattleTask {
   advance(maxTicks: number): BattleResult | null;
 }
@@ -162,7 +168,10 @@ export interface BattleTask {
 const checkedResults = new WeakMap<BattleResult, ReturnType<typeof createScopedContentFreezer>>();
 
 /** In-memory continuation. A slice budget never changes the Combat's own tick limit. */
-export function startTwoSidedBattle(input: BattleInput): BattleTask {
+export function startTwoSidedBattle(input: BattleInput, options: { readonly captureReplay: true }): BattleReplayTask;
+export function startTwoSidedBattle(input: BattleInput): BattleTask;
+export function startTwoSidedBattle(input: BattleInput, options: BattleReplayOptions): BattleTask | BattleReplayTask;
+export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOptions): BattleTask | BattleReplayTask {
   const checked = restoreBattleInput(input);
   const start = createCombatWithEvents(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
   const freezeBattle = createScopedContentFreezer();
@@ -177,14 +186,25 @@ export function startTwoSidedBattle(input: BattleInput): BattleTask {
     }
   };
   appendEvents(start);
+  const recorder = options?.captureReplay ? createCombatReplayRecorder(start.state, events) : undefined;
+  let replay: CombatReplay | null = null;
   let terminal = start.state;
   let result: BattleResult | null = null;
-  return { advance(maxTicks) {
+  const task: BattleTask = { advance(maxTicks) {
     if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new BattleValidationError('invalid-budget');
     if (result) return result;
     let steps = 0;
-    while (terminal.status === 'running' && steps < maxTicks) {
-      const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
+    if (recorder) {
+      while (terminal.status === 'running' && steps < maxTicks) {
+        const next = stepCombat(terminal);
+        recorder.record(terminal, next);
+        terminal = next.state; appendEvents(next); steps++;
+      }
+    } else {
+      // Keep the default hot loop free of replay work and per-tick option checks.
+      while (terminal.status === 'running' && steps < maxTicks) {
+        const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
+      }
     }
     if (terminal.status !== 'finished') return null;
     freezeBattle(events);
@@ -196,9 +216,11 @@ export function startTwoSidedBattle(input: BattleInput): BattleTask {
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.
     canonicalContent({...result,initial:null,events:[]});
+    if (recorder) replay = recorder.finish(terminal);
     checkedResults.set(result, freezeBattle);
     return result;
   } };
+  return recorder ? Object.assign(task, { replay: () => replay }) : task;
 }
 
 /** Compatibility: exhausting the total budget remains a fault, never a draw. */

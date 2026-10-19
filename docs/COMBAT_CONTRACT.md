@@ -92,3 +92,76 @@ G24-ZEPHYR-ABSENCE-01, not verified original script semantics.
 `CombatViewUnit.banished?:boolean` exposes presence without changing UI code.
 Zephyr save authority is exact independent combat reconstruction from validated
 frozen inputs; it does not accept candidate-supplied clocks as authority.
+
+## First-pass combat replay capture (optional PvP / PvE)
+
+All interfaces below are exported from the sole server rules entry, `src/server-entry`.
+No rule values, versions, content digests or settlement authority change.
+
+```ts
+interface BattleReplayOptions { readonly captureReplay?: boolean }
+interface BattleTask { advance(maxTicks: number): BattleResult | null }
+interface BattleReplayTask extends BattleTask { replay(): CombatReplay | null }
+startTwoSidedBattle(input: BattleInput): BattleTask;
+startTwoSidedBattle(input: BattleInput, options: { readonly captureReplay: true }): BattleReplayTask;
+startTwoSidedBattle(input: BattleInput, options: BattleReplayOptions): BattleTask | BattleReplayTask;
+
+interface CombatReplayRecorder {
+  record(previousState: CombatState, step: CombatStep): CombatReplayTick;
+  finish(terminalState: CombatState): CombatReplay;
+}
+createCombatReplayRecorder(initialState: CombatState,
+  initialEvents: readonly LedgerCombatEvent[]): CombatReplayRecorder;
+// CombatStep = { readonly state: CombatState; readonly events: readonly CombatEvent[] }
+// CombatReplay = { readonly initial: CombatViewState;
+//   readonly ticks: readonly CombatReplayTick[]; readonly terminal: CombatViewState }
+```
+
+- **PvP lifecycle:** opt in with `startTwoSidedBattle(input, { captureReplay: true })`.
+  Continue calling advance with the usual tick budgets. replay() returns null until
+  the advance that returns BattleResult, then returns the same deeply frozen replay
+  on every call. BattleResult has no added fields; its canonicalContent and the
+  proposeSettlement output equal those with capture disabled.
+- **Default path:** omitted options and explicit false create no recorder, views or
+  replay accessor. The task retains its original shape and advance return value.
+  A dynamic boolean option returns the union type; narrow with `'replay' in task`.
+- **Budgets:** recording never calls stepCombat or consumes RNG. advance still calls
+  stepCombat at most maxTicks times. Invalid budgets throw BattleValidationError
+  ('invalid-budget') before advancing, including after completion. The synchronous
+  resolveTwoSidedBattle wrapper is unchanged: insufficient total budget still
+  throws step-limit-exceeded. A tick-zero finished battle requires one advance call
+  before replay() is available.
+- **PvE lifecycle:** after successful startMatchCombat, construct the recorder with
+  state.combat and ALL opening events whose domain is 'combat'. initialState must
+  be tick zero. initial.nextEventSeq separates already applied opening events from
+  later events, rather than their tick: wolves' deferred tick-zero jumps belong to
+  the first step frame, not the initial frame.
+  For every `const next = stepCombat(previousState)`, call
+  `recorder.record(previousState, next)` exactly once before further stepping or
+  changing next. record returns the deeply frozen frame for that tick. Once finished,
+  call `recorder.finish(next.state)`. If already finished at creation, call
+  finish(initialState) directly. Repeated finish with the same terminal view returns
+  the same replay object; record after finish is prohibited.
+- **Trusted boundary and errors:** this recorder collects trusted rules outputs;
+  it does not replay combat or authenticate the full ledger/hidden state. Supply
+  the initial state, complete opening ledger and consecutive real CombatStep
+  outputs from the same battle; never use it to validate untrusted input.
+  A nonzero initial tick, or a non-finished/out-of-range terminal throws
+  RangeError('invalid-replay-input'). Repeated/skipped ticks, mismatched combatId,
+  record after finish, or a terminal view different from the last recorded view
+  throw RangeError('replay-divergence'). These rejected calls append no new frame;
+  fix the call sequence before continuing. Projection/identity-alignment exceptions
+  propagate unchanged. The recorder does not verify non-visible terminal fields.
+- **Ownership and equivalence:** every view and animation event is projected into
+  detached whitelist data and deeply frozen immediately. The recorder retains only
+  frozen views/frames and a task-local freezer; it adds no global freeze-table
+  registrations. First-pass and replay paths share identity alignment, unitUpdated
+  deltas, membership events and keyframes (every 20 ticks, order change or finish).
+  For the same trusted initial state, terminal and complete ledger, their resulting
+  CombatReplay canonicalContent is byte-identical, with identical deep immutability.
+- **Replay/audit compatibility:** startCombatReplay(input) and toCombatReplay(input)
+  retain combat re-execution, ordered visible-event comparison, terminal comparison
+  and replay-divergence errors. Old callers and server spot checks may continue
+  using them. Capturing a replay does not imply that a spot check has run, and never
+  authorizes another settlement. Server integration/spot-check policy is separate.
+  See also [MULTIPLAYER_CONTRACT.md](MULTIPLAYER_CONTRACT.md).
