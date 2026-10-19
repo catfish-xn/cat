@@ -19,6 +19,11 @@ on:
         default: false
 env:
   M5_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  # Wall-clock budgets (timing tests, M6 frozen performance gates, M7 first interactive) are
+  # recorded but do not fail pull requests; .github/workflows/wallclock.yml enforces them nightly
+  # and after every merge into multiplayer (docs/WORKFLOW_RULES_2026-10-19.md §4). Thresholds unchanged.
+  CI_WALLCLOCK_GATES: ${{ github.event_name == 'pull_request' && 'report' || 'enforce' }}
+  WALLCLOCK_REPORT_DIR: artifacts/wallclock
 permissions:
   contents: read
 # A new push to the same PR cancels that PR's unfinished run. Pushes to main and manual

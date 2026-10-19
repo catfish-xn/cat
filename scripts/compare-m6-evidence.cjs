@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { sourceFingerprint, applicationHeapCeilingBytes, applicationHeapGate, warnApplicationHeap } = require('./m5-evidence.cjs');
 const { hash } = require('./m4-evidence.cjs');
+const { wallClockEnforced } = require('./wallclock-gate.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
 // Read module budgets directly; full-application mode limits use the shared policy.
 const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS, MAX_BATTLE_RECORDS})');
@@ -175,8 +176,11 @@ for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   assert.equal(gate.metric, metric);
   assert.equal(gate.ceiling, limits.PERFORMANCE_BUDGET_MS[budget], `${name} frozen ceiling`);
   assert.equal(gate.actual, actual, `${name} sample-derived result`);
-  assert.equal(gate.passed, true);
-  assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  // Wall-clock budgets: enforced unless CI_WALLCLOCK_GATES=report (PR gate); scripts/wallclock-gate.cjs.
+  if (wallClockEnforced) {
+    assert.equal(gate.passed, true);
+    assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  } else assert.equal(gate.passed, actual <= gate.ceiling, `${name} recorded verdict`);
   };
   verifyOriginalGate();
 }
@@ -186,7 +190,7 @@ assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enem
 assert(Array.isArray(performance.fullLoadObserved)&&performance.fullLoadObserved.length>0,'actual fifth-route load observations retained');
 assert.equal(performance.measurements.fullLoadRoundTrip?.verified, true);
 assert.equal(performance.measurements.fullLoadRoundTrip.battles, performance.measurements.completeBattleCount);
-assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
+if (wallClockEnforced) assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
 assert.equal(performance.lifecycle.cycles, limits.LIFECYCLE_CYCLES);
 assert.equal(performance.lifecycle.extraListeners, 0);
 assert.equal(performance.lifecycle.remainingComponentRoots, 0);

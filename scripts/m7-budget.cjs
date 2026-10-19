@@ -17,6 +17,7 @@ const http = require('node:http');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { chromium } = require('playwright');
+const { wallClockEnforced, recordWallClock } = require('./wallclock-gate.cjs');
 
 const arg = (name, fallback) => (process.argv.find(value => value.startsWith(`--${name}=`)) ?? `=${fallback}`).split('=').slice(1).join('=');
 const baseDir = path.resolve(arg('base', '')), currentDir = path.resolve(arg('current', 'dist')), samples = Number(arg('samples', '9'));
@@ -60,7 +61,11 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
   };
-  result.passed = result.jsRatio <= result.jsBudget && result.interactiveRatio <= result.interactiveBudget;
+  // First interactive is wall-clock: only recorded in the PR gate (CI_WALLCLOCK_GATES=report); the
+  // JS gzip budget is deterministic and always enforced. Both budgets are unchanged.
+  const interactivePassed = result.interactiveRatio <= result.interactiveBudget;
+  result.wallClock = { enforced: wallClockEnforced, gates: recordWallClock('m7-budget', [{ name: 'firstInteractiveRatio', metric: 'median ratio', actual: result.interactiveRatio, limit: result.interactiveBudget, comparison: '<=', passed: interactivePassed }]) };
+  result.passed = result.jsRatio <= result.jsBudget && (interactivePassed || !wallClockEnforced);
   fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   if (!result.passed) process.exitCode = 1;

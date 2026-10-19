@@ -1,0 +1,121 @@
+name: Wall-clock budgets
+# Enforces the wall-clock budgets that pull requests only record (ci.yml sets
+# CI_WALLCLOCK_GATES=report): vitest timing project (B8 startup/advance, whole-room
+# durations), M6 frozen performance gates (first seek etc.) and the M7 first-interactive
+# ratio. Same scripts and same thresholds as ci.yml; a red run here never blocks a PR and
+# is followed up as its own performance task (docs/WORKFLOW_RULES_2026-10-19.md §4).
+# GitHub only fires `schedule` from the default branch, so until multiplayer reaches main
+# the post-merge `push` trigger (and manual dispatch) is what runs it.
+on:
+  schedule:
+    - cron: '0 18 * * *' # 02:00 Beijing time
+  push:
+    branches: [multiplayer]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to measure (default multiplayer)
+        type: string
+        default: multiplayer
+permissions:
+  contents: read
+concurrency:
+  group: wallclock-${{ github.event_name }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+env:
+  CI_WALLCLOCK_GATES: enforce
+  WALLCLOCK_REPORT_DIR: artifacts/wallclock
+  WALLCLOCK_REF: ${{ inputs.ref || (github.event_name == 'schedule' && 'multiplayer') || github.sha }}
+jobs:
+  vitest-timing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WALLCLOCK_REF }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Timing tests (one worker, serial files, budgets enforced)
+        run: npm run test:timing
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wallclock-vitest-timing
+          path: artifacts/
+  m6-performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WALLCLOCK_REF }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: M6 frozen performance gates (budgets enforced)
+        run: node scripts/verify-m6-performance.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wallclock-m6-performance
+          path: artifacts/
+  m7-budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WALLCLOCK_REF }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Signed-off M6 interaction and M7 JS budget builds (same bases as ci.yml)
+        run: |
+          git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
+          ln -s "$PWD/node_modules" ../m6-base/node_modules
+          (cd ../m6-base && npx vite build)
+          git worktree add ../m7-js-base 15313a75c6e74beec739fe52a2875c104c55eae3
+          ln -s "$PWD/node_modules" ../m7-js-base/node_modules
+          (cd ../m7-js-base && npx vite build)
+      - name: M7 JS and first-interactive budgets (budgets enforced)
+        run: node scripts/m7-budget.cjs --base=../m6-base/dist --js-base=../m7-js-base/dist --current=dist --out=artifacts/m7-budget
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wallclock-m7-budget
+          path: artifacts/
+  report:
+    needs: [vitest-timing, m6-performance, m7-budget]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WALLCLOCK_REF }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wallclock-*
+          path: wallclock-artifacts/
+      - name: Wall-clock report
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/wallclock-report.cjs wallclock-artifacts >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wallclock-report
+          path: wallclock-artifacts/REPORT.md
