@@ -1,6 +1,6 @@
 /**
- * 3D 渲染模块与 2D 外壳之间的接口约定。src/rendering3d/（Codex）交付的入口须导出满足 MountRenderer3d 的
- * `mountRenderer3d`；接入时只把 three-loader.ts 里的动态 import 改指向它，外壳、开关和体积统计不变。
+ * 3D 外壳（three-loader.ts）与 3D chunk 之间的接口约定。实现是 placeholder-renderer.ts 的 `mountRenderer3d`：
+ * 它组合 src/rendering3d/（Codex）的公共导出，并从 ../board-feed.ts 读取 2D 棋盘的只读画面数据。
  * 本文件只有类型，2D 主包不因此多出任何代码。
  */
 export interface Renderer3dOptions {
