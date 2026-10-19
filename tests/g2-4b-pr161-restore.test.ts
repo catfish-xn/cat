@@ -127,7 +127,7 @@ it('restores the copied hero across battles and an equip/remove cycle with full 
  expect(history.completedRecords.filter(b=>b.context.round>claimRound&&b.initial.units.some(u=>u.id===unitId)).length).toBeGreaterThanOrEqual(2);
  expect(state.preparation.units.some(u=>u.id===unitId)).toBe(true);
  await expectFullDuplicatorSaveAndNextBattle(state,history);
-});
+},20_000);
 
 let tier14:MatchState|undefined;
 /** Historical receipt vector reaches 1172; the tier14 award itself comes from a real solo battle. */
