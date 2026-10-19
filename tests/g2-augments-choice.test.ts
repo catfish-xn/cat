@@ -1,9 +1,10 @@
 import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { generateChoices } from '../src/simulation/choices';
-import { selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
+import { createMatch,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
+import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll } from './fixtures/m5/oracle.g2.cjs';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
-import { accepted,reachRound,resolveM5Choices } from './match-helpers';
+import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-helpers';
 
 describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
  it.each([0,1,42,123456789,4294967295])('seed %i consumes exactly three independently calculated LCG words',seed=>{
@@ -29,5 +30,51 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const started=accepted(startMatchCombat(resolveM5Choices(after)));expect(restoreMatch(serializeMatch(started))).toEqual(started);
   let live=started;for(let i=0;i<3&&live.phase==='combat';i++)live=stepMatch(live).state;
   expect(restoreMatch(serializeMatch(live))).toEqual(live);
+ });
+});
+
+describe('v14 independent augment oracle',()=>{
+ it.each([0,1,42,123456789,4294967295])('strictly checks tier, three words, free reroll and failures for seed %i',seed=>{
+  const state=freeze(reachRound('2-1',false,seed)),c=state.pendingChoice!,tier=augmentTier(seed,c.choiceId);
+  const draw=augmentDraw((seed^0x9e3779b9)>>>0,tier,[]);
+  expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,rerollCount:0,generation:0,rerollsRemaining:1});
+  expect(state.choiceRngState).toBe(draw.rng);
+  const command={type:'rerollAugment',choiceId:c.choiceId,generation:0},result=rerollAugment(state,c.choiceId,0);
+  validateAugmentReroll(state,result,command);
+  const after=accepted(result);
+  for(const [before,cmd] of [
+   [createMatch(seed),command],
+   [state,{...command,choiceId:'wrong'}],
+   [after,command],
+   [after,{...command,generation:1}],
+  ] as const)validateAugmentReroll(freeze(before),rerollAugment(before,cmd.choiceId,cmd.generation),cmd);
+  // Explicit shortage boundary, as in the domain tests; no ordinary acquisition claim.
+  const short={...state,augments:augmentPool(tier,[],c.offers).slice(2).map((definitionId:string)=>({definitionId,choiceId:'prior',acquiredRound:1}))};
+  validateAugmentReroll(freeze(short),rerollAugment(short,c.choiceId,0),command);
+  // A matching implementation bug must still fail the independent expected state/event.
+  expect(()=>validateAugmentReroll(state,{...result,state:{...after,gold:after.gold+1}},command)).toThrow();
+  expect(()=>validateAugmentReroll(state,{...result,state:{...after,choiceRngState:state.choiceRngState}},command)).toThrow();
+  expect(()=>validateAugmentReroll(state,{...result,state:{...after,pendingChoice:{...after.pendingChoice,offers:c.offers}}},command)).toThrow();
+ });
+ it('independently checks owned exclusion and the next node reset after exhausting an earlier node',()=>{
+  let state=reachRound('2-1',false),c=state.pendingChoice!;
+  state=accepted(rerollAugment(state,c.choiceId,c.generation));
+  const rng=state.choiceRngState;
+  while(state.roundDefinitionId!=='3-2'){
+   state=resolveM5Choices(state);
+   if(state.phase==='preparation')state=accepted(startMatchCombat(emptyBoard(state)));
+   state=resolveM5Choices(state);
+   state=accepted(nextRound(state,state.round));
+  }
+  c=state.pendingChoice!;
+  const tier=augmentTier(state.seed,c.choiceId),draw=augmentDraw(rng,tier,state.augments);
+  expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,generation:0,rerollCount:0,rerollsRemaining:1});
+  expect(state.choiceRngState).toBe(draw.rng);
+  expect(state.augmentOffers.map(r=>r.rerollCount)).toEqual([1,0]);
+  expect(c.offers.some(id=>state.augments.some(a=>a.definitionId===id))).toBe(false);
+  validateAugmentReroll(freeze(state),rerollAugment(state,c.choiceId,0),{type:'rerollAugment',choiceId:c.choiceId,generation:0});
+ });
+ it('hashes UTF-16 surrogate code units independently of code point iteration',()=>{
+  expect(augmentTier(42,'round:\ud83d\ude00:augment')).toBe('silver');
  });
 });

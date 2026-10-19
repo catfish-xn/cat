@@ -2,6 +2,8 @@
 
 基线：`043773eff1a1315c7ba24919f27ca1044c898354`，分支 `codex/augment-tier-consistency`。改动只在工作区；未执行 add/commit/checkout、未安装依赖、未改界面文件。**规则实现已完成；发布收口未完成。**
 
+第二轮（2026-10-19）：本 LF clone 核对为 `codex/augment-tier-consistency`、HEAD `16977dd8b9540b5db1f81a292db4c3850ce6a154`。按调度方授权同步独立 oracle，只修测试路线并更新本文；未安装依赖、未写 `.git`、未操作历史 Herald raw。施工中出现的界面目录改动属于并行工作，本轮没有修改这些文件。
+
 ## 规则与实现位置
 
 来源为用户 2026-10-19 08:15 约定，不声称复原 14.24b 的全员同级或刷新锁级规则。等级表只有等级身份，没有概率/权重；按指定默认等权处理，并标注“项目约定、待用户确认”。
@@ -42,54 +44,64 @@
 
 运行时规则与内容分别为 `s13-g2-3-v14`、`s13-14.24b-g2-3-v14`。当前自动计算 `CONTENT_DIGEST=fnv1a32-utf16:ea6b11b6`、`LOOT_REPLAY_DIGEST=fnv1a32-utf16:9895bc42`。schema7/save3/replay3/command3/NET3 保持；NET3 的刷新命令需新服务端，旧客户端仍可选择，但无刷新入口。
 
-## 验证结果
+## 验证结果（第二轮）
 
-`npx.cmd tsc --noEmit` 通过；`git diff --check` 通过。只运行相关单文件测试，均使用 `npx.cmd vitest run <文件> --configLoader runner`；未跑全套，未改时限、skip 或放宽校验。
+只执行用户指定的 23 个单文件，逐个运行 `npx.cmd vitest run tests/<文件> --configLoader runner`，以及 `npx.cmd tsc --noEmit`；未跑完整测试集、未改测试时限、未 skip、未放宽原断言。类型检查及 `git diff --check` 通过。上一轮的 18 文件/267 项不计入本轮总数。
 
-| 测试文件（相对于 tests/） | 最终结果 |
-| --- | --- |
-| `augment-tier-consistency.test.ts` | 7 通过：同级、锁级、三词、免费、额度重置、失败原子、读档防篡改、池不足拒绝 |
-| `server/augment-tier-consistency.test.ts` | 2 通过：同一房间八席连续 2-1/3-2/4-2 同级、刷新与门控、私有视图、消息校验 |
-| `g2-augments-choice.test.ts` | 62 通过 |
-| `m5-serialization.test.ts` | 33 通过 |
-| `s13-p1-acquisition.test.ts` | 3 通过 |
-| `s13-augments-p2-choice.test.ts` | 23 通过 |
-| `match-contract.test.ts` | 12 通过 |
-| `m8-contracts.test.ts` | 6 通过 |
-| `s13-p1-income.test.ts` | 8 通过 |
-| `s13-p1-multiplayer-income.test.ts` | 2 通过 |
-| `s13-augments-p2-multiplayer.test.ts` | 18 通过 |
-| `g2-augments-multiplayer.test.ts` | 6 通过 |
-| `server/net/messages.test.ts` | 7 通过 |
-| `server/room.test.ts` | 13 通过 |
-| `m8-b3-restore.test.ts` | 13 通过 |
-| `m8-b8-combat-input.test.ts` | 38 通过 |
-| `s13-anomalies-restore.test.ts` | 11 通过 |
-| `m8-b8-live-economy.test.ts` | 3 通过 |
+| 测试文件（相对于 tests/） | 结果 | 本轮修法 |
+| --- | --- | --- |
+| `m5-audit-boundaries.test.ts` | 20 通过 | 自动使用更新后的独立 oracle；测试本身不改 |
+| `m5-growth.test.ts` | 2 通过 | 不改 |
+| `m5-content.test.ts` | 9 通过 | 不改 |
+| `s13-p3-acquisition.test.ts` | 12 通过 | 只同步 oracle，suite 初始化恢复；没有改种子或断言 |
+| `s13-p1-acquisition.test.ts` | 3 通过 | 不改 |
+| `s13-augments-p2-choice.test.ts` | 23 通过 | 不改；保留上一轮已落入基线的路线 |
+| `g2-augments-choice.test.ts` | 69 通过 | 原 62 项保留；新增 7 项独立 oracle 校验，覆盖刷新成功、五类失败输入、篡改结果、UTF-16、已持有排除和下一节点重置 |
+| `m8-b8-equipment-fixture.test.ts` | 4 通过 | `m8-b4-match.ts` 优先选无装备赠品的候选；双饮血种子 `401952→76672`，保留全部编号、掉落、强化及数值断言 |
+| `m8-b8-live-capacity.test.ts` | 6 通过 | 种子仍为 36；通过公开部署把 Urgot 移至 `(4,7)`，保留 reveal=117、final=137 |
+| `m8-b8-live-reveal.test.ts` | 3 通过 | 同时死亡路线 `42→242874`，保留原三强化与 Protective Shielding；真实补给/合成四件原装备、付费招募八名二星、使用已获拆卸器并部署，Leona 在 `(0,5)`；保留 tick-44/eventSeq-382/383。Zyra `166883→8606`、Loris `31731→59439`，真实出售/招募/卸装并部署，保留单来源 tick-152/381 及全部发放/恢复断言 |
+| `m8-b8-live-transfer.test.ts` | 19 通过 | `t13-loot-public.ts` 将 Corki 购买上限设为 1，避免 4-7 多一次出生；保留 23 次出生、unit-24 奖励等原断言 |
+| `m8-b8-live-growth.test.ts` | 26 通过 | `48→312`；真实出售巨人杀手持有者，将已获得装备交给幸存者；保留两来源既有成长、两次当前成长、奖励合并及全部防篡改断言 |
+| `m8-b5-temporary.test.ts` | 30 通过 | `t13-public-gloves.ts` 避开 P1/P3 提前赠品、优先 Backup 而非额外 HP 的 Item Collector；必要时使用公开免费刷新；原 35 条路线、43 定义和所有数值断言保留 |
+| `chest-bracer-integration-trial.test.ts` | 11 通过 | `64145→580279`，优先 Manaflow I；保留 2-4 法棒选择、2-5 战斗、授予/脉冲/叠层/死亡的所有原 tick |
+| `bracer-multikill-stacks.test.ts` | 25 通过 | contribution=false 路线 `120→77`，保留 Manaflow I 及 tick-190 击杀 |
+| `task-mechanism-restore.test.ts` | 20 通过 | 同上；Bulky Buddies I 路线 `22→112`；断言不改 |
+| `t12-combat-equip.test.ts` | 48 通过 | 不改 |
+| `server/carousel-room.test.ts` | 20 通过 | 种子仍为 24；保留开局单位至 3-1、2-1 买当轮商店，额外购买下一准备阶段真实卖出；保留 5-6 淘汰、两战间隔和卡池归还断言 |
+| `server/projection-wire.test.ts` | 9 通过 | 加时路线 `4→5`；断言不改 |
+| `server/g5-economy-preview.test.ts` | 2 通过 | 同上，真实进入加时，逐项比较经济预览不变 |
+| `restore-audit/cd-replay-facts.test.ts` | 34 通过 | 不改 |
+| `g2-4b-trench-gold.test.ts` | 1 通过 | `1→52`；保留原体/复制体各一次 Gambler、中一次 Collector、总三次支付、完整独立随机流及一次性结算断言 |
+| `g2-4a-crown-history.test.ts` | 56 通过 | 不改 |
 
-以上为 18 个完整单文件、267 项通过，其中新增 9 项。种子修法：P2 的 `seedFor` 原先自行抽混合池，改为搜索实际同级候选；Crown→Trifecta→Kog'Maw 路线 `182→1837`；live-economy `973→97653`，筛选保留原开局单位和掉落签名。原有数值、掉落、金币、HP、成长、护盾断言全部保留。临时搜索与诊断测试已删除。
+共 23 个完整文件、452 项通过，其中新增 7 项。所有原严格断言均保留，路线修复使用真实公开命令，没有改规则数值、伪造资源或替换 golden。临时诊断/搜索代码及旧基线导入已从测试删除；搜索日志和只读对照材料仅在忽略提交的 `artifacts/augment-tier-v14-round2/`。
 
-### 仍失败的既有测试
+同时死亡路线的对照来自提交 `404a0c4` 的只读源码副本，在指定的同一个测试文件内核实旧场景仍为 tick-44/eventSeq-382/383；没有改该基准。新路线以真实掉落加三次补给选择获得日炎、离子火花、科技枪、朔极之矛，保留原装备持有者和八人二星阵容，并调整 Leona 一格；测试不导入旧实现或保存的参考状态。构建目标仍由当前公开 Match 命令及严格恢复验证。
 
-| 文件 | 当前结果及原因 |
-| --- | --- |
-| `s13-p3-acquisition.test.ts` | suite 初始化失败，0 项执行；独立 oracle 的 `independent augment offers` 仍按混合池计算候选 |
-| `s13-p1-dual-wielding.test.ts` | 1 通过、1 失败；v13 录制的 `contentDigest` 与 v14 不符，需重录 dual commands |
-| `opening-random-identity.test.ts` | 4 通过、136 失败：1 个发布身份对账、134 个 cannon/sniper 的旧 v13 checkpoint 恢复、1 个首战状态 trace hash；均依赖尚未重录的当前发布夹具 |
+本轮需决定的测试断言变更：**无**。指定的包内失败均已修复，剩余仅为下面明确排除在本轮之外的发布重录工作。
 
-没有运行并宣称通过其他长路线或整个测试集。其他依赖当前发布原件的恢复/指纹测试，在重录前也不具备验收条件。
+### 需重录的发布证据（本轮按指令未运行、未修复）
 
-## Oracle 决策阻塞
+`opening-random-identity`、`m8-content-equivalence`、`s13-p1-dual-wielding` 的 dual commands，以及 Herald/recorded-states 仍依赖 v13 发布原件或旧指纹，由调度方在沙箱外重录后再评估。上一轮记录的 opening 4 通过/136 失败、dual 1 通过/1 失败仅为历史结果，不冒充本轮执行结果。
 
-`tests/fixtures/m5/oracle.g2.cjs:211` 的独立候选计算只排除已持有，仍从混合池抽三个；新规则必然需要同步该预期算法，换种子无法解决。这同时影响 release/Herald/dual 的路线生成，以及引用生成器的测试。
+## 独立 Oracle 已同步（原决策阻塞解除）
 
-按用户“必须改断言的停下列出原因”的约束，本次**未改 oracle**，已发送异步选择，尚未获得答复。建议允许：独立重写节点派生、按等级过滤及刷新重推，保留候选逐项相等与 RNG 守恒断言，不从 production 导入等级派生实现。替代选项为保持 oracle 不动，由调度方处理该阻塞。
+规则依据为用户 2026-10-19 08:15 约定及本轮调度授权，见 `docs/MATCH_CONTRACT.md`。`tests/fixtures/m5/oracle.g2.cjs` 顶部已标明来源和独立性：唯一运行时 `require` 是 `node:assert/strict`，不 import/require 任何 `src/simulation` 实现或内容表；`.d.cts` 中只有类型引用。
+
+- 57 项等级身份采用独立字面量表，并核对与原有独立 ID 并集逐项一致；UTF-16 code unit FNV-1a32、异或 `0x61756774` 和 LCG 用 BigInt 独立算术实现，首词 `%3` 映射 silver/gold/prismatic，不消耗选择流。
+- 按等级过滤、排除已持有及当前代、按字典序抽取三个 LCG 词；原候选逐项相等、选择/奖励/战斗 RNG 守恒和全部经济/成长/收据断言保留。
+- `validateAugmentReroll(before,result,command)` 独立核对失败优先级、原 state 引用及无事件；成功时比较整个预期 state、完整事件、三个词、零费用、锁级、计数、代次、剩余额度和历史记录。`Ledger.apply` 对刷新成功接入同一检查，并在所有强化节点核对重置及已持有排除，非抽取步骤核对历史保留。
+- 额外刷新额度的独立字面量表当前为空，符合本次没有注册 ExtraRolls 强化的内容边界；将来新增内容时须独立补录，而非读取被测定义。
+
+本轮路线调整均在测试或测试夹具；发布/dual 脚本已经通过 `generate-m5-route.cjs` 自动引用更新后的 oracle，没有需要同步到录制脚本的同一条改种子路线。未改 Vite 或脚本绕过沙箱；发布整局胜利和录制仍须由调度方执行原严格验收。
+
+建议第二轮提交：`test(augments): sync independent v14 oracle and reseed acquisition routes`。只包含本轮 oracle、类型声明、测试/夹具和本文；并行界面文件不属于本轮提交范围。
 
 ## 发布录制与指纹步骤
 
 历史基准全 SHA 从当前 release-audit.json 读取为 `bc49cac5deb74d6388f6d8c0eebb85ba15a9027e`，不是本工作区的施工基线。当前发布夹具及审计 JSON 均保留 v13 原件，没有手改身份、hash 或 golden。
 
-| 步骤 | 沙箱内结果 |
+| 步骤 | 上一轮沙箱记录（本轮未重跑） |
 | --- | --- |
 | `node scripts/record-g2-4b-release.cjs --baseline-commit=bc49cac5deb74d6388f6d8c0eebb85ba15a9027e` | `EPERM unlink node_modules/.vite/deps/_metadata.json`，无输出后中止；无发布原件写入 |
 | `node tests/fixtures/record-g2-4b-herald.cjs --write` | 立即失败：`Cannot read directory "../../..": Access is denied`、`Could not resolve .../vite.config.ts`；未写入 |
@@ -99,7 +111,7 @@
 
 未改 Vite 配置或录制脚本绕过限制，未运行历史 `g2-3-herald-raw`、`g2-augments-herald-raw` 的 `--write`。升版流程中的发布 JSON、两份 gzip 录制、Herald raw、dual gzip、输入最小向量、指纹和 sourceDigests 均待调度方重录。
 
-先解决 oracle 决策与实现，再在沙箱外依次执行：
+本轮 oracle 已同步；发布录制仍由调度方在沙箱外依次执行：
 
 ```powershell
 node scripts/record-g2-4b-release.cjs --baseline-commit=bc49cac5deb74d6388f6d8c0eebb85ba15a9027e
@@ -122,4 +134,4 @@ node scripts/record-s13-p1-dual-choice.cjs
 4. `docs(augments): document the user-defined tier and whole-offer reroll rules`：合同、规则和交接。
 5. `release(s13): bump to v14 and re-record release evidence`：现有升版字符串改动，以及后续成功生成的夹具/审计；证据未完成前不要把这一提交视作可发布。
 
-自行决定：FNV 节点派生、固定 namespace、等权默认、次数/剩余额度字段、只排除当前代、池不足原子拒绝、以 choiceOpened 发布刷新结果、沿用 NET3 的可选命令兼容方式。未改变现有强化效果、数值或额外新增内容。剩余风险是 oracle 未同步、发布证据仍为 v13，以及尚未逐个运行的其他种子长路线；本分支当前不满足发布验收。
+上一轮实现选择：FNV 节点派生、固定 namespace、等权默认、次数/剩余额度字段、只排除当前代、池不足原子拒绝、以 choiceOpened 发布刷新结果、沿用 NET3 的可选命令兼容方式。第二轮未改变规则或内容。Oracle 原阻塞已解除；发布证据仍为 v13，且完整发布路线未在本轮验收，本分支当前不满足发布验收。

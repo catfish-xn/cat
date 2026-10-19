@@ -4,7 +4,10 @@ import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
-const prepared=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']),live=battle(prepared),waiting=live.ended;
+const prefix=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']);
+// One public hex move preserves the independent reveal-117 / final-137 boundary under v14.
+const prepared=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
+const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 const soldUnit=bench(waiting)[0];
 function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}

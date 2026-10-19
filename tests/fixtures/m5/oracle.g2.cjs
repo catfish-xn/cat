@@ -1,4 +1,6 @@
 /* Independent M5_RULES R3/R4 and approved M8B_OPENING/LOOT/ADDENDUM arithmetic. No production imports. */
+/* Augment tier/reroll rules: user agreement 2026-10-19 08:15, documented in
+ * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
@@ -26,6 +28,47 @@ ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-
 // P1 literal union: independent from production registration.
 AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','hedge-fund','investment-strategy-ii');AUGMENTS.sort();
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
+// Literal tier identities, transcribed independently; no runtime content imports.
+const AUGMENT_POOLS={
+ silver:['backup','blistering-strikes','bulky-buddies-i','climb-the-ladder-i','find-your-center','glass-cannon-i','item-collector-i','lineup','lone-hero','manaflow-i','mentorship-i','placebo','placebo-plus','pumping-up-i'],
+ gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
+ prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
+};
+assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
+function augmentTier(seed,node){
+ let hash=2166136261n;
+ // Index UTF-16 code units, including each half of a surrogate pair.
+ for(let i=0;i<node.length;i++)hash=((hash^BigInt(node.charCodeAt(i)))*16777619n)%4294967296n;
+ return ['silver','gold','prismatic'][word(Number(BigInt(seed)^0x61756774n^hash))%3];
+}
+function augmentPool(tier,owned,excluded=[]){return AUGMENT_POOLS[tier].filter(id=>!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)).sort();}
+function augmentDraw(rng,tier,owned,excluded=[]){
+ const pool=augmentPool(tier,owned,excluded);assert(pool.length>=3,'independent augment pool has three candidates');
+ for(let i=0;i<3;i++){rng=word(rng);const j=i+rng%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
+ return {offers:pool.slice(0,3),rng};
+}
+// No admitted definition grants ExtraRolls; future content must extend this literal expectation.
+const AUGMENT_EXTRA_ROLLS={};
+function augmentLimit(owned){return 1+owned.reduce((n,a)=>n+(AUGMENT_EXTRA_ROLLS[a.definitionId]??0),0);}
+function augmentSeed(state){
+ if(!state.multiplayer)assert.equal(state.augmentTierSeed,state.seed,'independent solo tier seed binding');
+ return state.augmentTierSeed;
+}
+function validateAugmentReroll(before,result,command){
+ assert.equal(command.type,'rerollAugment');const c=before.pendingChoice;
+ let reason=null,tier;
+ if(before.phase!=='choice'||c?.kind!=='augment'||c.step!=='offer')reason='wrong-phase';
+ else if(command.choiceId!==c.choiceId||command.generation!==c.generation)reason='stale-choice';
+ else if(c.rerollCount>=augmentLimit(before.augments))reason='augment-rerolls-exhausted';
+ else {tier=augmentTier(augmentSeed(before),c.choiceId);if(augmentPool(tier,before.augments,c.offers).length<3)reason='augment-pool-too-small';}
+ if(reason){assert.deepEqual(result,{ok:false,state:before,reason},'independent reroll rejection');assert.equal(result.state,before,'failed reroll preserves state reference');return;}
+ assert.equal(result.ok,true);const after=result.state,draw=augmentDraw(before.choiceRngState,tier,before.augments,c.offers);
+ const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:augmentLimit(before.augments)-c.rerollCount-1};
+ assert.equal(c.augmentTier,tier,'reroll locks node tier');
+ assert.deepEqual(after,{...before,choiceRngState:draw.rng,pendingChoice:next,nextMatchEventSeq:before.nextMatchEventSeq+1,
+  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount}:r)},'independent free atomic reroll state');
+ assert.deepEqual(result.events,[{domain:'match',eventSeq:before.nextMatchEventSeq,type:'choiceOpened',choice:next}],'independent reroll event');
+}
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}
@@ -202,13 +245,26 @@ function investment(before,record){return {pumpingRounds:before.augmentProgress.
 class Ledger {
  constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
+  if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
+  if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,before.augments.some(a=>a.definitionId==='going-long')?4:0);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
   if(command?.type==='target'||command?.type==='anomalyReroll'){choice=word(choice);const pool=ANOMALIES.filter(id=>command.type!=='anomalyReroll'||!before.pendingChoice.offers.includes(id));assert.deepEqual(after.pendingChoice.offers,[pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)]],'independent anomaly offer');}
   for(const event of events){
-   if(event.type==='choiceOpened'&&event.choice.kind==='augment'){const pool=AUGMENTS.filter(id=>!after.augments.some(a=>a.definitionId===id));for(let i=0;i<3;i++){choice=word(choice);const j=i+choice%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}assert.deepEqual(event.choice.offers,pool.slice(0,3),'independent augment offers');}
+   if(event.type==='choiceOpened'&&event.choice.kind==='augment'){
+    const c=event.choice,tier=augmentTier(augmentSeed(after),c.choiceId),rerolled=command?.type==='rerollAugment';
+    assert.equal(c.choiceId,`round:${after.roundDefinitionId}:augment`,'independent scheduled augment node identity');
+    const draw=augmentDraw(choice,tier,after.augments,rerolled?before.pendingChoice.offers:[]);choice=draw.rng;
+    assert.deepEqual(c.offers,draw.offers,'independent augment offers');
+    const used=rerolled?before.pendingChoice.rerollCount+1:0;
+    assert.deepEqual(c,{kind:'augment',step:'offer',choiceId:c.choiceId,eventId:c.choiceId,generation:used,offers:draw.offers,targetId:null,
+     rerollCount:used,augmentTier:tier,rerollsRemaining:augmentLimit(after.augments)-used,returnPhase:'preparation'},'independent augment node/reset metadata');
+    assert.deepEqual(after.pendingChoice,c,'augment event equals pending state');
+    const record={choiceId:c.choiceId,tier,rerollCount:used};
+    assert.deepEqual(after.augmentOffers,rerolled?before.augmentOffers.map(r=>r.choiceId===c.choiceId?record:r):[...before.augmentOffers,record],'independent augment history');
+   }
    if(event.type==='rewardGranted'){reward=word(reward);assert.equal(event.receipt.itemIds.length,1);assert.equal(after.items.find(i=>i.id===event.receipt.itemIds[0]).definitionId,COMPONENTS[reward%8],'independent random component');}
   }
   assert.equal(after.choiceRngState,choice,'choice RNG conservation');assert.equal(after.rewardRngState,reward,'reward RNG conservation');assert.equal(after.battleSeedRngState,battle,'battle seed RNG conservation');
@@ -247,4 +303,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(state.items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger};
+module.exports={ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
