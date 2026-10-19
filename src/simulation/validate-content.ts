@@ -78,7 +78,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   s13P3:['enabled','stage'],
-  acquisitionGold:['amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
+  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
 });
 export function validateEffect(effect:Effect):void {
@@ -132,8 +132,9 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  // Augments: 30 historical + 14 P2 + 7 P3; anomalies: 30 historical + 3 P2 + 11 P4 + 7 P3.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length,anomalies:30+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length})) {
+  // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
+  // investment-strategy-ii) + 14 P2 + 7 P3; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3.
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

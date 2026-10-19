@@ -1,0 +1,16 @@
+import {expect,it} from 'vitest';
+import {createMatch} from '../src/simulation/match';
+import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
+import {createCombatWithEvents,stepCombat} from '../src/simulation/combat';
+import {packets} from './helpers/replay2-views';
+it.each([[0,1500],[1,1500],[2,1600],[49,3900],[50,4000],[100,4000]])('Avarice uses %i bank for %i bps actual damage', (gold,amp)=>{
+ const base=createMatch(42),preparation={...base.preparation,units:[{id:'p',definitionId:'lux',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}},{id:'e',definitionId:'garen',starLevel:3 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:1,row:3}}}]};
+ const state={...base,gold,preparation,anomalyBinding:{definitionId:'avarice-incarnate',unitId:'p',choiceId:'test',boundRound:1}};
+ const strategy=buildStrategySnapshot(state),combat=createCombatWithEvents(preparation,strategy,'avarice',42).state;
+ const first=stepCombat({...combat,units:combat.units.map(u=>({...u,mana:0,maxMana:0}))});
+ const packet=packets(first.events).find(p=>p.source.ownerId==='p')!;
+ expect(packet).toBeDefined();
+ // Lux 30 AD, fixed-seed crit 140%, Garen 60 armor: crit then armor then amplifier floors.
+ expect(packet.critical).toBe(true);
+ expect(packet.mitigated).toBe(Math.max(1,Math.floor(Math.floor(42*100/160)*(10000+amp)/10000)));
+});

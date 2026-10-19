@@ -14,7 +14,7 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
 const MECHANICS = new Set(['s13P3','s13Anomaly','g23Junker','g23Experiment','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
-  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
+  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   s13P2Augment: ['enabled'], s13P2Anomaly: ['enabled'], s13P2ItemAugment: ['enabled'],
   s13Anomaly:['enabled'],
@@ -51,7 +51,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   gargoyle: ['resistPerEnemy'], gunblade: ['selfHealBps', 'allyHealBps'], extraAttackMana: ['amount'], titanic: ['adBps', 'radius'],
   killStreak: ['mana'], bulkyBuddies: ['health', 'shieldMaxHpBps', 'durationTicks'], mageArmor: ['apBps'],
   glassCannon: ['startingHealthBps', 'damageAmpBps'], pumpingUp: ['attackSpeedBpsPerRound'], investment: ['healthPerInterest'],
-  damageAmp: ['bps'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
+  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
 MECHANICS.add('s13P2Augment');

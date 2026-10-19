@@ -1,3 +1,4 @@
+import { investmentGrowth } from './augment-income';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
 import { crownTeamSizeBonus } from './deployment-cap';
@@ -142,10 +143,9 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   }
   const history = authority.roundResults.filter(result => result.round < authority.round);
   const pump = input.augments.find(augment => augment.definitionId === 'pumping-up-i');
-  const investment = input.augments.find(augment => augment.definitionId === 'investment-strategy-i');
   requireBasis(equal(input.augmentProgress, {
     pumpingRounds: pump ? history.filter(result => result.round >= pump.acquiredRound).length : 0,
-    investmentHp: investment ? history.filter(result => result.round >= investment.acquiredRound).reduce((sum,result) => sum + result.incomeBreakdown.interest * 8,0) : 0,
+    investmentHp: investmentGrowth(input.augments,history),
   }));
   const rolls = authority.equipmentRolls.slice(0, basis.equipmentRollPrefixLength);
   const expectedChildren = sorted(input.items).filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId])).flatMap(item => {

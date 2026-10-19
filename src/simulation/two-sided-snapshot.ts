@@ -89,7 +89,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
     requireSnapshot(s.augmentProgress.pumpingRounds <= round.ordinal
       && (augmentIds.has('pumping-up-i') || s.augmentProgress.pumpingRounds === 0)
-      && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
+      && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),

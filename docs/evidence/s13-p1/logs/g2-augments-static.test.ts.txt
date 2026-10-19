@@ -1,0 +1,85 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-augments-static.test.ts --reporter=verbose
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > contains exactly the existing thirty and six implemented P1 definitions 3ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > blinding-speed keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > portable-forge keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > radiant-relics keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > going-long keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > hedge-fund keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > investment-strategy-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > placebo keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > placebo-plus keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > manaflow-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > manaflow-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > glass-cannon-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > glass-cannon-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > pumping-up-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > pumping-up-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > pumping-up-iii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > investment-strategy-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > bulky-buddies-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > bulky-buddies-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > bulky-buddies-iii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > mentorship-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > mentorship-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > item-collector-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > item-collector-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > bronze-for-life-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > bronze-for-life-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > little-buddies keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > backup keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > lineup keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > find-your-center keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > built-different keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > blistering-strikes keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > clockwork-accelerator keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > lone-hero keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > climb-the-ladder-i keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > climb-the-ladder-ii keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 plus P1 augments: independent exact source parameters > inspiring-epitaph keeps exact normalized source values 0ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > bulky-buddies-ii selects exactly one adjacent ally 56ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > bulky-buddies-iii selects exactly one adjacent ally 12ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > manaflow II and glass cannon II are restricted to the last row by the real snapshot 16ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > mentorship-i only requires one higher-cost neighbor 19ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > mentorship-ii only requires one higher-cost neighbor 29ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > item-collector-i counts distinct worn items rather than copies or inventory 53ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > item-collector-ii counts distinct worn items rather than copies or inventory 38ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > lineup sums two 2.5 contributions before integer rounding 22ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > bronze-for-life-i counts current source-style-1 tiers only 3ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > bronze-for-life-ii counts current source-style-1 tiers only 2ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > backup requires four allies in the last two rows 13ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies gives corki two low-cost contributions 11ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies gives caitlyn two low-cost contributions 6ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies never buffs cost 1/2/3/6 target lux 6ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies never buffs cost 1/2/3/6 target akali 6ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies never buffs cost 1/2/3/6 target blitzcrank 5ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > little buddies never buffs cost 1/2/3/6 target test-six-cost 4ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 1 uses the B-patch stage ladder 5ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 4 uses the B-patch stage ladder 5ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 11 uses the B-patch stage ladder 5ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 18 uses the B-patch stage ladder 5ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 25 uses the B-patch stage ladder 10ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different round 32 uses the B-patch stage ladder 8ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > built different rejects any active member trait but ignores unrelated and inactive traits 3ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > find center uses the documented player deployment center (3,5) 11ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > blistering strikes preserves the five-second attack burn and wound program parameters 2ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > Pumping I retains its original validated counter even without multiplayer history 2ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > pumping-up-ii uses its own completed combat nodes, not a shared progress counter 2ms
+ ✓ |fast| tests/g2-augments-static.test.ts > G2 static augment selectors and hand-calculated totals > pumping-up-iii uses its own completed combat nodes, not a shared progress counter 3ms
+
+ Test Files  1 passed (1)
+      Tests  66 passed (66)
+   Start at  18:31:03
+   Duration  2.55s (transform 68%, tests 17%, import 15%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
