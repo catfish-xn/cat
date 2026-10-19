@@ -8,7 +8,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
+import { boardFeedActive, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -372,10 +372,13 @@ export class BoardScene extends Phaser.Scene {
    * C17: a battle on the board may name my pieces by battle id (PvP replay, C15); the drop targets the unit it stands for.
    */
   private boardUnitAt(x: number, y: number): string | undefined {
+    const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
+    // ?render=3d covers this canvas: the 3D layer picks the model under the pointer (perspective, not 2D boxes).
+    const picked = boardFeedUnitAt({ x, y });
+    if (picked !== null) return picked === undefined || !this.tokens.get(picked)?.visible ? undefined : ownerOf(picked);
     const rect = this.game.canvas.getBoundingClientRect();
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
-    const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
     // P8: in a battle tokens walk into each other's box (melee neighbours, a unit stepping between cells); the token
     // nearest the pointer wins, not the first one in insertion order, so a drop on my unit never lands on the enemy beside it.
     let best: string | undefined, bestDistance = Number.POSITIVE_INFINITY;

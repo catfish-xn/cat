@@ -38,11 +38,19 @@ export interface BoardControls {
   dragEnd(point: { x: number; y: number } | null, client: { x: number; y: number }): void;
   dragCancel(): void;
 }
-export interface BoardFeedListener { frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void }
+export interface BoardFeedListener {
+  frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
+  /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
+  unitAt?(client: { x: number; y: number }): string | undefined;
+}
 
 let listener: BoardFeedListener | null = null, controls: BoardControls | null = null;
 
 export const boardFeedActive = (): boolean => listener !== null;
+/** null when no layer answers (2D picks itself); otherwise the layer's piece under the point, if any. */
+export function boardFeedUnitAt(client: { x: number; y: number }): string | undefined | null {
+  return listener?.unitAt ? listener.unitAt(client) : null;
+}
 export function publishBoardFrame(build: () => BoardFrame): void { if (listener) listener.frame(build()); }
 export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]): void {
   if (!listener) return;
