@@ -1,5 +1,5 @@
 {
-  "baseCommit": "0369a0b664d9975372926e8795d785267ad3fd54",
+  "baseCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
   "sourceDigests": {
     "scripts/g2-4b-fixture-audit.cjs": "d450e2434e6a707afafea87e968dbf466cfd707f3e337eec69211cd0414367ae",
     "scripts/generate-m5-route.cjs": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
@@ -7,7 +7,7 @@
     "scripts/measure-g2-4b-restore.cjs": "7197c30995abcab508d482169259791d29f79d020fd8354a53743249eda9dd5a",
     "scripts/record-g2-4b-inputs.cjs": "e8ca736c7db5ee0db5b55f1db9e09b073bc2233e4e26637417166fbfcbfeb6c5",
     "scripts/record-g2-4b-live-reveal.cjs": "2a4fecd05ab0cefb3271673a1bc763be7df22a9a9006471542b4c9b9c71dcd65",
-    "scripts/record-g2-4b-release.cjs": "ffb402b7d4a7b2e76627b074c7639b1712e29058ffe4a9829a7aaa19ec22333c",
+    "scripts/record-g2-4b-release.cjs": "3532d2f7f1d43156d6c8b99369b9688aace25fcb4359590e0f127074285469d5",
     "src/server-entry/index.ts": "12574f5f339b6cf9cff71fcc72572761c5a8a7e27182fce6b251c1eee8140f6c",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "c903ed0f463a1cf5d3fc382c069e42da19f27e71ed969e4bb5f813b7d8b0c77d",
@@ -54,7 +54,7 @@
     "src/simulation/consumables.ts": "62fe0f3c511520294b81dbbbbbde5e368b29e05cf2aaed9cf5ad1ebbf7e8e773",
     "src/simulation/content/abilities.ts": "61cbc39ebd9b34719316f2363853a9bf68756338a9f17175e86c8e8117e9a5d0",
     "src/simulation/content/anomalies.ts": "69c4550189b9a855d321fe6b44d258674548078577954cec6aae2c2807b48e56",
-    "src/simulation/content/augment-policy.ts": "b1282504fa5f9f02b676c04003bffed80bbe64570c4d420e9a253f2493dc5ab7",
+    "src/simulation/content/augment-policy.ts": "0edb26c3e2bb6ae3bee1a7f1c47a71e568e056677772b74aa1581740e3c103bb",
     "src/simulation/content/augments.ts": "e54a973e9c64681be44fda24f0ef486d15409a2046d1a9a6a6a1f75275c73879",
     "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
     "src/simulation/content/freeze.ts": "ee4cc2f7d31a3a9367448d7f6089ccaea479a88c8421074cc5ad086f1366b653",
@@ -67,7 +67,7 @@
     "src/simulation/content/g2-3-anomaly-source.ts": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1",
     "src/simulation/content/g2-3-item-registry.ts": "87f2eec38dea8037d62ef981e90f21bd20566415903bc13760bea3a63ad71055",
     "src/simulation/content/g2-3-loot-source.ts": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459",
-    "src/simulation/content/g2-3-policy.ts": "c3655d0d2c56f607e37411e8d1e5a7b2f152326478823f72c442092203c9ad96",
+    "src/simulation/content/g2-3-policy.ts": "97235611e25d010b8e375bd71fa1ce434f256c3a91e5ac8f901ca9fe5aa366ce",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-source.ts": "c14a36070f08134cabc93fcb439b5e276907523b4e99e09bfbb82c551a40075e",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
@@ -158,7 +158,7 @@
     "src/simulation/g2-3-grant-evidence.ts": "69abacc338580ab1f43aae4ed27d1d57b4197d457a5ba64fd6857f5526cc0c08",
     "src/simulation/g2-3-junker.ts": "984653e96e620221e4ab0325bf041205a449a8590e95fc858ab9af9ce366bb04",
     "src/simulation/g2-3-match-progress.ts": "0271d4cac211bd2325d425f15e02171dacb56aabe11daf77e7407db8e0f240ae",
-    "src/simulation/g2-3-programs.ts": "6ea090ae2e0e94d4c6cdfbd56980b9f37986805c26b67b50d05faddf728eabef",
+    "src/simulation/g2-3-programs.ts": "daa50ff2ee05361e171a6e5e6dd429df139fe20c00ff01efed5d1d09af939dcd",
     "src/simulation/g2-3-progress.ts": "67fe4ce581703594d61b5d94b531494c30ff365bbaf28f73601888c259fb53a9",
     "src/simulation/g2-3-radiant.ts": "a6e81641114f8ae5fa042e3fb050c362bb4c1bbf7f043d0b3173bd862d0497cf",
     "src/simulation/g2-3-restore.ts": "7ccbf0119bae7fc122e8a3b985f5b4e549fbcf35a17ed093f4318f3b385c8aee",
@@ -190,7 +190,7 @@
     "src/simulation/m8/combat-item-grants.ts": "4ad713d018038ab2537d2ffb2eba3eb5ff90f6dc1bacead966af64937794485e",
     "src/simulation/m8/combat-item-programs.ts": "95312a7e9a21578ed01e5f257c763f7c212b9f5320097d855c08a4529bfe4734",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "4363de5b864e75095f46c549b0c0f6225273364ba5a39a4331f0995409114b94",
+    "src/simulation/m8/contracts.ts": "d64e7fcb36ee5028f127fcb0026bf3d69a721020aacea812fb039cac33fd0fb1",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "62f2091444a93abb63af395df3508b36a123dde776862524f0027e52a38570ce",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -217,7 +217,7 @@
     "src/simulation/m8/triggers.ts": "0d329e8ae7109be23b4bec9c7c48978008de5289d44f485b96530cb142996847",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "4a73747134948ce983c921ec16d5b802bc9e25d51d5d39f73956a687982bd7b7",
+    "src/simulation/m8/version.ts": "8633d076982ca0a97ad40dacba3b17fb8a1e51b9e8c89db3c9c4a2263828fb61",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
     "src/simulation/match.ts": "7a38e691a33b623359c4f3351cd19b7cffcf0b46aaed5e59f14efd06c1e99458",
@@ -275,11 +275,11 @@
     "tests/fixtures/m5/oracle.g2.cjs": "066edb21bfdddccf46401fe50deed96c29065dc216736edc649c90f37832373a",
     "tests/fixtures/record-g2-4b-herald.cjs": "a6cd232d913d30e1b7d8db408574a2d9680e5fd74eaf2e1a5398b9d0b3bfbd56"
   },
-  "contentDigest": "fnv1a32-utf16:601f574f",
+  "contentDigest": "fnv1a32-utf16:9535ffff",
   "route": "mage",
   "seed": 42,
   "roundId": "4-7",
-  "prefixHash": "90e7723786f33a8c3b05c90c22c6be400d1a34f08b1e166f2a11fcd58b506852",
+  "prefixHash": "16af8adb3357456a8d35a47607741426c97e3cb37f39eb778496ec229622c210",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -327,7 +327,7 @@
     }
   },
   "byteEvidence": {
-    "previousCommit": "0369a0b664d9975372926e8795d785267ad3fd54",
+    "previousCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
     "previousBytes": 8126,
     "currentBytes": 8126,
     "previousSha256": "f7f8acc7da0786bc2912223c9407dd90874e4e2e544564cb73413b857deaebc5",
@@ -407,7 +407,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "df40a045b5e798692ab50813e14e80c78d454a54af1d3e478910df0bfbf01d4e",
-      "terminalHash": "ed0cdcad0f85568ce54703e796961136f0b67c0cc35c61524afa3daf2afba6c8",
+      "terminalHash": "3af78742e81f6cdd67d52175ab4dc484a6f2f8a0d5cf753b741ffe468a5c2206",
       "receipts": 4
     },
     "simultaneous": {
@@ -480,7 +480,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "9e0f3f3d46c8aa863fd4bc32d413ecace6bc14a214f1458fdb9db5fb2281b36f",
-      "terminalHash": "bbcd12a7abe56ef527e690e563d375d9ca409a066f49dafc05ad2c15a507d272",
+      "terminalHash": "9cd1250a14d22b56229bd419809bbea27d5b111495dacfb3f22a92676cdbd8f1",
       "receipts": 4
     },
     "loris": {
@@ -528,7 +528,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "ef87ee66495c9fb34cf3b46f7fe33edbfd29a6628ebd8bcd5b313f53a2a7bc37",
-      "terminalHash": "2083b2171029bc7949570d261f0d52cf9066d1689931eb04a7e3cebbc8dcbd86",
+      "terminalHash": "8eb0c10f18d9bbf2d550fb90b54dff4230d79bea9de8df4630f7afee8b063bc5",
       "receipts": 4,
       "star": 2
     },
@@ -544,7 +544,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "f19932f84c4ba5c180175f0bbe28c154ab10363a51837d9cc465beb9f43391bf",
-      "terminalHash": "8bab850d4d30acccfb40b6c6642ec7fe209c83c9e338bdeae7f70a356e7b0fc2",
+      "terminalHash": "e051ed5acd528019eccc17974eb00a9b46cc27173e2597d1524022867b272d75",
       "receipts": 0,
       "star": 2
     }
