@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as replayView from '../src/simulation/combat-replay-view';
 import {
   createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle,
   proposeSettlement, startCombatReplay, createCombatReplayRecorder, stepCombat, startMatchCombat,
@@ -104,6 +105,34 @@ describe('first-pass combat frames', () => {
     expect(actual.result.terminal.tick).toBe(0);
     expect(canonicalContent(actual.replay)).toBe(canonicalContent(replayOf(actual.result)));
     deeplyFrozen(actual.replay);
+  });
+
+  it('does not cache a result when replay finalization throws, and can retry consistently', () => {
+    const createRecorder = replayView.createCombatReplayRecorder;
+    const failure = new Error('replay finish failed');
+    let finish: ReturnType<typeof vi.spyOn> | undefined;
+    const factory = vi.spyOn(replayView, 'createCombatReplayRecorder').mockImplementation((...args) => {
+      const recorder = createRecorder(...args);
+      finish = vi.spyOn(recorder, 'finish').mockImplementation(() => { throw failure; });
+      return recorder;
+    });
+    try {
+      const task = startTwoSidedBattle(input(48), { captureReplay: true });
+      expect(factory).toHaveBeenCalledOnce();
+      expect(() => task.advance(1201)).toThrow(failure);
+      expect(task.replay()).toBeNull();
+      expect(() => task.advance(1)).toThrow(failure);
+      expect(task.replay()).toBeNull();
+      expect(finish).toHaveBeenCalledTimes(2);
+      finish!.mockRestore();
+      const result = task.advance(1);
+      expect(result).not.toBeNull();
+      expect(canonicalContent(task.replay())).toBe(canonicalContent(replayOf(result!)));
+      expect(task.advance(1)).toBe(result);
+    } finally {
+      finish?.mockRestore();
+      factory.mockRestore();
+    }
   });
 
   // Real Match PvE routes: opening combat and wolves' deferred tick-zero jumps.
