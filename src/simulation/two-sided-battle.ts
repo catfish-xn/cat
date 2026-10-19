@@ -208,15 +208,18 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     }
     if (terminal.status !== 'finished') return null;
     freezeBattle(events);
-    result = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
+    const candidate: BattleResult = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
       winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
       a:sideResult(checked.a.seatId,checked.mapping,terminal,start.state), b:sideResult(checked.b.seatId,checked.mapping,terminal,start.state,checked.mirrorOfSeatId !== null),
       mapping:checked.mapping,initial:start.state,terminal,events});
     // Initial and each ledger element were fully checked and frozen before
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.
-    canonicalContent({...result,initial:null,events:[]});
-    if (recorder) replay = recorder.finish(terminal);
+    canonicalContent({...candidate,initial:null,events:[]});
+    const candidateReplay = recorder ? recorder.finish(terminal) : null;
+    // Publish only after validation and replay finalization both succeed.
+    result = candidate;
+    replay = candidateReplay;
     checkedResults.set(result, freezeBattle);
     return result;
   } };
