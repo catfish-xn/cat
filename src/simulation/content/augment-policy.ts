@@ -1,8 +1,9 @@
 import { P3_TIERS } from './s13-p3';
 import { freezeContent } from './freeze';
 import { S13_P2_TIERS } from './s13-augments-p2';
-/** U: no primary historical offer probabilities found; preserve equal three-word sampling. */
-export const AUGMENT_OFFER_POLICY = freezeContent({version:'aug30-equal-v1',evidence:'U',sampling:'equal-without-replacement',words:3} as const);
+/** User convention 2026-10-19 08:15: shared node tier and one free whole-offer reroll.
+ * No historical tier probabilities/weights found: equal tiers pending user confirmation. */
+export const AUGMENT_OFFER_POLICY = freezeContent({version:'augment-shared-tier-v14',evidence:'user-convention-2026-10-19',tierEvidence:'unweighted-project-convention-pending-confirmation',tiers:['silver','gold','prismatic'],tierSeedXor:0x61756774,freeRerolls:1,sampling:'equal-without-replacement',words:3,reroll:'whole-offer-locked-tier-exclude-current-and-owned-reject-small-pool'} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
 export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[]>> = freezeContent({
   // S13 14.24 source style 1; later content releases added these active traits.

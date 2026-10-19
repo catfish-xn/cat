@@ -56,6 +56,8 @@ export interface MatchBase {
   readonly commandProtocolVersion: import('./m8/contracts').M8Version['commandProtocolVersion']; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];
+  readonly augmentTierSeed: number;
+  readonly augmentOffers: readonly import('./augment-offers').AugmentOfferRecord[];
   readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;
@@ -74,7 +76,7 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target'
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small'
   | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure
   | import('./seat-mechanics/types').SeatMechanicFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }

@@ -1,7 +1,7 @@
 import type { ClientCommand } from '../../server/protocol';
 import type { MatchState } from '../match-types';
 import { buyUnit, buyXp, sellUnit, setShopLock, rerollShop, selectChoice, selectAnomalyTarget,
-  rerollAnomaly, validateMatchDeployment } from '../match';
+  rerollAugment, rerollAnomaly, validateMatchDeployment } from '../match';
 import { previewCombine, previewEquip } from '../item-selectors';
 
 /** Existing public rules are the authority. Speculative command results are discarded entirely:
@@ -20,6 +20,7 @@ export function legal(state: MatchState, action: ClientCommand): boolean {
     case 'shopLock': return setShopLock(state, action.locked, action.generation).ok;
     case 'choose': return selectChoice(state, action.choiceId, action.generation, action.definitionId).ok;
     case 'anomalyTarget': return selectAnomalyTarget(state, action.choiceId, action.generation, action.unitId).ok;
+    case 'rerollAugment': return rerollAugment(state, action.choiceId, action.generation).ok;
     case 'anomalyReroll': return rerollAnomaly(state, action.choiceId, action.generation).ok;
   }
 }
