@@ -97,6 +97,9 @@ export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_ScuttleFamiliar", "en": "Scuttle Familiar", "zh": "真的会蟹"},
   {"apiName": "TFT13_GoopBuff_UnstoppableForce", "en": "Unstoppable Force", "zh": "势不可挡"},
   {"apiName": "TFT13_GoopBuff_WolfFamiliars", "en": "Wolf Familiars", "zh": "双狼佣兽"},
+  {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
+  {"apiName": "TFT13_GoopBuff_CullTheWeak", "en": "Cull The Weak", "zh": "剔除弱者"},
+  {"apiName": "TFT13_GoopBuff_Stoneskin", "en": "Stoneskin", "zh": "石头皮肤"},
   // P3 names from the archived 14.24 stringtables.
   {"apiName": "TFT13_GoopBuff_TheFinisher", "en": "The Finisher", "zh": "终结者"},
   {"apiName": "TFT13_GoopBuff_TouchofFrost", "en": "Touch of Frost", "zh": "冰霜触摸"},

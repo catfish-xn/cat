@@ -92,6 +92,16 @@ G24-ZEPHYR-ABSENCE-01, not verified original script semantics.
 `CombatViewUnit.banished?:boolean` exposes presence without changing UI code.
 Zephyr save authority is exact independent combat reconstruction from validated
 frozen inputs; it does not accept candidate-supplied clocks as authority.
+
+## S13 P2 开场事实与实例覆盖
+
+`CombatUnit.s13P2Opening?: { selected: readonly string[]; shared: readonly ({source:CombatOrigin;attackDamage:number;abilityPower:number;health:number;armor:number;magicResist:number})[] }` 记录经过种子选择的强化身份和一次冻结的分享贡献，仅在真正获得开场加成的单位上存在。它不写回准备棋盘、不影响羁绊计数。恢复先从已认证 `CombatInputBasis` 独立重建开场，再逐单位核对此字段；保留所有原有动态事实、HP 基底和 RNG 校验。没有这些效果时不允许伪造该字段。
+
+`startP2Combat(ctx: AbilityContext): void` 在既有开场初始化、羁绊与光环后使用现有 Combat lcg32 流；两个随机强化共用无放回抽样。先完成随机加成，再冻结所有分享者的五项属性及邻格名单，最后统一广播，禁止广播间的反馈放大。`validateP2Opening(combat: CombatState, replay: RestoreCombatReplay): void` 对比独立开场，错误抛出 `Invalid/Unexpected S13 P2 opening`。当前已有的 `readCombatStats` 统一读取这些经过认证的数值；调用参数只需 `Pick<CombatState,'units'|'tick'>`，原来传完整 CombatState 的调用兼容。
+
+冕卫／夜之锋刃／基克／兰顿的覆盖绑定具体装备实例。普通物品目录不变；宝箱战斗中新发放的冕卫／夜之锋刃也按接收者已冻结的强化来源覆盖，由同一程序恢复。石头皮肤按战斗时钟确定剩余双抗，剔除弱者按实际目标失血比例决定暴击率、每 60 tick 在射程内按百分比生命选择目标。
+
+P2 审查修正：开场护盾仍按既有机制初始化时的生命采样，随后执行 P2 随机增益及冻结后广播。恢复在 tick 0 精确扣除已认证的 P2 生命贡献，重建护盾产生前的生命基底；tick > 0 使用生效后的基底，不增加任意候选。P2 生命写入统一经过 `scaleItemSummonHp`。镜像在 P2 全部广播完成后再次冻结持有者的最终开场生命，镜像自身接收的 P2 生命作为 flat 保留，并统一按其 healthBps 缩放。精心赋能仅给后两排非召唤英雄生成候选，先过滤再排序抽样。
 # S13 P3 补充合同
 
 当前分支新增7个强化和7个异常，来源、接口、逐项数值证明与两项缺脚本数据的**项目约定**见 [S13_AUGMENTS_P3.md](S13_AUGMENTS_P3.md)。公开战斗入口和伤害管线保持一致；仅增加可序列化的 `CombatUnit.s13P3?` 调度/门控记录，以及伤害准备阶段的只读 `blockedByMitigation` 观察值。版本由合并时统一升级。

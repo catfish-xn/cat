@@ -35,7 +35,7 @@ export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<
       ...(program.periodic ?? []).map(d=>bind('periodic',d)), ...(program.vamp ?? []).map(d=>bind('vamp',d)) ];
   });
 }
-export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'> & Partial<Pick<CombatUnit, 'combatItemGrants'>>) {
+export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'> & Partial<Pick<CombatUnit, 'combatItemGrants' | 'mechanics'>>) {
   const programs=itemPrograms(unit), modifiers=programs.flatMap(p=>p.program.modifiers ?? []);
   const sources=programEntries(unit).flatMap(e=>e.kind==='effect' && 'kind' in e.declaration && e.declaration.kind==='authorize-spell-crit'?[e.source]:[]);
   const chance=resolveStat('critChance',unit.baseCritChanceBps ?? (unit.ability.kind==='s13'&&unit.ability.championId==='neutral'?0:2500),modifiers,{holder:unit});

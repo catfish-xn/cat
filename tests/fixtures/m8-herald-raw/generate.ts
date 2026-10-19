@@ -1,6 +1,9 @@
 import * as api from '../../../src/simulation/match';
 import { ECONOMY_RULES } from '../../../src/simulation/match-rules';
 import { ITEM_DEFINITIONS } from '../../../src/simulation/content/items';
+import { UNIT_DEFINITIONS } from '../../../src/simulation/units';
+import { MATCH_RULES } from '../../../src/simulation/match-rules';
+import { checkEquipmentPlacement } from '../../../src/simulation/equipment-policy';
 
 /** Version the actual command recipe, independently of generated save bytes. */
 export const HERALD_RAW_GENERATION_VERSION = 'g2-2-herald-public-commands-v3';
@@ -92,12 +95,40 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
           && (needsGaren && s.definitionId === 'garen' || needsScar && s.definitionId === 'scar'));
         state = accepted(slot >= 0 ? commands.buyUnit(state, slot, state.shop.generation) : commands.rerollShop(state));
       }
+      // The expanded augment pool changes this branch's army strength. Spend real
+      // remaining gold on natural-shop copies of owned heroes; keep every battle,
+      // source, receipt and ordinary bench/upgrade rule in the public route.
+      for (;;) {
+        const slot=state.shop.slots.findIndex(offer=>offer.status==='available'
+          && UNIT_DEFINITIONS[offer.definitionId].cost<=state.gold
+          && (offer.definitionId==='garen'||state.preparation.units.some(u=>u.team==='player'&&u.definitionId===offer.definitionId&&u.starLevel===1))
+          && (state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length<state.preparation.benchSize
+            ||state.preparation.units.filter(u=>u.team==='player'&&u.definitionId===offer.definitionId&&u.starLevel===1).length>=2));
+        if(slot>=0){state=accepted(commands.buyUnit(state,slot,state.shop.generation));continue;}
+        const reserve=Math.max(...state.preparation.units.filter(u=>u.team==='player').map(u=>UNIT_DEFINITIONS[u.definitionId].cost));
+        if(state.gold<MATCH_RULES.rerollCost+reserve||state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===state.preparation.benchSize)break;
+        state=accepted(commands.rerollShop(state));
+      }
       for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench')) {
         if (state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length >= state.level) break;
         const free = [{ col: 3, row: 4 }, { col: 5, row: 4 }, { col: 0, row: 4 }, { col: 6, row: 4 }, { col: 3, row: 7 }, ...Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)}))]
           .find(cell => !state.preparation.units.some(u => u.location.kind === 'board' && u.location.cell.col === cell.col && u.location.cell.row === cell.row));
         if (!free) throw new Error('No public deployment cell');
         state = accepted(commands.deployMatchUnit(state, unit.id, { kind: 'board', cell: free }));
+      }
+      // Preserve the exact components needed for the isolated Herald equipment;
+      // use only genuine surplus components and inventory items to sustain the army.
+      const reserved=new Set<string>(),available=[...inventory()];
+      for(const component of required){const index=available.findIndex(i=>i.definitionId===component);if(index>=0)reserved.add(available.splice(index,1)[0].id);}
+      for(;;){
+        const spare=inventory().filter(i=>!reserved.has(i.id)&&ITEM_DEFINITIONS[i.definitionId]?.kind==='component');
+        if(spare.length<2)break;
+        state=accepted(commands.combineItems(state,spare[0].id,spare[1].id));
+      }
+      for(const item of inventory().filter(i=>ITEM_DEFINITIONS[i.definitionId]?.kind==='completed')){
+        const holders=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');
+        const placement=holders.flatMap(u=>[0,1,2].map(slot=>({unitId:u.id,slot}))).find(p=>checkEquipmentPlacement(state.items,item,p.unitId,p.slot).allowed);
+        if(placement)state=accepted(commands.equipItem(state,item.id,placement.unitId,placement.slot));
       }
       state = accepted(commands.startMatchCombat(state));
       while (state.phase === 'combat') state = commands.stepMatch(state).state;

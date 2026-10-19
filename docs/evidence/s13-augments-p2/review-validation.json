@@ -1,0 +1,518 @@
+{
+  "parent": "8f0f129d221d899467fff6f5216ef8978ff0931a",
+  "fixtureBaseline": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "branch": "codex/s13-augments-p2",
+  "contentDigest": "fnv1a32-utf16:ac7ae827",
+  "rulesVersion": "s13-g2-3-v11",
+  "contentVersion": "s13-14.24b-g2-3-v11",
+  "issues": {
+    "M1": "fixed; historical shield sample remains strict, seed 14 all save entrances",
+    "M2": "fixed; summon HP scaling, complete-opening 402 HP regression",
+    "M3": "fixed; final owner HP frozen after P2, 1030 => 721 regression",
+    "M4": "fixed; exclude summoned Forge before sorted random draw",
+    "M5": "deferred by user; validator byte-for-byte unchanged",
+    "M6": "partial; release/Herald/inputs checks pass, live-reveal original assertion blocks record/check",
+    "S1": "partial; offline deployment, purchases outside frozen combat, repeated gift drain; shared deployment needs server transaction wiring",
+    "S2": "documented: numerical/main-effect alignment; original mutual exclusions excluded",
+    "S3": "equal HP ratio ID tie and tick-60 stun/channel regressions"
+  },
+  "tests": {
+    "files": 41,
+    "total": 871,
+    "passed": 871,
+    "failed": 0,
+    "pending": 0,
+    "openingRandomIdentity": {
+      "file": "tests/opening-random-identity.test.ts",
+      "tests": 140,
+      "passed": 140,
+      "failed": 0,
+      "seconds": 21.478
+    },
+    "perFile": [
+      {
+        "file": "tests/g2-3-anomalies.test.ts",
+        "tests": 42,
+        "passed": 42,
+        "failed": 0,
+        "seconds": 0.201
+      },
+      {
+        "file": "tests/g2-4b-support-items.test.ts",
+        "tests": 17,
+        "passed": 17,
+        "failed": 0,
+        "seconds": 0.581
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "tests": 39,
+        "passed": 39,
+        "failed": 0,
+        "seconds": 16.251
+      },
+      {
+        "file": "tests/g2-augments-choice.test.ts",
+        "tests": 49,
+        "passed": 49,
+        "failed": 0,
+        "seconds": 4.242
+      },
+      {
+        "file": "tests/g2-augments-combat.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "failed": 0,
+        "seconds": 1.629
+      },
+      {
+        "file": "tests/g2-augments-identity.test.ts",
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "seconds": 0.126
+      },
+      {
+        "file": "tests/g2-augments-multiplayer.test.ts",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "seconds": 0.013
+      },
+      {
+        "file": "tests/g2-augments-static.test.ts",
+        "tests": 74,
+        "passed": 74,
+        "failed": 0,
+        "seconds": 0.107
+      },
+      {
+        "file": "tests/m4-effect-combat.test.ts",
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "seconds": 0.037
+      },
+      {
+        "file": "tests/m4-effects.test.ts",
+        "tests": 21,
+        "passed": 21,
+        "failed": 0,
+        "seconds": 0.005
+      },
+      {
+        "file": "tests/m4-ledger-bound.test.ts",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "seconds": 9.637
+      },
+      {
+        "file": "tests/m4-review-regressions.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "failed": 0,
+        "seconds": 0.076
+      },
+      {
+        "file": "tests/m4-strategy-snapshot.test.ts",
+        "tests": 10,
+        "passed": 10,
+        "failed": 0,
+        "seconds": 0.02
+      },
+      {
+        "file": "tests/m5-content.test.ts",
+        "tests": 9,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 0.025
+      },
+      {
+        "file": "tests/m8-b4-audit-regressions.test.ts",
+        "tests": 14,
+        "passed": 14,
+        "failed": 0,
+        "seconds": 8.19
+      },
+      {
+        "file": "tests/m8-b4-belt.test.ts",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "seconds": 0.004
+      },
+      {
+        "file": "tests/m8-b4-bow.test.ts",
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "seconds": 0.023
+      },
+      {
+        "file": "tests/m8-b4-catalog.test.ts",
+        "tests": 84,
+        "passed": 84,
+        "failed": 0,
+        "seconds": 8.248
+      },
+      {
+        "file": "tests/m8-b4-cloak.test.ts",
+        "tests": 3,
+        "passed": 3,
+        "failed": 0,
+        "seconds": 0.068
+      },
+      {
+        "file": "tests/m8-b4-gloves.test.ts",
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "seconds": 0.001
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "failed": 0,
+        "seconds": 0.701
+      },
+      {
+        "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "seconds": 0.58
+      },
+      {
+        "file": "tests/m8-b4-rod.test.ts",
+        "tests": 6,
+        "passed": 6,
+        "failed": 0,
+        "seconds": 0.031
+      },
+      {
+        "file": "tests/m8-b4-sword.test.ts",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "seconds": 0.008
+      },
+      {
+        "file": "tests/m8-b4-tear.test.ts",
+        "tests": 9,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 0.055
+      },
+      {
+        "file": "tests/m8-b4-trigger-ledger.test.ts",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "seconds": 0.002
+      },
+      {
+        "file": "tests/m8-b4-vest.test.ts",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "seconds": 0.028
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "tests": 140,
+        "passed": 140,
+        "failed": 0,
+        "seconds": 21.478
+      },
+      {
+        "file": "tests/s13-augments-p2-choice.test.ts",
+        "tests": 23,
+        "passed": 23,
+        "failed": 0,
+        "seconds": 1.577
+      },
+      {
+        "file": "tests/s13-augments-p2-combat.test.ts",
+        "tests": 34,
+        "passed": 34,
+        "failed": 0,
+        "seconds": 0.28
+      },
+      {
+        "file": "tests/s13-augments-p2-multiplayer.test.ts",
+        "tests": 18,
+        "passed": 18,
+        "failed": 0,
+        "seconds": 0.533
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "tests": 48,
+        "passed": 48,
+        "failed": 0,
+        "seconds": 6.116
+      },
+      {
+        "file": "tests/t3-round-settlement.test.ts",
+        "tests": 10,
+        "passed": 10,
+        "failed": 0,
+        "seconds": 1.733
+      },
+      {
+        "file": "tests/task-mechanism-restore.test.ts",
+        "tests": 20,
+        "passed": 20,
+        "failed": 0,
+        "seconds": 10.464
+      },
+      {
+        "file": "tests/tp-shared-pool.test.ts",
+        "tests": 14,
+        "passed": 14,
+        "failed": 0,
+        "seconds": 0.538
+      },
+      {
+        "file": "tests/server/carousel-room.test.ts",
+        "tests": 20,
+        "passed": 20,
+        "failed": 0,
+        "seconds": 29.323
+      },
+      {
+        "file": "tests/restore-audit/bounds-preflight.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "failed": 0,
+        "seconds": 2.713
+      },
+      {
+        "file": "tests/restore-audit/cd-replay-facts.test.ts",
+        "tests": 34,
+        "passed": 34,
+        "failed": 0,
+        "seconds": 18.297
+      },
+      {
+        "file": "tests/restore-audit/combat-accumulators.test.ts",
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "seconds": 0.012
+      },
+      {
+        "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+        "tests": 15,
+        "passed": 15,
+        "failed": 0,
+        "seconds": 0.656
+      },
+      {
+        "file": "tests/restore-audit/g23-reward-allocation.test.ts",
+        "tests": 11,
+        "passed": 11,
+        "failed": 0,
+        "seconds": 0.073
+      }
+    ]
+  },
+  "commands": [
+    {
+      "name": "tests",
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "--maxWorkers=2",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile.json=/tmp/p2-all-final.json",
+        "tests/g2-3-anomalies.test.ts",
+        "tests/g2-4b-support-items.test.ts",
+        "tests/g2-4b-unstable-chest.test.ts",
+        "tests/g2-augments-choice.test.ts",
+        "tests/g2-augments-combat.test.ts",
+        "tests/g2-augments-identity.test.ts",
+        "tests/g2-augments-multiplayer.test.ts",
+        "tests/g2-augments-static.test.ts",
+        "tests/m4-effect-combat.test.ts",
+        "tests/m4-effects.test.ts",
+        "tests/m4-ledger-bound.test.ts",
+        "tests/m4-review-regressions.test.ts",
+        "tests/m4-strategy-snapshot.test.ts",
+        "tests/m5-content.test.ts",
+        "tests/m8-b4-audit-regressions.test.ts",
+        "tests/m8-b4-belt.test.ts",
+        "tests/m8-b4-bow.test.ts",
+        "tests/m8-b4-catalog.test.ts",
+        "tests/m8-b4-cloak.test.ts",
+        "tests/m8-b4-gloves.test.ts",
+        "tests/m8-b4-integration.test.ts",
+        "tests/m8-b4-r3b-lifecycle.test.ts",
+        "tests/m8-b4-rod.test.ts",
+        "tests/m8-b4-sword.test.ts",
+        "tests/m8-b4-tear.test.ts",
+        "tests/m8-b4-trigger-ledger.test.ts",
+        "tests/m8-b4-vest.test.ts",
+        "tests/opening-random-identity.test.ts",
+        "tests/restore-audit/bounds-preflight.test.ts",
+        "tests/restore-audit/cd-replay-facts.test.ts",
+        "tests/restore-audit/combat-accumulators.test.ts",
+        "tests/restore-audit/g23-grant-evidence.test.ts",
+        "tests/restore-audit/g23-reward-allocation.test.ts",
+        "tests/s13-augments-p2-choice.test.ts",
+        "tests/s13-augments-p2-combat.test.ts",
+        "tests/s13-augments-p2-multiplayer.test.ts",
+        "tests/server/carousel-room.test.ts",
+        "tests/t12-combat-equip.test.ts",
+        "tests/t3-round-settlement.test.ts",
+        "tests/task-mechanism-restore.test.ts",
+        "tests/tp-shared-pool.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 90.844
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit": 0,
+      "seconds": 12.977
+    }
+  ],
+  "fingerprints": [
+    {
+      "name": "release-record",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=075e9a4"
+      ],
+      "exit": 0,
+      "seconds": 61.889
+    },
+    {
+      "name": "herald-record",
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs",
+        "--write"
+      ],
+      "exit": 0,
+      "seconds": 56.382
+    },
+    {
+      "name": "inputs-record",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=075e9a4"
+      ],
+      "exit": 0,
+      "seconds": 3.111
+    },
+    {
+      "name": "live-record",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-live-reveal.cjs",
+        "--baseline-commit=075e9a4"
+      ],
+      "exit": 1,
+      "seconds": 6.496
+    },
+    {
+      "name": "release-check",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=075e9a4",
+        "--check"
+      ],
+      "exit": 0,
+      "seconds": 61.254
+    },
+    {
+      "name": "herald-check",
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs"
+      ],
+      "exit": 0,
+      "seconds": 51.042
+    },
+    {
+      "name": "inputs-check",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=075e9a4",
+        "--check"
+      ],
+      "exit": 0,
+      "seconds": 2.963
+    },
+    {
+      "name": "live-check",
+      "command": [
+        "node",
+        "scripts/record-g2-4b-live-reveal.cjs",
+        "--baseline-commit=075e9a4",
+        "--check"
+      ],
+      "exit": 1,
+      "seconds": 6.301
+    }
+  ],
+  "beforeFixEvidence": {
+    "M1_M2_M3_S1": "7 expected regression failures before fixes",
+    "M4": "old strategy injected without source mutation: 31 passed, Forge regression failed"
+  },
+  "unchanged": {
+    "protectedPathsChanged": [],
+    "M5ValidatorIdentical": true,
+    "M5ValidatorSha256": "25ec52c53f1e1b834e8135f4ca656560452a5d76272b70ff59cb97da52546c0d",
+    "versionFileChanged": false,
+    "testTimeoutsChanged": false,
+    "testsDeletedOrSkipped": false
+  },
+  "liveRevealBlock": {
+    "expected": [
+      {
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+        "tick": 51,
+        "eventSeq": 447
+      },
+      {
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+        "tick": 51,
+        "eventSeq": 448
+      }
+    ],
+    "actual": [
+      {
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+        "tick": 59,
+        "eventSeq": 489
+      },
+      {
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+        "tick": 69,
+        "eventSeq": 582
+      }
+    ],
+    "assertionsAndAuditUnchanged": true,
+    "versionBumpAloneDoesNotRepairScenario": true
+  },
+  "incomplete": [
+    "M5 等单机重启再补",
+    "S1 联机部署即时补发仍需服务器接入共享事务",
+    "M6 live-reveal 严格场景尚未重录，整链未闭合"
+  ]
+}

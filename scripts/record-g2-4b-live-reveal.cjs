@@ -9,7 +9,7 @@ async function main(){
  const api=await server.ssrLoadModule('/src/simulation/match.ts');
  const helpers=await server.ssrLoadModule('/tests/fixtures/g2-3-b8-public.ts');
  let prefix;const reached=new Error('public route reached4-7');
- try{await require('./generate-m5-route.cjs').run(api,{build:'mage',seed:42,onStep(before,_result,command){if(command?.type==='start'&&before.roundDefinitionId==='4-7'){prefix=before;throw reached;}}});}catch(e){if(e!==reached)throw e;}
+ try{await require('./generate-m5-route.cjs').run(api,{build:'mage',seed:42,goldReserves:{'4-7':0},anomalyDefinitionId:'protective-shielding',onStep(before,_result,command){if(command?.type==='start'&&before.roundDefinitionId==='4-7'){prefix=before;throw reached;}}});}catch(e){if(e!==reached)throw e;}
  assert(prefix);
  const accept=r=>{assert(r.ok!==false,r.reason);return r.state;};
  function resolve(state){

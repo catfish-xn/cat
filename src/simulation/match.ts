@@ -1,4 +1,5 @@
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
+import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
 import { deploymentCapFor } from './deployment-cap';
@@ -203,7 +204,9 @@ export function deployMatchUnit(state: MatchState, unitId: string, target: UnitL
       : from.kind === 'bench' && to.kind === 'bench' && from.slot === to.slot) return [];
     return [{ type: 'unitDeployed' as const, unitId: unit.id, from: structuredClone(from), to: structuredClone(unit.location) }];
   }) : [];
-  return accept({ ...state, preparation: result.state }, events);
+  const deployed={ ...state, preparation: result.state };
+  const gifted=state.sharedPool?deployed:drainP2Gifts(deployed);
+  return acceptEquipment(gifted,[...events,...mechanicGrantEvents(deployed,gifted)]);
 }
 /** After PvP snapshots are frozen, protect the live roster while keeping the T3 state shape. */
 export function lockMatchCombatRoster(state: MatchState): MatchCommandResult {
@@ -238,7 +241,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   }
   return { ok: true, state: next, events };
 }
-export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
+export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -255,7 +258,8 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
-  return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
+  const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
+  return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
@@ -635,12 +639,16 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
+  if(choice.kind==='augment'){
+    const gifted=drainP2Gifts(selected,unitLootPolicy);
+    events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
+  }
   if (choice.kind === 'component' && getRoundKind(state.round) === 'supply') {
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
-  return accept(entered.state, [...events, ...entered.events]);
+  return acceptEquipment(entered.state, [...events, ...entered.events]);
 }
 
 /** Compatibility domain entrypoints use the same pending choices and generic receipts. */

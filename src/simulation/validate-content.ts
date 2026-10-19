@@ -7,6 +7,7 @@ import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { P3_AUGMENTS, P3_ANOMALIES } from './content/s13-p3';
+import { S13_P2_AUGMENTS, S13_P2_ANOMALIES } from './content/s13-augments-p2';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { S13_ABILITY_DATA } from './content/abilities';
 import { FINAL_ROUND, ROUND_SCHEDULE } from './round-schedule';
@@ -44,6 +45,7 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  s13P2Augment:['enabled'],s13P2Anomaly:['enabled'],s13P2ItemAugment:['enabled'],
   s13Anomaly:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
@@ -130,8 +132,8 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  // Augments: 30 historical + 7 P3; anomalies: 30 historical + 11 P4 + 7 P3.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+Object.keys(P3_AUGMENTS).length,anomalies:30+11+Object.keys(P3_ANOMALIES).length})) {
+  // Augments: 30 historical + 14 P2 + 7 P3; anomalies: 30 historical + 3 P2 + 11 P4 + 7 P3.
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length,anomalies:30+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

@@ -20,10 +20,10 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // Seed 1 is a real public-command route: the original Irelia and copies all
+ // Seed 27 is a real public-command route: the original Irelia and copies all
  // attack, with positive Gambler payouts on both sides of the split and an
  // actual successful Collector execution by a copy. No combat state is edited.
- const {state,ownerId}=prepare(1);
+ const {state,ownerId}=prepare(27);
  const equippedItems=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===ownerId);
  const gamblerId=equippedItems.find(i=>i.definitionId===items[1])!.id;
  const collectorId=equippedItems.find(i=>i.definitionId===items[2])!.id;
