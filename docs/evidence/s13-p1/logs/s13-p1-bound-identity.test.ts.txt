@@ -1,0 +1,16 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/s13-p1-bound-identity.test.ts --reporter=verbose
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+ ✓ |fast| tests/s13-p1-bound-identity.test.ts > follows consumed bound unit to actual survivor and then sale to null 2ms
+ ✓ |fast| tests/s13-p1-bound-identity.test.ts > accepts verified postcombat and carousel upgrade fact shapes without changing originals 1ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  18:37:56
+   Duration  243ms (transform 58%, setup 18%, tests 10%, worker 7%, import 6%)
+

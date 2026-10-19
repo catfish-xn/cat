@@ -6,7 +6,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { readRevealedLoot } from './online/seat-view-adapter';
+import { readEconomyPreview, readRevealedLoot } from './online/seat-view-adapter';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -18,7 +18,7 @@ import type { CombatOrigin } from '../simulation/combat-types';
 import type { CombatState } from '../simulation/combat-types';
 import { isLedgerEvent, type CombatViewState, type SceneCombatEvent } from '../presentation/combat-display';
 import { readCombatStats } from '../simulation/combat-s13';
-import { getInterestGold } from '../simulation/economy';
+import { previewRoundEconomy } from '../simulation/economy-preview';
 import { combatEventText, originLabel, viewEventLine } from './combat-feedback';
 import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
@@ -419,7 +419,11 @@ export class StrategyPanel {
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
-    const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
+    const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
+    // Interest comes from the rules' own preview (augments such as 遥遥领先/对冲基金 change it); online, the server's copy of it.
+    // No preview (choice, settlement, supply rounds) hides the interest part instead of guessing it from gold.
+    const economy = online ? readEconomyPreview(state) : previewRoundEconomy(state);
+    const interest = economy ? `预计利息 +${economy.ifLoss.interest}${economy.ifWin.interest === economy.ifLoss.interest ? '' : `（胜 +${economy.ifWin.interest}）`} · ` : '';
     const lootView = readLootView(state);
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
@@ -435,7 +439,7 @@ export class StrategyPanel {
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
     if (dock) dock.append(stats); else head.append(stats);
-    head.append(element('p', `预计利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
+    head.append(element('p', `${interest}${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';

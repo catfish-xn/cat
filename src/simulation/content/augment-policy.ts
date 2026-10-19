@@ -58,6 +58,12 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  "blinding-speed": "prismatic",
+  "portable-forge": "gold",
+  "radiant-relics": "prismatic",
+  "going-long": "prismatic",
+  "hedge-fund": "prismatic",
+  "investment-strategy-ii": "prismatic",
   ...S13_P2_TIERS,
   ...P3_TIERS,
   "manaflow-ii": "gold",
