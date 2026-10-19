@@ -25,8 +25,8 @@ describe('G5 economyPreview in the private seat view', () => {
   });
 
   it('equals the settled incomeBreakdown item by item over a match into overtime (1-x opening, 2-1, overtime, 10-gold steps)', () => {
-    // Seed 3 runs past 6-7 into overtime under random openings and rewards (see projection-wire B7 overtime).
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
+    // Seed 4 runs past 6-7 into overtime under random openings and rewards (see projection-wire B7 overtime).
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 4 });
     /** Per seat: its preview as last projected before its next round record, with the streak it was computed on. */
     const last = new Map<string, { preview: RoundEconomyPreview | null; streak: MatchState['streak']; round: number }>();
     const settled = new Map<string, number>();

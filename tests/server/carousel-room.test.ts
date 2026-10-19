@@ -53,7 +53,7 @@ function buyAll(room: Room, seatId: string): void {
   for (let slot = 0; slot < 5 && placed(room, seatId, 'bench') < 9; slot++) room.handle(seatId, { type: 'buy', slot, generation: seatOf(room, seatId).match.shop.generation });
 }
 /**
- * Units on the 2-4 carousel of this room (seed 35: under random openings and rewards, seed 42 left s0 one bench card short);
+ * Units on the 2-4 carousel of this room (seed 5 since the v13 augment pool; seed 35 left s2/s3 a board place short, seed 42 left s0 one bench card short);
  * s1 collects two one-star copies of one of them before it opens, so its pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
  */
 const PAIR_TARGETS = ['nocturne', 'urgot', 'rell', 'renata'];
@@ -108,7 +108,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
  */
 describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAYER_CONTRACT §21.6)', () => {
   const resolver = new RecordingResolver();
-  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 35 });
+  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 5 });
   const opened: string[] = [];
   room.subscribe(state => { if (state.phase === 'carousel' && opened.at(-1) !== state.roundId) opened.push(state.roundId); });
   const carousel = () => room.state.carousel!.state;
@@ -400,7 +400,7 @@ describe('P7 carousel timing and refusals, each on its own room played to 2-4', 
  * holdings, and `carouselReceipts` stay `granted` by design (ownership is the holdings). These pin both halves on one match.
  */
 describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a later elimination returns the picks', () => {
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules });
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules, seed: 24 });
   const seat = (seatId: string) => seatOf(room, seatId);
   type Snapshot = typeof room.state;
   const opened: string[] = [];
@@ -478,7 +478,7 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   it('a seat eliminated at the first fight after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // Seed 42: s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
+    // Seed 24: s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
     // moves the death fails here, and the rest follows from what the match recorded.
     expect(atDeath.roundId).toBe('5-6');
     expect(death!.fightsSinceCarousel).toBe(2);
