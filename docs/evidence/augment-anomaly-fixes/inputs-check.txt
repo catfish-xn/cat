@@ -1,0 +1,15 @@
+AssertionError [ERR_ASSERTION]: Generate Herald first at final identity
++ actual - expected
+
++ 'fnv1a32-utf16:67cd0953'
+- 'fnv1a32-utf16:0e727042'
+                 ^
+
+    at main (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/scripts/record-g2-4b-inputs.cjs:36:74) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'fnv1a32-utf16:67cd0953',
+  expected: 'fnv1a32-utf16:0e727042',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
