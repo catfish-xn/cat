@@ -1,5 +1,5 @@
 import { isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
-import { freezeContent } from './content/freeze';
+import { freezeContent, freezeTransientContent } from './content/freeze';
 import type { CombatUnit } from './combat-types';
 
 const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone', 'mechanismDefinitions'] as const;
@@ -26,10 +26,17 @@ export function sharedCombatDeclarations(unit: CombatUnit): Partial<CombatUnit> 
 // receive push/filter updates belong to the new tick; their entries can share.
 const tickRecords = new Set(['cell', 'maxHpBasis', 'spellCrit']);
 const tickLists = new Set(['statuses', 'shieldLayers', 'tasks', 'effectRuntime', 'combatItemGrants']);
+// Records detached here stay out of the process-wide certification tables: a
+// replay creates thousands of them, and growing those weak tables while a large
+// save is loaded slows every later garbage collection.
+const tickOwned = new WeakSet<object>();
 function immutableTickRecord<T extends object>(value: T): T {
   // Never freeze a caller's mutable checkpoint. Detach it once, then reuse the
   // deeply immutable record on subsequent ticks, including nested receipt data.
-  return isImmutableJson(value) ? value : freezeContent(structuredClone(value));
+  if (tickOwned.has(value) || isImmutableJson(value)) return value;
+  const owned = freezeTransientContent(structuredClone(value));
+  tickOwned.add(owned);
+  return owned;
 }
 /** Copy writable runtime, share only certified read-only records/declarations. */
 export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
