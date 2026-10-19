@@ -17,15 +17,22 @@
 | `tests/m8-b8-live-reveal.test.ts` › earns only killed source rewards after an actual partial defeat with loris | 指定的部分阵亡记录 | 阵亡记录不同 | 同上 |
 | `tests/restore-audit/cd-replay-facts.test.ts` › G-C06 binds the real absorption value… | 种子 4 的加农炮路线拿到"能量吸收"（power-absorption） | 拿到 `TFT13_GoopBuff_DramaticEntrance` | 异常池变大，路线的重掷预算内没再刷出能量吸收 |
 | `tests/server/carousel-room.test.ts` › a seat eliminated at the first fight after a carousel… | 种子 42 的 s0 在 5-6 被淘汰 | 5-5 被淘汰 | 机器人选到的强化变了，对局走向不同；测试注释已写明内容变化会让这一行失败 |
+| `tests/m8-b5-equipment-history.test.ts` › B5 audit R1: equipment roll level belongs to its round history | 公开装备路线走通 | 路线中途断言不成立 | 公开装备路线抽到的强化／商店变了 |
+| `tests/m8-b5-grant-upgrade.test.ts` › chains to three stars, retaining one TG… | 购买后合成 `unit-40` 三星 | 仍是 4 个分散单位（`unit-37` 起） | 同上，商店出现的英雄变了 |
+| `tests/m8-b5-grant-upgrade.test.ts` › returns unique conflicts and preserves permanent IDs… | 公开装备路线不经过异常选择 | 路线遇到异常选择而报错 | 同上 |
+
+P2 CI（57418b1）的 test-and-build-tests 正好是这 7 条失败，浏览器、无头、计时等作业未见表外红灯。合入提交 de5ba28。
 
 ## P3 合入后（P2 + P3：强化 51 个，异常 51 个）
+
+上一节的 G-C06 和两个 m8-b5 文件在此树上已通过。
 
 P3 合包时另有两条按种子挑强化的测试，已在合并提交里换种子修好，断言未动：
 
 - `tests/s13-augments-p2-choice.test.ts` › public Crown + Trifecta…：种子 82 改成 2734（2-1 出冕卫守护、3-2 出三重奏 II、赠送英雄仍为克格莫）。
 - `tests/g2-augments-combat.test.ts` › climb-the-ladder-i…：种子 1 改成 11（报价含登梯 I，且战斗里触发死亡增益）。
 
-重录指纹后仍失败的 28 条（覆盖上一节；上一节的 G-C06 在此树上已通过）：
+重录指纹后仍失败的 28 条（替代上一节）：
 
 | 测试 | 原期望 | 现结果 |
 | --- | --- | --- |
