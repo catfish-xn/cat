@@ -126,6 +126,24 @@ describe('exact v2 conversion and fail-closed reports', () => {
     expect(out.opacity).toEqual([{ time: 0, value: 0.5 }, { time: 1, value: 0 }]);
     expect(out.size).toEqual([{ time: 0, value: 1 }, { time: 1, value: 2 }]);
   });
+  it.each(['color', 'scale0'])('rejects the whole %s emitter when constantValue coexists with dynamics', name => {
+    const value = name === 'color' ? [1, 1, 1, 1] : [1, 1, 1];
+    for (const constantValue of [value, { unknown: { nested: 1 } }, value.map(() => ({ unknown: 1 })), undefined]) {
+      const original = e({ [name]: { constantValue, dynamics: { times: [0, 1], values: [value, value] } } });
+      const result = convert([original]);
+      expect(result.counts).toEqual({ mapped: 0, skipped: 0, rejected: 1 });
+      expect(result.systems[0].document).toBeUndefined();
+      expect(result.systems[0].report[0]).toMatchObject({ mapped: false, status: 'rejected',
+        reason: 'ambiguous-curve:constantValue+dynamics', originalFields: original });
+    }
+  });
+  it.each(['color', 'scale0'])('validates nested %s constantValue contents without dynamics', name => {
+    for (const value of [{ unknown: { nested: 1 } }, [1, 1, { unknown: 1 }], [1, 1, 1, { unknown: 1 }]]) {
+      const result = convert([e({ [name]: c(value) })]);
+      expect(result.systems[0].document).toBeUndefined();
+      expect(result.byReason[`invalid-source-curve:${name}`]).toBe(1);
+    }
+  });
   it('uses explicit atlas timing and refuses an unverified multi-frame default', () => {
     expect(mapped({ texture: 'x.tex', texDiv: [2, 2], numFrames: 4, frameRate: c(8) }).frames)
       .toEqual({ columns: 2, rows: 2, fps: 8, loop: false });
@@ -220,6 +238,20 @@ describe('zero-dependency static particle meshes', () => {
   });
   it('converts SCO to byte-identical geometry, including independent per-face UVs', () => {
     expect(readGlb(convertParticleMesh(sco(), '.sco').glb)).toEqual(readGlb(convertParticleMesh(scb(), '.scb').glb));
+  });
+  it.each(['1e39', '-1e39'])('rejects finite Number %s that overflows Float32 in SCO positions or UVs', value => {
+    expect(Number.isFinite(Number(value))).toBe(true);
+    expect(Number.isFinite(Math.fround(Number(value)))).toBe(false);
+    for (const [from, to] of [['\n1 0 0\n', `\n${value} 0 0\n`],
+      ['material 0 0 1 0 0 1', `material 0 ${value} 1 0 0 1`]]) {
+      expect(() => convertParticleMesh(Buffer.from(sco().toString().replace(from, to)), '.sco')).toThrow('mesh-nonfinite-float32');
+    }
+  });
+  it.each([NaN, Infinity, -Infinity, 1e39])('rejects nonfinite SCB positions and UVs (%s)', value => {
+    for (const offset of [180, 304]) {
+      const bytes = scb(); bytes.writeFloatLE(value, offset);
+      expect(() => convertParticleMesh(bytes, '.scb')).toThrow('mesh-nonfinite');
+    }
   });
   it.each([{ maxBytes: 8 }, { maxVertices: 2 }, { maxFaces: 0 }, { maxOutputBytes: 16 }])('rejects budget %j before large allocation', limits => {
     expect(() => convertParticleMesh(scb(), '.scb', limits)).toThrow(/budget/);

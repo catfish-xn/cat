@@ -50,9 +50,17 @@ function birth(v, name, rotate = false) {
   return transform(constant(v, name));
 }
 function curve(v, name, dimensions) {
-  if (!v || typeof v !== 'object') throw new Error(`invalid-source-curve:${name}`);
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error(`invalid-source-curve:${name}`);
   only(v, ['constantValue', 'dynamics', '__type'], name);
   if (v.__type && !/^Value(Float|Vector[234]|Color)$/.test(v.__type)) throw new Error(`unsupported-value-type:${v.__type}`);
+  // No source evidence establishes whether these compose, multiply or override.
+  // Reject even malformed/nested constants here; neither branch may hide the other.
+  if (v.dynamics && Object.hasOwn(v, 'constantValue')) throw new Error('ambiguous-curve:constantValue+dynamics');
+  if (Object.hasOwn(v, 'constantValue')) {
+    const value = v.constantValue;
+    if (dimensions ? !Array.isArray(value) || value.length !== dimensions || !value.every(Number.isFinite)
+      : !Number.isFinite(value)) throw new Error(`invalid-source-curve:${name}`);
+  }
   if (!v.dynamics) return [{ time: 0, value: constant(v, name) }];
   const d = v.dynamics;
   only(d, ['times', 'values', '__type'], name);

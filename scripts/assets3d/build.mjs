@@ -13,7 +13,7 @@ import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
 import { convertParticles } from './particles.mjs';
 import { loadParticleBins, particleSourcesFromBins, compareParticleSources } from './particle-bin.mjs';
-import { convertParticleMesh } from './particle-mesh.mjs';
+import { convertParticleMesh, MESH_LIMITS } from './particle-mesh.mjs';
 import { planFetch, argumentsFor } from './plan-fetch.mjs';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
@@ -86,11 +86,15 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             throw new Error('duplicate-source-record');
         recordMap.set(record.path, { ...record, absolute: path });
     }
-    const readRaw = async (path) => {
+    const readRaw = async (path, maxBytes) => {
         const r = recordMap.get(path);
         if (!r)
             throw new Error(`missing-source-record:${path}`);
+        if (maxBytes !== undefined && (await stat(r.absolute)).size > maxBytes)
+            throw new Error('mesh-byte-budget');
         const bytes = await readFile(r.absolute);
+        if (maxBytes !== undefined && bytes.length > maxBytes)
+            throw new Error('mesh-byte-budget');
         if (r.bytes !== bytes.length || r.sha256 !== sha256(bytes))
             throw new Error(`source-hash-mismatch:${path}`);
         if (!sources.some(s => s.path === path))
@@ -237,7 +241,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             try {
                 const raw = sourcePath(ref);
                 if (!raw) throw new Error('mesh-resource-unavailable');
-                const convertedMesh = convertParticleMesh(await readRaw(raw), extname(raw));
+                const convertedMesh = convertParticleMesh(await readRaw(raw, MESH_LIMITS.maxBytes), extname(raw));
                 const path = `meshes/${raw.replace(/\.(scb|sco)$/i, '.glb')}`;
                 meshPaths.set(ref, path); meshBuffers.set(path, convertedMesh.glb);
                 meshReports.push({ source: ref, path, status: 'converted', ...convertedMesh.report });

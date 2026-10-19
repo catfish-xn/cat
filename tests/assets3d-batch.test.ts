@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, truncate } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
 import { parseParticleDocument } from '../src/rendering3d/particles';
@@ -136,6 +136,13 @@ describe('isolated per-unit batch build', () => {
     expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['quad', 'mesh']);
     expect((await readFile(join(unitRoot, document.emitters[1].mesh))).subarray(0, 4).toString()).toBe('glTF');
     expect(result.particleTotals).toMatchObject({ availableUnits: 1, completeUnits: 1, systems: 1, emitters: 2, mapped: 2 });
+    // Oversized source has an intentionally stale hash: the byte preflight must
+    // reject it before readRaw reaches content hashing or mesh parsing.
+    await truncate(join(source, 'extracted', particleMesh), 16 * 1024 * 1024 + 1);
+    const rebuilt = await buildAll({ units: 'vi', source, out: join(root, 'out'), force: true });
+    expect(rebuilt.units.vi.status).toBe('success');
+    expect(rebuilt.units.vi.particles).toMatchObject({ mapped: 1, skipped: 1, rejected: 0,
+      byReason: { 'mesh-byte-budget': 1 } });
   });
   it('continues after one failure, reports missing mappings, and preserves per-unit metrics', async () => {
     const out = await output();

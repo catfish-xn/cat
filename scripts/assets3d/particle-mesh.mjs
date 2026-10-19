@@ -3,6 +3,12 @@ import { writeGlb } from './glb.mjs';
 export const MESH_LIMITS = Object.freeze({ maxBytes: 16 * 1024 * 1024, maxVertices: 100000, maxFaces: 100000,
   maxOutputBytes: 32 * 1024 * 1024 });
 function check(ok, message) { if (!ok) throw new Error(message); }
+function float32(value) {
+  check(Number.isFinite(value), 'mesh-nonfinite');
+  const rounded = Math.fround(value);
+  check(Number.isFinite(rounded), 'mesh-nonfinite-float32');
+  return rounded;
+}
 function budgetCount(n, max) { check(Number.isSafeInteger(n) && n > 0 && n <= max, 'mesh-count-budget'); }
 function readScb(b, limits) {
   let at = 0;
@@ -70,8 +76,8 @@ export function convertParticleMesh(bytes, extension, options = {}) {
   for (const face of faces) for (const j of [0, 2, 1]) {
     const vi = face.indices[j]; check(Number.isSafeInteger(vi) && vi >= 0 && vi < vertices.length, 'invalid-mesh-index');
     const p = [-vertices[vi][0], vertices[vi][1], vertices[vi][2]], uv = face.uv[j];
-    p.forEach((v, k) => { positions.writeFloatLE(v, index * 12 + k * 4); min[k] = Math.min(min[k], v); max[k] = Math.max(max[k], v); });
-    uv.forEach((v, k) => texcoords.writeFloatLE(v, index * 8 + k * 4)); index++;
+    p.forEach((v, k) => { positions.writeFloatLE(float32(v), index * 12 + k * 4); min[k] = Math.min(min[k], v); max[k] = Math.max(max[k], v); });
+    uv.forEach((v, k) => texcoords.writeFloatLE(float32(v), index * 8 + k * 4)); index++;
   }
   const doc = { asset: { version: '2.0', generator: 'assets3d-static-particle-mesh' }, scene: 0,
     scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }], meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, mode: 4 }] }],

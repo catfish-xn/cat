@@ -82,6 +82,8 @@ export function makeModel(skn, skl, animationSources, textures, { hiddenSubmeshe
     }
     function accessor(values, type, componentType = 5126, target, range = false) {
         const size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[type], Typed = componentType === 5126 ? Float32Array : Uint16Array;
+        if (componentType === 5126 && values.some(v => !Number.isFinite(v) || !Number.isFinite(Math.fround(v))))
+            throw new Error('nonfinite-float32-accessor');
         const typed = new Typed(values), a = { bufferView: view(Buffer.from(typed.buffer), target), componentType, count: values.length / size, type };
         if (range) {
             a.min = Array.from({ length: size }, (_, k) => {
