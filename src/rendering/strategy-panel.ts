@@ -43,7 +43,7 @@ import { genericOffer, isKnownChoiceKind, readChoiceExtras, SKIP_OPTION, timeout
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
-import { anomalyDisplayName, itemDisplayName } from '../presentation/g23-display';
+import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -861,10 +861,12 @@ export class StrategyPanel {
       for (const id of choice.offers) {
         if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；');
+        // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
+        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；')
+          : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
         const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
-          : `${choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id)}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${effects}`;
+          : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
         const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
@@ -1091,7 +1093,7 @@ export class StrategyPanel {
     const list = element('ul', '', 'anomaly-codex-list');
     for (const definition of definitions) {
       const row = element('li', '', 'anomaly-codex-entry'); row.dataset.anomaly = definition.id;
-      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${definition.description}`));
+      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${anomalyPlayerDescription(definition.id)}`));
       list.append(row);
     }
     codex.append(list);
