@@ -1,0 +1,34 @@
+{
+  "jinx": {
+    "sourceName": "tft13_jinx",
+    "base": "assets/characters/tft13_jinx/skins/base",
+    "mesh": "tft13_jinx.tft_set13.skn",
+    "skeleton": "tft13_jinx.tft_set13.skl",
+    "textures": { "Body": "tft13_jinx_skin0_tx_cm.tft_set13.tex", "Torch": "petstyletwojinx_carbs2_torch_tx_cm.tex" },
+    "animations": { "idle": "tft13_jinx_idle1", "move": "tft13_jinx_minigun_run", "attack": "tft13_jinx_minigun_attack1", "cast": "tft13_jinx_spell_deathrocket", "death": "jinx_minigun_death" },
+    "animationPath": "animations/{name}.tft_set13.anm",
+    "effectPatterns": { "cast": ["_Base_W_", "_Base_E_", "_Base_R_"], "attack": ["_Base_BA_"] }
+  },
+  "maddie": { "sourceName": "tft13_shooter" },
+  "vander": { "sourceName": "tft13_prime" },
+  "scar": { "sourceName": "tft13_flyguy" },
+  "loris": { "sourceName": "tft13_beardy" },
+  "powder": { "sourceName": "tft13_blue" },
+  "violet": { "sourceName": "tft13_red" },
+  "steb": { "sourceName": "tft13_fish" },
+  "renni": { "sourceName": "tft13_chainsaw" },
+  "smeech": { "sourceName": "tft13_gremlin" },
+  "sevika": { "sourceName": "tft13_lieutenant" },
+  "nunu": { "sourceName": "tft13_nunuwillump" },
+  "renata": { "sourceName": "tft13_renataglasc" },
+  "vi": {
+    "sourceName": "tft13_vi",
+    "base": "assets/characters/tft13_vi/skins/base",
+    "mesh": "tft13_vi.tft_set13.skn",
+    "skeleton": "tft13_vi.tft_set13.skl",
+    "textures": { "Body": "tft13_vi_skin0_tx_cm.tft_set13.tex" },
+    "animations": { "idle": "vi_idle1", "move": "vi_run1", "attack": "vi_attack1", "cast": "vi_spell4_hit", "death": "vi_death" },
+    "animationPath": "animations/{name}.tft_set13.anm",
+    "effectPatterns": { "cast": ["_Base_Q_"], "attack": ["_BA_", "_BasicAttack"] }
+  }
+}
