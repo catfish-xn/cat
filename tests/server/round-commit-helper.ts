@@ -7,6 +7,7 @@ import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleResult, RoomState } from '../../src/server/room/types';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { expectWallClockBelow } from '../fixtures/wallclock';
 
 const twoSided = (battle: BattleResult): battle is Extract<BattleResult, { kind: 'two-sided' }> => battle.kind === 'two-sided';
 
@@ -138,8 +139,7 @@ describe('Room: whole-round commit through T3 receipts', () => {
     room.start();
     const started = Date.now();
     const state = runUntil(room, clock, current => current.phase === 'ended', 20_000);
-    const seconds = (Date.now() - started) / 1000;
-    expect(seconds).toBeLessThan(30);
+    expectWallClockBelow('round-commit whole room to ranking', Date.now() - started, 30_000);
     expect(state.settlements.length).toBe(state.round);
     for (const seat of state.seats) expect(seat.match.playerHp).toBe(seat.hp);
     const eliminated = state.seats.filter(seat => !seat.alive);

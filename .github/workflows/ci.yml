@@ -43,7 +43,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [tests, timing, headless, performance]
+        # The fast Vitest project is split into four shards (vitest --shard) on separate machines.
+        part: [tests-1, tests-2, tests-3, tests-4, timing, headless, performance]
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
       M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
@@ -59,9 +60,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - name: Fast tests (parallel)
-        if: ${{ matrix.part == 'tests' }}
-        run: node scripts/ci-m5-step.cjs tests npm test
+      - name: Fast tests (parallel, one of four shards)
+        if: ${{ startsWith(matrix.part, 'tests-') }}
+        env:
+          PART: ${{ matrix.part }}
+        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/4"
       - name: Timing tests (one worker, serial files)
         if: ${{ matrix.part == 'timing' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing

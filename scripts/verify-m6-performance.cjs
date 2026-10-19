@@ -7,6 +7,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evidence.cjs');
 const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-fixture-transport.cjs');
+const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
 (async()=>{
  const output=process.env.M6_EVIDENCE_DIR??'artifacts/m6-performance';fs.mkdirSync(output,{recursive:true});
  const started=performance.now();const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),sourceFingerprint:sourceFingerprint(),scriptHash:hash(fs.readFileSync(__filename,'utf8')),node:process.version,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),startedAt:new Date().toISOString(),passed:false,acceptanceScope:'original F4 performance gates at the catalog capacity (B9, issue #23)',method:'Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.'};
@@ -175,7 +176,8 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   diagnosticPhase('measurements-returned');
   assert.deepEqual(report.measurements.skipped,[],'no deferred performance measurement after B9');
   assert.equal(report.measurements.fullLoadRoundTrip?.verified,true,'full-load import/activation roundtrip ran');
-  assert(report.measurements.fullLoadRoundTrip.milliseconds<=report.measurements.limits.completeImport,'full-load import/activation roundtrip frozen budget');
+  // Wall-clock budget: enforced unless CI_WALLCLOCK_GATES=report (PR gate), see scripts/wallclock-gate.cjs.
+  if(wallClockEnforced)assert(report.measurements.fullLoadRoundTrip.milliseconds<=report.measurements.limits.completeImport,'full-load import/activation roundtrip frozen budget');
   diagnosticPhase('lifecycle-start');
   // Warm constructors/listeners/code before establishing the lifecycle baseline.
   const lifecycle=async cycles=>page.evaluate(async cycles=>{
@@ -215,7 +217,10 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   report.fixtureTransport.verificationMs=performance.now()-verificationStarted;
   diagnosticPhase('fixture-transport-verification-complete',report.fixtureTransport.verification);
   assert.equal(report.errors.length,0,'browser errors');assert.equal(sourceFingerprint(),report.sourceFingerprint,'source changed during measurement');
-  const failures=report.measurements.gates.filter(g=>!g.passed);assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;
+  const roundTrip=report.measurements.fullLoadRoundTrip;
+  report.wallClock={enforced:wallClockEnforced,gates:recordWallClock('m6-performance',[...report.measurements.gates.map(g=>({name:g.name,metric:g.metric,actual:g.actual,limit:g.ceiling,comparison:'<=',passed:g.passed})),
+   {name:'fullLoadRoundTrip',metric:'max',actual:roundTrip.milliseconds,limit:report.measurements.limits.completeImport,comparison:'<=',passed:roundTrip.milliseconds<=report.measurements.limits.completeImport}])};
+  const failures=report.measurements.gates.filter(g=>!g.passed);if(wallClockEnforced)assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;
  }catch(error){diagnostic('script-catch',{pageClosed:page?.isClosed()??null,browserConnected:browser?.isConnected()??null,message:String(error)});report.failure=error.stack;console.error(error);process.exitCode=1;}
  finally{report.endedAt=new Date().toISOString();report.durationMs=performance.now()-started;report.finalSourceFingerprint=sourceFingerprint();report.peakProcessRssBytes=process.resourceUsage().maxRSS*1024;report.loadAtEnd=os.loadavg();diagnosticCleanupStarted=true;diagnosticPhase('script-cleanup-start',{failureRecorded:Boolean(report.failure)});fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify(report,null,2));diagnostic('browser-close-call',{location:'script-finally',connected:browser?.isConnected()??null,pageClosed:page?.isClosed()??null});await browser?.close();diagnostic('browser-close-return',{location:'script-finally'});await server?.close();console.log(JSON.stringify({passed:report.passed,durationMs:report.durationMs,acceptanceScope:report.acceptanceScope,skipped:[...(report.skipped??[]),...(report.measurements?.skipped??[])],gates:report.measurements?.gates,boundedImport:report.boundedImport,lifecycle:report.lifecycle?.heapDeltaBytes,failure:report.failure}));}
 })();

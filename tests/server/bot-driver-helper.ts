@@ -8,6 +8,7 @@ import { toPlayerView } from '../../src/server/room/projection';
 import { BOT_MAX_STEPS } from '../../src/server-entry';
 import type { RoomCommandResult, SeatCommand, SeatSpec } from '../../src/server/room/types';
 import { expectUniqueRanking, runUntil, SEATS } from './helpers';
+import { expectWallClockBelow } from '../fixtures/wallclock';
 
 /** The rules battle runs in full; only the second playback pass is skipped (nobody watches these matches). */
 const headlessResolver = () => new TwoSidedBattleResolver();
@@ -58,7 +59,7 @@ if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
     // The bots built up: every seat levelled, and some upgraded a hero to two stars through the buy command.
     expect(room.state.seats.every(seat => seat.match.level >= 5)).toBe(true);
     expect(room.state.seats.some(seat => seat.match.preparation.units.some(unit => unit.team === 'player' && unit.starLevel >= 2))).toBe(true);
-    expect(performance.now() - started).toBeLessThan(60_000);
+    expectWallClockBelow('bot-driver eight bots whole match', performance.now() - started, 60_000);
   }, 60_000); }
 
   if (mode === 'timing') { it('plays one idle human and seven bots through the lobby to a unique ranking; the human seat is never driven', () => {
@@ -83,7 +84,7 @@ if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
     expect(new Set(log.map(record => record.seatId)).size).toBe(7);
     for (const record of log) expect(['preparation', 'choice']).toContain(record.phase);
     budgetsHold(log, BOT_MAX_STEPS);
-    expect(performance.now() - started).toBeLessThan(60_000);
+    expectWallClockBelow('bot-driver idle human and seven bots whole match', performance.now() - started, 60_000);
   }, 60_000); }
 });
 
