@@ -136,7 +136,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
     case 'leap': {
       if (hexDistance(holder.cell, target.cell) <= 1) break;
       const free = Array.from({ length: ctx.board.rows }, (_, row) => Array.from({ length: ctx.board.columns }, (_, col) => ({ col, row }))).flat()
-        .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
+        .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(holder.cell, a) - hexDistance(holder.cell, b) || a.row - b.row || a.col - b.col)[0];
       if (!free) break;
       ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); holder.cell = free; break;

@@ -12,7 +12,7 @@
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "7b0276340c441264c1776966c97bbe84f02c489ce971e6c9f09b177b1c52a864",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
-    "src/simulation/anomalies/availability.ts": "e9e999ca32c54c61cac3a31aac6b9711e9d6627bc664436f5e5fb04b19eca267",
+    "src/simulation/anomalies/availability.ts": "cacb8c710e560f32a8a2d709602adb1661d40e0d29a6d0d9e8db9df2c9ac5a6f",
     "src/simulation/anomalies/bonuses.ts": "0d94565002943d87cee29811dc03d1ebbebd28d4dbc4794be80774e86fd053e5",
     "src/simulation/anomalies/center-of-the-universe.ts": "451f72a226544868bbe1318b940202b54b149388ff118c107de062d31e851670",
     "src/simulation/anomalies/certain-death.ts": "39ef37d032cdcae787c35c5e38ef80672dde88d92e999000eafb1c6aec511203",
@@ -228,7 +228,7 @@
     "src/simulation/m8/restore.ts": "474670368b7916c7ea71ae17d61446cb10652c0888e531c8df50dc9c6021b6a9",
     "src/simulation/m8/runtime-types.ts": "da704a0f399e0917a1825b5e84aa0baee570cee43042dbd996b15a3fe96ceee4",
     "src/simulation/m8/s13-definitions.ts": "1efb20ee44995e5687c23272ced5fee2704285ee1547954557683d66bfa841a1",
-    "src/simulation/m8/s13-mechanisms.ts": "b0e62067ca39d62857145e00e0337dfd3865898742be6b878deb3fa9f714e73c",
+    "src/simulation/m8/s13-mechanisms.ts": "bdc87e7ecdcf0dc159dc03a93683bdd69358bc6bb741da4a9ee4069f430ed636",
     "src/simulation/m8/s13-targeting.ts": "1808464be7d8eeb76d1650740a8897e84af50249bf2e591aeb8a4519d8a66846",
     "src/simulation/m8/s13-triggers.ts": "7d4b68e1e518f964003d7eca750e2f82de63a3210f525ff1a8689afd0da6aed0",
     "src/simulation/m8/sampled-stat-facts.ts": "f5d1244ce39ab2ef380eec9f005abe22d9fa3558d33db03717f649c827609e3e",
@@ -352,7 +352,7 @@
       "previousBytes": 29874,
       "currentBytes": 33396,
       "previousSha256": "f76d874a352a1b156ff97dbc7e59f64c6e8f1865656328de3b6fc633ebd6fd72",
-      "currentSha256": "2f784551e9a18a74f30da6c7fabaca67ed6aa3ac9e1201a78515b90aa35449fb",
+      "currentSha256": "921ee6728bbc59bfb8746a234a3d7da7c9188152037ba4d2b4c419fe821f3a5a",
       "firstDifferentByte": 135
     },
     "tests/fixtures/g2-4b-herald-raw/trajectory.json": {

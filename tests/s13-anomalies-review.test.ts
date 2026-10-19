@@ -18,6 +18,7 @@ import { compileBattle } from '../src/simulation/two-sided-battle';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { anomalyId } from './helpers/s13-anomalies';
+import { occupiesCell, isPresent, isSelectable } from '../src/simulation/anomalies/availability';
 
 it.each([0, 40])('M1 Scuttle clears 30 percent Shred/Sunder at death while retaining +%i resolved resists', bonus => {
   let state = quiet(startAnomaly('ScuttleFamiliar'));
@@ -50,6 +51,57 @@ it('M2 Repulsor stops at the first occupied step instead of jumping to (0,1)', (
   const step = stepCombat(state);
   expect(step.state.units.find(u => u.id === 'e')!.cell).toEqual({ col: 1, row: 3 });
   expect(step.events.filter(e => e.type === 'movement' && e.unitId === 'e')).toEqual([]);
+});
+
+it('M2 Repulsor walks to (1,2) when the first step is free and the second (0,1) is blocked', () => {
+  let state = quiet(startAnomaly('Repulsor', 'lux', [
+    { id: 'block', definitionId: 'garen', starLevel: 1, team: 'enemy', location: { kind: 'board', cell: { col: 0, row: 1 } } },
+  ]));
+  state = { ...state, units: state.units.map(u => u.id === 'p' ? { ...u, maxMana: 50, mana: 50 } : u) };
+  const step = stepCombat(state);
+  expect(step.state.units.find(u => u.id === 'e')!.cell).toEqual({ col: 1, row: 2 });
+  expect(step.events.filter(e => e.type === 'movement' && e.unitId === 'e')).toEqual([
+    expect.objectContaining({ from: { col: 1, row: 3 }, to: { col: 1, row: 2 } }),
+  ]);
+});
+
+it.each(['zero-hp', 'dramatic-entrance', 'zephyr', 'dead'] as const)('M3 preserves legacy occupancy for %s without changing presence or selection', kind => {
+  const base = startAnomaly('EvenInDeath').units.find(u => u.id === 'p')!;
+  const unit = { ...base, hp: kind === 'zero-hp' ? 0 : base.hp, alive: kind !== 'dead',
+    ...(kind === 'dramatic-entrance' ? { anomalyState: { absentUntilTick: 100 } } : {}),
+    ...(kind === 'zephyr' ? { itemBanish: { ownerId: 'e', itemInstanceId: 'review-zephyr', untilTick: 100 } } : {}),
+  };
+  expect(occupiesCell(unit, 1)).toBe(kind !== 'dead');
+  expect(isPresent(unit, 1)).toBe(false);
+  expect(isSelectable(unit, 1)).toBe(false);
+});
+
+it('M3 same-tick Trench split reserves an adjacent ally cell until Even in Death revives it', () => {
+  const { inputs } = anomalyInputs('EvenInDeath', 'lux', [
+    { id: 'coat', definitionId: 'lux', starLevel: 1, team: 'player', location: { kind: 'board', cell: { col: 3, row: 7 } } },
+  ]);
+  const base = { ...inputs, preparation: { ...inputs.preparation, units: inputs.preparation.units.map(u => u.id === 'coat' ? u : { ...u,
+    location: { kind: 'board' as const, cell: { col: 3, row: u.id === 'p' ? 6 : 5 } },
+  }) } };
+  let equipped = accepted(grantMechanicItem(base, { receiptId: 'review-revive-coat', source: 'test', definitionId: 'TFT_Item_Artifact_SuspiciousTrenchCoat' }));
+  equipped = accepted(equipItem(equipped, equipped.items.at(-1)!.id, 'coat', 0));
+  let state = quiet(createCombatWithEvents(equipped.preparation, buildStrategySnapshot(equipped), 'review-revive-coat').state);
+  state = { ...state, units: state.units.map(u => u.id === 'p' ? { ...u, hp: 1 }
+    : u.id === 'coat' ? { ...u, hp: Math.floor(u.maxHp / 2) } : { ...u, cooldownTicks: 0 }) };
+  expect(state.units.find(u => u.id === 'p')!.anomalyState?.revivedAtTick).toBeUndefined();
+  const step = stepCombat(state), copies = step.state.units.filter(u => u.itemSummon?.kind === 'trench');
+  expect(packets(step.events).some(p => p.unitId === 'p' && p.hpDamage === 1)).toBe(true);
+  expect(step.events).toContainEqual(expect.objectContaining({ type: 'unitRevived', tick: step.state.tick, unitId: 'p' }));
+  expect(copies).toHaveLength(3);
+  expect(copies.every(u => u.cell.col !== 3 || u.cell.row !== 6)).toBe(true);
+  const revived = step.state.units.find(u => u.id === 'p')!;
+  expect(revived).toMatchObject({ alive: true, hp: revived.maxHp, cell: { col: 3, row: 6 } });
+  const living = step.state.units.filter(u => u.alive);
+  expect(new Set(living.map(u => `${u.cell.col},${u.cell.row}`)).size).toBe(living.length);
+  const splitIndex = step.events.findIndex(e => e.type === 'unitSpawned' && copies.some(u => u.id === e.unitId));
+  const reviveIndex = step.events.findIndex(e => e.type === 'unitRevived' && e.unitId === 'p');
+  expect(splitIndex).toBeGreaterThanOrEqual(0);
+  expect(reviveIndex).toBeGreaterThan(splitIndex);
 });
 
 function itemAnomaly(suffix: string, itemId: string): CombatState {
@@ -103,13 +155,27 @@ it('M4 Mini Mees preserves redirected damage without reducing redirect-only Lori
     ? { ...u, armor: 50, maxMana: 50, mana: 50 } : u) };
   for (let i = 0; i < 3; i++) state = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) }).state;
   state = quiet(state);
-  const redirected = [];
+  const redirected = [], direct = [];
   for (let i = 0; i < 10; i++) {
     const step = stepCombat(state); state = step.state;
     redirected.push(...packets(step.events).filter(p => p.source.definitionId.endsWith('DeftHands') && p.redirected));
+    direct.push(...packets(step.events).filter(p => p.source.definitionId.endsWith('DeftHands') && !p.redirected));
   }
   expect(redirected).toHaveLength(3);
-  expect(redirected.every(p => p.unitId === 'guard' && p.hpDamage + p.absorbed > 0)).toBe(true);
+  // Lux AD=30: each mini raw=floor(30*0.30)=9. Armor before each hit=60,55,50:
+  // mitigated=floor(9*100/(100+armor))=5,5,6; Loris gets floor(50%)=2,2,3.
+  // Redirect skips Loris's 50 armor; its active self-shield absorbs all 2,2,3.
+  // The original target loses the remainder 3,3,3 HP; each direct hit removes 5 armor.
+  expect(redirected.map(p => ({ unitId: p.unitId, raw: p.raw, mitigated: p.mitigated, hpDamage: p.hpDamage, absorbed: p.absorbed }))).toEqual([
+    { unitId: 'guard', raw: 2, mitigated: 2, hpDamage: 0, absorbed: 2 },
+    { unitId: 'guard', raw: 2, mitigated: 2, hpDamage: 0, absorbed: 2 },
+    { unitId: 'guard', raw: 3, mitigated: 3, hpDamage: 0, absorbed: 3 },
+  ]);
+  expect(direct.map(p => ({ unitId: p.unitId, raw: p.raw, mitigated: p.mitigated, hpDamage: p.hpDamage, absorbed: p.absorbed }))).toEqual([
+    { unitId: 'e', raw: 9, mitigated: 3, hpDamage: 3, absorbed: 0 },
+    { unitId: 'e', raw: 9, mitigated: 3, hpDamage: 3, absorbed: 0 },
+    { unitId: 'e', raw: 9, mitigated: 3, hpDamage: 3, absorbed: 0 },
+  ]);
   expect(readCombatStats(state.units.find(u => u.id === 'guard')!, state).armor).toBe(50);
   expect(readCombatStats(state.units.find(u => u.id === 'e')!, state).armor).toBe(45);
 });
