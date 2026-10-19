@@ -8,20 +8,25 @@ async function main(){
  try{
  const api=await server.ssrLoadModule('/src/simulation/match.ts');
  const helpers=await server.ssrLoadModule('/tests/fixtures/g2-3-b8-public.ts');
- let prefix;const reached=new Error('public route reached4-7');
- try{await require('./generate-m5-route.cjs').run(api,{build:'mage',seed:42,goldReserves:{'4-7':0},anomalyDefinitionId:'protective-shielding',onStep(before,_result,command){if(command?.type==='start'&&before.roundDefinitionId==='4-7'){prefix=before;throw reached;}}});}catch(e){if(e!==reached)throw e;}
- assert(prefix);
+ async function capture(options){let captured;const reached=new Error('public route reached4-7');
+ try{await require('./generate-m5-route.cjs').run(api,{...options,onStep(before,_result,command){if(command?.type==='start'&&before.roundDefinitionId==='4-7'){captured=before;throw reached;}}});}catch(e){if(e!==reached)throw e;}
+ assert(captured);return captured;}
+ // Same three public routes as tests/m8-b8-live-reveal.test.ts.
+ const original=['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii'];
+ const prefix=await capture({build:'mage',seed:42,goldReserves:{'4-7':0},anomalyDefinitionId:'protective-shielding'});
+ const partialPrefixes={loris:await capture({build:'mage',seed:31731,goldReserves:{'4-7':0},augmentPriorities:original,anomalyDefinitionId:'protective-shielding'}),
+  zyra:await capture({build:'mage',seed:166883,augmentPriorities:original,anomalyDefinitionId:'protective-shielding'})};
  const accept=r=>{assert(r.ok!==false,r.reason);return r.state;};
- function resolve(state){
+ function resolve(state,base=prefix){
  state=accept(api.startMatchCombat(state));const events=[];
  while(state.phase==='combat'){const step=api.stepMatch(state);state=step.state;events.push(...step.events);}
- return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-prefix.m8.loot.receipts.length};
+ return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-base.m8.loot.receipts.length};
  }
  const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix))};
  assert.deepEqual(branches.simultaneous.deaths.slice(0,2),[{unitId:'["pve","4-7","razorbeaks-v1","r00"]',tick:51,eventSeq:447},{unitId:'["pve","4-7","razorbeaks-v1","r01"]',tick:51,eventSeq:448}]);
  for(const definitionId of ['loris','zyra']){
- const target=prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
- branches[definitionId]={...resolve(helpers.partialB8Preparation(prefix,definitionId)),star:target.starLevel};
+ const base=partialPrefixes[definitionId],target=base.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
+ branches[definitionId]={...resolve(helpers.partialB8Preparation(base,definitionId),base),star:target.starLevel,prefixHash:sha(base)};
  }
  assert.equal(branches.loris.deaths.length,1);assert.equal(branches.loris.deaths[0].tick,381);assert.equal(branches.loris.receipts,4);
  assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,152);assert.equal(branches.zyra.receipts,0);

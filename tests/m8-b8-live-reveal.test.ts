@@ -22,8 +22,13 @@ try {
 if (!preparation) throw Error('Public mage route did not reach 4-7');
 const prefix = preparation;
 // This public seed retains the original three augments and Zyra's tick-152
-// source death under the expanded P2 offer pool.
-const zyraPrefix = await configuredPrefix('4-7', { build: 'mage', seed: 8486,
+// source death under the v13 57-augment offer pool.
+const zyraPrefix = await configuredPrefix('4-7', { build: 'mage', seed: 166883,
+  augmentPriorities: ['bronze-for-life-i', 'pumping-up-ii', 'bronze-for-life-ii'],
+  anomalyDefinitionId: 'protective-shielding' });
+// Seed 42 can no longer be offered pumping-up-ii under v13; this public seed keeps the
+// original three augments and Loris's single tick-381 r00 death with four direct receipts.
+const lorisPrefix = await configuredPrefix('4-7', { build: 'mage', seed: 31731, goldReserves: { '4-7': 0 },
   augmentPriorities: ['bronze-for-life-i', 'pumping-up-ii', 'bronze-for-life-ii'],
   anomalyDefinitionId: 'protective-shielding' });
 function unchangedStep(state: api.MatchState): void {
@@ -98,7 +103,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ['loris', 'r00', 381, 'settlement', 4],
     ['zyra', 'r01', 152, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
-    let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : prefix, survivor));
+    let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : lorisPrefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
       definitionId: survivor, starLevel: 2, team: 'player',
