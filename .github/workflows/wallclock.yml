@@ -21,7 +21,8 @@ permissions:
   contents: read
 concurrency:
   group: wallclock-${{ github.event_name }}-${{ inputs.ref || github.ref }}
-  cancel-in-progress: true
+  # Never cancel: back-to-back merges each get their own measurement.
+  cancel-in-progress: false
 env:
   CI_WALLCLOCK_GATES: enforce
   WALLCLOCK_REPORT_DIR: artifacts/wallclock
@@ -41,6 +42,9 @@ jobs:
       - run: npm ci
       - name: Timing tests (one worker, serial files, budgets enforced)
         run: npm run test:timing
+      - name: Fast-project files with wall-clock budgets (budgets enforced)
+        if: ${{ always() }}
+        run: npx vitest run --project fast tests/explorer-bracer-restore-pressure.test.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
