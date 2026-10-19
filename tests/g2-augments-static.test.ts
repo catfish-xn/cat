@@ -167,3 +167,17 @@ describe('G2 static augment selectors and hand-calculated totals', () => {
     expect(compiled(id, state, unit(), [], 8)).toEqual([speed(base), speed(0)]);
   });
 });
+
+describe('Bronze For Life includes the later S13 bronze traits',()=>{
+ const added = [['ambusher',2],['visionary',2],['chem-baron',3],['dominator',2],['pit-fighter',2],['experiment',3],['bruiser',2],['black-rose',3],['quickstriker',2]] as const;
+ it.each(added)('%s source bronze tier %i counts for both augments', (id,tier)=>{
+   expect(compiled('bronze-for-life-i',fixture(),unit(),[trait(id,tier)])).toEqual([mech('damageAmp',{bps:300})]);
+   expect(compiled('bronze-for-life-ii',fixture(),unit(),[trait(id,tier)])).toEqual([mech('damageAmp',{bps:350}),mech('watcher',{reductionBps:150,healthyReductionBps:150,thresholdBps:0})]);
+   expect(compiled('bronze-for-life-i',fixture(),unit(),[trait(id,0),trait(id,tier,[],'enemy')])).toEqual([mech('damageAmp',{bps:0})]);
+ });
+ it('does not count higher or unique tiers and counts all nine bronze tiers together',()=>{
+   const nonBronze=[trait('ambusher',3),trait('visionary',4),trait('chem-baron',4),trait('dominator',4),trait('pit-fighter',4),trait('experiment',5),trait('bruiser',4),trait('black-rose',4),trait('quickstriker',3),trait('high-roller',1),trait('junker-king',1),trait('family',3),trait('conqueror',4)];
+   expect(compiled('bronze-for-life-i',fixture(),unit(),nonBronze)).toEqual([mech('damageAmp',{bps:0})]);
+   expect(compiled('bronze-for-life-ii',fixture(),unit(),added.map(([id,tier])=>trait(id,tier)))).toEqual([mech('damageAmp',{bps:3150}),mech('watcher',{reductionBps:1350,healthyReductionBps:1350,thresholdBps:0})]);
+ });
+});

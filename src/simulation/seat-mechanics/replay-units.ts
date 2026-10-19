@@ -10,21 +10,27 @@ export type ReplayMembershipEvent =
   | { readonly type: 'unitLeft'; readonly unitId: string };
 
 /**
- * Aligns the previous tick's units to the current ones and appends unitLeft/unitEntered to `events`. Survivors must keep
- * their order and new units must come after them (spawnCombatUnit appends), so the reducer's order equals the state's.
+ * Aligns units by identity and appends membership events. A changed roster order is carried by
+ * the caller's keyframe; identity uniqueness remains mandatory.
  * Returns, per current unit, its previous view or undefined when it just entered.
  */
 export function alignReplayUnits(previous: readonly CombatViewUnit[], current: readonly CombatViewUnit[], events: CombatViewEvent[]): readonly (CombatViewUnit | undefined)[] {
   const currentIds = new Set(current.map(unit => unit.id)), byId = new Map(previous.map(unit => [unit.id, unit]));
-  const survivors = previous.filter(unit => currentIds.has(unit.id));
-  if (current.length !== new Set(currentIds).size || survivors.some((unit, i) => current[i]?.id !== unit.id)
-    || current.slice(survivors.length).some(unit => byId.has(unit.id))) throw new RangeError('replay-divergence');
+  if (current.length !== currentIds.size || previous.length !== byId.size) throw new RangeError('replay-divergence');
   for (const unit of previous) if (!currentIds.has(unit.id)) events.push({ type: 'unitLeft', unitId: unit.id });
   return current.map(unit => {
     const before = byId.get(unit.id);
     if (!before) events.push({ type: 'unitEntered', unit });
     return before;
   });
+}
+
+/** True when applying the membership events to `previous` already yields `current`'s order: survivors keep their
+ * order and entering units come after them (spawnCombatUnit appends). Otherwise the caller adds a keyframe. */
+export function replayOrderFollowsMembership(previous: readonly CombatViewUnit[], current: readonly CombatViewUnit[]): boolean {
+  const currentIds = new Set(current.map(unit => unit.id)), previousIds = new Set(previous.map(unit => unit.id));
+  const survivors = previous.filter(unit => currentIds.has(unit.id));
+  return survivors.every((unit, i) => current[i].id === unit.id) && current.slice(survivors.length).every(unit => !previousIds.has(unit.id));
 }
 
 /** Display reducer step for one membership event; idempotent for a repeated frame. */

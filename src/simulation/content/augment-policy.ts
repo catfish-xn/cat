@@ -3,6 +3,16 @@ import { freezeContent } from './freeze';
 export const AUGMENT_OFFER_POLICY = freezeContent({version:'aug30-equal-v1',evidence:'U',sampling:'equal-without-replacement',words:3} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
 export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[]>> = freezeContent({
+  // S13 14.24 source style 1; later content releases added these active traits.
+  "ambusher": [2],
+  "visionary": [2],
+  "chem-baron": [3],
+  "dominator": [2],
+  "pit-fighter": [2],
+  "experiment": [3],
+  "bruiser": [2],
+  "black-rose": [3],
+  "quickstriker": [2],
   "automata": [
     2
   ],

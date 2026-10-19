@@ -1,0 +1,166 @@
+[
+  {
+    "run": "anomalies-final.json",
+    "passed": 40,
+    "failed": 0,
+    "elapsedMs": 1584.439,
+    "failures": []
+  },
+  {
+    "run": "anomalies-green1.json",
+    "passed": 40,
+    "failed": 0,
+    "elapsedMs": 1843.171,
+    "failures": []
+  },
+  {
+    "run": "anomalies-red.json",
+    "passed": 39,
+    "failed": 1,
+    "elapsedMs": 1953.446,
+    "failures": [
+      {
+        "title": "Slow Cooker uses the holder maximum HP, not the target HP, at each one-second pulse",
+        "messages": [
+          "AssertionError: expected [ { tick: 20, raw: 108 }, …(1) ] to deeply equal [ { tick: 20, raw: 15 }, …(1) ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-3-anomalies.test.ts:99:17\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+        ]
+      }
+    ]
+  },
+  {
+    "run": "bronze-green1.json",
+    "passed": 70,
+    "failed": 0,
+    "elapsedMs": 1548.413,
+    "failures": []
+  },
+  {
+    "run": "bronze-red.json",
+    "passed": 60,
+    "failed": 10,
+    "elapsedMs": 1686.108,
+    "failures": [
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits ambusher source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits visionary source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits chem-baron source bronze tier 3 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits dominator source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits pit-fighter source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits experiment source bronze tier 3 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits bruiser source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits black-rose source bronze tier 3 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits quickstriker source bronze tier 2 counts for both augments",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) } ] to deeply equal [ { kind: 'mechanic', …(2) } ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:168:76\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "Bronze For Life includes the later S13 bronze traits does not count higher or unique tiers and counts all nine bronze tiers together",
+        "messages": [
+          "AssertionError: expected [ { kind: 'mechanic', …(2) }, …(1) ] to deeply equal [ { kind: 'mechanic', …(2) }, …(1) ]\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-static.test.ts:175:99\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+        ]
+      }
+    ]
+  },
+  {
+    "run": "hyper-mutation.json",
+    "passed": 39,
+    "failed": 1,
+    "elapsedMs": 1600.53,
+    "failures": [
+      {
+        "title": "Hypervelocity adds exactly fifteen percent speed per completed cast and restores both stacks",
+        "messages": [
+          "AssertionError: expected 26 to be 23 // Object.is equality\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-3-anomalies.test.ts:65:64\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+        ]
+      }
+    ]
+  },
+  {
+    "run": "multiplayer-green.json",
+    "passed": 6,
+    "failed": 0,
+    "elapsedMs": 2996.528,
+    "failures": []
+  },
+  {
+    "run": "multiplayer1.json",
+    "passed": 4,
+    "failed": 2,
+    "elapsedMs": 1401.436,
+    "failures": [
+      {
+        "title": "bronze-for-life-i tracks current board bronze tiers in two-sided compilation and settlement facts",
+        "messages": [
+          "BattleValidationError: invalid-snapshot\n    at requireSnapshot (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:20:25)\n    at checkSerial (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/input-assets.ts:28:5)\n    at validateInputAssets (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/input-assets.ts:62:33)\n    at restorePlayerBattleSnapshot (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:55:19)\n    at snapshotForBattle (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:131:10)\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-multiplayer.test.ts:37:31\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "title": "bronze-for-life-ii tracks current board bronze tiers in two-sided compilation and settlement facts",
+        "messages": [
+          "BattleValidationError: invalid-snapshot\n    at requireSnapshot (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:20:25)\n    at checkSerial (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/input-assets.ts:28:5)\n    at validateInputAssets (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/input-assets.ts:62:33)\n    at restorePlayerBattleSnapshot (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:55:19)\n    at snapshotForBattle (/workspace/scratch/2d61d723fa5a/cat-augment-anomaly/src/simulation/two-sided-snapshot.ts:131:10)\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-multiplayer.test.ts:37:31\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      }
+    ]
+  },
+  {
+    "run": "multiplayer2.json",
+    "passed": 4,
+    "failed": 2,
+    "elapsedMs": 2578.297,
+    "failures": [
+      {
+        "title": "bronze-for-life-i tracks current board bronze tiers in two-sided compilation and settlement facts",
+        "messages": [
+          "AssertionError: expected 900 to be 300 // Object.is equality\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-multiplayer.test.ts:47:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      },
+      {
+        "title": "bronze-for-life-ii tracks current board bronze tiers in two-sided compilation and settlement facts",
+        "messages": [
+          "AssertionError: expected 1050 to be 350 // Object.is equality\n    at /workspace/scratch/2d61d723fa5a/cat-augment-anomaly/tests/g2-augments-multiplayer.test.ts:47:18\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:63\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/2d61d723fa5a/cat-augment-anomaly/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+        ]
+      }
+    ]
+  }
+]

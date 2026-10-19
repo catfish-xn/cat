@@ -7,6 +7,7 @@ const path = require('node:path');
 const { fork, execFileSync } = require('node:child_process');
 const { performance } = require('node:perf_hooks');
 const { createHash } = require('node:crypto');
+const { replayErrorGuard, assertNoReplayErrors } = require('./replay-error-guard.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const epochMs = () => performance.timeOrigin + performance.now();
@@ -150,7 +151,7 @@ export { validateDeployment } from './src/simulation/game';
 /** A separate real server process; only observation wrappers + an explicit playback-only clock cap. */
 async function worker(file,config) {
   const api=require(file), {WebSocket,Room,WriteQueue,TwoSidedBattleResolver,RealClock}=api;
-  let server,activeInbound=null,commands=[],battles=[],freezes=[],slices=[],game=0,cappedWaits=0;
+  let server,activeInbound=null,commands=[],battles=[],freezes=[],slices=[],game=0,cappedWaits=0,replayFailures=[];
   const inbound=new WeakMap(), seatIds=new WeakMap();
   const sendIpc=value=>{if(process.connected)process.send(value);};
   // Observe ws message delivery -> WriteQueue task start -> receipt serialization/enqueue.
@@ -203,14 +204,15 @@ async function worker(file,config) {
     }
   }
   const clock=new LoadClock();
+  const observeReplayError=replayErrorGuard(error=>{replayFailures.push(error.message);sendIpc({type:'error',error:error.message});});
   server=await api.createGameServer({port:0,host:'127.0.0.1',seed:config.seed,clock,
     timings:{preparationMs:config.prepSec*1000,choiceMs:config.choiceSec*1000,settlementMs:config.settleSec*1000},
-    log:line=>{if(/failed|error/i.test(line))process.stderr.write(`[server] ${line}\n`);}});
+    log:line=>{observeReplayError(line+'\n');if(/failed|error/i.test(line))process.stderr.write(`[server] ${line}\n`);}});
   sendIpc({type:'ready',port:server.port,pid:process.pid,memory:sampleMemory()});
   process.on('message',async message=>{
     try {
-      if(message.type==='begin') {game=message.game;commands=[];battles=[];freezes=[];slices=[];cappedWaits=0;sendIpc({type:'begun',game,memory:sampleMemory()});}
-      if(message.type==='snapshot')sendIpc({type:'snapshot',game,commands,battles,freezes,slices,sliceWallMs:summary(slices.map(s=>s.wallMs)),cappedWaits,memoryEnd:sampleMemory(true),
+      if(message.type==='begin') {game=message.game;commands=[];battles=[];freezes=[];slices=[];cappedWaits=0;replayFailures=[];sendIpc({type:'begun',game,memory:sampleMemory()});}
+      if(message.type==='snapshot')sendIpc({type:'snapshot',game,commands,battles,freezes,slices,replayFailures,sliceWallMs:summary(slices.map(s=>s.wallMs)),cappedWaits,memoryEnd:sampleMemory(true),
         roomPhase:server.room?.state.phase,roomFault:server.room?.state.fault,connections:server.connectionCount});
       if(message.type==='stop') {await server.close();clock.dispose();process.exit(0);}
     }catch(error){sendIpc({type:'error',error:error.message});}
@@ -391,6 +393,7 @@ async function main(config) {
       if(measured&&prep.length&&m.preparationCommands.serverMatched!==prep.length)throw new Error('Instrumentation did not correlate every preparation command');
       if(measured&&(!measured.battles.length||measured.battles.some(b=>!b.complete||!b.ok||!b.slices.length)))throw new Error('Missing/unfinished battle computation samples');
       if(!m.rounds.some(row=>row.applicationBytes.replay>0))throw new Error('No combat replay received');
+      if(measured)assertNoReplayErrors(measured.replayFailures);
       if(errors.length)throw new Error(`Client errors: ${[...new Set(errors)].join(',')}`);
       m.status='complete';
       // Raw timing samples remain in server.commands; no tokens, payloads, or full combat states are retained.

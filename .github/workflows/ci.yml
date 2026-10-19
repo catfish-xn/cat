@@ -19,6 +19,11 @@ on:
         default: false
 env:
   M5_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  # Wall-clock budgets (timing tests, M6 frozen performance gates, M7 first interactive) are
+  # recorded but do not fail pull requests; .github/workflows/wallclock.yml enforces them nightly
+  # and after every merge into multiplayer (docs/WORKFLOW_RULES_2026-10-19.md §4). Thresholds unchanged.
+  CI_WALLCLOCK_GATES: ${{ github.event_name == 'pull_request' && 'report' || 'enforce' }}
+  WALLCLOCK_REPORT_DIR: artifacts/wallclock
 permissions:
   contents: read
 # A new push to the same PR cancels that PR's unfinished run. Pushes to main and manual
@@ -43,7 +48,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [tests, timing, headless, performance]
+        # The fast Vitest project is split into four shards (vitest --shard) on separate machines.
+        part: [tests-1, tests-2, tests-3, tests-4, timing, headless, performance]
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
       M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
@@ -59,9 +65,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - name: Fast tests (parallel)
-        if: ${{ matrix.part == 'tests' }}
-        run: node scripts/ci-m5-step.cjs tests npm test
+      - name: Fast tests (parallel, one of four shards)
+        if: ${{ startsWith(matrix.part, 'tests-') }}
+        env:
+          PART: ${{ matrix.part }}
+        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/4"
       - name: Timing tests (one worker, serial files)
         if: ${{ matrix.part == 'timing' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing
