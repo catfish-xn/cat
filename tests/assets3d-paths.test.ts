@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { TestContext } from 'vitest';
 import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -26,15 +25,8 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
-async function linkDirectory(target: string, link: string, context: TestContext) {
-  try { await symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir'); }
-  catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (['EPERM', 'EACCES', 'ENOSYS', 'ENOTSUP'].includes(code ?? '')) {
-      context.skip(`平台无法创建目录链接 (${code})；无链接路径校验另有测试覆盖`);
-    }
-    throw error;
-  }
+async function linkDirectory(target: string, link: string) {
+  await symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir');
 }
 async function record(root: string, paths: string[]) {
   await mkdir(join(root, '.local'), { recursive: true });
@@ -69,19 +61,19 @@ describe('assets3d filesystem boundaries', () => {
     await writeOutputFile(path, 'replacement', { force: true });
     expect(await readFile(path, 'utf8')).toBe('replacement');
   });
-  it('blocks a directory link escaping output before creating external parents', async context => {
+  it('blocks a directory link escaping output before creating external parents', async () => {
     const root = await temporary(true), external = await temporary(), link = join(root, 'escape');
-    await linkDirectory(external, link, context);
+    await linkDirectory(external, link);
     await expect(writeOutputFile(join(link, 'new/file.json'), '{}', { force: true })).rejects.toThrow('unsafe-output-path');
     await expect(readFile(join(external, 'new/file.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
-  it('does not trust assets3d-local itself when it is an external directory link', async context => {
+  it('does not trust assets3d-local itself when it is an external directory link', async () => {
     const repo = await temporary(), external = await temporary(), scripts = join(repo, 'scripts/assets3d');
     await mkdir(scripts, { recursive: true });
     // Isolated copy retains the production rule: the repository is derived from the module location.
     const modulePath = join(scripts, 'safe-path.mjs');
     await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
-    await linkDirectory(external, join(repo, 'assets3d-local'), context);
+    await linkDirectory(external, join(repo, 'assets3d-local'));
     const isolated = await import(pathToFileURL(modulePath).href);
     await expect(isolated.safeOutputPath('assets3d-local/report.json', { force: true })).rejects.toThrow('unsafe-output-path');
   });
@@ -112,18 +104,18 @@ describe('assets3d filesystem boundaries', () => {
       await expect(verifySource(root, ['jinx'])).rejects.toThrow('unsafe-source-path');
     }
   });
-  it('rejects an extracted source root pointing outside the input root', async context => {
+  it('rejects an extracted source root pointing outside the input root', async () => {
     const root = await temporary(), external = await temporary();
     await record(root, []);
-    await linkDirectory(external, join(root, '.local/extracted'), context);
+    await linkDirectory(external, join(root, '.local/extracted'));
     await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
   });
-  it('checks actual manifest entry paths, including entries for unselected heroes', async context => {
+  it('checks actual manifest entry paths, including entries for unselected heroes', async () => {
     const root = await temporary(), external = await temporary(), path = 'assets/characters/tft13_vi/texture.png';
     const bytes = await record(root, [path]);
     const parent = join(root, '.local/extracted/assets/characters'); await mkdir(parent, { recursive: true });
     await writeFile(join(external, 'texture.png'), bytes);
-    await linkDirectory(external, join(parent, 'tft13_vi'), context);
+    await linkDirectory(external, join(parent, 'tft13_vi'));
     await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
   });
   it('checks the extraction record file itself before reading it', async context => {
@@ -133,7 +125,9 @@ describe('assets3d filesystem boundaries', () => {
     try { await symlink(join(external, 'extraction.json'), join(root, '.local/extraction.json'), 'file'); }
     catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (['EPERM', 'EACCES', 'ENOSYS', 'ENOTSUP'].includes(code ?? '')) context.skip(`平台无法创建文件符号链接 (${code})；safeInputPath 有无链接测试`);
+      if (process.platform === 'win32' && code === 'EPERM') {
+        context.skip('Windows 当前权限不允许创建文件符号链接 (EPERM)；safeInputPath 有无链接测试');
+      }
       throw error;
     }
     await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
