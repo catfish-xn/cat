@@ -522,11 +522,15 @@ async function carouselPick(human, s, carousel, pushed) {
   let slot = free?.[0], receipt = null, before = wire.mark();
   for (let attempt = 0; slot !== undefined && attempt < 3; attempt++) {
     before = wire.mark();
-    // The other human (same release batch) or a bot may take the slot between the read and the click: the chip turns
-    // disabled, or the server answers slot-taken; either way another standing unit is picked.
-    const clicked = await page.click(`[data-debug="online:carousel-slot:${slot}"]`, { timeout: 2_000 }).then(() => true, () => false);
-    receipt = clicked ? await wire.receiptSince(before, 'carousel-pick', 5_000) : 'taken-before-click';
-    if (receipt !== 'refused:slot-taken' && receipt !== 'taken-before-click') break;
+    // The ring re-renders every countdown tick, so the chip is clicked where it stands (a pointer click, no wait for
+    // a stable node). Another seat may take the slot, or pick first so my view's revision is stale, between the read
+    // and the click: the chip is disabled and sends nothing, or the server answers slot-taken / stale-carousel;
+    // either way the ring is read again and a standing unit is clicked.
+    const box = await page.locator(`[data-debug="online:carousel-slot:${slot}"]`).boundingBox({ timeout: 1_000 }).catch(() => null);
+    if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(300);
+    receipt = box && wire.commandsSince(before, 'carousel-pick').length ? await wire.receiptSince(before, 'carousel-pick', 5_000) : 'taken-before-click';
+    if (!['refused:slot-taken', 'refused:stale-carousel', 'taken-before-click'].includes(receipt)) break;
     await page.waitForTimeout(300);
     slot = (await ringFree())?.[0] ?? slot;
   }
