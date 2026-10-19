@@ -8,23 +8,29 @@ import { selectChoice, startMatchCombat, stepMatch, selectAnomalyTarget, rerollA
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, reachRound } from './match-helpers';
 import * as matchApi from '../src/simulation/match';
-let anomalyPrefix: Promise<ReturnType<typeof matchApi.createMatch>> | undefined;
-function publicAnomalyPrefix() {
-  return anomalyPrefix ??= (async () => {
+const anomalyPrefixes = new Map<number, Promise<ReturnType<typeof matchApi.createMatch>>>();
+function publicAnomalyPrefix(seed = 42) {
+  const cached = anomalyPrefixes.get(seed);
+  if (cached) return cached;
+  const prefixPromise = (async () => {
     let prefix: ReturnType<typeof matchApi.createMatch> | undefined;
     const stop = new Error('Captured public 4-5 preparation prefix');
     try {
-      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed: 42,
+      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed,
         onStep(_before: unknown, result: {state: ReturnType<typeof matchApi.createMatch>}) {
           if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation') {prefix=result.state;throw stop;}
         } });
     } catch(error) { if(error!==stop)throw error; }
     if(!prefix)throw new Error('No public anomaly prefix');return prefix;
   })();
+  anomalyPrefixes.set(seed, prefixPromise);
+  return prefixPromise;
 }
 // The existing public-neutral fixture also builds its public route at module setup.
 // Test bodies retain Vitest's unchanged 5s limit; no workload or assertion is skipped.
 const publicPrefix = await publicAnomalyPrefix();
+// Keep the six existing routes on seed 42; seed 44 reaches nothing-wasted within 100 rerolls in the expanded pool.
+const nothingWastedPrefix = await publicAnomalyPrefix(44);
 
 it('independently checks every new coefficient and Chinese label against compressed raw, with no archive writes', () => {
   const raw = (name: string) => JSON.parse(gunzipSync(readFileSync(new URL('../src/simulation/content/source/s13-14.24b/raw/' + name + '.gz', import.meta.url))).toString());
@@ -64,7 +70,7 @@ it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the ex
   const next = stepMatch(combat).state; expect(restoreMatch(serializeMatch(next))).toEqual(next);
 });
 it.each(['the-finisher','touch-of-frost','fireball','dragonsoul','nothing-wasted','thornskin','knockout'])('%s is publicly selectable and strictly restores after entering and advancing combat',async id=>{
-  let s=publicPrefix;
+  let s=id==='nothing-wasted'?nothingWastedPrefix:publicPrefix;
   const target=s.preparation.units.find(u=>u.team==='player')!;
   // Pay for rerolls with real sales from the acquired army, retaining the bound target.
   for(const other of s.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))s=accepted(sellUnit(s,other.id));
