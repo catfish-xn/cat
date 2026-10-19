@@ -10,7 +10,9 @@
  * first, then 甲, then 乙, so a seed replays the same match. Every check compares what the server projected to the page (my private state, the public view, the
  * receipts) with what the page shows; nothing here computes a rule. Along the way, once each unless noted:
  *   ops      during one of 甲's battles: buy, reroll and buy XP through the docked shop; each receipt is applied, the
- *            replay keeps playing, and the gold/level chips and the shop cards show the pushed state.
+ *            replay keeps playing, and the gold/level chips and the shop cards show the pushed state. From the 2-1
+ *            preparation until this check ran, 甲 skips its policy turn to keep the gold for it and sells one bench unit
+ *            when the bench is full, so a battle starts with gold, an offer and bench space.
  *   T13-A    a component clicked onto an EMPTY slot of a board unit wearing one loose component (preparation): one equip,
  *            applied; afterwards the unit wears no loose component and the panel slot + token icons show what the
  *            projection says the unit wears.
@@ -19,8 +21,11 @@
  *   orbs     every PvE round, once its battle played out: one orb card per `revealedLoot.revealedOrbs` entry with the
  *            server's tier and status (both humans, all rounds); the tiers seen are reported, and the page's own presenter
  *            renders all four tiers (gray/blue/gold/prismatic) with their tier marks.
- *   .4       every supply pick: the dialog is the supply dialog with exactly the offered components; the picked one lands
- *            in my inventory.
+ *   .4       with the shared carousel (the production default, C19_CAROUSEL=1): at every x-4 carousel a living human picks
+ *            by hand on the ring once released; the server applies the carousel-pick, the view marks my slot, and the
+ *            unit (on the bench, the board or the holding slot) and its item arrive in my state; no component choice opens
+ *            at an x-4 round. With C19_CAROUSEL=0 (the pre-P7 x-4 supply): every supply pick: the dialog is the supply
+ *            dialog with exactly the offered components; the picked one lands in my inventory.
  *   tools    a magnetic remover and a reforger (component or completed) each used once by whichever human holds one:
  *            one useConsumable to a target the server's consumableTargets allows, receipt consumable-used, and the
  *            inventory cards and the tool shelf show the pushed state.
@@ -46,8 +51,13 @@ const VITE_PORT = Number(process.env.C19_VITE_PORT ?? 5208);
 const WS_PORT = Number(process.env.C19_WS_PORT ?? 8801);
 // Seed 1 dropped a reforger to 乙 at 2-7 (see the report); other seeds may not.
 const SEED = process.env.C19_SEED ?? '1';
+// The shared carousel at the x-4 rounds is the server default (CAT_CAROUSEL); 0 runs the pre-P7 component supply instead.
+const CAROUSEL = process.env.C19_CAROUSEL !== '0';
 const NEXT_BATTLE = '下场生效';
 const TIERS = ['gray', 'blue', 'gold', 'prismatic'];
+/** The in-battle ops run from the 2-1 battle on (round ordinal 5). */
+const OPS_FROM_ROUND = 5;
+const OPS_GOLD = 12;
 
 const { check, failures, finish } = createChecks();
 const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
@@ -111,7 +121,7 @@ async function loadTables() {
   return import(`${outfile}?${Date.now()}`);
 }
 
-const report = { ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
+const report = { ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], carousel: [], x4Choices: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
 /** Global once-only tasks; a human claims one synchronously before awaiting anything. */
 const claimed = new Set();
 const claim = task => { if (claimed.has(task)) return false; claimed.add(task); return true; };
@@ -121,7 +131,7 @@ const turns = new Map();
 async function main() {
   const tables = await loadTables();
   const kindOf = definitionId => tables.ITEM_DEFINITIONS[definitionId]?.kind;
-  const wsPort = await startGameServer(WS_PORT, { CAT_SEED: SEED, CAT_PREP_SEC: '16', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '18', CAT_BOT_STEP_MS: '50', CAT_TAKEOVER_SEC: '600' });
+  const wsPort = await startGameServer(WS_PORT, { CAT_SEED: SEED, CAT_PREP_SEC: '16', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '18', CAT_BOT_STEP_MS: '50', CAT_TAKEOVER_SEC: '600', CAT_CAROUSEL: CAROUSEL ? '1' : '0' });
   const base = await startVite(VITE_PORT);
   const browser = await launchBrowser();
   const errors = [];
@@ -155,7 +165,10 @@ async function main() {
     }, TIERS);
     check(same(report.tierPresenter.map(card => card.tier), TIERS) && new Set(report.tierPresenter.map(card => card.mark)).size === 4 && report.tierPresenter.every(card => card.mark && card.className.includes(`orb-${card.tier}`)),
       `the orb presenter renders all four tiers with distinct marks (${report.tierPresenter.map(card => `${card.tier}:${card.mark}`).join(' ')})`);
-    check(report.supply.length > 0 && report.supply.every(entry => entry.ok), `every .4 supply dialog showed exactly the offered components and the pick landed in the inventory (${report.supply.map(entry => `${entry.human} ${entry.roundId}${entry.ok ? '' : ' ✗'}`).join(', ') || 'no supply pick'})`);
+    if (CAROUSEL) {
+      check(report.carousel.length > 0 && report.carousel.every(entry => entry.ok), `every x-4 carousel pick by hand was applied, marked mine, and its unit and item arrived (${report.carousel.map(entry => `${entry.human} ${entry.roundId}${entry.ok ? '' : ` ✗ ${entry.receipt}`}`).join(', ') || 'no carousel pick'})`);
+      check(report.x4Choices.length === 0 && report.supply.length === 0, `no component choice opened at an x-4 round with the carousel on (${report.x4Choices.map(entry => `${entry.human} ${entry.roundId} ${entry.kind}`).join(', ') || 'none'})`);
+    } else check(report.supply.length > 0 && report.supply.every(entry => entry.ok), `every .4 supply dialog showed exactly the offered components and the pick landed in the inventory (${report.supply.map(entry => `${entry.human} ${entry.roundId}${entry.ok ? '' : ' ✗'}`).join(', ') || 'no supply pick'})`);
     check(report.income.length > 0 && report.income.every(entry => entry.ok), `every settlement receipt shows the record's interest and XP (${report.income.length} settlements${report.income.some(entry => !entry.ok) ? `; differ: ${JSON.stringify(report.income.filter(entry => !entry.ok).slice(0, 3))}` : ''})`);
     check(report.ops !== null, `in-battle buy/reroll/buyXp ran (${report.ops ? report.ops.roundId : 'no battle with gold, an offer and bench space'})`);
     check(report.autoCombine !== null, `T13-A auto-combine ran (${report.autoCombine ? report.autoCombine.roundId : 'never a component and a unit wearing one loose component'})`);
@@ -181,7 +194,7 @@ async function main() {
 /** One human from the first preparation until the ranking. */
 async function play(human, tables, kindOf, role) {
   const { name, page, wire } = human;
-  const answered = new Set(), settlementsSeen = new Set(), orbsSeen = new Set(), overtimeSeen = new Set();
+  const answered = new Set(), carouselsPicked = new Set(), settlementsSeen = new Set(), orbsSeen = new Set(), overtimeSeen = new Set();
   let pending = null, lastPrep = 0;
   const reloadAttempts = [], prepSeen = new Map();
   const started = Date.now();
@@ -250,6 +263,14 @@ async function play(human, tables, kindOf, role) {
     const me = s.m6.seats.find(seat => seat.name === name);
     if (me && !me.alive) { await page.waitForTimeout(250); return false; } // spectating until the end
 
+    /* x-4 carousel: once released, pick by hand on the ring (the first unit still standing) */
+    const carousel = s.m6.carousel ?? null;
+    if (phase?.kind === 'carousel' && carousel?.status === 'open' && carousel.eligible && carousel.pickedSlot === null && !carouselsPicked.has(carousel.id)) {
+      carouselsPicked.add(carousel.id);
+      await carouselPick(human, s, carousel, pushed);
+      return false;
+    }
+
     /* choices: supply (.4) dialogs are checked, every other choice takes the first offer */
     const choice = s.state.phase === 'choice' ? s.state.pendingChoice : null;
     if (choice) {
@@ -257,6 +278,7 @@ async function play(human, tables, kindOf, role) {
       if (!answered.has(key)) {
         if (choice.step === 'target') { const unit = mine(s.state)[0]; if (unit && await click(page, `anomaly-target:${unit.id}`)) answered.add(key); }
         else if (choice.kind === 'component' && s.state.m8.round.kind === 'supply') {
+          if (CAROUSEL) report.x4Choices.push({ human: name, roundId: s.state.roundDefinitionId, kind: choice.kind, offers: choice.offers });
           await page.waitForTimeout(150);
           const dialog = (await screen(page)).choice, pick = choice.offers[0], before = new Set(inventory(s.state).map(item => item.id));
           const receipt = await act(`choice:${pick}`, 'choose');
@@ -381,11 +403,11 @@ async function play(human, tables, kindOf, role) {
     }
 
     /* in-battle ops (甲, once): buy, reroll, buy XP during a battle */
-    if (role.ops && !report.ops && inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 120 && (s.replay.tick ?? 0) < 40 && s.state.round >= 5) {
+    if (role.ops && !report.ops && inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 120 && (s.replay.tick ?? 0) < 40 && s.state.round >= OPS_FROM_ROUND) {
       const state = s.state;
       const slot = state.shop.slots.findIndex(offer => offer.status === 'available');
       const benchFree = mine(state).filter(unit => unit.location.kind === 'bench').length < state.preparation.benchSize;
-      if (slot >= 0 && benchFree && state.gold >= 12 && state.level < 9 && claim('ops')) {
+      if (slot >= 0 && benchFree && state.gold >= OPS_GOLD && state.level < 9 && claim('ops')) {
         const superseded = s.replay.superseded;
         // Each applied receipt is followed by its state push: wait for the state to change before the next control.
         let print = fingerprint(state);
@@ -453,13 +475,75 @@ async function play(human, tables, kindOf, role) {
       if (!ready) { await page.waitForTimeout(80); return false; }
       lastPrep = s.state.round;
       await autoCombineCheck(human, kindOf, pushed, items);
-      await policyTurn(human, tables, act, pushed, items);
+      // Until the in-battle ops ran, 甲 keeps its gold for them and makes room on the bench (see the header).
+      if (role.ops && !report.ops && s.state.round >= OPS_FROM_ROUND) await keepForOps(human, act, items);
+      else await policyTurn(human, tables, act, pushed, items);
       if (name === '甲') turns.set(s.state.round, 'done');
       return false;
     }
     await page.waitForTimeout(80);
     return false;
   }
+}
+
+/**
+ * 甲's preparation while the in-battle ops wait for their battle: no policy turn (the gold stays), and with a full bench
+ * one bench unit is sold through the page so the battle's buy has a place to land. The sell is the page's own control.
+ */
+async function keepForOps(human, act, items) {
+  const s = await read(human.page);
+  if (!inPreparation(s)) return;
+  const bench = mine(s.state).filter(unit => unit.location.kind === 'bench');
+  if (bench.length < s.state.preparation.benchSize) return;
+  const outcome = await perform(human, { type: 'sell', unitId: bench[0].id }, act, items);
+  console.log(`甲 ${s.state.roundDefinitionId}: bench full, sold ${bench[0].id} to keep room for the in-battle buy (${outcome})`);
+}
+
+/**
+ * One x-4 carousel pick by hand: the ring is brought up when the page sits on the board side, the first unit still
+ * standing is clicked (another one when the server answers slot-taken under load), and the pick must be applied, shown
+ * as mine and arrive in my state with its item. The rules decide everything; nothing here names a slot for the server.
+ */
+async function carouselPick(human, s, carousel, pushed) {
+  const { name, page, wire } = human;
+  const ringFree = () => page.evaluate(() => {
+    const root = document.querySelector('#carousel-panel');
+    if (!root || root.hidden) return null;
+    return [...root.querySelectorAll('.carousel-slot')].filter(node => node.classList.contains('takable') && !node.disabled).map(node => Number(node.dataset.slot));
+  });
+  if (s.m6.carouselSide !== 'carousel') {
+    await page.evaluate(() => (document.activeElement instanceof HTMLElement) && document.activeElement.blur());
+    await page.keyboard.press('Space');
+  }
+  const unitsBefore = new Set(mine(s.state).map(unit => unit.id)), itemsBefore = new Set(s.state.items.map(item => item.id));
+  const heldBefore = new Set((s.state.heldCarouselUnits ?? []).map(unit => unit.unitId));
+  let free = null;
+  for (let wait = 0; wait < 30 && !(free = await ringFree())?.length; wait++) await page.waitForTimeout(100);
+  let slot = free?.[0], receipt = null, before = wire.mark();
+  for (let attempt = 0; slot !== undefined && attempt < 3; attempt++) {
+    before = wire.mark();
+    // The other human (same release batch) or a bot may take the slot between the read and the click: the chip turns
+    // disabled, or the server answers slot-taken; either way another standing unit is picked.
+    const clicked = await page.click(`[data-debug="online:carousel-slot:${slot}"]`, { timeout: 2_000 }).then(() => true, () => false);
+    receipt = clicked ? await wire.receiptSince(before, 'carousel-pick', 5_000) : 'taken-before-click';
+    if (receipt !== 'refused:slot-taken' && receipt !== 'taken-before-click') break;
+    await page.waitForTimeout(300);
+    slot = (await ringFree())?.[0] ?? slot;
+  }
+  const picked = slot === undefined ? null : carousel.slots.find(entry => entry.slot === slot);
+  const shown = receipt === 'applied' ? await pushed(x => x.m6.carousel?.pickedSlot === slot, 5_000) : null;
+  const mineShown = shown && await page.evaluate(chip => document.querySelector(`[data-debug="online:carousel-slot:${chip}"]`)?.classList.contains('mine') ?? false, slot);
+  // The unit lands on the bench or the board (a new unit, or a star-up of one I own) or waits in the holding slot; its item is mine.
+  const arrived = shown && await pushed(x => {
+    const units = mine(x.state), held = x.state.heldCarouselUnits ?? [];
+    const unit = held.some(entry => !heldBefore.has(entry.unitId) && entry.definitionId === picked.definitionId)
+      || units.some(entry => entry.definitionId === picked.definitionId && (!unitsBefore.has(entry.id) || entry.starLevel > (s.state.preparation.units.find(old => old.id === entry.id)?.starLevel ?? 0)));
+    return unit && x.state.items.some(item => !itemsBefore.has(item.id));
+  }, 10_000);
+  const ok = receipt === 'applied' && Boolean(shown) && mineShown === true && Boolean(arrived);
+  report.carousel.push({ human: name, roundId: carousel.roundId, slot, definitionId: picked?.definitionId ?? null, items: picked?.items ?? [], receipt, mineShown, arrived: Boolean(arrived), ok });
+  if (!ok) await page.screenshot({ path: `${OUT}/${name}-carousel-${carousel.roundId}.png` });
+  console.log(`${name} ${carousel.roundId} carousel: slot ${slot} ${picked?.definitionId} (${receipt}${ok ? '' : ', ✗'})`);
 }
 
 /** The bounds key of an item: its inventory card, else the equipment slot that holds it. */
