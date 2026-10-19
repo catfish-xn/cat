@@ -723,3 +723,5 @@ body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; f
 @keyframes seat-damage { 0% { opacity: 0; transform: translateY(4px); } 10% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
 .online-seat.hit { animation: seat-hit .5s ease-out; }
 @keyframes seat-hit { 0% { background: #4a2328; } 100% { background: var(--c-surface, #14212c); } }
+.sound-toggle { justify-self: end; min-width: 0; min-height: 26px; padding: 2px 8px; font-size: 11px; border-radius: 999px; background: #203440; border-color: #34505f; color: #9aaeb9; }
+.sound-toggle[aria-pressed="true"] { outline: none; background: #1f4a46; color: #68ddd0; }

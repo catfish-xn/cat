@@ -110,6 +110,11 @@ export class PlayersSidebar {
     bar.append(fill);
     row.append(head, bar, foot); return row;
   }
+  /** Whole seconds left on the phase countdown, or null when the phase has none. */
+  secondsLeft(): number | null {
+    const endsAt = this.view?.phase.endsAt ?? null;
+    return endsAt === null ? null : Math.ceil(Math.max(0, endsAt - (performance.now() - this.clockOffset)) / 1000);
+  }
   /** Called every frame; only touches the countdown text. */
   tick(): void {
     const view = this.view; if (!view) return;
