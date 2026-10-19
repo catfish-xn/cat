@@ -5,3 +5,6 @@ dist-server/
 coverage/
 *.log
 artifacts/
+
+# Private 3D source assets and generated output; never commit.
+assets3d-local/

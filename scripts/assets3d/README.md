@@ -1,0 +1,66 @@
+# D7 素材管线（WIP）
+
+本目录只放代码。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
+`assets3d-local/` 或其他仓库外目录。禁止把真实样本加进测试夹具。
+
+## 当前可运行入口：整理已有试验成果
+
+```sh
+node scripts/assets3d/prepare-existing.mjs --source /path/to/3d-trial --output assets3d-local/prepared
+```
+
+输入采用 2026-10-18 试验的目录结构：
+
+- `.local/extraction.json`：14.24.6442327 提取记录。
+- `.local/extracted/assets/characters/tft13_jinx/`、`tft13_vi/`：对应记录中的原始文件。
+- `public/assets/{jinx,vi}/rigged.glb`、`diffuse.png`：已有转换成果。
+
+先逐个核对指定英雄原始文件的大小和 SHA256，再检查现代 SKL、SKN v4 和动画格式。
+提取记录是本地来源记录，并非 Riot 签名，不能当作独立的发行方认证。
+将 PNG 嵌入已有 GLB，所有原几何、骨骼、动画 buffer 字节、accessor、node、skin 与
+animation 描述不变。新增的只是贴图数据及材质引用，避免 D8 读取时丢失外部漫反射图。
+输出 `manifest.json` 与 PR #212 的 v1 模型契约兼容，额外 `files` 保存大小与哈希。
+
+这是**已有 GLB 整理入口**，不是已经实现原始 ANM 解码。当前不下载、不运行第三方
+转换程序、不修改原试验目录。输出路径不能位于输入目录内部。符号链接不能逃逸根目录。
+
+## 可复用基础模块
+
+- `glb.mjs`：GLB 块/范围检查、确定性写出、嵌入 PNG、统计。
+- `inspect-source.mjs`：有界 SKN v4 / 现代 SKL 读取、ANM 格式识别；先核对文件长度再枚举。
+- `verify-source.mjs`：提取清单与实际输入逐文件核验。
+- `wad.mjs`：WAD 3.x 索引，以及未压缩/gzip/zstd 单条目解包；路径哈希由调用者显式传入。
+  解压前限制输出大小，默认单条目 64 MiB，调用者可以明确设置其它预算。
+  Node 24 内置 zstd；不提供内置 zstd 的 Node 22 可注入可信解码器，未注入则明确报错。
+  重定向及 subchunk 压缩暂明确拒绝，不将未支持的数据当原始文件输出。
+
+## 真实输入验证（2026-10-19）
+
+起点 `9c3c7a9319333d24e456a9c808e18d4afc47589e`，分支 `codex/assets3d-pipeline`。
+用户明确允许把必要试验素材传到 dot 工作目录处理后返回本机；这不允许公开发布素材。
+
+| 英雄 | 原始文件 | 原始字节 | 顶点 | 骨骼 | 原始动作 | 整理后动作 | GLB 字节 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 金克丝 | 80 | 2,510,639 | 5,163 | 89 | 19 | 5 | 2,223,468 |
+| 蔚 | 26 | 2,298,922 | 4,247 | 72 | 9 | 5 | 2,100,520 |
+
+两者动作名称均为 attack/cast/death/idle/move。整理产物通过
+Khronos `gltf-validator@2.0.0-dev.3.10`：分别 0 error / 0 warning。
+这验证了文件结构，不代替实际动画与画面验收。
+
+合成单文件测试串行：`assets3d-glb` 5/5（246 ms），`assets3d-source` 6/6（221 ms），
+`assets3d-wad` 7/7（198 ms）。只运行新增文件及 typecheck，不跑全套。
+
+## 尚未完成
+
+- 原始 SKN+SKL+ANM 到 GLB 的完整转换，尤其压缩 ANM 样条求值。
+- 生产 WAD subchunk、RMAN 定向获取与下载预算清单。
+- 粒子规范化与 D8 真实兼容验证，原版复杂粒子不能默默近似成简单粒子。
+- 原始 TEX/DDS 转码；现入口复用同版本已有 PNG。
+- 其余 58 英雄的定向获取、转换、统计；浏览器截图及视觉验收。
+
+格式参考：[LTK SKN](https://wiki.leaguetoolkit.dev/reference/file-formats/skn/)、
+[LTK SKL](https://wiki.leaguetoolkit.dev/reference/file-formats/skl/)、
+[LTK ANM](https://wiki.leaguetoolkit.dev/reference/file-formats/anm/)、
+[CommunityDragon WAD](https://www.communitydragon.org/docs/wad)。
+旧试验脚本只作来源与接口参考，未执行它的 Windows EXE 安装流程。
