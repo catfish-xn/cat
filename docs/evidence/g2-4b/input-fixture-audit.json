@@ -1,5 +1,5 @@
 {
-  "baseCommit": "bc49cac5deb74d6388f6d8c0eebb85ba15a9027e",
+  "baseCommit": "73ff5228e55c5719408e6e555cb83e2b7e5041d7",
   "sourceDigests": {
     "scripts/g2-4b-fixture-audit.cjs": "d450e2434e6a707afafea87e968dbf466cfd707f3e337eec69211cd0414367ae",
     "scripts/generate-m5-route.cjs": "452742f12f9b5218847a8efc46fc2f9dd7b2b2b6d34a7c433c91da2d9cd0b3b5",

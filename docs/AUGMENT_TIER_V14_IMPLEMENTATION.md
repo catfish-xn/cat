@@ -135,3 +135,7 @@ node scripts/record-s13-p1-dual-choice.cjs
 5. `release(s13): bump to v14 and re-record release evidence`：现有升版字符串改动，以及后续成功生成的夹具/审计；证据未完成前不要把这一提交视作可发布。
 
 上一轮实现选择：FNV 节点派生、固定 namespace、等权默认、次数/剩余额度字段、只排除当前代、池不足原子拒绝、以 choiceOpened 发布刷新结果、沿用 NET3 的可选命令兼容方式。第二轮未改变规则或内容。Oracle 原阻塞已解除；发布证据仍为 v13，且完整发布路线未在本轮验收，本分支当前不满足发布验收。
+
+## 调度方收口（2026-10-19）
+
+上文“发布级录制仍依赖 v13 原件 / 沙箱内未运行”的描述已过时：调度方在沙箱外按发布审计基线 `73ff5228e55c5719408e6e555cb83e2b7e5041d7`（与 #208 的发布审计一致；早先一次误用 bc49cac 已更正）依次运行 release 录制、Herald `--write`、输入审计、P1 dual commands 重录及全部 `--check`、`verify-m8-herald-fixtures`，均通过；`opening-random-identity`、`s13-p1-dual-wielding` 本机通过。
