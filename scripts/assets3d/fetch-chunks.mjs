@@ -108,7 +108,7 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
   }
   if (dryRun) return finish();
   const ranges = mergeRanges(missing), abort = new AbortController();
-  let next = 0;
+  let next = 0, reservedBytes = 0;
   const completed = new Set();
   const count = size => {
     report.downloadBytes += size;
@@ -118,13 +118,15 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
     }
   };
   const checkBudget = range => {
-    const remaining = maxBytes - report.downloadBytes;
+    const remaining = maxBytes - report.downloadBytes - reservedBytes;
     if (remaining <= 0 || remaining < range.end - range.start) throw new Error('runtime-byte-limit');
   };
   async function request(range) {
     if (abort.signal.aborted) throw abort.signal.reason;
-    // Check every dispatch, including retries; an exact-size successful body may still finish.
+    // Reserve synchronously before every dispatch, including retries.
     checkBudget(range);
+    let reserved = range.end - range.start;
+    reservedBytes += reserved;
     const url = bundleUrl(range.bundleId), controller = new AbortController();
     let response, reader, timer;
     const cancel = () => controller.abort(abort.signal.reason);
@@ -149,6 +151,9 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
         const item = await reader.read();
         if (controller.signal.aborted) throw controller.signal.reason;
         if (item.done) break;
+        // Convert this request's reservation to actual bytes, including failed bodies.
+        const covered = Math.min(reserved, item.value.byteLength);
+        reserved -= covered; reservedBytes -= covered;
         count(item.value.byteLength); size += item.value.byteLength;
         if (size > range.end - range.start) throw new Error('range-body-too-large');
         parts.push(Buffer.from(item.value));
@@ -162,6 +167,7 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
     })();
     try { return await Promise.race([task, timeout]); }
     finally {
+      reservedBytes -= reserved;
       clearTimeout(timer); abort.signal.removeEventListener('abort', cancel);
       controller.abort();
       if (reader) await reader.cancel().catch(() => {});
