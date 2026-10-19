@@ -30,10 +30,10 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 // Top-level assets/*.js only: assets/3d/ is the on-demand 3D mode and is summed separately by js3dGzip.
 function jsGzip(dir, sub = 'assets') {
   const assets = path.join(dir, sub);
-  if (!fs.existsSync(assets)) return 0;
   return fs.readdirSync(assets).filter(file => file.endsWith('.js')).reduce((sum, file) => sum + zlib.gzipSync(fs.readFileSync(path.join(assets, file)), { level: 9 }).length, 0);
 }
-const js3dGzip = dir => jsGzip(dir, path.join('assets', '3d'));
+// The 3D chunk is optional (base builds predate it); the 2D assets/ folder must exist and still throws ENOENT.
+const js3dGzip = dir => (fs.existsSync(path.join(dir, 'assets', '3d')) ? jsGzip(dir, path.join('assets', '3d')) : 0);
 function serve(dir) {
   const server = http.createServer((req, res) => {
     const file = path.join(dir, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html');
