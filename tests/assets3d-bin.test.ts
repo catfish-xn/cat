@@ -134,6 +134,7 @@ describe('initial material and action binding', () => {
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
     expect(characterForPath('characters/tft13_vi')).toBe('tft13_vi');
     expect(propertyReferences(prop('Example', field('texture', 16, str('assets/shared/body.tex'))))).toEqual(['assets/shared/body.tex']);
+    expect(propertyReferences(prop('Example', field('mesh', 16, str('assets/shared/triangle.sco'))))).toEqual(['assets/shared/triangle.sco']);
     expect(characterForPath('data/characters/tft13_vi/skins/skin0.bin')).toBe('tft13_vi');
     expect(characterForPath('assets/characters/tft13_vi/skins/base/vi.tex')).toBe('tft13_vi');
     expect(characterForPath('characters/tft13_vi_extra')).toBe('tft13_vi_extra');

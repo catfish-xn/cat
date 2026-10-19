@@ -6,6 +6,55 @@
 本目录只放代码。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
 `assets3d-local/` 下，不提交素材或生成产物。禁止把真实样本加进测试夹具。
 
+## 当前：粒子 v2 第 2 段
+
+`build.mjs` / `build-all.mjs` 现以校验过长度与 SHA-256 的 **PROP BIN** 为粒子主源，
+不再要求每单位有 CDragon JSON。入口为皮肤 skin0/root、无扩展名的 `characters/<sourceName>`，
+再递归跟随 linked 和字段内的 `.bin` 引用。只读 extraction 索引中的本地文件，
+最多尝试 256 份文档、累计 64 MiB；缺文件、解析失败或超预算逐项记入 `particles.input.unresolved`。
+本次 60 单位无需补解包，已有提取记录包含所有访问的链接。
+`particle-bin.mjs` 复用 `bin.mjs`，`particle-names.json` 只含字段/类型名字，
+按小写 FNV-1a 查找；未知字段与类型保留 `{xxxxxxxx}`，不猜名字、不丢字段。
+源 JSON 只用于可选的逐字段对照，结果在 `particles.input.referenceComparison`；
+比较覆盖全部系统/发射器字段，仅归一化 float32、矩阵分行、hash/link 名称和布尔/flag 表示。
+
+`particles.mjs` 输出 `{schemaVersion:2,limits,emitters}`，manifest 仍为 v1。
+每个候选及整份文档都调用经现有 ts-loader 加载的真实 `parseParticleDocument`。
+候选不合法只记旁路；整份校验失败会撤回全部候选的 mapped 计数，不写文档、不登记 effects。
+`--force` 会移除当前系统的旧粒子 payload，保留 `.report.json`。
+旁路包含 `mapped:false/status/reason/originalFields`，同时保存系统字段及 `systemGaps`。
+
+- 默认预算为 10000 个存活粒子、30 秒；有限效果按 delay + 发射持续时间 + 粒子寿命 + 尾寿命
+  自动扩展时限，最多 3600 秒；超出合同或调用方明确收紧的时限则拒绝，不能静默截短有限效果。
+  循环/无限效果必须有独立语义依据，且始终受总预算约束；本次真实数据未启用这类依据。
+- 常量 rate 与正 emitter lifetime 映射 continuous；粒子寿命单独取 particleLifetime。
+  单粒子默认 count=1；源 rate 不是 1 时，没有数量语义证据就拒绝。
+- 支持 constantValue 位置、尺寸向量（含零轴）、度数出生旋转、显式均匀 min/max、
+  常量速度/重力、等轴 drag、线性 color/alpha 和等轴 scale0 曲线、birthColor 相乘。
+  位置/速度反射 X；XYZ Euler 的 Y/Z 角反号。动态出生值、概率表、非等轴随龄缩放仍拒绝。
+- CameraQuad → quad。ArbitraryQuad、Ray、Camera/ArbitraryTrail 提供有 provenance 的
+  `primitiveConventions` 接口，可表达已确认的 XY 平面、显式方向及完整 trail 参数；
+  合成测试提供独立定义，**生产构建没有给真实 primitive 填任何臆测的轴/朝向/模式配置**。
+  单凭源类型标签仍拒绝。AttachedMesh 的附着/骨骼语义、屏幕扭曲分别计数跳过。
+- 数字 blendMode 不凭枚举编号猜混合方式；未知字段、bindWeight、particleLinger、源 erosion、
+  子系统、系统 transform/flags/时序等均保留报告。多帧图集须有显式帧率。
+
+静态网格由零依赖 `particle-mesh.mjs` 转换：支持 SCB 2.2/3.2 的无顶点色、三角形子集，
+以及文本 SCO 的 Name/CentralPoint/Verts/Faces 子集；非零 pivot、顶点色、未知 flag/版本、
+坏索引/UV/非有限数和无法完整消费的输入均明确拒绝。GLB 反射 X、反转绕序，保留逐角 UV，
+不继承源材质。默认输入 16 MiB、100000 顶点/面、输出 32 MiB，分配前检查预算。
+构建器预转换引用并记 `particles.meshes`；只有通过粒子合同且确实被引用的网格才写到 `meshes/`。
+网格缺失/转换失败时整个发射器不写，原因进入旁路，模型/动作管线不作变更。
+
+单位详细报告增加 `particles.systemCount/emitters/counts/byReason/reasonsByStatus/input/meshes`；
+批量汇总使用 `particles.systems/emitters/mapped/skipped/rejected` 和 `particleTotals`。
+`complete` 仅表示已知 BIN 链接全部读取，不代表源引擎语义或所有可见特效已覆盖。
+actionEffects 仍只是基于原有 effectPatterns 的名称建议，只包含实际写出且校验通过的 effect。
+实际执行数字、拒绝分组和模型回归证据见 [粒子 v2 验收记录](D7-PARTICLES-V2-REPORT.md)。
+
+下文的 v1 粒子、依赖 source-json 或缺少其余 58 单位源的叙述为之前阶段记录；
+当前粒子入口和覆盖边界以上述 v2 说明为准。
+
 ## 第 2 步统一入口
 
 ```sh
