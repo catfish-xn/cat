@@ -5,7 +5,7 @@ import { stepCombat } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { readCombatStats } from './combat-s13';
 import { canonicalContent } from './content';
-import { freezeContent } from './content/freeze';
+import { createScopedContentFreezer, freezeTransientContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 import { alignReplayUnits, applyReplayMembership, replayOrderFollowsMembership } from './seat-mechanics/replay-units';
 
@@ -19,10 +19,11 @@ function unitView(unit: CombatUnit, state: CombatState) {
     ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
-export function toCombatViewState(state: CombatState) {
-  return freezeContent({ ...pick(state, ['combatId', 'tick', 'maxTicks', 'status', 'result']),
-    board: boardView(state.board), units: state.units.map(unit => unitView(unit, state)) });
+function combatViewState(state: CombatState) {
+  return { ...pick(state, ['combatId', 'tick', 'maxTicks', 'status', 'result']),
+    board: boardView(state.board), units: state.units.map(unit => unitView(unit, state)) };
 }
+export function toCombatViewState(state: CombatState) { return freezeTransientContent(combatViewState(state)); }
 export type CombatViewState = ReturnType<typeof toCombatViewState>;
 export type CombatViewUnit = CombatViewState['units'][number];
 
@@ -100,15 +101,16 @@ function equalViewField(a: unknown, b: unknown): boolean {
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
+  const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
-  const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);
+  const initial = freezeReplay(combatViewState(battle.initial)), terminal = freezeReplay(combatViewState(battle.terminal));
   // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
   // The initial state's ledger cursor, not the event tick, marks applied start effects.
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
-  const ticks: CombatReplayTick[] = [freezeContent({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
+  const ticks: CombatReplayTick[] = [freezeReplay({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
   let state = battle.initial, previous = initial;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
@@ -136,7 +138,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
       if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
       state = next.state;
       const ledger = toLedgerEvents(next.events);
-      const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
+      const view = freezeReplay(combatViewState(state)), events: CombatViewEvent[] = toCombatViewEvents(ledger);
       for (const event of events) {
         try {
           const expected = nextExpected();
@@ -157,7 +159,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
           && !equalViewField(value, prior[key as keyof CombatViewUnit])));
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
-      ticks.push(freezeContent({ tick: state.tick, events,
+      ticks.push(freezeReplay({ tick: state.tick, events,
         ...(!ordered || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
       previous = view;
       steps++;
@@ -168,7 +170,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');
     }
-    result = freezeContent({ initial, ticks, terminal });
+    result = freezeReplay({ initial, ticks, terminal });
     return result;
   } };
 }
@@ -185,5 +187,5 @@ export function applyCombatReplayTick(view: CombatViewState, frame: CombatReplay
   for (const event of frame.events) if (event.type === 'unitUpdated') {
     units = units.map(unit => unit.id === event.unitId ? { ...unit, ...event.changes } : unit);
   } else if (event.type === 'unitEntered' || event.type === 'unitLeft') units = applyReplayMembership(units, event);
-  return freezeContent({ ...view, tick: frame.tick, units });
+  return freezeTransientContent({ ...view, tick: frame.tick, units });
 }

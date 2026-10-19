@@ -920,6 +920,7 @@ export class StrategyPanel {
     button.replaceChildren(element('strong', label.split('\n')[0]!, 'offer-name'));
     if (offer.description) button.append(element('span', offer.description, 'offer-desc'));
     if (catalogEntry(offer.id)) button.insertAdjacentHTML('afterbegin', itemMarkHtml(offer.id, 40));
+    else if (Object.hasOwn(AUGMENT_DEFINITIONS, offer.id)) button.insertAdjacentHTML('afterbegin', augmentIconHtml(offer.id, 40));
     if (timeoutPick) { button.dataset.timeoutPick = 'true'; button.append(element('span', '超时默认', 'choice-timeout-tag')); }
     button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
     return button;
