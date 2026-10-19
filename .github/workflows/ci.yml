@@ -252,6 +252,46 @@ jobs:
           path: |
             artifacts/m8-u6-loot/
             artifacts/m5-ci-timing-m8-u6-loot/
+  # DRAFT-ONLY diagnosis of the third first-seek spike; never merge this job.
+  gc-diagnostic:
+    name: gc-diagnostic-${{ matrix.tree }}-${{ matrix.trace && 'trace' || 'plain' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: [head, base]
+        trace: [false, true]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+          fetch-depth: 0
+      - if: ${{ matrix.tree == 'base' }}
+        run: |
+          git show HEAD:scripts/verify-m6-performance.cjs > /tmp/m6.cjs
+          git checkout e81c766
+          cp /tmp/m6.cjs scripts/verify-m6-performance.cjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: M6 performance with GC diagnostics
+        env:
+          CI_WALLCLOCK_GATES: report
+          M6_TRACE_GC: ${{ matrix.trace && '1' || '' }}
+          DEBUG: ${{ matrix.trace && 'pw:browser' || '' }}
+        run: node scripts/verify-m6-performance.cjs 2>&1 | tee gc-run.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gc-diagnostic-${{ matrix.tree }}-${{ matrix.trace && 'trace' || 'plain' }}
+          path: |
+            gc-run.log
+            artifacts/
   m6-retention:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m6-retention

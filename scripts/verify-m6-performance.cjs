@@ -65,7 +65,7 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
   report.routes=routes;report.routeGenerationMs=performance.now()-started;
   report.payload={completeBytes:largestComplete.bytes,incrementalBytes:largestIncremental.bytes,incrementalCombatId:largestIncremental.envelope.currentBattle.combatId,incrementalEvents:largestIncremental.envelope.currentBattle.events.length,largestRecordBytes:largestRecord.bytes,largestRecordCombatId:largestRecord.record.combatId};
   diagnosticPhase('browser-launch');
-  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});report.browser=browser.version();
+  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-precise-memory-info',`--js-flags=--expose-gc${process.env.M6_TRACE_GC?' --trace-gc':''}`]});report.browser=browser.version();
   browser.on('disconnected',()=>diagnostic('browser-disconnected',{connected:browser.isConnected()}));
   diagnosticPhase('page-create');page=await browser.newPage();
   page.on('close',()=>diagnostic('page-close',{closed:page.isClosed(),browserConnected:browser.isConnected()}));
@@ -73,7 +73,7 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
   page.on('crash',()=>diagnostic('page-crash',{closed:page.isClosed(),browserConnected:browser.isConnected()}));
   report.errors=[];page.on('pageerror',error=>report.errors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});
   page.on('console',message=>{
-   const text=message.text();if(message.type()!=='log'||!text.startsWith(diagnosticPrefix))return;
+   const text=message.text();if(text.startsWith('__M6_GC_DIAGNOSTIC__'))console.log(text);if(message.type()!=='log'||!text.startsWith(diagnosticPrefix))return;
    try{const {stage,...details}=JSON.parse(text.slice(diagnosticPrefix.length));diagnosticPhase(stage,details);}
    catch(error){diagnostic('invalid-browser-marker',{message:String(error)});}
   });
@@ -152,13 +152,24 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
     // Cold includes constructor's validation; cached seeks restore actual production checkpoints.
     for(let repeat=0;repeat<3;repeat++){
      let playback;
-     mark('first-seek-start',{repeat});
-     measure('firstSeek',()=>{playback=new PlaybackSession(record);playback.seek(record.endTick);});
-     mark('first-seek-complete',{repeat});
+     const heap0=performance.memory.usedJSHeapSize;let split;
+     mark('first-seek-start',{repeat,heapMb:heap0/1048576});
+     measure('firstSeek',()=>{const t0=performance.now();playback=new PlaybackSession(record);const t1=performance.now(),heap1=performance.memory.usedJSHeapSize;playback.seek(record.endTick);split={constructMs:t1-t0,seekMs:performance.now()-t1,heapAfterConstructMb:heap1/1048576};});
+     mark('first-seek-complete',{repeat,...split,heapMb:performance.memory.usedJSHeapSize/1048576});
      for(let i=0;i<4;i++){const tick=Math.max(0,Math.min(record.endTick-1,Math.floor(record.endTick*(repeat*4+i+1)/13)));measure('cachedSeek',()=>playback.seek(tick));}
      mark('cached-seeks-complete',{repeat});
      playback.dispose();
     }
+    // GC diagnosis only (draft PR, not a gate): the same cold seek with a full collection
+    // forced before each repeat, so deferred garbage from earlier phases cannot land inside it.
+    const gcDiagnostic=[];
+    for(let repeat=0;repeat<3;repeat++){
+     const g0=performance.now();globalThis.gc();const gcMs=performance.now()-g0,heap0=performance.memory.usedJSHeapSize;
+     const t0=performance.now();const playback=new PlaybackSession(record);const t1=performance.now();playback.seek(record.endTick);const t2=performance.now();
+     gcDiagnostic.push({repeat,forcedGcMs:gcMs,heapBeforeMb:heap0/1048576,constructMs:t1-t0,seekMs:t2-t1,totalMs:t2-t0,heapAfterMb:performance.memory.usedJSHeapSize/1048576});
+     playback.dispose();
+    }
+    console.log('__M6_GC_DIAGNOSTIC__'+JSON.stringify(gcDiagnostic));
     mark('stats-start');
     let stats=emptyStats(record.runId,record.combatId),cursor=0;
     for(let tick=0;tick<=record.endTick+39;tick+=40){let end=cursor;while(end<record.events.length&&record.events[end].tick<=tick)end++;const delta=record.events.slice(cursor,end);measure('statsBatch',()=>{stats=appendStats(stats,delta);});cursor=end;}
