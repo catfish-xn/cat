@@ -8,11 +8,11 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, publishBoardFrame, publishCombatEvents, type BoardFrame } from './board-feed';
+import { boardFeedActive, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
-import { InputRouter } from './input-router';
+import { InputRouter, type Gesture } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
@@ -47,6 +47,8 @@ import type { ItemSummonView } from '../server/protocol';
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
 /** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
+/** Gesture owner id for the 3D layer's pointer; Phaser pointer ids are never negative. */
+const POINTER_3D = -3;
 const SUMMON_BOARD_ONLY = '虚空生物只能在我方棋盘区域移动，不能放入备战席';
 const SPECIAL_CELL_COLORS: Readonly<Record<string, string>> = { trial: THEME.color.gold };
 
@@ -69,6 +71,9 @@ export class BoardScene extends Phaser.Scene {
   private replayCombat: import('../simulation/combat-types').CombatState | null = null;
   private replayRenderKey = '';
   private inputRouter = new InputRouter();
+  /** ?render=3d gestures (boardControls): the unit the 3D pointer is over, and the drag it owns. */
+  private hover3d: string | null = null;
+  private gesture3d: Gesture | null = null;
   private strategyPanel: StrategyPanel | null = null;
   private help: HelpPanel | null = null;
   private get state() { return this.session.preparation; }
@@ -213,6 +218,8 @@ export class BoardScene extends Phaser.Scene {
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
+    const withdrawControls = provideBoardControls(this.boardControls());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.gesture3d = null; });
     this.sync();
     this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
@@ -325,6 +332,8 @@ export class BoardScene extends Phaser.Scene {
   private hoveredId(): string | undefined {
     // D/F can change page layout without another mousemove. Resolve native client
     // coordinates against the current canvas bounds instead of a cached pointer transform.
+    // ?render=3d covers the canvas; its layer reports the unit under its own pointer instead.
+    if (boardFeedActive()) return this.hover3d && this.tokens.get(this.hover3d)?.visible ? this.hover3d : undefined;
     const client = this.mouseClient;
     if (!client || document.elementFromPoint(client.x, client.y) !== this.game.canvas) return;
     const rect = this.game.canvas.getBoundingClientRect();
@@ -402,22 +411,7 @@ export class BoardScene extends Phaser.Scene {
       // Center the token on the pointer: Phaser's threshold-delayed drag offset
       // otherwise incorporates the first mouse move and can shift a whole hex.
       const { x, y } = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-      token.setPosition(x, y); this.overlay.clear();
-      const target = this.target({ x, y });
-      const summon = this.summonOf(token.getData('unitId'));
-      if (summon) {
-        const reason = this.summonHint(summon, target);
-        this.setStatus(reason ?? '可放置 · 释放后虚空生物移到此格，之后每回合保持');
-        this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
-        if (target?.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
-      } else if (target) {
-        // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
-        const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
-        this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
-        this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
-        if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
-        else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
-      } else this.setStatus(this.failureMessage('invalid-location'));
+      this.dragTo(token, { x, y });
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
@@ -426,18 +420,84 @@ export class BoardScene extends Phaser.Scene {
       if (pointer.wasCanceled) { this.clearDrag(); return; }
       if (!this.inputRouter.release(gesture)) return;
       // Read release coordinates directly, even if no final drag frame rendered.
-      const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
-      // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
-      const swap = !!target && this.swapsWith(token.getData('unitId'), target);
-      const summon = this.summonOf(token.getData('unitId'));
-      if (summon) {
-        if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), '虚空生物已移动 · 之后每回合保持此位置');
-        else this.setStatus(SUMMON_BOARD_ONLY);
-      } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
-      else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
-      else this.setStatus(this.failureMessage('invalid-location'));
+      this.dropAt(token, pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       this.clearDrag(); this.sync();
     });
+  }
+  /** Shared by the 2D drag and the 3D layer's: token follows the point, the status line and outline say what a drop does. */
+  private dragTo(token: Phaser.GameObjects.Container, point: Point): BoardDropHint {
+    const { x, y } = point;
+    token.setPosition(x, y); this.overlay.clear();
+    const target = this.target({ x, y });
+    const summon = this.summonOf(token.getData('unitId'));
+    const centre = target && { kind: target.kind, ...this.position(target) };
+    if (summon) {
+      const reason = this.summonHint(summon, target);
+      this.setStatus(reason ?? '可放置 · 释放后虚空生物移到此格，之后每回合保持');
+      this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
+      if (target?.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
+      return { target: centre, allowed: !reason };
+    }
+    if (!target) { this.setStatus(this.failureMessage('invalid-location')); return { allowed: false }; }
+    // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
+    const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
+    this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
+    this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
+    if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
+    else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
+    return { target: centre, allowed: !reason };
+  }
+  /** Shared release: the same deploy / summon move commands as the 2D drag; the caller has already released the gesture. */
+  private dropAt(token: Phaser.GameObjects.Container, point: Point | null) {
+    const target = point ? this.target(point) : undefined;
+    // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
+    const swap = !!target && this.swapsWith(token.getData('unitId'), target);
+    const summon = this.summonOf(token.getData('unitId'));
+    if (summon) {
+      if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), '虚空生物已移动 · 之后每回合保持此位置');
+      else this.setStatus(SUMMON_BOARD_ONLY);
+    } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+    else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
+    else this.setStatus(this.failureMessage('invalid-location'));
+  }
+  /**
+   * ?render=3d: the 3D layer covers this canvas and replays its pointer here as the same gestures (one gesture owner,
+   * same drag rules, same commands). Releasing over the shop sells, like E on the dragged unit.
+   */
+  private boardControls(): BoardControls {
+    const token = (id: string) => this.draggingId === id && this.gesture3d && this.inputRouter.owns(this.gesture3d) ? this.tokens.get(id) : undefined;
+    return {
+      hover: id => { this.hover3d = id; },
+      select: id => {
+        const unit = this.displayedUnit(id);
+        if (!unit || unit.team !== 'player' || !this.tokens.has(id) || this.inputRouter.current) return;
+        this.selectedId = id; this.syncSelection(); this.strategyPanel?.render();
+      },
+      dragStart: id => {
+        const unit = this.displayedUnit(id);
+        if (!this.dragPhase() || !unit || !this.canDrag(unit) || !this.tokens.has(id)) return false;
+        const gesture = this.inputRouter.begin('unit', id, POINTER_3D);
+        if (!gesture) return false;
+        this.gesture3d = gesture; this.draggingId = id; this.selectedId = id;
+        this.tokens.get(id)!.setDepth(10).setScale(1.08); this.syncSelection();
+        return true;
+      },
+      dragMove: point => {
+        const dragged = this.draggingId ? token(this.draggingId) : undefined;
+        return dragged && this.dragPhase() ? this.dragTo(dragged, point) : { allowed: false };
+      },
+      dragEnd: (point, client) => {
+        const id = this.draggingId, dragged = id ? token(id) : undefined, gesture = this.gesture3d;
+        this.gesture3d = null;
+        if (!id || !dragged || !gesture || !this.dragPhase() || !this.inputRouter.release(gesture)) { this.clearDrag(); this.sync(); return; }
+        if (document.elementFromPoint(client.x, client.y)?.closest('.shop-panel, .shop-dock')) {
+          this.clearDrag(); this.sell(id); this.sync(); return;
+        }
+        this.dropAt(dragged, point);
+        this.clearDrag(); this.sync();
+      },
+      dragCancel: () => { if (this.gesture3d) { this.gesture3d = null; this.clearDrag(); this.sync(); } },
+    };
   }
   /**
    * Online (T10, contract §15.1): during my battle, the choice window and the settlement the shop, XP and my bench stay

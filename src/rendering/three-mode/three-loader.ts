@@ -1,11 +1,12 @@
 /**
  * 3D 单独加载模式外壳。这一文件留在 2D 主包里，体积很小；three.js 和渲染实现只在 `?render=3d` 时
  * 动态 import，构建时落在 assets/3d/（见 vite.config.ts），JS 体积预算把它单列，不计入 2D 门槛。
- * 3D 层盖在 #board-root 上，只负责画面；对局、输入和 2D 棋盘照常运行在下面。任何失败都留在 2D。
+ * 3D 层盖在 #board-root 上，画面和棋盘指针都在 3D 层；拖放和点选经 board-feed 交回 2D 棋盘的同一套手势和命令。
+ * 任何失败都留在 2D。
  */
 import { readAssetBase3d, readRenderMode, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
-import { subscribeBoardFeed } from '../board-feed';
+import { boardFeed } from '../board-feed';
 
 export interface ThreeModeHandle { dispose(): void }
 
@@ -44,7 +45,7 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
 
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
-    .then(module => { module.useBoardFeed?.(subscribeBoardFeed); return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
+    .then(module => { module.useBoardFeed?.(boardFeed); return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }
       renderer = mounted;
