@@ -11,6 +11,7 @@ import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
+import { LeftPanelToggle } from './left-panel-toggle';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
@@ -67,6 +68,7 @@ export class OnlineApplication implements SceneApplication {
   /** G5: battle ranking (right column) and the preparation economy hint. */
   private summary: BattleSummaryPanel;
   private economy: EconomyHint;
+  private leftToggle: LeftPanelToggle;
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
   private ranking: RankingOverlay;
@@ -89,6 +91,7 @@ export class OnlineApplication implements SceneApplication {
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
+    this.leftToggle = new LeftPanelToggle();
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); });
@@ -284,7 +287,7 @@ export class OnlineApplication implements SceneApplication {
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
-  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
+  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, leftCollapsed: this.leftToggle.isCollapsed, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
     battleSummary: this.summary.debug(), economy: this.economy.debug(),
     opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselSide: this.carousel.showing, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
@@ -293,7 +296,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }
