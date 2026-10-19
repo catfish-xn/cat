@@ -43,6 +43,23 @@ RGB 为线性空间 `[0,1]`；世界坐标采用 three 轴向（Y 向上）。
 默认局部固定种子 RNG，可注入 `[0,1)` 随机函数；不依赖全局随机或真实时钟。
 不支持未知 schema/kind；已知未实现的三类发射器直接跳过，不加载其贴图。
 
+v1 严格校验文档字段、sprite 字段及其 shape/frames/曲线关键帧字段。未知字段使整份
+文档拒绝，错误为 `unsupported-particle-field:<字段路径>`，例如
+`unsupported-particle-field:$.emitters[0].origin`；格式或值错误也带字段路径。
+先校验整份文档，再加载任何贴图或构造粒子网格，不会把部分合法的 sprite 先画出来。
+显式 `null`、错误记录类型和不适用的 shape 字段也拒绝，不能借此默默触发默认值。
+
+尚不支持发射器偏移（`origin`/`EmitterPosition`）、连续发射（`emission`）、single 特殊
+生命周期、出生概率分布、birthScale0 与 scale0 向量曲线，以及非等比二维/三维大小。
+这些字段不能混入 v1 sprite；`size` 的 value 只能是非负标量，向量值会报
+`invalid-curve:<字段路径>`。`lifetime=-1` 报 `invalid-emitter-timing:<字段路径>`，不解释为
+无限寿命，也不替换为任意正数；ArbitraryQuad/Ray kind 报 `invalid-emitter-kind:<字段路径>`。
+D7 不能通过丢弃必需语义把此类源发射器标成普通 v1 sprite，应在转换侧拒绝并报告。
+
+`mesh/trail/screenDistortion` 保持原合同：仅识别 kind，其内部载荷不作 sprite 校验或解释，
+整个发射器跳过，`skipped` 每类按发射器数计数。其参数不构成受支持的绘制能力。
+本次没有增加 v2 字段或改变 v1 的绘制语义。
+
 ## 素材及资源生命周期
 
 `ModelCache.fromUrl(manifestUrl, root?, readModel?)` 校验 manifest；manifest HTTP/格式错误
@@ -98,8 +115,8 @@ origin={x:242,y:146}，奇数行偏移半列，边界采用相同逐行优先次
 使用 ESM GLTFLoader/SkeletonUtils、AnimationMixer、ShaderMaterial 和 Raycaster；精确固定版本
 减少解码/类型漂移。类型包的间接开发依赖不引入产品物理系统，也没有接入 2D 静态依赖图。
 
-本次交付起点：`9c3c7a9319333d24e456a9c808e18d4afc47589e`（fetch 得到的 origin/3d）。
-验证记录（每条测试命令均加 `--no-file-parallelism`，依次运行）：
+初次交付起点：`9c3c7a9319333d24e456a9c808e18d4afc47589e`（fetch 得到的 origin/3d）。
+初次提交 `7764aea08cc8cb93ea2e8667799f414cff21b6fe` 的验证记录（每条测试命令均加 `--no-file-parallelism`，依次运行）：
 
 | 命令/文件 | 结果 | 耗时 |
 | --- | --- | --- |
@@ -111,3 +128,11 @@ origin={x:242,y:146}，奇数行偏移半列，边界采用相同逐行优先次
 
 素材检查：没有生成 `assets3d-local/`，`git status --ignored --short assets3d-local` 无输出；
 测试中的 GLB 只在内存生成，纹理只用内存 Texture。未生成 manifest 输出文件。
+
+追加修复（基于上述初次提交，保留原始验证证据）：v1 未知字段由静默忽略改为严格拒绝，
+支持的 sprite 及其嵌套记录均给出拒因和字段路径；三类已知 unsupported kind 仍跳过计数。
+本次只运行 `npm test -- tests/rendering3d-particles.test.ts --no-file-parallelism`
+（48/48，290 ms，含原有 13 项及新增 35 项）和 `npm run typecheck`（通过，13.239 s wall）。
+其余原始测试未重跑；#213 的追加测试仍待父会话确认合入，不属于本次完成项。
+CI 入口：`.github/workflows/ci.yml` 的 pull_request 事件（未修改配置或手动触发全套），
+检查页为 https://github.com/catfish-xn/cat/pull/212/checks；此记录不表示 CI 已通过。

@@ -100,6 +100,78 @@ describe('normalized 3D particle interpreter', () => {
       effect.dispose(); effect.dispose(); expect(dispose).toHaveBeenCalledTimes(1);
     } finally { fetchMock.mockRestore(); }
   });
+  it('rejects unknown document fields instead of dropping semantics', () => {
+    expect(() => parseParticleDocument({ ...document(emitter()), origin: [1, 2, 3] }))
+      .toThrow('unsupported-particle-field:$.origin');
+    expect(() => parseParticleDocument({ ...document(emitter()), metadata: {} }))
+      .toThrow('unsupported-particle-field:$.metadata');
+  });
+  it.each([
+    ['origin', [1, 2, 3]], ['emission', { mode: 'continuous', rate: 2 }],
+    ['sizeVector', { birth: [2, 3, 4] }], ['birthScale0', [2, 3, 4]], ['scale0', []],
+    ['single', true], ['birthProbability', [0.25, 0.75]], ['renderType', 'Ray'], ['typo', false], ['unknown', undefined],
+  ])('rejects unsupported sprite field %s with its location', (key, value) => {
+    expect(() => parseParticleDocument({ schemaVersion: 1, emitters: [{ ...emitter(), [key as string]: value }] }))
+      .toThrow(`unsupported-particle-field:$.emitters[0].${key}`);
+  });
+  it.each([
+    [{ shape: { kind: 'point', radius: 1 } }, 'shape.radius'],
+    [{ shape: { kind: 'sphere', radius: 1, origin: [1, 2, 3] } }, 'shape.origin'],
+    [{ shape: { kind: 'box', halfExtents: [1, 1, 1], jitter: 1 } }, 'shape.jitter'],
+    [{ frames: { columns: 2, rows: 2, fps: 1, startFrame: 1 } }, 'frames.startFrame'],
+    [{ size: [{ time: 0, value: 1, probability: [] }] }, 'size[0].probability'],
+    [{ color: [{ time: 0, value: [1, 1, 1], interpolation: 'step' }] }, 'color[0].interpolation'],
+    [{ opacity: [{ time: 0, value: 1, random: true }] }, 'opacity[0].random'],
+    [{ dissolve: [{ time: 0, value: 0, seed: 1 }] }, 'dissolve[0].seed'],
+  ])('rejects unhandled nested sprite data at %s', (changes, fieldPath) => {
+    expect(() => parseParticleDocument({ schemaVersion: 1, emitters: [{ ...emitter(), ...changes }] }))
+      .toThrow(`unsupported-particle-field:$.emitters[0].${fieldPath}`);
+  });
+  it.each([[2, 3], [2, 3, 4]])('rejects a vector size key value %s instead of flattening it', (...size) => {
+    expect(() => parseParticleDocument({ schemaVersion: 1, emitters: [{ ...emitter(), size: [{ time: 0, value: size }] }] }))
+      .toThrow('invalid-curve:$.emitters[0].size[0].value');
+  });
+  it.each([
+    [null, 'invalid-particle-document:$'],
+    [[], 'invalid-particle-document:$'],
+    [{ schemaVersion: 1, emitters: {} }, 'invalid-particle-document:$'],
+    [{ schemaVersion: 1, emitters: [[]] }, 'invalid-emitter-kind:$.emitters[0]'],
+    [{ schemaVersion: 1, emitters: [{ ...emitter(), shape: null }] }, 'invalid-shape:$.emitters[0].shape'],
+    [{ schemaVersion: 1, emitters: [{ ...emitter(), shape: false }] }, 'invalid-shape:$.emitters[0].shape'],
+    [{ schemaVersion: 1, emitters: [{ ...emitter(), frames: null }] }, 'invalid-frames:$.emitters[0].frames'],
+    [{ schemaVersion: 1, emitters: [{ ...emitter(), frames: [] }] }, 'invalid-frames:$.emitters[0].frames'],
+    [{ schemaVersion: 1, emitters: [{ ...emitter(), frames: { columns: 1, rows: 1, fps: 1, loop: null } }] }, 'invalid-frames:$.emitters[0].frames.loop'],
+  ])('rejects malformed document or nested record %# with a field path', (value, reason) => {
+    expect(() => parseParticleDocument(value)).toThrow(reason as string);
+  });
+  it('rejects sentinel negative lifetime without inferring an infinite or replacement lifetime', () => {
+    expect(() => parseParticleDocument(document(emitter({ lifetime: -1 }))))
+      .toThrow('invalid-emitter-timing:$.emitters[0].lifetime');
+  });
+  it.each(['ArbitraryQuad', 'Ray'])('rejects unsupported kind %s rather than rendering a billboard', kind => {
+    expect(() => parseParticleDocument({ schemaVersion: 1, emitters: [{ ...emitter(), kind }] }))
+      .toThrow('invalid-emitter-kind:$.emitters[0].kind');
+  });
+  it('keeps the three known unsupported kinds opaque and counted, without resolving their textures', () => {
+    const texture = vi.fn();
+    const effect = new ParticleEffect({ schemaVersion: 1, emitters: ['mesh', 'trail', 'screenDistortion'].map(kind => ({
+      kind, lifetime: -1, origin: [1, 2, 3], emission: { mode: 'continuous' }, texture: 'unused.png',
+    })) }, { texture });
+    expect(effect.skipped).toEqual({ mesh: 1, trail: 1, screenDistortion: 1 });
+    expect(effect.object.children).toHaveLength(0); expect(texture).not.toHaveBeenCalled(); effect.dispose();
+  });
+  it('rejects the entire document before resolving any texture when a later sprite has unsupported data', async () => {
+    const value = { schemaVersion: 1, emitters: [emitter({ texture: 'synthetic.png' }), { ...emitter(), origin: [1, 2, 3] }] };
+    const readTexture = vi.fn(async () => new Texture()), directTexture = vi.fn();
+    expect(() => new ParticleEffect(value, { texture: directTexture })).toThrow('unsupported-particle-field:$.emitters[1].origin');
+    expect(directTexture).not.toHaveBeenCalled();
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(value));
+    try {
+      await expect(loadParticleEffect({ schemaVersion: 1, models: {}, effects: { x: { path: 'x.json' } } }, 'x', { readTexture }))
+        .rejects.toThrow('unsupported-particle-field:$.emitters[1].origin');
+      expect(readTexture).not.toHaveBeenCalled();
+    } finally { fetchMock.mockRestore(); }
+  });
   it('cleans already loaded textures if a later texture load fails', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(document(emitter({ texture: 'a.png' }), emitter({ texture: 'b.png' })))), texture = new Texture();
     const dispose = vi.spyOn(texture, 'dispose'), readTexture = vi.fn().mockResolvedValueOnce(texture).mockRejectedValueOnce(new Error('texture-failed'));
