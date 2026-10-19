@@ -2,7 +2,7 @@ import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
 import { amount, applyStatus, enemies, grantShield, origin, type S13Unit } from './combat-s13-state';
 import { hexDistance, type Board } from './board';
-import { UNIT_DEFINITIONS } from './units';
+import {isCombatTraitMember} from './traits/effective-membership';
 import type { CombatUnit } from './combat-types';
 import { getUnitStats } from './unit-stats';
 import { resolveAbility } from './combat-abilities';
@@ -37,7 +37,7 @@ export function createG23Forge(jayce:CombatUnit,units:readonly CombatUnit[],boar
 export function g23Bound(u:S13Unit):boolean{return u.definitionId==='g23-sion'&&!u.runtime.buddyTriggered;}
 export function advanceG23Summons(ctx:AbilityContext):void{
  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0&&g23Bound(u))){
-  const casts=ctx.units.filter(a=>a.team===u.team&&UNIT_DEFINITIONS[a.definitionId]?.traits.includes('black-rose')).reduce((n,a)=>n+a.runtime.castCount,0);
+  const casts=ctx.units.filter(a=>a.team===u.team&&isCombatTraitMember(a,'black-rose')).reduce((n,a)=>n+a.runtime.castCount,0);
   if(casts<5&&u.hp*10000>=u.maxHp*6500)continue;
   u.runtime.buddyTriggered=true;
   ctx.events.push({type:'bindingChanged',tick:ctx.tick,unitId:u.id,bound:false,reason:casts>=5?'casts':'hp-threshold'});
