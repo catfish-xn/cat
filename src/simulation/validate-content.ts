@@ -39,10 +39,11 @@ function finiteJson(v:unknown,seen=new Set<object>()):void {
   seen.add(v as object);for(const x of Object.values(v as object)) finiteJson(x,seen);seen.delete(v as object);
 }
 function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,kind:string):void {
-  for(const [id,entry] of Object.entries(catalog)) if(!entry||entry.id!==id||!(/^[a-z][a-z0-9-]*$/.test(id)||kind==='items'&&Object.hasOwn(ITEM_DEFINITIONS,id))) fail(`Invalid ${kind} ID: ${id}`);
+  for(const [id,entry] of Object.entries(catalog)) if(!entry||entry.id!==id||!(/^[a-z][a-z0-9-]*$/.test(id)||kind==='items'&&Object.hasOwn(ITEM_DEFINITIONS,id)||kind==='anomalies'&&Object.hasOwn(ANOMALY_DEFINITIONS,id))) fail(`Invalid ${kind} ID: ${id}`);
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  s13Anomaly:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
   g24SpectralCutlass:['durationTicks'],
@@ -127,7 +128,14 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:36,anomalies:31})) {
+  // Augments: existing 30 + blinding-speed, portable-forge, radiant-relics,
+  // going-long, hedge-fund, investment-strategy-ii = 36.
+  // Anomalies: existing 30 + P4 TFT13_GoopBuff_CenteroftheUniverse,
+  // TFT13_GoopBuff_CertainDeath, TFT13_GoopBuff_DeftHands, TFT13_GoopBuff_DramaticEntrance,
+  // TFT13_GoopBuff_EvenInDeath, TFT13_GoopBuff_HungerForPower, TFT13_GoopBuff_Invisibility,
+  // TFT13_GoopBuff_Repulsor, TFT13_GoopBuff_ScuttleFamiliar, TFT13_GoopBuff_UnstoppableForce,
+  // TFT13_GoopBuff_WolfFamiliars + P1 dual-wielding = 42.
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:36,anomalies:42})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

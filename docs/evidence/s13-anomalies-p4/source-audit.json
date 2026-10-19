@@ -1,0 +1,119 @@
+{
+  "baseline": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
+  "sourceSha256": {
+    "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "src/simulation/content/source/s13-14.24b/raw/zh_cn.tft.stringtable.json.gz": "ae17b0ce7ebc199e3b3c8dbc7fc906cfb0a83a1c45a9d6ce2d4a78e1526ebca4"
+  },
+  "records": {
+    "TFT13_GoopBuff_UnstoppableForce": {
+      "pointer": "{9b302b6d}",
+      "values": {
+        "StunDuration": 1.5,
+        "PctHealthHeal": 10.0
+      }
+    },
+    "TFT13_GoopBuff_CertainDeath": {
+      "pointer": "{e2fec80c}",
+      "values": {
+        "BonusAS": 0.25,
+        "BonusOmnivamp": 0.2,
+        "HexRadius": 2.0,
+        "StunDuration": 1.5
+      }
+    },
+    "TFT13_GoopBuff_DramaticEntrance": {
+      "pointer": "{6a5e8bac}",
+      "values": {
+        "IncreasedMaxHealthPercent": 0.55,
+        "Delay": 6.0,
+        "StunDuration": 2.0
+      }
+    },
+    "TFT13_GoopBuff_Repulsor": {
+      "pointer": "{cda514bb}",
+      "values": {
+        "BonusAS": 0.35,
+        "KnockbackRange": 2.0
+      }
+    },
+    "TFT13_GoopBuff_Invisibility": {
+      "pointer": "{67e2e886}",
+      "values": {
+        "BonusCrit": 1.0,
+        "StealthTimer": 6.0,
+        "StealthDuration": 1.0
+      }
+    },
+    "TFT13_GoopBuff_EvenInDeath": {
+      "pointer": "{56b63bc8}",
+      "values": {
+        "PercentHealthLoss": 0.125,
+        "BonusOmnivamp": 0.2,
+        "BonusAttackSpeed": 0.5,
+        "MoveSpeed": 500.0
+      }
+    },
+    "TFT13_GoopBuff_ScuttleFamiliar": {
+      "pointer": "{66e7e024}",
+      "values": {
+        "PctOfDefensiveStats": 100.0
+      }
+    },
+    "TFT13_GoopBuff_WolfFamiliars": {
+      "pointer": "{b92a45ae}",
+      "values": {
+        "PercentAD": 0.5,
+        "TooltipAS": 0.9
+      }
+    },
+    "TFT13_GoopBuff_HungerForPower": {
+      "pointer": "{6c4a9ea4}",
+      "values": {
+        "HealthAndADPercent": 60.0
+      }
+    },
+    "TFT13_GoopBuff_CenteroftheUniverse": {
+      "pointer": "{5a47d9df}",
+      "values": {
+        "MissileDamage": 75.0,
+        "{0911adb5}": 75.0,
+        "NumStars": 6.0
+      }
+    },
+    "TFT13_GoopBuff_DeftHands": {
+      "pointer": "{3ef46724}",
+      "values": {
+        "PercentAD": 0.3,
+        "MiniCount": 3.0,
+        "ArmorReduction": 5.0,
+        "AttackCadence": 3.0
+      }
+    }
+  },
+  "overrides": {
+    "WolfFamiliars.TooltipAS": {
+      "raw": 0.9,
+      "implemented": 1.0,
+      "basis": "用户明确指定官方14.24攻速1.0"
+    }
+  },
+  "originalScriptEvidence": {
+    "orbitMissile": {
+      "pointer": "{f1853b8b}",
+      "type": "SyncCircleMovement",
+      "angularVelocity": -1.9500000476837158,
+      "missileWidth": 50.0
+    },
+    "miniMissile": {
+      "pointer": "{89bf7245}",
+      "travelTimeSeconds": 0.5
+    },
+    "unavailable": [
+      "orbit radius-expansion Lua",
+      "same-target hit-interval Lua",
+      "archived Center of the Universe match replay",
+      "Scuttle offense stat block"
+    ]
+  },
+  "projectConventions": "docs/S13_ANOMALIES_P4.md"
+}

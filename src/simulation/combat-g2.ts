@@ -1,3 +1,5 @@
+import { occupiesCell } from './anomalies/availability';
+import { isAttackProxy } from './anomalies/availability';
 import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
@@ -38,7 +40,7 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       ctx.heals.push({ source: origin(unit), targetId: unit.id, amount: mag('Heal') }); strike(target, mag('Damage')); break;
     case 'singed': {
       applyStatus(unit, origin(unit), 'damageReduction', Math.min(10000, Math.round(v('DR') * ap(unit, ctx.tick) * 100)), ticks('Duration'), ctx.tick, ctx.events, true);
-      const ally = ctx.units.filter(u => u.alive && u.team === unit.team).sort((a, b) => (b.expansion?.damageDealt ?? 0) - (a.expansion?.damageDealt ?? 0) || (a.id < b.id ? -1 : 1))[0];
+      const ally = ctx.units.filter(u => u.alive && !isAttackProxy(u) && u.team === unit.team).sort((a, b) => (b.expansion?.damageDealt ?? 0) - (a.expansion?.damageDealt ?? 0) || (a.id < b.id ? -1 : 1))[0];
       if (ally) {
         applyStatus(ally, origin(unit), 'attackSpeed', Math.round(v('AttackSpeed') * 100), 1, ctx.tick, ctx.events, true);
         task(unit, 'g2SingedSpeed', ctx.tick + 1, ally.id, Math.round(v('AttackSpeed') * 100), seq, 1, ticks('Duration'));
@@ -174,7 +176,7 @@ export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): v
       const m = unit.mechanics!.find(m => m.mechanic === 'firelight')!, state = expansion(unit);
       ctx.heals.push({ source: m.source, targetId: unit.id, amount: Math.floor(state.damageTaken * m.values.healBps / 10000) }); state.damageTaken = 0;
       const target = byDistance(unit, enemies(unit, ctx.units))[0];
-      const destination = target && getNeighbors(ctx.board, target.cell).filter(c => !ctx.units.some(u => u.alive && u.cell.col === c.col && u.cell.row === c.row))
+      const destination = target && getNeighbors(ctx.board, target.cell).filter(c => !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(unit.cell, a) - hexDistance(unit.cell, b) || a.row - b.row || a.col - b.col)[0];
       if (destination) { ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: unit.cell, to: destination }); unit.cell = destination; }
       if (m.values.attackSpeedBps) applyStatus(unit, m.source, 'attackSpeed', m.values.attackSpeedBps, m.values.dashTicks, ctx.tick, ctx.events, true);

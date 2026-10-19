@@ -13,9 +13,10 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
   attack: -2, ability: -1, trait: 0, item: 1, augment: 2, anomaly: 3, enemyGrowth: 4,
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
-const MECHANICS = new Set(['g23Junker','g23Experiment','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
+const MECHANICS = new Set(['s13Anomaly','g23Junker','g23Experiment','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
   'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  s13Anomaly:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
   g24SpectralCutlass:['durationTicks'],

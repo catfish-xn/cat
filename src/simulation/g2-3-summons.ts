@@ -6,7 +6,7 @@ export const isG23Summon=(unit:{readonly definitionId:string})=>unit.definitionI
 /** Forge and the reserved barrel identity are skill bodies, never an army's last fighter. */
 export const isG23NonCombatant=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-forge'||unit.definitionId==='g23-barrel';
 /** 约定值: only surviving roster units add player damage; combat summons never add it. */
-export const countsG23SurvivorDamage=(unit:{readonly definitionId:string;readonly alive:boolean;readonly itemSummon?:unknown})=>unit.alive&&!unit.itemSummon&&!isG23Summon(unit)&&!isG23NonCombatant(unit);
+export const countsG23SurvivorDamage=(unit:{readonly definitionId:string;readonly alive:boolean;readonly itemSummon?:unknown;readonly anomalySummon?:unknown})=>unit.alive&&!unit.itemSummon&&!unit.anomalySummon&&!isG23Summon(unit)&&!isG23NonCombatant(unit);
 /** Reserved combat-only identities never enter assets, the shop or the shared pool. */
 export function projectG23Summons(preparation:GameState):GameState{
  const units=[...preparation.units],added:Unit[]=[];

@@ -1,3 +1,4 @@
+import { isPresent, isSelectable } from './anomalies/availability';
 import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
@@ -14,7 +15,8 @@ const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'm
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
-    ...(unit.itemBanish?{banished:state.tick<unit.itemBanish.untilTick}:{}),
+    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
+    ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
 export function toCombatViewState(state: CombatState) {

@@ -1,3 +1,4 @@
+import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
 import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
@@ -43,8 +44,8 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 }
 
 describe('M5 independent finite combat rules', () => {
-  it('resolves all admitted abilities as integer-only isolated snapshots', () => {
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS};
+  it('resolves all 70 admitted abilities as integer-only isolated snapshots', () => {
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
     for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);

@@ -1,3 +1,4 @@
+import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
 import { mirroredItemCell, nearestItemCell, manaReavedMaximum, validateDeferredItemDamage } from './g2-4b-item-kernel';
 import { sameCell, hexDistance } from './board';
@@ -26,7 +27,7 @@ export function returnZephyrUnits(ctx:AbilityContext):void {
   for(const unit of ctx.units){
     if(unit.itemBanish?.untilTick!==ctx.tick)continue;
     const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
-    const to=nearestItemCell(unit.cell,cells.filter(c=>!ctx.units.some(u=>u.id!==unit.id&&u.alive&&sameCell(u.cell,c))));
+    const to=nearestItemCell(unit.cell,cells.filter(c=>!ctx.units.some(u=>u.id!==unit.id&&occupiesCell(u,ctx.tick)&&sameCell(u.cell,c))));
     if(!to)throw new RangeError('No Zephyr return cell');
     if(!sameCell(to,unit.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});unit.cell=to;}
     if(unit.mechanismState)unit.mechanismState={...unit.mechanismState,periodicTasks:unit.mechanismState.periodicTasks.map(t=>{
@@ -92,7 +93,7 @@ export function advanceSpectralCutlass(ctx: AbilityContext): void {
     if (!unit.startingCell) throw new RangeError('Missing cutlass starting cell');
     const desired = ctx.tick === 0 ? mirroredItemCell(ctx.board, unit.startingCell) : unit.startingCell;
     const cells = Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
-    const available = cells.filter(cell=>!ctx.units.some(other=>other.id!==unit.id&&other.alive&&sameCell(other.cell,cell)));
+    const available = cells.filter(cell=>!ctx.units.some(other=>other.id!==unit.id&&occupiesCell(other,ctx.tick)&&sameCell(other.cell,cell)));
     const to = nearestItemCell(desired,available);
     if (!to || sameCell(to,unit.cell)) continue;
     ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});

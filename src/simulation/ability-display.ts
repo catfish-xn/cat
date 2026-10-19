@@ -1,3 +1,4 @@
+import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
 import { G23_SUMMON_ABILITIES } from './content/g2-3-summons';
 import { G23_ABILITIES } from './content/g2-3-abilities';
@@ -13,6 +14,7 @@ export interface AbilityDisplayStats {
   readonly attackDamage?: number;
 }
 function sourceFor(id: string): {readonly name:string;readonly variables:Readonly<Record<string,readonly number[]>>} {
+  if(Object.hasOwn(S13_ANOMALY_SUMMON_ABILITIES,id+'-ability'))return S13_ANOMALY_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_SUMMON_ABILITIES,id+'-ability'))return G23_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_ABILITIES,id+'-ability'))return G23_ABILITIES[id+'-ability'];
