@@ -67,3 +67,10 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 - 终身黄铜 I/II 补齐 9 个 S13 铜级羁绊（伏击者、先知、炼金男爵、统治者、搏击手、实验体、斗士、黑玫瑰、迅击战士），首档阈值取自原始数据 style 1，只在当前激活档等于铜档时计数；该强化不改羁绊计数，战斗和结算的征服者/炼金男爵档位一致。
 - 超高速规则不变，测试改为真实施法两次并核对攻击间隔。
 - schema/save/replay/command 保持 7/3/3/3，v11 存档按既有不迁移政策拒绝。G2-4b 证据按 MIGRATION.md 顺序重录（baseline `075e9a4`），四项 `--check` 通过；G2-3 与 g2-augments 历史目录不改。
+
+## v13：S13 强化与异常批次（P1–P4，集成分支 `integration/s13-augments`）
+
+- 起点 multiplayer `bc49cac`（v12）。rules `s13-g2-3-v13`、content `s13-14.24b-g2-3-v13`、policy `g2-4b-s13-augments-anomalies-v13`；content digest `fnv1a32-utf16:a1fc26ff`。
+- 合入 P4 #192、P2 #188、P3 #189、P1 #191：强化 57 个、异常 52 个（各包内容与数值依据见各自 PR 和 `docs/evidence/s13-augments/`）。规则数值不因合包改变；池变大使固定种子的报价、商店和战斗走向变化，相关测试的处理见 `docs/evidence/s13-augments/SEED_ROUTE_DEFERRED.md`。
+- 合包时修正穿刺莲花读档校验：后一次暴击刷新同一状态时到期顺延，读档接受该顺延。
+- schema/save/replay/command 保持 7/3/3/3，v12 存档按既有不迁移政策拒绝。G2-4b 证据按 MIGRATION.md 顺序重录（baseline `bc49cac`），S13 P1 双选录制重录；G2-3 与 g2-augments 历史目录不改。

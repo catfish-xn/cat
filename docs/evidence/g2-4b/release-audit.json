@@ -6,7 +6,7 @@
     "scripts/measure-g2-4b-restore.cjs": "7197c30995abcab508d482169259791d29f79d020fd8354a53743249eda9dd5a",
     "scripts/record-g2-4b-inputs.cjs": "e8ca736c7db5ee0db5b55f1db9e09b073bc2233e4e26637417166fbfcbfeb6c5",
     "scripts/record-g2-4b-live-reveal.cjs": "8513f5354a23d16a7bbd3a7751d5858ee015039f1a4c471113af65c5df502868",
-    "scripts/record-g2-4b-release.cjs": "3532d2f7f1d43156d6c8b99369b9688aace25fcb4359590e0f127074285469d5",
+    "scripts/record-g2-4b-release.cjs": "afbbdeefeb86aa0f5f996d80c153936737cc71045cacd10b0fee19d26c121ea2",
     "src/server-entry/index.ts": "12574f5f339b6cf9cff71fcc72572761c5a8a7e27182fce6b251c1eee8140f6c",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "7b0276340c441264c1776966c97bbe84f02c489ce971e6c9f09b177b1c52a864",
@@ -63,12 +63,12 @@
     "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
     "src/simulation/combat-input.ts": "e98c7965e4aff791272a4cd790b6eaa3af417ed8f80c66932deb2fe3c575060a",
     "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
-    "src/simulation/combat-replay-view.ts": "7fe2979e52d0b61c1289a724d812dc8ab28f23d247410821a0ecf7bbdf97d659",
+    "src/simulation/combat-replay-view.ts": "4a66001c3275dc7e583c97dcc798f973f0dd8ff3656f4be3d98c6499728d9af6",
     "src/simulation/combat-runtime-facts.ts": "747760783a98aea1eed0b9f0a3c23f5960fa586363356e7606793cbd9e0df5c0",
     "src/simulation/combat-s13-abilities.ts": "a46291e165d3d3e9cc953fe8316c152c8bdb0da91fdeb337598d8a67d08c8d4c",
     "src/simulation/combat-s13-state.ts": "0e89a65ffdddabc1a6a547353c36f5f406d0f484a36068e73e5d193643b84e08",
-    "src/simulation/combat-s13.ts": "b66d7866ecc9a26754bc684a664382e811d326feeb7d079a94eb5adeb94be1e0",
-    "src/simulation/combat-static.ts": "463180343e52c9a0e86da915ee407c16a95d0f3c7f938673c6e5de247dcae871",
+    "src/simulation/combat-s13.ts": "62c39e066b55589378faf5ec324bad83664b25c17c75a0bf0175ef27da7f37c3",
+    "src/simulation/combat-static.ts": "434e6e073311b00cdec1d50359985fc16bea2762446131bdf563affbf197cfae",
     "src/simulation/combat-summary.ts": "4b8a4ae4567a975f32ef45c7529d85c460a502aa8d24af8106acd62e1b6c6426",
     "src/simulation/combat-tick.ts": "98ff95ffa1d8f042361006eef70a02c1c21207308b9b495b0916045de16ae143",
     "src/simulation/combat-types.ts": "77ef2e85b66fd322a8361405d3b5f81b701689246eab9b2350df2c548744ba47",
@@ -81,7 +81,7 @@
     "src/simulation/content/augment-policy.ts": "c379b9c741ebb69c38ae2ccdf72873fc7d9db15e367a70a4f57b80b3e1e8d4ec",
     "src/simulation/content/augments.ts": "7ab914ebc0ee9876564091b3a954bc847fc1b71a635a94a0bb78a6b9d6d5ed67",
     "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
-    "src/simulation/content/freeze.ts": "91965b7be2e8c0b75bb403d632dce45b8f272d57781c52f3e6f319ff911e11ab",
+    "src/simulation/content/freeze.ts": "ee4cc2f7d31a3a9367448d7f6089ccaea479a88c8421074cc5ad086f1366b653",
     "src/simulation/content/g2-2-abilities.ts": "f1056777733c6fb59d8c899381b873f71d401cd0f48b2c958386434f205c4390",
     "src/simulation/content/g2-2-traits.ts": "ebc6375f5cd5bf99e4c4070c76c9dc6053dac41ccbd73ecf548c75f412d29ea9",
     "src/simulation/content/g2-2-units.ts": "ba7b9f30e2566f609fc9ded95a94b884965cf87cae6193d80b4c688ee48baa6d",
@@ -91,7 +91,7 @@
     "src/simulation/content/g2-3-anomaly-source.ts": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1",
     "src/simulation/content/g2-3-item-registry.ts": "87f2eec38dea8037d62ef981e90f21bd20566415903bc13760bea3a63ad71055",
     "src/simulation/content/g2-3-loot-source.ts": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459",
-    "src/simulation/content/g2-3-policy.ts": "97235611e25d010b8e375bd71fa1ce434f256c3a91e5ac8f901ca9fe5aa366ce",
+    "src/simulation/content/g2-3-policy.ts": "385874ef67c7c7d098105b0a8b2e330a7d83c5c44ba446139a540af87595a98f",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-source.ts": "c14a36070f08134cabc93fcb439b5e276907523b4e99e09bfbb82c551a40075e",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
@@ -109,7 +109,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/index.ts": "5bf2e8ea4369478e693dfe6e1b486dce8696bd98e9fd5f62ef6ba617337f6007",
+    "src/simulation/content/index.ts": "fb49969723230e9a31c4ef201d0670b75e25927a41591fc9e22cf2bb9401513c",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
     "src/simulation/content/items-bow.ts": "4da0832e81baf5191b87a4c53a99abd2050b53ecf493648f670863b04262ddec",
@@ -221,7 +221,7 @@
     "src/simulation/m8/combat-item-grants.ts": "4ad713d018038ab2537d2ffb2eba3eb5ff90f6dc1bacead966af64937794485e",
     "src/simulation/m8/combat-item-programs.ts": "99cc9a622f5c04291ecba3ef097c60b5a8c705d36000223190c3366c1eeddf1c",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "85452072d60457080c285d9ca7d3f74c00a09607bfc530554e49e427e9df06b0",
+    "src/simulation/m8/contracts.ts": "8adeb422a5e327c1a3efe576d223e6850971f883bdd50f6366958dcd3fad4740",
     "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
     "src/simulation/m8/damage.ts": "50fdfe674792cbc3b262e506f7501cfbe479ac67c26419794688baf22072e532",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -248,7 +248,7 @@
     "src/simulation/m8/triggers.ts": "611d8c15d4eca4c8496a7ce962e2f45840521e7ee35f37ee3e37ee697c6652cc",
     "src/simulation/m8/ui-contracts.ts": "0be5f9922e8bc293793d1d1f9e544de36cc248afc164af7506f7c7191ad37df1",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "8633d076982ca0a97ad40dacba3b17fb8a1e51b9e8c89db3c9c4a2263828fb61",
+    "src/simulation/m8/version.ts": "467170c68df25d70c3dcf7ce831bf19a44b2509d0cc18460035872fb8aee70be",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "06d6f93f43fef3a08b6da7e21dc72daad95bcf871fee15a18d9b3da72699dc09",
     "src/simulation/match.ts": "bdf04e72f358196d278231638dcca38b9711bb7db74447ddd4867ae578a86ce6",
@@ -298,7 +298,7 @@
     "src/simulation/strategy-types.ts": "4b72b103d764fe27186bc237dfe64f44795d5f8137dfa4c8b1d03b551075cf49",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
-    "src/simulation/two-sided-battle.ts": "705a3bd03c5bc134b6aefcfe55aa0cfd6299c4cd06d9b01c7a588fcd6dbfb932",
+    "src/simulation/two-sided-battle.ts": "5142122fbcebd8f0f8c8bcf15299e9ec4617c803904ef966c0cf68b6e5d4cc9e",
     "src/simulation/two-sided-snapshot.ts": "858ec4fb18abd048242f4bac376be8bd47b1a80421158ad63c333f25425a864f",
     "src/simulation/two-sided-types.ts": "0762679b79672d7453a94c29dc81057d29cd99ce90d644928a55b63e0655bf07",
     "src/simulation/unit-acquisition.ts": "9a867e504678b2b8080fd4b0e33e58dae940515a1b2e8d63d9d3105e0f8606d2",
@@ -311,17 +311,17 @@
     "tests/fixtures/m5/oracle.g2.cjs": "6559c78c13bdbab9a7930435b23388afccc45a2f05dcfb673e84a890c555bd31",
     "tests/fixtures/record-g2-4b-herald.cjs": "873371f3572b960bd564f67face0d65bc57f48d9d38608121895462527806654"
   },
-  "baseCommit": "a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+  "baseCommit": "bc49cac5deb74d6388f6d8c0eebb85ba15a9027e",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:212df9c7",
-    "lootReplayDigest": "fnv1a32-utf16:498a92d1",
-    "rulesVersion": "s13-g2-3-v12",
-    "contentVersion": "s13-14.24b-g2-3-v12",
+    "contentDigest": "fnv1a32-utf16:a1fc26ff",
+    "lootReplayDigest": "fnv1a32-utf16:c7ddc223",
+    "rulesVersion": "s13-g2-3-v13",
+    "contentVersion": "s13-14.24b-g2-3-v13",
     "schemaVersion": 7,
     "previousContentDigest": "fnv1a32-utf16:4bf7fe15",
     "previousLootReplayDigest": "fnv1a32-utf16:c11d2d0c",
     "traceHashes": {
-      "state": "39354b308e1d132f365b7364b0ff09d1c212857493c760878e15db67b67c1117",
+      "state": "0305cc33d04c9ac7c4da26dbf1ec545296875811cd60989f292fe8c58a386c1d",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
     },
@@ -333,7 +333,7 @@
       "stateHash": "fnv1a32-utf16:1db5b9e9",
       "eventHash": "fnv1a32-utf16:cf452d32"
     },
-    "reason": "G2-4b release v12: Slow Cooker uses holder max HP; Bronze For Life counts all nine later S13 bronze traits."
+    "reason": "S13 augment/anomaly batch v13: P1-P4 add augments and anomalies to the offer pools."
   },
   "previousGoldenSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
   "driverSha256": "452742f12f9b5218847a8efc46fc2f9dd7b2b2b6d34a7c433c91da2d9cd0b3b5",
@@ -359,14 +359,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 695191,
-          "currentBytes": 697924,
+          "currentBytes": 698010,
           "previousSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27",
-          "currentSha256": "998d80799ff8a0045f4925d781032a858688ca5bfd5e1230853015eafa0addcf",
+          "currentSha256": "aac293a15c80384460485feb4e08e4ddbf629d5861351a96ce5d24eb4f981fda",
           "firstDifferentByte": 24
         },
         "states": 67,
-        "gzipSha256": "998d80799ff8a0045f4925d781032a858688ca5bfd5e1230853015eafa0addcf",
-        "stateUtf8Sha256": "81db43de30c71e2aa4ee6aa00fba172f24ecc2356686bfba9d20788cad630416",
+        "gzipSha256": "aac293a15c80384460485feb4e08e4ddbf629d5861351a96ce5d24eb4f981fda",
+        "stateUtf8Sha256": "f02a2875a2007665ff7c06a51ce32973f97a2b2bf7da3cb63c5019adb7f5a2c4",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "ec1132e524b71e6274bb0ca9ba67cf1fb75ee1e8325fdab2dc83e8fd6476dc27"
       },
@@ -1945,14 +1945,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 718824,
-          "currentBytes": 725095,
+          "currentBytes": 725177,
           "previousSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e",
-          "currentSha256": "541eab26a9ffc9c7dc45c9faa9897585192bf30bd25ae3d9575453a7d946ddeb",
+          "currentSha256": "7acbba1dd71981998167b81958787ca3f26e33475f2fe4ccfcc6aaf59658f25a",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "541eab26a9ffc9c7dc45c9faa9897585192bf30bd25ae3d9575453a7d946ddeb",
-        "stateUtf8Sha256": "3ac3a8bc60e019c7034d8b6eef3d99e39974590dbc896c95da98f620ecfb4819",
+        "gzipSha256": "7acbba1dd71981998167b81958787ca3f26e33475f2fe4ccfcc6aaf59658f25a",
+        "stateUtf8Sha256": "102df4b6c9fe718e02f01c91ba7a3007e28a927e5c93df2a2df4303e51cd5dc1",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "872b1a73abea7470bb2a5d884fd60c1fee42e07d97950a256a8e75508e23ca0e"
       },
@@ -6658,12 +6658,12 @@
       }
     }
   },
-  "candidateSha256": "44566029b280176acfc7c48adca6896b943a18aadf9f66d44d50d290795cbc4e",
+  "candidateSha256": "71931b3e60586c64626d599cb95d98b5aa9bb62793de13d909bf74805b73365b",
   "goldenByteEvidence": {
     "previousBytes": 99708,
     "currentBytes": 99701,
     "previousSha256": "aa54c5e51a7df820ba6892145372132f5804461c2a741ba65a057193ede29df8",
-    "currentSha256": "44566029b280176acfc7c48adca6896b943a18aadf9f66d44d50d290795cbc4e",
+    "currentSha256": "71931b3e60586c64626d599cb95d98b5aa9bb62793de13d909bf74805b73365b",
     "firstDifferentByte": 16
   }
 }

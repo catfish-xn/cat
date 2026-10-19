@@ -1,13 +1,13 @@
 {
-  "contentDigest": "fnv1a32-utf16:212df9c7",
-  "lootReplayDigest": "fnv1a32-utf16:498a92d1",
-  "rulesVersion": "s13-g2-3-v12",
-  "contentVersion": "s13-14.24b-g2-3-v12",
+  "contentDigest": "fnv1a32-utf16:a1fc26ff",
+  "lootReplayDigest": "fnv1a32-utf16:c7ddc223",
+  "rulesVersion": "s13-g2-3-v13",
+  "contentVersion": "s13-14.24b-g2-3-v13",
   "schemaVersion": 7,
   "previousContentDigest": "fnv1a32-utf16:4bf7fe15",
   "previousLootReplayDigest": "fnv1a32-utf16:c11d2d0c",
   "traceHashes": {
-    "state": "39354b308e1d132f365b7364b0ff09d1c212857493c760878e15db67b67c1117",
+    "state": "0305cc33d04c9ac7c4da26dbf1ec545296875811cd60989f292fe8c58a386c1d",
     "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
     "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
   },
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "G2-4b release v12: Slow Cooker uses holder max HP; Bronze For Life counts all nine later S13 bronze traits."
+  "reason": "S13 augment/anomaly batch v13: P1-P4 add augments and anomalies to the offer pools."
 }

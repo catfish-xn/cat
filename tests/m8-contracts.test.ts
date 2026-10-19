@@ -70,7 +70,7 @@ describe('M8 B2 data expressiveness (not combat execution)', () => {
   it('public loot and compatibility exclude hidden plans and fake grant receipts', () => {
     const retained: RevealedDropView = {orbId:'orb',entryOrdinal:0, dropId: 'd1', encounterId: 'e1', sourceUnitId: 'n1', roundId: 'r-6-7', payload: { kind: 'unit', definitionId: 'irelia', quantity: 1 }, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
     const loot: LootView = { revealedOrbs: [], roundId: 'r-6-7', revealedDrops: [retained], pendingClaims: [], canContinue: false, reason: 'game-over', pendingChoice: null };
-    const legacy: CompatibilityView = { status: 'legacy-preserved', currentRulesVersion: 's13-g2-3-v12', fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' };
+    const legacy: CompatibilityView = { status: 'legacy-preserved', currentRulesVersion: 's13-g2-3-v13', fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' };
     expect(loot.revealedDrops[0].receiptId).toBeNull();
     expect(legacy.canReplay).toBe(false);
     // @ts-expect-error A future public loot view cannot expose an unrevealed plan.

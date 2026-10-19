@@ -41,10 +41,10 @@ it('binds G2-4b to fresh public rules and preserved G2-3 byte evidence', () => {
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
-  // Release v12 (after the v11 support anvil) moves both version strings and the content digest off G2-3 v10.
+  // Release v13 (after v11 support anvil and v12 fixes) moves both version strings and the content digest off G2-3 v10.
   expect(recorded.contentDigest).not.toBe(previous.contentDigest);
-  expect(recorded.rulesVersion).toBe('s13-g2-3-v12');
-  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v12');
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v13');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v13');
   expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
   expect(recorded.contentVersion).not.toBe(previous.contentVersion);
   expect(recorded.previousContentDigest).toBe(previous.contentDigest);
@@ -94,6 +94,9 @@ it('rejects each old release identity without migration shortcuts', () => {
   // v11 (support anvil) version strings are superseded by v12.
   expect(() => restoreMatch({ ...fresh, rulesVersion: 's13-g2-3-v11' })).toThrow();
   expect(() => restoreMatch({ ...fresh, contentVersion: 's13-14.24b-g2-3-v11' })).toThrow();
+  // v12 (augment/anomaly fixes) version strings are superseded by v13.
+  expect(() => restoreMatch({ ...fresh, rulesVersion: 's13-g2-3-v12' })).toThrow();
+  expect(() => restoreMatch({ ...fresh, contentVersion: 's13-14.24b-g2-3-v12' })).toThrow();
 });
 for (const build of ['cannon', 'sniper']) {
   const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
