@@ -252,3 +252,62 @@ node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-loca
 合成测试新增 `tests/assets3d-extract.test.ts`，覆盖四种编码、多段 subchunk、跨块索引/条目拼接、哈希、合并保留、重复跳过、缺块/TOC 报告、逐条失败和路径拒绝；batch 测试先从合成缓存解包，再直接调用真实 build-all 管线。原有材质绑定、动作语义、源 JSON 与独立参考限制仍如上，不由本步骤补齐。
 
 本次交付检查时尚无 `out/fetch-report.json`，未执行完整 Jinx/Vi 写入回归或 60 单位全量运行。现有缓存只读抽查中，Jinx/Vi 的 121 个 type 4 条目通过 TOC 段哈希与解包长度检查，其中 39 个可与既有提取记录对照的 SHA-256 全部一致；另 32 个条目因缺块未验证。这项抽查不等于完整单位回归，下载完成后仍应执行上面的 `--units jinx,vi --verify-existing`。
+
+## D7 第 3 步（d）：PROP 材质与动作绑定
+
+实现和验收结果见 [D7-STEP3D-REPORT.md](D7-STEP3D-REPORT.md)。两批为 27/27、33/33 成功。成功表示转换和结构检查通过；动作缺项及材质近似仍单独报告。
+
+### 输入和离线准备
+
+除 SKN/SKL/.anm/.tex/.dds 外，还须读取以下 PROP 条目，均按 extraction.json 的长度和 SHA-256 验证：
+
+- data/characters/<sourceName>/skins/skin0.bin，存在时还读取 skins/root.bin。
+- **characters/<sourceName>**：没有扩展名，但也是 PROP；StaticMaterialDef 通常在此，不能只按 .bin 后缀收集。
+- 皮肤链接的 animations/skin*.bin，按 AnimationGraphData link 找图，不固定 skin0（Amumu 使用 skin1）。
+- bin 引用的共享贴图及动画，可跨单位和目录。
+
+已有缓存时，下列操作只读本地。先按新计划提取角色主 PROP，再做第二轮计划，从已提取 bin 补充直接共享依赖：
+
+~~~powershell
+node scripts/assets3d/plan-fetch.mjs --out assets3d-local/out/bin-plan --force
+node scripts/assets3d/extract-from-chunks.mjs --plan assets3d-local/out/bin-plan/fetch-plan.json --units all --cost 1,2,3,4,5 --out assets3d-local/out/bin-extract
+node scripts/assets3d/plan-fetch.mjs --out assets3d-local/out/bin-plan --force
+node scripts/assets3d/extract-from-chunks.mjs --plan assets3d-local/out/bin-plan/fetch-plan.json --units all --cost 1,2,3,4,5 --out assets3d-local/out/bin-extract
+node scripts/assets3d/build-all.mjs --units all --cost 1,2 --out assets3d-local/out/batch-cost12 --force
+node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-local/out/batch-cost345 --force
+~~~
+
+未缓存依赖仍报告 missingChunks，不自动下载。第二轮只解析已存在的 bin，列出 unresolvedReferences，不宣称完整传递闭包。
+
+### 解析 API 与预算
+
+bin.mjs 是纯 Node、零依赖模块：
+
+~~~js
+parseBin(buffer, { maxBytes, maxDepth, maxValues, maxCount, maxStringBytes })
+// => { version, patch, linked, entries: [{ hash, type, fields }], patches }
+// fields: [{ hash, type, value }]
+binField(object, 'skinMeshProperties')
+binIs(object, 'StaticMaterialDef')
+fnv1a('mAnimationFilePath')
+~~~
+
+默认预算：文件 32 MiB、深度 64、总 value 1,000,000、单个计数 100,000、累计字符串 4 MiB。所有 length 块限制子边界并检查精确消费，计数在分配前检查。支持 14.24 的 PROP v1–3 和 PTCH(1,0) 包装、patch records。支持类型 0–18 和 0x80–0x87：整数（64 位为 bigint）、布尔、float/vector/matrix、RGBA、严格 UTF-8 字符串、hash/link、64 位 WAD path hash、list/list2、pointer/embed、option/map、flag。
+
+未知类型/版本、截断、尾随字节、非法 option/bool、非有限数及超预算均明确失败。字段与类查询用小写 FNV-1a；只需源码中的少量字段名，不要求外部字典。未知字段和类保留原 hash，不猜名字，也不跳过未知类型。hash/link 为 {kind, hash}，map 为 {keyType, valueType, entries}，NULL pointer 为 null。PTCH 保留 patch 数据，但绑定器拒绝尚未应用的 patch，避免静默忽略。类型编号针对 14.24，不做旧补丁时期 enum 重编号兼容。
+
+### 材质和隐藏部件
+
+skinBindings(documents, submeshNames) 返回 mesh/skeleton、textures、solidMaterials、hidden、animationGraphHash。按 skinMeshProperties 主 Material/texture 及 materialOverride 绑定。Material 从文档组解析 StaticMaterialDef，按 Diffuse_Texture/DiffuseTexture、basecolor/albedo sampler 优先级选贴图。未知材质不自动用白图兜底。
+
+initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构建依赖，源顶点缓冲仍保留。没有漫反射 sampler、但有 Glass_Color1 的程序化玻璃使用源色近似，并明确标注 solidMaterials.reason；不声称还原 shader、透明度和动态驱动。
+
+旧 jinx/vi textures 表只作 step2Mapping 对照。Jinx 两项路径一致；Vi 初始 TierUpgrade 用 base 贴图，旧表的 skin0 贴图属于 RebelStatus，报告保留 matches:false。当前构建候选以 bin 初始状态为准；若要强制旧外观，需要显式兼容政策。完整哈希和差异见验收记录。
+
+### 动作和报告
+
+unit-map.json 新增保留键 `$animationRules`，其余键仍是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；先按公共图别名，再按文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段显式选择仍须在图中找到；其余单位不增加硬编码。
+
+批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用 v1。
+
+真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。

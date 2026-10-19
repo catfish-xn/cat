@@ -1268,5 +1268,81 @@
       "run": "animations/run.tft_set13.anm",
       "spell": "animations/spell.tft_set13.anm"
     }
+  },
+  "$animationRules": {
+    "idle": {
+      "aliases": [
+        "Idle1",
+        "Idle"
+      ],
+      "tokens": [
+        "idle1",
+        "idle"
+      ]
+    },
+    "move": {
+      "aliases": [
+        "Run",
+        "Run1",
+        "Run_Base",
+        "Walk"
+      ],
+      "tokens": [
+        "run",
+        "run1",
+        "walk"
+      ]
+    },
+    "attack": {
+      "aliases": [
+        "Attack1",
+        "Attack"
+      ],
+      "tokens": [
+        "attack1",
+        "attack"
+      ]
+    },
+    "cast": {
+      "aliases": [
+        "Spell1",
+        "Spell",
+        "Spell4",
+        "Spell4_Hit"
+      ],
+      "tokens": [
+        "spell1",
+        "spell4_hit",
+        "spell",
+        "cast"
+      ]
+    },
+    "hit": {
+      "aliases": [
+        "Hit",
+        "Hit1",
+        "Hurt"
+      ],
+      "tokens": [
+        "hit1",
+        "hurt",
+        "hit"
+      ],
+      "excludeTokens": [
+        "spell",
+        "attack",
+        "cast"
+      ]
+    },
+    "death": {
+      "aliases": [
+        "Death",
+        "Death1"
+      ],
+      "tokens": [
+        "death",
+        "death1"
+      ]
+    }
   }
 }

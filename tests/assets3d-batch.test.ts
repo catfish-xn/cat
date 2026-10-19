@@ -73,6 +73,26 @@ describe('isolated per-unit batch build', () => {
     const raw = new Map<string, Buffer>([[`${config.base}/${config.mesh}`, f.mesh], [`${config.base}/${config.skeleton}`, f.rig],
       [`${config.base}/${config.textures.Body}`, f.texture]]);
     for (const path of Object.values(config.animationFiles) as string[]) raw.set(`${config.base}/${path}`, f.anm);
+    const uint = (n: number, width = 4) => { const b = Buffer.alloc(width); b.writeUIntLE(n, 0, width); return b; };
+    const hash = (name: string) => { let h = 0x811c9dc5; for (const c of Buffer.from(name.toLowerCase())) h = Math.imul(h ^ c, 0x01000193) >>> 0; return h; };
+    const text = (name: string) => Buffer.concat([uint(Buffer.byteLength(name), 2), Buffer.from(name)]);
+    const block = (b: Buffer) => Buffer.concat([uint(b.length), b]);
+    const field = (name: string, type: number, bytes: Buffer) => Buffer.concat([uint(hash(name)), uint(type, 1), bytes]);
+    const fields = (...b: Buffer[]) => Buffer.concat([uint(b.length, 2), ...b]);
+    const embed = (name: string, ...b: Buffer[]) => Buffer.concat([uint(hash(name)), block(fields(...b))]);
+    const graphName = 'Characters/TFT13_Vi/Animations/Skin0', graphPath = 'data/characters/tft13_vi/animations/skin0.bin';
+    const prop = (type: string, name: string, body: Buffer, linked: string[] = []) => Buffer.concat([Buffer.from('PROP'), uint(3), uint(linked.length),
+      ...linked.map(text), uint(1), uint(hash(type)), block(Buffer.concat([uint(hash(name)), body]))]);
+    raw.set('data/characters/tft13_vi/skins/skin0.bin', prop('TftSkinCharacterDataProperties', 'skin', fields(
+      field('skinMeshProperties', 0x83, embed('SkinMeshDataProperties',
+        field('simpleSkin', 16, text(`${config.base}/${config.mesh}`)), field('skeleton', 16, text(`${config.base}/${config.skeleton}`)),
+        field('texture', 16, text(`${config.base}/${config.textures.Body}`)))),
+      field('skinAnimationProperties', 0x83, embed('SkinAnimationProperties', field('animationGraphData', 0x84, uint(hash(graphName)))))
+    ), [graphPath]));
+    const pairs = Object.entries(config.animations).map(([alias, name]) => Buffer.concat([uint(hash(alias)), embed('AtomicClipData',
+      field('mAnimationResourceData', 0x83, embed('AnimationResourceData', field('mAnimationFilePath', 16, text(`${config.base}/${config.animationFiles[name as string]}`)))))]));
+    raw.set(graphPath, prop('AnimationGraphData', graphName, fields(field('mClipDataMap', 0x86,
+      Buffer.concat([uint(17, 1), uint(0x82, 1), block(Buffer.concat([uint(pairs.length), ...pairs]))])))));
     const wadName = 'DATA/synthetic.wad.client', wad = Buffer.alloc(272 + raw.size * 32 + [...raw.values()].reduce((n, b) => n + b.length, 0));
     wad.write('RW'); wad[2] = 3; wad[3] = 4; wad.writeUInt32LE(raw.size, 268);
     let offset = 272 + raw.size * 32, index = 0;
@@ -130,11 +150,13 @@ describe('isolated per-unit batch build', () => {
     const definitions = await unitDefinitions();
     const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
     expect(Object.keys(definitions)).toHaveLength(60);
-    expect(Object.keys(map).sort()).toEqual(Object.keys(definitions).sort());
+    const { $animationRules: rules, ...unitMap } = map;
+    expect(Object.keys(unitMap).sort()).toEqual(Object.keys(definitions).sort());
+    expect(Object.keys(rules)).toEqual(['idle', 'move', 'attack', 'cast', 'hit', 'death']);
     expect(selectUnits(definitions, 'all', '1,2')).toHaveLength(27);
-    for (const value of Object.values(map) as Array<{ missing?: boolean; base: string; mesh: string; skeleton: string; sourceName: string }>) {
+    for (const value of Object.values(unitMap) as Array<{ missing?: boolean; base: string; mesh: string; skeleton: string; sourceName: string }>) {
       if (value.missing) continue;
-      expect(value.base).toBe(`assets/characters/${value.sourceName}/skins/base`);
+      expect(value.base).toBe('assets/characters/' + value.sourceName + '/skins/base');
       expect(value.mesh).toMatch(/\.skn$/); expect(value.skeleton).toMatch(/\.skl$/);
       expect(JSON.stringify(value)).not.toMatch(/https?:|data:|\.\.\//);
     }

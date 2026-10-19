@@ -8,6 +8,19 @@ import { readRman, readCachedRange, chunksForRange } from './rman.mjs';
 import { readWadIndex } from './wad.mjs';
 import { safeInputPath, safeOutputPath, writeOutputFile } from './safe-path.mjs';
 import { unitDefinitions } from './runtime.mjs';
+import { parseBin } from './bin.mjs';
+export function propertyReferences(bytes) {
+    const stack = [parseBin(bytes)], references = new Set();
+    while (stack.length) {
+        const value = stack.pop();
+        if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|bin)$/i.test(value)) references.add(value);
+        else if (value && typeof value === 'object') stack.push(...Object.values(value));
+    }
+    return [...references];
+}
+export function characterForPath(path) {
+    return path?.match(/^(?:(?:assets|data)\/)?characters\/([^/]+)(?:\/|$)/)?.[1];
+}
 export function summarizeRanges(file, entries) {
     const unique = new Map();
     for (const e of entries)
@@ -54,7 +67,7 @@ export async function planFetch({ source = 'assets3d-local/trial/local', out = '
     for (const { name, file, indexBytes, index } of archives) {
         const selected = [], shared = [];
         for (const entry of index) {
-            const path = paths.get(entry.hash) ?? null, character = path?.match(/^(?:assets|data)\/characters\/([^/]+)\//)?.[1], id = ownership.get(character);
+            const path = paths.get(entry.hash) ?? null, character = characterForPath(path), id = ownership.get(character);
             const e = { ...entry, path, unitId: id ?? null, chunkIds: chunksForRange(file, entry.offset, entry.compressedSize).map(c => c.id) };
             // All non-unit entries are retained as conservative shared dependency candidates.
             // Unknown hashes remain visible, never omitted merely because the dictionary lacks them.
@@ -97,32 +110,44 @@ export async function planFetch({ source = 'assets3d-local/trial/local', out = '
         let source;
         try { source = JSON.parse(await readFile(await safeInputPath(jsonRoot, join(jsonRoot, `${id}.json`)), 'utf8')); }
         catch (error) { if (error.code !== 'ENOENT') throw error; }
+        const references = new Set(), entries = new Set(u.entries.map(e => `${e.wad}:${e.hash}`));
+        u.sourceBinsAvailable = [];
+        // A second offline planning pass after extraction discovers cross-unit
+        // dependencies without needing CDragon JSON for every champion.
+        for (const entry of u.entries.filter(e => e.path === `characters/${u.sourceName}` || e.path?.endsWith('.bin'))) {
+            const path = join(root, 'extracted', entry.path);
+            try {
+                const bytes = await readFile(await safeInputPath(root, path));
+                for (const ref of propertyReferences(bytes)) references.add(ref);
+                u.sourceBinsAvailable.push(entry.path);
+            } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        }
         if (source) {
             u.sourceJsonAvailable = true;
-            const stack = [source], references = new Set(), entries = new Set(u.entries.map(e => `${e.wad}:${e.hash}`));
+            const stack = [source];
             while (stack.length) {
                 const value = stack.pop();
                 if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|bin)$/i.test(value)) references.add(value);
                 else if (value && typeof value === 'object') stack.push(...Object.values(value));
             }
-            for (const ref of [...references].sort()) {
-                const matches = byCanonical.get(ref.toLowerCase().replaceAll('.tft_set13', ''));
-                if (!matches) { u.unresolvedReferences.push(ref); continue; }
-                for (const entry of matches) if (!entries.has(`${entry.wad}:${entry.hash}`)) {
-                    entries.add(`${entry.wad}:${entry.hash}`);
-                    u.entries.push({ ...entry, dependency: true });
-                }
-            }
-            u.sourceReferences = references.size;
         }
+        for (const ref of [...references].sort()) {
+            const matches = byCanonical.get(ref.toLowerCase().replaceAll('.tft_set13', ''));
+            if (!matches) { u.unresolvedReferences.push(ref); continue; }
+            for (const entry of matches) if (!entries.has(`${entry.wad}:${entry.hash}`)) {
+                entries.add(`${entry.wad}:${entry.hash}`);
+                u.entries.push({ ...entry, dependency: true });
+            }
+        }
+        u.sourceReferences = references.size;
         for (const archive of archives) u.byWad[archive.name] = summarizeRanges(archive.file, u.entries.filter(e => e.wad === archive.name));
         u.summary = { entries: u.entries.length, downloadBytes: Object.values(u.byWad).reduce((s, w) => s + w.downloadBytes, 0) };
         if (!u.entries.length)
             throw new Error(`unit-missing-index:${u.sourceName}`);
     }
     const report = { schemaVersion: 1, sourceManifest: { path: '14.24.manifest', sha256: createHash('sha256').update(raw).digest('hex') }, unitIds: Object.keys(units), costCounts: [1, 2, 3, 4, 5].map(cost => Object.values(units).filter(u => u.cost === cost).length),
-        policy: 'Offline conservative plan: every entry in the two TFT WADs is included, partitioned into unit-owned paths and shared candidates. Available unit source JSON adds directly referenced entries to that unit summary; unresolved references remain listed. No form-variant unit IDs. Per-unit sizes exclude remaining shared candidates and may overlap; use global deduplicated chunk total for downloads.',
-        limitations: ['Cross-WAD references cannot be proven complete for units without their source BIN/JSON. Available JSON unresolvedReferences list dependencies outside the two planned WADs or absent from the dictionaries; these have no invented byte estimate. Shared candidates include unused content; this is a conservative candidate plan, not an exact transitive dependency closure.'],
+        policy: 'Offline conservative plan: every entry in the two TFT WADs is included, partitioned into unit-owned paths and shared candidates. Available unit PROP BINs and source JSON add directly referenced entries to that unit summary; unresolved references remain listed. No form-variant unit IDs. Per-unit sizes exclude remaining shared candidates and may overlap; use global deduplicated chunk total for downloads.',
+        limitations: ['Cross-WAD references cannot be proven complete for units without their source BIN/JSON. unresolvedReferences lists dependencies outside the two planned WADs or absent from the dictionaries; these have no invented byte estimate. Shared candidates include unused content; this is a conservative candidate plan, not an exact transitive dependency closure.'],
         units, wads, chunks, totals: { units: Object.keys(units).length, entries: wads.reduce((s, w) => s + w.entries.length, 0), chunks: chunks.length, downloadBytes: chunks.reduce((s, c) => s + c.size, 0), missingCachedChunks: missingCache.size, additionalCachedDownloadBytes: chunks.filter(c => missingCache.has(c.id)).reduce((s, c) => s + c.size, 0) } };
     if (write)
         await writeOutputFile(join(output, 'fetch-plan.json'), `${JSON.stringify(report, null, 2)}\n`, { force });

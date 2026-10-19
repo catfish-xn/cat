@@ -56,11 +56,72 @@ function fixtures() {
     const png = encodePng({ width: 1, height: 1, rgba: Buffer.from([255, 0, 0, 255]) });
     return { mesh, rig, anm, png };
 }
+function locatorRig() {
+    const names = ['root', 'Locator', 'LOCATOR'], bytes = names.reduce((n, s) => n + Buffer.byteLength(s) + 1, 0);
+    const rig = Buffer.alloc(368 + bytes); rig.writeUInt32LE(rig.length); rig.writeUInt32LE(0x22fd4fc3, 4);
+    rig.writeUInt16LE(3, 14); rig.writeUInt32LE(2, 16); rig.writeInt32LE(64, 20); rig.writeInt32LE(364, 28);
+    rig.writeInt16LE(0, 364); rig.writeInt16LE(1, 366);
+    let nameAt = 368;
+    names.forEach((name, i) => {
+        const at = 64 + i * 100; rig.writeUInt16LE(i, at + 2); rig.writeInt16LE(i === 0 ? -1 : 0, at + 4);
+        rig.writeUInt32LE(i === 0 ? 123 : 77, at + 8);
+        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1].forEach((v, k) => rig.writeFloatLE(v, at + 16 + k * 4));
+        rig.writeInt32LE(nameAt - (at + 96), at + 96); rig.write(name + '\0', nameAt); nameAt += name.length + 1;
+    });
+    return rig;
+}
+function threeTrackAnm(original: Buffer, hashes: number[]) {
+    const b = Buffer.alloc(118 + hashes.length * 4 + hashes.length * 12); original.copy(b, 0, 0, 118);
+    b.writeUInt32LE(hashes.length, 28); b.writeUInt32LE(118 + hashes.length * 4 - 12, 60);
+    hashes.forEach((h, j) => b.writeUInt32LE(h, 118 + j * 4));
+    for (let f = 0; f < 2; f++) for (let j = 0; j < hashes.length; j++) b.writeUInt16LE(f + 1, 118 + hashes.length * 4 + (f * hashes.length + j) * 6);
+    return b;
+}
 function converted() {
     const f = fixtures();
     return makeModel(f.mesh, f.rig, [{ name: 'source_idle', bytes: f.anm }], { Body: f.png });
 }
 describe('raw skinned GLB assembly', () => {
+    it('retains bind pose for ambiguous unweighted leaf locators, rejects deforming ambiguity, and clears zero-weight indices', () => {
+        const f = fixtures(), rig = locatorRig(), anm = threeTrackAnm(f.anm, [123, 77, 77]);
+        // Second influence points to a valid nonzero joint, but has zero weight.
+        f.mesh[158 + 13] = 1;
+        const result = makeModel(f.mesh, rig, [{ name: 'idle', bytes: anm }], { Body: f.png });
+        const glb = readGlb(result.glb);
+        expect(result.report.animations[0].bindPoseLocatorHashes).toEqual(['4d']);
+        expect(glb.document.animations[0].channels).toHaveLength(3);
+        expect(readAccessor(glb, glb.document.meshes[0].primitives[0].attributes.JOINTS_0)[0]).toEqual([0, 0, 0, 0]);
+        expect(validateModel(result.glb).passed).toBe(true);
+        f.mesh[158 + 12] = 1;
+        expect(() => makeModel(f.mesh, rig, [{ name: 'idle', bytes: anm }], { Body: f.png })).toThrow('ambiguous-deforming-animation-bone');
+    });
+    it('reports omission of tracks whose source bone is absent from this skin rig', () => {
+        const f = fixtures(), anm = threeTrackAnm(f.anm, [123, 456]);
+        const result = makeModel(f.mesh, f.rig, [{ name: 'idle', bytes: anm }], { Body: f.png });
+        expect(result.report.animations[0]).toMatchObject({ omittedUnboundTracks: 3, omittedBoneHashes: ['1c8'] });
+        expect(readGlb(result.glb).document.animations[0].channels).toHaveLength(3);
+    });
+
+    it('reconstructs zero normals from winding, zeros unused joint indices, and omits declared hidden primitives', () => {
+        const f = fixtures();
+        for (let i = 0; i < 3; i++) f.mesh.fill(0, 158 + i * 52 + 32, 158 + i * 52 + 44);
+        const result = makeModel(f.mesh, f.rig, [], { Body: f.png }), p = readGlb(result.glb);
+        expect(readAccessor(p, p.document.meshes[0].primitives[0].attributes.NORMAL)).toEqual([[0, 0, 1], [0, 0, 1], [0, 0, 1]]);
+        expect(result.report.normalRepair).toEqual({ reconstructed: 3, isolatedFallback: 0 });
+        const hidden = readGlb(makeModel(f.mesh, f.rig, [], {}, { hiddenSubmeshes: ['Body'] }).glb);
+        expect(hidden.document.meshes[0].primitives).toEqual([]);
+    });
+    it('reports foreign animation tracks and rejects a clip with no matching rig tracks', () => {
+        const f = fixtures(); f.anm.writeUInt32LE(456, 118);
+        expect(() => makeModel(f.mesh, f.rig, [{ name: 'foreign', bytes: f.anm }], { Body: f.png })).toThrow('animation-has-no-rig-tracks');
+    });
+    it('uses an explicit procedural material approximation without inventing a texture', () => {
+        const f = fixtures(), factor = [0.2, 0.4, 0.6, 1];
+        const p = readGlb(makeModel(f.mesh, f.rig, [], {}, { solidMaterials: { Body: { factor } } }).glb);
+        expect(p.document.materials[0].pbrMetallicRoughness.baseColorFactor).toEqual(factor);
+        expect(p.document.images).toEqual([]);
+    });
+
     it.each([MAX_ANIMATION_FRAMES + 1, 1_000_000_000])('rejects a tiny compressed ANM declaring %s frames before creating the frame array', frames => {
         const f = fixtures(), anm = Buffer.alloc(128);
         anm.write('r3d2canm');

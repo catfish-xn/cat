@@ -7,7 +7,7 @@ export { MAX_ANIMATION_FRAMES, MAX_ACCESSOR_ELEMENTS, MAX_ANIMATION_ELEMENTS } f
 const mirrorVector = v => [-v[0], v[1], v[2]];
 const mirrorRotation = q => [q[0], -q[1], -q[2], q[3]];
 const quat = q => new Quaternion(...q).normalize().toArray();
-export function makeModel(skn, skl, animationSources, textures) {
+export function makeModel(skn, skl, animationSources, textures, { hiddenSubmeshes = [], solidMaterials = {} } = {}) {
     const mesh = inspectSkn(skn), rig = inspectSkl(skl), r = new BinaryReader(skn);
     const positions = [], normals = [], uv = [], joints = [], weights = [];
     const jointIndex = new Map(rig.joints.map((j, i) => [j.id, i]));
@@ -24,11 +24,28 @@ export function makeModel(skn, skl, animationSources, textures) {
             const id = jointIndex.get(rig.influences[indices[k]]);
             if (id === undefined && w[k] > 0)
                 throw new Error('invalid-skin-joint');
-            joints.push(id ?? 0);
+            joints.push(w[k] === 0 ? 0 : id ?? 0);
             weights.push(w[k] / sum);
         }
         normals.push(...new Vector3(...mirrorVector([r.f32(), r.f32(), r.f32()])).normalize().toArray());
         uv.push(r.f32(), r.f32());
+    }
+    // Reconstruct only zero source normals from adjacent triangles.
+    const zeroNormals = new Set();
+    for (let i = 0; i < mesh.vertices; i++)
+        if (normals.slice(i * 3, i * 3 + 3).every(n => n === 0)) zeroNormals.add(i);
+    const accumulated = new Map([...zeroNormals].map(i => [i, new Vector3()]));
+    for (let i = 0; i < mesh.triangles * 3 && zeroNormals.size; i += 3) {
+        const indices = [0, 2, 1].map(k => skn.readUInt16LE(mesh.indexOffset + (i + k) * 2));
+        if (!indices.some(v => zeroNormals.has(v))) continue;
+        const [a, b, c] = indices.map(v => new Vector3(...positions.slice(v * 3, v * 3 + 3)));
+        const normal = b.sub(a).cross(c.sub(a));
+        for (const v of indices) accumulated.get(v)?.add(normal);
+    }
+    let isolatedZeroNormals = 0;
+    for (const [i, n] of accumulated) {
+        if (!n.lengthSq()) { n.set(0, 1, 0); isolatedZeroNormals++; }
+        normals.splice(i * 3, 3, ...n.normalize().toArray());
     }
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < positions.length; i++) {
@@ -96,18 +113,18 @@ export function makeModel(skn, skl, animationSources, textures) {
     }
     doc.skins[0].inverseBindMatrices = accessor(ibm, 'MAT4');
     const embedded = new Map();
-    for (const s of mesh.submeshes) {
+    for (const s of mesh.submeshes.filter(s => !hiddenSubmeshes.includes(s.name))) {
         const png = textures[s.name];
-        if (!png)
+        if (!png && !solidMaterials[s.name])
             throw new Error(`missing-material-texture:${s.name}`);
-        if (!embedded.has(png)) {
+        if (png && !embedded.has(png)) {
             const image = doc.images.length;
             doc.images.push({ mimeType: 'image/png', bufferView: view(png) });
             doc.textures.push({ source: image, sampler: 0 });
             embedded.set(png, image);
         }
         const material = doc.materials.length;
-        doc.materials.push({ name: s.name, pbrMetallicRoughness: { baseColorTexture: { index: embedded.get(png) }, metallicFactor: 0, roughnessFactor: 1 } });
+        doc.materials.push({ name: s.name, pbrMetallicRoughness: { ...(png ? { baseColorTexture: { index: embedded.get(png) } } : { baseColorFactor: solidMaterials[s.name].factor }), metallicFactor: 0, roughnessFactor: 1 } });
         const idx = [];
         for (let i = s.startIndex; i < s.startIndex + s.indexCount; i += 3)
             idx.push(skn.readUInt16LE(mesh.indexOffset + i * 2), skn.readUInt16LE(mesh.indexOffset + (i + 2) * 2), skn.readUInt16LE(mesh.indexOffset + (i + 1) * 2));
@@ -118,11 +135,30 @@ export function makeModel(skn, skl, animationSources, textures) {
         const animation = decodeAnm(bytes), step = Math.fround(1 / animation.fps), count = animation.format === 'compressed' ? Math.round(animation.duration * animation.fps) : animation.tracks[0].keys.length;
         assertAnimationBudget(count, animation.tracks.reduce((sum, track) => sum + (track.path === 'rotation' ? 4 : 3), 0));
         const times = Array.from({ length: count }, (_, i) => Math.fround(i * step)), input = accessor(times, 'SCALAR', 5126, undefined, true), channels = [], samplers = [];
-        const byHash = new Map(rig.joints.map((j, i) => [j.nameHash, i + 1]));
+        const byHash = new Map(), ambiguous = new Set();
+        rig.joints.forEach((j, i) => {
+            if (byHash.has(j.nameHash)) ambiguous.add(j.nameHash);
+            byHash.set(j.nameHash, i + 1);
+        });
+        // Case-only duplicate locator names collide. Keep bind pose only for
+        // unweighted leaves; never guess a track for a deforming joint.
+        const usedJoints = new Set(joints.filter((_, i) => weights[i] > 0));
+        for (const hash of ambiguous) {
+            for (let i = 0; i < rig.joints.length; i++) {
+                const joint = rig.joints[i];
+                if (joint.nameHash === hash && (usedJoints.has(i) || rig.joints.some(j => j.parent === joint.id)))
+                    throw new Error('ambiguous-deforming-animation-bone');
+            }
+        }
+        const unboundTracks = animation.tracks.filter(t => !byHash.has(t.hash));
+        if (unboundTracks.length === animation.tracks.length) throw new Error('animation-has-no-rig-tracks');
+        const channelKeys = new Set();
         for (const track of animation.tracks) {
             const node = byHash.get(track.hash);
-            if (node === undefined)
-                throw new Error('animation-joint-not-in-rig');
+            if (node === undefined || ambiguous.has(track.hash)) continue;
+            const key = `${node}:${track.path}`;
+            if (channelKeys.has(key)) throw new Error('duplicate-deforming-animation-track');
+            channelKeys.add(key);
             let previous;
             const values = [];
             for (const time of times) {
@@ -140,10 +176,10 @@ export function makeModel(skn, skl, animationSources, textures) {
             channels.push({ sampler, target: { node, path: track.path } });
         }
         doc.animations.push({ name, channels, samplers });
-        animationReport.push({ name, format: animation.format, version: animation.version, sourceDuration: animation.duration, duration: times.at(-1), frames: count });
+        animationReport.push({ name, format: animation.format, version: animation.version, sourceDuration: animation.duration, duration: times.at(-1), frames: count, ...(ambiguous.size ? { bindPoseLocatorHashes: [...ambiguous].map(h => h.toString(16)) } : {}), ...(unboundTracks.length ? { omittedUnboundTracks: unboundTracks.length, omittedBoneHashes: [...new Set(unboundTracks.map(t => t.hash.toString(16)))] } : {}) });
     }
     doc.buffers[0].byteLength = byteOffset;
-    return { glb: writeGlb(doc, Buffer.concat(parts)), report: { vertices: mesh.vertices, triangles: mesh.triangles, bones: rig.bones, bbox: { min: min.map((n, k) => n + offset[k]), max: max.map((n, k) => n + offset[k]), height: max[1] - min[1] }, coordinateTransform: { mirror: 'X', translation: offset, originBasis: body ? 'Body bind-mesh minimum Y and XZ bounds center (prop submeshes retained)' : 'complete bind-mesh minimum Y and XZ bounds center', scale: 1, units: 'League native', forward: '+Z', up: '+Y' }, animations: animationReport } };
+    return { glb: writeGlb(doc, Buffer.concat(parts)), report: { vertices: mesh.vertices, triangles: mesh.triangles, bones: rig.bones, normalRepair: { reconstructed: zeroNormals.size, isolatedFallback: isolatedZeroNormals }, bbox: { min: min.map((n, k) => n + offset[k]), max: max.map((n, k) => n + offset[k]), height: max[1] - min[1] }, coordinateTransform: { mirror: 'X', translation: offset, originBasis: body ? 'Body bind-mesh minimum Y and XZ bounds center (prop submeshes retained)' : 'complete bind-mesh minimum Y and XZ bounds center', scale: 1, units: 'League native', forward: '+Z', up: '+Y' }, animations: animationReport } };
 }
 export function readAccessor({ document: d, binary: b }, index) {
     const a = d.accessors?.[index], v = d.bufferViews?.[a?.bufferView], size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a?.type], width = { 5121: 1, 5123: 2, 5125: 4, 5126: 4 }[a?.componentType];

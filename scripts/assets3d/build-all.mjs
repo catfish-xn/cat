@@ -40,7 +40,7 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
   const path = join(output, 'build-report.json');
   await safeOutputPath(path, { force });
   const report = { schemaVersion: 1, ready: false, phase: 'building', cost: cost ?? '1,2,3,4,5',
-    policy: 'Success means conversion/structural checks passed; runtime action mapping, materials, source JSON and independent reference coverage remain explicit. Each units/<id>/manifest.json uses that unit directory as its asset root.',
+    policy: 'Success means conversion/structural checks passed; source BIN action mapping and initial materials are resolved; source JSON and independent reference coverage remain explicit. Each units/<id>/manifest.json uses that unit directory as its asset root.',
     mapping: { mapped: 0, missing: [] }, units: {}, totals: { success: 0, failed: 0, missing: 0, artifactBytes: 0 } };
   const writeReport = () => writeOutputFileAtomic(path, `${JSON.stringify(report, null, 2)}\n`, { force: true });
   await writeReport();
@@ -61,12 +61,13 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
       const unit = result.units[id];
       entry.vertices = unit.vertices; entry.bones = unit.bones;
       const clips = unit.animations.map(a => a.name);
-      const mapped = Object.fromEntries(Object.entries(config.animations ?? {}).filter(([, name]) => clips.includes(name)));
+      const mapped = Object.fromEntries(Object.entries(unit.actionMapping ?? config.animations ?? {}).filter(([, name]) => clips.includes(name)));
       entry.animations = { clips, mapped, missing: ACTIONS.filter(action => !mapped[action]) };
       entry.textures = unit.textures; entry.materialTextureMappings = unit.materialTextureMappings;
       entry.particles = { available: unit.particles.available, reason: unit.particles.reason,
         ...(unit.particles.available ? unit.particles.counts : { mapped: null, skipped: null, rejected: null }) };
       entry.reference = unit.comparison;
+      entry.actionDecisions = unit.actionDecisions; entry.bindings = unit.bindings; entry.step2Mapping = unit.step2Mapping;
       entry.artifactBytes = result.totals.outBytes;
       entry.status = result.ready ? 'success' : 'failed';
       entry.reason = result.ready ? null : 'conversion-verification-failed';

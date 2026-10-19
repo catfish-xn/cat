@@ -5,6 +5,9 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { safeInputPath, safeOutputPath, writeOutputFile, withinRoot } from './safe-path.mjs';
 import { contracts, unitDefinitions } from './runtime.mjs';
+import { parseBin } from './bin.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset } from './bin-bindings.mjs';
+import { inspectSkn } from './inspect-source.mjs';
 import { makeModel, validateModel } from './model.mjs';
 import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
@@ -120,8 +123,39 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             particleSources[id] = null;
         }
     }
-    const requestedTextures = new Set([...recordMap.keys()].filter(p => selected.some(id => p.startsWith(`${map[id].base}/`)) && /\.(tex|dds)$/i.test(p)));
     const rawByCanonical = new Map([...recordMap.keys()].map(p => [canonical(p), p]));
+    const sourcePath = path => recordMap.has(path.toLowerCase()) ? path.toLowerCase() : rawByCanonical.get(canonicalAsset(path));
+    const resolvedUnits = {};
+    for (const id of selected) {
+        const config = map[id], docs = [];
+        for (const path of [`data/characters/${config.sourceName}/skins/skin0.bin`,
+            `data/characters/${config.sourceName}/skins/root.bin`, `characters/${config.sourceName}`]) {
+            if (recordMap.has(path)) docs.push(parseBin(await readRaw(path)));
+            else if (path.endsWith('/skins/skin0.bin')) throw new Error(`missing-source-record:${path}`);
+        }
+        const meshBytes = await readRaw(`${config.base}/${config.mesh}`);
+        const binding = skinBindings(docs, inspectSkn(meshBytes).submeshes.map(s => s.name));
+        for (const [kind, actual] of [['mesh', binding.mesh], ['skeleton', binding.skeleton]])
+            if (sourcePath(actual ?? '') !== `${config.base}/${config[kind]}`) throw new Error(`skin-${kind}-mapping-mismatch`);
+        const graphPaths = [...new Set(docs.flatMap(d => d.linked).filter(p => /\/animations\/.*\.bin$/i.test(p)).map(sourcePath))];
+        const graphDocs = [...docs];
+        for (const path of graphPaths) {
+            if (!path) throw new Error('missing-linked-animation-bin');
+            graphDocs.push(parseBin(await readRaw(path)));
+        }
+        if (graphDocs.some(d => d.patches.length)) throw new Error('unsupported-binding-bin-patches');
+        const graphEntries = graphDocs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
+        if (graphEntries.length !== 1) throw new Error('missing-or-ambiguous-animation-graph');
+        const clips = animationClips([{ entries: graphEntries, patches: [] }]), animation = selectAnimations(clips, map.$animationRules, config.animations);
+        resolvedUnits[id] = { binding, animation, clips, meshBytes };
+    }
+    const requestedTextures = new Set([...recordMap.keys()].filter(p => selected.some(id => p.startsWith(`${map[id].base}/`)) && /\.(tex|dds)$/i.test(p)));
+    for (const { binding } of Object.values(resolvedUnits)) for (const [material, path] of Object.entries(binding.textures)) {
+        if (binding.hidden.includes(material)) continue;
+        const raw = sourcePath(path);
+        if (!raw) throw new Error(`missing-bound-texture:${path}`);
+        requestedTextures.add(raw);
+    }
     const missingTextureReferences = new Set();
     for (const source of Object.values(particleSources)) {
         const stack = [source];
@@ -164,29 +198,37 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     }
     const models = {}, effects = {}, unitReports = {}, actionEffects = {}, effectIds = new Set();
     for (const id of selected) {
-        const config = map[id], animationSources = [];
-        const clips = batch && config.animationFiles ? config.animationFiles : Object.fromEntries(Object.values(config.animations).map(name => [name, config.animationPath.replace('{name}', name)]));
-        for (const [name, path] of Object.entries(clips))
-            animationSources.push({ name, bytes: await readRaw(`${config.base}/${path}`) });
+        const config = map[id], { binding, animation, clips, meshBytes } = resolvedUnits[id], animationSources = [];
+        for (const [name, path] of Object.entries(animation.files)) {
+            const raw = sourcePath(path);
+            if (!raw) throw new Error(`missing-animation-source:${path}`);
+            animationSources.push({ name, bytes: await readRaw(raw) });
+        }
         const materialTextures = {};
-        for (const [material, path] of Object.entries(config.textures))
-            materialTextures[material] = textures[`${config.base}/${path}`];
-        const result = makeModel(await readRaw(`${config.base}/${config.mesh}`), await readRaw(`${config.base}/${config.skeleton}`), animationSources, materialTextures), structure = validateModel(result.glb);
+        for (const [material, path] of Object.entries(binding.textures))
+            if (!binding.hidden.includes(material)) materialTextures[material] = textures[sourcePath(path)];
+        const result = makeModel(meshBytes, await readRaw(`${config.base}/${config.skeleton}`), animationSources, materialTextures, { hiddenSubmeshes: binding.hidden, solidMaterials: binding.solidMaterials }), structure = validateModel(result.glb);
         let reference, comparison = { available: false, reason: 'missing-reference-glb' };
         try {
             reference = await readFile(await safeInputPath(referenceRoot, join(referenceRoot, id, 'rigged.glb')));
-            comparison = { available: true, ...compareModels(result.glb, reference, config.animations, result.report.coordinateTransform) };
+            comparison = { available: true, ...compareModels(result.glb, reference, animation.mapped, result.report.coordinateTransform) };
         } catch (error) { if (!batch || error.code !== 'ENOENT') throw error; }
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        models[id] = { path, animations: config.animations };
+        models[id] = { path, animations: animation.mapped };
         const converted = convertParticles(particleSources[id] ?? {}, p => textureByCanonical.get(canonical(p)), parseParticleDocument);
         const particleOutput = await writeParticleEffects(id, converted, config.effectPatterns, { write, remove }, effectIds), systems = particleOutput.systems;
         Object.assign(effects, particleOutput.effects);
         actionEffects[id] = particleOutput.actionEffects;
         unitReports[id] = { ...result.report, bytes: result.glb.length, sha256: sha256(result.glb), referenceSha256: reference ? sha256(reference) : null, structure, comparison, gltfValidation: gltfValidation ? { version: validator.version(), ...gltfValidation.issues } : { available: false }, particles: { available: particleSources[id] !== null, reason: particleSources[id] === null ? 'missing-source-json' : null, counts: converted.counts, emitters: converted.emitters, systems }, textures: textureReports.filter(t => t.status === 'converted').length,
-            materialTextureMappings: Object.keys(config.textures).length };
+            materialTextureMappings: Object.keys(binding.textures).length,
+            bindings: binding, actionMapping: animation.mapped, actionDecisions: animation.decisions,
+            graphClips: clips.map(c => ({ ...c, hash: c.hash.toString(16) })),
+            step2Mapping: Object.keys(config.textures).length ? Object.fromEntries(Object.entries(config.textures).map(([name, path]) => [name, {
+                expected: `${config.base}/${path}`, actual: binding.textures[name] ?? null,
+                matches: canonicalAsset(binding.textures[name] ?? '') === canonicalAsset(`${config.base}/${path}`)
+            }])) : null };
     }
     const manifest = makeManifest(models, effects, assertManifest);
     await write('manifest.json', json(manifest));
