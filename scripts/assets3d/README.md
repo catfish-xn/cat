@@ -29,6 +29,8 @@ animation 描述不变。新增的只是贴图数据及材质引用，避免 D8 
 - `glb.mjs`：GLB 块/范围检查、确定性写出、嵌入 PNG、统计。
 - `inspect-source.mjs`：有界 SKN v4 / 现代 SKL 读取、ANM 格式识别；先核对文件长度再枚举。
 - `verify-source.mjs`：提取清单与实际输入逐文件核验。
+- `particle-inventory.mjs`：完整保留 CDTB 粒子源参数并列出 D8 v1 表达缺口；
+  输出明确标记 `renderable: false`，不是伪装成可渲染定义的近似结果。
 - `wad.mjs`：WAD 3.x 索引，以及未压缩/gzip/zstd 单条目解包；路径哈希由调用者显式传入。
   解压前限制输出大小，默认单条目 64 MiB，调用者可以明确设置其它预算。
   Node 24 内置 zstd；不提供内置 zstd 的 Node 22 可注入可信解码器，未注入则明确报错。
@@ -49,7 +51,12 @@ Khronos `gltf-validator@2.0.0-dev.3.10`：分别 0 error / 0 warning。
 这验证了文件结构，不代替实际动画与画面验收。
 
 合成单文件测试串行：`assets3d-glb` 5/5（246 ms），`assets3d-source` 6/6（221 ms），
-`assets3d-wad` 7/7（198 ms）。只运行新增文件及 typecheck，不跑全套。
+`assets3d-wad` 7/7（198 ms）、`assets3d-particle-inventory` 4/4（191 ms），累计 22 项。
+只运行新增文件及 typecheck，不跑全套。
+
+同版本 CommunityDragon 源 JSON 的无损盘点：金克丝 34 系统/252 发射器，蔚 11 系统/47 发射器。
+发射器数量不是最终渲染粒子数量。真实数据含位置、非等比尺寸、概率表、持续发射及特殊寿命等，
+D8 v1 未完整支持，不能丢弃字段后宣称还原。这些源 JSON 与盘点输出仍只在忽略目录。
 
 ## 尚未完成
 
