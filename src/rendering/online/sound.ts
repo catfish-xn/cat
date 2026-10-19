@@ -37,6 +37,8 @@ export class OnlineSound {
   private muted = readMuted();
   private readonly fileBase = readFileBase();
   private readonly failedFiles = new Set<SoundCue>();
+  /** External files still playing, so muting or disposing stops them at once. */
+  private readonly playing = new Set<HTMLAudioElement>();
   /** Last time each cue started, so a burst of identical changes plays once. */
   private readonly lastPlayed = new Map<SoundCue, number>();
   readonly played: SoundCue[] = [];
@@ -49,7 +51,8 @@ export class OnlineSound {
     document.addEventListener('pointerdown', this.unlock, true); document.addEventListener('keydown', this.unlock, true);
   }
   get isMuted(): boolean { return this.muted; }
-  setMuted(muted: boolean): void { this.muted = muted; writeMuted(muted); }
+  setMuted(muted: boolean): void { this.muted = muted; writeMuted(muted); if (muted) this.stopFiles(); }
+  private stopFiles(): void { for (const audio of this.playing) audio.pause(); this.playing.clear(); }
   play(cue: SoundCue): void {
     const now = performance.now();
     if (now - (this.lastPlayed.get(cue) ?? -Infinity) < 60) return;
@@ -58,7 +61,8 @@ export class OnlineSound {
     if (this.muted) return;
     if (this.fileBase && !this.failedFiles.has(cue)) {
       const audio = new Audio(`${this.fileBase}/${cue}.ogg`); audio.volume = VOLUME * 2;
-      audio.play().catch(() => { this.failedFiles.add(cue); this.synth(cue); });
+      this.playing.add(audio); audio.addEventListener('ended', () => this.playing.delete(audio), { once: true });
+      audio.play().catch(() => { this.playing.delete(audio); this.failedFiles.add(cue); if (!this.muted) this.synth(cue); });
       return;
     }
     this.synth(cue);
@@ -85,6 +89,6 @@ export class OnlineSound {
   }
   dispose(): void {
     document.removeEventListener('pointerdown', this.unlock, true); document.removeEventListener('keydown', this.unlock, true);
-    void this.context?.close().catch(() => undefined); this.context = null;
+    this.stopFiles(); void this.context?.close().catch(() => undefined); this.context = null;
   }
 }

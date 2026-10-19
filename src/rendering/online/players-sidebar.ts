@@ -102,10 +102,12 @@ export class PlayersSidebar {
     const foot = element('div', '', 'seat-foot');
     foot.append(element('span', seat.alive ? `${seat.hp}` : `第 ${seat.rank ?? '?'} 名`, 'seat-hp'), element('span', `Lv ${seat.level}`, 'seat-level'));
     if (hit.from > seat.hp) {
-      const lost = element('div', '', 'seat-lost'); lost.style.width = percent(hit.at === now ? hit.from : seat.hp); bar.append(lost);
-      if (hit.at === now) requestAnimationFrame(() => requestAnimationFrame(() => { lost.style.width = percent(seat.hp); }));
+      // A CSS animation with a negative delay resumes at the drop's real progress when a later push rebuilds the row.
+      const elapsed = `${-(now - hit.at)}ms`;
+      const lost = element('div', '', 'seat-lost'); lost.style.setProperty('--lost-from', percent(hit.from)); lost.style.setProperty('--lost-to', percent(seat.hp));
+      lost.style.animationDelay = elapsed; bar.append(lost);
       const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
-      chip.style.animationDelay = row.style.animationDelay = `${-(now - hit.at)}ms`; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
+      chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
     }
     bar.append(fill);
     row.append(head, bar, foot); return row;
