@@ -16,6 +16,8 @@
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
+import { G23_ANOMALY_SOURCE } from '../simulation/content/g2-3-anomaly-source';
+import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
@@ -120,6 +122,20 @@ export function anomalyDisplayName(id: string): string {
   const api = g23AnomalyApiName(id);
   return (api ? ALL_ANOMALIES.find(row => row.apiName === api)?.zh : undefined)
     ?? (Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined) ?? '未知异常';
+}
+/**
+ * Anomaly player text: the 14.24 zh_cn client description with the source values filled in (`@Key*100@` is the source
+ * fraction shown as a percent, as the client does), else the content description. The content `description` of G2-3
+ * anomalies is the English client string and stays as it is (it is part of the content digest).
+ */
+export function anomalyPlayerDescription(id: string): string {
+  const sources: Readonly<Record<string, { readonly zhDescription: string; readonly values: Readonly<Record<string, number>> }>> = G23_ANOMALY_SOURCE;
+  const source = Object.hasOwn(sources, id) ? sources[id] : undefined;
+  if (!source) return Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].description : '';
+  const values: Record<string, number> = {};
+  for (const [key, value] of Object.entries(source.values)) { values[key] = value; values[`${key}*100`] = value * 100; }
+  // `%i:scale…%` are inline stat icons next to the stat's own word; dropped so the word is not repeated.
+  return fillAbilityTemplate(source.zhDescription.replace(/%i:[A-Za-z]+%/g, ''), values).text;
 }
 /** The client shows every anomaly with the one shared anomaly icon (no per-anomaly icon exists in 14.24). */
 export const anomalyIconUrl = (): string | null => assetUrl('anomalies', 'TFT13_GoopItem_Icon');

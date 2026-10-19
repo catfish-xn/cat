@@ -11,16 +11,19 @@
  *
  * Run: npx esbuild tests/server/bench/replay-cpu.ts --bundle --platform=node --format=esm --packages=external \
  *        --outfile=dist-server/bench/replay-cpu.mjs && node dist-server/bench/replay-cpu.mjs --seeds 1,2,3 > report.json
+ * `--path first-pass` (default) runs the server as it is now: attended battles record their replay while first computed,
+ * and every SPOT_CHECK_EVERY_ROUNDS-th round that captured a battle re-runs one of them (the background spot check).
+ * `--path legacy` runs the earlier server: no capture, every attended battle re-run by the warm-up before its push.
  */
 import { performance } from 'node:perf_hooks';
 import { ManualClock, type Clock } from '../../../src/server/room/clock';
-import { startBattleJob, type BattleJob, type BattleResolver } from '../../../src/server/room/battle-resolver';
+import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../../src/server/room/room';
 import { BotDriver } from '../../../src/server/room/bot-driver';
 import { CAROUSEL_RULES_BINDING } from '../../../src/server/room/carousel';
-import { startReplayWarmup, toCombatReplayFor } from '../../../src/server/room/projection';
-import { DEFAULT_SLICE_TICKS } from '../../../src/server/net/server';
+import { startReplaySpotCheck, startReplayWarmup, toCombatReplayFor } from '../../../src/server/room/projection';
+import { DEFAULT_SLICE_TICKS, SPOT_CHECK_EVERY_ROUNDS } from '../../../src/server/net/server';
 import type { BattleResult, RoomState, SeatSpec } from '../../../src/server/room/types';
 import { stepCombat } from '../../../src/simulation/combat';
 import { toCombatViewEvents, toCombatViewState } from '../../../src/simulation/combat-replay-view';
@@ -32,6 +35,8 @@ interface RoundSample {
   totalMs: number; battleMs: number; replayMs: number; commitMs: number; pushMs: number;
   /** Measured outside the room, on the same battles: a bare stepCombat loop, and the comparison work alone. */
   resimMs: number; compareMs: number;
+  /** First-pass path only: the background spot check (one captured battle re-run per round). */
+  auditMs: number;
 }
 type Mode = { readonly name: string; readonly attended: (seats: readonly string[]) => readonly string[] };
 const MODES: readonly Mode[] = [
@@ -40,17 +45,20 @@ const MODES: readonly Mode[] = [
   { name: 'all', attended: seats => seats },
 ];
 
-function args(): { seeds: number[]; modes: string[]; warmup: number } {
+type Path = 'legacy' | 'first-pass';
+function args(): { seeds: number[]; modes: string[]; warmup: number; path: Path } {
   const argv = process.argv.slice(2);
   const get = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined; };
   return {
     seeds: (get('--seeds') ?? '1,2,3').split(',').map(Number),
     modes: (get('--modes') ?? MODES.map(mode => mode.name).join(',')).split(','),
     warmup: Number(get('--warmup') ?? '1'),
+    // legacy: no capture, replays re-run by the warm-up (the server before first-pass capture). first-pass: the server now.
+    path: get('--path') === 'legacy' ? 'legacy' : 'first-pass',
   };
 }
 
-function playMatch(seed: number, mode: Mode): RoundSample[] {
+function playMatch(seed: number, mode: Mode, path: Path): RoundSample[] {
   const seats: SeatSpec[] = Array.from({ length: 8 }, (_, i) => ({ seatId: `bot-${i + 1}`, name: `机器人 ${i + 1}`, kind: 'bot' }));
   const attended = mode.attended(seats.map(seat => seat.seatId));
   const manual = new ManualClock();
@@ -60,7 +68,7 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
     const state = room!.state;
     let entry: RoundSample | undefined = samples.get(state.round);
     if (!entry) samples.set(state.round, entry = { round: state.round, roundId: state.roundId ?? '', kind: state.roundKind ?? '', battles: 0, combatTicks: 0,
-      totalMs: 0, battleMs: 0, replayMs: 0, commitMs: 0, pushMs: 0, resimMs: 0, compareMs: 0 });
+      totalMs: 0, battleMs: 0, replayMs: 0, commitMs: 0, pushMs: 0, resimMs: 0, compareMs: 0, auditMs: 0 });
     return entry!;
   };
   let pushPending: RoomState | null = null, referencePending: RoomState | null = null;
@@ -88,7 +96,9 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
     }),
   };
   // The network server's withReplayWarmup, with each part of a job timed.
-  const inner = new TwoSidedBattleResolver();
+  // The network server's default resolver: battles with an attended seat record their replay on the first pass.
+  const captureReplay: ReplayCapture = seatIds => seatIds.some(seatId => attended.includes(seatId));
+  const inner = path === 'legacy' ? new TwoSidedBattleResolver() : new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
   const resolver: BattleResolver = {
     resolveBattle: (input, pool) => inner.resolveBattle(input, pool),
     startBattle(input, pool): BattleJob {
@@ -122,10 +132,23 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
   room.subscribe(state => {
     if (state.phase === 'battle' && !pushed.has(state.round)) { pushed.add(state.round); if (attended.length) pushPending = state; }
   });
-  let lastFrozenRound = -1;
+  let lastFrozenRound = -1, eligibleRounds = 0;
   room.subscribe(state => {
     if (state.phase !== 'battle' || lastFrozenRound === state.round) return;
     lastFrozenRound = state.round; referencePending = state;
+    if (path === 'legacy') return;
+    // The server's spot check (net/server.ts scheduleSpotCheck): one captured battle re-run per round, in clock slices.
+    const check = startReplaySpotCheck(state.battles, state.round, false, state.battleSeeds);
+    if (!check) return;
+    if (eligibleRounds++ % SPOT_CHECK_EVERY_ROUNDS !== 0) return;
+    const slice = () => {
+      const started = performance.now();
+      const results = check.advance(DEFAULT_SLICE_TICKS);
+      sample().auditMs += performance.now() - started;
+      if (!results) clock.schedule(manual.now(), slice);
+      else if (results.some(result => result.firstDifference !== null)) throw new Error(`spot check failed: ${JSON.stringify(results)}`);
+    };
+    clock.schedule(manual.now(), slice);
   });
   /** Off-clock reference measurements, once per round, on the battles just resolved. */
   function reference(state: RoomState, entry: RoundSample): void {
@@ -133,7 +156,7 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
       const combats = battle.kind === 'two-sided' ? [battle.battle] : battle.outcomes.flatMap(outcome => outcome.combat ? [outcome.combat] : []);
       for (const combat of combats) { entry.battles++; entry.combatTicks += combat.terminal.tick; }
     }
-    if (attended.length === 0) return;
+    if (attended.length === 0 || path !== 'legacy') return;
     for (const battle of state.battles) {
       if (!(battle.kind === 'two-sided' ? battle.participants : battle.outcomes.map(o => o.seatId)).some(id => attended.includes(id))) continue;
       const combats = battle.kind === 'two-sided' ? [battle.battle] : battle.outcomes.filter(o => attended.includes(o.seatId) && o.combat).map(o => o.combat!);
@@ -164,9 +187,9 @@ interface Totals { rounds: number; battles: number; ticks: number; total: number
 function totals(rounds: readonly RoundSample[]): Totals {
   const t: Totals = { rounds: 0, battles: 0, ticks: 0, total: 0, settle: 0, replay: 0, push: 0, resim: 0, compare: 0 };
   for (const r of rounds) {
-    t.rounds++; t.battles += r.battles; t.ticks += r.combatTicks; t.total += r.totalMs; t.replay += r.replayMs; t.push += r.pushMs;
-    // Settlement = resolving the frozen round (battle ticks), the replay warm-up, the per-connection replay push and the commit.
-    t.settle += r.battleMs + r.replayMs + r.pushMs + r.commitMs; t.resim += r.resimMs; t.compare += r.compareMs;
+    t.rounds++; t.battles += r.battles; t.ticks += r.combatTicks; t.total += r.totalMs; t.replay += r.replayMs + r.auditMs; t.push += r.pushMs;
+    // Settlement = resolving the frozen round (battle ticks, incl. first-pass capture), the replay warm-up or spot check, the per-connection replay push and the commit.
+    t.settle += r.battleMs + r.replayMs + r.auditMs + r.pushMs + r.commitMs; t.resim += r.resimMs; t.compare += r.compareMs;
   }
   return t;
 }
@@ -183,12 +206,12 @@ function markdown(runs: readonly { mode: string; rounds: RoundSample[] }[]): str
   return lines.join('\n');
 }
 
-const { seeds, modes, warmup } = args();
-for (let i = 0; i < warmup; i++) playMatch(seeds[0]!, MODES[2]!);
+const { seeds, modes, warmup, path } = args();
+for (let i = 0; i < warmup; i++) playMatch(seeds[0]!, MODES[2]!, path);
 const runs: { seed: number; mode: string; rounds: RoundSample[] }[] = [];
 for (const seed of seeds) for (const mode of MODES.filter(m => modes.includes(m.name))) {
   process.stderr.write(`seed ${seed} mode ${mode.name}\n`);
-  runs.push({ seed, mode: mode.name, rounds: playMatch(seed, mode) });
+  runs.push({ seed, mode: mode.name, rounds: playMatch(seed, mode, path) });
 }
 process.stderr.write(markdown(runs) + '\n');
-process.stdout.write(JSON.stringify({ node: process.version, sliceTicks: DEFAULT_SLICE_TICKS, seeds, runs }, null, 1) + '\n');
+process.stdout.write(JSON.stringify({ node: process.version, path, sliceTicks: DEFAULT_SLICE_TICKS, seeds, runs }, null, 1) + '\n');
