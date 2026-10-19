@@ -65,7 +65,10 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
       entry.animations = { clips, mapped, missing: ACTIONS.filter(action => !mapped[action]) };
       entry.textures = unit.textures; entry.materialTextureMappings = unit.materialTextureMappings;
       entry.particles = { available: unit.particles.available, reason: unit.particles.reason,
-        ...(unit.particles.available ? unit.particles.counts : { mapped: null, skipped: null, rejected: null }) };
+        ...(unit.particles.available ? unit.particles.counts : { mapped: null, skipped: null, rejected: null }),
+        complete: unit.particles.complete, systems: unit.particles.systemCount, emitters: unit.particles.emitters,
+        byReason: unit.particles.byReason, reasonsByStatus: unit.particles.reasonsByStatus, input: unit.particles.input };
+      entry.actionEffects = result.actionEffects?.[id] ?? {};
       entry.reference = unit.comparison;
       entry.actionDecisions = unit.actionDecisions; entry.bindings = unit.bindings; entry.step2Mapping = unit.step2Mapping;
       entry.artifactBytes = result.totals.outBytes;
@@ -81,6 +84,15 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
     await writeReport();
   }
   report.phase = 'complete';
+  report.particleTotals = { systems: 0, emitters: 0, mapped: 0, skipped: 0, rejected: 0,
+    availableUnits: 0, completeUnits: 0, reasonsByStatus: { skipped: {}, rejected: {} } };
+  for (const { particles } of Object.values(report.units)) {
+    if (particles.available) report.particleTotals.availableUnits++;
+    if (particles.complete) report.particleTotals.completeUnits++;
+    for (const key of ['systems', 'emitters', 'mapped', 'skipped', 'rejected']) report.particleTotals[key] += particles[key] ?? 0;
+    for (const status of ['skipped', 'rejected']) for (const [reason, count] of Object.entries(particles.reasonsByStatus?.[status] ?? {}))
+      report.particleTotals.reasonsByStatus[status][reason] = (report.particleTotals.reasonsByStatus[status][reason] ?? 0) + count;
+  }
   report.ready = selected.length > 0 && report.totals.failed === 0 && report.totals.missing === 0;
   await writeReport();
   return report;

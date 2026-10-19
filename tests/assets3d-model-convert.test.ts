@@ -82,6 +82,18 @@ function converted() {
     return makeModel(f.mesh, f.rig, [{ name: 'source_idle', bytes: f.anm }], { Body: f.png });
 }
 describe('raw skinned GLB assembly', () => {
+    it.each([0, 32, 44])('rejects nonfinite source position/normal/UV at vertex offset %s', offset => {
+        for (const value of [NaN, Infinity, -Infinity, 1e39]) {
+            const f = fixtures(); f.mesh.writeFloatLE(value, 158 + offset);
+            expect(() => makeModel(f.mesh, f.rig, [], { Body: f.png })).toThrow('nonfinite-asset');
+        }
+    });
+    it('rejects finite transformed positions that overflow when stored as Float32', () => {
+        const f = fixtures();
+        f.mesh.writeFloatLE(-3e38, 158 + 4);
+        f.mesh.writeFloatLE(3e38, 158 + 52 + 4);
+        expect(() => makeModel(f.mesh, f.rig, [], { Body: f.png })).toThrow('nonfinite-float32-accessor');
+    });
     it('retains bind pose for ambiguous unweighted leaf locators, rejects deforming ambiguity, and clears zero-weight indices', () => {
         const f = fixtures(), rig = locatorRig(), anm = threeTrackAnm(f.anm, [123, 77, 77]);
         // Second influence points to a valid nonzero joint, but has zero weight.

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, truncate } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
+import { parseParticleDocument } from '../src/rendering3d/particles';
 // @ts-expect-error Pure Node utility.
 import { buildAll, selectUnits } from '../scripts/assets3d/build-all.mjs';
 // @ts-expect-error Pure Node utility.
@@ -66,7 +67,7 @@ function rawFixtures() {
   return { mesh, rig, anm, texture };
 }
 describe('isolated per-unit batch build', () => {
-  it('builds a real unit pipeline using only synthetic files, with absent JSON/reference explicitly reported', async () => {
+  it('builds a real unit pipeline and v2 quad/mesh effects from synthetic linked BIN, without source JSON/reference', async () => {
     const root = await output(), source = join(root, 'trial/local');
     const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
     const config = map.vi, f = rawFixtures();
@@ -80,6 +81,7 @@ describe('isolated per-unit batch build', () => {
     const field = (name: string, type: number, bytes: Buffer) => Buffer.concat([uint(hash(name)), uint(type, 1), bytes]);
     const fields = (...b: Buffer[]) => Buffer.concat([uint(b.length, 2), ...b]);
     const embed = (name: string, ...b: Buffer[]) => Buffer.concat([uint(hash(name)), block(fields(...b))]);
+    const float = (n: number) => { const b = Buffer.alloc(4); b.writeFloatLE(n); return b; };
     const graphName = 'Characters/TFT13_Vi/Animations/Skin0', graphPath = 'data/characters/tft13_vi/animations/skin0.bin';
     const prop = (type: string, name: string, body: Buffer, linked: string[] = []) => Buffer.concat([Buffer.from('PROP'), uint(3), uint(linked.length),
       ...linked.map(text), uint(1), uint(hash(type)), block(Buffer.concat([uint(hash(name)), body]))]);
@@ -88,11 +90,22 @@ describe('isolated per-unit batch build', () => {
         field('simpleSkin', 16, text(`${config.base}/${config.mesh}`)), field('skeleton', 16, text(`${config.base}/${config.skeleton}`)),
         field('texture', 16, text(`${config.base}/${config.textures.Body}`)))),
       field('skinAnimationProperties', 0x83, embed('SkinAnimationProperties', field('animationGraphData', 0x84, uint(hash(graphName)))))
-    ), [graphPath]));
+    ), [graphPath, 'characters/tft13_vi']));
     const pairs = Object.entries(config.animations).map(([alias, name]) => Buffer.concat([uint(hash(alias)), embed('AtomicClipData',
       field('mAnimationResourceData', 0x83, embed('AnimationResourceData', field('mAnimationFilePath', 16, text(`${config.base}/${config.animationFiles[name as string]}`)))))]));
     raw.set(graphPath, prop('AnimationGraphData', graphName, fields(field('mClipDataMap', 0x86,
       Buffer.concat([uint(17, 1), uint(0x82, 1), block(Buffer.concat([uint(pairs.length), ...pairs]))])))));
+    const particleMesh = `${config.base}/triangle.scb`;
+    const emitter = (mesh: boolean) => embed('VfxEmitterDefinitionData',
+      field('isSingleParticle', 0x87, uint(1, 1)), field('particleLifetime', 0x83, embed('ValueFloat', field('constantValue', 10, float(2)))),
+      field('texture', 16, text(`${config.base}/${config.textures.Body}`)),
+      ...(mesh ? [field('primitive', 0x82, embed('VfxPrimitiveMesh', field('mMesh', 0x83,
+        embed('VfxMeshDefinitionData', field('mSimpleMeshName', 16, text(particleMesh))))))] : []));
+    raw.set('characters/tft13_vi', prop('VfxSystemDefinitionData', 'test_cast', fields(field('particlePath', 16, text('test_cast')),
+      field('complexEmitterDefinitionData', 0x80, Buffer.concat([uint(0x82, 1), block(Buffer.concat([uint(2), emitter(false), emitter(true)]))])))));
+    raw.set(particleMesh, Buffer.concat([Buffer.from('r3d2Mesh'), uint(3, 2), uint(2, 2), Buffer.alloc(128), uint(3), uint(1), uint(2),
+      Buffer.alloc(24), uint(0), ...[0, 0, 0, 1, 0, 0, 0, 1, 0].map(float), Buffer.alloc(12), uint(0), uint(1), uint(2),
+      Buffer.alloc(64), ...[0, 1, 0, 0, 0, 1].map(float)]));
     const wadName = 'DATA/synthetic.wad.client', wad = Buffer.alloc(272 + raw.size * 32 + [...raw.values()].reduce((n, b) => n + b.length, 0));
     wad.write('RW'); wad[2] = 3; wad[3] = 4; wad.writeUInt32LE(raw.size, 268);
     let offset = 272 + raw.size * 32, index = 0;
@@ -111,10 +124,25 @@ describe('isolated per-unit batch build', () => {
     expect(extraction.status).toBe('complete');
     const result = await buildAll({ units: 'vi', source, out: join(root, 'out') });
     expect(result.units.vi).toMatchObject({ status: 'success', vertices: 3, bones: 1, textures: 1,
-      particles: { available: false, reason: 'missing-source-json', mapped: null },
+        particles: { available: true, complete: true, reason: null, mapped: 2, systems: 1, emitters: 2 },
       reference: { available: false, reason: 'missing-reference-glb' } });
     expect(result.units.vi.animations.missing).toEqual(['hit']);
     expect(result.units.vi.artifactBytes).toBeGreaterThan(100);
+    const unitRoot = join(root, 'out/units/vi'), manifest = JSON.parse(await readFile(join(unitRoot, 'manifest.json'), 'utf8'));
+    expect(Object.keys(manifest.effects)).toEqual(['vi_test_cast']);
+    const document = JSON.parse(await readFile(join(unitRoot, manifest.effects.vi_test_cast.path), 'utf8'));
+    expect(parseParticleDocument(document)).toEqual(document);
+    expect(document.schemaVersion).toBe(2);
+    expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['quad', 'mesh']);
+    expect((await readFile(join(unitRoot, document.emitters[1].mesh))).subarray(0, 4).toString()).toBe('glTF');
+    expect(result.particleTotals).toMatchObject({ availableUnits: 1, completeUnits: 1, systems: 1, emitters: 2, mapped: 2 });
+    // Oversized source has an intentionally stale hash: the byte preflight must
+    // reject it before readRaw reaches content hashing or mesh parsing.
+    await truncate(join(source, 'extracted', particleMesh), 16 * 1024 * 1024 + 1);
+    const rebuilt = await buildAll({ units: 'vi', source, out: join(root, 'out'), force: true });
+    expect(rebuilt.units.vi.status).toBe('success');
+    expect(rebuilt.units.vi.particles).toMatchObject({ mapped: 1, skipped: 1, rejected: 0,
+      byReason: { 'mesh-byte-budget': 1 } });
   });
   it('continues after one failure, reports missing mappings, and preserves per-unit metrics', async () => {
     const out = await output();

@@ -13,7 +13,7 @@ export function propertyReferences(bytes) {
     const stack = [parseBin(bytes)], references = new Set();
     while (stack.length) {
         const value = stack.pop();
-        if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|bin)$/i.test(value)) references.add(value);
+        if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|sco|bin)$/i.test(value)) references.add(value);
         else if (value && typeof value === 'object') stack.push(...Object.values(value));
     }
     return [...references];
@@ -127,7 +127,7 @@ export async function planFetch({ source = 'assets3d-local/trial/local', out = '
             const stack = [source];
             while (stack.length) {
                 const value = stack.pop();
-                if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|bin)$/i.test(value)) references.add(value);
+                if (typeof value === 'string' && /\.(tex|dds|skn|skl|anm|scb|sco|bin)$/i.test(value)) references.add(value);
                 else if (value && typeof value === 'object') stack.push(...Object.values(value));
             }
         }

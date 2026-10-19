@@ -18,18 +18,18 @@ describe('strict particle conversion and public contract integration', () => {
     it('maps the exact finite subset, mirrors vectors and uses root-relative PNGs', () => {
         const result = convertParticles(source([sprite()]), () => 'textures/spark.png', parseParticleDocument);
         expect(result.counts).toEqual({ mapped: 1, skipped: 0, rejected: 0 });
-        expect(result.systems[0].document).toEqual({ schemaVersion: 1, emitters: [{ kind: 'sprite', count: 1, lifetime: 2, texture: 'textures/spark.png', velocity: [-1, 2, 3], color: [{ time: 0, value: [0.25, 0.5, 1] }], opacity: [{ time: 0, value: 0.75 }] }] });
+        expect(result.systems[0].document).toEqual({ schemaVersion: 2, limits: { maxParticles: 10000, maxDuration: 30 }, emitters: [{ kind: 'quad', emission: { mode: 'burst', count: 1 }, lifetime: 2, texture: 'textures/spark.png', velocity: [-1, 2, 3], color: [{ time: 0, value: [0.25, 0.5, 1] }], opacity: [{ time: 0, value: 0.75 }] }] });
         expect(parseParticleDocument(result.systems[0].document)).toEqual(result.systems[0].document);
     });
-    it('rejects continuous emission rather than dropping rate semantics', () => {
+    it('rejects continuous emission without an established emitter duration', () => {
         const result = convertParticles(source([{ ...sprite(), isSingleParticle: false, rate: constant(10) }]), () => 'textures/spark.png', parseParticleDocument);
         expect(result.systems[0].document).toBeUndefined();
         expect(result.systems[0].reason).toBe('no-writable-emitters');
         expect(result.counts.rejected).toBe(1);
-        expect(result.systems[0].report[0]).toMatchObject({ mapped: false, reason: 'continuous-emission', originalFields: { rate: { constantValue: 10 } } });
+        expect(result.systems[0].report[0]).toMatchObject({ mapped: false, reason: 'unverified-emitter-lifetime', originalFields: { rate: { constantValue: 10 } } });
     });
     it.each(['EmitterPosition', 'birthScale0', 'scale0', 'birthRotation0', 'lifetime', 'particleLinger'])('rejects the complete emitter when %s cannot be represented', field => {
-        const result = mapEmitter({ ...sprite(), [field]: constant([0, 0, 0]) }, () => 'textures/spark.png');
+        const result = mapEmitter({ ...sprite(), [field]: { dynamics: { probabilityTables: [] } } }, () => 'textures/spark.png');
         expect(result.status).toBe('rejected');
         expect(result.emitter).toBeUndefined();
     });
@@ -39,19 +39,19 @@ describe('strict particle conversion and public contract integration', () => {
         expect(result.counts.rejected).toBe(3);
         expect(result.systems[0].report.map((e: {
             reason: string;
-        }) => e.reason)).toEqual(['birth-probability', 'special-or-dynamic-lifetime', 'unmapped-source-field:unknownSemantic']);
+        }) => e.reason)).toEqual(['unmapped-birthVelocity:dynamics', 'special-or-dynamic-lifetime', 'unmapped-source-field:unknownSemantic']);
         expect(result.systems[0].document).toBeUndefined();
     });
     it('keeps unsupported emitters exclusively in sidecars and omits a system with no writable emitters', () => {
         const e: object[] = ['VfxPrimitiveMesh', 'VfxPrimitiveCameraTrail', 'VfxPrimitiveArbitraryQuad', 'VfxPrimitiveRay'].map(__type => ({ ...sprite(), primitive: { __type } }));
         e.push({ ...sprite(), distortionDefinition: { __type: 'VfxDistortionDefinitionData', distortion: 0.1 } });
         const r = convertParticles(source(e), () => 'textures/spark.png', parseParticleDocument);
-        expect(r.counts).toEqual({ mapped: 0, skipped: 3, rejected: 2 });
+        expect(r.counts).toEqual({ mapped: 0, skipped: 2, rejected: 3 });
         expect(r.systems[0].document).toBeUndefined();
         expect(r.systems[0].reason).toBe('no-writable-emitters');
         expect(r.systems[0].report.map((entry: { mapped: boolean; originalFields: unknown }) => entry.mapped)).toEqual([false, false, false, false, false]);
         expect(r.systems[0].report.map((entry: { originalFields: unknown }) => entry.originalFields)).toEqual(e);
-        expect(r.systems[0].report.map((entry: { reason: string }) => entry.reason)).toEqual(['v1-runtime-skips-mesh', 'v1-runtime-skips-trail', 'unsupported-primitive:VfxPrimitiveArbitraryQuad', 'unsupported-primitive:VfxPrimitiveRay', 'v1-runtime-skips-screen-distortion']);
+        expect(r.systems[0].report.map((entry: { reason: string }) => entry.reason)).toEqual(['mesh-resource-unavailable', 'unverified-primitive-semantics:VfxPrimitiveCameraTrail', 'unverified-primitive-semantics:VfxPrimitiveArbitraryQuad', 'unverified-primitive-semantics:VfxPrimitiveRay', 'screen-distortion-requires-scene-color']);
     });
     it('writes only mapped emitters in a mixed system and registers only written effects', async () => {
         const unsupported = [{ ...sprite(), primitive: { __type: 'VfxPrimitiveMesh' } }, { ...sprite(), primitive: { __type: 'VfxPrimitiveCameraTrail' } }, { ...sprite(), distortionDefinition: { __type: 'VfxDistortionDefinitionData' } }];
@@ -67,12 +67,12 @@ describe('strict particle conversion and public contract integration', () => {
         expect([...files.keys()].sort()).toEqual(['effects/jinx/empty.report.json', 'effects/jinx/system.json', 'effects/jinx/system.report.json']);
         expect(removed).toEqual(['effects/jinx/empty.json']);
         const document = JSON.parse(files.get('effects/jinx/system.json')!);
-        expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['sprite']);
+        expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['quad']);
         expect(parseParticleDocument(document)).toEqual(document);
         expect(output.effects).toEqual({ jinx_system: { path: 'effects/jinx/system.json' } });
         expect(makeManifest({}, output.effects, assertManifest).effects).toEqual(output.effects);
         expect(output.actionEffects.cast).toEqual(['jinx_system']);
-        expect(output.systems.find((s: { effectId: string }) => s.effectId === 'jinx_empty')).toMatchObject({ reason: 'no-writable-emitters', counts: { mapped: 0, skipped: 3, rejected: 0 } });
+        expect(output.systems.find((s: { effectId: string }) => s.effectId === 'jinx_empty')).toMatchObject({ reason: 'no-writable-emitters', counts: { mapped: 0, skipped: 2, rejected: 1 } });
         expect(output.systems.find((s: { effectId: string }) => s.effectId === 'jinx_empty').path).toBeUndefined();
         const sidecar = JSON.parse(files.get('effects/jinx/empty.report.json')!);
         expect(sidecar.reason).toBe('no-writable-emitters');
