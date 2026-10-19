@@ -12,8 +12,8 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
-it('admits thirty historically selected anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
- expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(30);
+it('admits thirty-three historically selected anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
+ expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(33);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
  expect(ANOMALY_DEFINITIONS['defense-expert'].name).toBeTruthy();
 });

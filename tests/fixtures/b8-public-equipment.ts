@@ -7,6 +7,7 @@ import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simul
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
 import { readLootView } from '../../src/simulation/loot-view';
+import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
 
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public B8 equipment fixture: ${result.reason}`);
@@ -88,11 +89,11 @@ const preparations = new Map<string, MatchState>();
  * Original Irelia/Lux stay one star for independent equipment stat assertions.
  */
 export function publicEquipmentPreparation(components: readonly string[],
-  options: { seed?: number; history?: BattleHistory } = {}): MatchState {
+  options: { seed?: number; history?: BattleHistory; augmentPriorities?: readonly string[] } = {}): MatchState {
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
   // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
   // glove recipes, leaving real supply choices for their other ingredients.
-  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components]);
+  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components,options.augmentPriorities??[]]);
   if (!options.history) {
     const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
     if (cached) { preparations.set(key, cached); return copyFixture(cached); }
@@ -110,7 +111,8 @@ export function publicEquipmentPreparation(components: readonly string[],
         state=accepted(selectAnomalyTarget(state,choice.choiceId,choice.generation,unit.id));continue;
       }
       const id=choice.kind==='component'?missing()[0]??'sword':choice.kind==='anomaly'?choice.offers[0]
-        :['bulky-buddies-i','manaflow-i','pumping-up-i'].find(id=>choice.offers.includes(id))??choice.offers[0];
+        :[...options.augmentPriorities??[],'bulky-buddies-i','manaflow-i','pumping-up-i'].find(id=>choice.offers.includes(id))
+          ??choice.offers.find(id=>!(id in S13_P2_SOURCE))??choice.offers[0];
       state=choose(state,id);
     }
     if(state.phase==='preparation'&&state.round>=4&&!missing().length){

@@ -125,12 +125,12 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
   });
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
-  return transact(pool,state,()=>{
+  return transact(pool,state,(_draft,policy)=>{
     requirePool(canOperateMatch(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
-    return buyUnit(state,slot,expectedGeneration);
+    return buyUnit(state,slot,expectedGeneration,policy);
   });
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {

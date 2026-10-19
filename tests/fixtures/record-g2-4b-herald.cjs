@@ -68,7 +68,7 @@ async function main() {
         const command=({startMatchCombat:{type:'start'},nextRound:{type:'continue',round:a},
           selectChoice:{type:'select',choiceId:a,generation:b,definitionId:c},selectAnomalyTarget:{type:'target',choiceId:a,generation:b,unitId:c},
           rerollAnomaly:{type:'anomalyReroll',choiceId:a,generation:b},
-          useConsumable:{type:'useConsumable',consumableId:a,target:b},buyXp:{type:'buyXp'},deployMatchUnit:{type:'deploy',id:a,target:b},sellUnit:{type:'sell',id:a},
+          useConsumable:{type:'useConsumable',consumableId:a,target:b},buyXp:{type:'buyXp'},buyUnit:{type:'buy',slot:a,generation:b},rerollShop:{type:'reroll'},deployMatchUnit:{type:'deploy',id:a,target:b},sellUnit:{type:'sell',id:a},
           combineItems:{type:'combine',ids:[a,b]},equipItem:{type:'equip',itemId:a,unitId:b,slot:c}})[operation];
         assert(operation==='stepMatch'||command,`Missing independent oracle command ${operation}`);
         ledger.apply(before,result.state,command,result.events);

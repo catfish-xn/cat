@@ -21,7 +21,7 @@ const accepted = (result: MatchCommandResult): MatchState => {
  * "test"), equip/deploy/start/step. The special items are NOT claimed to be
  * naturally rolled by the acquisition route. No combat facts, stats or RNG edits. */
 function startFight(): { state: MatchState; receiverId: string; chestHolderId: string } {
-  let state = publicEquipmentPreparation(['rod'], { seed: 19 });
+  let state = publicEquipmentPreparation(['rod'], { seed: 28746 });
   const chestHolderId = state.preparation.units.find(u => u.team === 'player' && u.definitionId !== 'lux')!.id;
   for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.definitionId !== 'lux' && u.id !== chestHolderId))
     state = accepted(sellUnit(state, unit.id));

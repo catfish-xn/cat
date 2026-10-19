@@ -36,6 +36,7 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly s13P2Opening?: import('./s13-augments-p2-combat').P2Opening;
   readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;

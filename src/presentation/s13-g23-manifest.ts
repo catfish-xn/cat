@@ -97,6 +97,9 @@ export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_ScuttleFamiliar", "en": "Scuttle Familiar", "zh": "真的会蟹"},
   {"apiName": "TFT13_GoopBuff_UnstoppableForce", "en": "Unstoppable Force", "zh": "势不可挡"},
   {"apiName": "TFT13_GoopBuff_WolfFamiliars", "en": "Wolf Familiars", "zh": "双狼佣兽"},
+  {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
+  {"apiName": "TFT13_GoopBuff_CullTheWeak", "en": "Cull The Weak", "zh": "剔除弱者"},
+  {"apiName": "TFT13_GoopBuff_Stoneskin", "en": "Stoneskin", "zh": "石头皮肤"},
 ];
 /**
  * Radiant (光明) version of each of the 36 completed items, keyed by the base item apiName. Five base items use an older

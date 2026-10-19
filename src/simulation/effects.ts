@@ -16,6 +16,7 @@ const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicRes
 const MECHANICS = new Set(['s13Anomaly','g23Junker','g23Experiment','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
   'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  s13P2Augment: ['enabled'], s13P2Anomaly: ['enabled'], s13P2ItemAugment: ['enabled'],
   s13Anomaly:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
@@ -52,6 +53,9 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   damageAmp: ['bps'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
+MECHANICS.add('s13P2Augment');
+MECHANICS.add('s13P2Anomaly');
+MECHANICS.add('s13P2ItemAugment');
 const compareAscii = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
 
 export function sourceRank(kind: SourceKind): number { return SOURCE_ORDER[kind]; }
