@@ -352,7 +352,7 @@
       "previousBytes": 29874,
       "currentBytes": 33396,
       "previousSha256": "f76d874a352a1b156ff97dbc7e59f64c6e8f1865656328de3b6fc633ebd6fd72",
-      "currentSha256": "921ee6728bbc59bfb8746a234a3d7da7c9188152037ba4d2b4c419fe821f3a5a",
+      "currentSha256": "4227186b5647a2d6af4d824a143c5a18fffbccd8e607f66de5d33429e2df6bca",
       "firstDifferentByte": 135
     },
     "tests/fixtures/g2-4b-herald-raw/trajectory.json": {
