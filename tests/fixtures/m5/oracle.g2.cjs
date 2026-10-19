@@ -19,6 +19,10 @@ function p2Gifts(state){const gifts=new Map();for(const a of state.augments){
  for(const c of namespace)hash=((hash^BigInt(c.charCodeAt(0)))*16777619n)%4294967296n;
  let rng=Number(BigInt(state.seed)^hash);for(let i=0;i<units[1];i++){rng=word(rng);const pool=CATALOG[units[0]],id=pool[Number(BigInt(rng)*BigInt(pool.length)/4294967296n)];gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'unit',i]),{kind:'unit',definitionId:id});}
  }return gifts;}
+// P3 literal union: independent from production registration.
+AUGMENTS.push('defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast');AUGMENTS.sort();
+const AUGMENT_ITEMS={'high-voltage':'ionic-spark','pyromaniac':'red-buff','thorn-plated-armor':'bramble-vest','unleash-the-beast':'steraks-gage'};
+ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-wasted','thornskin','knockout');ANOMALIES.sort();
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}
@@ -217,7 +221,7 @@ class Ledger {
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(after.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
   const schedule=appended(before.scheduleReceipts,after.scheduleReceipts,'eventId','schedule receipts');
-  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,AUGMENT_GOLD[command.definitionId]??0,'independent once-only augment acquisition gold');assert.deepEqual(receipt.itemIds,[],'augments do not grant items');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
+  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,AUGMENT_GOLD[command.definitionId]??0,'independent once-only augment acquisition gold');const item=AUGMENT_ITEMS[command.definitionId];assert.deepEqual(receipt.itemIds,item?[`item-${before.nextItemSerial}`]:[],'independent exact augment item grant');if(item)assert.equal(after.items.find(i=>i.id===receipt.itemIds[0])?.definitionId,item,'independent augment item identity');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
   let itemSerial=before.nextItemSerial;
   for(const receipt of lootReceipts)for(const id of receipt.grantedItemIds)assert.equal(id,`item-${itemSerial++}`,'loot item serial');
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');

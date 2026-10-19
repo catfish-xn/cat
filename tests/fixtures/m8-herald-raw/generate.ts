@@ -1,4 +1,5 @@
 import * as api from '../../../src/simulation/match';
+import { ECONOMY_RULES } from '../../../src/simulation/match-rules';
 import { ITEM_DEFINITIONS } from '../../../src/simulation/content/items';
 import { UNIT_DEFINITIONS } from '../../../src/simulation/units';
 import { MATCH_RULES } from '../../../src/simulation/match-rules';
@@ -52,7 +53,7 @@ export function fieldHeraldTarget(initial: api.MatchState, observer?: HeraldComm
  * The supplied genuine unresolved 4-4 prefix is independently copied. Every
  * intervening battle and item acquisition remains the original public route. */
 export function buildRawHeraldEquipment(initial: api.MatchState, definitions: readonly string[],
-  observer?: HeraldCommandObserver): api.MatchState {
+  observer?: HeraldCommandObserver, developArmy = false): api.MatchState {
   if (initial.roundDefinitionId !== '4-4' || initial.phase !== 'choice') throw new Error('Missing public 4-4 equipment prefix');
   const commands = commandApi(observer);
   let state: api.MatchState = structuredClone(initial);
@@ -82,6 +83,18 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
     }
     if (state.phase === 'preparation') {
       while (state.level < 8 && state.gold >= 4) state = accepted(commands.buyXp(state));
+      // P3 current-route policy: spend only gold above the unchanged maximum-interest reserve.
+      // Existing default recipe and all battle/restore assertions remain available unchanged.
+      if (developArmy) while (state.gold > ECONOMY_RULES.interestCap * ECONOMY_RULES.interestDivisor) {
+        const army = state.preparation.units.filter(u => u.team === 'player');
+        const needsGaren = !army.some(u => u.definitionId === 'garen');
+        const needsScar = !army.some(u => u.definitionId === 'scar' && u.starLevel > 1)
+          && army.filter(u => u.definitionId === 'scar' && u.starLevel === 1).length === 2;
+        if (!needsGaren && !needsScar) break;
+        const slot = state.shop.slots.findIndex(s => s.status === 'available'
+          && (needsGaren && s.definitionId === 'garen' || needsScar && s.definitionId === 'scar'));
+        state = accepted(slot >= 0 ? commands.buyUnit(state, slot, state.shop.generation) : commands.rerollShop(state));
+      }
       // The expanded augment pool changes this branch's army strength. Spend real
       // remaining gold on natural-shop copies of owned heroes; keep every battle,
       // source, receipt and ordinary bench/upgrade rule in the public route.

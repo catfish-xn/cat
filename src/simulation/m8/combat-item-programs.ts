@@ -1,5 +1,6 @@
 /** G2-4b: programs bound from items gained during combat (Unstable Treasure Chest). The grant record is the only
  * dynamic fact; the program itself always comes from the frozen pool, so compile and restore derive it identically. */
+import { p3ItemProgram } from '../s13-p3-programs';
 import type { CombatItemGrant, CombatUnit } from '../combat-types';
 import type { BoundItemProgram, ItemProgram } from './item-program';
 import type { Source } from './contracts';
@@ -28,7 +29,7 @@ function payloadOf(grant: CombatItemGrant) {
   if (!payload) throw new Error('Invalid Match save: combat item grant');
   return payload;
 }
-let cache = new WeakMap<readonly CombatItemGrant[], { unitId: string; mechanics: CombatUnit['mechanics']; bound: readonly BoundItemProgram[] }>();
+let cache = new WeakMap<readonly CombatItemGrant[], { unitId: string; mechanics: CombatUnit['mechanics']; p3Key: string; bound: readonly BoundItemProgram[] }>();
 /** External save candidates are mutable. Never read or populate the live combat
  * cache during validation; nested calls and failures restore the previous scope. */
 export function withGrantedItemRestoreCache<T>(run: () => T): T {
@@ -40,13 +41,15 @@ export function grantedItemPrograms(unit: Pick<CombatUnit, 'id' | 'combatItemGra
   const grants = unit.combatItemGrants;
   if (grants !== undefined && !Array.isArray(grants)) throw new Error('Invalid Match save: combat item grants');
   if (!grants?.length) return [];
+  const augments=(unit.mechanics??[]).filter(m=>m.mechanic==='s13P3'&&m.source.sourceKind==='augment');
+  const ids=augments.map(m=>m.source.definitionId),stage=augments[0]?.values.stage??1,p3Key=JSON.stringify([ids,stage]);
   const hit = cache.get(grants);
-  if (hit && hit.unitId === unit.id && hit.mechanics===unit.mechanics) return hit.bound;
+  if (hit && hit.unitId === unit.id && hit.mechanics===unit.mechanics && hit.p3Key === p3Key) return hit.bound;
   const bound = grants.map(grant => {
     const payload = payloadOf(grant);
-    return { source: grantedItemSource(unit.id, grant), program: shifted(p2GrantedItemProgram(unit,grant.definitionId,payload.program), grant.grantedAtTick) };
+    return { source: grantedItemSource(unit.id, grant), program: shifted(p3ItemProgram(grant.definitionId,p2GrantedItemProgram(unit,grant.definitionId,payload.program),ids,stage), grant.grantedAtTick) };
   });
-  cache.set(grants, { unitId: unit.id, mechanics:unit.mechanics, bound });
+  cache.set(grants, { unitId: unit.id, mechanics:unit.mechanics, p3Key, bound });
   return bound;
 }
 /** Health basis added by grants received at or before `at` (all grants when omitted). */

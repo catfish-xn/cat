@@ -1,3 +1,4 @@
+import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
 import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
@@ -98,7 +99,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:stageProgram(definition.combatProgram,state.round)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:p3ItemProgram(definition.id,stageProgram(definition.combatProgram,state.round),unit.team==='player'?state.augments.map(a=>a.definitionId):[],strategyStage(state.round))});
     };
     // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
     const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
@@ -176,7 +177,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
     }
     for(const m of resolved.mechanics ?? []) {
-      const program=m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
+      const program=m.mechanic==='s13P3'?p3Program(m.source.definitionId,strategyStage(state.round)):m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
       if(m.mechanic==='g23Anomaly'){
         const conversion=g23ConversionProgramValues(m.source.definitionId,resolved.stats.armor,resolved.stats.magicResist);
         if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});

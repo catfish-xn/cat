@@ -41,6 +41,7 @@ import { COMPONENT_IDS } from './content/g2-3-item-registry';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { planUnitAcquisition } from './unit-acquisition';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
@@ -623,7 +624,8 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
-  const granted = choice.kind === 'component' ? planPermanentItemGrant(state, { definitionId, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
+  const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
+  const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
   const acquisitionGold = choice.kind === 'augment' ? AUGMENT_DEFINITIONS[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;

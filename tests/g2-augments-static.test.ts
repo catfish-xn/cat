@@ -68,7 +68,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the forty-four admitted definitions', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(Object.keys(expected).sort()));
+  it('contains exactly the forty-four admitted definitions plus the seven P3 augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

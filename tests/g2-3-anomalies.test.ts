@@ -12,8 +12,9 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
-it('admits thirty-three historically selected anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
- expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(33);
+// Non-P4 anomalies: 30 historical + 3 P2 + 7 P3; the 11 P4 IDs use the TFT13_GoopBuff_ prefix.
+it('admits thirty historical, three P2 and seven P3 anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
+ expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(40);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
  expect(ANOMALY_DEFINITIONS['defense-expert'].name).toBeTruthy();
 });

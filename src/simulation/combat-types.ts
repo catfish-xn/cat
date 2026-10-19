@@ -41,6 +41,7 @@ export interface CombatUnit {
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
+  readonly s13P3?: import('./s13-p3-combat').P3CombatState;
   readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
   readonly openingItemBankGold?:number;
   readonly currentItemBankGold?:number;

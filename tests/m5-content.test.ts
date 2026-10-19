@@ -61,8 +61,9 @@ describe('M5 frozen S13 slice',()=>{
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });
-  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 44 augments and 44 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,44,44]);
+  // Augments: 30 historical + 14 P2 + 7 P3; anomalies: 30 historical + 3 P2 + 11 P4 + 7 P3.
+  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 51 augments and 51 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,51,51]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

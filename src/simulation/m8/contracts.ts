@@ -56,6 +56,8 @@ export type Condition =
   | { readonly kind: 'target-magic-resist'; readonly op: 'gt' | 'lte'; readonly value: number }
   /** G2-4b: the triggering facts contain a critical basic-attack hit. */
   | { readonly kind: 'critical-attack' }
+  | { readonly kind: 'critical-hit' }
+  | { readonly kind: 'damage-delivery'; readonly deliveries: readonly DamageDelivery[] }
   | { readonly kind: 'all'; readonly conditions: readonly Condition[] };
 /** A08: evaluate applicable contributions before selecting strongest reduction. */
 export interface DamageFilter {
