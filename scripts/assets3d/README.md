@@ -1,11 +1,66 @@
-# D7 素材管线第一阶段
+# D7 素材管线
 
-当前范围是**素材管线第一阶段：已有产物整理 + 源文件核验 + 粒子无损盘点**，不是完整转换。
+当前入口为**第 2 步：原始 SKN/SKL/ANM、TEX/DDS 与粒子源 JSON 离线转换**，支持 `jinx,vi`。
+第一阶段的整理、核验和盘点工具保留可用，历史说明见下方。
 
 本目录只放代码。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
 `assets3d-local/` 下，不提交素材或生成产物。禁止把真实样本加进测试夹具。
 
-## 当前可运行入口：整理已有试验成果
+## 第 2 步统一入口
+
+```sh
+node scripts/assets3d/build.mjs --units jinx,vi --source assets3d-local/trial/local --out assets3d-local/out
+# 显式覆盖本工具已生成的文件；不会清空目录
+node scripts/assets3d/build.mjs --units jinx,vi --source assets3d-local/trial/local --out assets3d-local/out --force
+# 只生成离线下载计划
+node scripts/assets3d/plan-fetch.mjs --source assets3d-local/trial/local --out assets3d-local/out --force
+```
+
+不联网、不启动子进程、不运行 lol2gltf 或任何外部转换二进制。使用 Node 内置 zstd（需要 Node 22.15+，本次实测 22.17.0）、zlib、TypeScript 的纯 JS 编译器及仓库已有的 three。
+无需安装新依赖或执行 `npm ci`。`runtime.mjs` / `ts-loader.mjs` 直接加载本仓库 `assertManifest`、`parseParticleDocument` 与 `M5_UNIT_DEFINITIONS`，不复制合同校验规则。
+转换的模型只接受 `jinx,vi`；下载计划总是枚举当前模拟层 60 个单位，费用分布为 14/13/13/12/8，不增加形态变体键。
+
+输入布局（均只读）：
+
+- `<source>/extracted/`：原始模型、骨骼、动作、贴图；`extraction.json` 提供版本、逐文件大小与 SHA256。实际使用的原始字节均核验哈希。
+- `<source>/14.24.manifest`、`chunks/*.zst`、`set13-index.txt`、`tft-index.txt`、`hashes/hashes.game.txt`：RMAN、缓存的 WAD 索引压缩块、路径字典；不下载缺少的块。
+- `<source>/../../source-json/{jinx,vi}.json`：完整粒子源 JSON；模型转换不读取旧 GLB 的内容。
+- `<source>/../public-assets/{jinx,vi}/rigged.glb`：仅供独立对照。若 `<source>/validator/node_modules/gltf-validator/index.js` 存在则运行纯 JS 校验器。
+
+输出全部经过 `safe-path.mjs`：`models/<id>/model.glb`、`textures/<原始相对路径>.png`、`effects/<id>/*.json` 和 `*.report.json`，以及根下 `manifest.json`、`build-report.json`、`fetch-plan.json`。旁路报告不进入 manifest。
+manifest 只含 v1 合同字段，动画 clip 使用源名称，缺少受击动作时省略 `hit`。粒子贴图路径相对 `out/` 根。供接线方使用的 `actionEffects`、bbox、源哈希、字节数、误差和下载计划摘要均在 build-report。
+
+坐标：反射 X、反转三角形绕序并同步变换骨骼/动作/逆绑定。原点使用 Body 绑定网格最低 Y 与 XZ 包围盒中心，保留道具子网格；金克丝火把可能伸到脚底以下，所以完整 bbox 的 minY 可以为负。
+平移写入顶点、根骨骼和相应动画/逆绑定，GLB 根节点保持单位变换、尺寸保留 League 原生单位。贴图自包含 PNG，不使用 Draco、KTX2 或 Meshopt。
+
+ANM v1 解码包含两种源标志对应的 Catmull-Rom 切线、16 位量化时间和源四元数端点符号规则；v5 解码向量/四元数池与逐帧索引。v1 按旧导出器的 Float32 时钟采样，最后一帧在源 duration 前一个帧间隔；报告同时保留源 duration 和 GLB 实际时长。
+真实样本格式通过本地字节反推并数值验证，尚不宣称支持未遇到的 ANM 版本（明确报错）。
+
+粒子只映射可证明等价的有限单粒子子集；连续发射、偏移、概率、向量尺寸、特殊生命周期或其它未映射语义导致整发射器拒绝。数值 blend 枚举未获本地独立证据，也拒绝而不猜值。
+mesh、trail 和明确的 distortion 定义输出运行时已知的 opaque kind，计数跳过；不会把 ArbitraryQuad/Ray 伪装成 sprite。每个发射器的源字段、原因和状态完整保存在旁路报告。
+本次真实样本没有可映射 sprite，因此粒子文档通过合同并不表示已还原可见技能特效。
+
+下载计划流式读取完整本地哈希字典，避免把无 `.tft_set13` 后缀的简表哈希误作 WAD 实际路径。计划保守包含 TFTSet13/TFTCommon 两个 WAD 的全部条目，按单位自有路径与共享候选分组，并给出 bundle ID、压缩块偏移/大小、文件范围、去重总下载量及缺少缓存量。
+逐英雄数字不含共享候选且彼此可能重叠，不能直接相加；最终下载预算使用全局去重块数。其余 58 名英雄缺少源 JSON，跨 WAD 传递依赖闭包尚未证明完整，计划明确记录该限制。
+
+校验方式：
+
+- GLB 本地结构校验，以及可用时的 Khronos JS validator（0 错误、0 警告才通过）。
+- 对照旧 GLB 的顶点数、骨骼数/层级、源动作到旧别名的映射、时长；每段取首/中/末帧，比较所有皮肤骨骼世界平移与旋转。参考模型只应用声明的反射/原点平移，不拟合；容差固定为 0.5 游戏单位、0.5°。
+- 对照全部唯一 POSITION 顶点在声明坐标变换下的误差，额外阈值 0.0001 游戏单位。
+- 直接调用 TS 合同校验所有 45 份粒子文档与 manifest；合成测试用同一批样例交叉核对。
+- `ready` 同时要求本地结构、对照及可用外部校验器通过。失败仍保留真实报告，并以非零状态结束。
+
+本次结果与 60 名英雄下载明细见 [D7-STEP2-REPORT.md](D7-STEP2-REPORT.md)。浏览器本地入口示例：`?render=3d&assets3d=/assets3d-local/out/`，`prepared/` 仅作历史对照。
+
+仅运行本步验收（Windows）：
+
+```powershell
+npx.cmd tsc --noEmit
+Get-ChildItem tests/assets3d-*.test.ts | ForEach-Object { npx.cmd vitest run $_.FullName --configLoader runner; if ($LASTEXITCODE -ne 0) { throw "asset test failed" } }
+```
+
+## 第一阶段保留入口：整理已有试验成果
 
 `prepare-existing.mjs` **只搬运/整理旧试验（lol2gltf）已生成的 GLB，不做原始 SKN/SKL/ANM 转换**。
 
@@ -60,12 +115,12 @@ node scripts/assets3d/particle-inventory.mjs assets3d-local/particle-source/jinx
 - `wad.mjs`：WAD 3.x 索引，以及未压缩/gzip/zstd 单条目解包；路径哈希由调用者显式传入。
   解压前限制输出大小，默认单条目 64 MiB，调用者可以明确设置其它预算。
   未压缩条目也在分配/复制输出前检查实际 payload 长度、声明大小与预算，不信任声明值。
-  Node 24 内置 zstd；不提供内置 zstd 的 Node 22 可注入可信解码器，未注入则明确报错。
+  Node 22.15+ 与 Node 24 内置 zstd；更早的 Node 22 可为该底层工具注入可信解码器，未注入则明确报错。
   重定向及 subchunk 压缩暂明确拒绝，不将未支持的数据当原始文件输出。
 
 ## 已有整理与盘点结果的验证记录（2026-10-19）
 
-以下为此前验证记录，不代表本管线已实现原始文件转换，也不代表本次文档修改重新运行了这些检查。
+以下为第一阶段历史验证记录，不能用它代替上方第 2 步的原始文件转换验收。
 
 起点 `9c3c7a9319333d24e456a9c808e18d4afc47589e`，分支 `codex/assets3d-pipeline`。
 用户明确允许把必要试验素材传到 dot 工作目录处理后返回本机；这不允许公开发布素材。
@@ -87,20 +142,14 @@ Khronos `gltf-validator@2.0.0-dev.3.10`：分别 0 error / 0 warning。
 发射器数量不是最终渲染粒子数量。真实数据含位置、非等比尺寸、概率表、持续发射及特殊寿命等，
 D8 v1 未完整支持，不能丢弃字段后宣称还原。这些源 JSON 与盘点输出仍只在忽略目录。
 
-## 转换（未实现）
+## 当前范围外的工作
 
-以下全部未实现，由后续步骤补齐：
+上方第 2 步已实现 jinx/vi 的原始模型、动作、贴图转换、严格粒子文档/旁路报告、统一入口与离线下载计划；其余工作另行安排：
 
-- **未实现**：原始 SKN+SKL+ANM（含 compressed v1 样条）→ GLB。
-- **未实现**：TEX/DDS → PNG；当前整理入口复用旧试验已有 PNG。
-- **未实现**：可渲染粒子 JSON（v1 合同）及 D8 真实兼容验证；无损盘点不能替代此转换，原版复杂粒子不能默默近似成简单粒子。
-- **未实现**：其余 58 英雄定向获取、转换与统计。
-- **未实现**：`build.mjs` 统一入口；当前仅有上述独立入口与基础模块。
-
-## 其他待补工作
-
-- 生产 WAD subchunk、RMAN 定向获取与下载预算清单。
-- 浏览器截图及视觉验收。
+- 其余 58 英雄的实际获取、转换及独立对照。
+- 在可证明语义等价的前提下扩展粒子合同与真实可见特效；v1 不支持的源发射器仍拒绝或跳过。
+- 生产 WAD subchunk 解包、RMAN 网络定向获取，以及跨 WAD 传递依赖的精确下载预算（本步只做本地保守计划）。
+- D8 浏览器接线、截图及视觉验收。
 
 格式参考：[LTK SKN](https://wiki.leaguetoolkit.dev/reference/file-formats/skn/)、
 [LTK SKL](https://wiki.leaguetoolkit.dev/reference/file-formats/skl/)、
