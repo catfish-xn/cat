@@ -1,6 +1,6 @@
 # D7 第 2 步交付记录
 
-日期：2026-10-19。分支 `codex/assets3d-convert`，起点 `9cdf0de9239c085aae74c2735da2598f178b822c`。仅修改 `scripts/assets3d/**` 与新增 `tests/assets3d-*.test.ts`；未修改 src、既有测试、依赖、Git 元数据。未联网，未运行外部转换二进制。素材和输出均在被忽略的 `assets3d-local/`。
+日期：2026-10-19。分支 `codex/assets3d-convert`，原施工起点 `9cdf0de9239c085aae74c2735da2598f178b822c`；PR #219 评审修复基于 HEAD `1ae2b93b`。仅修改 `scripts/assets3d/**` 与 `tests/assets3d-*.test.ts`；未修改 src、依赖、Git 元数据。未联网，未运行外部转换二进制。素材和输出均在被忽略的 `assets3d-local/`。
 
 ## 模型、动作和独立对照
 
@@ -37,25 +37,38 @@ vi 的唯一 POSITION 顶点在相同声明变换下最大误差 0.000005632 游
 
 TEX/DDS 的 BC1/BC3 解码、PNG 编码均为纯 Node。现有两名英雄目录内 52 张贴图全部转换（jinx 42，vi 10），格式跳过 0；GLB 内嵌 PNG 为金克丝 2 张、蔚 1 张，均无外部贴图或解码器扩展。
 
-| 英雄 | 系统/文档数 | 映射 sprite | 已知类型跳过 | 拒绝发射器 |
-| --- | ---: | ---: | ---: | ---: |
-| jinx | 34 | 0 | 70 | 182 |
-| vi | 11 | 0 | 14 | 33 |
+| 英雄 | 源系统/旁路报告数 | 输出粒子文档数 | 映射 sprite | 已知类型跳过 | 拒绝发射器 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| jinx | 34 | 0 | 0 | 70 | 182 |
+| vi | 11 | 0 | 0 | 14 | 33 |
 
-跳过类型包括 mesh、trail、明确的 screenDistortion。连续发射、概率分布、发射器位置、向量尺寸、特殊生命周期和未知语义导致整个 sprite 拒绝。未将 ArbitraryQuad/Ray 伪装为 sprite。每个发射器均有 `sourcePath / mapped / status / reason / originalFields` 旁路记录；报告不进 manifest。
+跳过类型包括 mesh、trail、明确的 screenDistortion，84 个此类发射器全部只进旁路报告，不再输出 opaque kind 占位。连续发射、概率分布、发射器位置、向量尺寸、特殊生命周期和未知语义导致整个 sprite 拒绝，共拒绝 215 个。未将 ArbitraryQuad/Ray 伪装为 sprite。全部 299 个发射器均有 `sourcePath / mapped / status / reason / originalFields` 旁路记录，未映射项 `mapped:false`；报告不进 manifest。
 
-45 份粒子 JSON 逐份直接调用源码 `parseParticleDocument` 通过；manifest 直接调用 `assertManifest` 通过。通过纯 JS TypeScript loader 加载权威源码，无规则拷贝。与抄录差别：实际解析器未要求 texture 的扩展名为 PNG，且 opaque kind 不检查内部字段；本工具仍只输出 PNG 路径，并为 opaque kind 只写 kind。未改合同。
+45 个源系统均没有可写发射器：不生成粒子 JSON，不进入 manifest 的 effects，build-report 与各旁路报告均记录 `no-writable-emitters`。本次粒子文档计数为 0，manifest 的 effects 为 `{}`，不宣称验证了 45 份粒子载荷。转换器对可映射的合成样本直接调用源码 `parseParticleDocument`，manifest 直接调用 `assertManifest`；通过纯 JS TypeScript loader 加载权威源码，无规则拷贝，未改合同。
 
 源 JSON 有 151 个贴图引用在当前 extracted 中缺失，已逐路径记入 build-report；所有依赖它们的实际发射器均被拒绝或作为已知类型跳过，输出 sprite 没有悬空贴图。本次没有可显示的 sprite 特效，不能把“文档校验通过”表述成“视觉技能特效已经还原”。
 
-`actionEffects` 是 build-report 内按源系统名称匹配的建议：金克丝 W/E/R 与 cast、BA 与 attack；蔚 Q 系统与 cast。没有写进 manifest，也没有修改 D8 接线。
+`actionEffects` 仅为已生成粒子载荷提供名称匹配建议；本次两名英雄的 cast/attack 列表均为空。没有写进 manifest，也没有修改 D8 接线。
 
 ## 产物大小
 
-manifest：5,823 字节；out 共 147 个文件，12,647,579 字节（12.062 MiB，包含 fetch-plan 和 build-report）。
-fetch-plan：5,264,307 字节；build-report：124,348 字节。输出报告包含每个载荷的 SHA256；报告自身不做递归自哈希。
+manifest：596 字节；out 共 102 个文件，12,627,943 字节（12.043 MiB，包含 fetch-plan 和 build-report）。
+fetch-plan：5,264,307 字节；build-report：113,229 字节。输出报告包含 101 个载荷/旁路文件的 SHA256；报告自身不做递归自哈希。磁盘清单与报告完全一致，无未登记文件；另核对了全部文件长度、哈希、45 份旁路报告和其中 299 个原始发射器。
 
-输出可通过 `node scripts/assets3d/build.mjs --units jinx,vi --source assets3d-local/trial/local --out assets3d-local/out` 重建；已存在时显式加 `--force`。开始写载荷之前将 build-report 标记为 ready:false，全部检查后才写 ready:true，避免失败重建遗留旧成功标记。没有清空原始目录或输出目录。
+已执行 `node scripts/assets3d/build.mjs --units jinx,vi --source assets3d-local/trial/local --out assets3d-local/out --force`，结果 `ready:true`。开始写载荷之前将 build-report 标记为 ready:false，全部检查后才写 ready:true，避免失败重建遗留旧成功标记。没有清空原始目录或输出目录；`--force` 仅按当前系统的精确路径、安全检查后移除旧粒子载荷，45 份旁路报告保留。
+
+两份 GLB 与修复前 SHA256 完全一致，完整 comparison 对象逐字段一致（包括顶点、时长、各骨骼首/中/末帧误差）；Khronos 检查仍为各 0 错误、0 警告：
+- jinx：`620658c3eff0ea8d00e3702d3c3cb57c487744297790ca5da605e60d067f1f51`。
+- vi：`b571abadf34845c4f0941c3545e7c12ea8e8db99e317c93615033e656262575d`。
+
+## PR #219 must-fix 与合成反例
+
+- M1：`model.mjs` 的 `MAX_ANIMATION_FRAMES=18_000`、`MAX_ACCESSOR_ELEMENTS=1_000_000`（标量分量）、`MAX_ANIMATION_ELEMENTS=4_000_000`（每段全部轨道分量）在采样数组创建前检查；错误为 `animation-frame-budget` / `animation-elements-budget` / `accessor-elements-budget`。accessor 还预检整数 count、stride、对齐、完整跨度及 bufferView/二进制边界，返回 `invalid-accessor-count/stride/span`。`assets3d-model-convert.test.ts` 新增 20 例：128 字节 ANM 声明十亿帧、越界预算、恶意 accessor 声明、有效交错边界；spy 证明拒绝发生在目标 `Array.from` 之前。
+- M2：`rman.mjs` 增加 `MAX_CACHED_CHUNK_BYTES=16 MiB` 与 `MAX_CACHED_RANGE_BYTES=64 MiB`，累计按实际需要解压的完整块统计，在任何缓存读取/解压前预检，超限分别报 `cached-chunk-output-budget` / `cached-range-output-budget`。`assets3d-rman.test.ts` 新增 3 例，覆盖 272 字节读取对应数 GiB 声明、合法大小块的累计超限，以及重叠块的小范围反例；spy 证明未调用缓存读取。
+- M3：`texture.mjs` 将像素 Buffer 提到 PNG 行循环外，Buffer 输入直接复用、Uint8Array 输入只转换一次。`assets3d-texture.test.ts` 新增 2 例，用 spy 计数完整像素复制（0/1 次），并逐行验证解压后的无损像素与过滤字节。
+- M4：`particles.mjs` 不为不支持类型返回 emitter；`build.mjs` 仅为含可写发射器的系统生成载荷、manifest 和 actionEffects。`assets3d-convert.test.ts` 更新旧占位断言，新增 2 例，覆盖混合系统、全不支持系统、旁路原字段/原因、旧载荷移除和 manifest 排除。
+
+建议本次修复提交信息：`fix(assets3d): bound decoding allocations and omit unsupported effects`。
 
 ## 离线下载计划
 
@@ -136,7 +149,7 @@ fetch-plan：5,264,307 字节；build-report：124,348 字节。输出报告包�
 
 ## 测试与交付边界
 
-本地 `npx.cmd tsc --noEmit` 通过。逐文件运行全部 10 个 `tests/assets3d-*.test.ts`，均使用 `--configLoader runner`：81 通过、1 个既有文件符号链接用例因 Windows EPERM 跳过；新增 49 个用例全部通过，未改既有断言或时限。未跑全套、浏览器或联网 CI。
+本地 `npx.cmd tsc --noEmit` 通过。逐文件运行全部 10 个 `tests/assets3d-*.test.ts`，均使用 `--configLoader runner`：108 通过、1 个既有文件符号链接用例因 Windows EPERM 跳过；本次新增 27 个用例全部通过，按 M4 修正旧粒子输出断言，未改测试时限。未跑全套、浏览器或联网 CI。
 
 合成样本覆盖压缩/非压缩 ANM、两类样条与四元数符号、BC1/BC3、DDS/TEX mip、PNG CRC/扫描线、SKN/SKL→GLB 镜像/原点/逆绑定、对照器的反例、粒子拒绝与合同交叉校验、manifest/路径、CLI、RMAN 表/缓存范围/块去重。不把真实素材作为测试夹具。
 

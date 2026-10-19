@@ -14,11 +14,11 @@ const vector = (v, name) => {
 export function mapEmitter(source, texturePath) {
     const primitive = source.primitive?.__type ?? 'VfxPrimitiveCameraQuad';
     if (source.distortionDefinition?.__type === 'VfxDistortionDefinitionData')
-        return { status: 'skipped', emitter: { kind: 'screenDistortion' }, reason: 'v1-runtime-skips-screen-distortion' };
+        return { status: 'skipped', reason: 'v1-runtime-skips-screen-distortion' };
     if (/Mesh/.test(primitive))
-        return { status: 'skipped', emitter: { kind: 'mesh' }, reason: 'v1-runtime-skips-mesh' };
+        return { status: 'skipped', reason: 'v1-runtime-skips-mesh' };
     if (/Trail/.test(primitive))
-        return { status: 'skipped', emitter: { kind: 'trail' }, reason: 'v1-runtime-skips-trail' };
+        return { status: 'skipped', reason: 'v1-runtime-skips-trail' };
     if (!['VfxPrimitiveCameraQuad'].includes(primitive))
         return { status: 'rejected', reason: `unsupported-primitive:${primitive}` };
     try {
@@ -111,9 +111,10 @@ export function convertParticles(source, texturePath, validate) {
                 emitters.push(result.emitter);
             report.push({ sourcePath: e.id, mapped: result.status === 'mapped', status: result.status, reason: result.reason, inventoryGaps: e.gaps, originalFields: e.source });
         }
-        const document = { schemaVersion: 1, emitters };
-        validate(document);
-        systems.push({ sourcePath: system.id, document, report });
+        const document = emitters.length ? { schemaVersion: 1, emitters } : undefined;
+        if (document)
+            validate(document);
+        systems.push({ sourcePath: system.id, document, reason: document ? undefined : 'no-writable-emitters', report });
     }
     return { systems, counts, emitters: inventory.emitterCount };
 }

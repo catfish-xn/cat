@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Matrix4, Quaternion, Vector3 } from 'three';
 // @ts-expect-error Pure Node build utility.
-import { makeModel, validateModel, readAccessor } from '../scripts/assets3d/model.mjs';
+import { makeModel, validateModel, readAccessor, MAX_ANIMATION_FRAMES, MAX_ACCESSOR_ELEMENTS } from '../scripts/assets3d/model.mjs';
 // @ts-expect-error Pure Node build utility.
 import { readGlb, summarizeGlb, writeGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node build utility.
@@ -61,6 +61,50 @@ function converted() {
     return makeModel(f.mesh, f.rig, [{ name: 'source_idle', bytes: f.anm }], { Body: f.png });
 }
 describe('raw skinned GLB assembly', () => {
+    it.each([MAX_ANIMATION_FRAMES + 1, 1_000_000_000])('rejects a tiny compressed ANM declaring %s frames before creating the frame array', frames => {
+        const f = fixtures(), anm = Buffer.alloc(128);
+        anm.write('r3d2canm');
+        anm.writeUInt32LE(1, 8);
+        anm.writeFloatLE(frames, 36);
+        anm.writeFloatLE(1, 40);
+        // Zero controls/hashes: only the declaration could induce a large array.
+        const original = Array.from, from = vi.spyOn(Array, 'from');
+        from.mockImplementation(((input: ArrayLike<unknown>, ...rest: unknown[]) => {
+            if (input.length > MAX_ANIMATION_FRAMES)
+                throw new Error('unexpected-large-allocation');
+            return Reflect.apply(original, Array, [input, ...rest]);
+        }) as typeof Array.from);
+        try {
+            expect(() => makeModel(f.mesh, f.rig, [{ name: 'huge', bytes: anm }], { Body: f.png })).toThrow('animation-frame-budget');
+            expect(from.mock.calls.some(([input]) => (input as ArrayLike<unknown>).length > MAX_ANIMATION_FRAMES)).toBe(false);
+        }
+        finally { from.mockRestore(); }
+    });
+    it.each([
+        [{ count: 1_000_000_000 }, {}, 'accessor-elements-budget'],
+        [{ count: Math.floor(MAX_ACCESSOR_ELEMENTS / 3) + 1 }, {}, 'accessor-elements-budget'],
+        ...[-1, 0, 0.5, NaN, Infinity].map(count => [{ count }, {}, 'invalid-accessor-count']),
+        ...[0, 8, 13, 256, 1e15].map(byteStride => [{}, { byteStride }, 'invalid-accessor-stride']),
+        [{ byteOffset: -1 }, {}, 'invalid-accessor-span'],
+        [{ byteOffset: 4 }, {}, 'invalid-accessor-span'],
+        [{}, { byteLength: 20 }, 'invalid-accessor-span'],
+        [{}, { byteOffset: 120 }, 'invalid-accessor-span'],
+        [{}, { byteStride: 16, byteLength: 24 }, 'invalid-accessor-span'],
+    ] as [object, object, string][])('preflights accessor count, stride and full view/binary span: %j %j', (accessor, view, reason) => {
+        const parsed = { document: { accessors: [{ bufferView: 0, type: 'VEC3', componentType: 5126, count: 2, ...(accessor as object) }], bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 24, ...(view as object) }] }, binary: Buffer.alloc(128) };
+        const from = vi.spyOn(Array, 'from').mockImplementation(() => { throw new Error('unexpected-accessor-allocation'); });
+        try {
+            expect(() => readAccessor(parsed, 0)).toThrow(reason as string);
+            expect(from).not.toHaveBeenCalled();
+        }
+        finally { from.mockRestore(); }
+    });
+    it('accepts an interleaved accessor ending exactly at its view boundary', () => {
+        const binary = Buffer.alloc(32);
+        [1, 2, 3].forEach((n, k) => binary.writeFloatLE(n, 4 + k * 4));
+        [4, 5, 6].forEach((n, k) => binary.writeFloatLE(n, 20 + k * 4));
+        expect(readAccessor({ document: { accessors: [{ bufferView: 0, type: 'VEC3', componentType: 5126, count: 2 }], bufferViews: [{ buffer: 0, byteOffset: 4, byteLength: 28, byteStride: 16 }] }, binary }, 0)).toEqual([[1, 2, 3], [4, 5, 6]]);
+    });
     it('embeds PNG, preserves native size, mirrors winding and places the origin at the centered foot', () => {
         const r = converted(), p = readGlb(r.glb), d = p.document;
         expect(validateModel(r.glb)).toMatchObject({ passed: true, animations: 1 });

@@ -37,7 +37,7 @@ ANM v1 解码包含两种源标志对应的 Catmull-Rom 切线、16 位量化时
 真实样本格式通过本地字节反推并数值验证，尚不宣称支持未遇到的 ANM 版本（明确报错）。
 
 粒子只映射可证明等价的有限单粒子子集；连续发射、偏移、概率、向量尺寸、特殊生命周期或其它未映射语义导致整发射器拒绝。数值 blend 枚举未获本地独立证据，也拒绝而不猜值。
-mesh、trail 和明确的 distortion 定义输出运行时已知的 opaque kind，计数跳过；不会把 ArbitraryQuad/Ray 伪装成 sprite。每个发射器的源字段、原因和状态完整保存在旁路报告。
+mesh、trail 和明确的 distortion 定义计数跳过，仅保留旁路报告，不输出 opaque kind 占位；不会把 ArbitraryQuad/Ray 伪装成 sprite。每个发射器的源字段、原因和状态完整保存在旁路报告。无可写发射器的系统不生成粒子 JSON，也不进入 manifest.effects，build-report 记录 `no-writable-emitters`；`--force` 重建会安全移除这些系统的旧载荷。
 本次真实样本没有可映射 sprite，因此粒子文档通过合同并不表示已还原可见技能特效。
 
 下载计划流式读取完整本地哈希字典，避免把无 `.tft_set13` 后缀的简表哈希误作 WAD 实际路径。计划保守包含 TFTSet13/TFTCommon 两个 WAD 的全部条目，按单位自有路径与共享候选分组，并给出 bundle ID、压缩块偏移/大小、文件范围、去重总下载量及缺少缓存量。
@@ -48,7 +48,7 @@ mesh、trail 和明确的 distortion 定义输出运行时已知的 opaque kind�
 - GLB 本地结构校验，以及可用时的 Khronos JS validator（0 错误、0 警告才通过）。
 - 对照旧 GLB 的顶点数、骨骼数/层级、源动作到旧别名的映射、时长；每段取首/中/末帧，比较所有皮肤骨骼世界平移与旋转。参考模型只应用声明的反射/原点平移，不拟合；容差固定为 0.5 游戏单位、0.5°。
 - 对照全部唯一 POSITION 顶点在声明坐标变换下的误差，额外阈值 0.0001 游戏单位。
-- 直接调用 TS 合同校验所有 45 份粒子文档与 manifest；合成测试用同一批样例交叉核对。
+- 直接调用 TS 合同校验可写粒子文档与 manifest；当前 45 个源系统均只生成旁路报告，粒子文档与 manifest.effects 数量为 0；合成测试覆盖可写文档并用同一批样例交叉核对。
 - `ready` 同时要求本地结构、对照及可用外部校验器通过。失败仍保留真实报告，并以非零状态结束。
 
 本次结果与 60 名英雄下载明细见 [D7-STEP2-REPORT.md](D7-STEP2-REPORT.md)。浏览器本地入口示例：`?render=3d&assets3d=/assets3d-local/out/`，`prepared/` 仅作历史对照。

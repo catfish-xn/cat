@@ -5,6 +5,10 @@ import { decodeAnm } from './animation.mjs';
 const mirrorVector = v => [-v[0], v[1], v[2]];
 const mirrorRotation = q => [q[0], -q[1], -q[2], q[3]];
 const quat = q => new Quaternion(...q).normalize().toArray();
+// Offline conversion budgets; declarations are checked before sampling/allocation.
+export const MAX_ANIMATION_FRAMES = 18_000;
+export const MAX_ACCESSOR_ELEMENTS = 1_000_000; // Scalar components, including vectors/matrices.
+export const MAX_ANIMATION_ELEMENTS = 4_000_000; // All sampled track components in one clip.
 export function makeModel(skn, skl, animationSources, textures) {
     const mesh = inspectSkn(skn), rig = inspectSkl(skl), r = new BinaryReader(skn);
     const positions = [], normals = [], uv = [], joints = [], weights = [];
@@ -114,6 +118,10 @@ export function makeModel(skn, skl, animationSources, textures) {
     const animationReport = [];
     for (const { name, bytes } of animationSources) {
         const animation = decodeAnm(bytes), step = Math.fround(1 / animation.fps), count = animation.format === 'compressed' ? Math.round(animation.duration * animation.fps) : animation.tracks[0].keys.length;
+        if (!Number.isSafeInteger(count) || count < 1 || count > MAX_ANIMATION_FRAMES)
+            throw new Error('animation-frame-budget');
+        if (animation.tracks.reduce((sum, track) => sum + count * (track.path === 'rotation' ? 4 : 3), 0) > MAX_ANIMATION_ELEMENTS)
+            throw new Error('animation-elements-budget');
         const times = Array.from({ length: count }, (_, i) => Math.fround(i * step)), input = accessor(times, 'SCALAR', 5126, undefined, true), channels = [], samplers = [];
         const byHash = new Map(rig.joints.map((j, i) => [j.nameHash, i + 1]));
         for (const track of animation.tracks) {
@@ -143,13 +151,23 @@ export function makeModel(skn, skl, animationSources, textures) {
     return { glb: writeGlb(doc, Buffer.concat(parts)), report: { vertices: mesh.vertices, triangles: mesh.triangles, bones: rig.bones, bbox: { min: min.map((n, k) => n + offset[k]), max: max.map((n, k) => n + offset[k]), height: max[1] - min[1] }, coordinateTransform: { mirror: 'X', translation: offset, originBasis: body ? 'Body bind-mesh minimum Y and XZ bounds center (prop submeshes retained)' : 'complete bind-mesh minimum Y and XZ bounds center', scale: 1, units: 'League native', forward: '+Z', up: '+Y' }, animations: animationReport } };
 }
 export function readAccessor({ document: d, binary: b }, index) {
-    const a = d.accessors[index], v = d.bufferViews[a.bufferView], size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a.type], width = { 5121: 1, 5123: 2, 5125: 4, 5126: 4 }[a.componentType];
+    const a = d.accessors?.[index], v = d.bufferViews?.[a?.bufferView], size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a?.type], width = { 5121: 1, 5123: 2, 5125: 4, 5126: 4 }[a?.componentType];
     if (!v || !size || !width)
         throw new Error('invalid-accessor');
-    const reader = new BinaryReader(b);
+    if (!Number.isSafeInteger(a.count) || a.count < 1)
+        throw new Error('invalid-accessor-count');
+    if (a.count > Math.floor(MAX_ACCESSOR_ELEMENTS / size))
+        throw new Error('accessor-elements-budget');
+    const packed = size * width, stride = v.byteStride ?? packed, viewOffset = v.byteOffset ?? 0, offset = a.byteOffset ?? 0;
+    if (!Number.isSafeInteger(stride) || stride < packed || stride % width !== 0 ||
+        (v.byteStride !== undefined && (stride > 252 || stride % 4 !== 0)))
+        throw new Error('invalid-accessor-stride');
+    const span = (a.count - 1) * stride + packed;
+    if (v.buffer !== 0 || a.sparse || ![viewOffset, offset, v.byteLength, span].every(n => Number.isSafeInteger(n) && n >= 0) ||
+        offset % width !== 0 || viewOffset % width !== 0 || offset > v.byteLength - span || viewOffset > b.length - v.byteLength)
+        throw new Error('invalid-accessor-span');
     return Array.from({ length: a.count }, (_, i) => Array.from({ length: size }, (_, k) => {
-        const o = (v.byteOffset ?? 0) + (a.byteOffset ?? 0) + i * (v.byteStride ?? size * width) + k * width;
-        reader.range(o, width);
+        const o = viewOffset + offset + i * stride + k * width;
         return a.componentType === 5126 ? b.readFloatLE(o) : b.readUIntLE(o, width);
     }));
 }

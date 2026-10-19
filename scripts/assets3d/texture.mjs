@@ -103,7 +103,8 @@ export function encodePng({ width, height, rgba }) {
     header[8] = 8;
     header[9] = 6;
     const scan = Buffer.alloc(height * (1 + width * 4));
+    const pixels = Buffer.isBuffer(rgba) ? rgba : Buffer.from(rgba);
     for (let y = 0; y < height; y++)
-        Buffer.from(rgba).copy(scan, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
+        pixels.copy(scan, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
     return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(scan, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }

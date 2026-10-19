@@ -4,7 +4,7 @@ import { parseParticleDocument } from '../src/rendering3d/particles';
 // @ts-expect-error Pure Node build utility.
 import { convertParticles, mapEmitter } from '../scripts/assets3d/particles.mjs';
 // @ts-expect-error Pure Node build utility.
-import { makeManifest, build } from '../scripts/assets3d/build.mjs';
+import { makeManifest, build, writeParticleEffects } from '../scripts/assets3d/build.mjs';
 // @ts-expect-error Pure Node build utility.
 import { contracts, unitDefinitions } from '../scripts/assets3d/runtime.mjs';
 // @ts-expect-error Pure Node build utility.
@@ -23,7 +23,8 @@ describe('strict particle conversion and public contract integration', () => {
     });
     it('rejects continuous emission rather than dropping rate semantics', () => {
         const result = convertParticles(source([{ ...sprite(), isSingleParticle: false, rate: constant(10) }]), () => 'textures/spark.png', parseParticleDocument);
-        expect(result.systems[0].document.emitters).toEqual([]);
+        expect(result.systems[0].document).toBeUndefined();
+        expect(result.systems[0].reason).toBe('no-writable-emitters');
         expect(result.counts.rejected).toBe(1);
         expect(result.systems[0].report[0]).toMatchObject({ mapped: false, reason: 'continuous-emission', originalFields: { rate: { constantValue: 10 } } });
     });
@@ -39,14 +40,53 @@ describe('strict particle conversion and public contract integration', () => {
         expect(result.systems[0].report.map((e: {
             reason: string;
         }) => e.reason)).toEqual(['birth-probability', 'special-or-dynamic-lifetime', 'unmapped-source-field:unknownSemantic']);
-        expect(JSON.stringify(result.systems[0].document)).not.toContain('originalFields');
+        expect(result.systems[0].document).toBeUndefined();
     });
-    it('skips only known opaque kinds and rejects arbitrary primitives', () => {
+    it('keeps unsupported emitters exclusively in sidecars and omits a system with no writable emitters', () => {
         const e: object[] = ['VfxPrimitiveMesh', 'VfxPrimitiveCameraTrail', 'VfxPrimitiveArbitraryQuad', 'VfxPrimitiveRay'].map(__type => ({ ...sprite(), primitive: { __type } }));
         e.push({ ...sprite(), distortionDefinition: { __type: 'VfxDistortionDefinitionData', distortion: 0.1 } });
         const r = convertParticles(source(e), () => 'textures/spark.png', parseParticleDocument);
         expect(r.counts).toEqual({ mapped: 0, skipped: 3, rejected: 2 });
-        expect(r.systems[0].document.emitters).toEqual([{ kind: 'mesh' }, { kind: 'trail' }, { kind: 'screenDistortion' }]);
+        expect(r.systems[0].document).toBeUndefined();
+        expect(r.systems[0].reason).toBe('no-writable-emitters');
+        expect(r.systems[0].report.map((entry: { mapped: boolean; originalFields: unknown }) => entry.mapped)).toEqual([false, false, false, false, false]);
+        expect(r.systems[0].report.map((entry: { originalFields: unknown }) => entry.originalFields)).toEqual(e);
+        expect(r.systems[0].report.map((entry: { reason: string }) => entry.reason)).toEqual(['v1-runtime-skips-mesh', 'v1-runtime-skips-trail', 'unsupported-primitive:VfxPrimitiveArbitraryQuad', 'unsupported-primitive:VfxPrimitiveRay', 'v1-runtime-skips-screen-distortion']);
+    });
+    it('writes only mapped emitters in a mixed system and registers only written effects', async () => {
+        const unsupported = [{ ...sprite(), primitive: { __type: 'VfxPrimitiveMesh' } }, { ...sprite(), primitive: { __type: 'VfxPrimitiveCameraTrail' } }, { ...sprite(), distortionDefinition: { __type: 'VfxDistortionDefinitionData' } }];
+        const converted = convertParticles({
+            ...source([sprite(), ...unsupported]),
+            empty: { __type: 'VfxSystemDefinitionData', complexEmitterDefinitionData: unsupported },
+        }, () => 'textures/spark.png', parseParticleDocument);
+        const files = new Map<string, string>([['effects/jinx/empty.json', 'old opaque payload']]), removed: string[] = [];
+        const output = await writeParticleEffects('jinx', converted, { cast: ['system', 'empty'] }, {
+            write: async (path: string, bytes: string) => { files.set(path, bytes); },
+            remove: async (path: string) => { removed.push(path); files.delete(path); },
+        });
+        expect([...files.keys()].sort()).toEqual(['effects/jinx/empty.report.json', 'effects/jinx/system.json', 'effects/jinx/system.report.json']);
+        expect(removed).toEqual(['effects/jinx/empty.json']);
+        const document = JSON.parse(files.get('effects/jinx/system.json')!);
+        expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['sprite']);
+        expect(parseParticleDocument(document)).toEqual(document);
+        expect(output.effects).toEqual({ jinx_system: { path: 'effects/jinx/system.json' } });
+        expect(makeManifest({}, output.effects, assertManifest).effects).toEqual(output.effects);
+        expect(output.actionEffects.cast).toEqual(['jinx_system']);
+        expect(output.systems.find((s: { effectId: string }) => s.effectId === 'jinx_empty')).toMatchObject({ reason: 'no-writable-emitters', counts: { mapped: 0, skipped: 3, rejected: 0 } });
+        expect(output.systems.find((s: { effectId: string }) => s.effectId === 'jinx_empty').path).toBeUndefined();
+        const sidecar = JSON.parse(files.get('effects/jinx/empty.report.json')!);
+        expect(sidecar.reason).toBe('no-writable-emitters');
+        expect(sidecar.emitters.map((e: { originalFields: unknown }) => e.originalFields)).toEqual(unsupported);
+    });
+    it('leaves an all-unsupported build with no particle payload or manifest effect', async () => {
+        const converted = convertParticles(source([{ primitive: { __type: 'VfxPrimitiveMesh' } }]), () => undefined, parseParticleDocument);
+        const written: string[] = [];
+        const result = await writeParticleEffects('vi', converted, { cast: ['system'] }, {
+            write: async (path: string) => { written.push(path); }, remove: async () => {},
+        });
+        expect(written).toEqual(['effects/vi/system.report.json']);
+        expect(makeManifest({}, result.effects, assertManifest).effects).toEqual({});
+        expect(result.actionEffects).toEqual({ cast: [] });
     });
     it('rejects a missing texture and records contract-invalid candidates per emitter', () => {
         expect(mapEmitter(sprite(), () => undefined).reason).toBe('missing-or-unsupported-texture');

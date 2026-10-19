@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { inflateSync } from 'node:zlib';
 // @ts-expect-error Pure Node build utility.
 import { decodeBlocks, decodeTexture, encodePng, crc32 } from '../scripts/assets3d/texture.mjs';
@@ -10,6 +10,22 @@ function colorBlock(c0 = 0xf800, c1 = 0x001f) {
     return b;
 }
 describe('BC1/BC3 and embedded PNG production', () => {
+    it.each([true, false])('reuses one pixel buffer across all PNG rows (Buffer input: %s)', bufferInput => {
+        const width = 8, height = 64, rgba = bufferInput ? Buffer.alloc(width * height * 4, 17) : new Uint8Array(width * height * 4).fill(17);
+        const from = vi.spyOn(Buffer, 'from');
+        try {
+            const png = encodePng({ width, height, rgba });
+            const copies = from.mock.calls.filter(([input]) => input === rgba);
+            expect(copies).toHaveLength(bufferInput ? 0 : 1);
+            const idatOffset = 33, length = png.readUInt32BE(idatOffset);
+            const scan = inflateSync(png.subarray(idatOffset + 8, idatOffset + 8 + length));
+            for (let y = 0; y < height; y++) {
+                expect(scan[y * (width * 4 + 1)]).toBe(0);
+                expect(scan.subarray(y * (width * 4 + 1) + 1, (y + 1) * (width * 4 + 1))).toEqual(Buffer.alloc(width * 4, 17));
+            }
+        }
+        finally { from.mockRestore(); }
+    });
     it('decodes BC1 four-color RGB565 and selector order', () => {
         const d = decodeBlocks(colorBlock(), 4, 4, 'BC1');
         expect([...d.rgba.subarray(0, 16)]).toEqual([255, 0, 0, 255, 0, 0, 255, 255, 170, 0, 85, 255, 85, 0, 170, 255]);

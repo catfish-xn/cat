@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as zlib from 'node:zlib';
 // @ts-expect-error Pure Node build utility.
-import { readRman, readCachedRange } from '../scripts/assets3d/rman.mjs';
+import { readRman, readCachedRange, MAX_CACHED_CHUNK_BYTES, MAX_CACHED_RANGE_BYTES } from '../scripts/assets3d/rman.mjs';
 function fixture() {
     const b = Buffer.alloc(416), u = (o: number, n: number) => b.writeUInt32LE(n, o), id = (o: number, n: number) => b.writeBigUInt64LE(BigInt(n), o);
     // Six table offsets, then vectors of table-relative pointers.
@@ -60,6 +60,22 @@ function fixture() {
     return { body: b, pack };
 }
 describe('offline RMAN metadata and cached chunk ranges', () => {
+    it.each([MAX_CACHED_CHUNK_BYTES + 1, 0xffffffff])('rejects a %s-byte block declaration for a 272-byte read before reading/inflating', async targetSize => {
+        const read = vi.fn(async () => zlib.zstdCompressSync(Buffer.from('tiny')));
+        const file = { size: targetSize, chunks: [{ id: 'huge', fileOffset: 0, targetSize, size: 1 }] };
+        await expect(readCachedRange(file, 0, 272, read)).rejects.toThrow('cached-chunk-output-budget');
+        expect(read).not.toHaveBeenCalled();
+    });
+    it('preflights the cumulative whole-block budget before reading the first valid-sized block', async () => {
+        const n = MAX_CACHED_RANGE_BYTES / MAX_CACHED_CHUNK_BYTES + 1;
+        const chunks = Array.from({ length: n }, (_, i) => ({ id: String(i), fileOffset: i * MAX_CACHED_CHUNK_BYTES, targetSize: MAX_CACHED_CHUNK_BYTES, size: 1 }));
+        const read = vi.fn(async () => Buffer.from('tiny'));
+        await expect(readCachedRange({ size: n * MAX_CACHED_CHUNK_BYTES, chunks }, 0, n * MAX_CACHED_CHUNK_BYTES, read)).rejects.toThrow('cached-range-output-budget');
+        expect(read).not.toHaveBeenCalled();
+        // A corrupt overlapping layout must not bypass the inflation budget via a tiny requested slice.
+        await expect(readCachedRange({ size: MAX_CACHED_CHUNK_BYTES, chunks: chunks.map(c => ({ ...c, fileOffset: 0 })) }, 0, 272, read)).rejects.toThrow('cached-range-output-budget');
+        expect(read).not.toHaveBeenCalled();
+    });
     it('reads a compressed synthetic RMAN with bundles, directories and exact file chunk offsets', () => {
         const f = fixture(), r = readRman(f.pack(f.body));
         expect(r.files).toEqual([{ name: 'DATA/toy.wad.client', size: 10, chunks: [{ id: '0000000000000002', bundleId: '0000000000000001', offset: 0, size: 7, targetSize: 10, fileOffset: 0 }] }]);

@@ -1,6 +1,8 @@
 // RMAN 2.0/2.1 FlatBuffer tables; follows the locally supplied CDTB patcher.py.
 import * as zlib from 'node:zlib';
 import { BinaryReader } from './inspect-source.mjs';
+export const MAX_CACHED_CHUNK_BYTES = 16 * 1024 * 1024;
+export const MAX_CACHED_RANGE_BYTES = 64 * 1024 * 1024; // Whole blocks inflated for a single range, even for tiny slices.
 export function readRman(bytes) {
     const r = new BinaryReader(bytes);
     r.range(0, 28);
@@ -104,9 +106,23 @@ export function chunksForRange(file, start, size) {
     return file.chunks.filter(c => size > 0 && c.fileOffset < start + size && c.fileOffset + c.targetSize > start);
 }
 export async function readCachedRange(file, start, size, readChunk) {
+    const chunks = chunksForRange(file, start, size);
+    let total = 0;
+    // Preflight the complete range before reading or inflating even the first block.
+    for (const c of chunks) {
+        if (!Number.isSafeInteger(c.targetSize) || c.targetSize < 1 || c.targetSize > MAX_CACHED_CHUNK_BYTES)
+            throw new Error('cached-chunk-output-budget');
+        total += c.targetSize;
+        if (total > MAX_CACHED_RANGE_BYTES)
+            throw new Error('cached-range-output-budget');
+    }
+    if (size > MAX_CACHED_RANGE_BYTES)
+        throw new Error('cached-range-output-budget');
     const parts = [];
-    for (const c of chunksForRange(file, start, size)) {
+    for (const c of chunks) {
         const packed = await readChunk(c.id);
+        if (packed.length !== c.size)
+            throw new Error('cached-chunk-size-mismatch');
         const bytes = zlib.zstdDecompressSync(packed, { maxOutputLength: c.targetSize });
         if (packed.length !== c.size || bytes.length !== c.targetSize)
             throw new Error('cached-chunk-size-mismatch');

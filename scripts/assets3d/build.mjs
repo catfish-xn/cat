@@ -1,4 +1,4 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, unlink } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -29,6 +29,32 @@ export function makeManifest(models, effects, validate) {
     const manifest = { schemaVersion: 1, models, effects };
     validate(manifest);
     return manifest;
+}
+export async function writeParticleEffects(id, converted, patterns, { write, remove }, effectIds = new Set()) {
+    const effects = {}, systems = [], actionEffects = Object.fromEntries(Object.keys(patterns).map(action => [action, []]));
+    for (const system of converted.systems) {
+        const slug = system.sourcePath.split('/').at(-1).toLowerCase().replace(/[^a-z0-9_-]/g, '_'), effectId = `${id}_${slug}`;
+        if (effectIds.has(effectId))
+            throw new Error('duplicate-effect-id');
+        effectIds.add(effectId);
+        const path = `effects/${id}/${slug}.json`, reportPath = `effects/${id}/${slug}.report.json`;
+        await write(reportPath, json({ sourcePath: system.sourcePath, reason: system.reason, emitters: system.report }));
+        const counts = { mapped: 0, skipped: 0, rejected: 0 };
+        system.report.forEach(e => counts[e.status]++);
+        if (!system.document) {
+            // Remove this system's former payload on --force; retain its sidecar.
+            await remove(path);
+            systems.push({ effectId, reportPath, sourcePath: system.sourcePath, counts, reason: system.reason });
+            continue;
+        }
+        await write(path, json(system.document));
+        effects[effectId] = { path };
+        systems.push({ effectId, path, reportPath, sourcePath: system.sourcePath, counts });
+        for (const [action, matches] of Object.entries(patterns))
+            if (matches.some(p => system.sourcePath.toLowerCase().includes(p.toLowerCase())))
+                actionEffects[action].push(effectId);
+    }
+    return { effects, systems, actionEffects };
 }
 export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
@@ -70,6 +96,17 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const data = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
         await writeOutputFile(join(output, path), data, { force });
         files.push({ path, bytes: data.length, sha256: sha256(data) });
+    };
+    const remove = async path => {
+        if (!force)
+            return;
+        try {
+            await unlink(await safeOutputPath(join(output, path), { force: true }));
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        }
     };
     const jsonRoot = resolve(root, '../../source-json'), referenceRoot = resolve(root, '../public-assets');
     const textures = {}, textureByCanonical = new Map(), textureReports = [], particleSources = {};
@@ -134,24 +171,10 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
         models[id] = { path, animations: config.animations };
-        const converted = convertParticles(particleSources[id], p => textureByCanonical.get(canonical(p)), parseParticleDocument), systems = [];
-        actionEffects[id] = Object.fromEntries(Object.keys(config.effectPatterns).map(action => [action, []]));
-        for (const system of converted.systems) {
-            const slug = system.sourcePath.split('/').at(-1).toLowerCase().replace(/[^a-z0-9_-]/g, '_'), effectId = `${id}_${slug}`;
-            if (effectIds.has(effectId))
-                throw new Error('duplicate-effect-id');
-            effectIds.add(effectId);
-            const path = `effects/${id}/${slug}.json`, reportPath = `effects/${id}/${slug}.report.json`;
-            await write(path, json(system.document));
-            await write(reportPath, json({ sourcePath: system.sourcePath, emitters: system.report }));
-            effects[effectId] = { path };
-            const counts = { mapped: 0, skipped: 0, rejected: 0 };
-            system.report.forEach(e => counts[e.status]++);
-            systems.push({ effectId, path, reportPath, sourcePath: system.sourcePath, counts });
-            for (const [action, patterns] of Object.entries(config.effectPatterns))
-                if (patterns.some(p => system.sourcePath.toLowerCase().includes(p.toLowerCase())))
-                    actionEffects[id][action].push(effectId);
-        }
+        const converted = convertParticles(particleSources[id], p => textureByCanonical.get(canonical(p)), parseParticleDocument);
+        const particleOutput = await writeParticleEffects(id, converted, config.effectPatterns, { write, remove }, effectIds), systems = particleOutput.systems;
+        Object.assign(effects, particleOutput.effects);
+        actionEffects[id] = particleOutput.actionEffects;
         unitReports[id] = { ...result.report, bytes: result.glb.length, sha256: sha256(result.glb), referenceSha256: sha256(reference), structure, comparison, gltfValidation: gltfValidation ? { version: validator.version(), ...gltfValidation.issues } : { available: false }, particles: { counts: converted.counts, emitters: converted.emitters, systems }, textures: textureReports.filter(t => t.source.startsWith(`${config.base}/`)).length };
     }
     const manifest = makeManifest(models, effects, assertManifest);
@@ -161,7 +184,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     files.push({ path: 'fetch-plan.json', bytes: fetchBytes.length, sha256: sha256(fetchBytes) });
     const ready = Object.values(unitReports).every(u => u.comparison.passed && u.structure.passed && (!validator || u.gltfValidation.numErrors === 0 && u.gltfValidation.numWarnings === 0));
     const report = { schemaVersion: 1, ready, sourceVersion: records.version, units: unitReports, sourceFiles: sources, textureSummary: { converted: textureReports.filter(t => t.status === 'converted').length, skipped: textureReports.filter(t => t.status === 'skipped').length, missingReferences: [...missingTextureReferences].sort() }, textures: textureReports,
-        actionEffects, actionEffectsNote: 'Name-based suggestions only, no schema extension or runtime wiring. All current sprites are rejected; mesh/trail documents render no sprite visuals.',
+        actionEffects, actionEffectsNote: 'Name-based suggestions for written effects only, no schema extension or runtime wiring. Unsupported emitters are sidecar-only; systems with no writable emitters have no document or manifest effect.',
         contractVerification: { manifest: 'src/rendering3d/contracts.ts assertManifest (direct TS import)', particles: 'src/rendering3d/particles.ts parseParticleDocument (direct TS import)', particleDocuments: Object.keys(effects).length, passed: true },
         animationMethod: 'v1: 16-bit truncated sample time, flags bit 4 selects time-weighted rather than uniform Catmull-Rom tangents; incoming quaternion endpoint hemisphere correction leaves look-ahead control encoded. Float32 frame clock matches reference export. v5: indexed vector/quaternion pools. No fitting to reference GLBs; they are read only for verification.',
         fetchPlan: { totals: fetchPlan.totals, byWad: fetchPlan.wads.map(w => ({ name: w.name, entries: w.entries.length, chunks: w.chunks, downloadBytes: w.downloadBytes })), byUnit: Object.fromEntries(Object.entries(fetchPlan.units).map(([id, u]) => [id, u.summary])), limitations: fetchPlan.limitations }, files, totals: { manifestBytes: files.find(f => f.path === 'manifest.json').bytes, outFiles: 0, outBytes: 0, buildReportBytes: 0 } };
