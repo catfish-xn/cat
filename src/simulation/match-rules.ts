@@ -4,7 +4,7 @@ import { freezeContent } from './content/freeze';
 /** Approved M8B OPENING initialization, shared by Match and the content digest. */
 export const OPENING_INITIAL_STATE = freezeContent({
   gold:0, level:1, xp:0, hp:100,
-  unit:{definitionId:'irelia',id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
+  unit:{definitionId:{rule:'opening-unit-v1',catalog:'SHOP_CATALOG_BY_COST[1]',stream:'opening-unit-v1/<seatId>',rngAlgorithm:'lcg32-v1',derivation:'fnv1a32-utf16-xor-seed',sampling:'floor-word-times-length-over-2^32',seedXor:0x6f706844},id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
 } as const);
 export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.gold, rerollCost: 2, roundIncome: 5, shopSize: 5,
   initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 9, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
@@ -19,10 +19,10 @@ export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number
 for (const row of Object.values(SHOP_ODDS)) Object.freeze(row);
 export const SHOP_CATALOG_BY_COST: Readonly<Record<CostTier, readonly string[]>> = Object.freeze({
   1: Object.freeze(["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"]),
-  2: Object.freeze(["akali", "camille", "leona", "nocturne", "rell", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"]),
-  3: Object.freeze(["blitzcrank", "ezreal", "kogmaw", "loris", "nami", "scar", "twistedfate"]),
-  4: Object.freeze(["ambessa", "corki", "ekko", "garen", "heimerdinger", "illaoi", "twitch", "vi", "zoe"]),
-  5: Object.freeze(["caitlyn", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble"])
+  2: Object.freeze(["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"]),
+  3: Object.freeze(["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"]),
+  4: Object.freeze(["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"]),
+  5: Object.freeze(["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"])
 });
 export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_CATALOG_BY_COST).flat());
 /** Standard stage damage in the frozen 14.24b reference; M5 supports stages 2–6. */

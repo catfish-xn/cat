@@ -1,8 +1,8 @@
-import ionicRaw from './g2-augments-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './g2-augments-herald-raw/evenshroud.json?raw';
-import dualRaw from './g2-augments-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './g2-augments-herald-raw/quicksilver.json?raw';
-import edgeRaw from './g2-augments-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './g2-4b-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './g2-4b-herald-raw/evenshroud.json?raw';
+import dualRaw from './g2-4b-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './g2-4b-herald-raw/quicksilver.json?raw';
+import edgeRaw from './g2-4b-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';
@@ -13,7 +13,7 @@ let equipmentFork: api.MatchState | undefined;
 // Execute the command-only driver once, retaining only the actual preparation
 // prefixes. No golden, injected result, resource, birth, star or receipt is used.
 // Generate once per test module; consumers restore independent graphs before use.
-const route = await run(api, { build: 'sniper', seed: 42, onStep(before, result, command) {
+const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     preparations.set(before.roundDefinitionId, before);
   if (before.roundDefinitionId === '4-4' && before.phase === 'choice') equipmentFork ??= before;

@@ -1,5 +1,6 @@
 import type { BattleRecord, CapturedSave, SaveEnvelope, SlotToken } from '../m6/contracts';
 import { MAX_COMPLETED_RUNS } from '../m6/limits';
+import { snapshotData } from '../replay/snapshot';
 import { fixedCapture } from './capture-ownership';
 import { canonicalContent } from '../simulation/content';
 import { M8_VERSION } from '../simulation/m8/version';
@@ -88,7 +89,7 @@ export class SaveRepository {
   }
   /** Caller must validate imports before this method, outside the IDB transaction. */
   async activate(expected: SlotToken | null, candidate: SaveEnvelope): Promise<SlotToken> {
-    const fixed = structuredClone(candidate);
+    const fixed = snapshotData(candidate);
     const token = { runId: fixed.runId, activationEpoch: crypto.randomUUID(), revision: (expected?.revision ?? 0) + 1 };
     const run: StoredRun = { runId: fixed.runId, createdAt: fixed.createdAt, match: fixed.match, currentBattle: fixed.currentBattle, battleKeys: fixed.battles.map(b => b.combatId) };
     return this.write(expected, token, run, fixed.battles, true);

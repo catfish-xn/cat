@@ -1,5 +1,34 @@
 # M5 Match contract v5
 
+## G2-3 当前实现与接入合同（2026-10-16）
+
+本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。
+
+- 版本统一为 rules `s13-g2-3-v1` / content `s13-14.24b-g2-3-v1`，schema7、存档3、回放3保持；digest包含新内容、奖励过渡政策及有限规则manifest。旧存档/回放拒绝，无迁移或静默回退。开局沿用#126的一费随机英雄，不回退旧的固定开局。
+- 准入60位商店英雄，1–5费14/13/13/12/8种，共享库存1171份；原始26个非Teamup羁绊启用25个，FormSwapper与7个Teamup不开放；30个异变，排除Cosmic Rhythm。远程形态和召唤物不加入商店/合成/共享池。
+- Elise/Swain/Gangplank/Jayce按开战初始站位选属性与技能：己方前两排近战、后两排远程；敌方对称，整战不切换。永久资产保持canonical ID，Combat ability championId/初始属性记录当前形态，移动/恢复不重选。射程4格和Forge1000生命是约定值。
+- `seatMechanics` 是唯一持久机制容器；本席进度在 seat 的六个预留键，RNG/进度重演历史在 hidden.progress；发物、发英雄、金币和选择只有 MechanicReceipt，来源事实统一 mechanic，事件统一 mechanicGranted。MatchState.g23 和 g23ItemGranted 已删除。恢复从种子重演进度、核对通用收据和当前终局事实，不发奖、不抽签。CombatInputBasis/PlayerBattleSnapshot 的 g23 仅是从容器重建的冻结编译输入 DTO，不是第二个可修改的 MatchState 权威。
+- 征服者仅15个启用箱，第10档650，超过1500继续积层；唯一战斗/受害者收据防重，2/4/6/9档每击杀或助攻1/3/6/20层。每箱使羁绊基础AD/AP加成成长5%。各档只取非零权重Option1。
+- 征服者延后神器、辅助装、冠、窃贼手套、锻造器、复制器。仅受影响档删除这些物品，保留其余奖励，Gold=max(原Gold,map22整档估值)。已有拆卸器、重铸器保留，第5档不触发折金。第14档60金+光明装备+拆卸器；第15档200金+永久光明转化。逐档源/过渡对照在RECONCILIATION，均标约定值，下一批恢复原奖励。
+- 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
+- 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
+- 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
+- 黑市复制器（用户2026-10-17 15:20批准）：100微光的LootA/LootA4（25%/10%）及200微光的LootB1（20%）各发1个`TFT13_Crime_Consumable_LesserShimmerDuplicator`，14.24 zh_cn名“次级微光复制器”。仅复制场上或备战席已拥有的≤3费炼金男爵；目标按既有种子派生候选顺序取首个。无合格目标或备战席满则保留托管，不消费、重抽或改发其他英雄。征服者第4档`TFT_Consumable_ChampionDuplicator_III`仍可复制≤3费任意英雄。`G23RewardAtom.duplicatorDefinitionId?`在复制器原子上保留上述API身份，`readG23MechanismState(state).rewards`原样投影它；领取记录仍为现有`kind:'duplicator'`/英雄收据，不新增命令或手动消耗品。当前分支不升版本，合并时取multiplayer届时版本+1；digest按实际策略自动重算。大小两种大复制器均不准入。
+- Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。使用 pendingChoice.kind=armory、choose/timeoutChoice；超时始终选择0金项（普通Spare、全购Finishing、三星Titan），余额不足的付费选择拒绝并保持原对象。菜单待选期间拒绝卖出Rumble；联机购买合星改变菜单时刷新offers并增加generation，旧选择失效。
+- Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
+- G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
+- 奖励金币在唯一结算事务发放；已确定物品/英雄/工具同步发放，未决物品选择和满席英雄托管。英雄一律 grantMechanicUnit，并透传同事务 UnitLootPolicy；池空按费用折金，满席在碰池前保留待领奖励；卖出释放空间或 claimLoot 时重试。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明装备 kind=radiant 且 radiantOf 指向唯一普通成装；通用物品读取统一到 g2-3-item-registry，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
+
+- 召唤物结算约定：Sion维持阵营存活，Forge与预留桶id不维持；所有战斗召唤物不增加玩家伤害。Forge生成及复活空格搜索按席位坐标后镜像。
+- #134已合入并完成rebase；卡池policy透传、通用机制金币校验、非战斗召唤物判负均已接入，详见 [PR134接入清单](evidence/g2-3/PR134_INTEGRATION.md)。
+
+### G2-3 / Claude 服务器配套交接（本PR不越界）
+
+`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
+
+双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算，镜像无进度/收益。当前`src/server/room/room.ts`的`buildReceipt`（约1052行）仍只复制旧字段；Claude需补`...(proposal.g23Facts ? {g23Facts:proposal.g23Facts} : {})`，不自行算规则。该转发未完成前不能宣称G2-3联机机制已上线。见`docs/UI_REQUESTS.md`的G23-SERVER-FACTS。冻结战斗输入的g23/playerHp由规则快照函数提供，服务器不得另造进度。
+
+
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and `strategy-types.ts`. [M5_RULES](../M5_RULES.md) defines exact values and ordering. Match is the sole authority for economy, resources, schedule, progression and terminal state. The historical M4 contract is available in Git at the M4 baseline; this document describes the current API.
@@ -8,7 +37,10 @@ Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and
 - Successful commands return `{ok:true,state,events}`. Failure returns `{ok:false,state,reason}` with the identical original state, no events, and no partial gold, shop generation, RNG, ID, receipt, growth or sequence mutation. `setShopLock` with the current value is a successful unchanged-state no-op.
 - Preparation permits buy/sell/reroll/XP/deploy/item/lock commands. Buy validates generation and purchased status before resources, plans recursive triples atomically and checks final bench capacity. New candidate IDs consumed in upgrades are never reused. Price and sell value come from definitions, never UI.
 - F costs4G/4XP, rejects wrong-phase then max-level then insufficient-gold, and never changes the current shop. Level9 caps XP at0. Requested and applied XP are separately recorded. D costs2G and keeps the lock flag. Natural Continue refreshes only unlocked shops; every generated shop consumes ten shop words and increments generation.
-- Deployment shares `validateMatchDeployment` between preview and commit. Geometry is unchanged; nine bench slots and population equal to level. Moving a deployed unit does not consume an extra slot. Start rejects over-cap preparations. Empty player boards can concede immediately at tick0.
+- Deployment shares `validateMatchDeployment` between preview and commit. Geometry is unchanged; nine bench slots and population cap `getDeploymentCap(state)` = level + granted Tactician's Crowns (G2-4a, see below). Moving a deployed unit does not consume an extra slot. Start rejects over-cap preparations. Empty player boards can concede immediately at tick0.
+- Tactician's Crown (金铲铲冠冕, `TFT_Item_ForceOfNature`, source `MaxArmySizeIncrease` 1; user rule 2026-10-17): every G2-3 reward claim with `kind:'item'` and `definitionId:'TFT_Item_ForceOfNature'` adds +1 to `getDeploymentCap` permanently, wherever the crown sits (inventory, board or bench unit) and even after its holder is sold, it is removed or the instance is gone. A grant that fails records no claim and adds nothing. Saves, frozen combat inputs and PvP snapshots add no field: each validates population against the claims in the G2-3 progress it already carries, and a frozen input's claims must be a prefix of the authoritative claims. In this slice crowns come only from Conqueror tiers 12/15 (no spatula, no recipe).
+- Crown win gold (`TFT_Item_ForceOfNature`, source `PercentGoldChance=10`): user conventions G24-CROWN-GOLD-01..05 count only crowns equipped on deployed units at combat start (dead holders still count, inventory/bench excluded). Each crown independently rolls 10% for 1 gold on PvE/PvP wins; losses/draws do not roll. The G23 lcg32-v1 stream consumes one draw per crown after the battle's black-market draw. Gold is credited directly, after high-roller/chest payouts, once under `g23:crown:<battleId>` with source `tacticians-crown`; no pickup orb. `G23BattleFacts.crowns?:number` is omitted when zero (otherwise 1..84, the structural 7×4 deployment cells × 3 equipment slots bound); `G23EconomyAction.crownGold?:number` exists when rolled, including zero. Restore validates deterministic economy replay, mechanic receipt linkage, frozen combat input and terminal facts; repeated step/settlement/Continue never pays again. Rules/content v5 and policy `g2-4a-v5`; schema/save/replay unchanged; previous identity rejected, no migration. Evidence and convention provenance: `docs/evidence/g2-3/RECONCILIATION.md`.
+
 - `combineItems` and `equipItem` are atomic. Two inventory components become one new item ID; only the nine supported recipes are legal. Three equipment slots, deterministic upgrade transfer, overflow return and sale return remain authoritative in Match. Tristana growth sums into an upgrade survivor; selling destroys that unit's growth and anomaly binding.
 - Choice is a real phase; all ordinary commands reject until it resolves. Choices validate ID/generation. Seven-way component choices consume no RNG; augment three-way offers consume three words; anomaly single offers consume one word, with1G rerolls excluding only the previous offer. Target binding precedes offers. Confirmation is free. Upgrades migrate bindings.
 - Choice may carry a finished Combat snapshot during post-PvE rewards, and `returnPhase` distinguishes preparation from settlement. Restore verifies it against the scheduled timing (supply always returns settlement) and rejects forged return phases. Rendering must refresh on every transition out of Combat, including Combat→choice. A supply round has no Combat: selecting its component atomically settles income and XP. No early Continue can bypass rewards.
@@ -17,7 +49,9 @@ Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and
 - `nextRound(state,expectedRound)` accepts only the current completed settlement. It advances schedule/enemies, handles the shop lock, discards the old Combat and drains ordered before-round events. Receipts prevent duplicate grants. Income was already committed at settlement and is never repeated here.
 - HP0 ends in defeat. At round35, final PvE victory ends in victory; other results end in defeat. All normal commands reject in gameOver. New Match discards the entire prior session. `stepMatch` outside Combat returns unchanged state and no events.
 - `MatchSession` delegates synchronously, retains the complete current battle event ledger and uses a fixed-step accumulator. Phase changes and New Match clear time remainder. Native D/F/E commit in event order, independently of pointer-dismissal protection. The UI never settles, repairs state or calculates a parallel economy.
-- `serializeMatch`/`restoreMatch` validate exact versions/digest, IDs and ownership, receipts/history, terminal and phase boundaries, normalized economy, RNG, growth/augment state, frozen Combat sources and dynamic layers/statuses/tasks. Restoration runs no hooks or random draws. Old schema4 and unknown content versions are explicitly rejected. This is structural consistency validation, not cryptographic proof of command history.
+- `serializeMatch`/`restoreMatch` validate exact versions/digest, IDs and ownership, receipts/history, terminal and phase boundaries, normalized economy, RNG, growth/augment state, frozen Combat sources and dynamic layers/statuses/tasks. Crown history additionally uses isolated deterministic replay as specified below; it never advances the active match or pays its rewards again. Old schema4 and unknown content versions are explicitly rejected. Validation is not cryptographic proof of command history.
+- 战斗存档 C/D 一致性：对象恢复、JSON 恢复与 `serializeMatch` 共用从已认证 `CombatInputBasis` 和策略重建的单次 `RestoreCombatReplay`。`atSaveTick()` 的同一结果核对所有持有者完整 triggerLedger（含 processed/actionCounts 的全部键）、完整 runtime（含所有攻击/施法计数及其攻速/射程/成长）、damageContributors/nextTriggerEventSeq、战斗游标 rngState/rngDraws/nextActionSeq/nextEventSeq、全部普通/抗性 shieldLayers 和汇总 shield、G23 absorbed.value 及整个 g23/maxHp/maxHpBasis、periodicTasks 全部余数和相位与 burn 状态组、activities 全部时长/份额、G22 exposure 三字段、G2 damageDealt/damageTaken/crystalDamage。零值、缺失和无触发器持有者也必须比对，不能用候选记录挑选比对范围。抗性护盾沿用已有拒绝原因，但复用这次重演，不另走第二条轨迹。校验不写回重演状态、事件或 RNG，不改变版本、规则或数值。
+- Sevika 的 `g23.highRoller` 收据固定为 actionSeq、spell、mod、enhanced、gold 五字段，按完整字段集合严格校验；不接受第六个未知字段。其随机结果与全体 G23 运行事实一样由可信重演逐字段认证。
 - Match event sequences and Combat `combatId/tick/eventSeq` are distinct and monotonic. Start events at tick0 are retained. Replay verifies every command/tick state and all events, including failed-command noninterference. Canonical evidence hashes use SHA-256; the content drift digest is not a security primitive.
 
 
@@ -37,7 +71,22 @@ B5 第3阶段新增开发期必需字段 `equipmentState` 和 `temporaryEquipmen
 - `deaths[]` 每个中立死者至多一笔：`unitId`、正式死亡 `tick`、Combat 局部 `eventSeq`。恢复要求死者属于本场可信遭遇且确已死亡；每个已死亡中立都必须有收据。该身份绑定同伴反应的 `registeredAtTick` 与 `deathEventId`，防止删除／重定时后再次消费。
 - `controls[]` 记录中立来源眩晕：`key` 是完整机制身份，`targetId` 是受控目标，`appliedEventSeq` 是施加事件序号。仍挂载时 `removedAtTick`、`removedEventSeq`、`removedReason` 全为 null；移除后填写对应正式事件的 tick、序号与原因。
 - 恢复校验施加身份与可信开场任务／目标一致，状态应用来自同版本声明。起点由任务 `executeAtTick` 加声明的 next-tick 偏移计算，终点再加声明 `duration.ticks`；当前先锋为 `[2,12)`。活动收据须有对应存活目标和状态；移除收据须无活动状态，原因限有效的 `expired`、`death-cleanup`、`combat-end` 或有已消费装备净化依据的 `cleansed`。到期必须匹配声明终点；移除事件序号晚于施加序号。收据事件序号在本 Combat 的 `nextEventSeq` 范围内且不重复。
-- `serializeMatch`／`restoreMatch` 执行上述同版本结构和一次消费一致性检查，不重放战斗启动、伤害、控制、奖励或随机流。这些观察收据不是 B8 `LootReceipt`、资产／掉落键，也不是对联合伪造整段历史的密码学认证；不替代 B9 完整恢复／回放验收。
+- B7 观察收据本身执行上述同版本结构和一次消费一致性检查；冠冕历史另按下节在独立副本上重放。这些观察收据不是 B8 `LootReceipt`、资产／掉落键，也不是对联合伪造整段历史的密码学认证；不替代完整恢复／回放验收。
+
+## G2-4a 冠冕历史恢复 API（M1，方案 A）
+
+本节覆盖上文仅结构恢复的历史描述，MatchState 资源账本增加 `equipmentHistory: 'ordered'` 与普通 `item-equipped` 事实；BattleRecord 增加可选 `equipmentCommands`（穿戴／原位合成为 `{tick,itemId,unitId,slot}`，背包合成为 `{tick,consumedIds:[aId,bId]}`，消耗品使用为 `{tick,consumableId,target}`（`target` 为 `{kind:'unit',unitId}` 或 `{kind:'item',itemId}`），按执行顺序排列，缺省为空），SaveEnvelope 字段不变。不改变规则、数值、内容 digest。G24-CROWN-GOLD-01…05 保持：开战场上装备、阵亡仍算、PvE/PvP 赢才掷、每顶独立、直接到账、G23 黑市掷骰之后。征服者／化学男爵仍由现有结算逻辑按当前棋盘取档位；历史验证不引入另一套结算规则。
+
+- `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState`：文本／对象输入均先检查结构和资源来源折叠。存在冠冕战斗声明（包括零命中或败／平局的 `crowns`）时必须提供本局从首战至最新已结算战斗的完整回放；否则抛出 `Invalid Match save: missing historical evidence / 缺少冠冕历史证据，请提供完整 battles 回放`。提供历史时，无论有没有冠冕，均验证整段历史。没有冠冕声明的孤立 Match 保留原结构恢复合同，不代表其完整战斗历史已获认证。
+- `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string`：与恢复相同的验证条件，仍只输出原 Match JSON。调用方必须另外保留现有 `SaveEnvelope.battles`，不能只存该字符串后丢弃历史。
+- 逐轮验证 `BattleRecord.context` 的来源账本（真实获得／合成记录）、开战输入及全部事件／终局 hash；正常 `startMatchCombat`／`stepMatch` 在副本上重建胜负、开战冠冕资格、经济 RNG 和金币收据。后续开战上下文和最终 Match 必须继承已验证的经济、机制收据和资源来源前缀；所有装备实例必须延续上一场已验证的持有者与槽位，仅按普通穿戴、既有拆卸、出售、合成、升星迁移和转化资源事实更新；同时核对下一场开战输入和最终候选（包括无当前战斗的准备阶段）。不能用候选自报的 `crowns` 或 RNG 自洽代替历史证据。缺战、乱序、跨局、前缀改写或重建不符均整份拒绝，错误说明对应历史证据／经济收据／获得合成记录问题。
+- `validateBattleRecord(record, battles?)` 与 `new PlaybackSession(record, battles?)` 的第二参数是**该记录之前**的完整已完成回放。上下文含冠冕历史而省略参数时同样拒绝。`BattleHistory` 恢复当前前缀及 `MatchApplication` 打开回放已传入相应历史。单条记录的结构兼容检查 `checkRecordCompatibility` 不授予恢复权限。
+- `validateBattleCollection[Sync](envelope)` 按顺序验证全部已完成战斗、最终经济／资源前缀及当前战斗；`validateEnvelope`／`validateFile` 强制调用这项验证，调用方提供的附加回调不能取代它。`routeSaveFile` 只是版本／结构分流，返回 `view:null` 不表示可续玩；应调用完整验证入口或 `readCompatibility`。归档准入也使用完整集合校验。
+- 首场之前从空装备状态、可信开局单位及经验证的出生事实重演装备事务（`planEquip` 等生产规划器），核对首场开战和当前候选的位置；无战斗及 `battles: []` 也不跳过。战中穿戴／原位合成、背包合成和消耗品使用由记录器按命令顺序记录 tick，重演时分别调用生产 `equipItem`／`combineItems`／`useConsumable` 后再推进 tick；背包合成或重铸生成的新实例可供紧接着的穿戴使用。生产命令在对应 `item-equipped`／`item-combined`／`consumable-used` 资源事实写入当时的 `tick`，战斗外操作不带该字段。重演生成的全部资源事实按原顺序逐条严格比较（包含 tick），不能过滤为仅装备子序列；临时成装掷骰、经济收据及机制收据（含冠冕金币）的前缀也须一致，使装备进入正确的授予、成长、结算顺序。
+- 装备历史的认证边界（M9）：单独修改命令或资源事实的 tick 会被拒绝。若同时把两处 tick 改为另一合法战斗时刻，且命令、其他资源事实、临时成装及金币收据的顺序与结果完全不变，则无法独立识别这个时刻声明：永久装备本场不生效，此时只认证顺序与重演结果，不认证真实操作时刻。除账本记录的 tick 元数据外，恢复后的完整对局状态及后续逐 tick 结果完全相同；回归同时与在新时刻执行生产命令的真实对局比较完整状态。
+- 格式迁移：缺少 `equipmentHistory` 的旧账本直接报 `Invalid resource provenance: ordered equipment history required`，不迁移、不从最终位置猜测历史；须保留原文件并开始新局。当前版本常量暂不调整，合并前统一升版要求见 [M4 复审说明](G2_4A_M4_REVIEW.md#合并版本事项本提交暂不升)。
+- 调用方迁移：把 `restoreMatch(text)` 改成 `restoreMatch(text, envelope.battles)`，序列化相应传同一历史；产品导入／继续优先使用 `validateFile(file, validateBattleCollection)`／`validateEnvelope(envelope, validateBattleCollection)`。单场回放传入同局按轮排序的先前记录。缺少所需历史的旧孤立冠冕 Match 无法补证，不迁移、不猜测装备或胜负，应保留原文件并开始新局。
+- 验证只在独立副本重演，不修改调用者状态、发奖或推进活跃对局 RNG。缓存仅复用 recorder 私有标记且深冻结记录的单场重演结果；每次仍重新校验历史前缀，外部对象／自行 freeze 的输入不获得该信任。完整回放的耗时随历史长度增加，性能门槛与超时保持原值。
 
 详见 [M8B_CONTRACT_ADDENDUM §5.1](M8B_CONTRACT_ADDENDUM.md#51-b7-已接入的中立观察收据) 与 [B7 交接](M8_B7_HANDOFF.md)。
 
@@ -220,6 +269,8 @@ sellPendingCarouselUnit(pool:SharedPoolState,match:MatchState,unitId:string):Sha
 
 `releaseCarouselParticipant` 另返回 `poolEvents:readonly SharedPoolEvent[]`，events 为 `readonly (MatchEvent|CarouselEvent)[]`，保留 sharedSeatReleased 和 carousel-seat-released；重复淘汰返回两个空事件数组。失败也返回空 poolEvents。
 
+适用窗口（2026-10-16 澄清，规则代码未变）：`releaseCarouselParticipant` 只在盘仍为当前池的事务基准时使用，即盘 `open` 期间的参与席淘汰。盘关闭且收据全为 granted、池已经 complete/nextSharedRound 推进后发生的淘汰，只调用 `releaseSeatOnElimination(pool,match)`：选秀单位已在 holdings 中，随该席全部归还，池守恒成立；该席池收据保持 `granted` 作为历史出生记录，不改为 released，不另发 carousel-seat-released。此时以旧 CarouselState 调 `releaseCarouselParticipant` 会因旧池与当前席状态不一致返回 `invalid-match`，不改变任何状态。回归见 `tests/p7-1-carousel-rules.test.ts`「eliminated after the 2-4 carousel closed」。
+
 ### SR-G2-01：技能展示纯函数（G2-2 工作分支）
 
 模块 `src/simulation/ability-display.ts`：
@@ -255,9 +306,9 @@ function abilityDisplayValues(
 已声明公式缺源变量。不以 0 填补缺失源数据。返回对象冻结；函数不修改状态、
 不消耗 RNG、不读真实时间。
 
-### G2-2 有限内容合同
+### G2-2 有限内容合同（历史，已由顶部G2-3节覆盖）
 
-48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。当前联机冻结投影缺胜场历史时 Ambessa 胜场双抗为0，详见 UI_REQUESTS 的 G2-2 缺口。旧身份拒绝恢复，历史夹具只读保留。
+48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。联机由 `snapshotForBattle` 从本席权威 roundResults 冻结 `priorPvpWins`（同一 `priorPvpWins()` 口径），见 MULTIPLAYER_CONTRACT §10.11。旧身份拒绝恢复，历史夹具只读保留。
 
 ### P7-1 正式修订（覆盖本节旧开局/排队语义）
 
@@ -322,3 +373,190 @@ UI继续消费现有ChoiceDefinition字段；无新增预览或界面字段，�
 
 同族组合（U）：Glass Cannon初始损失生命百分比按相同统计口径相加，I+II均损失20%，
 合计从60%最大生命开始，增伤12%+20%=32%；Bulky各来源独立发盾，Manaflow额外法力相加。
+
+
+### OPENING-R1 奖励随机口径（2026-10-16）
+
+按用户 2026-10-16 决定维持随机：1-2/1-3 的英雄奖励各从原五个老一费 `darius/irelia/lux/maddie/zyra` 等权抽取；恢复 multiplayer 基线的掉落随机流、候选顺序、拒绝采样及消耗次数。1-1 每席随机一费起手保持 PR #126 现状，费用相同、允许重复。沿用本 PR 首次提交的 CONTENT/LOOT_REPLAY digest 和版本号，本次不再 bump。
+
+## G2-3 机制通用接口（2026-10-16，Claude 一次性代做，供 Codex 接入）
+
+用户 2026-10-16 决定：联机所需的通用接口由 Claude 先做，Codex 在 G2-3 里把征服者、学院、炼金男爵、机械公敌、试验格、光明转化、形态英雄、召唤物接上。本节只定接口，不加任何英雄、羁绊、异常或装备；现有内容下对局结果、CONTENT digest、版本号和夹具都不变。统一导入点 `src/simulation/seat-mechanics/index.ts`。联机视图与回放线格式见 MULTIPLAYER_CONTRACT §25。
+
+### 1 席位机制容器
+
+```ts
+MatchState.seatMechanics?: SeatMechanicsState   // 没有机制写过时不存在
+interface SeatMechanicsState {
+  version: 'g2-3-seat-mechanics-v1';
+  seat: Record<string, MechanicJson>;    // 本席可见，原样进入联机视图
+  hidden: Record<string, MechanicJson>;  // 只在权威侧，永不发给客户端（RNG 字、未来候选）
+  receipts: MechanicReceipt[];           // 只追加的收据，本席可见
+}
+readSeatMechanic(state, key) / readHiddenMechanic(state, key)
+writeSeatMechanic(state, key, value | undefined) / writeHiddenMechanic(...)   // 纯函数，undefined 删除
+appendMechanicReceipt(state, receipt) / findMechanicReceipt(state, receiptId)
+```
+
+- 值只能是纯 JSON，数字必须是安全整数（百分比用 bps），写入和恢复都会校验，不合格抛 RangeError。
+- 预留键：`conqueror`、`academy`、`alchemist`、`junkerKing`、`experimentCells`、`radiantConversion`。G2-3实际形状（全部owner-only；这里只列结构，数值口径见顶部）：
+  - conqueror `{stacks, chestsOpened, receipts, rewards}`：永久征服进度/战斗去重事实、已获得奖励包；15档阈值从内容表查询
+  - academy `{sponsored: string[3]}`；已发物品按`g23:academy:*`身份或source=academy读取；身份与来源必须同时匹配，改source不能跳过资格校验
+  - alchemist `{shimmer, losses, skips, offeredThrough, offer}`；offer是已抽出的当前机会，不是未来候选
+  - junkerKing `{rounds, purchases:[{id,round,unitId,upgrade,cost}]}`；购买映射必须与对应choice收据一致
+  - experimentCells `{col,row}[]`
+  - radiantConversion `boolean`（第15档生效后true）
+- 凡是影响界面显示或客户端选择器（羁绊、属性、previewCombine、previewEquip、getDeploymentCap）的状态都放 `seat`；客户端拿不到 `hidden`，选择器不能读它。
+- 需要界面播提示时，同一命令里发 `{type:'seatMechanicChanged', key}` 事件。
+- `restoreMatch` 只做结构校验（`validateSeatMechanicsState`），各机制自己的不变量由 Codex 补进恢复校验。
+
+### 2 发放与收据（每个 receiptId 只发一次）
+
+```ts
+grantMechanicGold(state, {receiptId, source, amount})
+grantMechanicItem(state, {receiptId, source, definitionId})
+grantMechanicUnit(state, {receiptId, source, definitionId}, unitLootPolicy?)
+  -> {ok:true, state, events, receipt, upgradeEvents} | {ok:false, state, reason}
+reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
+```
+
+- `source` 是自由文本的来源名，例如 `conqueror-chest`、`high-roller`、`academy`。保留拆卸器/重铸器的收据为`{kind:"consumable",consumableId,definitionId,...identity}`；其库存序号与消耗事实同样按唯一收据验证。收据记录 round、roundId、source，这就是战斗中金币和开箱金币的"金币来源"，界面按 round 分组显示。`incomeBreakdown` 不改。
+- events 未盖序号，含 `mechanicGranted{receipt}` 和英雄入席时的升级事件，由调用方所在命令的 accept 统一盖 eventSeq。
+- 物品和英雄的来源事实是 `{kind:'mechanic', receiptId}`，单人存档恢复按收据核对出生。
+- **共享卡池**：原有给玩家发英雄的路径只有商店购买和 PvE 掉落（rewardPolicy），没有通用路径，所以新增 `grantMechanicUnit`。联机时必须传入命令闭包里的 `policy`（`runSharedMatchCommand` 给每个命令的那个 UnitLootPolicy）：池里有副本就扣一张并入席，池空就按英雄费用折成金币（收据 `resolution:'gold'`），与 PvE 英雄掉落一致。备战席满时在动卡池前就返回 `bench-full`，什么都不变。成功结果必须在同一命令里提交，否则卡池守恒校验会失败。
+  - 只能发商店目录里的英雄或带 `summon` 标记的召唤物。
+  - 注意：`settleRound` 已在shared-pool.ts把同一闭包policy传入applyRoundSettlement，再传到commitG23Settlement的逐副本grantMechanicUnit；满席保留托管，池空金币写unit收据。
+- 单人存档：`RoundResult.mechanicReceiptPrefixLength`冻结进入经济结算前的通用收据前缀，且与CombatInputBasis同名字段核对。结算当前gold=goldAfter+掉落容量售出金币+前缀后本轮机制净金币（gold.amount、unit.gold、减choice.price）。准备期费用/金币已在goldBefore，不再加减一次。恢复同时核对经济历史与机制收据关联。
+
+- 存档一致性 A2/A4/A5：首次构造 G23 DTO/atoms 之前，先按经济收据中的轮次、结算身份与事实重推完整奖励包，核对 id、round、source、tier、reward；atoms 只遍历匹配的冻结表项，不按存档数量展开。
+- 学院赠装和拾荒者选择成功后，在 `seatMechanics.hidden.grantEvidence` 逐条记录 `{receiptId,round,resourcePrefixLength,mechanicPrefixLength,economyPrefixLength,level,units}`。快照取授予/选择前，units 为当时持有者的实例、定义、星级、队伍与部署位置；不投影给客户端。
+- 恢复时独立折叠资源前缀并核对快照，校验轮次、前缀顺序、部署合法性、位置唯一性与容量。学院须满足当时 3/4/5 羁绊资格且下一资源事实恰为该物品出生；拾荒者用 seed、已验证购买前缀和当时最强 Rumble 重建菜单，核对 unitId、选项、3 星 titan 及超时默认项。当前单位售出/合星不改历史资格；冻结战斗 DTO 的购买记录须与已验证记录一致。
+- 相关收据缺少上述新证据即拒绝读取，不迁移、不补造；未触发这些授予的存档不需要空证据字段。规则数值、内容 digest 和各版本不变。
+- 已知边界（约定）：拾荒者购买没有资源出生事实，`resourcePrefixLength` 只要求落在该轮资源窗口内且单调；选择期间允许交易，窗口内任一前缀都对应一条合法操作顺序。没有经验购买账本，`level` 只限在 `[上一轮 levelAfter, 本轮 levelBefore 或当前等级]`。部署位置只要求合法、互不相同且不超容量。
+
+### 3 新的选择类型：锻造器、黑市、军械库
+
+```ts
+PendingChoice.kind += 'forge' | 'blackMarket' | 'armory';   PendingChoice.payload?: MechanicChoicePayload
+openMechanicChoice(state, {choiceId, offers, payload, returnPhase}) -> {ok, state, events} | {ok:false, reason}
+CHOICE_SKIP_OPTION = '@skip'
+```
+
+| kind | offers | payload | 选中效果 |
+| --- | --- | --- | --- |
+| forge | 物品 definitionId | `{kind, source, timeoutOption}` | 该物品进库存 |
+| blackMarket | 物品 definitionId | `{kind, source, skippable, skipReward:{kind,amount}\|null, timeoutOption}` | 选物品则进库存；`@skip` 不给物品，收据 `skipped:true` |
+| armory | 机制选项 id（不是物品） | `{kind, source, prices:{[option]:gold}, timeoutOption}` | 扣 `prices[option]` 金币，只记收据 |
+
+- 打开：和强化一样是阻塞选择（用户已定军械库也这样），界面可以先收起，不选完不能离开选择阶段。`returnPhase` 必须等于当前阶段：`preparation` 在准备阶段开，`settlement` 在结算阶段开并保留战斗结果。补给回合和已有待选时拒绝（`wrong-phase`）。choiceId 不能和已有收据重复。
+- 玩家操作复用 `choose`（`selectChoice(state, choiceId, generation=0, optionId)`）。黑市跳过就是 `optionId='@skip'`，不可跳过时返回 `choice-not-skippable`。军械库钱不够返回 `insufficient-gold`。失败返回原 state，不耗资源和 RNG。
+- 选完写一条收据 `{kind:'choice', receiptId:choiceId, choiceKind, optionId, skipped, price, itemId, timedOut}`，发 `choiceSelected` 和 `mechanicGranted`，然后按 returnPhase 继续本回合日程（与强化选完后一样）。效果由机制自己读收据：已购升级就是 armory 收据列表；跳过收益由炼金男爵按 skipped 收据计算。
+- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。源表的无物品奖励包（LootA4）使用blackMarket的可选`grantItem:false`，offers为源奖励包apiName；通用层只记接受/跳过收据，不造占位物品，领域层发包内英雄/有限复制奖励。默认不带此字段仍按物品选择运行。
+- 机器人：`decideBotAction` 对新 kind 直接选 timeoutOption。Codex 可以以后换成更好的策略。
+- 存档：`restoreMatch` 接受待选的新 kind（`validateMechanicPendingChoice`）。
+
+### 4 形态英雄与召唤物标记
+
+- `UnitDefinition.formSwap?: true`。`resolveUnitForm(definition, team, location, board?)` 和 `getUnitForm(unit)` 返回 `'melee' | 'ranged' | null`：本方部署区离敌方最近的两排是近战，后两排是远程；备战席和普通英雄为 null。用户已定：开战时按站位定形态，战斗中不切换。
+- `CombatUnit.form?`：Codex 在开战快照里按 `getUnitForm` 填写并据此选那套属性和技能；回放单位视图带 `form`。
+- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；本批Sion/Forge仅在Combat入口由spawnCombatUnit生成，不进入准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
+
+### 5 物品
+
+- `ItemDefinition.kind += 'radiant'`，并加 `radiantOf: <成装 id>`。内容校验要求光明装备没有配方、`radiantOf` 指向成装、每件成装最多一件光明版。`radiantVersionOf(id)` 和 `isRadiantItem(id)` 供转化与界面使用。重铸、选秀、临时装备池默认不含光明装备。
+- `ItemDefinition.restriction?: {kind:'trait', traitId}`。穿给没有该羁绊的单位时，`previewEquip` 和 `equipItem` 返回 `item-restricted`（黑市装备只给炼金男爵）。
+- 按用户决定，神器、辅助装、战术家之冠、窃贼手套、锻造器、复制器这批不做；征服者奖励里这些先按源表金币估值折成金币，用 `grantMechanicGold` 发，对账表标"约定值"。
+
+### 6 战斗中途出现的单位与新战斗事件
+
+```ts
+spawnCombatUnit(state, unit, source, tick) / removeCombatUnit(state, unitId, reason, tick)
+castOutcomeEvent(tick, unitId, abilityKey, outcome, subOutcomes?) / bindingChangedEvent(tick, unitId, bound, reason)
+```
+
+- 新账本事件（已并入 CombatEventData 和 M8CombatEvent）：`unitSpawned{unitId, definitionId, team, cell, source}`、`unitRemoved{unitId, reason}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`（High Roller 的火箭、护盾、金币、三连）、`bindingChanged{unitId, bound, reason}`（赛恩束缚和挣脱）。帮助函数返回未盖序号的事件，放进当前 tick 的事件列表，由 `stampCombatStep` 统一盖号。
+- `spawnCombatUnit` 只把已算好属性的单位追加到 `state.units` 末尾，并检查 id 不重复、格子在棋盘内且没有存活单位。回放按这个顺序比对，插到中间会抛 `replay-divergence`。
+- 回放每 tick 自动比对单位名单，生成 `unitEntered{unit}` 和 `unitLeft{unitId}`，`applyCombatReplayTick` 接受新单位，不用等关键帧。
+- `eliminationResult` 仍按存活单位判胜负。火药桶这类不该撑住阵营的召唤物，Codex 需要在判定里排除或战斗结束前移除。
+- High Roller 掷到金币时，Codex 在战斗结算处用 `grantMechanicGold`（source `high-roller`，receiptId 带 combatId 和施法序号）发放，保证重复 step 不重发。
+
+### 7 新失败原因
+
+`MatchFailure += 'unit-not-sellable' | 'item-restricted' | 'choice-not-skippable' | 'duplicate-mechanic-receipt' | 'invalid-mechanic-state'`；`EquipmentFailure += 'item-restricted'`（界面已有中文）。
+
+### G2-3 收尾修订（v2）
+
+Power Absorption 吸收的固定 AD 在普通百分比 AD（含永久成长及动态贡献）之后相加，不再被放大；来源为14.24官方公告 bugfix，链接及原文见 `docs/evidence/g2-3/EXTERNAL_SOURCES.md`。每个已死友军仍只吸收一次。征服者保持基础羁绊加成 ×(1+5%×箱数) 的线性实现。
+
+取得 Junkyard Titan 后后续军械库只给免费 Finishing Touch，不再付费购买已包含的升级。刷新当前军械库须同时匹配 kind='armory' 和 choiceId；其他待选奖励不能覆盖它。形态统一使用 `seat-mechanics/forms.resolveUnitForm`。
+
+恢复时先校验机制收据结构；损坏统一拒绝为 `Invalid Match save`。`combat.removedUnitIds` 如存在必须为无重复字符串数组，并与现役 combat.units 的 ID 分离。自动钩子失败事件及隐藏输入边界见 MULTIPLAYER_CONTRACT §25。schema/save/replay/protocol 不变；rules/content 升至 G2-3 v2，旧 digest 严格拒绝，不迁移。
+
+## G2-4B 神器锻造器领域合同（2026-10-17）
+
+本节覆盖历史征服者延后清单与版本号。基于 #147 `d3112d6` 开发，合入 multiplayer `0cdd6eb`（含 #149 辅助装、#153 不稳定宝箱、#157 冠冕胜利掉金）后 rules/content 升至 `s13-g2-3-v8` / `s13-14.24b-g2-3-v8`；policy `g2-4b-artifact-forge-v8`。schema7、存档3、回放3、命令3不变；旧版本/digest 拒绝，无迁移。
+
+- 第10档650：神器锻造器，移除14过渡金。第14档1200：随机光明装备1件（沿用35件池）、50金、神器锻造器、拆卸器。第11档仍15金、第13档仍拆卸器+50金（辅助装锻造器与指定辅助装仍延后）；第12/15档冠冕已由G2-4a恢复。
+- `g23RewardAtoms(bundle, seed)` 对 `TFT_ArmoryKeyOrnn` 使用源29件与已实现21件交集；四选一、按ID排序等权无放回、不同窗口可重复、不排除已拥有物品。`TFT_ArmoryKeySupport` 仍拒绝，禁止落入任意其他池。全池与排除项、算法声明进入内容digest。
+- `openG23Choice(state)` → `{state,events}` 复用 `pendingChoice.kind='forge'`，`payload.source='conqueror'`、`timeoutOption=offers[0]`。第10档choiceId为 `g23:conqueror:10:atom:0:copy:0`；第14档为 `g23:conqueror:14:atom:1:copy:0`。光明装备不是锻造器，不新增光明选择。
+- `selectChoice(state, choiceId, generation, definitionId, policy?)` 与 `forfeitPendingChoice(state, round, choiceId, generation, policy?)` 签名不变。选择免费，发一件永久库存物品并写唯一 `MechanicReceipt{kind:'choice',choiceKind:'forge',source:'conqueror',price:0,skipped:false,timedOut,...}`，资源来源为该receiptId。超时只领取首项，不再抽签。
+- `claimG23Reward(state, atomId, definitionId, policy?)` 不绕过forge：多选item原子返回 `stale-choice`，无状态、资源或RNG变化；非准备阶段仍优先 `wrong-phase`。选择命令的 `wrong-phase` / `stale-choice` / `invalid-choice` 等既有失败语义不变，枚举以领域类型为准。
+- `validateG23Restoration(state, parsedJsonInput=false): void` 抽出既有G23恢复链供 `validateB8Resources` 调用，重演来源奖励/进度并重建完整pending choice；校验选择收据类型、来源、免费/未跳过、超时首项、合法选项与副本序号，异常抛RangeError。调用方仍须验证外围结构和资源账本。恢复不发奖、不修改活跃随机流；它不让单人 `restoreMatch` 接受联机状态。
+- `completed-reforger` 仍只允许普通36件成装，拒绝神器/辅助装；无需更改现有池成员保护。辅助锻造器只有计划接口，本批没有装备消耗品、时间参数或第二份选择账本。
+
+来源、约定编号与依赖见 [实施计划](evidence/g2-4/G2-4B-FORGES-PLAN.md)，验证边界见 [交付记录](evidence/g2-4/G2-4B-ARTIFACT-FORGE.md)。
+
+### G2-4b 不稳定的宝箱：战斗中途获得装备（v6）
+
+约定值与来源见 [SUPPORT_ITEMS.md](evidence/g2-4/SUPPORT_ITEMS.md) 的 G24-CHEST-01…04。随 #149 的 rules/content `s13-g2-3-v6` / `s13-14.24b-g2-3-v6`、policy `g2-4b-support-v6` 合入，本项不另升版本，只改内容摘要；schema7、存档3、回放3不变，旧 digest 严格拒绝。
+
+- 新战斗事件 `combatItemGranted{tick, unitId, definitionId, source}`：`unitId` 是受益者，`definitionId` 是获得的成装，`source` 是宝箱来源（持有者、物品实例、效果序号）。已并入 CombatEventData 和回放视图（回放里 `sourceId` 为持有者）。同一 tick 紧随其后可能有该受益者的 `maxHpChanged`、`manaChanged`（原因 `item-granted`）和开战类效果事件。
+- 新单位字段 `CombatUnit.combatItemGrants?: {chest: Source, ordinal, definitionId, grantedAtTick}[]`：只记获得事实，装备程序由冻结池派生，不进 `itemPrograms`、不占装备格、不进库存，战斗结束即失效。
+- 新声明词汇：效果 `grant-combat-item`（`policyId: 'G24-CHEST-01'`, `lifetime: 'combat'`），选择器排序 `hp-ratio-desc-id`（生命比从高到低，并列按 id）和选择器开关 `excludeSummons: true`（不选召唤物和建筑），法力请求原因 `item-granted`。
+- 恢复：先核对获得记录（形状、池内装备、tick、持有者已阵亡且宝箱触发过、同一宝箱序号 0…n−1 且受益者不重复、不超过 4 件、不发给召唤物），再按记录重新编译受益者的机制并照常逐项核对；任何损坏统一拒绝为 `Invalid Match save`。
+- 界面与服务器暂不消费此事件；装备图标另做。
+
+### G2-4b WIP item-gold settlement bridge
+
+`G23BattleFacts.itemGoldPayouts?` contains validated positive item receipts with
+`{receiptId, source:'g24-item-gold', amount:1}`. Identity encodes battle, combat
+owner, item instance, trigger kind and ordinal. `advanceG23Economy` accounts for
+these payouts; `commitG23Settlement` grants each through the generic mechanic
+receipt exactly once. `validateG23MechanicLinks` checks both directions between
+facts and grant receipts. Trigger authenticity/RNG reconstruction belongs to
+the combat adapter, still WIP; arbitrary input facts are not an authority.
+
+Gambler adds optional `CombatStrategyInputs.bankGold` and private
+`PlayerBattleSnapshot.bankGold` only when its item is present. The former is
+validated against the current balance or current settlement's goldBefore;
+the latter is captured from the owning seat by snapshotForBattle.
+`StrategyUnitSnapshot.openingItemBankGold` is capped30; combat's current bank
+adds own-side earned receipts up to that cap. No combat payout is spendable
+until the existing settlement transaction commits it.
+
+### G2-4b WIP — movable portal summon
+
+`readItemSummons(state:MatchState):ItemSummonOrigin[]` derives owner-visible
+preparation summons from equipped portals. `moveItemSummon(state,itemInstanceId,
+cell:HexCell):MatchCommandResult` persists a portal's desired cell in the seat
+mechanic `g24ItemPositions`; it accepts only an unlocked live preparation,
+owned active summon and unoccupied friendly cell. Failures return unchanged
+state, no event/RNG: wrong-phase, unknown-unit, outside-deployment-zone, occupied.
+Success emits seatMechanicChanged. Ordinary hero movement into a projected cell
+makes the summon relocate on next projection; a full half omits it. No permanent
+unit or population is minted. Frozen solo inputs and two-sided snapshots capture
+positions; restore rejects invalid/future item identities or frozen/current
+position disagreement. UI/server command dispatch adapters are not implemented.
+
+
+## G2-4B 辅助装锻造器预演合同（2026-10-17）
+
+仅适用于 `codex/g2-4b-support-forge-trial`，覆盖上节11/13延后和Support拒绝描述；正式版本与夹具待合并顺序确定后统一更新。
+
+- `resolveG24ForgePool(api: string): readonly string[]` 新准入 `TFT_ArmoryKeySupport`：固定源17件与已实现13件交集。`g23RewardAtoms(bundle, seed)` 沿用现有四选一采样；`openG23Choice(state)` 返回通用forge，不增命令或第二份账本。未知selector抛RangeError；内容初始化时池少于4件或重复ID抛RangeError，不降档、不折金。
+- 第11档750只发辅助装锻造器，choiceId/receiptId=`g23:conqueror:11:atom:0:copy:0`；offers四个不同辅助装ID，超时首项，选择免费且只发一件。`selectChoice` / `forfeitPendingChoice` 参数和失败枚举不变；后者仍要求联机席位（否则 `multiplayer-required`）。多选原子不能用 `claimG23Reward` 绕过（`stale-choice`）。
+- 第13档1000依源字段顺序发 `TFT_Item_ZekesHerald`、`TFT_Item_LocketOfTheIronSolari`、`TFT_Item_Chalice`，item收据依次为 `g23:conqueror:13:atom:0/1/2:copy:0`；拆卸器是atom3的consumable收据，20金为 `g23:conqueror:13:gold`。三件固定辅助装自动发放，不开三个选择窗口。移除11档15金及13档额外30金；其他档位不新增变更。
+- 沿用 `validateG23Restoration(state, parsedJsonInput=false): void` 重建源奖励、选择及收据；旧折金、错池/错来源/错副本/空itemId收据拒绝，重复选择或结算不重发。联机领域恢复测试验证机制账本及G23边界；完整单人 `serializeMatch/restoreMatch` 测试另验证获取、装备、战斗中恢复与后续逐tick状态/事件一致，不放宽单人恢复对联机状态的限制。
+- 普通36件成装重铸器继续拒绝辅助装输入，失败保持原state、资源、事件、RNG。复用G24-FORGE-01…08；界面约定名“辅助装锻造器”，联机和界面仍由Claude接。
+
+详见 [预演记录](evidence/g2-4/G2-4B-SUPPORT-FORGE-TRIAL.md)。

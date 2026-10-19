@@ -1,3 +1,9 @@
+import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
+import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
+import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
+import {G23_TRAIT_SOURCE} from './g2-3-trait-source';
+import {G23_ANOMALY_SOURCE} from './g2-3-anomaly-source';
+import {G24_ARTIFACT_SOURCE} from './g2-4-artifact-source';
 import { AUGMENT_OFFER_POLICY, AUGMENT_BRONZE_THRESHOLDS, AUGMENT_TIERS } from './augment-policy';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../carousel-policy';
 import { RULES_GAP_MANIFEST } from './rules-manifest';
@@ -21,7 +27,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from './round-catalog';
 import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
-import { ITEM_DEFINITIONS } from './items';
+import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
 import { ANOMALY_DEFINITIONS } from './anomalies';
 export { TRAIT_DEFINITIONS, ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS };
@@ -30,6 +36,9 @@ export { COMPONENT_IDS } from './items';
 // `var` is intentional: content helpers are called while cyclic content imports
 // initialize. The lazily allocated cache must be available before this module's body.
 var frozenCanonical: WeakMap<object, string> | undefined;
+// Certification is independent of text retention: large frozen ledgers may still
+// cache their small digest without retaining canonical text at every depth.
+var canonicalFrozen: WeakSet<object> | undefined;
 var frozenDigests: WeakMap<object, string> | undefined;
 var canonicalKeys: Map<string, string> | undefined;
 var scalarPrototype: object | undefined;
@@ -47,8 +56,12 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor || !('value' in descriptor)) return false;
     const child: unknown = descriptor.value;
-    return child === null || typeof child !== 'object' || frozenCanonical!.has(child);
-  })) frozenCanonical!.set(value, text);
+    return child === null || typeof child !== 'object' || canonicalFrozen?.has(child);
+  })) {
+    (canonicalFrozen ??= new WeakSet()).add(value);
+    // UTF-16 storage stays below 4 KiB per cached text.
+    if (text.length < 2048) (frozenCanonical ??= new WeakMap()).set(value, text);
+  }
   return text;
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
@@ -124,13 +137,18 @@ export function digestContent(value: unknown): string {
   for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
   const digest = `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
   // canonicalContent certifies the entire frozen data graph, including children.
-  if (value !== null && typeof value === 'object' && frozenCanonical?.has(value)) (frozenDigests ??= new WeakMap()).set(value, digest);
+  if (value !== null && typeof value === 'object' && canonicalFrozen?.has(value)) (frozenDigests ??= new WeakMap()).set(value, digest);
   return digest;
 }
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
+import { G24_SUPPORT_DECLARATIONS } from './g2-4-support-items';
+import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
+import { G24_CHEST_POOL } from './g2-4-chest-pool';
 export const CONTENT_DIGEST = digestContent({
-  rulesManifest: RULES_GAP_MANIFEST,
+  g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
+  rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
+  g24:{artifactSource:G24_ARTIFACT_SOURCE,supportDeclarations:G24_SUPPORT_DECLARATIONS,supportItemSource:G24_SUPPORT_ITEM_SOURCE,chestPool:G24_CHEST_POOL},
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},

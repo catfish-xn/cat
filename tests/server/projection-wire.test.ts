@@ -21,7 +21,7 @@ import { expectOk, flush, seatTwo, startServer, type NetHarness } from './net/he
 /** Fields of MatchState that must never reach a client (contract §14.1, work order B7 item 2). */
 const PRIVATE_KEYS = ['rngState', 'battleSeedRngState', 'choiceRngState', 'rewardRngState', 'resourceProvenance', 'combatInputBasis',
   'seed', 'scheduleReceipts', 'equipmentState', 'multiplayer', 'sharedPool', 'combat', 'outcome', 'nextItemSerial', 'nextUnitSerial', 'nextMatchEventSeq',
-  'loot', 'frozen', 'encounterPlan', 'settlementId'] as const;
+  'loot', 'frozen', 'encounterPlan', 'settlementId', 'g23Facts', 'economyReceipts'] as const;
 function privateKeysIn(value: unknown, path = '$', found: string[] = []): string[] {
   if (Array.isArray(value)) value.forEach((item, index) => privateKeysIn(item, `${path}[${index}]`, found));
   else if (typeof value === 'object' && value !== null) {
@@ -242,8 +242,8 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Seed 2 (T13-B loot): idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-4.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 2 });
+    // Seed 3 (random openings and baseline random rewards): idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-7.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();

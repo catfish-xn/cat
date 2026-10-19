@@ -34,7 +34,7 @@ function reject(state: MatchState, message: string, change: (raw: any) => void):
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 const lootItem = (state: MatchState, definitionId: string) => state.m8.loot.receipts.find(r => r.payload.kind === 'item' && r.payload.definitionId === definitionId)!;
 
-/* T13 seed 14349: independent literal-table oracle gives Irelia/Lux, rod,
+/* T13 seed 14349: independent literal-table oracle gives Amumu opening, baseline random Irelia/Lux, rod,
  * gloves and bow. Cross-round components are random earned drops, not PvE picks. */
 const choiceViews: { roundId: string; kind: string; choiceId: string; view: ReturnType<typeof api.readLootView> }[] = [];
 const openingState = createOpening();
@@ -57,7 +57,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   const opening = openingState;
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
     expect([opening.gold, opening.level, opening.xp]).toEqual([10, 3, 2]);
-    expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['irelia', 'irelia', 'lux']);
+    expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['amumu', 'irelia', 'lux']);
     expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['gloves', 'inventory'], ['rod', 'inventory']]);
     expect(opening.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'item').map(receipt => [JSON.parse(JSON.parse(receipt.dropId)[0])[1], 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))
       .toEqual([['1-3', 'rod'], ['1-4', 'gloves'], ['1-4', 'bow']]);
@@ -125,8 +125,8 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   it('rejects tampering with the cross-round consumption chain', () => {
     if (!sold.ok) throw new Error(sold.reason);
     const after = sold.state;
-    // Deleting the combine fact also moves the recorded 2-1 combat-start prefix, which is checked first.
-    reject(after, 'Invalid resource provenance: combat start prefix', raw => {
+    // Deleting the combine fact leaves the ordered placement of the combined item without an owned item, which is checked first.
+    reject(after, 'Invalid resource provenance: equipment ownership/slot', raw => {
       const index = raw.resourceProvenance.entries.findIndex((entry: any) => entry.kind === 'item-combined');
       raw.resourceProvenance.entries.splice(index, 1);
       raw.resourceProvenance.entries.forEach((entry: any, sequence: number) => { entry.sequence = sequence; });

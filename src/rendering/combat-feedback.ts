@@ -1,9 +1,12 @@
 import type { CombatOrigin } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { UNIT_DEFINITIONS } from '../simulation/units';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
+import { augmentDisplayName } from '../presentation/augment-display';
+import { anomalyDisplayName, itemDisplayName } from '../presentation/g23-display';
+import { traitDisplayName } from '../presentation/hero-identity';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from './display-names';
 import { m8EventText, STATUS_KIND_NAMES } from '../presentation/combat-status';
@@ -17,7 +20,9 @@ export function originLabel(source: CombatOrigin, lookup?: UnitNameLookup): stri
   const catalog = source.sourceKind === 'item' ? ITEM_DEFINITIONS : source.sourceKind === 'trait' ? TRAIT_DEFINITIONS
     : source.sourceKind === 'augment' ? AUGMENT_DEFINITIONS : source.sourceKind === 'anomaly' ? ANOMALY_DEFINITIONS : UNIT_DEFINITIONS;
   // Champion attack/ability ids are not catalog keys; the owner's name already identifies them.
-  const label = UNIT_DEFINITIONS[source.definitionId] ? displayUnitName(source.definitionId) : catalog[source.definitionId]?.name
+  const label = UNIT_DEFINITIONS[source.definitionId] ? displayUnitName(source.definitionId) : (!catalog[source.definitionId] ? undefined
+    : source.sourceKind === 'augment' ? augmentDisplayName(source.definitionId) : source.sourceKind === 'item' ? itemDisplayName(source.definitionId)
+    : source.sourceKind === 'trait' ? traitDisplayName(source.definitionId) : source.sourceKind === 'anomaly' ? anomalyDisplayName(source.definitionId) : catalog[source.definitionId].name)
     ?? (['attack', 'ability', 'enemyGrowth'].includes(source.sourceKind) && lookup ? '' : '效果');
   // M8 Source carries the parent instance for temporary child items; the plain origin has none.
   const parent = (source as CombatOrigin & { readonly parentItemInstanceId?: string | null }).parentItemInstanceId;
@@ -29,6 +34,7 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${source(event.source)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix} ${source(event.source)} 复活 ${name(event.unitId)}（生命 ${event.hp}）`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'activityChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
       const text = m8EventText(event, name, source); return text && `${prefix} ${text}`;
@@ -38,11 +44,12 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
 }
 /** Online (C6) log line for a §14.2 wire event: the facts it carries, without provenance it does not carry. */
 export function viewEventLine(event: DisplayCombatEvent, name: UnitNameLookup = unnamed): string | null {
-  if (event.type === 'unitUpdated') return null;
+  if (event.type === 'unitUpdated' || event.type === 'unitEntered' || event.type === 'unitLeft') return null;
   const prefix = `第 ${event.tick} 刻`;
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${name(event.sourceId)} 击败 ${name(event.unitId)}`;
+    case 'unitRevived': return `${prefix} ${name(event.sourceId)} 复活 ${name(event.unitId)}（生命 ${event.hp}）`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
     case 'packetDamage': return `${prefix} ${name(event.sourceId)} → ${name(event.targetId)}：${DAMAGE[event.damageType]}实际生命伤害 ${event.hpDamage}，护盾吸收 ${event.absorbed}${event.critical ? ' · 暴击' : ''}`;
     case 'heal': return `${prefix} ${name(event.targetId)} 恢复生命 ${event.actual}`;

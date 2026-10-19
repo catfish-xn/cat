@@ -2,44 +2,58 @@
 const assert = require('node:assert/strict');
 const PIPE_CAPACITY = 100 * 1024 * 1024;
 const COMMAND_RESERVE = 1024 * 1024;
-/** N2-P2-6: an object reachable from both groups (the 33-battle complete and incremental envelopes of one route
- * share immutable subtrees such as loot state) crosses as a reference to its first path in group 0 and is resolved
- * back to that same page object before measurement, so the staged value graph keeps every shared reference. */
+/** N2-P2-6: an object reachable from an earlier group (the 33-battle complete, full-load and incremental envelopes of
+ * one route share immutable subtrees such as loot state) crosses as a reference [group, ...path] to its first path
+ * there and is resolved back to that same page object before measurement, so the staged value graph keeps every
+ * shared reference. Three groups since T13: complete (~68 MiB) and fullLoad (~33 MiB) together pass one pipe. */
 const SHARED_REF = '__m6FixtureSharedRef__';
 
 // Byte-count the locked Playwright 1.63 utility argument format; never encode or
 // decode the fixture here. Native Playwright transport retains the actual graph.
-/** Group 1 with every object already reachable from group 0 replaced by a path reference; group 1's own aliases kept. */
-function shareAcrossGroups(first, second) {
+/** Every group after the first with each object already reachable from an earlier group replaced by a path
+ * reference; each group's own aliases kept. */
+function shareAcrossGroups(original) {
   const firstPath = new Map();
-  const walk = (value, parent, key) => {
+  const walk = (value, parent, key, group) => {
     if (!value || typeof value !== 'object' || firstPath.has(value)) return;
-    firstPath.set(value, { parent, key });
-    for (const k of Object.keys(value)) walk(value[k], value, k);
+    firstPath.set(value, { parent, key, group });
+    for (const k of Object.keys(value)) walk(value[k], value, k, group);
   };
-  walk(first, null, null);
-  const pathOf = value => { const path = []; for (let at = firstPath.get(value); at.parent !== null; at = firstPath.get(at.parent)) path.unshift(at.key); return path; };
-  const memo = new Map(); let references = 0;
-  const copy = value => {
-    if (!value || typeof value !== 'object') return value;
-    if (firstPath.has(value)) { references++; return { [SHARED_REF]: pathOf(value) }; }
-    if (memo.has(value)) return memo.get(value);
-    const out = Array.isArray(value) ? [] : {}; memo.set(value, out);
-    for (const key of Object.keys(value)) out[key] = copy(value[key]);
-    return out;
+  const pathOf = value => {
+    const path = []; let at = firstPath.get(value);
+    for (; at.parent !== null; at = firstPath.get(at.parent)) path.unshift(at.key);
+    return [at.group, ...path];
   };
-  const anyShared = (() => { const seen = new Set(); const visit = v => { if (!v || typeof v !== 'object' || seen.has(v)) return false; if (firstPath.has(v)) return true; seen.add(v); return Object.keys(v).some(k => visit(v[k])); }; return visit(second); })();
-  // Without sharing, group 1 crosses as is (same objects as the fixture).
-  return anyShared ? { transported: copy(second), references } : { transported: second, references: 0 };
+  let references = 0;
+  const groups = original.map((group, index) => {
+    if (index > 0) {
+      const memo = new Map();
+      const copy = value => {
+        if (!value || typeof value !== 'object') return value;
+        if (firstPath.has(value)) { references++; return { [SHARED_REF]: pathOf(value) }; }
+        if (memo.has(value)) return memo.get(value);
+        const out = Array.isArray(value) ? [] : {}; memo.set(value, out);
+        for (const key of Object.keys(value)) out[key] = copy(value[key]);
+        return out;
+      };
+      const anyShared = (() => { const seen = new Set(); const visit = v => { if (!v || typeof v !== 'object' || seen.has(v)) return false; if (firstPath.has(v)) return true; seen.add(v); return Object.keys(v).some(k => visit(v[k])); }; return visit(group); })();
+      // Without sharing, the group crosses as is (same objects as the fixture).
+      if (anyShared) group = copy(group);
+    }
+    // Paths of this group's own objects are identical in the original and the transported copy.
+    walk(original[index], null, null, index);
+    return group;
+  });
+  return { transported: groups, references };
 }
 function inspectFixtureGroups(fixtures) {
   assert.deepEqual(Object.keys(fixtures), ['complete', 'current', 'record', 'fullLoad', 'expectedBattleCount']);
   assert.equal(typeof fixtures.expectedBattleCount, 'number');
-  const original = [{ complete: fixtures.complete, fullLoad: fixtures.fullLoad }, { current: fixtures.current, record: fixtures.record }];
+  const original = [{ complete: fixtures.complete }, { fullLoad: fixtures.fullLoad }, { current: fixtures.current, record: fixtures.record }];
   // Validate the original data first (plain values only, no accessors run), allowing cross-group sharing.
   summarize(original, false);
-  const shared = shareAcrossGroups(original[0], original[1]);
-  const groups = [original[0], shared.transported];
+  const shared = shareAcrossGroups(original);
+  const groups = shared.transported;
   // The transported groups themselves never alias across groups; byte accounting is of what actually crosses.
   const summaries = summarize(groups, true);
   return { groups, summaries, sharedReferences: shared.references, capacityBytes: PIPE_CAPACITY, commandReserveBytes: COMMAND_RESERVE };
@@ -87,19 +101,21 @@ function summarize(groups, crossGroupCheck) {
     return { fields: Object.keys(group), encodedArgumentBytes, uniqueObjects: seen.size };
   });
 }
-/** Page-side inverse of shareAcrossGroups (self-contained for page.evaluate and Node tests). */
-function resolveSharedReferences(first, second, mark) {
+/** Page-side inverse of shareAcrossGroups (self-contained for page.evaluate and Node tests). Groups are patched in
+ * order, so a reference always lands on an earlier group's own (already patched) object. */
+function resolveSharedReferences(groups, mark) {
   const seen = new Set();
   const patch = value => {
     if (!value || typeof value !== 'object') return value;
     const keys = Object.keys(value);
-    if (keys.length === 1 && keys[0] === mark) return value[mark].reduce((at, key) => at[key], first);
+    if (keys.length === 1 && keys[0] === mark) { const [group, ...path] = value[mark]; return path.reduce((at, key) => at[key], groups[group]); }
     if (seen.has(value)) return value;
     seen.add(value);
     for (const key of keys) { const next = patch(value[key]); if (next !== value[key]) value[key] = next; }
     return value;
   };
-  return patch(second);
+  for (const group of groups.slice(1)) patch(group);
+  return groups;
 }
 
 // Self-contained in both Node and page.evaluate. Hash values, field order and
@@ -127,13 +143,13 @@ async function stageFixtureGroups(page, fixtures, groups) {
   const handles = [];
   try {
     for (const group of groups) handles.push(await page.evaluateHandle(value => value, group));
-    await page.evaluate(({ first, second, expectedBattleCount, mark, resolver }) => {
+    await page.evaluate(({ groups, expectedBattleCount, mark, resolver }) => {
       if (Object.hasOwn(globalThis, '__M6_PERF_FIXTURES')) throw new Error('M6 fixture staging already occupied');
       // Restore cross-group shared references before any measured callback (staging only, outside timing).
-      new Function(`return (${resolver})`)()(first, second, mark);
-      globalThis.__M6_PERF_FIXTURES = { complete: first.complete, current: second.current, record: second.record,
-        fullLoad: first.fullLoad, expectedBattleCount };
-    }, { first: handles[0], second: handles[1], expectedBattleCount: fixtures.expectedBattleCount, mark: SHARED_REF, resolver: resolveSharedReferences.toString() });
+      new Function(`return (${resolver})`)()(groups, mark);
+      globalThis.__M6_PERF_FIXTURES = { complete: groups[0].complete, current: groups[2].current, record: groups[2].record,
+        fullLoad: groups[1].fullLoad, expectedBattleCount };
+    }, { groups: handles, expectedBattleCount: fixtures.expectedBattleCount, mark: SHARED_REF, resolver: resolveSharedReferences.toString() });
   } catch (error) {
     throw new Error(`M6 fixture transport failed: ${error.message}`, { cause: error });
   } finally {

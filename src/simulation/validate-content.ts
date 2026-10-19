@@ -4,7 +4,7 @@ import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilit
 import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, M8_NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
 import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
 import { TRAIT_DEFINITIONS } from './content/traits';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { S13_ABILITY_DATA } from './content/abilities';
@@ -39,10 +39,21 @@ function finiteJson(v:unknown,seen=new Set<object>()):void {
   seen.add(v as object);for(const x of Object.values(v as object)) finiteJson(x,seen);seen.delete(v as object);
 }
 function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,kind:string):void {
-  for(const [id,entry] of Object.entries(catalog)) if(!entry||entry.id!==id||!/^[a-z][a-z0-9-]*$/.test(id)) fail(`Invalid ${kind} ID: ${id}`);
+  for(const [id,entry] of Object.entries(catalog)) if(!entry||entry.id!==id||!(/^[a-z][a-z0-9-]*$/.test(id)||kind==='items'&&Object.hasOwn(ITEM_DEFINITIONS,id))) fail(`Invalid ${kind} ID: ${id}`);
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  g24Zephyr:['durationTicks','allyAttackSpeedBps'],
+  g24Fishbones:['rangeMultiplier'],
+  g24SpectralCutlass:['durationTicks'],
+  g24Shroud:['costIncreaseBps','allyHealth'],
+  g24DeathsDefiance:['fractionBps','durationTicks'],
+  g24Mirror:['healthBps','manaIncreaseBps'],
+  g24Trench:['thresholdBps','healthBps'],
+  g24Collector:['executeBps'],
+  g24Gambler:['goldLimit','speedPerGoldBps'],
+  g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
+  g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
   backup:['minimum', 'attackSpeedBps'],
@@ -116,7 +127,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:48,traits:14,items:44,augments:30,anomalies:3})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:60,traits:25,items:Object.keys(ITEM_DEFINITIONS).length,augments:30,anomalies:30})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);
@@ -143,11 +154,16 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     const approved=ITEM_DEFINITIONS[item.id];
     if(!approved||item.apiName!==approved.apiName||item.kind!==approved.kind||item.unique!==approved.unique||item.slotCost!==approved.slotCost
       ||[...item.recipe ?? []].sort().join('|')!==[...approved.recipe ?? []].sort().join('|')) fail('Item differs from approved B1 mapping');
-    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram);
+    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram); if(item.isolatedEffects) effects(item.isolatedEffects);
     if(item.kind==='component') {if(item.recipe!==undefined) fail('Component recipe');}
     else if(item.kind==='completed') {
+      if(!item.recipe&&approved.evidenceStatus==='approved-provisional')continue;
       if(!item.recipe||item.recipe.length!==2||item.recipe.some(id=>!components.includes(id))) fail('Invalid item recipe');
       const key=[...item.recipe!].sort().join('|');if(recipes.has(key)) fail('Duplicate recipe');recipes.add(key);
+    } else if(item.kind==='radiant') {
+      // G2-3 radiant: no recipe, one completed base, at most one radiant per base.
+      if(item.recipe!==undefined||content.items[item.radiantOf??'']?.kind!=='completed'
+        ||Object.values(content.items).filter(other=>other.kind==='radiant'&&other.radiantOf===item.radiantOf).length!==1) fail('Invalid radiant item');
     } else fail('Invalid item kind');
   }
   for(let a=0;a<components.length;a++) for(let b=a;b<components.length;b++) if(!recipes.has([components[a],components[b]].sort().join('|'))) fail('Missing completed recipe');

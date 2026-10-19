@@ -11,8 +11,8 @@ function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);
  for(const d of v.revealedDrops)expect(Object.keys(d).filter(k=>!['orbId','entryOrdinal','dropId','encounterId','sourceUnitId','roundId','payload','status','receiptId','allowedActions','reason'].includes(k))).toEqual([]);
  expect(api.nextRound(s,s.round).ok).toBe(v.canContinue);return v;}
 function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.parse(serializeMatch(s));mutate(raw);expect(api.readLootView(raw)).toEqual(api.readLootView(s));}
-beforeAll(async () => { await terminalPreparation('unit-10', 1); });
-beforeAll(async () => { await terminalPreparation('unit-15', 1); });
+beforeAll(async () => { await terminalPreparation('loris', 1); });
+beforeAll(async () => { await terminalPreparation('rell', 1); });
 describe('B8 readLootView over real randomized public routes',()=>{
  it('exposes no future orb content and hidden payloads cannot leak before a death',()=>{
   const v=view(prepared);expect(v).toEqual({roundId:'3-7',revealedDrops:[],revealedOrbs:[],pendingClaims:[],canContinue:false,reason:'unsettled-round',pendingChoice:null});
@@ -42,7 +42,7 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths',keep:'unit-10',row:6,earned:true},{name:'only orb carrier',keep:'unit-10',row:7,earned:true},{name:'no carrier',keep:null,row:7,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,row,earned})=>{
+ it.each([{name:'two source deaths',keep:'loris',row:6,earned:true},{name:'only orb carrier',keep:'loris',row:7,earned:true},{name:'no carrier',keep:null,row:7,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,row,earned})=>{
   const s=battle(await terminalPreparation(keep,1,row)).ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(earned?['granted','granted','retained-terminal','granted']:[]);

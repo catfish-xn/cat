@@ -7,6 +7,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evidence.cjs');
 const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-fixture-transport.cjs');
+const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
 (async()=>{
  const output=process.env.M6_EVIDENCE_DIR??'artifacts/m6-performance';fs.mkdirSync(output,{recursive:true});
  const started=performance.now();const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),sourceFingerprint:sourceFingerprint(),scriptHash:hash(fs.readFileSync(__filename,'utf8')),node:process.version,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),startedAt:new Date().toISOString(),passed:false,acceptanceScope:'original F4 performance gates at the catalog capacity (B9, issue #23)',method:'Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.'};
@@ -28,7 +29,7 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
  try{
   const {createServer}=await import('vite');server=await createServer({root:path.resolve(__dirname,'..'),plugins:[{name:'m6-perf-page',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url==='/__m6_perf'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><body></body>');}else next();});}}],server:{host:'127.0.0.1',port:0},optimizeDeps:{noDiscovery:true,include:[]}});await server.listen();
   const api=await server.ssrLoadModule('/src/simulation/match.ts'),replay=await server.ssrLoadModule('/src/replay/index.ts');
-  const {digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts');
+  const {digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts'),{M8_VERSION}=await server.ssrLoadModule('/src/simulation/m8/version.ts');
   const {ROUND_CATALOG}=await server.ssrLoadModule('/src/simulation/content/round-catalog.ts');
   const routes=[];let largestComplete=null,largestIncremental=null,largestRecord=null,fullLoadEnvelope=null;
   for(const build of ['cannon','sniper','mage','sniper-caitlyn','full-load']){
@@ -41,15 +42,20 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
     if(before.combat?.status==='running'&&result.state.combat?.status==='finished'){
      const final=history.completedRecords.at(-1);const record={...final,events:final.events.filter(e=>e.tick<=before.combat.tick),endTick:before.combat.tick,nextEventSeq:before.combat.nextEventSeq,result:null,stateHash:digestContent(before.combat)};record.eventHash=digestContent(record.events);
      const done=history.completedRecords.slice(0,-1),size=Buffer.byteLength(JSON.stringify({match:before,currentBattle:record,battleKeys:done.map(r=>r.combatId)}));
-     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
+     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
     }
    }});
    assert.equal(route.final.phase,'gameOver');assert.equal(route.final.round,ROUND_CATALOG.at(-1).ordinal);assert.equal(history.completedRecords.length,ROUND_CATALOG.filter(round=>round.kind!=='supply').length);
-   const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
+   const envelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
     // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
-    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===15),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===15);fullLoadEnvelope=envelope;
+    // T13-A (ba319fa, MATCH_CONTRACT "单位全槽自动合成"): a component equipped onto a unit wearing a loose
+    // component combines with it. The route's ~15 components then leave at most 9 separate worn items, and
+    // 15 completed items would need ~30 components, which no legal command route supplies (user decision
+    // 2026-10-16: keep 15 if legally reachable, otherwise 9).
+    const FULL_LOAD_EQUIPPED=9;
+    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===FULL_LOAD_EQUIPPED),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===FULL_LOAD_EQUIPPED);fullLoadEnvelope=envelope;
    }
    const bytes=Buffer.byteLength(JSON.stringify(envelope));routes.push({build,bytes,incrementalBytes:currentBytes,summary:route.summary});
    if(!largestComplete||bytes>largestComplete.bytes)largestComplete={bytes,envelope};
@@ -78,7 +84,7 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   const fixtures={complete:largestComplete.envelope,current:largestIncremental.envelope,record:largestRecord.record,fullLoad:fullLoadEnvelope,expectedBattleCount:ROUND_CATALOG.filter(round=>round.kind!=='supply').length};
   const transport=inspectFixtureGroups(fixtures),expectedFixtureSignature=await fixtureSignature(fixtures);
   await stageFixtureGroups(page,fixtures,transport.groups);
-  report.fixtureTransport={method:'two native Playwright groups; delete staging and release handles before original callback',helperHash:hash(fs.readFileSync(require.resolve('./m6-fixture-transport.cjs'),'utf8')),groups:transport.summaries,sharedReferences:transport.sharedReferences,capacityBytes:transport.capacityBytes,commandReserveBytes:transport.commandReserveBytes,expected:expectedFixtureSignature,setupMs:performance.now()-transportStarted};
+  report.fixtureTransport={method:'three native Playwright groups; delete staging and release handles before original callback',helperHash:hash(fs.readFileSync(require.resolve('./m6-fixture-transport.cjs'),'utf8')),groups:transport.summaries,sharedReferences:transport.sharedReferences,capacityBytes:transport.capacityBytes,commandReserveBytes:transport.commandReserveBytes,expected:expectedFixtureSignature,setupMs:performance.now()-transportStarted};
   diagnosticPhase('fixture-transport-complete',report.fixtureTransport);
   diagnosticPhase('measurements-requested');
   report.measurements=await page.evaluate(()=>{
@@ -170,19 +176,20 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   diagnosticPhase('measurements-returned');
   assert.deepEqual(report.measurements.skipped,[],'no deferred performance measurement after B9');
   assert.equal(report.measurements.fullLoadRoundTrip?.verified,true,'full-load import/activation roundtrip ran');
-  assert(report.measurements.fullLoadRoundTrip.milliseconds<=report.measurements.limits.completeImport,'full-load import/activation roundtrip frozen budget');
+  // Wall-clock budget: enforced unless CI_WALLCLOCK_GATES=report (PR gate), see scripts/wallclock-gate.cjs.
+  if(wallClockEnforced)assert(report.measurements.fullLoadRoundTrip.milliseconds<=report.measurements.limits.completeImport,'full-load import/activation roundtrip frozen budget');
   diagnosticPhase('lifecycle-start');
   // Warm constructors/listeners/code before establishing the lifecycle baseline.
   const lifecycle=async cycles=>page.evaluate(async cycles=>{
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{createSaveControls}=await import('/src/persistence/save-controls.ts');
-   const {createMatch}=await import('/src/simulation/match.ts'),{MatchSession}=await import('/src/rendering/match-session.ts'),{PlaybackSession}=await import('/src/replay/index.ts');
+   const {createMatch}=await import('/src/simulation/match.ts'),{MatchSession}=await import('/src/rendering/match-session.ts'),{PlaybackSession}=await import('/src/replay/index.ts'),{M8_VERSION}=await import('/src/simulation/m8/version.ts');
    const {createStatsPanel}=await import('/src/stats/stats-panel.ts'),{aggregateStats}=await import('/src/stats/aggregate.ts'),{createCombatFeedbackRenderer}=await import('/src/stats/combat-feedback-renderer.ts');
    const add=EventTarget.prototype.addEventListener,remove=EventTarget.prototype.removeEventListener;let count=0;const seen=new WeakMap();
    EventTarget.prototype.addEventListener=function(type,listener,options){let map=seen.get(this);if(!map){map=new Map();seen.set(this,map);}const key=`${type}/${typeof options==='boolean'?options:Boolean(options?.capture)}`;let set=map.get(key);if(!set){set=new Set();map.set(key,set);}if(listener&&!set.has(listener)){set.add(listener);count++;}return add.call(this,type,listener,options);};
    EventTarget.prototype.removeEventListener=function(type,listener,options){const key=`${type}/${typeof options==='boolean'?options:Boolean(options?.capture)}`;if(seen.get(this)?.get(key)?.delete(listener))count--;return remove.call(this,type,listener,options);};
    try{for(let i=0;i<cycles;i++){
     const host=document.createElement('div');document.body.append(host);const session=new MatchSession(createMatch(42));session.pause('lifecycle');let notified=0;const unsubscribe=session.subscribe(()=>notified++);
-    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
+    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
     coordinator.enqueue({match:session.state,battleKeys:[],addedBattles:[],currentBattle:null});await coordinator.flush();
     const controls=createSaveControls(host,{onNewRandom(){},onNewFixed(){},onContinue(){},onImport(){},onExport(){}});controls.update({startup:false,canContinue:false,seed:42,runId:envelope.runId,busy:false,status:null,hasActive:true});
     const record=window.__M6_PERF_LIFECYCLE_RECORD,playback=new PlaybackSession(record);playback.play();const snapshot=playback.advance(50);const panel=createStatsPanel(host,()=>{});panel.render({stats:aggregateStats(record.runId,record.combatId,snapshot.events),combat:snapshot.combat,events:snapshot.events,selectedUnitId:null});const feedback=createCombatFeedbackRenderer(host);feedback.push(snapshot.events,0);feedback.render(50,new Map());
@@ -210,7 +217,10 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   report.fixtureTransport.verificationMs=performance.now()-verificationStarted;
   diagnosticPhase('fixture-transport-verification-complete',report.fixtureTransport.verification);
   assert.equal(report.errors.length,0,'browser errors');assert.equal(sourceFingerprint(),report.sourceFingerprint,'source changed during measurement');
-  const failures=report.measurements.gates.filter(g=>!g.passed);assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;
+  const roundTrip=report.measurements.fullLoadRoundTrip;
+  report.wallClock={enforced:wallClockEnforced,gates:recordWallClock('m6-performance',[...report.measurements.gates.map(g=>({name:g.name,metric:g.metric,actual:g.actual,limit:g.ceiling,comparison:'<=',passed:g.passed})),
+   {name:'fullLoadRoundTrip',metric:'max',actual:roundTrip.milliseconds,limit:report.measurements.limits.completeImport,comparison:'<=',passed:roundTrip.milliseconds<=report.measurements.limits.completeImport}])};
+  const failures=report.measurements.gates.filter(g=>!g.passed);if(wallClockEnforced)assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;
  }catch(error){diagnostic('script-catch',{pageClosed:page?.isClosed()??null,browserConnected:browser?.isConnected()??null,message:String(error)});report.failure=error.stack;console.error(error);process.exitCode=1;}
  finally{report.endedAt=new Date().toISOString();report.durationMs=performance.now()-started;report.finalSourceFingerprint=sourceFingerprint();report.peakProcessRssBytes=process.resourceUsage().maxRSS*1024;report.loadAtEnd=os.loadavg();diagnosticCleanupStarted=true;diagnosticPhase('script-cleanup-start',{failureRecorded:Boolean(report.failure)});fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify(report,null,2));diagnostic('browser-close-call',{location:'script-finally',connected:browser?.isConnected()??null,pageClosed:page?.isClosed()??null});await browser?.close();diagnostic('browser-close-return',{location:'script-finally'});await server?.close();console.log(JSON.stringify({passed:report.passed,durationMs:report.durationMs,acceptanceScope:report.acceptanceScope,skipped:[...(report.skipped??[]),...(report.measurements?.skipped??[])],gates:report.measurements?.gates,boundedImport:report.boundedImport,lifecycle:report.lifecycle?.heapDeltaBytes,failure:report.failure}));}
 })();

@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:4bf7fe15",
+  "lootReplayDigest": "fnv1a32-utf16:c11d2d0c",
+  "rulesVersion": "s13-g2-3-v10",
+  "contentVersion": "s13-14.24b-g2-3-v10",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:299ec0d0",
+  "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
+  "traceHashes": {
+    "state": "bb09c043e226db932e3eab2b018d0aba4b0f87090d8042a33ede7bff781ab469",
+    "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+    "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "G2-3: 60 canonical heroes, four fixed ranged forms,25 enabled origins and30 anomalies; baseline multiplayer38747c5 includes random1cost opening; integrated PR134 at19aa9f1."
+}

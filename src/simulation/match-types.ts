@@ -8,13 +8,15 @@ export type MatchEvent = LedgerCombatEvent | ((import('./consumable-types').Cons
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
-  | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'}) & { readonly domain?: 'match'; readonly eventSeq?: number });
+  | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'|'default-option'}
+  | import('./seat-mechanics/types').SeatMechanicMatchEvent) & { readonly domain?: 'match'; readonly eventSeq?: number });
 export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased'; readonly empty?: true };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  readonly mechanicReceiptPrefixLength?:number;
   readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
   readonly combatEventCount: number;
   readonly settlementId: string; readonly roundKind: RoundKind;
@@ -42,6 +44,8 @@ export interface MatchBase {
   readonly sharedPool?: import('./shared-pool-types').SharedPoolBinding;
   /** Server-only opt-in metadata. Absent from every offline state and save. */
   readonly multiplayer?: import('./round-settlement').MultiplayerProgress;
+  /** G2-3 owner-visible mechanic container and exactly-once receipts; absent until a mechanic writes it. */
+  readonly seatMechanics?: import('./seat-mechanics/types').SeatMechanicsState;
   readonly m8: Pick<import('./m8/contracts').M8MatchExtension, 'round' | 'encounterPlan'> & {readonly preparation: RoundPreparation; readonly loot: import('./loot-types').MatchLootState};
   readonly combatInputBasis: import('./combat-input').CombatInputBasis | null;
   readonly resourceProvenance: import('./resource-provenance').ResourceProvenance;
@@ -71,7 +75,8 @@ export type MatchState = MatchBase & (
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
   | 'stale-choice' | 'invalid-choice' | 'invalid-target'
-  | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure;
+  | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure
+  | import('./seat-mechanics/types').SeatMechanicFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure };
 export interface MatchStep { readonly state: MatchState; readonly events: readonly MatchEvent[] }

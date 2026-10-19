@@ -1,4 +1,4 @@
-import type { Amount, CastReceipt, Condition, DamageContext, DamageOutcome, Stat, StatModifier } from './contracts';
+import type { Amount, CastReceipt, Condition, DamageContext, DamageOutcome, DamageType, Stat, StatModifier } from './contracts';
 
 export interface HpSample { readonly id: string; readonly hp: number; readonly maxHp: number }
 export interface StatSample {
@@ -10,6 +10,11 @@ export interface StatSample {
   readonly startingRows?: 'front-two' | 'back-two';
   readonly positiveHpDamage?: boolean;
   readonly packet?: DamageContext;
+  /** G2-4b trigger facts: a killing packet, the hit damage types, and the event target's magic resist. */
+  readonly killedTarget?: boolean;
+  readonly damageTypes?: readonly DamageType[];
+  readonly targetMagicResistOf?: () => number;
+  readonly criticalAttack?: boolean;
 }
 export function integer(value: number, minimum = 0): bigint {
   if (!Number.isSafeInteger(value) || value < minimum) throw new RangeError('Expected safe integer');
@@ -41,6 +46,24 @@ export function conditionHolds(condition: Condition, sample: StatSample): boolea
     case 'enemy-targeting-holder':
       if (!sample.enemiesTargetingHolder) throw new RangeError('Missing current primary targets');
       return sample.enemiesTargetingHolder.length > 0;
+    case 'killing-blow':
+      if (!sample.packet) throw new RangeError('Missing killing packet');
+      return (sample.packet.source.ownerId === sample.holder.id) === (condition.by === 'holder');
+    case 'killed-target':
+      if (sample.killedTarget === undefined) throw new RangeError('Missing killing fact');
+      return sample.killedTarget;
+    case 'damage-type':
+      if (!sample.damageTypes) throw new RangeError('Missing damage types');
+      return sample.damageTypes.includes(condition.damageType);
+    case 'target-magic-resist': {
+      if (!sample.targetMagicResistOf) throw new RangeError('Missing target magic resist');
+      const resist = sample.targetMagicResistOf();
+      return condition.op === 'gt' ? resist > condition.value : resist <= condition.value;
+    }
+    case 'critical-attack':
+      if (sample.criticalAttack === undefined) throw new RangeError('Missing critical fact');
+      return sample.criticalAttack;
+    case 'all': return condition.conditions.every(c => conditionHolds(c, sample));
   }
 }
 /** Counter dictionaries belong to one source runtime, never to the whole holder. */
@@ -52,7 +75,7 @@ export function modifierValues(stat: Stat, modifiers: readonly BoundModifier[], 
     const counters = 'modifier' in entry ? entry.counters : sample.counters;
     if (modifier.stat !== stat) continue;
     if ((modifier.unit === 'hexes' && stat !== 'range') || (stat === 'range' && modifier.unit !== 'hexes')
-      || (['attackSpeed', 'critChance', 'critMultiplier', 'damageAmp', 'damageReduction', 'omnivamp'].includes(stat) && modifier.unit !== 'bps')) throw new RangeError('Invalid modifier unit');
+      || (['attackSpeed', 'critChance', 'critMultiplier', 'damageAmp', 'damageReduction', 'omnivamp', 'attackSpeedLock', 'damageAmpPerHex'].includes(stat) && modifier.unit !== 'bps')) throw new RangeError('Invalid modifier unit');
     if (stat === 'damageReduction') {
       if (!modifier.damageFilter || !sample.packet) throw new RangeError('Reduction requires explicit filter and packet');
       const f = modifier.damageFilter, c = sample.packet;
@@ -113,6 +136,8 @@ export interface AmountSample {
   readonly damage?: DamageOutcome;
   readonly damageOutcomes?: readonly DamageOutcome[];
   readonly shieldAbsorbed?: number;
+  /** Read lazily: only resist-scaled amounts pay for the holder's defense sample. */
+  readonly resistsOf?: () => number;
 }
 /** G01: no RNG or mutation; each coefficient joins the same rational numerator. */
 export function amountNumerator(amount: Amount, sample: AmountSample): bigint {
@@ -136,6 +161,14 @@ export function amountNumerator(amount: Amount, sample: AmountSample): bigint {
   if (amount.shieldAbsorbedBps !== 0) {
     if (sample.shieldAbsorbed === undefined) throw new RangeError('Missing shield absorption sample');
     numerator += integer(sample.shieldAbsorbed) * integer(amount.shieldAbsorbedBps);
+  }
+  if (amount.overkillBps) {
+    const outcomes = sample.damageOutcomes ?? (sample.damage ? [sample.damage] : []);
+    numerator += outcomes.reduce((sum, d) => sum + integer(d.overkill), 0n) * integer(amount.overkillBps);
+  }
+  if (amount.resistsBps) {
+    if (!sample.resistsOf) throw new RangeError('Missing resist sample');
+    numerator += integer(sample.resistsOf()) * integer(amount.resistsBps);
   }
   return numerator;
 }

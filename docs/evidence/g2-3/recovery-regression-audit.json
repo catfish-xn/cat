@@ -1,0 +1,379 @@
+{
+  "baseCommit": "22e7cfe7ca9e09d3ae24683740e1489eee118193",
+  "contentDigest": "fnv1a32-utf16:5789146c",
+  "reason": "G2-3扩容后真实公共命令路线重建；保留历史归档，不用改golden代替规则证据。",
+  "sourceByteEvidence": {
+    "scripts/generate-m5-route.cjs": {
+      "previousBytes": 16707,
+      "currentBytes": 16730,
+      "previousSha256": "e81ea893e5976b473b8eb96aa07ffa49726a1b1a9fdb0725f11d4599e87dac69",
+      "currentSha256": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
+      "firstDifferentByte": 7293
+    },
+    "src/simulation/m8/restore.ts": {
+      "previousBytes": 22586,
+      "currentBytes": 23143,
+      "previousSha256": "3b1223b6bd3bac66f4cd8f68ce32893b89abbe14e66e1b2d3da941dd10147202",
+      "currentSha256": "14a058c0f3968c12411652322bbfabea44847627119dfe8c59dc812f0e8321d7",
+      "firstDifferentByte": 16076
+    },
+    "tests/fixtures/g2-3-herald-raw/manifest.json": {
+      "previousBytes": 27586,
+      "currentBytes": 27586,
+      "previousSha256": "356cde62b2870b1a9c0bf95d307897372bc71aab49d520b6cc12798f8b01241e",
+      "currentSha256": "f9c3c83222da0858a811b948300bcc44c633b44f9f5e95e6aefc45f72da4b7d3",
+      "firstDifferentByte": 1647
+    },
+    "tests/fixtures/t13-loot-public.ts": {
+      "previousBytes": 5615,
+      "currentBytes": 6423,
+      "previousSha256": "4c51f3c3f1fb4ac30fbfc6eb19558d35beffa5e65a722e350c7b3e56d389ecbd",
+      "currentSha256": "1ab55703d486f7bf33447f9291146cfc683fd672ffa8f41d99be660d791d9245",
+      "firstDifferentByte": 4208
+    },
+    "tests/g2-3-anomalies.test.ts": {
+      "previousBytes": 4552,
+      "currentBytes": 5301,
+      "previousSha256": "382a51e9720e3b92b16fa8c4e7c06bca8df3fc2a85515c4b5ea4094d3ef0eab2",
+      "currentSha256": "841ffc3db8962b425dc60bd84273d566b1c098a192cbadccc093978830d44545",
+      "firstDifferentByte": 466
+    },
+    "tests/m5-audit-boundaries.test.ts": {
+      "previousBytes": 8464,
+      "currentBytes": 8584,
+      "previousSha256": "96ec0e6c98501e9decd5bc1133d250f9477c38fd9515d7849fb861f1c76f4ea8",
+      "currentSha256": "96a0c103647ec3d70ba495874b820b30d2152e40804fb3de242ec03b49895a40",
+      "firstDifferentByte": 8
+    },
+    "tests/m5-combat.test.ts": {
+      "previousBytes": 35295,
+      "currentBytes": 35318,
+      "previousSha256": "2b70cd55343adea49775c40cfbc1b2e063336ad220348f5c541a128231e629aa",
+      "currentSha256": "a43c02fc7cfea8e244486ee61215e331611a99db0aa29689006425d8f8ebbbae",
+      "firstDifferentByte": 4669
+    },
+    "tests/m5-content.test.ts": {
+      "previousBytes": 10821,
+      "currentBytes": 11017,
+      "previousSha256": "475b28428944715b5d217a167c758f2bf8e6e03c64d3d811e0f72bc27eba6144",
+      "currentSha256": "6ff33140676b1f86fdf1a50f292c496ad3b37471531efd72afb09526d6165f94",
+      "firstDifferentByte": 3811
+    },
+    "tests/m5-strategy-numbers.test.ts": {
+      "previousBytes": 16171,
+      "currentBytes": 16204,
+      "previousSha256": "5fea96266b78a36247fc2bcfea30ab2c00ff7f6412bb35e59d96a856a76f2f4f",
+      "currentSha256": "7388dfafb83f404460f8f463990095937545bdbf15f7ea8d8933ca29d16feefb",
+      "firstDifferentByte": 8877
+    },
+    "tests/m8-ability-contracts.test.ts": {
+      "previousBytes": 7902,
+      "currentBytes": 8012,
+      "previousSha256": "0d0139290b5dc0461ec8fb1b9c9498e62961a8469a735dfb0da6b59b2e2b1af2",
+      "currentSha256": "b779fbca386fdb2adaee1570bd3d4f4125340269f8dc07d52868513f189dd5d4",
+      "firstDifferentByte": 11
+    },
+    "tests/m8-b10-temporary-replay.test.ts": {
+      "previousBytes": 5015,
+      "currentBytes": 5016,
+      "previousSha256": "425840b6e5eebb548fe425a4d035664f48ca106b64ab824ad8cf09fed122f85c",
+      "currentSha256": "b154d7b25ee94f8a5f3432218a98ddd1bff87bd133719407e31f86fc63e9a174",
+      "firstDifferentByte": 848
+    },
+    "tests/m8-b5-equipment-history.test.ts": {
+      "previousBytes": 8781,
+      "currentBytes": 11413,
+      "previousSha256": "ddd735bb5486096d2797a25dba197753d8c68ac957bd9ac0539bcae4e6666c36",
+      "currentSha256": "17a82f9cc62febd04134df3fa45d9ba9169305ff3ba8d842812b3811d484c601",
+      "firstDifferentByte": 143
+    },
+    "tests/m8-b7-match-wiring.test.ts": {
+      "previousBytes": 17338,
+      "currentBytes": 17356,
+      "previousSha256": "a802795ec455b338015630db3229b0172e0bc305d7811e3f5a70e4e8643cabee",
+      "currentSha256": "41445920c9a0398d092ea6eabd2d0b421429f5242be4c6c1706dbbaf7a2b37db",
+      "firstDifferentByte": 9524
+    },
+    "tests/m8-b8-combat-input.test.ts": {
+      "previousBytes": 15520,
+      "currentBytes": 15684,
+      "previousSha256": "fe6789e490b8fb1651fb5b7099ae82e8d369697f281ef2473caef0df71d2dbf0",
+      "currentSha256": "c15e312bb9bfddbf56e8796bab71a483619d01d515aed4e2c2c5073b675bdd85",
+      "firstDifferentByte": 8
+    },
+    "tests/m8-b8-live-capacity.test.ts": {
+      "previousBytes": 8220,
+      "currentBytes": 8221,
+      "previousSha256": "54823b10610f3352f90b62f2459cf081aa85a29768c7b67f439276fdb982c8cb",
+      "currentSha256": "cf308d2dc2ba97310e15e3744353c1d100d9668f82e1a623f06899c75bc53359",
+      "firstDifferentByte": 1551
+    },
+    "tests/m8-b8-live-growth.test.ts": {
+      "previousBytes": 15533,
+      "currentBytes": 15540,
+      "previousSha256": "7c9e0a1ce8c86d5dc9935a1a5d067d3a5742c00906c1653e0a3a7df98d3a37ea",
+      "currentSha256": "a49bcc1e2568462bb595d42fe9f8f465e678b0364efd6ea411d72af98506b28c",
+      "firstDifferentByte": 5590
+    },
+    "tests/m8-b8-live-transfer.test.ts": {
+      "previousBytes": 10448,
+      "currentBytes": 10449,
+      "previousSha256": "26189d86fed44cf1a07aacdd02e725bd88505e2f51be84d74c7530d5d2813c85",
+      "currentSha256": "46f4e5b045deb146b1e68b674c327cc6cc384b917d2dc004b633c883101a797d",
+      "firstDifferentByte": 446
+    },
+    "tests/match-economy.test.ts": {
+      "previousBytes": 12102,
+      "currentBytes": 12095,
+      "previousSha256": "dc6bf8b9aea698f5d6205e761fc1b8f845695b18cd6b4418b41fa7663cf08ff5",
+      "currentSha256": "d1a59b04fbba4f00e3127346b9b27b89fb313aa611550c924602eaefa60d868c",
+      "firstDifferentByte": 9785
+    },
+    "tests/server/carousel-room.test.ts": {
+      "previousBytes": 35203,
+      "currentBytes": 35200,
+      "previousSha256": "11164c89773f43e8c4cd38b65b4f19db0abe40942c8fd97d9d93aff942696818",
+      "currentSha256": "ba31058b64c16cb96581729823c5306ebb9786e0bc55edc01830fab3635ceadd",
+      "firstDifferentByte": 4582
+    },
+    "tests/server/shared-pool-room.test.ts": {
+      "previousBytes": 16015,
+      "currentBytes": 16017,
+      "previousSha256": "b7e434a8f9a2e0b1b088ad21f02210d2ea65af121a3a0c99b76f3a09b8a45f37",
+      "currentSha256": "b12ad7364ca9e5ab7ce3249114a0385ba327e81c3ac9302f487042dbac68d2c9",
+      "firstDifferentByte": 4890
+    },
+    "tests/t12-offline-transfer.test.ts": {
+      "previousBytes": 1692,
+      "currentBytes": 1693,
+      "previousSha256": "a5dd93eeadaaef6de365e249f1cf4a84513df09fedc144a18ce5d546b9d9d7a2",
+      "currentSha256": "194e1976dd45d86099d8e7fd8a348f13044107e677f969845a178476242a2738",
+      "firstDifferentByte": 414
+    },
+    "tests/t5r-loot-view.test.ts": {
+      "previousBytes": 9461,
+      "currentBytes": 9484,
+      "previousSha256": "7fa130c54f0aabb3841077b96d68521736fce866810c9f4c83ec0b1fa05c5989",
+      "currentSha256": "c210e0dd2841a5216bccf6c8c15f7e8efca0ba48061bea56f7cdb4a0ec4adb65",
+      "firstDifferentByte": 7636
+    }
+  },
+  "independentChecks": {
+    "shield": {
+      "maxHp": 1440,
+      "maxHpBps": 1200,
+      "firstPulse": 172,
+      "secondPulse": 173,
+      "reason": "1728000/10000=172余8000，第二次累积余数后发173；174篡改拒绝"
+    },
+    "capacity": {
+      "revealedTick": 117,
+      "waitingTick": 137,
+      "preparationGold": 18
+    },
+    "carousel": {
+      "pairTargets": [
+        "nocturne",
+        "urgot",
+        "rell",
+        "renata"
+      ],
+      "s0EliminatedRound": "5-6",
+      "fightsSinceCarousel": 2
+    },
+    "B5": "真实buy/reroll/deploy/sell继续至4-5；保留unit-1、不买其同名牌、不改等级流或seed42的G12随机流；4-4为补给结算，不在该阶段部署；8项包含存档envelope均通过"
+  },
+  "transferPublicRun": {
+    "prepared": {
+      "gold": 11,
+      "next": 24,
+      "ez": [
+        {
+          "id": "unit-13",
+          "definitionId": "ezreal",
+          "team": "player",
+          "starLevel": 1,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "id": "unit-9",
+          "definitionId": "ezreal",
+          "team": "player",
+          "starLevel": 1,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        }
+      ],
+      "tg": {
+        "id": "item-9",
+        "definitionId": "thiefs-gloves",
+        "location": {
+          "kind": "unit",
+          "unitId": "unit-13",
+          "slot": 0
+        }
+      },
+      "binding": {
+        "definitionId": "mage-armor",
+        "unitId": "unit-13",
+        "choiceId": "round:4-6:anomaly",
+        "boundRound": 23
+      },
+      "counts": {
+        "unit-acquired": 23,
+        "combat-growth-committed": 20,
+        "item-acquired": 10,
+        "unit-upgraded": 5,
+        "item-combined": 3,
+        "unit-sold": 2
+      },
+      "provenance": [
+        {
+          "kind": "unit-acquired",
+          "unitId": "unit-9",
+          "source": {
+            "kind": "shop",
+            "generation": 14,
+            "slotIndex": 4,
+            "definitionId": "ezreal"
+          },
+          "sequence": 28,
+          "roundId": "3-3"
+        },
+        {
+          "kind": "unit-acquired",
+          "unitId": "unit-13",
+          "source": {
+            "kind": "shop",
+            "generation": 20,
+            "slotIndex": 3,
+            "definitionId": "ezreal"
+          },
+          "sequence": 33,
+          "roundId": "3-3"
+        }
+      ],
+      "rolls": 10
+    },
+    "ended": {
+      "gold": 21,
+      "next": 25,
+      "ez": [
+        {
+          "id": "unit-9",
+          "definitionId": "ezreal",
+          "team": "player",
+          "starLevel": 2,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        }
+      ],
+      "tg": {
+        "id": "item-9",
+        "definitionId": "thiefs-gloves",
+        "location": {
+          "kind": "unit",
+          "unitId": "unit-9",
+          "slot": 0
+        }
+      },
+      "binding": {
+        "definitionId": "mage-armor",
+        "unitId": "unit-9",
+        "choiceId": "round:4-6:anomaly",
+        "boundRound": 23
+      },
+      "counts": {
+        "unit-acquired": 24,
+        "combat-growth-committed": 21,
+        "item-acquired": 12,
+        "unit-upgraded": 6,
+        "item-combined": 3,
+        "unit-sold": 2
+      },
+      "provenance": [
+        {
+          "kind": "unit-acquired",
+          "unitId": "unit-9",
+          "source": {
+            "kind": "shop",
+            "generation": 14,
+            "slotIndex": 4,
+            "definitionId": "ezreal"
+          },
+          "sequence": 28,
+          "roundId": "3-3"
+        },
+        {
+          "kind": "unit-acquired",
+          "unitId": "unit-13",
+          "source": {
+            "kind": "shop",
+            "generation": 20,
+            "slotIndex": 3,
+            "definitionId": "ezreal"
+          },
+          "sequence": 33,
+          "roundId": "3-3"
+        }
+      ],
+      "rolls": 10
+    },
+    "upgrades": [
+      {
+        "type": "unitUpgraded",
+        "survivorId": "unit-9",
+        "consumedIds": [
+          "unit-13",
+          "unit-24"
+        ],
+        "definitionId": "ezreal",
+        "fromStar": 1,
+        "toStar": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 1,
+            "row": 7
+          }
+        },
+        "domain": "match",
+        "eventSeq": 136
+      }
+    ]
+  },
+  "testLogs": {
+    "full-test.log": {
+      "bytes": 41409,
+      "sha256": "1fbaefd4c256d06162f6a9c3fab0231bf5d7b4329f5a69e4fe487e95a5afad02"
+    },
+    "remaining.log": {
+      "bytes": 1259,
+      "sha256": "2d12b9533fcee6fde488bd0e0bc5bd9571437d20bbf5bb0cc8aefd3c35bc40f2"
+    },
+    "b5-final.log": {
+      "bytes": 265,
+      "sha256": "6c222d9a7298c08cb995cacbfdffb4d4360dc2e15b04672652a547fb544e03f5"
+    },
+    "typecheck.log": {
+      "bytes": 51,
+      "sha256": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0"
+    }
+  }
+}

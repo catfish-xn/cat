@@ -3,12 +3,13 @@ import type { MatchState } from '../match-types';
 import { buyUnit, getDeploymentCap, needsAnomalyRecruitment } from '../match';
 import { MATCH_RULES } from '../match-rules';
 import { getShopOdds } from '../progression';
-import { ITEM_DEFINITIONS } from '../content/items';
+import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../units';
 import { nextRandom, validateSeed } from '../rng';
 import { BOT_MAX_STEPS, type BotContext, type BotDecision } from './types';
 import { byId, cheapest, formationAction, strongest, strength } from './formation';
 import { legal } from './preflight';
+import { isMechanicChoice } from '../seat-mechanics/choices';
 export { BOT_MAX_STEPS, BOT_POLICY_VERSION } from './types';
 export type { BotContext, BotDecision } from './types';
 
@@ -31,6 +32,8 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
     const identity={choiceId:choice.choiceId,generation:choice.generation};
     const actions:ClientCommand[]=choice.kind==='anomaly' && choice.step==='target'
       ? [...roster].sort(byId).map(u=>({type:'anomalyTarget',...identity,unitId:u.id}))
+      // G2-3 forge/blackMarket/armory: the same free default the timeout would pick.
+      : isMechanicChoice(choice) ? [{type:'choose',...identity,definitionId:choice.payload.timeoutOption}]
       : choice.offers.map(definitionId=>({type:'choose',...identity,definitionId}));
     const action=actions.find(a=>legal(state,a));
     return action?emit(action):done;
@@ -45,7 +48,8 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
   const spendDown=state.playerHp<=30 || state.m8.round.stage>=5;
   for(const item of inventory) {
     // Save unpaired components for a future recipe until the late/low-HP spend-down.
-    if(ITEM_DEFINITIONS[item.definitionId].kind!=='completed' && !spendDown) continue;
+    const definition=ITEM_DEFINITIONS[item.definitionId];
+    if(!definition || definition.kind==='component' && !spendDown) continue;
     for(const unit of roster.filter(u=>u.location.kind==='board')) for(let slot=0;slot<3;slot++) {
       const action:ClientCommand={type:'equip',itemId:item.id,unitId:unit.id,slot};
       if(legal(state,action)) return emit(action);

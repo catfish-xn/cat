@@ -32,9 +32,10 @@ function recording(inner: BattleResolver = new TwoSidedBattleResolver()) {
 }
 
 describe('T10 room gate (contract §15.2)', () => {
-  it('passes exactly OPS and CHOICES per room phase', () => {
+  it('passes exactly OPS, CHOICES and the summon move per room phase', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
-      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES], choice: [...OPS, ...CHOICES], frozen: [],
+      // G2-4b (contract §26): the summon move passes only while seats prepare.
+      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...CHOICES, 'moveItemSummon'], frozen: [],
       battle: OPS, 'awaiting-settlement': OPS, settlement: OPS, ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());
@@ -180,6 +181,14 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
       .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
     const botIds = ['s4', 's5', 's6', 's7'];
+    // Seek the required pair through paid public rerolls; random openings no longer
+    // guarantee that seed 23's original board hero appears twice in its first shop.
+    for(const id of botIds) {
+      while(!onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2)&&seat(room.state,id).match.gold>=2) {
+        const result=room.handle(id,{type:'reroll'});if(!result.ok)break;
+      }
+      if(onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2))break;
+    }
     const seatId = botIds.find(id => onBoard(seat(room.state, id).match).some(unit => offersOf(id, unit.definitionId).length >= 2))!;
     expect(seatId).toBeDefined();
     const s4 = () => seat(room.state, seatId);

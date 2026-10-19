@@ -58,9 +58,12 @@ if(finalGate){
    assert.equal(manifest.fullOpeningItemScenarioPassed,false);
    // B8 restored the three Rageblade checks on the real 2-1 chain; the two back-to-back opening
    // checks are user-approved archives (not applicable under the frozen schedule, not verified).
+   // T13 removed PvE loot picks: the loot half of the 1-3/1-4 burst is a user-approved archive
+   // (2026-10-16); its next-round-pick half is kept and verified at 2-4.
    assert.deepEqual(manifest.skipped??[],[],'input gate may no longer defer any B8 case');
    assert.deepEqual((manifest.archived??[]).map(entry=>[entry.status,entry.id,entry.verifiedConsecutiveDialogs]),
-    ['mouse','touch'].map(method=>['archived-not-applicable',`${method}-back-to-back-opening-components`,false]),'only the two approved archives');
+    ['mouse','touch'].flatMap(method=>[['archived-not-applicable',`${method}-back-to-back-opening-components`,false],
+     ['archived-not-applicable',`${method}-real-loot-choice-1-3-1-4-burst`,false]]),'only the approved archives');
    // Audit P2-2: the Rageblade summary must be bound to its recorded artifacts (validated below).
    b8InputEvidence.push({name,manifest});
   }
@@ -74,8 +77,9 @@ if(finalGate){
 }
 // The U6 job is part of the final evidence: its report must exist, match this commit and contain
 // every expected checkpoint, so a green comparison cannot silently omit U6.
-const U6_CHECKS=['1-2 preparation','1-2: mid-combat reveal','1-2 settlement','1-3: mid-combat reveal','1-3 loot choice pending','1-3 after real choice',
- '2-7 capacity: mid-combat reveal','2-7 choice with full bench','2-7 capacity blocks Continue','2-7 after real sale','3-1 preparation after Continue',
+// T13 orbs: no PvE loot pick; capacity is seed-36 3-7 (Tristana), terminal seed-38 4-7 (tests/m8-b8-live-capacity).
+const U6_CHECKS=['1-2 preparation','1-2: mid-combat reveal','1-2 settlement','1-3: mid-combat reveal','1-3 settlement',
+ '3-7 capacity: mid-combat reveal','3-7 capacity blocks Continue','3-7 after real sale','4-1 preparation after Continue',
  '4-7 terminal: mid-combat reveal','4-7 game over'];
 function validateU6Report(report){
  assert.equal(report.passed,true,'U6 loot gate failed');
@@ -83,7 +87,7 @@ function validateU6Report(report){
  assert.deepEqual(report.errors,[],'U6 gate errors');
  assert.deepEqual(report.checks.map(check=>check.label),U6_CHECKS,'U6 gate checkpoints');
  for(const check of report.checks)assert.equal(typeof check.continueDisabled,'boolean',`U6 ${check.label}: Continue state recorded`);
- assert.deepEqual(report.checks.map(check=>check.continueDisabled),[true,true,false,true,true,false,true,true,true,false,true,true,true],'U6 Continue availability');
+ assert.deepEqual(report.checks.map(check=>check.continueDisabled),[true,true,false,true,false,true,true,false,true,true,true],'U6 Continue availability');
  assert(report.fixtures?.capacity?.battles>0&&report.fixtures?.terminal?.battles>0,'U6 imported public-route fixtures');
 }
 (async()=>{

@@ -5,7 +5,11 @@ import {accepted,readyMatch} from './match-helpers';
 import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';
 
-beforeAll(() => { publicEquipmentPreparation(['sword','rod','sword','sword']); });
+// Warm the same public acquisition route used below, once, outside the test body.
+beforeAll(() => {
+ const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
+ expect(shared.seed).toBe(8);
+});
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
 // Full ordinary acquisition is covered independently by the three route tests.

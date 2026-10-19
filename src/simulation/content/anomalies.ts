@@ -1,3 +1,4 @@
+import { G23_ANOMALIES } from './g2-3-anomalies';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
@@ -43,5 +44,6 @@ export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
         }
       }
     ]
-  }
+  },
+  ...G23_ANOMALIES,
 });

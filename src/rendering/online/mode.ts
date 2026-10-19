@@ -14,7 +14,10 @@ export function readServerKind(search = currentSearch()): OnlineServerKind { ret
 function numberParam(params: URLSearchParams, key: string, fallback: number): number {
   const value = Number(params.get(key)); return Number.isFinite(value) && params.has(key) ? value : fallback;
 }
-/** Debug-only `poolCaps=irelia:8,darius:1`: catalog heroes with non-negative integer copies; anything malformed is ignored (official sizes). */
+/**
+ * Debug-only `poolCaps=irelia:8,darius:1`: catalog heroes with non-negative integer copies; anything malformed is ignored (official sizes).
+ * Unlisted heroes have 0; the room raises each seat's random opening one-cost to at least its openings (`withOpeningCopies`).
+ */
 function poolCapsParam(raw: string | null): Readonly<Record<string, number>> | null {
   if (!raw) return null;
   const entries = raw.split(',').map(pair => pair.split(':'));

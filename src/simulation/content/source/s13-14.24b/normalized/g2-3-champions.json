@@ -1,0 +1,161 @@
+{
+  "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
+  "champions": [
+    {
+      "id": "renata",
+      "apiName": "TFT13_RenataGlasc",
+      "form": null,
+      "abilityPointer": "TFT13_RenataGlasc/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "silco",
+      "apiName": "TFT13_Silco",
+      "form": null,
+      "abilityPointer": "TFT13_Silco/ability",
+      "classification": "源数据",
+      "overrides": [
+        "14.24b MinionDamage 36/55/100"
+      ],
+      "conventions": []
+    },
+    {
+      "id": "drmundo",
+      "apiName": "TFT13_DrMundo",
+      "form": null,
+      "abilityPointer": "TFT13_DrMundo/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "cassiopeia",
+      "apiName": "TFT13_Cassiopeia",
+      "form": null,
+      "abilityPointer": "TFT13_Cassiopeia/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "elise",
+      "apiName": "TFT13_Elise",
+      "form": "Melee",
+      "abilityPointer": "TFT13_Elise/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "elise-ranged",
+      "apiName": "TFT13_Elise",
+      "form": "Ranged",
+      "abilityPointer": "{c00bdaf9}",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": [
+        "ranged range=4"
+      ]
+    },
+    {
+      "id": "jayce",
+      "apiName": "TFT13_Jayce",
+      "form": "Melee",
+      "abilityPointer": "TFT13_Jayce/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "jayce-ranged",
+      "apiName": "TFT13_Jayce",
+      "form": "Ranged",
+      "abilityPointer": "{113c9b5d}",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": [
+        "ranged range=4"
+      ]
+    },
+    {
+      "id": "smeech",
+      "apiName": "TFT13_Gremlin",
+      "form": null,
+      "abilityPointer": "TFT13_Gremlin/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "sevika",
+      "apiName": "TFT13_Lieutenant",
+      "form": null,
+      "abilityPointer": "TFT13_Lieutenant/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "renni",
+      "apiName": "TFT13_Chainsaw",
+      "form": null,
+      "abilityPointer": "TFT13_Chainsaw/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "nunu",
+      "apiName": "TFT13_NunuWillump",
+      "form": null,
+      "abilityPointer": "TFT13_NunuWillump/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "gangplank",
+      "apiName": "TFT13_Gangplank",
+      "form": "Melee",
+      "abilityPointer": "TFT13_Gangplank/ability",
+      "classification": "源数据",
+      "overrides": [
+        "14.24b melee AD 65"
+      ],
+      "conventions": []
+    },
+    {
+      "id": "gangplank-ranged",
+      "apiName": "TFT13_Gangplank",
+      "form": "Ranged",
+      "abilityPointer": "{63408f43}",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": [
+        "ranged range=4"
+      ]
+    },
+    {
+      "id": "swain",
+      "apiName": "TFT13_Swain",
+      "form": "Melee",
+      "abilityPointer": "TFT13_Swain/ability",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": []
+    },
+    {
+      "id": "swain-ranged",
+      "apiName": "TFT13_Swain",
+      "form": "Ranged",
+      "abilityPointer": "{f06a42c9}",
+      "classification": "源数据",
+      "overrides": [],
+      "conventions": [
+        "ranged range=4"
+      ]
+    }
+  ]
+}

@@ -13,14 +13,15 @@ const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
 const t13Baseline = require('../tests/g2-augments-content-baseline.json');
+const currentBaseline = require('../tests/g2-4b-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
-  seed: state.seed, shop: state.rngState, choice: state.choiceRngState,
+  seed: state.seed, mechanics:state.seatMechanics?{state:state.seatMechanics.hidden.progress.rngState,draws:state.seatMechanics.hidden.progress.rngDraws}:null, shop: state.rngState, choice: state.choiceRngState,
   reward: state.rewardRngState, battleSeed: state.battleSeedRngState,
   equipment: state.equipmentState.equipment, reforge: state.reforgeState,
   layout: state.m8.loot.layoutBinding.mode === 'solo' ? state.m8.loot.layoutBinding.layout.rng : null, loot: state.m8.loot.frozen.rng,
-  combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws } : null,
+  combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws, items: state.combat.itemRandomStreams ?? null } : null,
 });
 
 function battle(api) {
@@ -70,6 +71,7 @@ async function worker() {
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
+    'priorPvpWins', 'G22_EMISSARY_WIN_CAP',
     'startTwoSidedBattle', 'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
     'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
     'createSharedPool', 'initializeSharedSeat', 'generateSharedShop', 'buySharedUnit', 'rerollSharedShop',
@@ -82,10 +84,12 @@ async function worker() {
   assert.equal(actual.steps.length, expected.steps.length);
   const traceHashes = {};
   const originalStateTraceHash = baseline.traceHashes.state;
-  assert.equal(actual.initial.contentDigest,t13Baseline.contentDigest);
+  assert.equal(currentBaseline.previousContentDigest,require('../tests/opening-random-content-baseline.json').contentDigest);
+  assert.notEqual(currentBaseline.contentDigest,t13Baseline.contentDigest);
+  assert.equal(actual.initial.contentDigest,currentBaseline.contentDigest);
   assert.notEqual(actual.initial.contentDigest, t12Baseline.contentDigest);
   assert.equal(t12Baseline.previousContentDigest, t11Baseline.contentDigest);
-  assert.equal(actual.initial.m8.loot.frozen.replayDigest,t13Baseline.lootReplayDigest);
+  assert.equal(actual.initial.m8.loot.frozen.replayDigest,currentBaseline.lootReplayDigest);
   assert.notEqual(actual.initial.m8.loot.frozen.replayDigest, t11Baseline.lootReplayDigest);
   assert.equal(t11Baseline.previousContentDigest, t10Baseline.contentDigest);
   assert.equal(t10Baseline.previousContentDigest, deploymentBaseline.contentDigest);
@@ -97,7 +101,7 @@ async function worker() {
     const browserBytes = Buffer.from(JSON.stringify(expected.steps.map(project)));
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
-    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned W4 ${key} trace`);
+    assert.equal(traceHashes[key],currentBaseline.traceHashes[key],`pinned G23 ${key} trace`);
     // T13 changes opening reward content, Match schema and random streams.
     // Preserve prior baselines; do not normalize away actual gameplay differences.
     assert.notEqual(traceHashes[key], baseline.traceHashes[key], `T13 ${key} must record the signed change`);
@@ -108,8 +112,8 @@ async function worker() {
     eventHash: reference.digestContent(combatEvents) };
   const probe = JSON.parse(fs.readFileSync(path.join(root, 'artifacts/server-authority-audit/report.json'), 'utf8'));
   for (const [key, value] of Object.entries(summary)) {
-    assert.equal(value, t13Baseline.firstBattle[key], `pinned W4 first battle: ${key}`);
-    if(key !== 'stateHash') assert.equal(value, baseline[key], `unchanged original probe: ${key}`);
+    assert.equal(value, currentBaseline.firstBattle[key], `pinned G23 first battle: ${key}`);
+    if(key === 'seed') assert.equal(value, baseline[key], `original probe seed: ${key}`);
     assert.equal(value, probe[key], `unmodified probe rerun: ${key}`);
   }
 

@@ -3,7 +3,6 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { displayUnitName } from './display-names';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
@@ -40,6 +39,15 @@ import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
+import { itemDisplayName } from '../presentation/g23-display';
+import type { HexCell } from '../simulation/board';
+import type { ItemSummonView } from '../server/protocol';
+
+/** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
+export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
+/** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
+const SUMMON_BOARD_ONLY = '虚空生物只能在我方棋盘区域移动，不能放入备战席';
+const SPECIAL_CELL_COLORS: Readonly<Record<string, string>> = { trial: THEME.color.gold };
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -94,6 +102,9 @@ export class BoardScene extends Phaser.Scene {
   private startHint!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
+  /** G2-3 prep: special-cell layer (trial cells) drawn above the board fill, below units; empty until the rules supply cells. */
+  private specialCellLayer!: Phaser.GameObjects.Graphics;
+  private specialCells: readonly SpecialCell[] = [];
   private status!: Phaser.GameObjects.Text;
   /** C18: "本场：X / 下场：Y" above a hovered fighting unit whose equipment changed during the battle. */
   private loadoutTip!: Phaser.GameObjects.Text;
@@ -148,6 +159,8 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillStyle(toNumber(isDeploymentCell(this.state.board, 'player', { col, row }) ? THEME.color.boardAlly : THEME.color.boardEnemy)).lineStyle(1, toNumber(THEME.color.boardLine));
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
+    this.specialCellLayer = this.add.graphics();
+    this.drawSpecialCells();
     this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
     for (const team of ['enemy', 'player'] as const) {
       const zone = this.state.board.deploymentZones[team];
@@ -195,7 +208,7 @@ export class BoardScene extends Phaser.Scene {
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
-    }, this.inputRouter, mounts?.shopDock ?? null);
+    }, this.inputRouter, mounts?.shopDock ?? null, mounts?.itemDock ?? null);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -322,6 +335,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private sell(id: string) {
+    if (this.summonOf(id)) { this.setStatus('虚空生物由兹若特传送门召唤 · 不能出售'); return; }
     const result = this.session.sell(id);
     // A hover sale must also clear a different old selection: holding E must
     // never unexpectedly sell that unit once the hovered token disappears.
@@ -373,7 +387,7 @@ export class BoardScene extends Phaser.Scene {
 
   private installDragHandlers() {
     this.input.on('dragstart', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      const unit = this.state.units.find(candidate => candidate.id === token.getData('unitId'));
+      const unit = this.displayedUnit(token.getData('unitId'));
       if (!unit || !this.canDrag(unit) || !this.tokens.has(unit.id)) return;
       const gesture = this.inputRouter.begin('unit', token.getData('unitId'), pointer.id);
       if (!gesture) return;
@@ -389,7 +403,13 @@ export class BoardScene extends Phaser.Scene {
       const { x, y } = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
       token.setPosition(x, y); this.overlay.clear();
       const target = this.target({ x, y });
-      if (target) {
+      const summon = this.summonOf(token.getData('unitId'));
+      if (summon) {
+        const reason = this.summonHint(summon, target);
+        this.setStatus(reason ?? '可放置 · 释放后虚空生物移到此格，之后每回合保持');
+        this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
+        if (target?.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
+      } else if (target) {
         // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
         const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
         this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
@@ -408,7 +428,11 @@ export class BoardScene extends Phaser.Scene {
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
       const swap = !!target && this.swapsWith(token.getData('unitId'), target);
-      if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+      const summon = this.summonOf(token.getData('unitId'));
+      if (summon) {
+        if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), '虚空生物已移动 · 之后每回合保持此位置');
+        else this.setStatus(SUMMON_BOARD_ONLY);
+      } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
       else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
       else this.setStatus(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
@@ -424,6 +448,21 @@ export class BoardScene extends Phaser.Scene {
       && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
   }
   private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
+  /**
+   * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物) as the rules place them, shown on the board only while I
+   * prepare and no battle is on it. They are not assets: no bench, sale, equipment or population.
+   */
+  private shownSummons() { return this.session.phase === 'preparation' && !this.session.combatView ? this.session.itemSummons : []; }
+  private summonOf(id: string | null | undefined) { return id ? this.shownSummons().find(summon => summon.unit.id === id) : undefined; }
+  private displayedUnit(id: string): Unit | undefined { return this.state.units.find(unit => unit.id === id) ?? this.summonOf(id)?.unit as Unit | undefined; }
+  /** Display-only drag hint for a summon (board cell, my rows, free); the rules' moveItemSummon decides the move itself. */
+  private summonHint(summon: ItemSummonView, target: UnitLocation | undefined): string | undefined {
+    if (target?.kind !== 'board') return SUMMON_BOARD_ONLY;
+    if (!isDeploymentCell(this.state.board, 'player', target.cell)) return this.failureMessage('outside-deployment-zone');
+    const taken = [...this.state.units.filter(unit => unit.team === 'player'), ...this.shownSummons().map(other => other.unit as Unit)]
+      .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
+    return taken ? '该位置已有单位 · 虚空生物只能移到空格' : undefined;
+  }
   private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
@@ -432,6 +471,21 @@ export class BoardScene extends Phaser.Scene {
       : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
   }
   private benchCenter(slot: number): Point { return { x: 27 + slot * 53.25, y: 480 }; }
+  /** G2-3 prep: replace the special cells shown on the board; an empty list clears the layer. Display only. */
+  setSpecialCells(cells: readonly SpecialCell[]): void {
+    this.specialCells = cells.map(entry => ({ kind: entry.kind, cell: { col: entry.cell.col, row: entry.cell.row } }));
+    this.drawSpecialCells();
+  }
+  private drawSpecialCells(): void {
+    const layer = this.specialCellLayer;
+    if (!layer?.active) return;
+    layer.clear();
+    for (const { kind, cell } of this.specialCells) {
+      if (cell.col < 0 || cell.row < 0 || cell.col >= this.state.board.columns || cell.row >= this.state.board.rows) continue;
+      const color = toNumber(SPECIAL_CELL_COLORS[kind] ?? THEME.color.focus), corners = this.layout.corners(cell);
+      layer.fillStyle(color, 0.18).lineStyle(2, color, 0.9).fillPoints(corners, true).strokePoints(corners, true);
+    }
+  }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
   private target(point: Point): UnitLocation | undefined {
     const cell = this.layout.hitTest(point);
@@ -453,7 +507,7 @@ export class BoardScene extends Phaser.Scene {
     const messages: Partial<Record<MatchFailure, string>> = {
       'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
         : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
-        : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
+        : this.session.phase === 'choice' ? '请先完成当前强化 / 异常选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
         : this.session.phase === 'settlement' ? (this.online ? '本轮已结算 · 稍后自动进入下一回合' : '本轮已结算 · 点击 继续进入下一回合')
         : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
@@ -539,6 +593,7 @@ export class BoardScene extends Phaser.Scene {
     // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
     // by its combat unit only, never as a second token at its preparation cell (C10).
     const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
     // Rewards can consume an old unit while its finished combat is still displayed.
     // Keep that combat view until Continue clears it, including restored settlements.
@@ -601,7 +656,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.benchOps()) this.syncOperable();
       this.syncCombat(); return;
     }
-    for (const unit of this.state.units) {
+    for (const unit of [...this.state.units, ...this.shownSummons().map(summon => summon.unit as Unit)]) {
       const p = this.position(unit.location), token = this.tokens.get(unit.id)!;
       token.setPosition(p.x, p.y).setVisible(true).setAlpha(1).setScale(1).setDepth(0);
       this.views.get(unit.id)!.resetMeters();
@@ -725,6 +780,9 @@ export class BoardScene extends Phaser.Scene {
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
   }
   update(_time: number, delta: number) {
+    // Cheap motion (idle bob, lunge, hit flash) offsets each piece's drawing only; tokens keep their positions.
+    const now = performance.now();
+    for (const view of this.views.values()) view.animate?.(now);
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
@@ -768,12 +826,12 @@ export class BoardScene extends Phaser.Scene {
     const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
     const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
     if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); return; }
-    const text = battleLoadoutText(loadout, definitionId => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId);
+    const text = battleLoadoutText(loadout, definitionId => itemDisplayName(definitionId));
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
-    const dragged = this.state.units.find(unit => unit.id === this.draggingId);
+    const dragged = this.draggingId ? this.displayedUnit(this.draggingId) : undefined;
     if (dragged) {
       const point = this.position(dragged.location);
       this.tokens.get(dragged.id)?.setPosition(point.x, point.y);
@@ -823,7 +881,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.renderedCells.get(unit.id) !== key) {
         this.tweens.killTweensOf(token);
         const p = this.layout.center(unit.cell);
-        if (this.renderedCells.has(unit.id) && unit.alive && !reducedMotion()) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 100 });
+        if (this.renderedCells.has(unit.id) && unit.alive && !reducedMotion()) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 220, ease: 'Sine.easeInOut' });
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
@@ -844,7 +902,7 @@ export class BoardScene extends Phaser.Scene {
     this.renderedCastCount += this.fx.casts - casts;
     this.feedback?.push(events, performance.now());
   }
-  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc, duration: number) {
+  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);
     this.tweens.add({ targets: effect, alpha: 0, duration, onComplete: () => { this.effects.delete(effect); effect.destroy(); } });
   }

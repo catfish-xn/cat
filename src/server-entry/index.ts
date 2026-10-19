@@ -5,7 +5,9 @@ export {
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, advanceMultiplayerRound,
+  readItemSummons, moveItemSummon,
 } from '../simulation/match';
+export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';
 export type {
   MatchState, MatchBase, MatchCommandResult, MatchFailure, MatchStep, MatchEvent,
@@ -20,6 +22,7 @@ export type {
   StrategySnapshot, StrategyUnitSnapshot, ItemInstance, OwnedAugment, AnomalyBinding,
 } from '../simulation/strategy-types';
 export { snapshotForBattle, restorePlayerBattleSnapshot } from '../simulation/two-sided-snapshot';
+export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-history';
 export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
   startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement } from '../simulation/two-sided-battle';
 export type { BattleTask } from '../simulation/two-sided-battle';

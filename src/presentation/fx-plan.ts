@@ -7,27 +7,33 @@
 import type { HexCell } from '../simulation/board';
 import type { ResolvedAbility } from '../simulation/ability-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombatEvent } from './combat-display';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
+import { augmentDisplayName } from './augment-display';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from '../rendering/display-names';
-import { getHeroIdentity } from './hero-identity';
+import { getHeroIdentity, traitDisplayName } from './hero-identity';
+import { anomalyDisplayName, itemDisplayName } from './g23-display';
 import { THEME, toNumber } from './theme';
 
 const C = THEME.color;
 const SOURCE_KIND: Readonly<Record<string, string>> = { ability: '技能', trait: '羁绊', item: '装备', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
 const sourceName = (kind: string, id: string) => {
+  if (kind === 'augment' && AUGMENT_DEFINITIONS[id]) return augmentDisplayName(id);
+  if (kind === 'item' && ITEM_DEFINITIONS[id]) return itemDisplayName(id);
+  if (kind === 'trait' && TRAIT_DEFINITIONS[id]) return traitDisplayName(id);
+  if (kind === 'anomaly' && ANOMALY_DEFINITIONS[id]) return anomalyDisplayName(id);
   const catalog = kind === 'item' ? ITEM_DEFINITIONS : kind === 'trait' ? TRAIT_DEFINITIONS : kind === 'augment' ? AUGMENT_DEFINITIONS : kind === 'anomaly' ? ANOMALY_DEFINITIONS : null;
   return (catalog?.[id] as { name?: string } | undefined)?.name ?? displayUnitName(id);
 };
 
 export type FxSpec =
-  | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number }
-  | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean }
+  | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number; sourceId: string }
+  | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean; sourceId: string }
   | { kind: 'cast'; at: HexCell; targets: readonly HexCell[]; color: number; duration: number; label: string }
   | { kind: 'ring'; at: HexCell; color: number; radius: number; duration: number }
-  | { kind: 'death'; at: HexCell; duration: number }
+  | { kind: 'death'; at: HexCell; duration: number; unitId: string }
   | { kind: 'label'; at: HexCell; text: string; dy: number; color: string; background: string; duration: number }
   | { kind: 'flash'; unitId: string }
   | { kind: 'target'; unitId: string; team: 'player' | 'enemy' };
@@ -56,8 +62,8 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
       const source = unit(event.attackerId), target = unit(event.targetId);
       if (!source || !target) continue;
       const color = toNumber(source.team === 'player' ? C.ally : C.enemy);
-      if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200 });
-      else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced });
+      if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200, sourceId: source.id });
+      else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced, sourceId: source.id });
     } else if (event.type === 'cast') {
       const source = unit(event.sourceId);
       if (!source) continue;
@@ -84,7 +90,13 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
       if (!flashed.has(id)) { flashed.add(id); specs.push({ kind: 'flash', unitId: id }); }
     } else if (event.type === 'death') {
       const target = unit(event.unitId);
-      if (target) specs.push({ kind: 'death', at: target.cell, duration: 600 });
+      if (target) specs.push({ kind: 'death', at: target.cell, duration: 600, unitId: target.id });
+    } else if (event.type === 'unitRevived') {
+      // The unit returns in place (same id); its token reappears from the end-of-tick alive flag.
+      const target = unit(event.unitId);
+      if (!target) continue;
+      specs.push({ kind: 'ring', at: target.cell, color: 0xffd56e, radius: 34, duration: 700 });
+      specs.push({ kind: 'label', at: target.cell, text: `复活 · 生命 ${event.hp}`, dy: 46, color: '#fff2c4', background: '#3a2c10', duration: 900 });
     } else if (event.type === 'effectTriggered') {
       const owner = unit(event.ownerId);
       if (owner) specs.push({ kind: 'label', at: owner.cell, text: `${SOURCE_KIND[event.sourceKind] ?? '效果'} · ${sourceName(event.sourceKind, event.sourceDefinitionId)}`,

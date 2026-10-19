@@ -1,4 +1,4 @@
-import { G2_CATALOG } from './fixtures/g2-roster';
+import { G23_CATALOG as G2_CATALOG } from './fixtures/g2-3-roster';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
@@ -9,8 +9,10 @@ import { settlement } from './fixtures/m5/oracle.g2.cjs';
 import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
+// Seed 7216: the random opening is Irelia (whose 1-2 fight casts and shields, as seed 6240 did before random openings) and
+// the baseline random 1-2/1-3 rewards are Maddie then Lux, which the opening-hero transcription below spells out.
 function preparation(): MatchState {
-  return deployMatchUnit(readyMatch(6240), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
+  return deployMatchUnit(readyMatch(7216), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
 }
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 // Independent M8B_LOOT §2 opening transcription: no receipt or unit fields copied from the result.

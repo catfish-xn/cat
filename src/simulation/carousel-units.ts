@@ -3,9 +3,12 @@ import type { PendingCarouselUnit } from './carousel-types';
 import type { GameState } from './game';
 import { sameCell } from './board';
 import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { planDeferredUpgrades, transferUpgradeResources } from './upgrades';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import { canonicalContent } from './content';
+import { deploymentCapFor } from './deployment-cap';
+import { readG23Progress } from './g2-3-state';
 
 /** The deprecated aliases are persisted for the current server adapter, never separate queues. */
 export function validateCarouselMetadata(state: MatchState): void {
@@ -20,7 +23,8 @@ export function validateCarouselMetadata(state: MatchState): void {
   for(const id of settled){
     const receipt=metadata.receipts.find(r=>r.id===id);
     const fact=state.resourceProvenance.entries.find(e=>e.kind==='carousel-preparation-settled'&&e.receiptIds.includes(id));
-    if(!receipt || !fact || getCatalogRoundById(receipt.carouselId.split(':').at(-1)!).ordinal>=getCatalogRoundById(fact.roundId).ordinal) invalid();
+    if(!receipt || !fact || getCatalogRoundById(receipt.carouselId.split(':').at(-1)!).ordinal>=(state.multiplayer
+      ? getMultiplayerRoundById(fact.roundId) : getCatalogRoundById(fact.roundId)).ordinal) invalid();
   }
   const ids=new Set<string>();
   for(const unit of metadata.heldCarouselUnits){
@@ -39,7 +43,7 @@ export function placeCarouselUnit(state: MatchState, unit: PendingCarouselUnit):
       location = {kind:'bench',slot}; break;
     }
   }
-  if (!location && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < state.level) {
+  if (!location && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < deploymentCapFor(state.level, readG23Progress(state))) {
     const zone = preparation.board.deploymentZones.player;
     for (let row = zone.firstRow; row <= zone.lastRow && !location; row++) {
       for (let col = 0; col < preparation.board.columns; col++) {

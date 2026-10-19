@@ -1,0 +1,12 @@
+{"phase":"raw-exported","name":"ionic-spark","battles":14,"ticks":4485,"rawBytes":119645,"rawSha256":"adadc0cfc3ffec1dd64276b377c5e87f689aa2ea015d5683f567b5dfb47d7d6d","generationMs":14958.430950000002}
+{"phase":"raw-exported","name":"evenshroud","battles":14,"ticks":4485,"rawBytes":119644,"rawSha256":"c2c0deed9e7e18d3ce7733303baebbfd6a1c83931fa8896afb66e3a3f2b68504","generationMs":8478.975185000003}
+{"phase":"raw-exported","name":"ionic-spark--evenshroud","battles":14,"ticks":4485,"rawBytes":119870,"rawSha256":"2552dd42bdea92afdfeb5761fbe5ed4a42e5edefc81cd650983672ea28b51088","generationMs":8381.978813999995}
+{"phase":"raw-exported","name":"quicksilver","battles":14,"ticks":4485,"rawBytes":119648,"rawSha256":"b1d57acbc324d4c745caa5adc660c83f0078b7209a77f854308d860893664c5c","generationMs":8338.808543}
+{"phase":"raw-exported","name":"edge-of-night","battles":14,"ticks":4485,"rawBytes":119650,"rawSha256":"1fad79cc5d518bd6689445119d4e912c03c77e9a1e1307072065cb40a32e5993","generationMs":8924.161917999998}
+{"phase":"all-raw-exported-before-restore-import","count":5}
+{"phase":"production-restore-verified","name":"ionic-spark","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}
+{"phase":"production-restore-verified","name":"evenshroud","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}
+{"phase":"production-restore-verified","name":"ionic-spark--evenshroud","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}
+{"phase":"production-restore-verified","name":"quicksilver","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}
+{"phase":"production-restore-verified","name":"edge-of-night","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}
+{"phase":"complete","mode":"verify","files":7,"cases":[{"name":"ionic-spark","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true},{"name":"evenshroud","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true},{"name":"ionic-spark--evenshroud","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true},{"name":"quicksilver","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true},{"name":"edge-of-night","rawStateEqualsRestored":true,"startAndFifteenTicksRoundTrip":true}],"sourceSha256":"1db0627a78206134194ff494a40ec5b7330408c08601639f8937eeb0732e5b09","allRawExportedBeforeRestoreImport":true,"elapsedMs":77932.115391}

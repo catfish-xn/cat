@@ -1,0 +1,2439 @@
+{
+  "codeSha": "1897144c456b51163a1ad64ea8d00cbf99500e11",
+  "initial": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "exit": 0,
+      "seconds": 10.752,
+      "passed": 25,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "exit": 1,
+      "seconds": 1.702,
+      "passed": 9,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "file": "tests/explorer-bracer-pressure.test.ts",
+      "exit": 1,
+      "seconds": 0.432,
+      "passed": 0,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/explorer-bracer-restore.test.ts",
+      "exit": 0,
+      "seconds": 3.48,
+      "passed": 24,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "exit": 0,
+      "seconds": 2.939,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifact-mechanism-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.778,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "exit": 0,
+      "seconds": 2.785,
+      "passed": 48,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-clone-forges.test.ts",
+      "exit": 0,
+      "seconds": 0.899,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-collector.test.ts",
+      "exit": 0,
+      "seconds": 3.669,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-cutlass.test.ts",
+      "exit": 0,
+      "seconds": 1.859,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-defiance.test.ts",
+      "exit": 0,
+      "seconds": 1.77,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-fishbones.test.ts",
+      "exit": 0,
+      "seconds": 1.881,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-gambler.test.ts",
+      "exit": 0,
+      "seconds": 2.035,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-gold-settlement.test.ts",
+      "exit": 0,
+      "seconds": 1.627,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-item-gold.test.ts",
+      "exit": 0,
+      "seconds": 0.659,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-item-kernel.test.ts",
+      "exit": 0,
+      "seconds": 0.672,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mirror-forge-restore.test.ts",
+      "exit": 0,
+      "seconds": 1.914,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mirror.test.ts",
+      "exit": 0,
+      "seconds": 2.619,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mogul.test.ts",
+      "exit": 0,
+      "seconds": 2.074,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-pr161-restore.test.ts",
+      "exit": 0,
+      "seconds": 11.054,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "exit": 0,
+      "seconds": 3.498,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "exit": 0,
+      "seconds": 5.397,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-restore-authority.test.ts",
+      "exit": 0,
+      "seconds": 2.259,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-reward-order.test.ts",
+      "exit": 0,
+      "seconds": 1.089,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-shroud.test.ts",
+      "exit": 0,
+      "seconds": 1.889,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "exit": 0,
+      "seconds": 1.393,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-support-items.test.ts",
+      "exit": 1,
+      "seconds": 2.236,
+      "passed": 14,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-gold.test.ts",
+      "exit": 0,
+      "seconds": 2.282,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-restore.test.ts",
+      "exit": 1,
+      "seconds": 2.682,
+      "passed": 2,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "exit": 0,
+      "seconds": 2.282,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "exit": 0,
+      "seconds": 16.878,
+      "passed": 39,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-voidspawn.test.ts",
+      "exit": 0,
+      "seconds": 1.986,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-zephyr.test.ts",
+      "exit": 0,
+      "seconds": 2.21,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-ability-contracts.test.ts",
+      "exit": 1,
+      "seconds": 0.716,
+      "passed": 20,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-audit-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.672,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b10-encounter-outcomes.test.ts",
+      "exit": 0,
+      "seconds": 14.784,
+      "passed": 46,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b10-item-save-replay.test.ts",
+      "exit": 0,
+      "seconds": 20.613,
+      "passed": 45,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "exit": 0,
+      "seconds": 6.352,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-audit.test.ts",
+      "exit": 0,
+      "seconds": 2.652,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-damage-control-order.test.ts",
+      "exit": 0,
+      "seconds": 1.436,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.482,
+      "passed": 25,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-periodic-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.493,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.547,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-second-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.475,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b3-third-audit.test.ts",
+      "exit": 0,
+      "seconds": 1.436,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-audit-regressions.test.ts",
+      "exit": 0,
+      "seconds": 9.539,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-belt.test.ts",
+      "exit": 0,
+      "seconds": 1.39,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-bow.test.ts",
+      "exit": 0,
+      "seconds": 1.452,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-catalog.test.ts",
+      "exit": 0,
+      "seconds": 13.608,
+      "passed": 84,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-cloak.test.ts",
+      "exit": 0,
+      "seconds": 1.477,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-gloves.test.ts",
+      "exit": 0,
+      "seconds": 1.422,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-integration.test.ts",
+      "exit": 0,
+      "seconds": 5.18,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+      "exit": 0,
+      "seconds": 3.882,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-rod.test.ts",
+      "exit": 0,
+      "seconds": 1.498,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-sword.test.ts",
+      "exit": 0,
+      "seconds": 1.381,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-tear.test.ts",
+      "exit": 0,
+      "seconds": 1.443,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-trigger-ledger.test.ts",
+      "exit": 0,
+      "seconds": 0.682,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b4-vest.test.ts",
+      "exit": 0,
+      "seconds": 1.391,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "exit": 0,
+      "seconds": 10.274,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "exit": 0,
+      "seconds": 10.451,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "exit": 0,
+      "seconds": 11.164,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b5-queries.test.ts",
+      "exit": 0,
+      "seconds": 3.888,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b5-temporary.test.ts",
+      "exit": 0,
+      "seconds": 4.615,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "exit": 0,
+      "seconds": 15.066,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b6-opening-economy.test.ts",
+      "exit": 0,
+      "seconds": 0.69,
+      "passed": 27,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b6-round-catalog.test.ts",
+      "exit": 0,
+      "seconds": 0.626,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "exit": 0,
+      "seconds": 23.865,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-catalog.test.ts",
+      "exit": 0,
+      "seconds": 0.867,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-cleanup.test.ts",
+      "exit": 0,
+      "seconds": 1.899,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-known-limitations.test.ts",
+      "exit": 0,
+      "seconds": 1.517,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "exit": 0,
+      "seconds": 19.926,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-mechanisms.test.ts",
+      "exit": 0,
+      "seconds": 1.559,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-serialization-reuse.test.ts",
+      "exit": 0,
+      "seconds": 2.347,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-acquisition.test.ts",
+      "exit": 0,
+      "seconds": 1.74,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-combat-input.test.ts",
+      "exit": 0,
+      "seconds": 1.989,
+      "passed": 38,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-command-oracle.test.ts",
+      "exit": 0,
+      "seconds": 1.746,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-copy-semantics.test.ts",
+      "exit": 0,
+      "seconds": 1.756,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-equipment-fixture.test.ts",
+      "exit": 0,
+      "seconds": 3.544,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-capacity.test.ts",
+      "exit": 0,
+      "seconds": 7.876,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-cross-round.test.ts",
+      "exit": 0,
+      "seconds": 3.131,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-economy.test.ts",
+      "exit": 0,
+      "seconds": 3.015,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "exit": 0,
+      "seconds": 6.458,
+      "passed": 26,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "exit": 0,
+      "seconds": 7.907,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "exit": 0,
+      "seconds": 8.072,
+      "passed": 19,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-loot-freeze.test.ts",
+      "exit": 0,
+      "seconds": 1.362,
+      "passed": 67,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-loot-runtime.test.ts",
+      "exit": 0,
+      "seconds": 1.716,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-loot-view.test.ts",
+      "exit": 0,
+      "seconds": 6.747,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-oracle.test.ts",
+      "exit": 0,
+      "seconds": 21.446,
+      "passed": 24,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-resource-provenance.test.ts",
+      "exit": 0,
+      "seconds": 1.226,
+      "passed": 64,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "exit": 0,
+      "seconds": 1.921,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.757,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b8-token-lifecycle.test.ts",
+      "exit": 0,
+      "seconds": 2.738,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b9-activity-log.test.ts",
+      "exit": 0,
+      "seconds": 15.235,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b9-compatibility.test.ts",
+      "exit": 0,
+      "seconds": 3.05,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b9-status-events.test.ts",
+      "exit": 0,
+      "seconds": 1.475,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "exit": 1,
+      "seconds": 0.687,
+      "passed": 0,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.64,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-effect-policy-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.732,
+      "passed": 20,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g01.test.ts",
+      "exit": 0,
+      "seconds": 0.67,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g02.test.ts",
+      "exit": 0,
+      "seconds": 0.648,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g03.test.ts",
+      "exit": 0,
+      "seconds": 0.669,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g04.test.ts",
+      "exit": 0,
+      "seconds": 0.71,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g05.test.ts",
+      "exit": 0,
+      "seconds": 0.686,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g06.test.ts",
+      "exit": 0,
+      "seconds": 0.672,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g07.test.ts",
+      "exit": 0,
+      "seconds": 0.688,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g08.test.ts",
+      "exit": 0,
+      "seconds": 1.391,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g09-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.446,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g09.test.ts",
+      "exit": 0,
+      "seconds": 0.65,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g10-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.437,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g10.test.ts",
+      "exit": 0,
+      "seconds": 0.647,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g11.test.ts",
+      "exit": 0,
+      "seconds": 1.406,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g12-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.413,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-g12.test.ts",
+      "exit": 0,
+      "seconds": 0.693,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-if-death.test.ts",
+      "exit": 0,
+      "seconds": 0.675,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-if-inputs.test.ts",
+      "exit": 0,
+      "seconds": 1.469,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-if-open.test.ts",
+      "exit": 0,
+      "seconds": 0.692,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-node3-copy-boundary.test.ts",
+      "exit": 0,
+      "seconds": 1.664,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-planning.test.ts",
+      "exit": 0,
+      "seconds": 0.69,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-rereview-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.663,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-target-order-contracts.test.ts",
+      "exit": 0,
+      "seconds": 1.322,
+      "passed": 28,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-u5-preview-mocked-snapshot.test.ts",
+      "exit": 0,
+      "seconds": 1.856,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-u5-preview.test.ts",
+      "exit": 0,
+      "seconds": 14.698,
+      "passed": 60,
+      "failed": 0,
+      "pending": 0
+    }
+  ],
+  "final": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "exit": 0,
+      "seconds": 10.907,
+      "passed": 25,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "exit": 0,
+      "seconds": 1.841,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "exit": 0,
+      "seconds": 2.018,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/explorer-bracer-restore.test.ts",
+      "exit": 0,
+      "seconds": 3.608,
+      "passed": 24,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "exit": 0,
+      "seconds": 3.238,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifact-mechanism-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.9,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "exit": 0,
+      "seconds": 3.064,
+      "passed": 48,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-clone-forges.test.ts",
+      "exit": 0,
+      "seconds": 1.013,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-collector.test.ts",
+      "exit": 0,
+      "seconds": 4.147,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-cutlass.test.ts",
+      "exit": 0,
+      "seconds": 1.988,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-defiance.test.ts",
+      "exit": 0,
+      "seconds": 2.014,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-fishbones.test.ts",
+      "exit": 0,
+      "seconds": 1.938,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-gambler.test.ts",
+      "exit": 0,
+      "seconds": 1.995,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-gold-settlement.test.ts",
+      "exit": 0,
+      "seconds": 1.638,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-item-gold.test.ts",
+      "exit": 0,
+      "seconds": 0.719,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-item-kernel.test.ts",
+      "exit": 0,
+      "seconds": 0.685,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mirror-forge-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.073,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mirror.test.ts",
+      "exit": 0,
+      "seconds": 2.791,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-mogul.test.ts",
+      "exit": 0,
+      "seconds": 2.171,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-pr161-restore.test.ts",
+      "exit": 0,
+      "seconds": 11.385,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "exit": 0,
+      "seconds": 3.344,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "exit": 0,
+      "seconds": 5.653,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-restore-authority.test.ts",
+      "exit": 0,
+      "seconds": 2.287,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-reward-order.test.ts",
+      "exit": 0,
+      "seconds": 1.117,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-shroud.test.ts",
+      "exit": 0,
+      "seconds": 1.945,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "exit": 0,
+      "seconds": 1.401,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-support-items.test.ts",
+      "exit": 0,
+      "seconds": 2.341,
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-gold.test.ts",
+      "exit": 0,
+      "seconds": 2.336,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.745,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "exit": 0,
+      "seconds": 2.488,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "exit": 0,
+      "seconds": 17.157,
+      "passed": 39,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-voidspawn.test.ts",
+      "exit": 0,
+      "seconds": 2.047,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/g2-4b-zephyr.test.ts",
+      "exit": 0,
+      "seconds": 2.233,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-ability-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.737,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "exit": 0,
+      "seconds": 19.709,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "exit": 1,
+      "seconds": 1.749,
+      "passed": 0,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/restore-audit/bounds-preflight.test.ts",
+      "exit": 0,
+      "seconds": 14.657,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "exit": 0,
+      "seconds": 16.69,
+      "passed": 34,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/restore-audit/combat-accumulators.test.ts",
+      "exit": 0,
+      "seconds": 1.804,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "exit": 0,
+      "seconds": 11.829,
+      "passed": 20,
+      "failed": 0,
+      "pending": 0
+    }
+  ],
+  "latestUnique": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "exit": 0,
+      "seconds": 10.907,
+      "passed": 25,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "exit": 0,
+      "seconds": 1.841,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "exit": 0,
+      "seconds": 2.018,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/explorer-bracer-restore.test.ts",
+      "exit": 0,
+      "seconds": 3.608,
+      "passed": 24,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "exit": 0,
+      "seconds": 3.238,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-artifact-mechanism-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.9,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "exit": 0,
+      "seconds": 3.064,
+      "passed": 48,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-clone-forges.test.ts",
+      "exit": 0,
+      "seconds": 1.013,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-collector.test.ts",
+      "exit": 0,
+      "seconds": 4.147,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-cutlass.test.ts",
+      "exit": 0,
+      "seconds": 1.988,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-defiance.test.ts",
+      "exit": 0,
+      "seconds": 2.014,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-fishbones.test.ts",
+      "exit": 0,
+      "seconds": 1.938,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-gambler.test.ts",
+      "exit": 0,
+      "seconds": 1.995,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-gold-settlement.test.ts",
+      "exit": 0,
+      "seconds": 1.638,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-item-gold.test.ts",
+      "exit": 0,
+      "seconds": 0.719,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-item-kernel.test.ts",
+      "exit": 0,
+      "seconds": 0.685,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-mirror-forge-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.073,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-mirror.test.ts",
+      "exit": 0,
+      "seconds": 2.791,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-mogul.test.ts",
+      "exit": 0,
+      "seconds": 2.171,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-pr161-restore.test.ts",
+      "exit": 0,
+      "seconds": 11.385,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "exit": 0,
+      "seconds": 3.344,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "exit": 0,
+      "seconds": 5.653,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-restore-authority.test.ts",
+      "exit": 0,
+      "seconds": 2.287,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-reward-order.test.ts",
+      "exit": 0,
+      "seconds": 1.117,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-shroud.test.ts",
+      "exit": 0,
+      "seconds": 1.945,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "exit": 0,
+      "seconds": 1.401,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-support-items.test.ts",
+      "exit": 0,
+      "seconds": 2.341,
+      "passed": 15,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-trench-gold.test.ts",
+      "exit": 0,
+      "seconds": 2.336,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-trench-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.745,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "exit": 0,
+      "seconds": 2.488,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "exit": 0,
+      "seconds": 17.157,
+      "passed": 39,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-voidspawn.test.ts",
+      "exit": 0,
+      "seconds": 2.047,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/g2-4b-zephyr.test.ts",
+      "exit": 0,
+      "seconds": 2.233,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/m8-ability-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.737,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/m8-audit-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.672,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b10-encounter-outcomes.test.ts",
+      "exit": 0,
+      "seconds": 14.784,
+      "passed": 46,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b10-item-save-replay.test.ts",
+      "exit": 0,
+      "seconds": 20.613,
+      "passed": 45,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "exit": 0,
+      "seconds": 6.352,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-audit.test.ts",
+      "exit": 0,
+      "seconds": 2.652,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-damage-control-order.test.ts",
+      "exit": 0,
+      "seconds": 1.436,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.482,
+      "passed": 25,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-periodic-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.493,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.547,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-second-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.475,
+      "passed": 13,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b3-third-audit.test.ts",
+      "exit": 0,
+      "seconds": 1.436,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-audit-regressions.test.ts",
+      "exit": 0,
+      "seconds": 9.539,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-belt.test.ts",
+      "exit": 0,
+      "seconds": 1.39,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-bow.test.ts",
+      "exit": 0,
+      "seconds": 1.452,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-catalog.test.ts",
+      "exit": 0,
+      "seconds": 13.608,
+      "passed": 84,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-cloak.test.ts",
+      "exit": 0,
+      "seconds": 1.477,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-gloves.test.ts",
+      "exit": 0,
+      "seconds": 1.422,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-integration.test.ts",
+      "exit": 0,
+      "seconds": 5.18,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+      "exit": 0,
+      "seconds": 3.882,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-rod.test.ts",
+      "exit": 0,
+      "seconds": 1.498,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-sword.test.ts",
+      "exit": 0,
+      "seconds": 1.381,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-tear.test.ts",
+      "exit": 0,
+      "seconds": 1.443,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-trigger-ledger.test.ts",
+      "exit": 0,
+      "seconds": 0.682,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b4-vest.test.ts",
+      "exit": 0,
+      "seconds": 1.391,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "exit": 0,
+      "seconds": 10.274,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "exit": 0,
+      "seconds": 10.451,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "exit": 0,
+      "seconds": 11.164,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b5-queries.test.ts",
+      "exit": 0,
+      "seconds": 3.888,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b5-temporary.test.ts",
+      "exit": 0,
+      "seconds": 4.615,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "exit": 0,
+      "seconds": 15.066,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b6-opening-economy.test.ts",
+      "exit": 0,
+      "seconds": 0.69,
+      "passed": 27,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b6-round-catalog.test.ts",
+      "exit": 0,
+      "seconds": 0.626,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "exit": 0,
+      "seconds": 23.865,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-catalog.test.ts",
+      "exit": 0,
+      "seconds": 0.867,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-cleanup.test.ts",
+      "exit": 0,
+      "seconds": 1.899,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-known-limitations.test.ts",
+      "exit": 0,
+      "seconds": 1.517,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "exit": 0,
+      "seconds": 19.709,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/m8-b7-mechanisms.test.ts",
+      "exit": 0,
+      "seconds": 1.559,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b7-serialization-reuse.test.ts",
+      "exit": 0,
+      "seconds": 2.347,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-acquisition.test.ts",
+      "exit": 0,
+      "seconds": 1.74,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-combat-input.test.ts",
+      "exit": 0,
+      "seconds": 1.989,
+      "passed": 38,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-command-oracle.test.ts",
+      "exit": 0,
+      "seconds": 1.746,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-copy-semantics.test.ts",
+      "exit": 0,
+      "seconds": 1.756,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-equipment-fixture.test.ts",
+      "exit": 0,
+      "seconds": 3.544,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-capacity.test.ts",
+      "exit": 0,
+      "seconds": 7.876,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-cross-round.test.ts",
+      "exit": 0,
+      "seconds": 3.131,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-economy.test.ts",
+      "exit": 0,
+      "seconds": 3.015,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "exit": 0,
+      "seconds": 6.458,
+      "passed": 26,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "exit": 0,
+      "seconds": 7.907,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "exit": 0,
+      "seconds": 8.072,
+      "passed": 19,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-loot-freeze.test.ts",
+      "exit": 0,
+      "seconds": 1.362,
+      "passed": 67,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-loot-runtime.test.ts",
+      "exit": 0,
+      "seconds": 1.716,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-loot-view.test.ts",
+      "exit": 0,
+      "seconds": 6.747,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-oracle.test.ts",
+      "exit": 0,
+      "seconds": 21.446,
+      "passed": 24,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-resource-provenance.test.ts",
+      "exit": 0,
+      "seconds": 1.226,
+      "passed": 64,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "exit": 0,
+      "seconds": 1.921,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "exit": 0,
+      "seconds": 2.757,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b8-token-lifecycle.test.ts",
+      "exit": 0,
+      "seconds": 2.738,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b9-activity-log.test.ts",
+      "exit": 0,
+      "seconds": 15.235,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b9-compatibility.test.ts",
+      "exit": 0,
+      "seconds": 3.05,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-b9-status-events.test.ts",
+      "exit": 0,
+      "seconds": 1.475,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "exit": 1,
+      "seconds": 1.749,
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/m8-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.64,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-effect-policy-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.732,
+      "passed": 20,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g01.test.ts",
+      "exit": 0,
+      "seconds": 0.67,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g02.test.ts",
+      "exit": 0,
+      "seconds": 0.648,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g03.test.ts",
+      "exit": 0,
+      "seconds": 0.669,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g04.test.ts",
+      "exit": 0,
+      "seconds": 0.71,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g05.test.ts",
+      "exit": 0,
+      "seconds": 0.686,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g06.test.ts",
+      "exit": 0,
+      "seconds": 0.672,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g07.test.ts",
+      "exit": 0,
+      "seconds": 0.688,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g08.test.ts",
+      "exit": 0,
+      "seconds": 1.391,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g09-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.446,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g09.test.ts",
+      "exit": 0,
+      "seconds": 0.65,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g10-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.437,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g10.test.ts",
+      "exit": 0,
+      "seconds": 0.647,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g11.test.ts",
+      "exit": 0,
+      "seconds": 1.406,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g12-integration.test.ts",
+      "exit": 0,
+      "seconds": 1.413,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-g12.test.ts",
+      "exit": 0,
+      "seconds": 0.693,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-if-death.test.ts",
+      "exit": 0,
+      "seconds": 0.675,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-if-inputs.test.ts",
+      "exit": 0,
+      "seconds": 1.469,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-if-open.test.ts",
+      "exit": 0,
+      "seconds": 0.692,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-node3-copy-boundary.test.ts",
+      "exit": 0,
+      "seconds": 1.664,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-planning.test.ts",
+      "exit": 0,
+      "seconds": 0.69,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-rereview-contracts.test.ts",
+      "exit": 0,
+      "seconds": 0.663,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-target-order-contracts.test.ts",
+      "exit": 0,
+      "seconds": 1.322,
+      "passed": 28,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-u5-preview-mocked-snapshot.test.ts",
+      "exit": 0,
+      "seconds": 1.856,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/m8-u5-preview.test.ts",
+      "exit": 0,
+      "seconds": 14.698,
+      "passed": 60,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "initial"
+    },
+    {
+      "file": "tests/restore-audit/bounds-preflight.test.ts",
+      "exit": 0,
+      "seconds": 14.657,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "exit": 0,
+      "seconds": 16.69,
+      "passed": 34,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/restore-audit/combat-accumulators.test.ts",
+      "exit": 0,
+      "seconds": 1.804,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "exit": 0,
+      "seconds": 11.829,
+      "passed": 20,
+      "failed": 0,
+      "pending": 0,
+      "evidence": "final"
+    }
+  ]
+}

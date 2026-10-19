@@ -1,0 +1,54 @@
+import {createCombatWithEvents,stepCombat} from './combat';
+import type {CombatState} from './combat-types';
+import type {CombatInputBasis} from './combat-input';
+import type {StrategySnapshot} from './strategy-types';
+import {canonicalContent} from './content';
+
+/** Opening HP is derived from authenticated inputs, never the saved owner HP. */
+export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
+  const enabled=strategy.units.some(u=>u.itemSummon?.kind==='mirror');
+  const initial=enabled?createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state:null;
+  for(const unit of candidate.units){
+    const expected=initial?.units.find(u=>u.id===unit.id)?.itemSummonOpeningMaxHp;
+    if(unit.itemSummonOpeningMaxHp!==expected)throw new RangeError('Invalid authoritative Mirror opening health');
+  }
+}
+
+/** Banishment suspends mechanism clocks, so the normal per-tick structural
+ * validator is not its authority. Require exact reconstruction of the entire
+ * combat, not a candidate-supplied absence flag or weaker clock bounds.
+ * Trench also replaces the roster, so this runs before static-roster checks.
+ * Every call reconstructs independently from the validated frozen basis. */
+export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):boolean {
+  const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
+  const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
+  const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
+  if(!zephyr&&!trench&&!mirrorForge){
+    if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
+    if(candidate.units.some(u=>u.itemSummon?.kind==='trench'))throw new RangeError('Unexpected Trench copy');
+    if(candidate.units.some(u=>u.itemBanish!==undefined))throw new RangeError('Unexpected item banishment');
+    return false;
+  }
+  if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid dynamic combat checkpoint');
+  let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+  while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
+  return true;
+}
+
+/** Money authority cannot be the candidate's own receipt list. Independently
+ * replay only gold-item combats from the validated frozen input, without
+ * settling or granting anything. Existing non-gold saves take no replay path. */
+export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
+  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul'].includes(m.mechanic)));
+  if(!enabled){
+    if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
+    return;
+  }
+  if(!Array.isArray(candidate.itemGoldReceipts)||!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid item gold checkpoint');
+  let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+  while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
+  if(expected.tick!==candidate.tick||canonicalContent(expected.itemGoldReceipts)!==canonicalContent(candidate.itemGoldReceipts)
+    ||canonicalContent(expected.itemRandomStreams)!==canonicalContent(candidate.itemRandomStreams)
+    ||expected.units.some(u=>candidate.units.find(c=>c.id===u.id)?.currentItemBankGold!==u.currentItemBankGold||canonicalContent(candidate.units.find(c=>c.id===u.id)?.itemMogulHits??null)!==canonicalContent(u.itemMogulHits??null)))throw new RangeError('Invalid authoritative item gold replay');
+}

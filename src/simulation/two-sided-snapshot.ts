@@ -1,13 +1,18 @@
+import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
+import {readG23Progress} from './g2-3-state';
+import { validateG23Progress } from './g2-3-match-progress';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { freezeContent } from './content/freeze';
 import { DEFAULT_BOARD } from './board';
 import { createInputValidation, validateInputAssets } from './input-assets';
-import { ITEM_DEFINITIONS } from './content/items';
+import { crownTeamSizeBonus } from './deployment-cap';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { getCatalogRoundByOrdinal } from './round-selectors';
 import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { M8_VERSION } from './m8/version';
+import { G22_EMISSARY_WIN_CAP, priorPvpWins } from './g2-2-pvp-history';
 import type { MatchState } from './match-types';
 import { BattleValidationError, PLAYER_BATTLE_SNAPSHOT_VERSION, type PlayerBattleSnapshot } from './two-sided-types';
 
@@ -20,6 +25,12 @@ const integer: typeof validation.integer = validation.integer;
 const list: typeof validation.list = validation.list;
 const record: typeof validation.record = validation.record;
 const ascii = (a: { id: string }, b: { id: string }) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+/** A snapshot cannot claim more wins than PvP rounds before its own round, nor more than the Emissary cap. */
+const priorPvpRoundLimit = (ordinal: number) => {
+  let rounds = 0;
+  for (let i = 1; i < ordinal && rounds < G22_EMISSARY_WIN_CAP; i++) if (getMultiplayerRoundByOrdinal(i).kind === 'pvp') rounds++;
+  return rounds;
+};
 const nextSerial = (ids: readonly string[]) => Math.max(0, ...ids.map(value => Number(value.slice(value.indexOf('-') + 1)))) + 1;
 
 /** Own-format structural validation, not client authentication or asset-history validation. */
@@ -30,13 +41,19 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     if (value.version !== PLAYER_BATTLE_SNAPSHOT_VERSION) throw new BattleValidationError('snapshot-version');
     if (value.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
     const s = value as unknown as PlayerBattleSnapshot;
+    if(s.itemSummonPositions)validateItemSummonPositions(s.itemSummonPositions);
+    if(s.bankGold!==undefined)integer(s.bankGold);
+    if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
+    if(s.g23)validateG23Progress(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
+    if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
+    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
     const units = validateInputAssets({ preparation: { board: DEFAULT_BOARD, benchSize: 9, units: s.units }, items: s.items },
-      { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)) }, [], validation);
+      { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)), teamSizeBonus: crownTeamSizeBonus(s.g23) }, [], validation);
     const itemIds = new Set(s.items.map(item => item.id)), temporarySlots = new Set<string>();
     for (const child of s.temporaryEquipment) {
       record(child); id(child.temporaryId); requireSnapshot(!itemIds.has(child.temporaryId)); itemIds.add(child.temporaryId);
@@ -75,6 +92,9 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
       && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
+      ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
+      ...(s.priorPvpWins===undefined?{}:{priorPvpWins:s.priorPvpWins}),
       version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: CONTENT_DIGEST, seatId: s.seatId, roundId: s.roundId, level: s.level,
       units: s.units.map(u => ({ id: u.id, definitionId: u.definitionId, team: 'player', starLevel: u.starLevel,
         location: { kind: 'board', cell: u.location.kind === 'board' ? { col: u.location.cell.col, row: u.location.cell.row } : { col: -1, row: -1 } } })),
@@ -106,8 +126,12 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
+  const wins = priorPvpWins(state.roundResults, state.round);
+  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   return restorePlayerBattleSnapshot({
-    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, seatId, roundId: state.roundDefinitionId, level: state.level,
+    ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
+    ...(state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,

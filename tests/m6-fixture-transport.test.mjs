@@ -3,12 +3,13 @@ import transport from '../scripts/m6-fixture-transport.cjs';
 const { inspectFixtureGroups, fixtureSignature, resolveSharedReferences, SHARED_REF } = transport;
 const fixture = () => ({ complete: { x: 1 }, current: { y: 2 }, record: { z: 3 }, fullLoad: { w: 4 }, expectedBattleCount: 33 });
 describe('M6 native handle fixture transport', () => {
-  it('keeps the two graph-connected groups and original scalar metadata', () => {
+  // T13: complete and fullLoad together exceed one pipe, so fullLoad crosses as its own group.
+  it('keeps the three graph-connected groups and original scalar metadata', () => {
     const input = fixture(), result = inspectFixtureGroups(input);
-    expect(Object.keys(result.groups[0])).toEqual(['complete', 'fullLoad']);
-    expect(Object.keys(result.groups[1])).toEqual(['current', 'record']);
+    expect(result.groups.map(group => Object.keys(group))).toEqual([['complete'], ['fullLoad'], ['current', 'record']]);
     expect(result.groups[0].complete).toBe(input.complete);
-    expect(result.groups[1].record).toBe(input.record);
+    expect(result.groups[1].fullLoad).toBe(input.fullLoad);
+    expect(result.groups[2].record).toBe(input.record);
     expect(result.summaries.every(g => g.encodedArgumentBytes + result.commandReserveBytes < result.capacityBytes)).toBe(true);
   });
   it('retains aliases within each group and detects a JSON clone losing them', async () => {
@@ -26,21 +27,24 @@ describe('M6 native handle fixture transport', () => {
     const x = await fixtureSignature(a), y = await fixtureSignature(b);
     expect(x.valueSha256).toBe(y.valueSha256); expect(x.aliasSha256).not.toBe(y.aliasSha256);
   });
-  // N2-P2-6: the 33-battle complete/incremental envelopes share subtrees; they cross by reference, never as copies.
+  // N2-P2-6: the 33-battle complete/full-load/incremental envelopes share subtrees; they cross by reference, never as copies.
   it('transports cross-group aliases by reference and restores the identical value graph', async () => {
     const input = fixture(); input.complete.loot = { frozen: { rng: 1 } }; input.current.loot = input.complete.loot; input.record.inner = input.complete.loot.frozen;
     input.record.own = { k: 1 }; input.record.again = input.record.own;
+    input.fullLoad.tail = { t: 1 }; input.fullLoad.loot = input.complete.loot; input.record.tail = input.fullLoad.tail;
     const result = inspectFixtureGroups(input);
-    expect(result.sharedReferences).toBe(2);
-    expect(result.groups[1].current.loot).not.toBe(input.complete.loot);
+    expect(result.sharedReferences).toBe(4);
+    expect(result.groups[2].current.loot).not.toBe(input.complete.loot);
+    expect(result.groups[1].fullLoad.loot).not.toBe(input.complete.loot);
     // Each group crosses separately (independent clones), as the native handle transport does.
-    const page = groups => { const first = structuredClone(groups[0]), second = structuredClone(groups[1]);
-      return { first, second }; };
-    const assemble = ({ first, second }) => ({ complete: first.complete, current: second.current, record: second.record, fullLoad: first.fullLoad, expectedBattleCount: 33 });
-    const restored = page(result.groups); resolveSharedReferences(restored.first, restored.second, SHARED_REF);
+    const page = groups => groups.map(group => structuredClone(group));
+    const assemble = ([first, middle, last]) => ({ complete: first.complete, current: last.current, record: last.record, fullLoad: middle.fullLoad, expectedBattleCount: 33 });
+    const restored = page(result.groups); resolveSharedReferences(restored, SHARED_REF);
     const unresolved = page(result.groups);
     expect(await fixtureSignature(assemble(restored))).toEqual(await fixtureSignature(input));
     expect(assemble(restored).current.loot).toBe(assemble(restored).complete.loot);
+    expect(assemble(restored).fullLoad.loot).toBe(assemble(restored).complete.loot);
+    expect(assemble(restored).record.tail).toBe(assemble(restored).fullLoad.tail);
     expect((await fixtureSignature(assemble(unresolved))).valueSha256).not.toBe((await fixtureSignature(input)).valueSha256);
     // The transported groups never alias across groups, and the measured payload is unchanged.
     expect(result.summaries.every(g => g.encodedArgumentBytes > 0)).toBe(true);
@@ -50,11 +54,11 @@ describe('M6 native handle fixture transport', () => {
     expect(() => inspectFixtureGroups(input)).toThrow('reserved key');
   });
   it('counts native null/reference wrappers and refuses undefined rather than losing keys', () => {
-    const input = fixture(); input.complete = { b: null }; input.fullLoad = input.complete;
-    const first = inspectFixtureGroups(input).summaries[0];
-    const encoded = { o: [{ k: 'complete', v: { o: [{ k: 'b', v: { v: 'null' } }], id: 2 } }, { k: 'fullLoad', v: { ref: 2 } }], id: 1 };
-    expect(first.encodedArgumentBytes).toBe(Buffer.byteLength(JSON.stringify(encoded)));
-    input.complete.a = undefined;
+    const input = fixture(); input.current = { b: null }; input.record = input.current;
+    const last = inspectFixtureGroups(input).summaries[2];
+    const encoded = { o: [{ k: 'current', v: { o: [{ k: 'b', v: { v: 'null' } }], id: 2 } }, { k: 'record', v: { ref: 2 } }], id: 1 };
+    expect(last.encodedArgumentBytes).toBe(Buffer.byteLength(JSON.stringify(encoded)));
+    input.current.a = undefined;
     expect(() => inspectFixtureGroups(input)).toThrow('undefined value');
   });
   it('signature distinguishes special scalars hidden by ordinary JSON', async () => {
@@ -89,11 +93,11 @@ describe('M6 staging lifetime (simulated native transport, not Chromium)', () =>
     const input = fixture(); input.record.shared = input.current; const handles = [];
     const page = {
       async evaluateHandle(_fn, group) { const handle = { value: structuredClone(group), disposed: false, async dispose() { this.disposed = true; } }; handles.push(handle); return handle; },
-      async evaluate(fn, args) { return fn({ ...args, first: args.first.value, second: args.second.value }); },
+      async evaluate(fn, args) { return fn({ ...args, groups: args.groups.map(handle => handle.value) }); },
     };
     try {
       await transport.stageFixtureGroups(page, input, inspectFixtureGroups(input).groups);
-      expect(handles).toHaveLength(2); expect(handles.every(h => h.disposed)).toBe(true);
+      expect(handles).toHaveLength(3); expect(handles.every(h => h.disposed)).toBe(true);
       const received = globalThis.__M6_PERF_FIXTURES; delete globalThis.__M6_PERF_FIXTURES;
       expect(received).toEqual(input); expect(received.record.shared).toBe(received.current);
       expect(await fixtureSignature(received)).toEqual(await fixtureSignature(input));

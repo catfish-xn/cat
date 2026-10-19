@@ -16,7 +16,9 @@ button:focus-visible, summary:focus-visible { outline: 3px solid #ffd782; outlin
 .panel-tabs { display: flex; gap: 6px; position: sticky; top: -16px; background: #14212c; padding: 10px 0; z-index: 2; }
 .panel-tabs button { flex: 1; }
 .panel-hud { color: #ffe39b; }
-.panel-status { min-height: 40px; color: #a8c7d5; }
+/* Two 20px lines plus room for a fallback CJK font's taller line box: one- and two-line hints keep the same height,
+   so a drag rewriting the hint never shifts the layout (and the page's scroll anchoring) under the pointer. */
+.panel-status { min-height: 42px; line-height: 20px; color: #a8c7d5; }
 .mobile-controls { display: none; }
 .trait, .equipment-row, .combat-sources { padding: 9px; background: #0f1a24; border-radius: 8px; margin-bottom: 8px; }
 .combat-sources:empty { display: none; }
@@ -40,6 +42,9 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .choice-dialog p { color: #c2d7de; line-height: 1.5; }
 .choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
 .choice-cards button { min-height: 150px; font-size: 16px; line-height: 1.65; }
+.choice-cards .augment-icon { display: block; margin: 0 auto 6px; border-radius: 8px; }
+.owned-augments .augment-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151f; cursor: help; }
+.owned-augments .augment-icon { border-radius: 4px; }
 .choice-targets { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (max-width: 1000px) {
   #app { grid-template-columns: 1fr; }
@@ -246,6 +251,22 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .item-l10n { margin-left: 2px; font-size: 9px; color: var(--c-text-faint); }
 .item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
 .item-codex .codex-note { color: var(--c-text-muted); }
+.choice-extras { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+/* Mechanic popups (forge, armory): item mark, name, smaller effect text; the timeout pick is tagged online. */
+.choice-cards button.generic-offer { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; min-height: 0; padding: 12px 10px; line-height: 1.4; }
+.generic-offer .item-mark { border-radius: 8px; }
+.generic-offer .offer-name { font-size: 16px; }
+.generic-offer .offer-desc { font-size: 13px; color: #c2d7de; line-height: 1.45; white-space: normal; }
+.choice-timeout { color: #ffd98f !important; }
+.choice-timeout-tag { position: absolute; top: 6px; right: 6px; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; color: #ffd98f; border: 1px solid #e6bc76; }
+/* Reopen pill sits on the board just under the online countdown bar (top of the board offline), clear of the shop dock. */
+.choice-reopen { position: absolute; left: 50%; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); transform: translateX(-50%); z-index: 90; width: max-content; max-width: calc(100% - 16px); white-space: nowrap; padding: 8px 16px; border-color: #ffd782; background: #24404d; box-shadow: 0 6px 24px #000a; }
+.choice-reopen.page-top { position: fixed; top: 12px; }
+body[data-m6-mode="startup"] .choice-reopen, body[data-m6-mode="import"] .choice-reopen, body[data-m6-mode="replay"] .choice-reopen,
+body[data-online-mode="online-ended"] .choice-reopen, body[data-online-spectating] .choice-reopen { display: none !important; }
+.anomaly-codex { margin-top: 10px; padding: 0 9px 6px; background: var(--c-surface-alt); border-radius: 8px; }
+.anomaly-codex > summary { cursor: pointer; padding: 6px 0; }
+.anomaly-codex-list { margin: 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12px; }
 .codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .codex-filter { font-size: 12px; padding: 4px; }
 .codex-filter[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); }
@@ -388,6 +409,35 @@ body[data-online] #feedback-root { top: calc(var(--online-countdown-h) + var(--o
 .shop-dock .shop-odds { margin: 2px 0 0 !important; text-align: center; }
 body[data-online] #strategy-root .hud-bar { margin-bottom: var(--space-sm, 8px); }
 body[data-online] #strategy-root .action-bar:empty { display: none; }
+/* Cheap TFT pass (online): the left column keeps titles and tabs; the long rule hint folds away (interest and streak sit in
+   the countdown bar), the enemy stat cards and per-unit slots open on click, and the item bench sits at the board's lower
+   left as a column of icons (name and effect on hover). The board leaves a gutter on both sides so it stays centred. */
+body[data-online] { --item-gutter: 56px; }
+body[data-online] #strategy-root .hud-hint { display: none; }
+body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), calc((100cqw - 2 * var(--item-gutter)) * 520 / 480));
+  width: min(calc(100% - 2 * var(--item-gutter)), calc(max(var(--online-board-h), 360px) * 480 / 520)); }
+.item-dock { position: absolute; z-index: 20; left: 0; width: calc(var(--item-gutter) - 6px); top: calc(var(--online-countdown-h) + var(--online-gap));
+  bottom: calc(var(--online-dock-h) + var(--online-gap) + 8px); display: flex; flex-direction: column-reverse; flex-wrap: wrap-reverse; align-content: flex-start;
+  gap: 4px; pointer-events: none; }
+.item-dock:empty { display: none; }
+.item-dock > * { pointer-events: auto; }
+.item-dock .item-inventory, .item-dock .consumable-row { display: flex; flex-direction: column-reverse; gap: 4px; }
+.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark), .item-dock .consumable-hint { display: none; }
+.item-dock .item-card, .item-dock .consumable-card { width: 44px; height: 44px; min-height: 0; padding: 3px; font-size: 0; line-height: 0; display: grid; place-items: center;
+  border-radius: 7px; background: #0f1a24; border: 1px solid #304653; }
+.item-dock .item-card .item-mark { width: 36px !important; height: 36px !important; margin: 0; }
+.item-dock .item-glyph { font-size: 12px; line-height: 1; }
+.item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
+.item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
+.equip-details, .stats-details { margin: 8px 0; }
+.stats-details:has(> .combat-sources:empty) { display: none; }
+.equip-details > summary, .stats-details > summary { padding: 6px 0; font-weight: 600; cursor: pointer; }
+@media (max-width: 700px) {
+  body[data-online] { --item-gutter: 0px; }
+  .item-dock { position: static; width: auto; flex-direction: row; flex-wrap: wrap; }
+  .item-dock .item-inventory, .item-dock .consumable-row { flex-direction: row; flex-wrap: wrap; }
+  .item-dock > * { min-width: 0; max-width: 100%; }
+}
 /* A room can end during a choice (every other seat eliminated): the ranking, not the stale choice, is what to show. */
 body[data-online-mode="online-ended"] .choice-overlay { display: none !important; }
 /* C3: once the room ended, the left column drops the per-round supply/income leftovers of my own seat (the ranking overlay is the result). */
@@ -596,6 +646,8 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .trait-step.reached { color: #9aaeb9; }
 .trait-step.current { color: #0b151f; background: #e6bc76; border-radius: 3px; padding: 0 3px; font-weight: 700; }
 .trait-sep { opacity: .5; }
+.trait-runtime { grid-column: 2 / -1; font-size: 11px; color: #e6bc76; overflow-wrap: anywhere; }
+.trait-card-runtime { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: #e6bc76; }
 .trait-letter { display: inline-grid; place-items: center; border-radius: 50%; background: #34505f; color: #e2eef1; font-size: 12px; font-weight: 700; line-height: 1; }
 .opponent-traits.trait-rows { display: grid; gap: 3px; }
 .opponent-traits .opponent-trait { display: grid; padding: 2px 8px 2px 4px; border-radius: 6px; }

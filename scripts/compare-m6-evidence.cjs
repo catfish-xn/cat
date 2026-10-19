@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { sourceFingerprint, applicationHeapCeilingBytes, applicationHeapGate, warnApplicationHeap } = require('./m5-evidence.cjs');
 const { hash } = require('./m4-evidence.cjs');
+const { wallClockEnforced } = require('./wallclock-gate.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
 // Read module budgets directly; full-application mode limits use the shared policy.
 const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS, MAX_BATTLE_RECORDS})');
@@ -115,8 +116,9 @@ assert.equal(unavailable.wholeMatchAndLedgerEqual, true);
 assert(Number.isSafeInteger(unavailable.nextEventSeq) && unavailable.nextEventSeq > 0);
 const phases = failures.results.G02_all_phase_native_roundtrip_and_exact_next_transition;
 assert.equal(phases?.status, 'passed', 'application phase results cover every phase (B9: no deferral)');
-// B8 restored the opening (1-3/1-4) and post-PvE loot picks; B9 restored the full terminal import.
-const livePhases=['opening_choice_1-3','opening_choice_1-4','post_pve_choice','augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice','game_over'];
+// B9 restored the full terminal import. T13 removed the opening (1-3/1-4) and post-PvE loot picks (orb loot
+// has no pick), so those phases no longer exist; tests/m6-application-failures dropped their samples (#130).
+const livePhases=['augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice','game_over'];
 assert.deepEqual(phases.samples.map(row=>row.phase).sort(),[...livePhases].sort(),'unknown missing or extra phase sample');
 for(const phase of livePhases)assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: real application roundtrip`);
 assert.deepEqual(failures.skipped??[],[],'application failure gate may not defer any case after B9');
@@ -174,17 +176,21 @@ for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   assert.equal(gate.metric, metric);
   assert.equal(gate.ceiling, limits.PERFORMANCE_BUDGET_MS[budget], `${name} frozen ceiling`);
   assert.equal(gate.actual, actual, `${name} sample-derived result`);
-  assert.equal(gate.passed, true);
-  assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  // Wall-clock budgets: enforced unless CI_WALLCLOCK_GATES=report (PR gate); scripts/wallclock-gate.cjs.
+  if (wallClockEnforced) {
+    assert.equal(gate.passed, true);
+    assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  } else assert.equal(gate.passed, actual <= gate.ceiling, `${name} recorded verdict`);
   };
   verifyOriginalGate();
 }
 // Restored after B8: the measured full-load route really reaches the F1 maximal load.
-assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
+// T13-A on-unit combining leaves at most 9 separate worn items on the legal route (verify-m6-performance FULL_LOAD_EQUIPPED).
+assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 9), 'same measured legal full-load scenario');
 assert(Array.isArray(performance.fullLoadObserved)&&performance.fullLoadObserved.length>0,'actual fifth-route load observations retained');
 assert.equal(performance.measurements.fullLoadRoundTrip?.verified, true);
 assert.equal(performance.measurements.fullLoadRoundTrip.battles, performance.measurements.completeBattleCount);
-assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
+if (wallClockEnforced) assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
 assert.equal(performance.lifecycle.cycles, limits.LIFECYCLE_CYCLES);
 assert.equal(performance.lifecycle.extraListeners, 0);
 assert.equal(performance.lifecycle.remainingComponentRoots, 0);

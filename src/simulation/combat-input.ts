@@ -1,3 +1,7 @@
+import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
+import {readG23Progress} from './g2-3-state';
+import { crownTeamSizeBonus } from './deployment-cap';
+import {validateG23Progress} from './g2-3-match-progress';
 import { shareGeneratedJson } from './immutable-json';
 import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
 import type { Unit } from './unit-types';
@@ -7,7 +11,7 @@ import { canonicalContent, equalValidatedContent } from './content';
 import { freezeContent } from './content/freeze';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { readRoundEnemyProjection } from './round-enemies';
@@ -18,8 +22,11 @@ import { nextRandom, validateSeed } from './rng';
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
-  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress'> & { readonly roundResults?: readonly RoundResult[] };
+  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
+  /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
+  & { readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
+  readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
   readonly combatId: string; readonly roundId: string; readonly contentDigest: string;
   readonly battleSeed: number; readonly playerLevel: number;
@@ -35,6 +42,9 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
+  readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
+  readonly bankGold?:number;
+  readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly playerHp?:number;
   readonly seed: number; readonly round: number; readonly contentDigest: string;
   readonly playerLevel: number; readonly provenancePrefixLength: number;
   readonly resources: CombatResourcePrefix;
@@ -43,13 +53,19 @@ export interface CombatInputAuthority {
   readonly scheduleReceipts: readonly ScheduleReceipt[];
   readonly roundResults: readonly RoundResult[];
 }
-export function readCombatStrategyInputs(state: CombatStrategyInputs): CombatStrategyInputs {
-  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [] } = state;
-  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults };
+export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
+  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
+  const needsBank=items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
+  const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
+  const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
+  const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
+  const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
+  return { ...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+    ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
-  return shareGeneratedJson(structuredClone({ version: COMBAT_INPUT_VERSION, combatId: `round-${state.round}`,
+  return shareGeneratedJson(structuredClone({ version: COMBAT_INPUT_VERSION,mechanicReceiptPrefixLength:state.seatMechanics?.receipts.length??0, combatId: `round-${state.round}`,
     roundId: state.roundDefinitionId, contentDigest: state.contentDigest, battleSeed, playerLevel: state.level,
     nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial,
     equipmentRollPrefixLength: state.equipmentState.rolls.length, provenancePrefixLength,
@@ -72,7 +88,24 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
+  integer(basis.mechanicReceiptPrefixLength);
+  requireBasis(equal(input.itemSummonPositions??null,authority.itemSummonPositions??null));
+  if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial);
+  if(input.bankGold!==undefined){integer(input.bankGold);requireBasis(input.bankGold===authority.bankGold);}
+  if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
+  if(authority.g23){
+    requireBasis(input.g23);validateG23Progress(input.g23,authority.seed,authority.round);
+    requireBasis(equal(input.g23.economyReceipts,authority.g23.economyReceipts.slice(0,input.g23.economyReceipts.length)));
+    requireBasis(input.g23.economyReceipts.filter(r=>r.kind==='battle').length===authority.g23.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round<authority.round).length);
+    requireBasis(equal(input.g23.itemReceipts,authority.g23.itemReceipts));
+    // Junker purchases only happen in preparation, before this frozen combat.
+    requireBasis(equal(input.g23.junkerPurchases,authority.g23.junkerPurchases));
+    // Claims only append, and the crown's team size is read from them: the frozen claims are an authoritative prefix.
+    requireBasis(equal(input.g23.rewardClaims,authority.g23.rewardClaims.slice(0,input.g23.rewardClaims.length)));
+  }else requireBasis(input.g23===undefined);
   requireBasis(equal(input.roundResults ?? [], authority.roundResults.filter(r => r.round < input.round)));
+  // Solo reads its Emissary wins from roundResults; the online-only frozen count never appears in a solo basis.
+  requireBasis(input.priorPvpWins===undefined);
   validateSeed(authority.seed); validateSeed(basis.battleSeed);
   let battleSeed = (authority.seed ^ 0x9e3779b9) >>> 0;
   for (const entry of ROUND_CATALOG) {
@@ -86,7 +119,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  const units = validateInputAssets(input, basis, readRoundEnemyProjection(authority.round).units, inputValidation);
+  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round).units, inputValidation);
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
   requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.map(({id,definitionId}) => ({id,definitionId})))));

@@ -8,10 +8,10 @@
  */
 import type { LootView, RevealedDropView } from '../simulation/m8/ui-contracts';
 import type { PendingChoice } from '../simulation/strategy-types';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { displayUnitName } from '../rendering/display-names';
 import { heroEmblemSvg } from './hero-identity';
 import { itemDescriptions, itemMarkHtml } from './item-codex';
+import { itemDisplayName } from './g23-display';
 
 export interface LootLabels {
   /** Monster name for a drop source; the formal wiring reads it from readEncounterPreview of the same round. */
@@ -22,7 +22,7 @@ type Payload = RevealedDropView['payload'];
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') => {
   const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
 };
-const itemName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+const itemName = (id: string) => itemDisplayName(id);
 
 /** Status wording mirrors the frozen semantics table; UI never infers a receipt from animation or gold. */
 const STATUS: Readonly<Record<RevealedDropView['status'], { label: string; note: string }>> = {

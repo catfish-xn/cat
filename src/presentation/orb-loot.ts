@@ -4,7 +4,6 @@
  * consumable shelf. They only format what the rules sent: no drop rate, tier, grant, reforge result or target legality
  * is decided here; names and descriptions come from CONSUMABLE_DEFINITIONS.
  */
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId, ConsumableFailure, ConsumableInstance, ConsumablePreview } from '../simulation/consumable-types';
 import type { LootView, RevealedDropView, RevealedOrbView } from '../simulation/m8/ui-contracts';
@@ -15,6 +14,7 @@ import { heroEmblemSvg } from './hero-identity';
 import { itemMarkHtml } from './item-codex';
 import type { LootLabels } from './loot-view';
 import { NEXT_BATTLE_TEXT, takesEffectNextBattle } from './equipment-feedback';
+import { itemDisplayName } from './g23-display';
 
 /** The orb part of a LootView, or of the private view's revealedLoot (§18.4): the same three fields. */
 export type OrbLoot = Pick<LootView, 'roundId' | 'revealedDrops' | 'revealedOrbs'>;
@@ -59,7 +59,7 @@ function payloadLabel(payload: RevealedDropView['payload']): { icon: string; tex
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
-  if (payload.kind === 'item') return { icon: itemMarkHtml(payload.definitionId, 22), text: `${ITEM_DEFINITIONS[payload.definitionId]?.name ?? payload.definitionId}${count}` };
+  if (payload.kind === 'item') return { icon: itemMarkHtml(payload.definitionId, 22), text: `${itemDisplayName(payload.definitionId)}${count}` };
   return { icon: heroEmblemSvg(payload.definitionId, 22), text: `${displayUnitName(payload.definitionId)}${count}` };
 }
 
@@ -173,7 +173,7 @@ export function consumableDropText(tool: ConsumableInstance, targetLabel: string
  * consumableUsed event that follows them says nothing more and gets no line. Names only; nothing is applied from events.
  */
 export function consumableEventText(event: MatchEvent, name: { readonly item: (itemId: string) => string; readonly unit: (unitId: string) => string }): string | null {
-  const definitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+  const definitionName = (id: string) => itemDisplayName(id);
   if (event.type === 'itemReforged') return `重铸：${definitionName(event.definitionId)} → ${definitionName(event.outputDefinitionId)}`;
   if (event.type === 'itemsRemoved') return `拆卸：${name.unit(event.unitId)} 卸下 ${event.itemIds.map(name.item).join('、') || '—'}`;
   return null;

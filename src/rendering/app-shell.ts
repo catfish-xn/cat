@@ -22,7 +22,7 @@ export function createAppShell(app: HTMLElement): AppShell {
 }
 /** Online-only mounts inside #board-frame: a countdown strip above the board and a shop dock below it (TFT layout).
  *  Offline never calls this, so the single-player DOM order is untouched. Idempotent across scene restarts. */
-export interface OnlineBoardMounts { readonly countdown: HTMLElement; readonly shopDock: HTMLElement }
+export interface OnlineBoardMounts { readonly countdown: HTMLElement; readonly shopDock: HTMLElement; readonly itemDock: HTMLElement }
 export function mountOnlineBoardFrame(): OnlineBoardMounts {
   const frame = document.getElementById('board-frame') ?? document.getElementById('board-root')?.parentElement ?? document.body;
   const ensure = (id: string, label: string, place: 'before' | 'after') => {
@@ -31,5 +31,8 @@ export function mountOnlineBoardFrame(): OnlineBoardMounts {
       if (board && board.parentElement === frame) board[place](node); else frame.append(node); }
     return node;
   };
-  return { countdown: ensure('online-countdown', '阶段倒计时', 'before'), shopDock: ensure('shop-dock', '商店与操作', 'after') };
+  const itemDock = document.getElementById('item-dock') ?? Object.assign(document.createElement('section'), { id: 'item-dock' });
+  // The item bench sits at the board's lower left, as in TFT; positioned by CSS, so its place in the frame does not matter.
+  if (!itemDock.isConnected) { itemDock.setAttribute('aria-label', '物品备战席'); frame.append(itemDock); }
+  return { countdown: ensure('online-countdown', '阶段倒计时', 'before'), shopDock: ensure('shop-dock', '商店与操作', 'after'), itemDock };
 }

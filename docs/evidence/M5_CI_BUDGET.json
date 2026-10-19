@@ -1149,7 +1149,7 @@
         }
       ],
       "maxSeconds": 1051,
-      "timeoutMinutes": 32
+      "timeoutMinutes": 45
     },
     {
       "name": "browser-preview-cannon",
@@ -1921,13 +1921,27 @@
         }
       ],
       "maxSeconds": 1036,
-      "timeoutMinutes": 31
+      "timeoutMinutes": 45
     }
   ],
   "workflowTimeoutMinutes": {
     "test": 22,
     "browser": 28,
-    "input": 32,
+    "input": 45,
     "comparison": 6
+  },
+  "budgetUpdate": "2026-10-17: input-dev/input-preview同步ci.yml已采用的45分钟；原测量样本保留，不重算或放宽任何性能/测试门槛。",
+  "workflowTimeoutOverrides": {
+    "input": {
+      "minutes": 45,
+      "formulaMinutes": 32,
+      "commit": "a0ecc35",
+      "date": "2026-10-16",
+      "reason": "T13 repairs let the whole dev input chain run; it measured about 36 min (preview about 22 min) and hit the 32 min formula limit while the last step was still passing. ci.yml chromium-input timeout-minutes is 45; per-job samples below keep their original measurements."
+    }
+  },
+  "parallelSplit": {
+    "date": "2026-10-17",
+    "note": "ci.yml runs test-and-build as four parts (tests, timing, headless, performance) and chromium-input as per-mode parts (input, touch, layout; dev also archives and m6-performance), each on its own runner. Each part keeps its logical M5_JOB_KEY and the existing timeout ceiling (22 / 45 min); no test, gate or timeout value changed. The measured samples above predate the split and are not recomputed."
   }
 }

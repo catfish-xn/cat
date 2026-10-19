@@ -123,5 +123,112 @@
     ],
     "ledger": "project-conventions.json",
     "note": "Source wording establishes conditional additional amp and strict threshold; undecoded/unspecified behavior follows labelled provisional project choices."
-  }
+  },
+  "g24PendingConventions": [
+    {
+      "id": "G24-FISHBONES-TARGET-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Each actual basic attack samples one living targetable enemy inside doubled effective range. Pools sort by code-point ID. No attack means no draw. Multiple Fishbones use one holder-level doubling and one draw per attack.",
+      "sourceLimit": "Raw says doubles attack range and each attack targets a random enemy; target-pool radius, multiple-copy composition and ordering are not specified. Wiki fetch denied.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-KERNEL-PENDING-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "behavior": "Mana cost rounds upward; deferred damage apportions each tick by cumulative integer division and discards nonlethal excess; cell ties use row then column.",
+      "sourceLimit": "Kernel-only proposals; damage mitigation/shield ordering and final integration remain unresolved.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-CUTLASS-CELL-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "behavior": "Mirror both board axes; at occupied mirror/home choose nearest free hex, ties row then column, holders processed by ID. Multiple cutlasses share one teleport/return. Dead holders do not return.",
+      "sourceLimit": "Source duration is 8 seconds; collision and multiple-copy rules absent.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-SHROUD-BEAM-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "behavior": "Freeze beam on initial combined-board columns: target within one column of holder (three-column beam). Overlaps take maximum 30%; integer maximum rounds upward; clear after first cast. Each equipped on-board Shroud adds 60 HP to every ally including holder.",
+      "sourceLimit": "Source confirms 30% mana reave until next cast and 60 team HP; beam geometry and integer rounding are project conventions.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-DEFIANCE-ORDER-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Post-mitigation, post-redirect, post-shield remainder defers floor(50%) over 80 ticks. Existing debts pay at the next damage barrier by cumulative integer division, never below 1 HP; clipped excess is consumed. Payments bypass shields and do not trigger mana, vamp, redirect or item procs. A packet can still kill from its immediate half.",
+      "sourceLimit": "Raw 14.24 confirms 50%, 4 seconds, nonlethal and 25% omnivamp, but not shield/redirect ordering or proc semantics. BaseHeal=25 is retained in normalized data; no separate flat heal inferred from this unreferenced legacy constant.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-MIRROR-INHERIT-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Clone HP=floor(owner actual opening maximum HP including equipment/augments/anomaly/growth *70%); maximum mana=ceil(owner compiled maximum mana*110%). Other stats recompile naked champion/star/form plus activated traits. No equipment programs, anomaly effects or growth counters. No population, extra trait count or survivor damage. Independent opening reconstruction validates inherited HP.",
+      "sourceLimit": "14.24 raw max Health wording supports owner maximum HP; remaining inheritance boundaries are the explicit user-approved convention. Shroud is subsequently applied by clone cell as an external combat debuff. Native summon behavior remains to be verified.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-SUMMON-CELL-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Mirror clone uses nearest free cell in friendly deployment half; distance then row/column; holder ID order; full board produces no clone. Combat identity derives from item and original holder, never from candidate save metadata. Voidspawn now projects during preparation with movable positions keyed to permanent item IDs; absent/colliding positions use nearest free friendly cell, defaulting toward front row. Ordinary hero deployment into a projected cell relocates the summon on reprojection.",
+      "sourceLimit": "Raw collision rules unavailable.14.6 movable preparation placement and14.8 cross-round persistence are implemented in domain APIs; UI/server adapters remain separate. Exact spawn order and hero/summon collision behavior are conventions.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-COLLECTOR-EXECUTE-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "After a positive ordinary attack/ability/attack-extra packet, execute a still-living target strictly below12% maxHP. Execution bypasses shields/Defiance and does not trigger vamp. Only such executions draw the independent40% gold roll; natural lethal packets do not roll.",
+      "sourceLimit": "Raw says attacks/abilities execute below12%, executions40%1gold. Exact barrier, natural-kill qualification and shield/deferral bypass are not proved by original script.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-ITEM-GOLD-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Store successful and failed combat gold rolls explicitly. Positive receipts grant exactly once at settlement through generic economy receipts. Gambler uses frozen opening bank plus this side’s earned battle receipts, capped30, updated after the triggering attack scheduled its cooldown.",
+      "sourceLimit": "Original pickup timing is unavailable. Collector, Gambler and Mogul wired; raw Gambler hashed20/4 remain uninterpreted.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-MOGUL-STACK-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "One stack per positive HP-or-shield packet, capped35; deferred payments do not stack. Resists affect later packets; HP grows after the fixed-max survival barrier, preserving missing HP but never reviving a lethal hit. Full-stack1gold may occur on a lethal35th hit; subsequent160tick payouts require a living holder.",
+      "sourceLimit": "Raw confirms health7/resists1/cap35/full1gold/8seconds, not shield qualification, per-packet order, lethal35th-hit eligibility or precise HP-growth barrier.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-ZEPHYR-ABSENCE-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP",
+      "behavior": "Opening frozen cell mirrors both axes; owner ID order reserves distinct nearest enemies, ties ID. Banished unit remains in the authoritative roster but is excluded from active actions/targets/passives through tick99, returns at100 to nearest free home cell. Start declarations execute before suspension; missed periodic pulses/opening jumps and companion reactions while absent are not replayed. Absolute buff deadlines continue. Return collision ties distance,row,column. Full combat reconstruction authorizes saves.",
+      "sourceLimit": "Raw14.24 fixes5seconds, team2%AS,150HP and ignores CC immunity. Exact opening priority, multiple Zephyrs, missed passive timing and return collision are unverified.",
+      "approvedUtcDate": "2026-10-17"
+    },
+    {
+      "id": "G24-VOIDSPAWN-STAGES-01",
+      "status": "user-approved-project-convention",
+      "label": "约定值（用户 10-17 批准），非官方证据",
+      "version": "14.24b project WIP; historical14.6/14.7 tables",
+      "behavior": "Carry forward14.6 stage2..6 HP1000/1500/2000/2500/3000 and14.7 stage2..5 AD80/80/120/180, stars1/1/2/3. Stage1 uses stage2; stage6+ clamps final row. Treat totals as already star-scaled. Preparation summon moves through public domain command; position persists by item ID. Missing/colliding desired cell falls back nearest free friendly cell; full board omits summon. No taunt. Team trait auras and augment compilation apply; counts are zero traits/population.",
+      "sourceLimit": "Raw14.24 stat block lacks HP/AD table; local AS.75,armor/MR30,crit25/140 agree with historical14.7. All30 later official patch pages searched in VOIDSPAWN-PATCH-CHAIN ledger; carry-forward is an inference. SummonedStatReduction25 remains uninterpreted, not silently implemented. Temporary equipment placement has automatic fallback only.",
+      "approvedUtcDate": "2026-10-17"
+    }
+  ]
 }

@@ -5,7 +5,7 @@ import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { readRevealedLoot } from './online/seat-view-adapter';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
@@ -27,6 +27,7 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
@@ -38,9 +39,11 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
+import { genericOffer, isKnownChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
+import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -82,6 +85,8 @@ interface PanelActions {
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
+  /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
+  readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
   readonly deploy: (id: string, location: UnitLocation) => void;
   readonly control: (name: ControlName) => void;
@@ -102,15 +107,19 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 }
 export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
-const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+const itemDefinitionName = (id: string) => itemDisplayName(id);
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
-const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
+const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? (ITEM_DEFINITIONS[id] ? itemDisplayName(id) : undefined) ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? (ANOMALY_DEFINITIONS[id] ? anomalyDisplayName(id) : undefined) ?? '未知来源';
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
 
 /** Accessible DOM view over the same Match commands; it owns no game state. */
+/** Keys whose default action scrolls the page; within SCROLL_INTENT_MS of one (or of a wheel) a scroll is the player's. */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
+const SCROLL_INTENT_MS = 1_000;
+
 export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
@@ -120,6 +129,7 @@ export class StrategyPanel {
   private selectedItems: string[] = [];
   /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
   private selectedConsumable: string | null = null;
+  private anomalyCodexOpen = false;
   private tab: 'traits' | 'items' | 'units' | 'builds' | 'events' = 'items';
   private lastCombatTick = -1;
   private lastCombatId: string | undefined;
@@ -130,6 +140,8 @@ export class StrategyPanel {
   /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
+  /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
+  private choiceReopen: HTMLButtonElement | null = null;
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
@@ -141,11 +153,19 @@ export class StrategyPanel {
   private codex: HTMLElement | null = null;
   /** Enemy-preview open state chosen by the player for the current round only. */
   private previewOpen: { round: number; open: boolean } | null = null;
+  /** Docked (online): the per-unit equipment slots fold away; this keeps the player's own open/closed choice. */
+  private equipOpen = false;
+  private statsOpen = false;
 
-  /** @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel. */
-  constructor(private readonly actions: PanelActions, private readonly router: InputRouter, private readonly shopDock: HTMLElement | null = null) {
+  /**
+   * @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel.
+   * @param itemDock Optional mount for the item bench at the board's lower left (online); null keeps it in the items tab.
+   */
+  constructor(private readonly actions: PanelActions, private readonly router: InputRouter, private readonly shopDock: HTMLElement | null = null,
+    private readonly itemDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     if (this.shopDock) this.shopDock.classList.add('shop-dock');
+    if (this.itemDock) { this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
@@ -239,13 +259,24 @@ export class StrategyPanel {
     window.addEventListener('pointerdown', trackPointer, true);
     window.addEventListener('pointercancel', cancelPointer, true); window.addEventListener('resize', cancel);
     window.addEventListener('touchcancel', cancel, true);
-    window.addEventListener('blur', cancel); window.addEventListener('scroll', cancel, true);
+    window.addEventListener('blur', cancel);
+    // A scroll the player asked for (wheel, scroll keys) ends a drag. A layout shift that makes the browser nudge the
+    // scroll position (a status line changing height under scroll anchoring) is not a request: the drop still reads
+    // the geometry where it lands. Touch scrolling already ends the gesture through pointercancel.
+    let scrollIntentAt = -Infinity;
+    const scrollIntent = () => { scrollIntentAt = performance.now(); };
+    const scrollKey = (event: KeyboardEvent) => { if (SCROLL_KEYS.has(event.key)) scrollIntent(); };
+    const scrolled = () => { if (performance.now() - scrollIntentAt <= SCROLL_INTENT_MS) cancel(); };
+    window.addEventListener('wheel', scrollIntent, { capture: true, passive: true });
+    window.addEventListener('keydown', scrollKey, true); window.addEventListener('scroll', scrolled, true);
     this.disposers.push(() => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', release);
       window.removeEventListener('pointerdown', trackPointer, true);
       window.removeEventListener('pointercancel', cancelPointer, true); window.removeEventListener('resize', cancel);
       window.removeEventListener('touchcancel', cancel, true);
-      window.removeEventListener('blur', cancel); window.removeEventListener('scroll', cancel, true);
+      window.removeEventListener('blur', cancel);
+      window.removeEventListener('wheel', scrollIntent, true);
+      window.removeEventListener('keydown', scrollKey, true); window.removeEventListener('scroll', scrolled, true);
     });
     this.modal.addEventListener('pointerdown', event => {
       event.stopPropagation();
@@ -273,9 +304,16 @@ export class StrategyPanel {
       this.itemDrag = null;
     }
   }
-  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
+  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
+  /** Owned augment: icon + zh name; hovering shows the authored effect text. */
+  private augmentChip(id: string): HTMLElement {
+    const chip = element('span', augmentDisplayName(id), 'augment-chip');
+    chip.dataset.augment = id; chip.title = `${augmentDisplayName(id)}\n${AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).join('；') ?? ''}`;
+    chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
+    return chip;
+  }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
     button.addEventListener('click', action);
@@ -335,7 +373,7 @@ export class StrategyPanel {
     const state = this.actions.state(), hit = document.elementFromPoint(x, y);
     // A unit tool (the remover) names the unit from any of its slots, also one wearing an item.
     const itemId = unitTool(tool) ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
-    if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
+    if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? itemDisplayName(item.definitionId) : itemId }; }
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
     if (!unit) return null;
@@ -378,7 +416,7 @@ export class StrategyPanel {
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
     const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
-    this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
+    this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
@@ -444,7 +482,8 @@ export class StrategyPanel {
     this.root.append(secondary);
     this.actions.highlight([]);
     const preview = encounterPreviewSection(state, {
-      open: this.previewOpen?.round === state.round ? this.previewOpen.open : null,
+      // Docked (online) the stat cards start folded; the summary line still names the round's enemies.
+      open: this.previewOpen?.round === state.round ? this.previewOpen.open : this.itemDock ? false : null,
       onToggle: open => { this.previewOpen = { round: state.round, open }; },
       onHover: ids => this.actions.highlight(ids),
     });
@@ -466,22 +505,35 @@ export class StrategyPanel {
     this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
-    for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {
+    // Online (docked) drops the battle-record tab: rounds move on by themselves and there is nothing to look back at.
+    const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const;
+    if (this.itemDock && this.tab === 'events') this.tab = 'items';
+    for (const [tab, label] of tabList.filter(([tab]) => !this.itemDock || tab !== 'events')) {
       const button = this.button(`panel:${tab}`, label, () => { this.actions.cancelGesture(); this.tab = tab; this.render(); });
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
     }
     this.root.append(tabs);
-    this.combatText = element('section', '', 'combat-sources'); this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
+    this.combatText = element('section', '', 'combat-sources');
+    if (this.itemDock) {
+      // Docked (online): the unit stat sheet folds away; the board's hover card already shows a piece's stats.
+      const fold = element('details', '', 'stats-details'); fold.open = this.statsOpen;
+      fold.append(element('summary', '单位属性'), this.combatText);
+      fold.addEventListener('toggle', () => { this.statsOpen = fold.open; });
+      this.root.append(fold);
+    } else this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
     if (this.tab === 'traits') this.renderTraits(state);
-    if (this.tab === 'items') this.renderItems(state, this.itemsOpen());
+    // Docked, the item bench stays on the board whichever tab is open.
+    if (this.tab === 'items' || this.itemDock) this.renderItems(state, this.itemsOpen(), this.tab === 'items');
     if (this.tab === 'units') this.renderUnits(state, ready);
     if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
-    owned.append(element('p', `强化： ${state.augments.map(augment => AUGMENT_DEFINITIONS[augment.definitionId].name).join(' / ') || '尚未选择'}`));
+    const augments = element('p', state.augments.length ? '强化：' : '强化： 尚未选择', 'owned-augments');
+    for (const augment of state.augments) augments.append(this.augmentChip(augment.definitionId));
+    owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
-    owned.append(element('p', binding ? `异常： ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
+    owned.append(element('p', binding ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
     this.root.append(owned);
     this.renderChoice(state); this.lastCombatTick = -1; this.updateCombat();
   }
@@ -551,8 +603,9 @@ export class StrategyPanel {
     this.root.append(list);
   }
   /** `open`: this seat can send commands at all; each combine/equip target's legality comes from the previews. */
-  private renderItems(state: MatchState, open: boolean): void {
-    const section = element('section', '', 'item-panel'); section.dataset.items = 'true'; section.append(element('h3', '物品备战席'));
+  private renderItems(state: MatchState, open: boolean, shown = true): void {
+    const dock = this.itemDock;
+    const section = element('section', '', 'item-panel'); section.dataset.items = 'true'; section.append(element('h3', dock ? '合成与装备' : '物品备战席'));
     const inventory = element('div', '', 'item-inventory');
     for (const item of state.items.filter(item => item.location.kind === 'inventory')) {
       const definition = ITEM_DEFINITIONS[item.definitionId];
@@ -571,13 +624,13 @@ export class StrategyPanel {
       button.addEventListener('keydown', event => { if (event.code === 'Enter' || event.code === 'Space') { event.preventDefault(); this.selectItem(item.id); } });
       inventory.append(button);
     }
-    section.append(inventory);
+    (dock ?? section).append(inventory);
     // C18-B: consumable tools (§18.4); a picked or dragged tool outlines the targets the answers allow (§18.8 01).
     const consumables = readConsumables(state);
     const tool = consumables.find(entry => entry.consumableId === this.selectedConsumable) ?? null;
     if (!tool) this.selectedConsumable = null;
     const usable = (target: ConsumableTarget) => tool !== null && previewConsumable(state, tool.consumableId, target).ok;
-    if (consumables.length) section.append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
+    if (consumables.length) (dock ?? section).append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
       card.disabled = !open;
       card.addEventListener('pointerdown', event => {
         if (!open || event.button !== 0) return;
@@ -591,10 +644,10 @@ export class StrategyPanel {
     for (const card of Array.from(inventory.querySelectorAll<HTMLElement>('.item-card'))) if (usable({ kind: 'item', itemId: card.dataset.itemId! })) card.classList.add('consumable-candidate');
     // Combine and equip legality come from the B5 previews (same validators as the commands);
     // the commands still re-check the current state when clicked.
-    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
+    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? itemDisplayName(item.definitionId) : '已不存在的物品'; };
     const selected = [...this.selectedItems];
     const combine = open && selected.length === 2 ? previewCombine(state, selected[0], selected[1]) : null;
-    const resultName = combine?.allowed ? ITEM_DEFINITIONS[combine.resultDefinitionId]?.name ?? combine.resultDefinitionId : '';
+    const resultName = combine?.allowed ? itemDisplayName(combine.resultDefinitionId) : '';
     const choice = element('p', `选择：${selected.map(itemName).join(' + ') || '无'}${combine?.allowed ? ` → ${resultName}` : ''}`, 'combine-selection');
     section.append(choice);
     if (combine && !combine.allowed) { const hint = element('p', `无法合成：${equipmentFailureText(combine.reason)}`, 'equip-hint denied'); hint.dataset.debug = 'combine-preview'; hint.dataset.reason = combine.reason; section.append(hint); }
@@ -602,7 +655,14 @@ export class StrategyPanel {
       if (this.router.current) { this.actions.status('请先结束当前拖拽，再确认合成'); return; }
       this.actions.combine(selected[0], selected[1]);
     }, !open || !combine?.allowed));
-    section.append(element('h3', '单位装备 · 每单位 3 槽'));
+    // Docked: the slot list folds into a details block (opened by the player, or while an item or tool is picked).
+    const equipment = dock ? element('details', '', 'equip-details') : section;
+    if (equipment instanceof HTMLDetailsElement) {
+      equipment.open = this.equipOpen || this.selectedItems.length > 0 || tool !== null;
+      equipment.append(element('summary', '单位装备 · 每单位 3 槽'));
+      equipment.addEventListener('toggle', () => { this.equipOpen = equipment.open; });
+      section.append(equipment);
+    } else section.append(element('h3', '单位装备 · 每单位 3 槽'));
     const chosen = open ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
     const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
@@ -620,15 +680,15 @@ export class StrategyPanel {
       for (const entry of view ? slotViews(view) : []) {
         const { slot } = entry, item = entry.itemInstanceId ? state.items.find(value => value.id === entry.itemInstanceId) : undefined;
         const reserved = !item && entry.reservedByItemInstanceId !== null;
-        const label = item ? ITEM_DEFINITIONS[item.definitionId].name
-          : entry.temporary ? `临时 · ${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+        const label = item ? itemDisplayName(item.definitionId)
+          : entry.temporary ? `临时 · ${itemDisplayName(entry.temporary.definitionId)}`
           : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (tool) {
             const onItem = item && !unitTool(tool) ? item : undefined;
             const target: ConsumableTarget = onItem ? { kind: 'item', itemId: onItem.id } : { kind: 'unit', unitId: unit.id };
-            this.useTool(tool, { target, label: onItem ? ITEM_DEFINITIONS[onItem.definitionId].name : displayUnitName(unit.definitionId) });
+            this.useTool(tool, { target, label: onItem ? itemDisplayName(onItem.definitionId) : displayUnitName(unit.definitionId) });
             return;
           }
           if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
@@ -656,11 +716,11 @@ export class StrategyPanel {
       row.append(slots);
       if (loadoutText) { const line = element('p', loadoutText, 'equip-loadout'); line.dataset.debug = `equip-loadout:${unit.id}`; row.append(line); }
       if (previews) row.append(this.equipHint(previews, itemName));
-      for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, itemName(temporary.parentItemInstanceId)), 'temporary-line'));
-      section.append(row);
+      for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => itemDisplayName(id), itemName(temporary.parentItemInstanceId)), 'temporary-line'));
+      equipment.append(row);
     }
-    section.append(this.codex ??= createItemCodex());
-    this.root.append(section);
+    equipment.append(this.codex ??= createItemCodex());
+    if (shown) this.root.append(section);
   }
   /** C18: a slot whose item is worn now but not in the battle on the board says so, with both loadouts on hover. */
   private markPending(button: HTMLButtonElement, loadout: BattleLoadout): void {
@@ -674,15 +734,15 @@ export class StrategyPanel {
     if (state.preparation.units.find(unit => unit.id === unitId)?.team !== 'player') return;
     const view = readUnitEquipment(state, unitId);
     if (!view) return;
-    const name = (id: string | null) => { const item = id ? state.items.find(entry => entry.id === id) : undefined; return item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : null; };
-    const slots = slotViews(view).map(entry => entry.itemInstanceId ? name(entry.itemInstanceId) : entry.temporary ? `临时·${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+    const name = (id: string | null) => { const item = id ? state.items.find(entry => entry.id === id) : undefined; return item ? itemDisplayName(item.definitionId) : null; };
+    const slots = slotViews(view).map(entry => entry.itemInstanceId ? name(entry.itemInstanceId) : entry.temporary ? `临时·${itemDisplayName(entry.temporary.definitionId)}`
       : entry.reservedByItemInstanceId ? `（${name(entry.reservedByItemInstanceId) ?? '独占装备'}占用）` : '空');
     const line = element('p', `装备槽：${slots.map((text, slot) => `${slot + 1} ${text}`).join(' · ')}`, 'unit-equipment'); line.dataset.debug = `unit-equipment:${unitId}`;
     node.append(line);
     const loadout = battleLoadout(state.items, this.actions.battleItems(), unitId);
     if (loadout?.changed) { const text = element('p', battleLoadoutText(loadout, itemDefinitionName), 'equip-loadout'); text.dataset.debug = `unit-loadout:${unitId}`; node.append(text); }
     for (const temporary of view.temporaryItems) {
-      const item = element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
+      const item = element('p', temporaryItemText(temporary, id => itemDisplayName(id), name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
       item.dataset.itemDef = temporary.definitionId; item.tabIndex = 0; node.append(item);
     }
   }
@@ -755,7 +815,7 @@ export class StrategyPanel {
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
     if (!choice) {
-      this.choiceToken = '';
+      this.choiceToken = ''; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
         this.modal.hidden = true; this.modal.replaceChildren();
@@ -768,6 +828,7 @@ export class StrategyPanel {
     this.clearChoiceDismissal();
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
     if (token === this.choiceToken) return;
+    this.dropChoiceReopen();
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
@@ -776,8 +837,16 @@ export class StrategyPanel {
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
     if (loot) card.dataset.dropId = loot.dropId;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
-    card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
-    card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
+    // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
+    const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
+    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化';
+    card.append(element('h2', title));
+    // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
+    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验${generic ? '：收起弹窗即可操作' : '（D 刷新、F 购买经验）'}。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
+    // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
+    const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
+    if (fallback) card.append(element('p', fallback === SKIP_OPTION ? '倒计时结束仍未选择时，自动跳过。' : `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
@@ -790,15 +859,30 @@ export class StrategyPanel {
       }
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
+        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        const button = this.button(`choice:${id}`, `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；')}`, () => {
+        // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
+        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；')
+          : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
+        // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
+        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
+          : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
+        const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
+        if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
+      if (generic) {
+        // Extras slot: skip only when the choice declares it (disabled until a command is wired); fold always.
+        const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
+        if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+        row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
+        card.append(row);
+      }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
     this.modal.append(card);
@@ -806,6 +890,38 @@ export class StrategyPanel {
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  /** Hides the popup without answering it; the pending choice and its deadline are unchanged. */
+  private collapseChoice(title: string): void {
+    this.dropChoiceReopen();
+    this.modal.hidden = true;
+    const reopen = this.button('choice-reopen', `展开 ${title}`, () => {
+      this.dropChoiceReopen(); this.modal.hidden = false; this.focusChoice();
+    });
+    // On the board under the countdown bar, never over the shop dock or the side panels; without a board frame, top of the page.
+    const frame = document.getElementById('board-frame');
+    reopen.className = frame ? 'choice-reopen' : 'choice-reopen page-top';
+    (frame ?? document.body).append(reopen); this.choiceReopen = reopen;
+    this.root.focus({ preventScroll: true });
+  }
+  private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
+  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
+    const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
+    const button = this.button(`choice:${offer.id}`, label, () => {
+      this.actions.choose(choice.choiceId, choice.generation, offer.id);
+      const after = this.actions.state().pendingChoice;
+      if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+    });
+    if (offer.price !== undefined) button.dataset.price = String(offer.price);
+    // Name line, then the effect text in a smaller block so four offers fit one screen; the full label stays the tooltip.
+    button.classList.add('generic-offer'); button.title = label;
+    button.replaceChildren(element('strong', label.split('\n')[0]!, 'offer-name'));
+    if (offer.description) button.append(element('span', offer.description, 'offer-desc'));
+    if (catalogEntry(offer.id)) button.insertAdjacentHTML('afterbegin', itemMarkHtml(offer.id, 40));
+    else if (Object.hasOwn(AUGMENT_DEFINITIONS, offer.id)) button.insertAdjacentHTML('afterbegin', augmentIconHtml(offer.id, 40));
+    if (timeoutPick) { button.dataset.timeoutPick = 'true'; button.append(element('span', '超时默认', 'choice-timeout-tag')); }
+    button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
+    return button;
   }
   private focusChoice(): void {
     if (this.modal.hidden || getComputedStyle(this.modal).display === 'none' || document.body.dataset.helpOpen === 'true') return;
@@ -963,15 +1079,29 @@ export class StrategyPanel {
       ['四法四哨', '拉克丝 / 婕拉 / 娜美 / 佐伊 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '拉克丝/婕拉 过渡 → 娜美 中期 → 8级二星 佐伊；出售过渡持装者后重购羁绊挂件。', '佐伊：朔极之矛 / 灭世者的死亡之帽 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
     ];
     for (const [title, units, route, items] of builds) { const card = element('article', '', 'trait'); card.append(element('h3', title), element('p', units), element('p', route), element('p', items)); section.append(card); }
-    for (const definition of Object.values(ANOMALY_DEFINITIONS)) section.append(element('p', `${definition.name}：${definition.description}`));
-    section.append(element('p', '异常适配：库奇/崔丝塔娜 可选泰坦打击；克格莫/佐伊 可选法师护甲；库奇/佐伊 可选连杀。无需特定异常才能继续。'));
+    section.append(this.anomalyCodex());
     section.append(element('p', '日程：强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7。S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀。', 'mode-note'));
     section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自每阶段 .4 补给；1-2～1-4 与各阶段 .7 为野怪回合，野怪掉落尚未开放。副羁绊只保留原生身份，本版本未开放。'));
     this.root.append(section);
   }
+  /** Collapsible anomaly codex: every definition the content ships, name + verbatim description; open state survives re-renders. */
+  private anomalyCodex(): HTMLElement {
+    const definitions = Object.values(ANOMALY_DEFINITIONS);
+    const codex = element('details', '', 'anomaly-codex'); codex.dataset.debug = 'anomaly-codex'; codex.open = this.anomalyCodexOpen;
+    codex.addEventListener('toggle', () => { this.anomalyCodexOpen = codex.open; });
+    codex.append(element('summary', `异常图鉴（${definitions.length} 个）`));
+    const list = element('ul', '', 'anomaly-codex-list');
+    for (const definition of definitions) {
+      const row = element('li', '', 'anomaly-codex-entry'); row.dataset.anomaly = definition.id;
+      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${anomalyPlayerDescription(definition.id)}`));
+      list.append(row);
+    }
+    codex.append(list);
+    return codex;
+  }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
-    for (const scope of [this.root, this.modal, ...(this.shopDock ? [this.shopDock] : [])]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
+    for (const scope of [this.root, this.modal, ...(this.shopDock ? [this.shopDock] : []), ...(this.itemDock ? [this.itemDock] : [])]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
       const rect = node.getBoundingClientRect(); if (!rect.width || !rect.height || node.closest('[hidden]')) continue;
       bounds[node.dataset.debug!] = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, centerX: rect.x + rect.width / 2, centerY: rect.y + rect.height / 2 };
     }

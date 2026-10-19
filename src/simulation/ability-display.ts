@@ -1,3 +1,8 @@
+import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
+import { G23_SUMMON_ABILITIES } from './content/g2-3-summons';
+import { G23_ABILITIES } from './content/g2-3-abilities';
+import { G23_UNITS } from './content/g2-3-units';
+import { resolveUnitStats } from './unit-stats';
 import { S13_ABILITY_DATA } from './content/abilities';
 import { ABILITY_DISPLAY_SOURCE } from './ability-display-source';
 import { getUnitStats } from './unit-stats';
@@ -7,7 +12,10 @@ export interface AbilityDisplayStats {
   readonly abilityPower?: number;
   readonly attackDamage?: number;
 }
-function sourceFor(id: string) {
+function sourceFor(id: string): {readonly name:string;readonly variables:Readonly<Record<string,readonly number[]>>} {
+  if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
+  if(Object.hasOwn(G23_SUMMON_ABILITIES,id+'-ability'))return G23_SUMMON_ABILITIES[id+'-ability'];
+  if(Object.hasOwn(G23_ABILITIES,id+'-ability'))return G23_ABILITIES[id+'-ability'];
   if (!Object.hasOwn(ABILITY_DISPLAY_SOURCE, id)) throw new RangeError(`Unknown ability display definition: ${id}`);
   return ABILITY_DISPLAY_SOURCE[id as keyof typeof ABILITY_DISPLAY_SOURCE];
 }
@@ -19,7 +27,7 @@ export function abilityDisplayName(definitionId: string): string { return source
  */
 export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
   stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
-  const source = sourceFor(definitionId), base = getUnitStats(definitionId, starLevel);
+  const source = sourceFor(definitionId), base = definitionId.endsWith('-ranged')&&Object.hasOwn(G23_UNITS,definitionId)?resolveUnitStats(G23_UNITS[definitionId],starLevel):getUnitStats(definitionId, starLevel);
   const ad = stats.attackDamage ?? base.attack, ap = stats.abilityPower ?? 100;
   if (![ad, ap].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 1_000_000))
     throw new RangeError('Display AD/AP must be integers in [0, 1000000]');
@@ -38,6 +46,20 @@ export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
   const physical = (key: string, apKey?: string) => amount(key, apKey);
   // Explicit aliases avoid treating every Modified* token as an AP multiplier.
   switch (definitionId) {
+    case 'renata':Object.assign(values,{ModifiedShield:magic('Shield'),ModifiedTargetDamage:magic('TargetDamage'),ModifiedExplosionDamage:magic('ExplosionDamage')});break;
+    case 'silco':Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedMinionDamage:magic('MinionDamage')});break;
+    case 'drmundo':Object.assign(values,{ModifiedHeal:amount(undefined,'APHeal',undefined,'PercentHealthHeal'),ModifiedDamage:magic('APDamage'),ModifiedSecondaryDamage:amount(undefined,undefined,undefined,'PercentHealthDamage'),'TFTUnitProperty.:TFT13_DrMundoBaseHealthExperimentBonus':v('BaseExperimentHealthGain'),'TFTUnitProperty.:TFT13_DrMundoCurrentExperimentBonus':v('ExperimentHealthGain')});break;
+    case 'cassiopeia':Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedMiasmaDamage:magic('MiasmaDamage')});break;
+    case 'elise':Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedHeal:magic('FlatHealth')});break;
+    case 'elise-ranged':case 'swain-ranged':Object.assign(values,{ModifiedDamage:magic('MagicDamage'),ModifiedSecondaryDamage:magic('SecondaryDamage')});break;
+    case 'jayce':Object.assign(values,{ModifiedShield:magic('Shield'),ModifiedDamage:physical('PercentAttackDamage'),ModifiedSecondaryDamage:physical('PercentADSecondaryDamage')});break;
+    case 'jayce-ranged':Object.assign(values,{ModifiedAttackSpeed:v('AttackSpeed')*ap,ModifiedTargetDamage:physical('ClosestEnemyPercentAD'),ModifiedDamage:physical('PercentAttackDamage')});break;
+    case 'smeech':values.TotalDamage=physical('PercentAttackDamage','APDamage');break;
+    case 'renni':Object.assign(values,{ModifiedHealing:amount(undefined,'APHeal',undefined,'MaxHealthHealingPercent'),ModifiedDamage:physical('ADPercent'),FinalDamage:physical('FinalADPercent')});break;
+    case 'nunu':Object.assign(values,{ModifiedDurability:Math.min(100,v('Durability')*ap),ModifiedDamage:magic('Damage'),ModifiedSecondDamage:magic('SecondDamage'),'TFTUnitProperty.:TFT13_NunuCurrentExperimentBonus':v('ExperimentMaxHealthDamage')*100});break;
+    case 'gangplank':Object.assign(values,{ModifiedHeal:magic('Heal'),ModifiedDamage:physical('PercentAttackDamage')});break;
+    case 'gangplank-ranged':Object.assign(values,{TotalDamage:physical('PercentAttackDamage','APDamage'),SecondaryDamage:Math.floor(physical('PercentAttackDamage','APDamage')*v('PercentToAdjacentUnits'))});break;
+    case 'swain':Object.assign(values,{ModifiedHeal:magic('Heal'),ModifiedHealPerSecond:magic('HealPerSecond'),ModifiedDamage:magic('DamagePerSecond')});break;
     case 'camille': values.TotalDamage = physical('PercentAttackDamage','APDamage'); break;
     case 'vi': Object.assign(values,{ModifiedShield:magic('Shield'),ModifiedDamage:physical('PercentAttackDamage'),ModifiedSecondaryDamage:physical('PercentAttackDamage_SecondaryDamage')}); break;
     case 'akali': case 'vex': Object.assign(values,{ModifiedDamage:magic('Damage'),ModifiedSecondaryDamage:magic('SecondaryDamage')}); break;

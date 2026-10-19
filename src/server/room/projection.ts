@@ -10,9 +10,9 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import type { CarouselView, ItemSummonView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { listCarouselSlots } from '../../server-entry';
+import { listCarouselSlots, readItemSummons } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -37,6 +37,12 @@ export function toPublicBoard(match: MatchState): PublicBoard {
     const held = match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
       .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
     units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: held.map(item => item.definitionId) });
+  }
+  // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
+  for (const summon of readItemSummons(match)) {
+    const { unit } = summon;
+    if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
+    units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: [], summon: true });
   }
   units.sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
   return { units };
@@ -122,10 +128,27 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
  * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
  * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
  */
-export function toSeatPrivateView(match: MatchState): SeatStateView { return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match) }; }
+export function toSeatPrivateView(match: MatchState): SeatStateView {
+  return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+}
+/**
+ * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
+ * outside preparation (they exist in a battle only as its own units). Never minted, moved or scaled here.
+ */
+export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
+  if (match.phase !== 'preparation') return [];
+  return readItemSummons(match).filter(origin => origin.unit.team === 'player').map(origin => ({
+    kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId,
+    unit: { id: origin.unit.id, definitionId: origin.unit.definitionId, team: origin.unit.team, starLevel: origin.unit.starLevel,
+      location: origin.unit.location.kind === 'board' ? { kind: 'board', cell: { col: origin.unit.location.cell.col, row: origin.unit.location.cell.row } } : { ...origin.unit.location } },
+  }));
+}
 
-/** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
-const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded']);
+/**
+ * Server-originated events a seat's client may see with its state push: own-unit moves and merges (T10), the own seat's
+ * G2-3 mechanic grants, key changes and hook failures (§25), nothing else of the ledger.
+ */
+const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded', 'mechanicGranted', 'seatMechanicChanged', 'mechanicFailed']);
 export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
   const pushed = seat.serverEvents;
   if (!pushed || pushed.seatRevision !== seat.seatRevision) return [];
@@ -166,10 +189,18 @@ export interface SeatReplay { readonly battleId: string; readonly replay: Combat
  */
 const replays = new WeakMap<object, CombatReplay>();
 const mirroredReplays = new WeakMap<object, CombatReplay>();
+/**
+ * A replay the rules refused, kept with the same key: the refusal is a pure function of the immutable battle, so it is
+ * rethrown as is instead of re-running the whole battle inside every later push, resume or second participant.
+ */
+const failedReplays = new WeakMap<object, unknown>();
 function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => CombatReplay): CombatReplay {
   const hit = cache.get(key);
   if (hit) return hit;
-  const replay = build();
+  if (failedReplays.has(key)) throw failedReplays.get(key);
+  let replay: CombatReplay;
+  try { replay = build(); }
+  catch (error) { failedReplays.set(key, error); throw error; }
   cache.set(key, replay);
   return replay;
 }
@@ -209,7 +240,7 @@ function ownUnitIds(battle: Extract<BattleResult, { kind: 'two-sided' }>, seatId
 /**
  * Builds and caches the replays of one freshly resolved battle for the given seats ahead of the push (B8), so the
  * re-execution runs in its own slice instead of inside the push of the whole round. A failure is not reported here:
- * nothing is cached and the push reports it as before.
+ * its refusal is kept and the push reports it as before.
  */
 export function warmCombatReplays(battle: BattleResult, seatIds: Iterable<string>): void {
   for (const seatId of seatIds) {
@@ -223,14 +254,14 @@ export interface ReplayWarmup { advance(maxTicks: number): boolean }
  * warmCombatReplays cut into slices (§19): one `startCombatReplay` task per replay the given seats will be pushed and
  * the cache does not hold yet, advanced by at most `maxTicks` per call and never recreated; a finished replay goes into
  * the same cache toCombatReplayFor reads. Side B's mirror is still derived from that replay, never re-run. A task that
- * throws is dropped: nothing is cached and the push rebuilds and reports it as before.
+ * throws is dropped and its refusal kept: the push reports it as before, without re-running the battle.
  */
 export function startReplayWarmup(battle: BattleResult, seatIds: Iterable<string>): ReplayWarmup {
   const wanted = [...seatIds];
   const pending: { readonly key: object; readonly input: CombatReplayInput; task: CombatReplayTask | null }[] = [];
   if (battle.kind === 'placeholder') {
-    for (const outcome of battle.outcomes) if (wanted.includes(outcome.seatId) && outcome.combat && !replays.has(outcome)) pending.push({ key: outcome, input: outcome.combat, task: null });
-  } else if (battle.participants.some(seatId => wanted.includes(seatId)) && !replays.has(battle)) pending.push({ key: battle, input: battle.battle, task: null });
+    for (const outcome of battle.outcomes) if (wanted.includes(outcome.seatId) && outcome.combat && !replays.has(outcome) && !failedReplays.has(outcome)) pending.push({ key: outcome, input: outcome.combat, task: null });
+  } else if (battle.participants.some(seatId => wanted.includes(seatId)) && !replays.has(battle) && !failedReplays.has(battle)) pending.push({ key: battle, input: battle.battle, task: null });
   return {
     advance(maxTicks: number): boolean {
       const head = pending[0];
@@ -241,7 +272,7 @@ export function startReplayWarmup(battle: BattleResult, seatIds: Iterable<string
           const replay = head.task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
           if (!replay) return false;
           replays.set(head.key, replay);
-        } catch { /* reported by the push */ }
+        } catch (error) { failedReplays.set(head.key, error); /* reported by the push, which rethrows it without re-running */ }
         pending.shift();
         if (pending.length) return false;
       }
@@ -270,15 +301,21 @@ function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
   return {
     ...view,
     board: { ...view.board, deploymentZones: { player: enemy, enemy: player } },
-    units: view.units.map(unit => ({ ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) })),
+    units: view.units.map(unit => mirrorViewUnit(unit, rows)),
     result: swapResult(view.result),
   };
+}
+function mirrorViewUnit(unit: CombatViewState['units'][number], rows: number): CombatViewState['units'][number] {
+  return { ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) };
 }
 function mirrorViewEvent(event: CombatViewEvent, rows: number): CombatViewEvent {
   switch (event.type) {
     case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
     case 'cast': return { ...event, completionCell: flipCell(event.completionCell, rows) };
     case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
+    // G2-3 mid-combat units: the entered view and the spawn fact carry a cell and a team.
+    case 'unitEntered': return { ...event, unit: mirrorViewUnit(event.unit, rows) };
+    case 'unitSpawned': return { ...event, team: swapTeam(event.team), cell: flipCell(event.cell, rows) };
     case 'unitUpdated': {
       const { cell, startingCell, team } = event.changes;
       return { ...event, changes: { ...event.changes, ...(cell ? { cell: flipCell(cell, rows) } : {}), ...(startingCell ? { startingCell: flipCell(startingCell, rows) } : {}), ...(team ? { team: swapTeam(team) } : {}) } };

@@ -1,6 +1,10 @@
+import {projectItemSummons} from './g2-4b-summons';
+import {countsG23SurvivorDamage} from './g2-3-summons';
+import {g23BattleFacts} from './g2-3-settlement';
+import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
 import { canonicalContent, digestContent } from './content';
-import { freezeContent } from './content/freeze';
+import { createScopedContentFreezer, freezeContent } from './content/freeze';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -36,6 +40,7 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map('item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),
@@ -54,11 +59,13 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
   return {
     mapping,
-    units:preparation.units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
+    units:projectItemSummons(projectG23Summons(preparation),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
       ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
       : unit.location})),
     strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
-      units:compiled.units.map(unit=>({...unit,sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
+      units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
+        unit:{...unit.itemSummon.unit,team,location:unit.itemSummon.unit.location.kind==='board'?{kind:'board' as const,cell:{col:unit.itemSummon.unit.location.cell.col,row:team==='player'?unit.itemSummon.unit.location.cell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.unit.location.cell.row}}:unit.itemSummon.unit.location},
+        formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
         const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
       }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
         ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})) },
@@ -77,11 +84,13 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
   const mirrorOfSeatId = identity?.mirrorOfSeatId ?? null;
   if (mirrorOfSeatId !== null && mirrorOfSeatId !== right.seatId) throw new BattleValidationError('invalid-mirror');
   const x = compileSide(left,'player'), y = compileSide(right,'enemy');
-  return freezeContent(structuredClone({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
+  // Restored snapshots are detached and deeply frozen; compilation owns every
+  // new record. Re-cloning this entire derived graph would only copy owned data.
+  return freezeContent({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
     strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
-  }));
+  });
 }
 
 /** Recompile descriptors and compare every derived field; never disable Match restore checks. */
@@ -107,26 +116,67 @@ export function startTwoSidedCombatWithEvents(input: BattleInput): CombatStep {
 export function startTwoSidedCombat(input: BattleInput): CombatState {
   return startTwoSidedCombatWithEvents(input).state;
 }
-function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, isMirror = false): BattleSideResult {
+function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, initial: CombatState, isMirror = false): BattleSideResult {
   const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId).map(entry=>{
+    const origin=initial.units.find(unit=>unit.id===entry.combatId);
+    if(!origin||origin.itemSummon)throw new BattleValidationError('invalid-result');
     const unit=terminal.units.find(unit=>unit.id === entry.combatId);
-    if (!unit) throw new BattleValidationError('invalid-result');
-    return {originalId:entry.originalId,unit};
+    const split=terminal.trenchSplits?.find(split=>split.ownerId===entry.combatId);
+    if(!unit&&(!split||!terminal.removedUnitIds?.includes(entry.combatId)))throw new BattleValidationError('invalid-result');
+    if(unit&&split)throw new BattleValidationError('invalid-result');
+    return {originalId:entry.originalId,unit,growth:unit?.runtime?.permanentAdBps??split?.permanentAdBps??0};
   }).sort((a,b)=>order(a.originalId,b.originalId));
-  return { seatId, survivors:units.filter(({unit})=>unit.alive).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
-    growth:isMirror ? [] : units.filter(({unit})=>(unit.runtime?.permanentAdBps ?? 0)>0).map(({originalId,unit})=>({unitId:originalId,attackDamageBps:unit.runtime!.permanentAdBps})),
+  return { seatId, survivors:units.flatMap(({originalId,unit})=>unit&&countsG23SurvivorDamage(unit)?[{unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp}]:[]),
+    growth:isMirror ? [] : units.filter(({growth})=>growth>0).map(({originalId,growth})=>({unitId:originalId,attackDamageBps:growth})),
   };
+}
+
+/** BattleResult remains a trusted-rules-output API. For dynamic rosters, verify
+ * every terminal field and event against that result's original tick-zero state;
+ * the validated BattleInput boundary remains startTwoSidedBattle above. */
+function validateDynamicResult(result:BattleResult):void {
+  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
+  if(!enabled){
+    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
+    return;
+  }
+  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench')
+    ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>1200)throw new BattleValidationError('invalid-result');
+  let expected=structuredClone(result.initial);
+  // Tick-zero events already belong to the trusted initial state; authenticate
+  // all subsequently generated ledger events, including dynamic identities.
+  const events=[];
+  while(expected.tick<result.terminal.tick&&expected.status==='running'){
+    const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
+  }
+  if(canonicalContent(expected)!==canonicalContent(result.terminal)
+    ||canonicalContent(events)!==canonicalContent(result.events.slice(result.initial.nextEventSeq??0)))throw new BattleValidationError('invalid-result');
 }
 
 export interface BattleTask {
   advance(maxTicks: number): BattleResult | null;
 }
 
+// Only exact, immutable results whose entire JSON graph was checked below can
+// reuse that work. Clones, spreads and external results keep full validation.
+const checkedResults = new WeakMap<BattleResult, ReturnType<typeof createScopedContentFreezer>>();
+
 /** In-memory continuation. A slice budget never changes the Combat's own tick limit. */
 export function startTwoSidedBattle(input: BattleInput): BattleTask {
   const checked = restoreBattleInput(input);
   const start = createCombatWithEvents(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
-  const events = [...toLedgerEvents(start.events)];
+  const freezeBattle = createScopedContentFreezer();
+  freezeBattle(start.state);
+  canonicalContent(start.state);
+  const events: BattleResult['events'][number][] = [];
+  const appendEvents = (step: CombatStep) => {
+    for (const event of toLedgerEvents(step.events)) {
+      freezeBattle(event);
+      canonicalContent(event);
+      events.push(event);
+    }
+  };
+  appendEvents(start);
   let terminal = start.state;
   let result: BattleResult | null = null;
   return { advance(maxTicks) {
@@ -134,13 +184,19 @@ export function startTwoSidedBattle(input: BattleInput): BattleTask {
     if (result) return result;
     let steps = 0;
     while (terminal.status === 'running' && steps < maxTicks) {
-      const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events)); steps++;
+      const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
     }
     if (terminal.status !== 'finished') return null;
-    result = freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
+    freezeBattle(events);
+    result = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
       winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
-      a:sideResult(checked.a.seatId,checked.mapping,terminal), b:sideResult(checked.b.seatId,checked.mapping,terminal,checked.mirrorOfSeatId !== null),
+      a:sideResult(checked.a.seatId,checked.mapping,terminal,start.state), b:sideResult(checked.b.seatId,checked.mapping,terminal,start.state,checked.mirrorOfSeatId !== null),
       mapping:checked.mapping,initial:start.state,terminal,events});
+    // Initial and each ledger element were fully checked and frozen before
+    // scheduling pauses. Check every remaining field now, without regenerating
+    // a whole-battle string. Array ordering and all settlement checks stay below.
+    canonicalContent({...result,initial:null,events:[]});
+    checkedResults.set(result, freezeBattle);
     return result;
   } };
 }
@@ -156,7 +212,9 @@ export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): Bat
 /** Trusted rules output only. No Match mutation, HP clamp, income, receipt or elimination. */
 export function proposeSettlement(result: BattleResult): { readonly a: SideProposal; readonly b: SideProposal } {
   try {
-    canonicalContent(result);
+    const freezeResult = checkedResults.get(result);
+    if (!freezeResult) canonicalContent(result);
+    validateDynamicResult(result);
     const stage = getMultiplayerRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
     if (result.version !== TWO_SIDED_BATTLE_VERSION || stage.kind !== 'pvp' || result.a.seatId === result.b.seatId
@@ -164,8 +222,8 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       || result.terminal.status !== 'finished' || !result.terminal.result || result.terminal.combatId !== result.battleId
       || result.winnerSeatId !== expectedWinner || result.events.length !== result.terminal.nextEventSeq
       || result.events.some((event,index)=>event.combatId !== result.battleId || event.eventSeq !== index)
-      || canonicalContent(result.a) !== canonicalContent(sideResult(result.a.seatId,result.mapping,result.terminal))
-      || canonicalContent(result.b) !== canonicalContent(sideResult(result.b.seatId,result.mapping,result.terminal,result.mirrorOfSeatId !== null))) throw new BattleValidationError('invalid-result');
+      || canonicalContent(result.a) !== canonicalContent(sideResult(result.a.seatId,result.mapping,result.terminal,result.initial))
+      || canonicalContent(result.b) !== canonicalContent(sideResult(result.b.seatId,result.mapping,result.terminal,result.initial,result.mirrorOfSeatId !== null))) throw new BattleValidationError('invalid-result');
     const baseDamage = selectPlayerBaseDamage(stage.stage, stage.kind, result.roundId);
     if (baseDamage === undefined) throw new BattleValidationError('invalid-result');
     const side = (own: BattleSideResult, opponent: BattleSideResult): SideProposal => ({
@@ -175,9 +233,9 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       baseDamage,opposingSurvivors:opponent.survivors.length,
       // Same frozen PvP rule as economy.ts: winner 0; otherwise stage base + opposing survivors.
       damage:own.seatId === result.mirrorOfSeatId || result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
-      growth:own.growth,events:result.events,
+      growth:own.growth,events:result.events,...(own.seatId===result.mirrorOfSeatId?{}:{g23Facts:g23BattleFacts(result.terminal,own.seatId===result.a.seatId?'player':'enemy',stage.ordinal,'pvp',result.initial.units)}),
     });
-    return freezeContent({a:side(result.a,result.b),b:side(result.b,result.a)});
+    return (freezeResult ?? freezeContent)({a:side(result.a,result.b),b:side(result.b,result.a)});
   } catch (error) {
     if (error instanceof BattleValidationError) throw error;
     throw new BattleValidationError('invalid-result');

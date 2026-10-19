@@ -3,7 +3,7 @@ import type { Unit } from './unit-types';
 import type { ItemInstance } from './strategy-types';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
 import { canonicalContent } from './content';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from './units';
 import { checkEquipmentPlacement } from './equipment-policy';
 
@@ -31,7 +31,8 @@ export function createInputValidation(requireValue: InputValidation['requireValu
   return { requireValue, integer, id, definitionId, list, record, checkSerial };
 }
 interface InputAssets { readonly preparation: GameState; readonly items: readonly ItemInstance[] }
-interface AssetBoundary { readonly playerLevel: number; readonly nextUnitSerial: number; readonly nextItemSerial: number }
+/** `teamSizeBonus`: permanent crown team size, from the caller's validated G2-3 progress. */
+interface AssetBoundary { readonly playerLevel: number; readonly nextUnitSerial: number; readonly nextItemSerial: number; readonly teamSizeBonus?: number }
 /** Structural assets only: original combat inputs and current resources remain separate callers.
  * Enemy identities come from the round catalog, never from either candidate's saved projection. */
 export function validateInputAssets(
@@ -55,7 +56,7 @@ export function validateInputAssets(
   const units = new Map<string, Unit>(), locations = new Set<string>();
   for (const unit of input.preparation.units) {
     record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
-    definitionId(unit.definitionId, unit.team === 'player' ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
+    definitionId(unit.definitionId, unit.team === 'player'&&!UNIT_DEFINITIONS[unit.definitionId]?.summon ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
     requireValue([1, 2, 3].includes(unit.starLevel), 'star'); record(unit.location);
     if (unit.team === 'player') checkSerial(unit.id, 'unit', boundary.nextUnitSerial);
@@ -68,7 +69,7 @@ export function validateInputAssets(
   const byId = (a: Unit, b: Unit): number => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   requireValue(canonicalContent(input.preparation.units.filter(unit => unit.team === 'enemy').sort(byId))
     === canonicalContent([...enemies].sort(byId)), 'enemy roster identity');
-  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= boundary.playerLevel, 'population cap');
+  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board' && (UNIT_DEFINITIONS[unit.definitionId]?.summon?.countsTowardPopulation??true)).length <= boundary.playerLevel + (boundary.teamSizeBonus ?? 0), 'population cap');
   list(input.items); const itemIds = new Set<string>(), equipment = new Set<string>();
   for (const item of input.items) {
     record(item); id(item.id); checkSerial(item.id, 'item', boundary.nextItemSerial);

@@ -1,3 +1,4 @@
+import {scaleItemSummonHp} from '../g2-4b-summons';
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
 import { canonicalContent } from '../content';
 import { emitMechanismSignal } from './s13-triggers';
@@ -17,6 +18,7 @@ import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder
 import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples, survivalConsumptionKeys, remainingSurvivalKeys } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
+import { grantCombatItem } from './combat-item-grants';
 export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
   const tick = environment.tick ?? holder.mechanismState?.sampledAtTick ?? 0;
   const ids = selectTargets(selector, targetingEnvironment(environment.board ?? DEFAULT_BOARD, units, holder, tick,
@@ -37,6 +39,21 @@ function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: S
   const before = frozen ? { id: frozen.unitId, hp: frozen.hpAfterDamage, maxHp: frozen.maxHpBeforeThresholdEffects } : undefined;
   return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
 }
+function resistsSample(ctx: AbilityContext, holder: S13Unit): Pick<AmountSample, 'resistsOf'> {
+  return ctx.defenses ? { resistsOf: () => ctx.defenses!(holder, true) + ctx.defenses!(holder, false) } : {};
+}
+/** G2-4b over-time restores reuse non-cancellable delayed tasks: one per pulse, owned by the holder. */
+function scheduleOverTime(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Extract<Effect, { kind: 'over-time' }>, total: number, seq: number): void {
+  const kind = effect.resource === 'heal' ? 'g24Heal' as const : 'g24Mana' as const, { parentItemInstanceId, ...origin } = source;
+  for (let i = 0; i < effect.pulses; i++) holder.tasks.push({ key: JSON.stringify([holder.id, seq, kind, i, target.id, canonicalSource(source)]), kind,
+    source: parentItemInstanceId === null ? origin : source, executeAtTick: ctx.tick + (i + 1) * effect.periodTicks, targetId: target.id,
+    amount: Math.floor(total / effect.pulses) + (i < total % effect.pulses ? 1 : 0), ordinal: i, total: effect.pulses, cancellable: false, actionSeq: seq });
+}
+export function executeOverTimeTask(ctx: AbilityContext, task: import('../combat-types').CombatTask): void {
+  const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0); if (!target || task.amount <= 0) return;
+  if (task.kind === 'g24Heal') ctx.heals.push({ source: task.source, targetId: target.id, amount: task.amount });
+  else (ctx.manaRequests ??= []).push({ source: asSource(task.source), targetId: target.id, amount: task.amount, reason: 'periodic', bypassLock: 'none', castActionSeq: null });
+}
 function clearMechanismTarget(ctx: AbilityContext, unit: S13Unit, actionSeq: number): void {
   const before = unit.targetId; if (before === null) return;
   unit.targetId = null;
@@ -51,8 +68,9 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
   target.mechanismState = { ...target.mechanismState!, statuses: result.groups };
   const group = result.groups.find(g => g.contributions.some(c => c.key === identity.key))!;
   // New kinds retain their frozen group fact; a legacy status event only supplies its removal/display anchor.
+  const applied=group.contributions.find(c=>c.key===identity.key)!.application;
   const status: CombatStatus = { key: identity.key, source, kind: application.kind === 'stun' ? 'stun' : application.kind === 'sunder' ? 'armorReduction' : 'resistanceFlat',
-    amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
+    amount: applied.modifier?.value.kind === 'constant' ? applied.modifier.value.amount : applied.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   target.statuses=[...target.statuses.filter(s=>s.key!==status.key),status].sort((a,b)=>compareText(a.key,b.key));
   ctx.events.push(changedStatusEvent(ctx.tick, result.groups, [identity.key], result.refreshed));
@@ -104,11 +122,23 @@ export function executeDamageControlSequence(ctx: AbilityContext, holder: S13Uni
 }
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
   frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
-  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
+  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...resistsSample(ctx, holder), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
-    case 'grant-mana':
-      (ctx.manaRequests ??= []).push({ source, targetId: target.id, amount: effect.amount, reason: effect.reason, bypassLock: effect.bypassLock, castActionSeq: effect.reason === 'cast-refund' ? seq : null }); break;
+    case 'grant-mana': {
+      // G2-4b: a share of maximum mana rounds half up to whole mana.
+      const share = effect.maxManaBps ? Math.floor((target.maxMana * effect.maxManaBps + 5000) / 10000) : 0;
+      (ctx.manaRequests ??= []).push({ source, targetId: target.id, amount: effect.amount + share, reason: effect.reason, bypassLock: effect.bypassLock, castActionSeq: effect.reason === 'cast-refund' ? seq : null }); break;
+    }
+    case 'over-time': scheduleOverTime(ctx, holder, source, target, effect, value, seq); break;
+    case 'leap': {
+      if (hexDistance(holder.cell, target.cell) <= 1) break;
+      const free = Array.from({ length: ctx.board.rows }, (_, row) => Array.from({ length: ctx.board.columns }, (_, col) => ({ col, row }))).flat()
+        .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => u.alive && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
+        .sort((a, b) => hexDistance(holder.cell, a) - hexDistance(holder.cell, b) || a.row - b.row || a.col - b.col)[0];
+      if (!free) break;
+      ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); holder.cell = free; break;
+    }
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
       delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(damageContext?.facts?.damage[0] ? { parentPacketId: damageContext.facts.damage[0].context.packetId, rootActionSeq: damageContext.facts.damage[0].context.rootActionSeq } : {}), ...(periodic ? { periodic } : {}) }); break;
     case 'heal': {
@@ -144,7 +174,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
     case 'change-max-hp': {
       const basis = target.maxHpBasis ?? { base: target.maxHp, flat: 0, bps: 0, bonusBps: 0 };
       const updated = { ...basis, bonusBps: basis.bonusBps + effect.bonusBps };
-      const max = resolveStat('maxHp', updated.base, [constantModifier('maxHp', updated.flat), constantModifier('maxHp', updated.bps + updated.bonusBps, 'bps')], { holder: hpSample(target) });
+      const max = scaleItemSummonHp(target,resolveStat('maxHp', updated.base, [constantModifier('maxHp', updated.flat), constantModifier('maxHp', updated.bps + updated.bonusBps, 'bps')], { holder: hpSample(target) }));
       const result = changeMaxHp(target.maxHp, target.hp, max); target.maxHp = max; target.hp = result.afterHp; target.maxHpBasis = updated;
       ctx.events.push({ type: 'maxHpChanged', tick: ctx.tick, unitId: target.id, source, ...result }); break;
     }
@@ -160,6 +190,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       ctx.events.push(...endedStatusEvents(ctx.tick, target.id, result.ended, 'cleansed'));
       clearMechanismTarget(ctx, target, seq); break;
     }
+    case 'grant-combat-item': grantCombatItem(ctx, source, target, seq); break;
     default: throw new RangeError(`Effect ${effect.kind} belongs to a later B3 batch`);
   }
 }
@@ -201,7 +232,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     if (payable) {
       emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
       const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source, { board: ctx.board, tick: ctx.tick });
-      const samples = new Map(targets.map(t => [t.id, effectSample(holder, t, ctx.tick)]));
+      const samples = new Map(targets.map(t => [t.id, { ...effectSample(holder, t, ctx.tick), ...resistsSample(ctx, holder) }]));
       for (const target of targets) for (const [effectIndex, effect] of task.program.effects.entries()) {
         let value: number | undefined;
         if (effect.kind === 'damage' || effect.kind === 'heal' || effect.kind === 'grant-shield') { const computed = periodicAmount(current, effectIndex, target.id, samples.get(target.id)!); current = computed.task; value = computed.requested; }
@@ -288,7 +319,7 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
 export function vampRates(unit: S13Unit, hp: number): VampRate[] {
   return unit.mechanismDefinitions!.vamp.map(def => {
     const sample = { holder: { id: unit.id, hp, maxHp: unit.maxHp } };
-    return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0 };
+    return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0, ...(def.damageTypes ? { damageTypes: def.damageTypes } : {}) };
   });
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {

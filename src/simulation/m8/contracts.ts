@@ -34,14 +34,29 @@ export interface EffectRuntime extends EffectIdentity {
   readonly stackPolicy: StackPolicy;
 }
 export type Stat = 'maxHp' | 'attackDamage' | 'abilityPower' | 'armor' | 'magicResist'
-  | 'attackSpeed' | 'range' | 'critChance' | 'critMultiplier' | 'damageAmp' | 'damageReduction' | 'omnivamp';
+  | 'attackSpeed' | 'range' | 'critChance' | 'critMultiplier' | 'damageAmp' | 'damageReduction' | 'omnivamp'
+  /** G2-4b: attacks per second ×10000; the lowest active lock replaces the computed attack speed. */
+  | 'attackSpeedLock'
+  /** G2-4b: damage amp per hex between holder and packet target, sampled at resolution. */
+  | 'damageAmpPerHex';
 export type Condition =
   | { readonly kind: 'always' }
   | { readonly kind: 'positive-hp-damage' }
   | { readonly kind: 'hp-ratio'; readonly subject: 'holder' | 'target'; readonly op: 'gt' | 'lt' | 'lte'; readonly thresholdBps: Bps }
   | { readonly kind: 'target-max-hp'; readonly op: 'gt'; readonly hp: number }
   | { readonly kind: 'starting-rows'; readonly rows: 'front-two' | 'back-two' }
-  | { readonly kind: 'enemy-targeting-holder' };
+  | { readonly kind: 'enemy-targeting-holder' }
+  /** G2-4b: kill-or-assist only. The killing packet's owner is (or is not) the holder. */
+  | { readonly kind: 'killing-blow'; readonly by: 'holder' | 'other' }
+  /** G2-4b: the triggering damage facts contain a killing packet. */
+  | { readonly kind: 'killed-target' }
+  /** G2-4b: the triggering damage facts contain a hit of this type. */
+  | { readonly kind: 'damage-type'; readonly damageType: DamageType }
+  /** G2-4b: the event target's current magic resist, read at dispatch. */
+  | { readonly kind: 'target-magic-resist'; readonly op: 'gt' | 'lte'; readonly value: number }
+  /** G2-4b: the triggering facts contain a critical basic-attack hit. */
+  | { readonly kind: 'critical-attack' }
+  | { readonly kind: 'all'; readonly conditions: readonly Condition[] };
 /** A08: evaluate applicable contributions before selecting strongest reduction. */
 export interface DamageFilter {
   readonly deliveries: readonly DamageDelivery[] | 'all';
@@ -73,6 +88,10 @@ export interface Amount {
   readonly hpBasis: 'holder' | 'target';
   readonly sample: 'application' | 'each-pulse' | 'packet';
   readonly cap: number | null;
+  /** G2-4b: reads the overkill of the triggering outcomes. */
+  readonly overkillBps?: Bps;
+  /** G2-4b: reads the holder's current armor plus magic resist. */
+  readonly resistsBps?: Bps;
 }
 export type DamageType = 'physical' | 'magic' | 'true';
 /** Origin is provenance; delivery is proc eligibility. They are not interchangeable. */
@@ -82,6 +101,8 @@ export type ProcPermission = 'apply-item-burn' | 'last-whisper' | 'defender-tita
   | 'omnivamp' | 'gunblade-ally-heal' | 'guardbreaker' | 'incoming-basic-hit' | 'damage-mana';
 export type CritEligibility = 'basic' | 'requires-spell-authorization' | 'never';
 export interface DamageContext {
+  /** Nonlethal payment of previously deferred damage; no proc permissions. */
+  readonly deferredPayment?: true;
   readonly source: Source;
   readonly targetId: string;
   readonly damageType: DamageType;
@@ -115,6 +136,8 @@ export interface DamageOutcome {
   readonly absorbed: number;
   readonly hpDamage: number;
   readonly overkill: number;
+  /** Death's Defiance: post-shield amount scheduled separately, not HP damage. */
+  readonly deferred?: number;
   readonly critical: boolean;
   readonly killingPacket: boolean;
 }
@@ -256,7 +279,8 @@ export interface ManaRequest {
   readonly source: Source;
   readonly targetId: string;
   readonly amount: number;
-  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill';
+  /** item-granted: starting mana of an item gained during combat (G2-4b chest, G24-CHEST-03). */
+  readonly reason: 'attack' | 'damage' | 'incoming-basic-hit' | 'periodic' | 'cast-refund' | 'kill' | 'item-granted';
   readonly bypassLock: 'none' | 'this-cast-refund';
   readonly castActionSeq: number | null;
 }
@@ -280,7 +304,11 @@ export interface CastReceipt {
 }
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'
   | 'damage-dealt' | 'damage-taken' | 'shield-hit' | 'post-damage-survival' | 'shield-ended'
-  | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated';
+  | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated'
+  /** G2-4b: actor applied (or refreshed) a stun on target; a shield layer on actor reached zero. */
+  | 'stun-applied' | 'shield-broken'
+  /** G2-4b: the actor reached 0 HP this tick; emitted once, before death cleanup. */
+  | 'holder-death';
 /** A05: event actor/target are not the holder or the current ordinary-attack target. */
 export type TriggerContext = { readonly eventSeq: number; readonly tick: Tick; readonly actionSeq: number;
   readonly actorId: string; readonly targetId: string | null } & (
@@ -294,40 +322,55 @@ export interface TriggerListener {
 }
 export type TriggerGate = { readonly kind: 'always' }
   | { readonly kind: 'every-n'; readonly counterId: string; readonly everyN: number; readonly firstAt: number }
-  | { readonly kind: 'stack-threshold-once'; readonly counterId: string; readonly at: number; readonly rewardId: string };
+  | { readonly kind: 'stack-threshold-once'; readonly counterId: string; readonly at: number; readonly rewardId: string }
+  /** G2-4b: fires only while the counter is positive; each firing spends one count.
+   * critDamageBps: while positive, the holder's critical basic attacks resolve with this extra crit damage. */
+  | { readonly kind: 'consume-counter'; readonly counterId: string; readonly critDamageBps?: Bps };
 export interface CounterDefinition {
   readonly id: string;
-  readonly events: readonly { readonly event: Trigger; readonly listener: TriggerListener; readonly qualifies: 'completed-event' | 'positive-actual-damage' }[];
+  /** G2-4b: 'killing-blow' needs the holder's own killing packet; refill sets the counter to its cap. */
+  readonly events: readonly { readonly event: Trigger; readonly listener: TriggerListener; readonly qualifies: 'completed-event' | 'positive-actual-damage' | 'killing-blow'; readonly refill?: true }[];
   readonly scope: 'source-instance';
   readonly reset: 'combat-start';
   readonly cap: number | null;
 }
 export interface TargetSelector {
+  readonly geometry?: 'line-to-primary';
   readonly primary: 'normal' | 'first-required';
   readonly candidates: 'board' | 'event-actor' | 'event-target' | 'bound-target';
   readonly relation: 'self' | 'ally' | 'enemy';
-  readonly anchor: 'holder' | 'primary-target' | 'previous-target' | 'event-actor';
+  /** 'event-target' (G2-4b) never selects the event target itself: "the enemies nearest the target". */
+  readonly anchor: 'holder' | 'primary-target' | 'previous-target' | 'event-actor' | 'event-target';
   readonly radius: number | null;
   readonly maxTargets: number;
   readonly excludeSelf: boolean;
   readonly excludePrimary: boolean;
   readonly distinct: boolean;
-  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
+  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-ratio-desc-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
   readonly sample: 'combat-start' | 'action-completion' | 'each-tick' | 'each-pulse';
+  /** G24-CHEST-02 (user 2026-10-17 06:25): summons and structures cannot hold items, so they are never chosen. */
+  readonly excludeSummons?: true;
 }
 /** Finite declarative payloads; executors are B3–B5 work. */
 export type Effect =
   | { readonly kind: 'modify-stat'; readonly stackPolicy: StackPolicy; readonly activation: 'immediate' | 'next-tick'; readonly modifier: StatModifier; readonly duration: Duration }
   | { readonly kind: 'damage'; readonly damageType: DamageType; readonly delivery: DamageDelivery; readonly amount: Amount; readonly critEligibility: CritEligibility }
-  | { readonly kind: 'apply-status'; readonly status: StatusApplication }
+  /** anyDamage (G2-4b Obsidian Cleaver): on damage-dealt, qualifies on every positive-damage packet instead of the status kind's proc permission. */
+  | { readonly kind: 'apply-status'; readonly status: StatusApplication; readonly anyDamage?: true }
   | { readonly kind: 'heal'; readonly amount: Amount }
   | { readonly kind: 'transfer-stat'; readonly activation: 'next-tick'; readonly stats: readonly Stat[]; readonly amount: number; readonly duration: Duration; readonly applicationIdentity: 'action-target'; readonly persistAfterTargetDeath: true }
   | { readonly kind: 'grant-shield'; readonly amount: Amount; readonly durationTicks: Tick; readonly decay: ShieldDecayPolicy; readonly onEnd: readonly ShieldEndReason[]; readonly endTiming: 'post-damage' | 'next-action-planning'; readonly endTargeting: AbilityTargeting; readonly endEffects: readonly Effect[] }
-  | { readonly kind: 'grant-mana'; readonly amount: number; readonly reason: ManaRequest['reason']; readonly bypassLock: ManaRequest['bypassLock'] }
+  | { readonly kind: 'grant-mana'; readonly amount: number; readonly reason: ManaRequest['reason']; readonly bypassLock: ManaRequest['bypassLock']; readonly maxManaBps?: Bps }
+  /** G2-4b: the amount is sampled once, then paid in equal pulses (remainder to the earliest). */
+  | { readonly kind: 'over-time'; readonly resource: 'heal' | 'mana'; readonly amount: Amount; readonly pulses: number; readonly periodTicks: Tick }
+  /** G2-4b: the holder moves at once to the free hex next to the target nearest itself (as G2-3 leaps do). */
+  | { readonly kind: 'leap' }
   | { readonly kind: 'change-max-hp'; readonly bonusBps: Bps; readonly currentHp: 'add-max-delta'; readonly countsAsHeal: false }
   | { readonly kind: 'authorize-spell-crit'; readonly duplicateBonusBps: 1000 }
   | { readonly kind: 'cleanse'; readonly remove: 'removable-hostile-control-dot-debuff'; readonly retarget: true }
-  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' };
+  | { readonly kind: 'temporary-equipment'; readonly policyId: 'TG-01'; readonly lifetime: 'round' }
+  /** G2-4b Unstable Treasure Chest: the target gains one random pool item for the rest of this combat (G24-CHEST-01). */
+  | { readonly kind: 'grant-combat-item'; readonly policyId: 'G24-CHEST-01'; readonly lifetime: 'combat' };
 export interface TriggerDefinition {
   readonly id: string;
   readonly source: Source;
@@ -436,8 +479,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-2-aug30-v1';
-  readonly contentVersion: 's13-14.24b-g2-2-aug30-v1';
+  readonly rulesVersion: 's13-g2-3-v12';
+  readonly contentVersion: 's13-14.24b-g2-3-v12';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;
@@ -445,7 +488,7 @@ export interface M8Version {
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }
-export type UnchangedCombatEvent = Extract<CombatEventData, { readonly type: 'targetChanged' | 'kill' | 'growth' | 'effectTriggered' | 'movement' | 'attack' | 'death' | 'combatFinished' }>;
+export type UnchangedCombatEvent = Extract<CombatEventData, { readonly type: 'targetChanged' | 'kill' | 'growth' | 'effectTriggered' | 'movement' | 'attack' | 'death' | 'unitRevived' | 'combatFinished' }>;
 export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: string; readonly tick: Tick; readonly eventSeq: number } & (
   | UnchangedCombatEvent
   | { readonly type: 'activityChanged'; readonly activity: CombatActivity; readonly reason: 'applied' | 'refreshed' | ActivityEndReason }
@@ -457,6 +500,7 @@ export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: stri
   | { readonly type: 'shieldLayerChanged'; readonly layer: ShieldState; readonly reason: 'granted' | 'absorbed' | 'decayed' | ShieldEndReason }
   | { readonly type: 'statChanged'; readonly unitId: string; readonly source: Source; readonly stat: Stat; readonly before: number; readonly after: number }
   | { readonly type: 'maxHpChanged'; readonly unitId: string; readonly source: Source; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false }
+  | import('../seat-mechanics/combat-events').G23CombatEventData
 );
 
 

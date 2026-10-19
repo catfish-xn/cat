@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toPrivateSeatView, createMatch, advanceMultiplayerRound, equipItem, getDeploymentCap,
+import { toPrivateSeatView, createMatch, advanceMultiplayerRound, equipItem, getDeploymentCap, priorPvpWins,
   type MatchState, type PrivateSeatView } from '../src/server-entry';
 import { getPlayerDeploymentCount } from '../src/simulation/game';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
@@ -14,7 +14,8 @@ type Subset<T> = T extends readonly (infer V)[] ? readonly Subset<V>[] : T exten
 const asSubset = (view:PrivateSeatView):Subset<MatchState> => view;
 function sentinels(value:unknown):void {
   if(value===null||typeof value!=='object') return;
-  for(const child of Object.values(value)) sentinels(child);
+  // Generic owner-visible payload is explicitly public JSON, not a field whitelist.
+  for(const [key,child] of Object.entries(value)) if(key!=='seat') sentinels(child);
   if(!Array.isArray(value)) Object.assign(value,{rngState:'DO_NOT_SEND',futurePlan:'DO_NOT_SEND'});
 }
 function noReferences(a:unknown,b:unknown):void {
@@ -71,6 +72,15 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.roundResults[0].interestBasis).toBe(37);expect(view.roundResults[0].incomeBreakdown.interest).toBe(3);
     expect(view.roundResults[0]).not.toHaveProperty('settlementId');
   });
+  it('projects each committed roundKind so the display can count prior PvP wins (Emissary) without the catalog',()=>{
+    const state=richSeat(),record=state.roundResults[0];
+    const kinds=['pve','pvp','pvp','supply','pvp'] as const,results=['playerWin','playerWin','enemyWin',undefined,'playerWin'] as const;
+    const roundResults=kinds.map((roundKind,i)=>({...record,round:i+1,roundKind,result:results[i] ?? 'supply'})) as MatchState['roundResults'];
+    const view=toPrivateSeatView({...state,roundResults});
+    expect(view.roundResults.map(r=>r.roundKind)).toEqual([...kinds]);
+    expect(priorPvpWins(view.roundResults,6)).toBe(priorPvpWins(roundResults,6));
+    expect(priorPvpWins(view.roundResults,6)).toBe(2);
+  });
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'shown',
@@ -82,7 +92,7 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
     expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
-      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets'].sort());
+      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics'].sort());
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{
     const state=richSeat(),before=JSON.stringify(state),expected=toPrivateSeatView(state),hidden=structuredClone(state);
@@ -104,7 +114,7 @@ describe('T5R private own-seat whitelist',()=>{
     const state=richSeat(),view=toPrivateSeatView(state);
     const display:MatchState={...createMatch(777),...view,phase:'choice',combat:null,
       pendingChoice:view.pendingChoice?{...view.pendingChoice,eventId:'display-only'}:null,
-      roundResults:view.roundResults.map(r=>({...r,settlementId:'display-only',roundKind:'pvp',
+      roundResults:view.roundResults.map(r=>({...r,settlementId:'display-only',
         streakBefore:{kind:null,count:0},streakAfter:{kind:null,count:0},xpRequested:0})),
       m8:{...createMatch(777).m8,round:{...view.m8.round,isFinal:false}}};
     expect(getDeploymentCap(display)).toBe(getDeploymentCap(state));

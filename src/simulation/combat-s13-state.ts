@@ -19,16 +19,18 @@ export function ensureMechanisms(unit: S13Unit, tick = 0, combatId = 'standalone
 }
 // Index immutable contributions, never their HP-dependent evaluated values.
 // An array replacement or tick change invalidates the read cache automatically.
-const modifierIndex = new WeakMap<readonly StatusGroup[], { tick: number; values: Map<StatModifier['stat'], StatModifier[]> }>();
+const modifierIndex = new WeakMap<readonly StatusGroup[], { tick: number; values: Map<StatModifier['stat'], StatModifier[]>; fixedAd:number }>();
 export function statusModifiers(unit: S13Unit, stat: StatModifier['stat'], tick = unit.mechanismState?.sampledAtTick ?? 0): StatModifier[] {
   const groups = unit.mechanismState?.statuses; if (!groups?.length) return [];
   let index = modifierIndex.get(groups);
   if (!index || index.tick !== tick) {
-    const values = new Map<StatModifier['stat'], StatModifier[]>();
+    const values = new Map<StatModifier['stat'], StatModifier[]>();let fixedAd=0;
     for (const group of groups) for (const c of group.contributions) if (c.application.modifier && isEffective(c, tick)) {
-      const modifier = c.application.modifier, list = values.get(modifier.stat) ?? []; list.push(modifier); values.set(modifier.stat, list);
+      const modifier = c.application.modifier;
+      if(c.source.sourceKind==='anomaly'&&c.source.definitionId==='power-absorption'&&modifier.stat==='attackDamage'&&modifier.unit==='flat'&&modifier.value.kind==='constant'){fixedAd+=modifier.value.amount;continue;}
+      const list = values.get(modifier.stat) ?? []; list.push(modifier); values.set(modifier.stat, list);
     }
-    index = { tick, values }; modifierIndex.set(groups, index);
+    index = { tick, values, fixedAd }; modifierIndex.set(groups, index);
   }
   return index.values.get(stat) ?? [];
 }
@@ -81,15 +83,18 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number): number {
-  return resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
 export function ad(unit: S13Unit): number {
-  return resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
+  const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0);
 }
 export function range(unit: S13Unit): number {
-  return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  const resolved = resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return resolved * (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones') ? 2 : 1);
 }
 /** Historical floats are normalized to integer coefficient basis points before arithmetic. */
 export function amount(unit: S13Unit, tick: number, coefficients: { flat?: number; ad?: number; ap?: number; hp?: number }): number {
@@ -104,7 +109,12 @@ export function interval(unit: S13Unit, tick: number): number {
   // R7 neutral definitions author exact integer periods; they have no speed
   // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
   if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
-  const speedBps = (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  // G2-4b Silvermere Dawn: a lock replaces every speed term; two locks keep the slower one.
+  const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
+  if (locks.length) return attackInterval(Math.min(...locks), 0);
+  const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
+  const bankSpeed=gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0;
+  const speedBps = bankSpeed + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }

@@ -6,6 +6,7 @@ import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
 import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
 import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
+import { g23ChampionAssets } from '../src/presentation/g23-display';
 
 // Presentation ownership remains Claude's: preserve the 33 authored styles and test fallback for the new content.
 const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => Object.hasOwn(HERO_STYLE, definition.id));
@@ -52,15 +53,15 @@ describe('M7 hero identity (G01)', () => {
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
-      const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
-      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(14);
+      const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(25);
       expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
   });
-  it('opens all fourteen content traits for all forty-eight G2-2 heroes', () => {
-    const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+  it('opens all twenty-five enabled traits for all sixty G2-3 heroes', () => {
+    const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
     const observed = new Set<string>();
-    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(48);
+    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(60);
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
       const expected = hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id));
       expected.forEach(id => observed.add(id));
@@ -71,7 +72,8 @@ describe('M7 hero identity (G01)', () => {
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
-      const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id);
+      // G2-3 heroes take their portrait from the G2-3 icon manifest (s13-g23-manifest.ts) instead.
+      const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id) || g23ChampionAssets().some(asset => asset.id === hero.id);
       expect(s13AssetUrl('champion', hero.id) !== null).toBe(bundled);
       const html = heroPortraitHtml(hero.id, 34, heroEmblemSvg(hero.id, 34));
       expect(html.startsWith(bundled ? '<img' : '<svg')).toBe(true);

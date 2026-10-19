@@ -4,21 +4,24 @@ import { stepCombat } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { readCombatStats } from './combat-s13';
 import { canonicalContent } from './content';
-import { freezeContent } from './content/freeze';
+import { createScopedContentFreezer, freezeTransientContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
+import { alignReplayUnits, applyReplayMembership, replayOrderFollowsMembership } from './seat-mechanics/replay-units';
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
-  'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps'] as const;
+  'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
+    ...(unit.itemBanish?{banished:state.tick<unit.itemBanish.untilTick}:{}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
-export function toCombatViewState(state: CombatState) {
-  return freezeContent({ ...pick(state, ['combatId', 'tick', 'maxTicks', 'status', 'result']),
-    board: boardView(state.board), units: state.units.map(unit => unitView(unit, state)) });
+function combatViewState(state: CombatState) {
+  return { ...pick(state, ['combatId', 'tick', 'maxTicks', 'status', 'result']),
+    board: boardView(state.board), units: state.units.map(unit => unitView(unit, state)) };
 }
+export function toCombatViewState(state: CombatState) { return freezeTransientContent(combatViewState(state)); }
 export type CombatViewState = ReturnType<typeof toCombatViewState>;
 export type CombatViewUnit = CombatViewState['units'][number];
 
@@ -29,6 +32,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to) };
     case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };
+    case 'unitRevived': return { ...envelope, ...pick(event, ['type','unitId','hp']), sourceId:event.source.ownerId };
     case 'death': return { ...envelope, ...pick(event, ['type', 'unitId']) };
     case 'kill': return { ...envelope, type: event.type, unitId: event.unitId, sourceId: event.source.ownerId };
     case 'growth': return { ...envelope, ...pick(event, ['type', 'unitId', 'amountBps', 'totalBps']) };
@@ -50,11 +54,19 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'maxHpChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'beforeMax', 'afterMax', 'beforeHp', 'afterHp']) };
     // Activities/effect programs contain execution plans. Only their visible consequences are sent.
     case 'activityChanged': case 'effectTriggered': return null;
+    // G2-3: membership changes also produce unitEntered/unitLeft state events (seat-mechanics/replay-units.ts).
+    case 'unitSpawned': return { ...envelope, type: event.type, sourceId: event.source.ownerId,
+      ...pick(event, ['unitId', 'definitionId', 'team']), cell: cellView(event.cell) };
+    case 'unitRemoved': return { ...envelope, ...pick(event, ['type', 'unitId', 'reason']) };
+    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes] };
+    case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
+    case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
 export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
 export type CombatViewEvent = CombatAnimationEvent
-  | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> };
+  | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
+  | import('./seat-mechanics/replay-units').ReplayMembershipEvent;
 export interface CombatReplayTick {
   readonly tick: number;
   readonly events: readonly CombatViewEvent[];
@@ -87,15 +99,16 @@ function equalViewField(a: unknown, b: unknown): boolean {
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
+  const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
-  const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);
+  const initial = freezeReplay(combatViewState(battle.initial)), terminal = freezeReplay(combatViewState(battle.terminal));
   // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
   // The initial state's ledger cursor, not the event tick, marks applied start effects.
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
-  const ticks: CombatReplayTick[] = [freezeContent({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
+  const ticks: CombatReplayTick[] = [freezeReplay({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
   let state = battle.initial, previous = initial;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
@@ -123,7 +136,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
       if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
       state = next.state;
       const ledger = toLedgerEvents(next.events);
-      const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
+      const view = freezeReplay(combatViewState(state)), events: CombatViewEvent[] = toCombatViewEvents(ledger);
       for (const event of events) {
         try {
           const expected = nextExpected();
@@ -133,15 +146,19 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
           comparisonFailed = true;
         }
       }
-      if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
+      const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
+      // Align by identity; a keyframe below carries the exact order when the membership events cannot.
+      const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
+      const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
       for (let i = 0; i < view.units.length; i++) {
-        const unit = view.units[i], before = previous.units[i];
+        const unit = view.units[i], prior = before[i];
+        if (!prior) continue;
         const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-          && !equalViewField(value, before[key as keyof CombatViewUnit])));
+          && !equalViewField(value, prior[key as keyof CombatViewUnit])));
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
-      ticks.push(freezeContent({ tick: state.tick, events,
-        ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
+      ticks.push(freezeReplay({ tick: state.tick, events,
+        ...(!ordered || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
       previous = view;
       steps++;
     }
@@ -151,7 +168,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');
     }
-    result = freezeContent({ initial, ticks, terminal });
+    result = freezeReplay({ initial, ticks, terminal });
     return result;
   } };
 }
@@ -167,6 +184,6 @@ export function applyCombatReplayTick(view: CombatViewState, frame: CombatReplay
   let units = view.units;
   for (const event of frame.events) if (event.type === 'unitUpdated') {
     units = units.map(unit => unit.id === event.unitId ? { ...unit, ...event.changes } : unit);
-  }
-  return freezeContent({ ...view, tick: frame.tick, units });
+  } else if (event.type === 'unitEntered' || event.type === 'unitLeft') units = applyReplayMembership(units, event);
+  return freezeTransientContent({ ...view, tick: frame.tick, units });
 }

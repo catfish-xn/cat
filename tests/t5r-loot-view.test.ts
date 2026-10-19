@@ -101,7 +101,7 @@ describe('SR-C7-02 revealed loot whitelist',()=>{
     const sourceRefs=new Set<object>();
     function inject(value:unknown):void {
       if(!value||typeof value!=='object'||sourceRefs.has(value))return;
-      sourceRefs.add(value);for(const child of Object.values(value))inject(child);
+      sourceRefs.add(value);for(const [key,child] of Object.entries(value))if(key!=='seat')inject(child);
       if(!Array.isArray(value)){const hidden={secret:'HIDDEN_NESTED'};sourceRefs.add(hidden);Object.assign(value,{futurePlan:hidden});}
     }
     inject(raw);const before=JSON.stringify(raw),view=toPrivateSeatView(raw);

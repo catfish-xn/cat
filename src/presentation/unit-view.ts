@@ -7,21 +7,35 @@ import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
 import type { CombatState } from '../simulation/combat-types';
 import type { DisplayUnit } from './combat-display';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
-import { championPortraitKey } from './s13-assets';
+import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-assets';
 import { statusBadges } from './combat-status';
+import { reducedMotion } from './preferences';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
 /** TFT client convention: 1★ bronze, 2★ silver, 3★ gold. */
 const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'] as const;
 export type RingState = 'normal' | 'selected' | 'target';
+/** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
+const ITEM_ICON = 16, ITEM_Y = 32;
+/** Cheap motion (presentation only): idle bob, attack lunge, hit flash/shake. */
+const BOB_PX = 1.8, BOB_PERIOD_MS = 520, LUNGE_MS = 180, HIT_MS = 200;
 export interface MeterData { value: number; maxValue: number; ratio: number; width: number }
 
 export class UnitView {
   readonly token: Phaser.GameObjects.Container;
+  /** Everything drawn; offset by the motion below so the token (input, hit tests, positions) never moves for it. */
+  private readonly body: Phaser.GameObjects.Container;
+  /** White overlay for the hit flash. */
+  private readonly flash: Phaser.GameObjects.Arc;
+  private readonly itemIcons: Phaser.GameObjects.Image[] = [];
+  private readonly bobPhase: number;
+  private lungeAt = -Infinity;
+  private lunge = { x: 0, y: 0 };
+  private hitAt = -Infinity;
   readonly disc: Phaser.GameObjects.Arc;
   readonly hp: Phaser.GameObjects.Graphics;
   readonly mana: Phaser.GameObjects.Graphics;
@@ -57,19 +71,22 @@ export class UnitView {
     this.costBadge = add.circle(-20, 18, 8, toNumber(costColor(1))).setStrokeStyle(2, 0x0b151f);
     this.costText = add.text(-20, 18, '', { fontSize: '11px', fontStyle: 'bold', color: '#0b151f', resolution: 2 }).setOrigin(0.5);
     this.items = add.graphics();
+    this.flash = add.circle(0, 0, PIECE_RADIUS, 0xffffff).setAlpha(0);
     this.pendingTag = add.text(21, -19, '', { fontSize: '10px', fontStyle: 'bold', color: '#0b151f', backgroundColor: '#68ddd0', padding: { x: 2, y: 1 }, resolution: 2 }).setOrigin(0.5).setVisible(false);
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
     this.harmfulBadges = add.text(-1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#ffb0a0', backgroundColor: '#3a1218e6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(1, 0.5).setVisible(false);
     this.beneficialBadges = add.text(1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#9ff0e4', backgroundColor: '#0f2e2ae6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(0, 0.5).setVisible(false);
-    this.shieldLabel = add.text(0, 40, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges, this.pendingTag];
+    this.shieldLabel = add.text(0, 48, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges, this.pendingTag];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
     }
-    this.token = add.container(x, y, children).setSize(58, 58).setName(`unit:${unit.id}`);
+    this.body = add.container(0, 0, children);
+    this.token = add.container(x, y, [this.body]).setSize(58, 58).setName(`unit:${unit.id}`);
+    this.bobPhase = [...unit.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 7;
     this.token.setData('unitId', unit.id);
     for (const meter of [this.hp, this.mana, this.shield]) meter.setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
     this.update(unit, []);
@@ -94,7 +111,7 @@ export class UnitView {
     // Official S13 portrait when bundled; otherwise the code-drawn emblem and short name.
     const portraitKey = championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
     if (hasPortrait) {
-      if (!this.portrait) { this.portrait = this.scene.add.image(0, 0, portraitKey); this.token.addAt(this.portrait, 1); }
+      if (!this.portrait) { this.portrait = this.scene.add.image(0, 0, portraitKey); this.body.addAt(this.portrait, 1); }
       this.portrait.setTexture(portraitKey).setDisplaySize(PIECE_RADIUS * 2 - 2, PIECE_RADIUS * 2 - 2).setVisible(true);
     } else this.portrait?.setVisible(false);
     this.label.setVisible(!hasPortrait);
@@ -105,16 +122,60 @@ export class UnitView {
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
-    this.items.clear(); this.equipped = [...equipped];
-    equipped.forEach((definitionId, index) => {
-      const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe);
-      const x = -10 + index * 10;
-      this.items.fillStyle(completed ? toNumber(C.gold) : 0x9fb4c2).lineStyle(1.5, 0x0b151f).fillRect(x - 4, 22, 8, 8).strokeRect(x - 4, 22, 8, 8);
-    });
+    this.equipped = [...equipped]; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost });
     this.applyRing(unit.team);
+  }
+
+  /** Icon row of the worn items; a framed tile stands in until (or unless) the bundled icon is loaded. */
+  private drawItems(): void {
+    this.items.clear();
+    const step = ITEM_ICON + 2, left = -((this.equipped.length - 1) * step) / 2;
+    this.equipped.forEach((definitionId, index) => {
+      const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
+      this.items.fillStyle(completed ? 0x6b5432 : 0x3a5266).lineStyle(1.5, completed ? toNumber(C.gold) : 0x9fb4c2)
+        .fillRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2).strokeRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2);
+      const key = itemTextureKey(definitionId);
+      if (!this.scene.textures.exists(key)) {
+        this.itemIcons[index]?.setVisible(false);
+        requestItemTexture(this.scene, definitionId, () => { if (this.token.active) this.drawItems(); });
+        return;
+      }
+      let icon = this.itemIcons[index];
+      if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[index] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
+      icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setVisible(true);
+    });
+    for (let index = this.equipped.length; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
+  }
+
+  /** Attack: a short lunge toward the target (board units, presentation only). */
+  attack(dx: number, dy: number, ranged: boolean): void {
+    const length = Math.hypot(dx, dy) || 1, reach = ranged ? -3 : 9;
+    this.lunge = { x: (dx / length) * reach, y: (dy / length) * reach }; this.lungeAt = performance.now();
+  }
+  /** Took damage: white flash and a small shake. */
+  hit(): void { this.hitAt = performance.now(); }
+  /** Per-frame motion; offsets the drawn body only. */
+  animate(now: number): void {
+    if (!this.token.visible) return;
+    const still = reducedMotion();
+    let x = 0, y = still ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    const lunge = now - this.lungeAt;
+    if (!still && lunge >= 0 && lunge < LUNGE_MS) { const k = Math.sin((Math.PI * lunge) / LUNGE_MS); x += this.lunge.x * k; y += this.lunge.y * k; }
+    const hit = now - this.hitAt;
+    if (hit >= 0 && hit < HIT_MS) {
+      const fade = 1 - hit / HIT_MS; this.flash.setAlpha(0.7 * fade);
+      if (!still) x += Math.sin(hit * 0.09) * 2.5 * fade;
+    } else if (this.flash.alpha !== 0) this.flash.setAlpha(0);
+    this.body.setPosition(x, y);
+  }
+  /** Death: a copy of the face that shrinks and fades where the piece fell; the caller owns its cleanup. */
+  ghost(x: number, y: number): Phaser.GameObjects.Container {
+    const add = this.scene.add, parts: Phaser.GameObjects.GameObject[] = [add.circle(0, 0, PIECE_RADIUS, this.identity.colorNumber)];
+    if (this.portrait?.visible) parts.push(add.image(0, 0, this.portrait.texture.key).setDisplaySize(PIECE_RADIUS * 2 - 2, PIECE_RADIUS * 2 - 2));
+    return add.container(x, y, parts).setDepth(19);
   }
 
   setRing(state: RingState, team: 'player' | 'enemy'): void { this.ring = state; this.applyRing(team); }
@@ -128,7 +189,7 @@ export class UnitView {
     for (const meter of [this.hp, this.mana, this.shield]) meter.clear().setVisible(false).setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
     this.shieldLabel.setVisible(false).setText('');
     this.harmfulBadges.setVisible(false).setText(''); this.beneficialBadges.setVisible(false).setText('');
-    this.disc.setAlpha(1);
+    this.disc.setAlpha(1); this.flash.setAlpha(0); this.hitAt = this.lungeAt = -Infinity;
   }
 
   /**

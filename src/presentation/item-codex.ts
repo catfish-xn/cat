@@ -6,6 +6,7 @@
  */
 import { readItemCatalog, type RuntimeItemCatalogEntry } from '../simulation/item-catalog';
 import { s13AssetUrl } from './s13-assets';
+import { itemDisplayName } from './g23-display';
 
 type Entry = RuntimeItemCatalogEntry;
 let cached: { list: readonly Entry[]; byId: ReadonlyMap<string, Entry> } | null = null;
@@ -18,7 +19,10 @@ export const catalogEntry = (id: string): Entry | undefined => catalog().byId.ge
 /** Authoritative description lines, shown verbatim. */
 export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
 
-const KIND_NAMES = { component: '组件', completed: '成装' } as const;
+/** Kind labels; a kind added by later content shows its own label here, or "其他" until one is added (never "undefined"). */
+const KIND_NAMES: Readonly<Record<string, string>> = { component: '组件', completed: '成装', radiant: '光明' };
+const KNOWN_KINDS = Object.keys(KIND_NAMES);
+export const itemKindName = (kind: string): string => (Object.hasOwn(KIND_NAMES, kind) ? KIND_NAMES[kind] : '其他');
 const EVIDENCE_NAMES: Readonly<Record<Entry['evidenceStatus'], string>> = { 'source-reviewed': '来源已核对', 'approved-provisional': '批准暂行，待历史核验' };
 const LOCALIZATION_NAMES: Readonly<Record<Entry['localizationStatus'], string>> = { 'temporary-unverified': '临时译名（待核实）', verified: '译名已核实' };
 
@@ -34,7 +38,7 @@ const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => ({ '&': '&amp
  */
 export function itemMarkHtml(id: string, size: number): string {
   const entry = catalogEntry(id), url = s13AssetUrl('item', id);
-  const kind = entry?.kind ?? 'component', glyph = escapeHtml([...(entry?.name ?? id)].slice(0, 2).join(''));
+  const kind = entry?.kind ?? 'component', glyph = escapeHtml([...(entry ? itemDisplayName(id) : id)].slice(0, 2).join(''));
   return `<span class="item-mark kind-${kind}" style="width:${size}px;height:${size}px" aria-hidden="true"><span class="item-glyph">${glyph}</span>`
     + `${url ? `<img class="item-icon" src="${url}" width="${size}" height="${size}" alt="" draggable="false" loading="lazy" decoding="async">` : ''}</span>`;
 }
@@ -48,7 +52,7 @@ export function itemTags(entry: Entry): { text: string; kind: 'unique' | 'slots'
 }
 function tagNodes(entry: Entry): HTMLElement[] { return itemTags(entry).map(tag => el('span', tag.text, `item-tag tag-${tag.kind}`)); }
 function nameNode(entry: Entry): HTMLElement {
-  const name = el('span', entry.name, 'item-name');
+  const name = el('span', itemDisplayName(entry.id), 'item-name');
   // Every current name is temporary; the marker stays until the catalogue reports "verified".
   if (entry.localizationStatus === 'temporary-unverified') name.append(el('sup', '暂译', 'item-l10n'));
   return name;
@@ -65,9 +69,9 @@ function describe(entry: Entry): HTMLElement {
   const body = el('div', '', 'item-pop-body');
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
-  title.append(el('div', `${KIND_NAMES[entry.kind]} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
-  if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id)?.name ?? id).join(' + ')}`, 'item-pop-recipe'));
-  else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => item.name).join('、')}`, 'item-pop-recipe')); }
+  title.append(el('div', `${itemKindName(entry.kind)} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
+  if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id) ? itemDisplayName(id) : id).join(' + ')}`, 'item-pop-recipe'));
+  else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => itemDisplayName(item.id)).join('、')}`, 'item-pop-recipe')); }
   const effects = el('ul', '', 'item-pop-effects');
   for (const line of entry.effectDescriptions) effects.append(el('li', line));
   if (!entry.effectDescriptions.length) effects.append(el('li', '目录未提供效果说明'));
@@ -175,10 +179,18 @@ function installGridNavigation(table: HTMLTableElement): void {
   });
 }
 
-type Filter = 'all' | 'component' | 'completed' | 'unique' | 'slots' | 'provisional';
-const FILTERS: readonly [Filter, string][] = [['all', '全部'], ['component', '组件'], ['completed', '成装'], ['unique', '唯一'], ['slots', '占多槽'], ['provisional', '暂定']];
-const matches = (entry: Entry, filter: Filter) => filter === 'all' || filter === entry.kind || filter === 'unique' && entry.unique
+/** 'kind:<kind>' filters are one per kind the catalogue holds, so new kinds get a group without code changes. */
+type Filter = 'all' | `kind:${string}` | 'unique' | 'slots' | 'provisional';
+/** Known kinds keep their order (component/completed always; others only when the catalogue holds them); unknown kinds follow in first-seen order. */
+function filters(list: readonly Entry[]): readonly [Filter, string][] {
+  const present = new Set<string>(list.map(entry => entry.kind));
+  const kinds = [...new Set<string>([...KNOWN_KINDS.filter(kind => present.has(kind) || kind === 'component' || kind === 'completed'), ...present])];
+  return [['all', '全部'], ...kinds.map(kind => [`kind:${kind}`, itemKindName(kind)] as [Filter, string]), ['unique', '唯一'], ['slots', '占多槽'], ['provisional', '暂定']];
+}
+const matches = (entry: Entry, filter: Filter) => filter === 'all' || filter === `kind:${entry.kind}` || filter === 'unique' && entry.unique
   || filter === 'slots' && entry.slotCost > 1 || filter === 'provisional' && entry.evidenceStatus === 'approved-provisional';
+/** Debug names stay `codex-filter:component` / `:completed` as before. */
+const filterDebug = (filter: Filter) => filter.startsWith('kind:') ? filter.slice(5) : filter;
 
 /**
  * Codex section (built once, reused across panel renders so filter/open state survive).
@@ -193,9 +205,9 @@ export function createItemCodex(): HTMLElement {
 
   const controls = el('div', '', 'codex-controls'); controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', '图鉴筛选');
   const buttons = new Map<Filter, HTMLButtonElement>();
-  for (const [value, label] of FILTERS) {
+  for (const [value, label] of filters(list)) {
     const count = list.filter(entry => matches(entry, value)).length;
-    const button = el('button', `${label} ${count}`, 'codex-filter'); button.type = 'button'; button.dataset.debug = `codex-filter:${value}`;
+    const button = el('button', `${label} ${count}`, 'codex-filter'); button.type = 'button'; button.dataset.debug = `codex-filter:${filterDebug(value)}`;
     button.addEventListener('click', () => { filter = value; apply(); }); buttons.set(value, button); controls.append(button);
   }
   const search = el('input', '', 'codex-search'); search.type = 'search'; search.placeholder = '搜索名称或 apiName'; search.setAttribute('aria-label', '搜索装备'); search.dataset.debug = 'codex-search';
@@ -209,8 +221,8 @@ export function createItemCodex(): HTMLElement {
     tile.dataset.itemDef = entry.id; tile.dataset.codexItem = entry.id;
     tile.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 32));
     const text = el('div', '', 'codex-tile-text'); text.append(nameNode(entry));
-    const tags = el('div', '', 'codex-tile-tags'); tags.append(el('span', KIND_NAMES[entry.kind], 'item-tag tag-kind'), ...tagNodes(entry)); text.append(tags);
-    tile.append(text); tile.setAttribute('aria-label', `${entry.name}，${KIND_NAMES[entry.kind]}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
+    const tags = el('div', '', 'codex-tile-tags'); tags.append(el('span', itemKindName(entry.kind), 'item-tag tag-kind'), ...tagNodes(entry)); text.append(tags);
+    tile.append(text); tile.setAttribute('aria-label', `${itemDisplayName(entry.id)}，${itemKindName(entry.kind)}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
     grid.append(tile); return { entry, tile };
   });
   root.append(grid);
@@ -222,15 +234,15 @@ export function createItemCodex(): HTMLElement {
   table.setAttribute('role', 'grid'); table.setAttribute('aria-label', '组件合成表');
   table.append(el('caption', '行与列为两件组件，交点为配方结果（静态配方，不代表当前可合成）'));
   const head = table.createTHead().insertRow(); head.append(el('th'));
-  for (const component of components) { const th = el('th'); th.scope = 'col'; th.dataset.itemDef = component.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(component.id, 26)); th.setAttribute('aria-label', component.name); head.append(th); }
+  for (const component of components) { const th = el('th'); th.scope = 'col'; th.dataset.itemDef = component.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(component.id, 26)); th.setAttribute('aria-label', itemDisplayName(component.id)); head.append(th); }
   const body = table.createTBody();
   for (const a of components) {
-    const row = body.insertRow(); const th = el('th'); th.scope = 'row'; th.dataset.itemDef = a.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(a.id, 26)); th.setAttribute('aria-label', a.name); row.append(th);
+    const row = body.insertRow(); const th = el('th'); th.scope = 'row'; th.dataset.itemDef = a.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(a.id, 26)); th.setAttribute('aria-label', itemDisplayName(a.id)); row.append(th);
     for (const b of components) {
       const cell = row.insertCell(), result = recipeFor(a.id, b.id);
       if (!result) { cell.textContent = '—'; continue; }
       cell.dataset.itemDef = result.id; cell.dataset.recipeCell = `${a.id}+${b.id}`;
-      cell.setAttribute('aria-label', `${a.name} + ${b.name} → ${result.name}`);
+      cell.setAttribute('aria-label', `${itemDisplayName(a.id)} + ${itemDisplayName(b.id)} → ${itemDisplayName(result.id)}`);
       cell.insertAdjacentHTML('afterbegin', itemMarkHtml(result.id, 30));
       if (result.evidenceStatus === 'approved-provisional') cell.classList.add('provisional');
       if (result.unique || result.slotCost > 1) cell.classList.add('declared');
@@ -244,7 +256,7 @@ export function createItemCodex(): HTMLElement {
   function apply(): void {
     const query = search.value.trim().toLowerCase(); let shown = 0;
     for (const { entry, tile } of tiles) {
-      const visible = matches(entry, filter) && (!query || entry.name.toLowerCase().includes(query) || entry.apiName.toLowerCase().includes(query) || entry.id.includes(query));
+      const visible = matches(entry, filter) && (!query || itemDisplayName(entry.id).toLowerCase().includes(query) || entry.apiName.toLowerCase().includes(query) || entry.id.includes(query));
       tile.hidden = !visible; if (visible) shown++;
     }
     for (const [value, button] of buttons) button.setAttribute('aria-pressed', String(value === filter));

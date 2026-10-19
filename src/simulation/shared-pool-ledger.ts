@@ -1,3 +1,4 @@
+import {findMechanicReceipt} from './seat-mechanics/state';
 import { validateCarouselMetadata } from './carousel-units';
 import { isImmutableJson } from './immutable-json';
 import { restoreOrbLayout } from './orb-layout';
@@ -9,6 +10,7 @@ import { lootReceiptId } from './loot-identity';
 import type { UnitLootPolicy } from './loot-runtime';
 import { validateSeed } from './rng';
 import { UNIT_DEFINITIONS } from './units';
+import { mechanicDropId } from './seat-mechanics/grants';
 import { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, type PoolHolding, type PoolSeat, type ShopReservation, type RewardReservation,
   type PoolRewardReceipt, type SharedPoolState, type SharedPoolFailure, type SharedPoolEvent } from './shared-pool-types';
 
@@ -124,11 +126,13 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
       && state.m8.loot.frozen.throughRoundOrdinal<=pool.orbLayout.throughRoundOrdinal,'invalid-seat-state');
     requirePool(matchesFrozenLootLedger(state.m8.loot.frozen,state.seed,state.m8.loot.frozen.throughRoundOrdinal,pool.orbLayout),'invalid-seat-state');
     const binding=state.sharedPool;requirePool(binding&&binding.poolId===pool.poolId,'invalid-seat-state');
+    const opening=state.resourceProvenance.entries[0];
+    requirePool(opening?.kind==='unit-acquired'&&opening.source.kind==='opening'&&opening.source.seed===pool.seed&&opening.source.seatId===binding.seatId,'invalid-seat-state');
     requirePool(!provided.has(binding.seatId),'invalid-seat-state');provided.add(binding.seatId);
     const seat=seats.get(binding.seatId);requirePool(seat,'invalid-seat-state');
     requirePool(binding.revision===seat.revision,'stale-seat');
     requirePool(state.multiplayer?.seatId===seat.seatId&&((state.shop===seat.shop&&isImmutableJson(state.shop))||canonicalContent(state.shop)===canonicalContent(seat.shop)),'invalid-seat-state');
-    const roster=state.preparation.units.filter(u=>u.team==='player'),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
+    const roster=state.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
     if(seat.released) {requirePool(state.multiplayer?.status==='eliminated'&&state.playerHp===0,'invalid-seat-state');continue;}
     requirePool(roster.length+(state.carousel?.pendingUnits.length??0)===held.length,'invalid-seat-state');
     for(const u of roster) requirePool(held.some(h=>h.unitId===u.id&&h.definitionId===u.definitionId&&h.sources.length===3**(u.starLevel-1)),'invalid-seat-state');
@@ -140,6 +144,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   }
 }
 
+const isSummon=(state:MatchState,unitId:string)=>!!UNIT_DEFINITIONS[state.preparation.units.find(u=>u.id===unitId)?.definitionId??'']?.summon;
 /** Fold committed acquisition/upgrade/sale facts, never infer returned copies from display counts. */
 export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchState,events:SharedPoolEvent[],preSold?:string):void {
   const seatId=before.sharedPool!.seatId;
@@ -151,6 +156,14 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const origin=fact.source,r=pool.shops.find(r=>r.seatId===seatId&&r.generation===origin.generation&&r.slot===origin.slotIndex);
         requirePool(r&&r.definitionId===origin.definitionId,'invalid-seat-state');
         definitionId=r.definitionId;source=shopSource(r);pool.shops=pool.shops.filter(s=>s!==r);
+      } else if(fact.source.kind==='mechanic') {
+        // G2-3 mechanic grant: summons never enter the pool; heroes consume the same-transaction reservation.
+        const mechanicReceipt=findMechanicReceipt(after,fact.source.receiptId);
+        if(mechanicReceipt?.kind==='unit'&&UNIT_DEFINITIONS[mechanicReceipt.definitionId]?.summon)continue;
+        const dropId=mechanicDropId(fact.source.receiptId),p=pool.pending.find(p=>p.seatId===seatId&&p.dropId===dropId);
+        requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);
+        pool.pending=pool.pending.filter(r=>r!==p);
+        const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       } else {
         requirePool(fact.source.kind==='loot','invalid-seat-state');
         const receiptId=fact.source.receiptId,p=pool.pending.find(p=>p.seatId===seatId&&p.receiptId===receiptId);
@@ -160,14 +173,14 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
       }
       pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:[source]});
     } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
-      const e=fact.event,ids=[e.survivorId,...e.consumedIds];
+      const e=fact.event;if(UNIT_DEFINITIONS[e.definitionId]?.summon)continue;const ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
       requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');
       pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));
       pool.holdings.push({seatId,unitId:e.survivorId,definitionId:e.definitionId,sources:parts.flatMap(h=>h!.sources)});
     } else if(fact.kind==='carousel-preparation-settled'||fact.kind==='carousel-unit-claimed') {
       for(const e of fact.upgrades){const ids=[e.survivorId,...e.consumedIds],parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));pool.holdings.push({seatId,unitId:e.survivorId,definitionId:e.definitionId,sources:parts.flatMap(h=>h!.sources)});}
-    } else if(fact.kind==='unit-sold' && fact.unitId!==preSold) returnHolding(pool,seatId,fact.unitId);
+    } else if(fact.kind==='unit-sold' && fact.unitId!==preSold && !isSummon(before,fact.unitId)) returnHolding(pool,seatId,fact.unitId);
   }
   for(const p of pool.pending.filter(p=>p.seatId===seatId)) {
     if(after.m8.loot.direct.find(d=>d.dropId===p.dropId)?.status!=='forfeited') continue;

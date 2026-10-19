@@ -9,6 +9,13 @@ export const PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1';
 export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 /** Server-private frozen assets. No economy, shop, random stream or resolved combat numbers. */
 export interface PlayerBattleSnapshot {
+  /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
+  readonly bankGold?:number;
+  readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
+  readonly playerHp?:number;
+  readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
+  /** Emissary history from the seat's own settled ledger (1..7); omitted when zero. */
+  readonly priorPvpWins?: number;
   readonly version: typeof PLAYER_BATTLE_SNAPSHOT_VERSION;
   readonly contentDigest: string;
   readonly seatId: string;
@@ -72,6 +79,7 @@ export interface BattleResult {
   readonly events: readonly LedgerCombatEvent[];
 }
 export interface SideProposal {
+  readonly g23Facts?:import('./g2-3-economy').G23BattleFacts;
   readonly battleId: string;
   readonly roundId: string;
   readonly seatId: string;

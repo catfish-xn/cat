@@ -4,7 +4,7 @@ import type { Unit, UnitLocation } from '../src/simulation/units';
 import { expectedCommand } from './fixtures/m5/command-oracle.g2.cjs';
 import { accepted, freeze, readyMatch } from './match-helpers';
 
-const opening = { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' }, sequence: 0, roundId: '1-2' };
+const opening = { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed: 42, seatId: 'solo' }, sequence: 0, roundId: '1-2' };
 const unit = (id: string, location: UnitLocation, starLevel: Unit['starLevel'] = 1): Unit =>
   ({ id, definitionId: 'irelia', team: 'player', starLevel, location });
 
@@ -23,7 +23,7 @@ describe('B8 independent command provenance oracle', () => {
     const before = fixture(), snapshot = structuredClone(before);
     const result = expectedCommand(freeze(before), { type: 'buy', slot: 3, generation: 7 });
     const state = accepted(result);
-    expect(state.resourceProvenance).toEqual({ version: 'm8-b8-resource-provenance-v1', entries: [opening,
+    expect(state.resourceProvenance).toEqual({ version: 'm8-b8-resource-provenance-v1', equipmentHistory: 'ordered', entries: [opening,
       { kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'shop', generation: 7, slotIndex: 3, definitionId: 'vander' }, sequence: 1, roundId: '1-2' },
     ] });
     expect(state.gold).toBe(8); expect(state.nextUnitSerial).toBe(3);

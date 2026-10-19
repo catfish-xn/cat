@@ -1,7 +1,8 @@
 import type { DamageContext, DamageOutcome, DamageRequest, ProcPermission } from './contracts';
 import { evaluateAmount, integer, modifierValues, safeNumber, type AmountSample, type BoundModifier, type StatSample } from './stats';
 
-export function permissionsFor(context: Pick<DamageContext, 'delivery' | 'damageType' | 'redirected'>): ProcPermission[] {
+export function permissionsFor(context: Pick<DamageContext, 'delivery' | 'damageType' | 'redirected' | 'deferredPayment'>): ProcPermission[] {
+  if (context.deferredPayment === true) return [];
   const permissions: ProcPermission[] = ['defender-titan', 'damage-mana'];
   const ordinary = ['basic-attack', 'ability-direct', 'ability-periodic'].includes(context.delivery);
   const vamp = ordinary || context.delivery === 'attack-extra';
@@ -40,6 +41,7 @@ export function validateDamageContext(context: DamageContext): void {
       (context.delivery === 'basic-attack' && !['basic', 'never'].includes(context.critEligibility)) ||
       (['ability-direct', 'ability-periodic'].includes(context.delivery) && context.critEligibility === 'basic')) throw new RangeError('Invalid damage eligibility');
   const expected = permissionsFor(context);
+  if (context.deferredPayment === true && (context.delivery !== 'equipment-proc' || context.damageType !== 'true' || context.critEligibility !== 'never' || context.redirected)) throw new RangeError('Invalid deferred damage context');
   if (context.permissions.length !== expected.length || new Set(context.permissions).size !== expected.length || expected.some(p => !context.permissions.includes(p))) throw new RangeError('Forged proc permissions');
 }
 /** Coefficient/critical/resistance stages precede the one allowed Loris split. */
@@ -81,17 +83,20 @@ export function prepareDamage(request: DamageRequest, sample: DamageSample): Pic
   return { raw, rawAfterCritical, prevented, mitigated: value, critical };
 }
 export function allocateDamage(context: DamageContext, prepared: Pick<DamageOutcome, 'raw' | 'prevented' | 'mitigated' | 'critical'>,
-  hp: number, layers: readonly DamageShield[]): { readonly outcome: DamageOutcome; readonly shields: readonly DamageShield[]; readonly hpAfter: number } {
+  hp: number, layers: readonly DamageShield[], deferBps = 0): { readonly outcome: DamageOutcome; readonly shields: readonly DamageShield[]; readonly hpAfter: number } {
   integer(hp); integer(prepared.mitigated);
+  integer(deferBps); if (deferBps > 10000) throw new RangeError('Invalid deferred damage fraction');
   let remaining = prepared.mitigated, absorbed = 0;
   const shields = layers.map(layer => {
     integer(layer.remaining);
     const taken = Math.min(remaining, layer.remaining); absorbed += taken; remaining -= taken;
     return { ...layer, remaining: layer.remaining - taken };
   });
+  const deferred = hp > 0 ? safeNumber(BigInt(remaining) * BigInt(deferBps) / 10000n) : 0;
+  remaining -= deferred;
   const hpDamage = Math.min(hp, remaining), overkill = remaining - hpDamage;
   return { outcome: { context, hit: true, raw: prepared.raw, prevented: prepared.prevented, mitigated: prepared.mitigated,
-    critical: prepared.critical, absorbed, hpDamage, overkill,
+    critical: prepared.critical, absorbed, hpDamage, overkill, ...(deferred ? {deferred} : {}),
     killingPacket: hp > 0 && hpDamage === hp }, shields, hpAfter: hp - hpDamage };
 }
 /** G02: one integer outcome, shields and HP copied; the tick resolver commits HP simultaneously. */

@@ -1,0 +1,26 @@
+{
+  "cannon": {
+    "commandsIdentical": true,
+    "rounds": 33,
+    "eventHashesIdentical": true,
+    "changedStateHashes": 33
+  },
+  "sniper": {
+    "commandsIdentical": true,
+    "rounds": 33,
+    "eventHashesIdentical": true,
+    "changedStateHashes": 33
+  },
+  "mage": {
+    "commandsIdentical": true,
+    "rounds": 33,
+    "eventHashesIdentical": true,
+    "changedStateHashes": 33
+  },
+  "sniper-caitlyn": {
+    "commandsIdentical": true,
+    "rounds": 33,
+    "eventHashesIdentical": true,
+    "changedStateHashes": 33
+  }
+}

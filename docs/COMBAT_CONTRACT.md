@@ -30,3 +30,65 @@ The existing `stepCombat(state) → { state, events }` interface and explicit `l
 Every cast coefficient and star rank comes from `content/g2-abilities.ts`, generated from hash-gated normalized records. Twitch draws one random target per enhanced attack and one shared crit result per piercing bolt; secondary Zeri packets follow the existing non-critical extra-attack convention. LeBlanc initial kills scale subsequent empowered attacks. Attached Malzahar infections continue after caster death and transfer from dead targets; other non-attached tasks require a living owner. Trait blast, chain share and retaliation packets resolve on the following tick to avoid recursive same-tick damage.
 
 Source/runtime tables and explicit limitations are in [G2-1 reconciliation](evidence/g2-1/RECONCILIATION.md). This is a candidate with33 heroes; Swain and source/emblem tiers not reachable from this inventory remain outside runtime. This section does not assert full14.24b equivalence.
+
+## G2-4b WIP: Death’s Defiance
+
+`allocateDamage(context, prepared, hp, shields, deferBps=0)` returns an optional
+`outcome.deferred` after shield absorption. Packet conservation includes this
+amount: mitigated = absorbed + deferred + hpDamage + overkill. Defaults preserve
+existing callers. A holder stores `deferredItemDamage` debts with original packet
+identity, start tick, total, paid and elapsed ticks. Payments occur before new
+packets at the damage barrier over80ticks and never lower HP below1; excess is
+consumed. Each positive payment emits `packetDamage` with existing equipment-proc
+delivery plus `deferredPayment:true`; proc permissions are empty. No mana, vamp,
+shield, redirect or further deferral applies. Debt is cleared on death.
+These ordering details are pending project convention G24-DEFIANCE-ORDER-01,
+not asserted as verified original script order. Restore rejects missing/foreign
+item debt, duplicate or malformed packet provenance, and inconsistent progress.
+
+### G2-4b WIP: mirror membership
+
+`appendMirrorSummons(preparation,strategy)` appends canonical strategy units with
+`itemSummon` origin derived from an actual on-board Mirror source.
+`projectItemSummons(preparation,strategy)` projects these into combat only.
+Restore independently recompiles the strategy and compares origin, identity,
+starting cell, frozen form, sources and complete roster. Item summons never enter
+permanent inventory/growth or survivor player damage. Trait counts are frozen
+before copies; active trait targets extend to copies. `scaleItemSummonHp` applies
+the clone multiplier to initial and dynamic health. Inheritance/placement are
+pending conventions and this WIP does not claim complete native summon behavior.
+
+### G2-4b WIP: Collector and gold authority
+
+`CombatState.itemGoldReceipts` retains failed and successful rolls. Collector
+uses an independent explicit stream and only produces a gold opportunity after
+its own execution. The post-packet strict12% check, bypass of shields/Defiance
+and exclusion of natural lethal hits are pending convention G24-COLLECTOR-EXECUTE-01.
+Gold-item save verification has one explicit exception to structural-only combat
+restore: it independently simulates the bounded combat from validated input and
+compares receipts/RNG. This is read-only verification; it grants no resources and
+does not advance candidate state. No-gold saves incur no combat replay.
+
+### G2-4b WIP: Mogul stacking
+
+`CombatUnit.itemMogulHits` retains at most35 packet/tick identities. Positive
+shield-or-HP packets add one stack; deferred repayments do not. Resists affect
+later packets. Max HP grows after the fixed-max survival sampling barrier,
+preserves missing HP and cannot revive a lethal hit. Gold is1at full, then1
+every160ticks while alive. These ordering details are convention
+G24-MOGUL-STACK-01. Gold replay independently validates the hit ledger; max-HP
+restore accounts for its historical stack count when checking shield samples.
+
+### G2-4b WIP Zephyr absence
+
+`CombatUnit.itemBanish?: {ownerId:string;itemInstanceId:string;untilTick:number}`
+is frozen from original starting cells. For tick<untilTick the unit is absent
+from active action, target and passive processing; it remains alive in roster
+and prevents elimination. At tick100 it returns, relocating to the nearest free
+cell if occupied. This is not a stun and ignores CC immunity. Combat start
+programs precede suspension; missed periodic opportunities and opening jumps
+are not replayed. Those ordering/collision details are pending convention
+G24-ZEPHYR-ABSENCE-01, not verified original script semantics.
+`CombatViewUnit.banished?:boolean` exposes presence without changing UI code.
+Zephyr save authority is exact independent combat reconstruction from validated
+frozen inputs; it does not accept candidate-supplied clocks as authority.

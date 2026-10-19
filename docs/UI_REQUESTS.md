@@ -2,6 +2,13 @@
 
 按 AGENTS 约定记录界面缺少的数据、命令或接线。每条写明关联任务、优先级、交付阶段、缺少的字段与含义、界面当前替代路径、交付后需要复核的内容和验收条件。界面不自行计算规则；后端交付前，界面只读已有权威字段，并在无法确定含义时使用中性文案。
 
+## G23-SERVER-FACTS（Codex → Claude，G2-3配套P1）
+
+- 领域PR基于multiplayer #134 /19aa9f1；不修改src/server/、src/rendering/、src/server-entry/。
+- 缺少字段：src/server/room/room.ts约1052行的收据构造把SideProposal转成RoundSettlementReceipt时，需原样转发可选g23Facts。类型和规则均由simulation导出；服务器不计算征服击杀、金币、微光或军械库场次。
+- 状态：已由#140接通。`buildReceipt`原样转发可选g23Facts，联机PvP的征服者、化学男爵、军械库与High Roller进度随结算推进；`tests/server/g23-server-facts.test.ts`覆盖原样转发、重复提交只结算一次、镜像不发奖。
+- 验收：真实PvP的两席进度/机制奖励各提交一次，重试和镜像不发奖；服务器从proposal原样传facts，八席仍经runSharedMatchCommand事务；复用#134私有视图和选择超时。无需新增服务器调用签名。确认回放支持unitSpawned、bindingChanged、castOutcome及已有unitRevived。
+
 ## U6 已揭示掉落、领取与结算（静态阶段盘点）
 
 基线：`feat/m8-b0-baseline` 的 `f18985131c08c729f5bcf8cc8de8bbd3eec59a3d`；分支 `feat/m8-u6-static`。B8（PR #28）尚未签收，`readLootView` 接线排在 B8③。本阶段只做静态界面：渲染函数直接以冻结的 `LootView`／`RevealedDropView`（M8_UI_CONTRACT §5）和 `PendingChoice`（M8B_CONTRACT_ADDENDUM §3.3）为输入类型，样例只在开发服务器的 `/u6-preview.html` 上展示，不进入游戏入口和生产构建。
@@ -914,6 +921,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 ### 说明（无需动作）
 
 - `releaseCarouselParticipant` 已绑定但房间当前没有调用点：淘汰只在战斗结算提交时发生，而选秀阶段只在回合进入时开、截止+2 秒后关，二者不重叠；盘关闭后的淘汰沿用 `releaseSeatOnElimination`（八席整局单测与 e2e 跑到终局无守恒错误）。若规则侧认为关闭后的盘仍需经它释放，请在合同写明。
+- **回应（2026-10-16，规则侧结论：无需调用）**：盘关闭后的淘汰只走 `releaseSeatOnElimination` 即保持卡池守恒，房间现有做法正确，无需改动。选秀单位在发放时已登记为普通 holdings，淘汰释放会连同其他棋子一并归还；该席池收据保持 `granted` 是历史出生记录，不是遗漏，不必改成 released。关闭后的旧 CarouselState 已与当前池脱节，再用它调 `releaseCarouselParticipant` 会以 `invalid-match` 拒绝。`releaseCarouselParticipant` 仅用于盘开着时淘汰参与席（房间当前不会发生）。合同见 MULTIPLAYER_CONTRACT §21.5 `releaseCarouselSeat` 条目下「盘关闭后的淘汰」与 MATCH_CONTRACT P7「适用窗口」；回归用例见 `tests/p7-1-carousel-rules.test.ts`。
 
 ### SR-G2-01 G2-2 完整回应
 
@@ -922,6 +930,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 ### G2-2 联机外交官胜场历史缺口（有限实现清单）
 
 规则编译器可读 `CombatStrategyInputs.roundResults` 中此前 PvP 胜场，用于 Ambessa 外交官双抗；当前联机冻结输入没有这段历史，因此该项按 0 处理。后续服务器应在冻结战斗输入时提供经过权威账本验证的胜场历史（双方分别绑定），不能由客户端推算。当前有限版本不阻塞；更改须补联机数值与冻结/恢复测试。完整近似清单见 `evidence/g2-2/RECONCILIATION.md`。
+- **回应（2026-10-17，已实现）**：`snapshotForBattle` 用纯函数 `priorPvpWins()` 从本席权威 roundResults 推出此前 PvP 胜场（上限 7），写入 `PlayerBattleSnapshot.priorPvpWins`（0 时省略），双方各自绑定，恢复时重编译比对；服务器沿用现有冻结调用，无需另传。合同见 MULTIPLAYER_CONTRACT §10.11，测试 `tests/g2-2-online-emissary.test.ts`、`tests/server/g2-2-emissary-wins.test.ts`。
 # P7-1 给 Opus 的接线交接（规则 PR，2026-10-15）
 
 请从本规则分支 head 叠加服务器 PR；按用户确认，两份一起验、按顺序合，规则不单独发布。规范见 MULTIPLAYER_CONTRACT §21.6 与 MATCH_CONTRACT「P7-1 正式修订」。
@@ -930,3 +939,41 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 私有投影 pendingCarouselUnits 删除、改为 heldCarouselUnits。新 Match 字段 carousel.heldCarouselUnits；旧 pendingUnits 暂为严格镜像的废弃别名，供当前出售/resolve 入口过渡。界面 readHeldCarouselUnits 改读新投影。两处满才保管，场上未满时卡已直接放进 preparation 的合法格，照常参战。
 - nextSharedRound 已自动在下一准备期（choice 之前）迁入并合星、同步 holdings；不要服务器另算。之后准备期卖出/部署腾空、buyXp 升级后调用保留名 resolvePendingCarouselUnits，原子发布 pool/state/events；临时位出售仍用保留名 sellPendingCarouselUnit。事件新增 carouselPreparationSettled，旧 carouselPendingClaimed 名字保留。
 - tests/server/carousel-room.test.ts 的 1-1 开局、放行、断线、计时追赶、全选等待、拒绝开盘故障断言会失效；2-4 全局用例也依赖先完成 1-1，需移除旧前奏驱动。e2e/p7-carousel.mjs 的 1-1 段（包括切棋盘/空格/断线恢复）应迁到 2-4，并改查新开局与临时位三路落点。规则 PR 不修改这些文件。
+# 黑市次级微光复制器显示交接（2026-10-17，Codex → Claude）
+
+用户15:20批准：黑市100微光LootA/LootA4与200微光LootB1发“次级微光复制器”，只复制≤3费炼金男爵。领域继续自动领取/无目标托管，不新增可拖放工具或弹窗；征服者仍发“次级英雄复制器”。
+
+- `G23RewardAtom.duplicatorDefinitionId?`及`readG23MechanismState(state).rewards[*].duplicatorDefinitionId`保留源身份：黑市为`TFT13_Crime_Consumable_LesserShimmerDuplicator`，征服者为`TFT_Consumable_ChampionDuplicator_III`。名称分别在`G23_POLICY.duplicators`中；这是领域元数据，不要求界面自行重算资格或候选。
+- 已有正确名称：`src/presentation/s13-g23-manifest.ts:167`；已有图标：`src/presentation/s13-g23-asset-checks.ts:113`及`public/assets/s13/g23/loot/tft13_crime_consumable_lessershimmerduplicator.png`。不应改成通用小复制器或大微光的名称/图标。
+- 若展示托管奖励，请按上述身份区分名称/图标，并使用服务端返回的候选；现有`src/rendering/online/loot-fields.ts:31`、`src/rendering/strategy-panel.ts:593`、`src/presentation/orb-loot.ts:125`处理的是库存工具，不应为此凭空创建`consumableId`或拖放入口。Codex本次未修改界面目录。
+- 验收：黑市显示“次级微光复制器（≤3费炼金男爵）”，征服者显示“次级英雄复制器（≤3费）”；无合格目标仍保留托管，界面不自行授予英雄。
+
+## G24-FORGE / 神器锻造器交接（Codex → Claude，2026-10-17）
+
+领域分支codex/g2-4b-artifact-forge基于#147 d3112d6。第10/14档自动产生通用forge窗口，4个offers是神器definitionId，source为conqueror，超时项为offers[0]，选择/收据/私有投影沿用既有接口。按物品注册表和神器ID集合区分神器标题，不依赖kind=completed或字符串前后缀猜类别。展示需求仅为四件物品和说明、当前候选与超时项；布局沿用现有通用弹窗。
+
+辅助锻造器和第11/13档尚未开放，等待#149与后续领域批。源归档确有TFT_ArmoryKeySupport及“辅助装锻造器”文本，请后续修正choice-fallback中“14.24 has no support anvil”的断言；继续采用用户指定名称。领域合同见MATCH_CONTRACT的G2-4B段，不在服务器/客户端重算奖励或候选池。本批未做联机UI验收。
+
+
+### G2-4b WIP — Zephyr combat presence (Codex data contract)
+
+`toCombatViewState` / compact replay units expose optional `banished:boolean`.
+Absent means ordinary presence. `true` means the unit is alive but temporarily
+outside combat; `false` marks its return. Combat frames already carry this
+field as ordinary unitUpdated changes. Claude's display adapter should consume
+it without changing HP, death, targeting, or economy. Acceptance: tick0–99
+shows the temporary absence; tick100 returns at the authoritative cell; no death
+or new inventory unit is inferred. Codex has not changed UI/server files.
+
+### G2-4b WIP — movable preparation Voidspawn (domain API ready)
+
+`simulation/match` exports `readItemSummons(state)` and
+`moveItemSummon(state,itemInstanceId,cell)`. Read returns derived origin records
+with the owning item/unit and projected Unit location. Use this for preparation
+summon presence; it is not an inventory unit and takes no population. Movement
+returns the standard MatchCommandResult and is locked with the combat roster.
+The same item retains its chosen cell across rounds/save; stage changes update
+combat stats. Claude needs to wire presentation and server-entry/command dispatch
+without computing stage values, creating assets or changing economy. Acceptance:
+move during preparation, freeze for battle, restore the position, mirror seat B
+once, reject movement while roster locked. Codex changed no UI/server files.

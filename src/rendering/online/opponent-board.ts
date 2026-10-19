@@ -6,7 +6,6 @@
  */
 import type { Board } from '../../simulation/board';
 import type { GameState } from '../../simulation/game';
-import { ITEM_DEFINITIONS } from '../../simulation/content/items';
 import { deriveTraits } from '../../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../../presentation/hero-identity';
@@ -17,6 +16,7 @@ import { traitHoverCard } from '../../presentation/hover-card';
 import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
+import { itemDisplayName } from '../../presentation/g23-display';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -24,7 +24,7 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 
 /** The public board as a preparation state for the rules' trait selector (definition ids and board cells only). */
 function publicPreparation(board: PublicBoard, layout: Board): GameState {
-  return { board: layout, benchSize: 0, units: board.units.map((unit, index) => ({
+  return { board: layout, benchSize: 0, units: board.units.filter(unit => !unit.summon).map((unit, index) => ({
     id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
   })) };
 }
@@ -43,6 +43,7 @@ export function publicTraits(board: PublicBoard, layout: Board): { traitId: stri
 export function avatarUnit(board: PublicBoard | undefined): PublicBoardUnit | null {
   let best: PublicBoardUnit | null = null;
   for (const unit of board?.units ?? []) {
+    if (unit.summon) continue;
     const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0, bestCost = best ? UNIT_DEFINITIONS[best.definitionId]?.cost ?? 0 : -1;
     if (cost > bestCost || (cost === bestCost && unit.starLevel > best!.starLevel)) best = unit;
   }
@@ -110,7 +111,7 @@ export class OpponentBoardPanel {
     }
     // G2: the opponent's trait column, same rows, breakpoints and hover as mine.
     this.rows = publicTraitRows(board, layout);
-    const traits = renderTraitRows(this.rows, 'online:opponent-traits', board.units.length ? '无羁绊' : '场上暂无单位');
+    const traits = renderTraitRows(this.rows, 'online:opponent-traits', board.units.some(unit => !unit.summon) ? '无羁绊' : '场上暂无单位');
     traits.classList.add('opponent-traits');
     for (const row of Array.from(traits.children)) row.classList.add('opponent-trait');
     traits.title = '只读 · 仅显示场上单位与装备（不含备战席、商店、金币）';
@@ -121,8 +122,10 @@ export class OpponentBoardPanel {
     const chip = element('div', '', `opponent-unit cost-${UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0}`);
     chip.dataset.debug = `online:opponent-unit:${unit.cell.col},${unit.cell.row}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(unit.starLevel);
-    chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel);
-    chip.title = `${identity.name} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => ITEM_DEFINITIONS[id]?.name ?? id).join('、')}` : ''}`;
+    // G2-4b: a summon's card would show champion base stats, not its stage values; its title names it instead.
+    if (unit.summon) chip.dataset.summon = 'true';
+    else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel); }
+    chip.title = `${identity.name}${unit.summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
     if (unit.items.length) {

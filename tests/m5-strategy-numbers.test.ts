@@ -132,7 +132,7 @@ describe('M5 five professions at every reachable tier', () => {
   });
   it('Sniper two gives only members seven percent per hex', () => {
     const state = fixture(['maddie', 'kogmaw', 'lux']);
-    for (const id of ['maddie', 'kogmaw']) expect(mechanisms(state, id)).toEqual([{ mechanic: 'sniper', values: { damageBpsPerHex: 700 } }]);
+    for (const id of ['maddie', 'kogmaw']) expect(mechanisms(state, id).filter(m=>m.mechanic==='sniper')).toEqual([{ mechanic: 'sniper', values: { damageBpsPerHex: 700 } }]);
     expect(mechanisms(state)).toEqual([]);
   });
   it.each([

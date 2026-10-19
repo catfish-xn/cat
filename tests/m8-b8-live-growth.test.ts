@@ -68,7 +68,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
  it('keeps the consumed reward birth, original stars and frozen combat basis',()=>{
   const receipt=live.ended.m8.loot.receipts.find(r=>r.grantedUnitIds.includes(REWARD))!;
   expect(receipt.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
-  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[DONOR,REWARD],fromStar:1,toStar:2})]);
+  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[DONOR,REWARD].sort(),fromStar:1,toStar:2})]);
   const birth=live.ended.resourceProvenance.entries.find(e=>e.kind==='unit-acquired'&&e.unitId===REWARD)!;
   expect(birth).toMatchObject({roundId:'3-7',source:{kind:'loot',receiptId:receipt.receiptId}});
   expect(currentCommit(live.ended).sequence).toBeGreaterThan(birth.sequence);
@@ -86,7 +86,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
   for(const s of [prepared,live.started,live.revealed,live.beforeFinal,live.ended])roundTrip(s);
   const reveal=live.revealPrefix.find(e=>e.type==='lootRevealed')!;
   expect(reveal.type).toBe('lootRevealed');
-  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
+  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>d.eventSeq===reveal.death.eventSeq&&live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
   expect(live.revealed.combat!.tick).toBe(death.tick);
   expect(live.revealed.phase).toBe('combat');
   expect(live.ended.phase).toBe('settlement');expect(live.ended.pendingChoice).toBeNull();

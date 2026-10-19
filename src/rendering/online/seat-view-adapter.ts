@@ -16,13 +16,15 @@ import { createMatch } from '../../simulation/match';
 import type { MatchState, RoundResult } from '../../simulation/match-types';
 import type { RevealedLootSummary } from '../../presentation/loot-view';
 import type { PrivateSeatView } from '../../server-entry';
-import type { RoundEconomyPreview, SeatStateView } from '../../server/protocol';
+import type { ItemSummonView, RoundEconomyPreview, SeatStateView } from '../../server/protocol';
 
 /**
  * Display MatchState of a seat view plus the server's revealed-loot summary of my current PvE round (SR-C7-02) and its
  * round economy preview (SR-G5-02).
  */
-export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null };
+export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null;
+  /** G2-4b (§26): my movable preparation summons as the server placed them; RemoteSession.itemSummons reads them. */
+  readonly itemSummons?: readonly ItemSummonView[] };
 
 /**
  * The rules' economy preview of my current round as the server sent it (SR-G5-02, contract §14.4); null outside
@@ -60,8 +62,9 @@ function placeholderShell(): MatchState {
 
 /**
  * MatchState-shaped display copy of my seat view. Fields of the view win; anything else is a placeholder.
- * Round records miss the server-only bookkeeping (settlementId, roundKind, streaks, XP requested); they stay
- * absent and the panels print only what is there. `interestBasis` is whitelisted (PR #50) and shown as is.
+ * Round records miss the server-only bookkeeping (settlementId, streaks, XP requested); they stay
+ * absent and the panels print only what is there. `interestBasis` (PR #50) and `roundKind` (PR #146, for the
+ * Emissary's prior PvP wins) are whitelisted and shown as is.
  */
 export function toDisplayMatch(view: PrivateSeatView | SeatStateView): DisplayMatch {
   const base = placeholderShell();

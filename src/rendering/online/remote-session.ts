@@ -16,7 +16,9 @@ import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
-import type { ConsumableTarget, GameClient, ReplayUnitId, WireCommand } from './protocol';
+import type { ConsumableTarget, GameClient, ItemSummonView, ReplayUnitId, WireCommand } from './protocol';
+import type { HexCell } from '../../simulation/board';
+import type { DisplayMatch } from './seat-view-adapter';
 
 /** Why the last intent did not change the local state although it was not refused by the rules. */
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
@@ -76,6 +78,10 @@ export class RemoteSession extends MatchSession {
   get lastBattle(): FinishedBattle | null { return this.finished.at(-1) ?? null; }
   /** G5: every battle of this match a replay was received for, one per round, oldest first. */
   get battleHistory(): readonly FinishedBattle[] { return this.finished; }
+  /** The battle on the board while it plays back: its replay, how many tick records are shown and the view on screen. */
+  get liveBattle(): { readonly replay: CombatReplay; readonly played: number; readonly view: CombatViewState } | null {
+    return this.replay && this.view && this.playingBack ? { replay: this.replay, played: this.nextTick, view: this.view } : null;
+  }
   /** Forgets the match's battles (back to the lobby). */
   forgetBattles(): void { this.finished = []; }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
@@ -183,6 +189,12 @@ export class RemoteSession extends MatchSession {
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
+  /** G2-4b (§26): the room hands it to the rules' moveItemSummon; refused outside preparation like any board move. */
+  override moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.intent({ type: 'moveItemSummon', itemInstanceId, cell: { col: cell.col, row: cell.row } }); }
+  /** G2-4b: the summons of my last state push as the server placed them; never derived from items or rounds here. */
+  override get itemSummons(): readonly ItemSummonView[] {
+    return this.matchState.phase === 'preparation' && !this.inBattle ? (this.matchState as DisplayMatch).itemSummons ?? [] : [];
+  }
   /** G1-P7: a carousel pick; the room and the rules' carousel decide whether and what this seat takes. */
   carouselPick(carouselId: string, revision: number, slot: number) { return this.intent({ type: 'carousel-pick', carouselId, revision, slot }); }
   override newMatch(): void { /* the server owns match lifecycle */ }

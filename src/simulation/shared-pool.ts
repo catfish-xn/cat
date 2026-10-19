@@ -1,8 +1,9 @@
+import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
 import { FINAL_ROUND } from './round-schedule';
 import { prepareMatchLoot } from './loot-runtime';
-import { createMatch, createCarouselMatch, useConsumable } from './match';
+import { createMatch, createCarouselMatch, useConsumable,claimG23Reward } from './match';
 import { canOperateMatch } from './operation-policy';
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
@@ -75,7 +76,7 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
     const carouselOpening=!!state.carousel;
     requirePool(canonicalContent(state)===canonicalContent(carouselOpening?createCarouselMatch(state.seed):createMatch(state.seed,{mode:'shared-deferred'})),'invalid-seat-state');
     const enabled=enableMultiplayerSettlement(state,seatId);if(!enabled.ok)return failure(pool,state,enabled.reason);
-    const draft=draftPool(pool),hero=roster[0];
+    const draft=draftPool(pool),hero={...roster[0],definitionId:selectOpeningUnit(pool.seed,seatId)};
     const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,1);
     if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
     const boundLoot=prepareMatchLoot(state.seed,1,{...state.m8.loot,layoutBinding:{mode:'shared',poolId:pool.poolId,
@@ -85,7 +86,7 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
       draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});
     }
     // createMatch's private infinite shop was never published. Its draws are discarded too.
-    const next:MatchState={...enabled.state,m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
+    const next:MatchState={...enabled.state,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
       sharedPool:{poolId:pool.poolId,seatId,revision:0}};
     draft.seats.push({seatId,seatIndex,revision:0,released:false,shop:next.shop});draft.revision++;
     assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:[],poolEvents:[]};
@@ -151,7 +152,8 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
     const unit=state.preparation.units.find(u=>u.id===unitId);
     requirePool(unit,'unknown-unit');requirePool(unit.team==='player','enemy-unit');
     // Returning the sold copies precedes automatic pending claims in the same private transaction.
-    returnHolding(draft,state.sharedPool!.seatId,unitId);
+    // G2-3 summons never hold a pool copy.
+    if(!UNIT_DEFINITIONS[unit.definitionId]?.summon) returnHolding(draft,state.sharedPool!.seatId,unitId);
     return sellUnit(state,unitId,policy);
   },unitId);
 }
@@ -161,7 +163,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
       case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
-      case 'settleRound': return applyRoundSettlement(state,command.receipt);
+      case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);
@@ -247,4 +249,9 @@ export function refreshSharedShops(pool:SharedPoolState,states:readonly MatchSta
 /** Atomic catalog/overtime advance + free refresh; neither an infinite shop nor its RNG is published. */
 export function nextSharedRound(pool:SharedPoolState,states:readonly MatchState[],expectedRound:number):SharedPoolBatchResult {
   return refreshBatch(pool,states,expectedRound,true);
+}
+
+/** G23 gifts consume real pool copies; an empty pool resolves the gift to cost gold. */
+export function sharedClaimG23Reward(pool:SharedPoolState,state:MatchState,atomId:string,definitionId:string):SharedPoolResult{
+ return transact(pool,state,(_draft,policy)=>claimG23Reward(state,atomId,definitionId,policy));
 }

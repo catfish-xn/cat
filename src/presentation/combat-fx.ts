@@ -18,7 +18,7 @@ export { planFx, type FxSpec } from './fx-plan';
 type Point = { x: number; y: number };
 const C = THEME.color;
 
-type Fadeable = Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc;
+type Fadeable = Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container;
 export interface CombatFxHost {
   readonly scene: Phaser.Scene;
   center(cell: HexCell): Point;
@@ -52,12 +52,14 @@ export class CombatFx {
     for (const spec of planFx(events, combat, reducedMotion())) {
       if (spec.kind === 'slash') {
         const to = at(spec.at), from = at(spec.from), angle = Math.atan2(to.y - from.y, to.x - from.x);
+        this.host.view(spec.sourceId)?.attack(to.x - from.x, to.y - from.y, false);
         const slash = add.graphics().setDepth(20).lineStyle(4, 0xffffff, 0.9);
         slash.beginPath(); slash.arc(to.x, to.y, 20, angle - 0.9, angle + 0.9); slash.strokePath();
         slash.lineStyle(2, spec.color, 1).beginPath(); slash.arc(to.x, to.y, 24, angle - 0.7, angle + 0.7); slash.strokePath();
         this.host.fade(slash, spec.duration);
       } else if (spec.kind === 'bolt') {
         const from = at(spec.from), to = at(spec.to);
+        this.host.view(spec.sourceId)?.attack(to.x - from.x, to.y - from.y, true);
         if (spec.travel) {
           const bolt = add.circle(from.x, from.y, 5, spec.color).setStrokeStyle(2, 0xffffff).setDepth(20);
           scene.tweens.add({ targets: bolt, x: to.x, y: to.y, duration: 140 });
@@ -75,17 +77,19 @@ export class CombatFx {
         const p = at(spec.at);
         this.host.fade(add.graphics().setDepth(20).lineStyle(4, spec.color, 0.95).strokeCircle(p.x, p.y, spec.radius), spec.duration);
       } else if (spec.kind === 'death') {
-        const p = at(spec.at);
-        this.host.fade(add.graphics().setDepth(20).lineStyle(3, toNumber(C.danger), 0.9).strokeCircle(p.x, p.y, 26), spec.duration - 100);
-        this.host.fade(add.text(p.x, p.y, '×', { fontSize: '40px', color: C.danger, fontStyle: 'bold', resolution: 2 }).setOrigin(0.5).setDepth(21), spec.duration);
+        // The piece shrinks and fades where it fell (the token itself hides with the end-of-tick alive flag).
+        const p = at(spec.at), ghost = this.host.view(spec.unitId)?.ghost(p.x, p.y);
+        if (ghost) {
+          if (!reducedMotion()) scene.tweens.add({ targets: ghost, scale: 0.4, y: p.y + 8, duration: spec.duration - 150, ease: 'Quad.easeIn' });
+          this.host.fade(ghost, spec.duration - 150);
+        } else this.host.fade(add.graphics().setDepth(20).lineStyle(3, toNumber(C.danger), 0.9).strokeCircle(p.x, p.y, 26), spec.duration - 100);
       } else if (spec.kind === 'label') {
         const p = at(spec.at);
         this.place(add.text(p.x, p.y, spec.text, { fontSize: '12px', color: spec.color, backgroundColor: spec.background, resolution: 2 }).setOrigin(0.5).setDepth(21), p, spec.dy, spec.duration);
       } else if (spec.kind === 'target') {
         this.host.view(spec.unitId)?.setRing('target', spec.team);
       } else if (spec.kind === 'flash') {
-        const disc = this.host.view(spec.unitId)?.disc;
-        if (disc) { scene.tweens.killTweensOf(disc); disc.setAlpha(1); scene.tweens.add({ targets: disc, alpha: 0.35, duration: 80, yoyo: true }); }
+        this.host.view(spec.unitId)?.hit();
       }
     }
   }

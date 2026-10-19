@@ -1,6 +1,7 @@
-import currentFingerprints from './fixtures/g2-augments-b8-fingerprints.json';
+import currentFingerprints from './fixtures/g2-3-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
+import { expectWallClockBelow } from './fixtures/wallclock';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
@@ -167,7 +168,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
         const startupMs = median(samples.map(sample => sample.startupMs));
         const longestMs = median(samples.map(sample => sample.longestMs));
         console.info(JSON.stringify({ name, warmups: 1, samples, startupMs, longestMs }));
-        expect(startupMs).toBeLessThan(50); expect(longestMs).toBeLessThan(50);
+        expectWallClockBelow(`b8 ${name} median startup`, startupMs, 50); expectWallClockBelow(`b8 ${name} median longest advance`, longestMs, 50);
       });
     });
   }

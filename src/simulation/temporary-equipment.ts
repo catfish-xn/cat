@@ -1,4 +1,5 @@
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
 import { freezeContent } from './content/freeze';
 import type { MatchState } from './match-types';
 import type { TemporaryEquipment } from './m8/contracts';
@@ -12,7 +13,7 @@ import type { ItemDefinition, StrategyEvent } from './strategy-types';
 export const grantsTemporaryEquipment = (definition: ItemDefinition): boolean =>
   definition.combatProgram?.effects?.some(effect => effect.kind === 'temporary-equipment') ?? false;
 
-export const TEMPORARY_EQUIPMENT_POOL = freezeContent(createEquipmentPool(Object.values(ITEM_DEFINITIONS).map(item => ({
+export const TEMPORARY_EQUIPMENT_POOL = freezeContent(createEquipmentPool(Object.values(ORDINARY_ITEMS).map(item => ({
   apiName: item.apiName!, definitionId: item.id, kind: item.kind, effects: item.combatProgram?.effects ?? [],
 }))));
 

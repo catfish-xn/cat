@@ -21,6 +21,7 @@ export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> 
   'unique-conflict': '该单位已有同名的唯一装备，同一单位只能装备一件',
   'exclusive-slots': '独占全部装备槽的装备不能与其他装备同时穿戴',
   'temporary-item': '临时装备由本轮自动生成，不能合成、穿戴或单独移动',
+  'item-restricted': '这件装备只有特定羁绊的单位可以穿戴',
 };
 /**
  * Codes whose command-failure text comes from this table. 'wrong-phase', 'unknown-unit'
@@ -28,7 +29,7 @@ export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> 
  * the status line keeps its own phase-aware wording for those.
  */
 export const EQUIPMENT_COMMAND_FAILURES = ['unknown-item', 'item-not-inventory', 'invalid-recipe', 'item-slot-occupied',
-  'same-item', 'unique-conflict', 'exclusive-slots', 'temporary-item'] as const satisfies readonly EquipmentFailure[];
+  'same-item', 'unique-conflict', 'exclusive-slots', 'temporary-item', 'item-restricted'] as const satisfies readonly EquipmentFailure[];
 /** Generic wording for a code this table does not name yet (a newer rules build may add codes). */
 export const EQUIPMENT_FAILURE_FALLBACK = '当前无法执行该装备操作';
 export const equipmentFailureText = (reason: string): string =>
