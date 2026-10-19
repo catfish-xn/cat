@@ -97,6 +97,8 @@ interface PanelActions {
   readonly highlight: (unitIds: readonly string[]) => void;
 }
 
+/** Fired on the panel root (bubbling) for every explicit status message. */
+export const PANEL_STATUS_EVENT = 'hex-panel-status';
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
   for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
@@ -306,7 +308,11 @@ export class StrategyPanel {
   }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
-  status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
+  status(message: string): void {
+    if (this.statusText) this.statusText.textContent = message;
+    // The online left-column fold can hide this line; it shows the same message as a toast over the board.
+    this.root.dispatchEvent(new CustomEvent<string>(PANEL_STATUS_EVENT, { detail: message, bubbles: true }));
+  }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');

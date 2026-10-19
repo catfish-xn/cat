@@ -176,7 +176,11 @@ export class OnlineApplication implements SceneApplication {
     else if (after.xp > before.xp && after.gold < before.gold) cue = 'xp';
     else if (after.shop.generation !== before.shop.generation && after.gold < before.gold) cue = 'reroll';
     else if (after.gold < before.gold) cue = 'buy';
-    else if (after.gold > before.gold) cue = 'sell';
+    // Only a real sale: gold up and one of my units gone (a loot orb's gold keeps every unit).
+    else if (after.gold > before.gold) {
+      const kept = new Set(after.preparation.units.map(unit => unit.id));
+      if (before.preparation.units.some(unit => unit.team === 'player' && !kept.has(unit.id))) cue = 'sell';
+    }
     if (upgraded) cue = 'starUp';
     if (cue) this.sound.play(cue);
   }
