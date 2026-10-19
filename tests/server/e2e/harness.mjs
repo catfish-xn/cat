@@ -9,6 +9,7 @@
  * Env: CHROMIUM overrides the browser path; VERBOSE=1 echoes the child processes' output.
  */
 import { spawn } from 'node:child_process';
+import { watchServerReplayErrors } from '../../../scripts/replay-error-guard.cjs';
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 
@@ -32,6 +33,7 @@ export function start(command, args, env, ready, timeout = 30_000) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(child);
+    watchServerReplayErrors(child, stopAll);
     let output = '';
     const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), timeout);
     const onData = data => {

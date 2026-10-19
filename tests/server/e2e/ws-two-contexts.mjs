@@ -14,6 +14,7 @@
  * once both pages have reached round N together the run passes without waiting for the ranking.
  */
 import { spawn } from 'node:child_process';
+import { watchServerReplayErrors } from '../../../scripts/replay-error-guard.cjs';
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 
@@ -39,6 +40,7 @@ function start(command, args, env, ready) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(child);
+    watchServerReplayErrors(child, stopAll);
     const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
     const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
     child.stdout.on('data', onData); child.stderr.on('data', onData);
