@@ -5,11 +5,11 @@ import { selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { accepted,reachRound,resolveM5Choices } from './match-helpers';
 
-describe('W4 plus P1 augment public choice and acquisition receipt',()=>{
+describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
  it.each([0,1,42,123456789,4294967295])('seed %i consumes exactly three independently calculated LCG words',seed=>{
   const ids=Object.keys(AUGMENT_DEFINITIONS).sort(),pool=[...ids];let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(36);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
+  expect(ids).toHaveLength(57);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  it.each(Object.keys(AUGMENT_DEFINITIONS))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Deterministic seed search concerns only genuine publicly generated offers, never state mutation.

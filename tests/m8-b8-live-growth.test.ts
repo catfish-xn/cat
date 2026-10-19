@@ -41,7 +41,7 @@ const priorBySource=originals.map(unitId=>({unitId,attackDamageBps:priorFacts.fi
 const STOCK=priorBySource.reduce((n,g)=>n+g.attackDamageBps,0);
 
 // Public deployment isolates both original growth sources and earns a real current-battle delta.
-const prepared = accepted(deployMatchUnit(reserveExcept(initial,originals),SURVIVOR,{kind:'board',cell:{col:0,row:4}}));
+const prepared = accepted(deployMatchUnit(reserveExcept(initial,originals),SURVIVOR,{kind:'board',cell:{col:3,row:4}}));
 const currentFacts:ReturnType<typeof bounceFacts>=[];
 let probe=accepted(startMatchCombat(prepared));
 while(probe.phase==='combat'){const next=stepMatch(probe);currentFacts.push(...bounceFacts(probe,next.state,next.events));probe=next.state;}

@@ -2,6 +2,7 @@ import {grantAnomalyAcquisition} from './anomaly-acquisition';
 import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
 import { readAugmentIncome } from './augment-income';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
+import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
 import { deploymentCapFor } from './deployment-cap';
@@ -43,6 +44,7 @@ import { COMPONENT_IDS } from './content/g2-3-item-registry';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { planUnitAcquisition } from './unit-acquisition';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
@@ -206,7 +208,9 @@ export function deployMatchUnit(state: MatchState, unitId: string, target: UnitL
       : from.kind === 'bench' && to.kind === 'bench' && from.slot === to.slot) return [];
     return [{ type: 'unitDeployed' as const, unitId: unit.id, from: structuredClone(from), to: structuredClone(unit.location) }];
   }) : [];
-  return accept({ ...state, preparation: result.state }, events);
+  const deployed={ ...state, preparation: result.state };
+  const gifted=state.sharedPool?deployed:drainP2Gifts(deployed);
+  return acceptEquipment(gifted,[...events,...mechanicGrantEvents(deployed,gifted)]);
 }
 /** After PvP snapshots are frozen, protect the live roster while keeping the T3 state shape. */
 export function lockMatchCombatRoster(state: MatchState): MatchCommandResult {
@@ -241,7 +245,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   }
   return { ok: true, state: next, events };
 }
-export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
+export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -258,7 +262,8 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
-  return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
+  const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
+  return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
@@ -629,7 +634,8 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
-  const granted = choice.kind === 'component' ? planPermanentItemGrant(state, { definitionId, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
+  const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
+  const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? (choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
@@ -643,6 +649,10 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
+  if(choice.kind==='augment'){
+    const gifted=drainP2Gifts(selected,unitLootPolicy);
+    events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
+  }
   if (choice.kind === 'component' && getRoundKind(state.round) === 'supply') {
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
@@ -651,7 +661,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   const forge=openAugmentForge(entered.state);
-  return accept(forge.state, [...events, ...entered.events,...forge.events]);
+  return acceptEquipment(forge.state, [...events, ...entered.events,...forge.events]);
 }
 
 /** Compatibility domain entrypoints use the same pending choices and generic receipts. */

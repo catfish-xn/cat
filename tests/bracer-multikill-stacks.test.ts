@@ -6,6 +6,7 @@ import { readCombatStats } from '../src/simulation/combat-s13';
 import { dispatchTriggers, EMPTY_TRIGGER_LEDGER, type TriggerSignal } from '../src/simulation/m8/triggers';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
+import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createMatch } from '../src/simulation/match';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
@@ -386,7 +387,7 @@ it.each([
   { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = contribution ? publicEquipmentPreparation(['rod']) : acquireEquipment(['rod'], { seed: 29 });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;

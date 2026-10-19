@@ -5,6 +5,7 @@ import { revealMatchLoot } from '../src/simulation/loot-runtime';
 import { run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
 import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8-public';
+import { configuredPrefix } from './fixtures/t13-loot-public';
 
 // This is a command-only domain prefix, stopped at the required encounter.
 // No retained JSON, golden state, injected deaths, or invented resource facts.
@@ -20,6 +21,11 @@ try {
 } catch (error) { if (error !== reached) throw error; }
 if (!preparation) throw Error('Public mage route did not reach 4-7');
 const prefix = preparation;
+// This public seed retains the original three augments and Zyra's tick-152
+// source death under the expanded P2 offer pool.
+const zyraPrefix = await configuredPrefix('4-7', { build: 'mage', seed: 8486,
+  augmentPriorities: ['bronze-for-life-i', 'pumping-up-ii', 'bronze-for-life-ii'],
+  anomalyDefinitionId: 'protective-shielding' });
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
@@ -92,7 +98,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ['loris', 'r00', 381, 'settlement', 4],
     ['zyra', 'r01', 152, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
-    let state = clone(partialB8Preparation(prefix, survivor));
+    let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : prefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
       definitionId: survivor, starLevel: 2, team: 'player',

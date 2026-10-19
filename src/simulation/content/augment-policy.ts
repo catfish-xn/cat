@@ -1,4 +1,6 @@
+import { P3_TIERS } from './s13-p3';
 import { freezeContent } from './freeze';
+import { S13_P2_TIERS } from './s13-augments-p2';
 /** U: no primary historical offer probabilities found; preserve equal three-word sampling. */
 export const AUGMENT_OFFER_POLICY = freezeContent({version:'aug30-equal-v1',evidence:'U',sampling:'equal-without-replacement',words:3} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
@@ -62,6 +64,8 @@ export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismat
   "going-long": "prismatic",
   "hedge-fund": "prismatic",
   "investment-strategy-ii": "prismatic",
+  ...S13_P2_TIERS,
+  ...P3_TIERS,
   "manaflow-ii": "gold",
   "glass-cannon-ii": "gold",
   "pumping-up-ii": "gold",

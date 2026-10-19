@@ -41,6 +41,7 @@ const expected: Record<string, Effect[]> = {
   'going-long':[mech('acquisitionGold',{amount:15}),mech('incomePolicy',{interestDisabled:1,interestCap:0,roundXp:4})],
   'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
   'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
+  ...Object.fromEntries(['crown-guarded','not-today','all-for-one-ii','belt-overflow','calculated-enhancement','crownguard-spirit','flurry-of-blows','guardbreaker-spirit','pair-of-fours','immovable-object','shojin-spirit','sword-overflow','trifecta-ii','wand-overflow'].map(id=>[id,[mech('s13P2Augment',{enabled:1})]])),
   'placebo': [speed(100), mech('acquisitionGold', { amount: 8 })],
   'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
@@ -72,8 +73,8 @@ const expected: Record<string, Effect[]> = {
   'climb-the-ladder-ii': [mech('climbLadder', { adBps: 500, abilityPower: 5, armor: 5, magicResist: 5 })],
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
-describe('G2 plus P1 augments: independent exact source parameters', () => {
-  it('contains exactly the existing thirty and six implemented P1 definitions', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(Object.keys(expected).sort()));
+describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
+  it('contains exactly the thirty existing, six P1 and fourteen P2 definitions plus the seven P3 augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

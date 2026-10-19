@@ -61,15 +61,9 @@ describe('M5 frozen S13 slice',()=>{
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });
-  // Augments: existing 30 + blinding-speed, portable-forge, radiant-relics,
-  // going-long, hedge-fund, investment-strategy-ii = 36.
-  // Anomalies: existing 30 + P4 TFT13_GoopBuff_CenteroftheUniverse,
-  // TFT13_GoopBuff_CertainDeath, TFT13_GoopBuff_DeftHands, TFT13_GoopBuff_DramaticEntrance,
-  // TFT13_GoopBuff_EvenInDeath, TFT13_GoopBuff_HungerForPower, TFT13_GoopBuff_Invisibility,
-  // TFT13_GoopBuff_Repulsor, TFT13_GoopBuff_ScuttleFamiliar, TFT13_GoopBuff_UnstoppableForce,
-  // TFT13_GoopBuff_WolfFamiliars + P1 dual-wielding = 42.
-  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 36 augments and 42 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,36,42]);
+  // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3.
+  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 57 augments and 52 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,57,52]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);
