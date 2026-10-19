@@ -67,9 +67,15 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
   while (state.roundDefinitionId !== '6-7') {
     while (state.phase === 'choice') {
       const choice = state.pendingChoice!;
+      // Keep the original Hypervelocity holder/effect through the expanded41-entry pool.
+      // Every search pays the normal public reroll cost; no fixture stats/resources are patched.
+      if(choice.kind==='anomaly'&&choice.step==='offer'&&!choice.offers.includes('hypervelocity')&&state.gold>=1){
+        state=accepted(commands.rerollAnomaly(state,choice.choiceId,choice.generation));
+        continue;
+      }
       state = accepted(choice.step === 'target'
         ? commands.selectAnomalyTarget(state, choice.choiceId, choice.generation, state.preparation.units.find(u => u.definitionId === 'kogmaw')!.id)
-        : commands.selectChoice(state, choice.choiceId, choice.generation, choice.kind === 'component' ? missingComponent() : choice.offers[0]));
+        : commands.selectChoice(state, choice.choiceId, choice.generation, choice.kind === 'component' ? missingComponent() : choice.kind==='anomaly'&&choice.offers.includes('hypervelocity')?'hypervelocity':choice.offers[0]));
     }
     if (state.phase === 'preparation') {
       while (state.level < 8 && state.gold >= 4) state = accepted(commands.buyXp(state));

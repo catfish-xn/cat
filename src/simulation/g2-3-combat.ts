@@ -1,3 +1,4 @@
+import { occupiesCell } from './anomalies/availability';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {hexDistance} from './board';
 import type { CombatUnit,G23State,CombatOrigin } from './combat-types';
@@ -16,8 +17,8 @@ export function recordG23Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:numbe
   ctx.packets.push({source,targetId:t.id,raw:v.BaseTrueDamage+count*v.BonusTrueDamage,damageType:'true',actionSeq:seq,ordinal:9000,
     delivery:'attack-extra',critEligibility:'never',area:false,triggeringCastActionSeq:null});
 }
-export function recordG23Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet,absorbed=0):void{
-  if(u&&packet.source.definitionId==='one-thousand-cuts'&&actual+absorbed>0){const s=g23State(u);s.cuts[packet.targetId]=(s.cuts[packet.targetId]??0)+1;}
+export function recordG23Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet,absorbed=0,redirected=false):void{
+  if(!redirected&&u&&packet.source.definitionId==='one-thousand-cuts'&&actual+absorbed>0){const s=g23State(u);s.cuts[packet.targetId]=(s.cuts[packet.targetId]??0)+1;}
   if(!u||actual<=0||packet.source.definitionId!=='slime-time')return;
   ctx.heals.push({source:packet.source,targetId:u.id,amount:actual});
 }
@@ -26,7 +27,7 @@ export function advanceG23Anomalies(ctx:AbilityContext):void{
     if(g23Anomaly(u,'deep-roots')){
       const t=byDistance(u,enemies(u,ctx.units))[0];
       if(t&&hexDistance(u.cell,t.cell)>range(u)&&!g23Anomaly(t,'deep-roots')){
-       const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(u.cell,c)<=range(u)&&!ctx.units.some(other=>other.alive&&other.cell.col===c.col&&other.cell.row===c.row)).sort((a,b)=>hexDistance(t.cell,a)-hexDistance(t.cell,b)||a.row-b.row||a.col-b.col);
+       const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(u.cell,c)<=range(u)&&!ctx.units.some(other=>occupiesCell(other,ctx.tick)&&other.cell.col===c.col&&other.cell.row===c.row)).sort((a,b)=>hexDistance(t.cell,a)-hexDistance(t.cell,b)||a.row-b.row||a.col-b.col);
        if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:t.id,from:t.cell,to:cells[0]});t.cell=cells[0];}
       }
     }
@@ -85,7 +86,7 @@ export function settleG23ExperimentKills(ctx:AbilityContext,killed:ReadonlyMap<s
 }
 
 export function recordG23Conquest(ctx:AbilityContext,id:string,contributors:readonly string[]):void{
- const victim=ctx.units.find(u=>u.id===id);if(!victim||victim.definitionId.startsWith('g23-'))return;
+ const victim=ctx.units.find(u=>u.id===id);if(!victim||victim.anomalySummon||victim.definitionId.startsWith('g23-'))return;
  for(const u of ctx.units.filter(u=>contributors.includes(u.id)&&u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'))){
   const ids=g23State(u).conquestTakedowns;if(!ids.includes(id))ids.push(id);
  }

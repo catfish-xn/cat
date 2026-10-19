@@ -1,3 +1,4 @@
+import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
 import { amount, applyStatus, enemies, grantShield, origin, type S13Unit } from './combat-s13-state';
 import { hexDistance, type Board } from './board';
@@ -14,9 +15,9 @@ import { g23ForgeCell } from './g2-3-summons';
  * The owner's star/form belongs to Jayce; native forges remain one-star 1000 HP.
  * Caller appends through the membership ledger and initializes mechanisms at birth.
  * No inventory, original forge state, item effects, or accumulated buffs are copied. */
-export function createG23Forge(jayce:CombatUnit,units:readonly CombatUnit[],board:Board):CombatUnit|undefined {
+export function createG23Forge(jayce:CombatUnit,units:readonly CombatUnit[],board:Board,tick=0):CombatUnit|undefined {
  if(jayce.definitionId!=='jayce'||units.some(u=>u.id===jayce.id+':g23-forge'))return;
- const cell=g23ForgeCell(jayce,board,units.filter(u=>u.alive).map(u=>u.cell));if(!cell)return;
+ const cell=g23ForgeCell(jayce,board,units.filter(u=>occupiesCell(u,tick)).map(u=>u.cell));if(!cell)return;
  const stats=getUnitStats('g23-forge',1),ability=resolveAbility(stats.abilityId,1);
  return freezeCombatDeclarations({
   ...compileCombatInitialInputs(jayce.id+':g23-forge',stats,ability),
@@ -50,7 +51,7 @@ export function advanceG23Summons(ctx:AbilityContext):void{
 export function reviveG23Forge(ctx:AbilityContext,jayce:S13Unit):S13Unit|undefined{
  const forge=ctx.units.find(u=>u.id===jayce.id+':g23-forge');if(!forge)return;
  if(!forge.alive){
-  const occupied=(col:number,row:number)=>ctx.units.some(u=>u.alive&&u.cell.col===col&&u.cell.row===row);
+  const occupied=(col:number,row:number)=>ctx.units.some(u=>occupiesCell(u,ctx.tick)&&u.cell.col===col&&u.cell.row===row);
   if(occupied(forge.cell.col,forge.cell.row)){
    const cells=Array.from({length:ctx.board.rows},(_,localRow)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row:jayce.team==='player'?localRow:ctx.board.rows-1-localRow}))).flat();
    const cell=cells.find(c=>!occupied(c.col,c.row));if(!cell)return;

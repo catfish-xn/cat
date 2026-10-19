@@ -17,7 +17,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));
@@ -72,8 +72,9 @@ const CHAMPION_BY_ID = bridge(G23_CHAMPIONS, row => apiForms(row.apiName));
 const CHAMPION_BY_EN = new Map(G23_CHAMPIONS.map(row => [row.en, row]));
 const TRAIT_BY_ID = bridge(G23_TRAITS, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
 const TRAIT_BY_EN = new Map(G23_TRAITS.map(row => [row.en, row]));
-const ANOMALY_BY_ID = bridge(G23_ANOMALIES, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
-const ANOMALY_BY_ZH = new Map(G23_ANOMALIES.map(row => [row.zh, row]));
+const ALL_ANOMALIES = [...G23_ANOMALIES, ...S13_EXTRA_ANOMALIES];
+const ANOMALY_BY_ID = bridge(ALL_ANOMALIES, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
+const ANOMALY_BY_ZH = new Map(ALL_ANOMALIES.map(row => [row.zh, row]));
 const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
 const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
 const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_ITEMS].map(row => [row.apiName, row]));
@@ -117,7 +118,7 @@ export const g23HeroStyle = (id: string): { short: string; color: string } | und
 /** Anomaly label: client name, else the content name. */
 export function anomalyDisplayName(id: string): string {
   const api = g23AnomalyApiName(id);
-  return (api ? G23_ANOMALIES.find(row => row.apiName === api)?.zh : undefined)
+  return (api ? ALL_ANOMALIES.find(row => row.apiName === api)?.zh : undefined)
     ?? (Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined) ?? '未知异常';
 }
 /** The client shows every anomaly with the one shared anomaly icon (no per-anomaly icon exists in 14.24). */

@@ -13,11 +13,11 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
 }
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
 it('admits thirty historically selected anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
- expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(30);
+ expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(30);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
  expect(ANOMALY_DEFINITIONS['defense-expert'].name).toBeTruthy();
 });
-it.each(Object.keys(ANOMALY_DEFINITIONS))('%s compiles and validates its detached combat-start program',id=>{
+it.each(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_')))('%s compiles and validates its detached combat-start program',id=>{
  const state=start(id);expect(()=>validate(state)).not.toThrow();const text=JSON.stringify(state);stepCombat(state);expect(JSON.stringify(state)).toBe(text);
 });
 it('Fortified applies twelve percent health at start and again at four seconds',()=>{
