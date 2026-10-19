@@ -210,7 +210,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
     }
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents }) ?? (() => {});
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, unitAt: client => pickUnit(client, true) ?? undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -223,13 +223,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let grid: HexGrid | null = null;
   let press: { id: string; pointerId: number; x: number; y: number } | null = null, dragging: string | null = null;
   const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
-  const unitAt = (event: PointerEvent): string | null => {
+  /** pick() over the drawn pieces: my units for board gestures, any team for item drops (BoardScene judges the target). */
+  const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => view.team === 'player').map(([unitId, view]) => ({ unitId, object: view.root }));
-    const hit = pick({ x: event.clientX, y: event.clientY }, area, camera, grid, units);
+    const units = [...pieces].filter(([, view]) => anyTeam || view.team === 'player').map(([unitId, view]) => ({ unitId, object: view.root }));
+    const hit = pick(client, area, camera, grid, units);
     return hit?.kind === 'unit' ? hit.unitId : null;
   };
+  const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
   const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
     const area = viewport();
     if (area.width <= 0 || area.height <= 0) return null;
