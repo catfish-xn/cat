@@ -23,8 +23,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
-function fixture() {
-  const raw = [Buffer.from('first synthetic chunk'), Buffer.from('second synthetic chunk')];
+function fixture(raw = [Buffer.from('first synthetic chunk'), Buffer.from('second synthetic chunk')]) {
   const packed = raw.map(b => zstdCompressSync(b));
   const chunks = raw.map((b, i) => ({ id: riotChunkId(b), bundleId: '0000000000000001',
     offset: i ? packed[0].length : 0, size: packed[i].length, targetSize: b.length }));
@@ -89,6 +88,84 @@ describe('targeted RMAN downloader with synthetic chunks and injected fetch', ()
     expect(fetchFn).not.toHaveBeenCalled();
     const exact = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, dryRun: true, fetchFn });
     expect(exact.status).toBe('planned');
+  });
+  it('accepts a verified 206 response that exactly exhausts the byte budget', async () => {
+    const f = fixture(), opts = await options();
+    const fetchFn = vi.fn(async () => response(f.bundle, 0, f.bundle.length));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, fetchFn });
+    expect(result).toMatchObject({ status: 'complete', requests: 1, downloadBytes: f.bundle.length, failed: [] });
+    expect(result.downloaded).toHaveLength(2);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < f.chunks.length; i++)
+      expect(await readFile(join(opts.cache, `${f.chunks[i].id}.zst`))).toEqual(f.packed[i]);
+  });
+  it.each([0, 1])('does not retry a 503 when only %i budget bytes remain', async remaining => {
+    const f = fixture(), opts = await options(), wait = vi.fn(async () => {});
+    const spent = f.bundle.length - remaining;
+    const fetchFn = vi.fn(async () => response(f.bundle.subarray(0, spent), 0, f.bundle.length, 503));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, retries: 2, fetchFn, wait });
+    expect(result).toMatchObject({ status: 'failed', requests: 1, downloadBytes: spent, downloaded: [] });
+    expect(result.failed).toEqual(f.chunks.map(c => ({ id: c.id, reason: 'runtime-byte-limit' })));
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
+    for (const c of f.chunks)
+      await expect(readFile(join(opts.cache, `${c.id}.zst`))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+  it('reserves in-flight bytes before retrying a concurrent 503 at the exact budget', async () => {
+    const f = fixture([Buffer.from('a'), Buffer.from('b')]), opts = await options();
+    expect(f.packed.map(bytes => bytes.length)).toEqual([10, 10]);
+    f.chunks[1].offset++; // Keep the two 10-byte ranges separate.
+    let secondStarted!: () => void, firstFinished!: () => void, releaseSecond!: (value: Response) => void;
+    const started = new Promise<void>(resolve => { secondStarted = resolve; });
+    const finished = new Promise<void>(resolve => { firstFinished = resolve; });
+    const second = new Promise<Response>(resolve => { releaseSecond = resolve; });
+    const wait = vi.fn(async () => {});
+    const fetchFn = vi.fn(async (_url: string, init: RequestInit) => {
+      if ((init.headers as Record<string, string>).Range !== 'bytes=0-9') {
+        secondStarted(); return second;
+      }
+      if (fetchFn.mock.calls.length === 1) {
+        await started;
+        init.signal!.addEventListener('abort', firstFinished, { once: true });
+        return response(f.packed[0], 0, 10, 503);
+      }
+      return response(f.packed[0], 0, 10);
+    });
+    const pending = fetchChunks({ ...f, ...opts, maxBytes: 20, concurrency: 2, retries: 1, fetchFn, wait });
+    await finished;
+    // Drain the first attempt's cleanup/retry microtasks while the second response is held.
+    await new Promise<void>(resolve => setImmediate(resolve));
+    const requestsBeforeRelease = fetchFn.mock.calls.length;
+    releaseSecond(response(f.packed[1], f.chunks[1].offset, f.chunks[1].offset + 10));
+    const result = await pending;
+    expect(requestsBeforeRelease).toBe(2);
+    expect(result).toMatchObject({ status: 'failed', requests: 2, downloadBytes: 20,
+      failed: [{ id: f.chunks[0].id, reason: 'runtime-byte-limit' }] });
+    expect(result.downloaded.map((c: { id: string }) => c.id)).toEqual([f.chunks[1].id]);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(wait).not.toHaveBeenCalled();
+  });
+  it.each([0, 1])('settles a %i-byte failed response and releases unused reservation for retry', async spent => {
+    const f = fixture(), opts = await options(), wait = vi.fn(async () => {});
+    const fetchFn = vi.fn().mockResolvedValueOnce(response(Buffer.alloc(spent), 0, f.bundle.length, 503))
+      .mockResolvedValueOnce(response(f.bundle, 0, f.bundle.length));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length + spent, retries: 1, fetchFn, wait });
+    expect(result).toMatchObject({ status: 'complete', requests: 2, downloadBytes: f.bundle.length + spent, failed: [] });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(wait).toHaveBeenCalledTimes(1);
+  });
+  it.each([0, 1])('does not dispatch another range when only %i budget bytes remain', async remaining => {
+    const f = fixture(), opts = await options();
+    f.chunks[1].offset++;
+    const spent = f.bundle.length - remaining;
+    const fetchFn = vi.fn(async () => response(Buffer.alloc(spent), 0, f.chunks[0].size));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, concurrency: 1, fetchFn });
+    expect(result).toMatchObject({ status: 'failed', requests: 1, downloadBytes: spent, downloaded: [] });
+    expect(result.failed).toEqual([
+      { id: f.chunks[0].id, reason: 'range-body-too-large' },
+      { id: f.chunks[1].id, reason: 'runtime-byte-limit' }
+    ]);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
   });
   it('counts actual streamed bytes, aborts all requests at the runtime cap and starts no further range', async () => {
     const f = fixture(), opts = await options();
