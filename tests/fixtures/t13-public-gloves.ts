@@ -1,6 +1,8 @@
 import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, startMatchCombat, combineItems } from '../../src/simulation/match';
 import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers } from './b8-public-equipment';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
+import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
+import { P2_ITEM_GRANTS } from '../../src/simulation/content/s13-augments-p2';
 
 const accepted = (result: MatchCommandResult): MatchState => {
   if (!result.ok) throw Error(`Public TG supply route: ${result.reason}`);
@@ -21,7 +23,9 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       const choice = state.pendingChoice!;
       if (choice.kind === 'anomaly') throw Error('TG fixture must finish before the anomaly');
       const id = choice.kind === 'component' ? 'gloves'
-        : ['manaflow-i', 'pumping-up-i', 'bulky-buddies-i'].find(id => choice.offers.includes(id)) ?? choice.offers[0];
+        : ['manaflow-i', 'pumping-up-i', 'bulky-buddies-i'].find(id => choice.offers.includes(id))
+          ?? choice.offers.find(id => !(id in S13_P2_SOURCE))
+          ?? choice.offers.find(id => !(id in P2_ITEM_GRANTS))!;
       state = accepted(selectChoice(state, choice.choiceId, choice.generation, id));
     }
     if (state.roundDefinitionId === '2-1') {

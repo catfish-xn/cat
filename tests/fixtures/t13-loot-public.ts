@@ -42,11 +42,11 @@ export function battle(prepared: MatchState) {
   return {prepared,started,revealed,beforeFinal,ended,events,revealPrefix,startEvents:start.events};
 }
 const prefixes=new Map<string,MatchState>();
-export async function publicPrefix(roundId:string,seed=42,build='cannon'):Promise<MatchState> {
-  const key=JSON.stringify([roundId,seed,build]);
+export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[]):Promise<MatchState> {
+  const key=JSON.stringify([roundId,seed,build,augmentPriorities]);
   if(!prefixes.has(key)) {
     const captured=new Error('captured');let prefix:MatchState|undefined;
-    try {await run(api,{build,seed,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+    try {await run(api,{build,seed,augmentPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
       if(before.roundDefinitionId===roundId && (command?.type==='start'||before.phase==='choice')) {prefix=before;throw captured;}
     }});}catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error(`Missing public prefix ${key}`);prefixes.set(key,prefix);
@@ -73,7 +73,8 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
 export async function transferPreparation() {
   let s=await configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
-    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
+    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor',
+    goldReserveByRound:{'4-5':19}});
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
   const pair=players(s).filter(u=>u.definitionId==='ezreal'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
   if(donor.location.kind==='board'&&survivor.location.kind==='board'){
