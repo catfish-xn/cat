@@ -1,3 +1,4 @@
+import { isTraitSnapshotMember } from './traits/effective-membership';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, OwnedAugment, TraitSnapshot } from './strategy-types';
@@ -37,7 +38,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'findCenter': return unit.location.kind==='board'&&unit.location.cell.col===Math.floor(state.preparation.board.columns/2)&&unit.location.cell.row===zone.firstRow+Math.floor((zone.lastRow-zone.firstRow)/2)?[{kind:'statPercentBps',stat:'maxHp',bps:v.healthBps},mechanic('damageAmp',{bps:v.damageAmpBps})]:[];
     case 'littleBuddies': {const cost=UNIT_DEFINITIONS[unit.definitionId].cost,count=allies.filter(u=>UNIT_DEFINITIONS[u.definitionId].cost<=2).length;return cost===4||cost===5?[flat('maxHp',count*v.health),speed(count*v.attackSpeedBps)]:[];}
     case 'bronzeForLife': {const count=traits.filter(t=>t.team===unit.team&&(AUGMENT_BRONZE_THRESHOLDS[t.traitId]??[]).includes(t.tier)).length;return [mechanic('damageAmp',{bps:count*v.damageAmpBps}),...(v.durabilityBps?[mechanic('watcher',{reductionBps:count*v.durabilityBps,healthyReductionBps:count*v.durabilityBps,thresholdBps:0})]:[])];}
-    case 'builtDifferent': {if(traits.some(t=>t.team===unit.team&&t.tier>0&&t.memberDefinitionIds.includes(unit.definitionId)))return [];const stage=Math.max(2,Math.min(5,getMultiplayerRoundByOrdinal(state.round).stage));return [flat('maxHp',v[`health${stage}`]),speed(v[`speed${stage}`])];}
+    case 'builtDifferent': {if(traits.some(t=>t.tier>0&&isTraitSnapshotMember(t,unit)))return [];const stage=Math.max(2,Math.min(5,getMultiplayerRoundByOrdinal(state.round).stage));return [flat('maxHp',v[`health${stage}`]),speed(v[`speed${stage}`])];}
     default:return [effect];
   }
 }

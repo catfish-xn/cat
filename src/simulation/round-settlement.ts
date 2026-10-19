@@ -1,3 +1,4 @@
+import type {TraitProjectionContext} from './traits/effective-membership';
 import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
@@ -59,7 +60,7 @@ export function enableMultiplayerSettlement(state: MatchState, seatId: string): 
 }
 
 /** One seat's atomic commit. The room stages all successful results before publishing any seat. */
-export function applyRoundSettlement(state: MatchState, input: unknown,unitLootPolicy?:UnitLootPolicy): MultiplayerCommandResult {
+export function applyRoundSettlement(state: MatchState, input: unknown,unitLootPolicy?:UnitLootPolicy,traitContext?:TraitProjectionContext): MultiplayerCommandResult {
   if (!state.multiplayer || state.multiplayer.version !== ROUND_SETTLEMENT_VERSION) return fail(state,'multiplayer-required');
   const multiplayer = state.multiplayer;
   try {
@@ -86,8 +87,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
         && !multiplayer.forfeitedChoices.includes(event.id))) return fail(state,'wrong-phase');
     const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
+    if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
     if(r.g23Facts){
-      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player');
+      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext);
       if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result||facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0)
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.

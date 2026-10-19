@@ -1,7 +1,7 @@
 import { p2Bonus } from '../s13-augments-p2-combat';
 import { g23FormStats } from '../g2-3-forms';
-import { augmentCombatEffects } from '../combat-augment-effects';
-import { M5_UNIT_DEFINITIONS } from '../units';
+import type { TraitSnapshot } from '../strategy-types';
+import { augmentCombatEffects, shareAugmentTraits } from '../combat-augment-effects';
 import { statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
 import { canonicalSource } from './identity';
 import { grantedMaxHpBasis } from './combat-item-programs';
@@ -16,7 +16,7 @@ import { validatePeriodicTask } from './periodic';
 import { validateShield } from './shield';
 import { integer } from './stats';
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`Invalid Match save: ${message}`); }
-export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false): void {
+export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false, traits?: readonly TraitSnapshot[]): void {
   const same = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
   check(state && definitions && state.initialized === true && state.combatId === combatId && state.sampledAtTick === tick, 'mechanism initialization/namespace');
@@ -67,7 +67,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           else if (m.mechanic === 'loneHero') check(owner.id === unit.id && units.filter(u => u.team === unit.team && u.alive).length === 1 && application === (index === 1 ? 'source' : JSON.stringify(['loneHero', index])), 'augment lone identity');
           else {
             check(!owner.alive && owner.id !== unit.id && application === JSON.stringify([m.mechanic, owner.id, index]), 'augment death identity');
-            if (m.mechanic === 'climbLadder') check((M5_UNIT_DEFINITIONS[owner.definitionId]?.traits ?? []).some(t => (M5_UNIT_DEFINITIONS[unit.definitionId]?.traits ?? []).includes(t)), 'augment shared trait');
+            if (m.mechanic === 'climbLadder') check(shareAugmentTraits(owner,unit,traits), 'augment shared trait');
             else check(m.mechanic === 'inspiringEpitaph', 'augment death mechanic');
           }
         }
@@ -135,7 +135,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       check(grants.length === 2 && new Set(grants.map(c => c.appliedAtTick)).size === 1, 'augment lone complete grant');
     }
   if (unit.alive && !finished) for (const owner of units.filter(u => !u.alive && u.team === unit.team)) {
-    if (!(M5_UNIT_DEFINITIONS[owner.definitionId]?.traits ?? []).some(t => (M5_UNIT_DEFINITIONS[unit.definitionId]?.traits ?? []).includes(t))) continue;
+    if (!shareAugmentTraits(owner,unit,traits)) continue;
     for (const m of owner.mechanics ?? []) if (m.mechanic === 'climbLadder') {
       const grants = contributions.filter(c => canonicalSource(c.source) === canonicalSource(asSource(m.source)));
       check(grants.length === 4 && new Set(grants.map(c => c.appliedAtTick)).size === 1, 'augment climb complete death grant');

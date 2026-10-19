@@ -2,7 +2,6 @@ import type { CombatState } from './combat';
 import { createRestoreCombatReplay } from './restore-combat-replay';
 import type { CombatInputBasis } from './combat-input';
 import type { StrategySnapshot } from './strategy-types';
-import { UNIT_DEFINITIONS } from './units';
 import { EMPTY_TRIGGER_LEDGER } from './m8/triggers';
 
 /** Tasks and one-time flags are historical facts, including after source death,
@@ -40,7 +39,7 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
       throw new Error('Invalid Match save: curse reave binding facts');
     // Every Black Rose member contributes its own historical cast count to Sion.
     // Identity comes from the authenticated roster, never a candidate team total.
-    if (UNIT_DEFINITIONS[settledUnit.definitionId]?.traits.includes('black-rose')
+    if (strategy.traits.some(t=>t.team===unit.team&&t.traitId==='black-rose'&&(t.memberUnitIds?t.memberUnitIds.includes(unit.id):t.memberDefinitionIds.includes(settledUnit.definitionId)))
       && unit.runtime?.castCount !== settledUnit.castCount)
       throw new Error('Invalid Match save: Black Rose cast binding facts');
     // These are history, not merely bounded counters or internally consistent
