@@ -362,3 +362,19 @@ jobs:
             artifacts/m6-validation.json
             artifacts/M6_VALIDATION.md
             artifacts/M6_REVIEW.md
+  # The one check branch protection requires. It is green only when every gate job above
+  # finished green, so splitting or renaming those jobs never touches the protection rule.
+  # Wall-clock budgets live in wallclock.yml and are not part of this gate.
+  ci-required:
+    if: ${{ always() }}
+    name: ci-required
+    needs: [test-and-build, chromium-match, chromium-input, m8-u3-dynamic, m8-u6-loot, m6-retention, m7-presentation, compare-evidence]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Every required job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null
