@@ -31,6 +31,9 @@ stdout: one JSON document, including partial evidence on failure (exit 1).
 stderr: progress. No thresholds, deployments, source edits, or automatic report files.
 Default timing is accelerated LOAD mode, NOT normal-time gameplay acceptance.
 Use node --expose-gc to force GC before each post-match memory sample (reported separately).
+Memory also records heapTotalBytes, externalBytes, arrayBuffersBytes and Linux rssAnonBytes
+(synchronous /proc/self/status RssAnon kB * 1024; null elsewhere or when unavailable).
+Two-version serial comparison: node scripts/loadtest-compare.cjs --help (default 6 matches/side).
 `;
 function options(argv) {
   const result = { seats:8, rounds:3, warmup:1, ops:4, seed:42, prepSec:0.25, choiceSec:0.10,
@@ -66,6 +69,8 @@ function summary(values) {
 function memoryTrend(samples, warmup) {
   const ends=samples.filter(s=>s.status===undefined||s.status==='complete').map(s=>s.server?.memoryEnd?.rssBytes).filter(Number.isFinite);
   return { postMatchRssBytes:ends, deltaBytes:ends.length>1?ends.at(-1)-ends[0]:null,
+    postMatchHeapTotalBytes:samples.filter(s=>s.status===undefined||s.status==='complete').map(s=>s.server?.memoryEnd?.heapTotalBytes??null),
+    postMatchRssAnonBytes:samples.filter(s=>s.status===undefined||s.status==='complete').map(s=>s.server?.memoryEnd?.rssAnonBytes??null),
     strictlyIncreasing:ends.length>=3?ends.every((n,i)=>i===0||n>ends[i-1]):null,
     interpretation:ends.length<3?'insufficient-local-samples':warmup===0?'unwarmed-observation-only':'observation-only-not-a-leak-proof',
     gcBeforeSamples:samples.filter(s=>s.status===undefined||s.status==='complete').map(s=>s.server?.memoryEnd?.gcApplied??null),
@@ -122,11 +127,19 @@ function observeBattleStart(start, records) {
     }};
   };
 }
-function sampleMemory(collect=false, runtime=process, gc=globalThis.gc) {
+function sampleMemory(collect=false, runtime=process, gc=globalThis.gc,
+  readProcStatus=()=>fs.readFileSync('/proc/self/status','utf8')) {
   const gcApplied=collect&&typeof gc==='function',started=performance.now();
   if(gcApplied)gc();
   const gcWallMs=gcApplied?performance.now()-started:null,usage=runtime.memoryUsage();
-  return {rssBytes:usage.rss,heapUsedBytes:usage.heapUsed,processLifetimeMaxRssBytes:runtime.resourceUsage().maxRSS*1024,gcApplied,gcWallMs};
+  let rssAnonBytes=null;
+  if(runtime.platform==='linux')try {
+    const match=/^RssAnon:[ \t]*(\d+)[ \t]+kB[ \t]*\r?$/m.exec(readProcStatus());
+    if(match&&Number.isSafeInteger(Number(match[1])*1024))rssAnonBytes=Number(match[1])*1024;
+  }catch{} // Optional Linux observation must never fail the load test.
+  return {rssBytes:usage.rss,heapUsedBytes:usage.heapUsed,heapTotalBytes:usage.heapTotal,
+    externalBytes:usage.external,arrayBuffersBytes:usage.arrayBuffers,rssAnonBytes,
+    processLifetimeMaxRssBytes:runtime.resourceUsage().maxRSS*1024,gcApplied,gcWallMs};
 }
 async function bundle(temp) {
   const esbuild=require('esbuild');
