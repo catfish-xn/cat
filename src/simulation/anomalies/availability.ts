@@ -8,6 +8,10 @@ export const isAttackProxy = (unit: Pick<CombatUnit, 'anomalySummon'>): boolean 
 export function isPresent(unit: CombatUnit, tick: number): boolean {
   return unit.alive && unit.hp > 0 && !isAbsent(unit, tick);
 }
+/** Attack agents share their owner's cell and never reserve a landing cell. */
+export function occupiesCell(unit: CombatUnit, tick: number): boolean {
+  return isPresent(unit, tick) && !isAttackProxy(unit);
+}
 export function isAbsent(unit: CombatUnit, tick: number): boolean {
   return (unit.itemBanish?.untilTick ?? 0) > tick || (unit.anomalyState?.absentUntilTick ?? 0) > tick;
 }

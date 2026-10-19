@@ -30,7 +30,8 @@ export const centerOfTheUniverse: AnomalyModule = {
   definition: definition('CenteroftheUniverse'),
   tick(ctx, unit, source, nextSeq) {
     const state = unit.anomalyState ??= {}, orbit = state.orbit ??= { radiusMilli: p.initialRadiusMilliHexes, hits: {}, center: { ...unit.cell }, tick: ctx.tick - 1 };
-    const target = byDistance(unit, enemies(unit, ctx.units))[0];
+    const eligible = enemies(unit, ctx.units);
+    const target = eligible.find(u => u.id === unit.targetId) ?? byDistance(unit, eligible)[0];
     const desired = target ? Math.max(p.initialRadiusMilliHexes, Math.min(p.maxRadiusMilliHexes, hexDistance(unit.cell, target.cell) * 1000)) : p.initialRadiusMilliHexes;
     const radius = orbit.radiusMilli + Math.max(-p.radiusChangeMilliHexesPerTick, Math.min(p.radiusChangeMilliHexesPerTick, desired - orbit.radiusMilli));
     const foes = areaEnemies(unit, ctx.units).filter(u => !['wolf', 'mini'].includes(u.anomalySummon?.kind ?? '')).sort((a, b) => a.id < b.id ? -1 : 1);

@@ -1,5 +1,5 @@
 import { freezeContent } from '../content/freeze';
-/** 项目约定：raw exposes missile -1.95rad/s and width50, but not Lua radius/re-hit rules.
+/** 项目约定（确定性近似）：raw exposes missile -1.95rad/s and width50, but not Lua radius/re-hit rules.
  * Official14.24 says significantly faster. The discrete32tick revolution is deliberately
  * faster than the extracted missile's ~64.4tick revolution; it is not claimed as native Lua. */
 export const ORBIT_PARAMETERS = freezeContent({

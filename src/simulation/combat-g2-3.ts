@@ -1,3 +1,4 @@
+import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
 import { reviveG23Forge } from './combat-g2-3-summons';
 import { g23State } from './g2-3-combat';
@@ -23,7 +24,7 @@ function split(total:number,n:number,i:number){return Math.floor(total/n)+(i<tot
 /** 约定值: instant leap to the nearest unoccupied adjacent hex; no movement animation. */
 function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
  if(hexDistance(u.cell,t.cell)<=1)return;
- const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>x.alive&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
+ const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>occupiesCell(x,ctx.tick)&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
  if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;

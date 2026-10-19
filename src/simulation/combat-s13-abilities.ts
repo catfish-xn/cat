@@ -24,8 +24,8 @@ export interface AbilityContext {
   virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
   manaRequests?: import('./m8/contracts').ManaRequest[];
-  /** G2-4b: current armor (true) or magic resist (false), as damage resolution reads it. */
-  defenses?: (unit: S13Unit, armor: boolean) => number;
+  /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
+  defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }

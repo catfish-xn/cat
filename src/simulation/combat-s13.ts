@@ -1,7 +1,7 @@
 import {splitTrenchHolders} from './combat-g2-4b-trench';
 import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies, attackAnomaly } from './anomalies/runtime';
 import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons, recordAnomalyProxyHit } from './anomalies/summons';
-import { isAbsent } from './anomalies/availability';
+import { isAbsent, occupiesCell } from './anomalies/availability';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -57,14 +57,14 @@ function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: Read
   }
   return undefined;
 }
-function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatState['units']): number {
+function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatState['units'], ignoreShredSunder = false): number {
   const stat = physical ? 'armor' : 'magicResist';
   const modifiers: StatModifier[] = [...statusModifiers(unit, stat, tick), ...active(unit, tick, 'resistanceFlat').filter(s => !s.contributionKeys && (physical || !s.key.includes(':armor:'))).map(s => constantModifier(stat, s.amount))];
   if(unit.itemMogulHits?.length)modifiers.push(constantModifier(stat,unit.itemMogulHits.length*mechanic(unit,'g24Mogul','resistPerStack')));
   for (const m of unit.mechanics ?? []) if (m.mechanic === 'gargoyle') modifiers.push({ ...constantModifier(stat, 0),
     value: { kind: 'unit-count', perUnit: m.values.resistPerEnemy, population: 'alive-enemies-targeting-holder', sample: 'current', distinctBy: 'unitId' } });
   const shred = Math.max(statusMagnitude(unit.mechanismState?.statuses ?? [], physical ? 'sunder' : 'shred', tick), ...(physical ? active(unit, tick, 'armorReduction').filter(s => !s.contributionKeys).map(s => s.amount) : [0]));
-  modifiers.push(constantModifier(stat, -shred, 'bps'));
+  if (!ignoreShredSunder) modifiers.push(constantModifier(stat, -shred, 'bps'));
   const resolved = resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit), startingRows: startingRows(unit.team,unit.startingCell?.row ?? unit.cell.row) ?? undefined,
     enemiesTargetingHolder: units.filter(u => u.alive && u.team !== unit.team && u.targetId === unit.id).map(u => u.id) });
   return Math.floor(resolved*(g23Anomaly(unit,'defense-expert')?16600:10000)/10000);
@@ -176,7 +176,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
   };
   if(hasBanish)returnZephyrUnits(ctx);
-  ctx.defenses = (unit, armor) => defenses(unit, armor, ctx.tick, units);
+  ctx.defenses = (unit, armor, ignoreShredSunder) => defenses(unit, armor, ctx.tick, units, ignoreShredSunder);
   if(hasBanish){
     const activeUnits=ctx.units;ctx.units=fullRoster;
     tickAnomalies(ctx,()=>actionSeq++,true);ctx.units=activeUnits;
@@ -262,7 +262,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     maintainActivities(ctx, unit, controlled);
     if (controlled) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
   }
-  const occupied = new Set(units.filter(u => u.alive&&!isAttackProxy(u)).map(u => key(u.cell))), reserved = new Set<string>();
+  const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
     if (isAttackProxy(unit)||unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || unit.hp<=0 || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
     const target = byDistance(unit, enemies(unit, units))[0];
@@ -424,7 +424,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       return next;
     }); syncShield(target);
     virtualHp.set(target.id, result.hpAfter);
-    if(outcome.hit&&packet.source.definitionId.endsWith('DeftHands'))recordAnomalyProxyHit(ctx,units.find(u=>u.id===packet.source.ownerId),target,packet.actionSeq);
+    if(outcome.hit&&packet.source.definitionId.endsWith('DeftHands'))recordAnomalyProxyHit(ctx,units.find(u=>u.id===packet.source.ownerId),target,packet.actionSeq,context.redirected);
     allOutcomes.push(outcome);
     ctx.resolutionFacts = { ...ctx.resolutionFacts!, damage: allOutcomes };
     hpLost.set(target.id, (hpLost.get(target.id) ?? 0) + actual);

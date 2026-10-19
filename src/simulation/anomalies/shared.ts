@@ -3,7 +3,7 @@ import { hexDistance, sameCell } from '../board';
 import type { CombatUnit } from '../combat-types';
 import type { AbilityContext } from '../combat-s13-abilities';
 import type { S13Unit } from '../combat-s13-state';
-import { isPresent } from './availability';
+import { occupiesCell } from './availability';
 import { effectiveStatuses } from '../m8/status';
 
 export { definition } from './definitions';
@@ -11,8 +11,7 @@ export const cells = (board: Board): HexCell[] => Array.from({ length: board.row
   Array.from({ length: board.columns }, (_, col) => ({ col, row }))).flat();
 export const cellOrder = (a: HexCell, b: HexCell): number => a.row - b.row || a.col - b.col;
 export function freeCells(ctx: AbilityContext, movingId?: string): HexCell[] {
-  return cells(ctx.board).filter(c => !ctx.units.some(u => u.id !== movingId && isPresent(u, ctx.tick)
-    && !['wolf', 'mini'].includes(u.anomalySummon?.kind ?? '') && sameCell(u.cell, c)));
+  return cells(ctx.board).filter(c => !ctx.units.some(u => u.id !== movingId && occupiesCell(u, ctx.tick) && sameCell(u.cell, c)));
 }
 export function nearestLanding(ctx: AbilityContext, desired: HexCell, movingId: string): HexCell | undefined {
   return freeCells(ctx, movingId).sort((a, b) => hexDistance(desired, a) - hexDistance(desired, b) || cellOrder(a, b))[0];

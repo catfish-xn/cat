@@ -74,8 +74,8 @@ export function scheduleAnomalyAttacks(ctx: AbilityContext, nextSeq: () => numbe
       critEligibility: 'never', critical: false, actionSeq: seq, ordinal: 0, area: false, triggeringCastActionSeq: null });
   }
 }
-export function recordAnomalyProxyHit(ctx: AbilityContext, proxy: S13Unit | undefined, target: S13Unit, seq: number): void {
-  if (proxy?.anomalySummon?.kind !== 'mini' || (ctx.virtualHp?.get(target.id) ?? target.hp) <= 0) return;
+export function recordAnomalyProxyHit(ctx: AbilityContext, proxy: S13Unit | undefined, target: S13Unit, seq: number, redirected = false): void {
+  if (redirected || proxy?.anomalySummon?.kind !== 'mini' || (ctx.virtualHp?.get(target.id) ?? target.hp) <= 0) return;
   const source = { ...proxy.anomalySummon.source, ownerId: proxy.id, instanceId: proxy.id };
   applyStatus(target, source, 'resistanceFlat', -P4_SOURCE.DeftHands.values.ArmorReduction, 1201 - ctx.tick,
     ctx.tick, ctx.events, true, 'armor:' + JSON.stringify([seq, proxy.anomalySummon.ordinal, target.id]));
