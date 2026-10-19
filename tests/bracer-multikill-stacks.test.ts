@@ -34,9 +34,13 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
     });
   }
 }
+// Seed 3151248's 2-1 offer no longer contains a Manaflow augment. Back-row-only
+// Glass Cannon II is equally inert for these front-row (row 4) holders. Seed 120
+// still offers Manaflow I, which the back-row contribution=false board needs.
+const frontRowRod = () => acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 beforeAll(() => {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = frontRowRod();
   for (let i = 0; i < 8; i++) state = accepted(grantMechanicUnit(state, { receiptId: `lux-${i}`, source: 'test', definitionId: 'lux' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'lux' && u.team === 'player')!;
   // S13 Lux shields and empowers her next attack. Its real Luden splash makes
@@ -348,7 +352,7 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it("retains a dead holder's same-tick killing blow but grants zero kill or assist stacks, with identical restored ticks", () => {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = frontRowRod();
   for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
   expect(owner.starLevel).toBe(3);
@@ -387,7 +391,7 @@ it.each([
   { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = contribution ? publicEquipmentPreparation(['rod']) : acquireEquipment(['rod'], { seed: 29 });
+  let state = contribution ? frontRowRod() : acquireEquipment(['rod'], { seed: 120 });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
