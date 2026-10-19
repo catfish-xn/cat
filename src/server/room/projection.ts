@@ -194,6 +194,16 @@ const mirroredReplays = new WeakMap<object, CombatReplay>();
  * rethrown as is instead of re-running the whole battle inside every later push, resume or second participant.
  */
 const failedReplays = new WeakMap<object, unknown>();
+/** Replays the rules recorded while first computing the battle (not re-run); only these are spot-checked. */
+const firstPassReplays = new WeakSet<object>();
+/**
+ * Stores the replay the rules recorded during the battle's first computation under the same key toCombatReplayFor
+ * reads (the two-sided result, or a PvE seat outcome), so no push or warm-up re-runs that battle.
+ */
+export function primeCombatReplay(key: object, replay: CombatReplay): void {
+  replays.set(key, replay);
+  firstPassReplays.add(key);
+}
 function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => CombatReplay): CombatReplay {
   const hit = cache.get(key);
   if (hit) return hit;
@@ -322,4 +332,73 @@ function mirrorViewEvent(event: CombatViewEvent, rows: number): CombatViewEvent 
     }
     default: return event;
   }
+}
+
+/* ---------------- first-pass replay spot check ---------------- */
+
+/** One audited battle: what the log needs to find it again, and the first frame the re-run disagrees on (null: equal). */
+export interface SpotCheckResult {
+  readonly battleId: string;
+  readonly seatIds: readonly string[];
+  readonly battleSeed: number | null;
+  /** `initial`, `tick <n>` (by frame tick), `frames` (frame count), `terminal`, or the re-run's own refusal. */
+  readonly firstDifference: string | null;
+}
+/** A sliced re-run of the chosen battles; `advance` returns every result once all are done. */
+export interface SpotCheck { advance(maxTicks: number): readonly SpotCheckResult[] | null }
+
+interface AuditCandidate { readonly key: object; readonly input: CombatReplayInput; readonly battleId: string; readonly seatIds: readonly string[]; readonly battleSeed: number | null }
+
+/**
+ * Background audit of first-pass replays: re-runs a round's captured battles with `startCombatReplay` (the rules'
+ * re-execution and comparison) and compares the result with the frames already pushed. One battle per round in
+ * rotation (`round % count`, no RNG), or every captured battle when `all`. Null when the round captured nothing.
+ */
+export function startReplaySpotCheck(battles: readonly BattleResult[], round: number, all: boolean, battleSeeds: Readonly<Record<string, number>> = {}): SpotCheck | null {
+  const candidates: AuditCandidate[] = [];
+  for (const battle of battles) {
+    if (battle.kind === 'two-sided') {
+      if (firstPassReplays.has(battle)) candidates.push({ key: battle, input: battle.battle, battleId: battle.battleId, seatIds: battle.participants, battleSeed: battle.battle.battleSeed });
+      continue;
+    }
+    for (const outcome of battle.outcomes) {
+      if (outcome.combat && firstPassReplays.has(outcome)) candidates.push({ key: outcome, input: outcome.combat, battleId: battle.battleId, seatIds: [outcome.seatId], battleSeed: battleSeeds[battle.battleId] ?? null });
+    }
+  }
+  if (candidates.length === 0) return null;
+  const chosen = all ? candidates : [candidates[round % candidates.length]!];
+  const results: SpotCheckResult[] = [];
+  let index = 0, task: CombatReplayTask | null = null;
+  const finish = (candidate: AuditCandidate, firstDifference: string | null) => {
+    results.push({ battleId: candidate.battleId, seatIds: candidate.seatIds, battleSeed: candidate.battleSeed, firstDifference });
+    index++; task = null;
+  };
+  return {
+    advance(maxTicks: number): readonly SpotCheckResult[] | null {
+      const candidate = chosen[index];
+      if (!candidate) return results;
+      try {
+        task ??= startCombatReplay(candidate.input);
+        // The room passes Infinity when it does not slice; the rules take a positive safe integer.
+        const rerun = task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
+        if (!rerun) return null;
+        finish(candidate, firstReplayDifference(replays.get(candidate.key)!, rerun));
+      } catch (error) {
+        finish(candidate, `rerun-refused:${error instanceof Error ? error.message : String(error)}`);
+      }
+      return index < chosen.length ? null : results;
+    },
+  };
+}
+
+/** Both replays come from the same rules recorder, so equal content serializes identically frame by frame. */
+function firstReplayDifference(captured: CombatReplay, rerun: CombatReplay): string | null {
+  if (JSON.stringify(captured.initial) !== JSON.stringify(rerun.initial)) return 'initial';
+  const count = Math.min(captured.ticks.length, rerun.ticks.length);
+  for (let i = 0; i < count; i++) {
+    if (JSON.stringify(captured.ticks[i]) !== JSON.stringify(rerun.ticks[i])) return `tick ${captured.ticks[i]!.tick}`;
+  }
+  if (captured.ticks.length !== rerun.ticks.length) return `frames ${captured.ticks.length}/${rerun.ticks.length}`;
+  if (JSON.stringify(captured.terminal) !== JSON.stringify(rerun.terminal)) return 'terminal';
+  return null;
 }
