@@ -115,3 +115,8 @@ m8-b4-r3b、m8-b8-live-capacity、m8-b8-live-growth、task-mechanism-restore ›
 - 2 条换种子保不住原期望，用户 10-19 07:49 确认按现值改期望（提交 dfd2b4af）：
   - `tests/m8-b8-live-transfer.test.ts`：异常 mage-armor → slime-time。原值要重掷 133 次（133 金），路线只有 32 金。
   - `tests/m8-b8-live-reveal.test.ts` 同 tick 双死亡：tick 51 → 44，eventSeq 447/448 → 382/383。所需强化在 v13 下刷不出；60 个保留原强化的候选种子里 eventSeq 最高约 310。同 tick 双死亡和四个掉落归属不变。
+
+## v14 并入（#214 + multiplayer `4300175`）
+
+- #214 把 `tests/m8-b8-live-reveal.test.ts` 改成纯命令路线后，`scripts/record-g2-4b-live-reveal.cjs` 仍走旧种子路线，录出 tick 50 而不是测试断言的 44。两边的路线现在都从 `tests/fixtures/b8-live-reveal-routes.ts` 取，断言不变（tick 44，eventSeq 382/383；loris 381 和 4 条收据；zyra 152 和 0 条收据）。
+- G2-4b 指纹按 baseline `430017516a18fb38ee028cec000a44fb94bb638f` 全部重录，各项 `--check` 都通过。
