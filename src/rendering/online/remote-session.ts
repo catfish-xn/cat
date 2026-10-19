@@ -189,6 +189,7 @@ export class RemoteSession extends MatchSession {
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
+  override augmentReroll(choiceId: string, generation: number) { return this.intent({ type: 'rerollAugment', choiceId, generation }); }
   /** G2-4b (§26): the room hands it to the rules' moveItemSummon; refused outside preparation like any board move. */
   override moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.intent({ type: 'moveItemSummon', itemInstanceId, cell: { col: cell.col, row: cell.row } }); }
   /** G2-4b: the summons of my last state push as the server placed them; never derived from items or rounds here. */

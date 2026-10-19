@@ -4,7 +4,7 @@ import { toCombatViewState, toDisplayEvents, type CombatViewState, type DisplayC
 import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
-  combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, setShopLock,
+  combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, rerollAugment, setShopLock,
   moveItemSummon, readItemSummons,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
@@ -96,6 +96,7 @@ export class MatchSession {
   choose(choiceId: string, generation: number, definitionId: string) { return this.paused ? this.blocked() : this.commit(selectChoice(this.matchState, choiceId, generation, definitionId)); }
   anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.paused ? this.blocked() : this.commit(selectAnomalyTarget(this.matchState, choiceId, generation, unitId)); }
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }
+  augmentReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAugment(this.matchState, choiceId, generation)); }
   /** G2-4b: move the preparation summon of one item instance (兹若特传送门); the rules check phase, ownership and the cell. */
   moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.paused ? this.blocked() : this.commit(moveItemSummon(this.matchState, itemInstanceId, cell)); }
   private summonCache: { readonly state: MatchState; readonly summons: readonly ItemSummonView[] } | null = null;

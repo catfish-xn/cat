@@ -27,7 +27,7 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
-import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
@@ -85,6 +85,8 @@ interface PanelActions {
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
+  /** Augment offers: free whole-set reroll that keeps the tier (rules rerollAugment); optional so panels without it hide the button. */
+  readonly rerollAugment?: (choice: string, generation: number) => void;
   /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
   readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
@@ -843,7 +845,7 @@ export class StrategyPanel {
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
-    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化';
+    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
     const blocking = isOnline() ? `选择期间仍可搜牌和购买经验${generic ? '：收起弹窗即可操作' : '（D 刷新、F 购买经验）'}。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
@@ -884,6 +886,12 @@ export class StrategyPanel {
         if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
         row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
         card.append(row);
+      }
+      const rerollAugment = this.actions.rerollAugment;
+      // Rules expose the remaining free rerolls on the offer; the button only forwards, the rules check count and generation again.
+      if (choice.kind === 'augment' && rerollAugment && choice.rerollsRemaining !== undefined) {
+        card.append(this.button('augment-reroll', `刷新强化 · 同一等级（剩余 ${choice.rerollsRemaining} 次）`,
+          () => rerollAugment(choice.choiceId, choice.generation), choice.rerollsRemaining < 1));
       }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
