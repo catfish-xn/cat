@@ -60,6 +60,8 @@ export interface GameServerOptions {
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
+  /** First-pass replay spot check cadence in rounds that captured a battle; SPOT_CHECK_EVERY_ROUNDS by default. */
+  readonly spotCheckEveryRounds?: number;
   /** Wall budget of one resolution slice in ms (RoomOptions.sliceMs); default DEFAULT_SLICE_MS, `null` slices by ticks only. */
   readonly sliceMs?: number | null;
   /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
@@ -129,6 +131,8 @@ export interface ServerRetained {
 }
 /** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
 export const DEFAULT_SLICE_TICKS = 100;
+/** First-pass replay spot check: one captured battle every this many rounds that captured one (user choice 2026-10-19). */
+export const SPOT_CHECK_EVERY_ROUNDS = 4;
 /**
  * Default wall budget of one slice: late-round ticks cost several milliseconds each, so 100 of them could hold the
  * single writer for hundreds of milliseconds and every command queued behind them waited as long.
@@ -211,6 +215,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   };
   const resolver = options.resolver ?? new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
   const sliceTicks = options.sliceTicks ?? DEFAULT_SLICE_TICKS;
+  const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
     clock: roomClock, sliceTicks,
     ...(options.sliceMs === null ? {} : { sliceMs: options.sliceMs ?? DEFAULT_SLICE_MS }), seed: options.seed,
@@ -311,18 +316,20 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   }
 
   /**
-   * Background spot check of first-pass replays (user decision 2026-10-19): once a round's battles are published, one
-   * captured battle is re-run by the rules (`startCombatReplay`) in write-queue slices and compared with the frames the
-   * seats were pushed. A mismatch never touches the round or its settlement: it is logged with the room, round, battle,
+   * Background spot check of first-pass replays (user decisions 2026-10-19): once a round's battles are published, every
+   * SPOT_CHECK_EVERY_ROUNDS-th round that captured a battle has one of them re-run by the rules (`startCombatReplay`) in
+   * write-queue slices and compared with the frames the seats were pushed. A mismatch never touches the round or its settlement: it is logged with the room, round, battle,
    * seed, seats and first differing frame, and every later round of that room is then checked in full.
    */
-  let audit = { room: null as Room | null, round: -1, all: false };
+  let audit = { room: null as Room | null, round: -1, all: false, eligible: 0 };
   function scheduleSpotCheck(owner: Room, state: RoomState): void {
-    if (audit.room !== owner) audit = { room: owner, round: -1, all: false };
+    if (audit.room !== owner) audit = { room: owner, round: -1, all: false, eligible: 0 };
     if (state.phase !== 'battle' || audit.round === state.round) return;
     audit.round = state.round;
     const check = startReplaySpotCheck(state.battles, state.round, audit.all, state.battleSeeds);
     if (!check) return;
+    // Rounds that captured a battle count; the 1st, 5th, 9th … of them are checked (all of them after a mismatch).
+    if (audit.eligible++ % spotCheckEvery !== 0 && !audit.all) return;
     const slice = () => {
       // A replaced room or a closing server drops the check; an ended room still finishes its last round's check.
       if (room !== owner || closing) return;

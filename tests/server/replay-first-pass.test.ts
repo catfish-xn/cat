@@ -11,6 +11,7 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { toCombatReplay } from '../../src/server-entry';
 import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type RoomState } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
+import { SPOT_CHECK_EVERY_ROUNDS } from '../../src/server/net/server';
 import { seatTwo, startServer, type NetHarness } from './net/helpers';
 
 const capturing = (capture: (seatIds: readonly string[]) => boolean = () => true) =>
@@ -142,5 +143,21 @@ describe('game server: spot check', () => {
     expect(failed[0]!.fields).toHaveProperty('seats');
     const roundTwo = records.filter(record => record.event === 'replay.spot-check' && record.fields.round === 2);
     expect(roundTwo.length).toBeGreaterThan(1);
+  });
+
+  it('checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between', async () => {
+    // The production cadence is SPOT_CHECK_EVERY_ROUNDS; a cadence of 2 shows the same counting in fewer rounds.
+    expect(SPOT_CHECK_EVERY_ROUNDS).toBe(4);
+    const records: { event: string; fields: Record<string, unknown> }[] = [];
+    harness = await startServer({ spotCheckEveryRounds: 2, logger: (_level, event, fields = {}) => records.push({ event, fields }) }, capturing());
+    await seatTwo(harness);
+    const room = harness.server.room!;
+    const battleRounds: number[] = [];
+    room.subscribe(state => { if (state.phase === 'battle' && state.battles.length && battleRounds.at(-1) !== state.round) battleRounds.push(state.round); });
+    for (let guard = 0; guard < 5_000 && !(battleRounds.length >= 3 && room.state.phase === 'preparation'); guard++) harness.clock.runNext();
+    expect(room.state.fault).toBeNull();
+    const checked = records.filter(record => record.event === 'replay.spot-check').map(record => record.fields.round);
+    expect(checked).toEqual([battleRounds[0], battleRounds[2]]);
+    expect(records.some(record => record.event === 'replay.spot-check-failed')).toBe(false);
   });
 });

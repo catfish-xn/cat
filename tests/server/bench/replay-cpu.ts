@@ -11,9 +11,9 @@
  *
  * Run: npx esbuild tests/server/bench/replay-cpu.ts --bundle --platform=node --format=esm --packages=external \
  *        --outfile=dist-server/bench/replay-cpu.mjs && node dist-server/bench/replay-cpu.mjs --seeds 1,2,3 > report.json
- * `--path first-pass` (default) runs the server as it is now: attended battles record their replay while first computed
- * and one captured battle per round is re-run by the background spot check. `--path legacy` runs the earlier server:
- * no capture, every attended battle re-run by the warm-up before its push.
+ * `--path first-pass` (default) runs the server as it is now: attended battles record their replay while first computed,
+ * and every SPOT_CHECK_EVERY_ROUNDS-th round that captured a battle re-runs one of them (the background spot check).
+ * `--path legacy` runs the earlier server: no capture, every attended battle re-run by the warm-up before its push.
  */
 import { performance } from 'node:perf_hooks';
 import { ManualClock, type Clock } from '../../../src/server/room/clock';
@@ -23,7 +23,7 @@ import { Room, ROOM_TIMING_DEFAULTS } from '../../../src/server/room/room';
 import { BotDriver } from '../../../src/server/room/bot-driver';
 import { CAROUSEL_RULES_BINDING } from '../../../src/server/room/carousel';
 import { startReplaySpotCheck, startReplayWarmup, toCombatReplayFor } from '../../../src/server/room/projection';
-import { DEFAULT_SLICE_TICKS } from '../../../src/server/net/server';
+import { DEFAULT_SLICE_TICKS, SPOT_CHECK_EVERY_ROUNDS } from '../../../src/server/net/server';
 import type { BattleResult, RoomState, SeatSpec } from '../../../src/server/room/types';
 import { stepCombat } from '../../../src/simulation/combat';
 import { toCombatViewEvents, toCombatViewState } from '../../../src/simulation/combat-replay-view';
@@ -132,7 +132,7 @@ function playMatch(seed: number, mode: Mode, path: Path): RoundSample[] {
   room.subscribe(state => {
     if (state.phase === 'battle' && !pushed.has(state.round)) { pushed.add(state.round); if (attended.length) pushPending = state; }
   });
-  let lastFrozenRound = -1;
+  let lastFrozenRound = -1, eligibleRounds = 0;
   room.subscribe(state => {
     if (state.phase !== 'battle' || lastFrozenRound === state.round) return;
     lastFrozenRound = state.round; referencePending = state;
@@ -140,6 +140,7 @@ function playMatch(seed: number, mode: Mode, path: Path): RoundSample[] {
     // The server's spot check (net/server.ts scheduleSpotCheck): one captured battle re-run per round, in clock slices.
     const check = startReplaySpotCheck(state.battles, state.round, false, state.battleSeeds);
     if (!check) return;
+    if (eligibleRounds++ % SPOT_CHECK_EVERY_ROUNDS !== 0) return;
     const slice = () => {
       const started = performance.now();
       const results = check.advance(DEFAULT_SLICE_TICKS);
