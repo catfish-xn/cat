@@ -90,7 +90,7 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
   report.measurements=await page.evaluate(()=>{
    const fixtures=globalThis.__M6_PERF_FIXTURES;delete globalThis.__M6_PERF_FIXTURES;
    return (async fixtures=>{
-   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),...details}));
+   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),usedHeapMb:performance.memory.usedJSHeapSize/1048576,totalHeapMb:performance.memory.totalJSHeapSize/1048576,...details}));
    mark('measurements-entered');
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{validateFile,exportFile}=await import('/src/persistence/format.ts');
    const {BattleHistory,PlaybackSession,validateBattleCollection}=await import('/src/replay/index.ts');
@@ -122,14 +122,18 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
      if(history.completedRecords.length!==fixtures.expectedBattleCount)throw Error('full import lost history');
      const result=await measured('activation',()=>repository.activate(null,candidate));prepared.dispose();return result;
     });
+    mark('complete-import-0-complete');
     await validateFile(exportFile(current),validateBattleCollection);
     token=await measured('activation',()=>repository.activate(token,current));
+    mark('current-activation-complete');
     let writeStart=0;
     coordinator=new SaveCoordinator(repository,token,status=>{if(status.kind==='saving')writeStart=performance.now();if(status.kind==='saved')samples.write.push(performance.now()-writeStart);if(status.kind==='failed')throw Error(status.message);});
     for(let i=0;i<12;i++){measure('capture',()=>coordinator.enqueue(capture()));await coordinator.flush();}
     const disk=await repository.readCurrent();if(disk.envelope.battles.length!==current.battles.length||disk.envelope.currentBattle.nextEventSeq!==current.currentBattle.nextEventSeq)throw Error('incremental roundtrip changed history/cursor');
+    mark('captures-complete');
     measureFullCapture(); // Original ordering before the remaining two complete-import samples.
     // Three complete-import samples; token is the latest successful coordinator revision.
+    mark('full-capture-complete');
     token=coordinator.token;coordinator.dispose();
     for(let repeat=1;repeat<3;repeat++)token=await measured('completeImport',async()=>{
      const candidate=await validateFile(exportFile(complete),validateBattleCollection);
@@ -137,12 +141,14 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
      if(history.completedRecords.length!==fixtures.expectedBattleCount)throw Error('full import lost history');
      const result=await measured('activation',()=>repository.activate(token,candidate));prepared.dispose();return result;
     });
+    mark('complete-imports-complete');
     const fullLoadStarted=performance.now();const fullLoadCandidate=await validateFile(exportFile(fullLoad),validateBattleCollection);
     const fullLoadSession=new MatchSession(fullLoadCandidate.match,fullLoadCandidate.battles.at(-1).events),fullLoadHistory=new BattleHistory(fullLoadCandidate.runId,fullLoadCandidate.battles,null);
     token=await measured('activation',()=>repository.activate(token,fullLoadCandidate));const fullLoadDisk=await repository.readCurrent();
     const canonical=v=>Array.isArray(v)?`[${v.map(canonical).join(',')}]`:v!==null&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')}}`:JSON.stringify(v);
     if(canonical(fullLoadDisk.envelope)!==canonical(fullLoadCandidate)||fullLoadHistory.completedRecords.length!==fixtures.expectedBattleCount)throw Error('maximum legal full-load roundtrip mismatch');fullLoadSession.dispose();
     fullLoadRoundTrip={milliseconds:performance.now()-fullLoadStarted,verified:true,battles:fullLoadCandidate.battles.length};
+    mark('full-load-complete');
     while(samples.activation.length<12)token=await measured('activation',()=>repository.activate(token,fullLoadCandidate));
     if(!fullCaptureMeasured)throw Error('fullCapture must run at its original pipeline position');
     mark('current-validation-start');
