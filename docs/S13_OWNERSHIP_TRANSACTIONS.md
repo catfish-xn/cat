@@ -39,8 +39,8 @@ serializeOwnership(state: OwnershipState, boundary: OwnershipBoundary,
 
 - `OwnershipAuthority.grants` 是独立认证的来源清单：每个 grant 有固定 id、seatId、有序资源列表。资源为英雄定义、装备定义，或带明确 `maxCost: 1|2|3|4|5` 的复制器；这里没有新增可报价内容定义。每个 grant 的全部资源同批提交，一个 grant 只能取得一次。
 - `OwnershipTransaction` 是唯一 id + 非空 operations。相同 id 与完全相同操作重试返回原 state、空事件；相同 id 换操作返回 `receipt-conflict`。同来源换事务 id 返回 `already-acquired`。
-- `OwnershipResult` 成功为 `{ok:true,state,events}`，失败为 `{ok:false,state:原引用,reason}`；失败没有事件，池、单位/装备/工具、序号、金币、成长、来源、历史均回滚。空托管领取及重复结算没有变更时成功返回原引用、空事件。
-- 成功改变状态才发一次 `ownershipCommitted`；实例/消费/合星谱系从已接纳操作重演，池 holdings 的每个基础份额保留不可重复的来源键。
+- `OwnershipResult` 成功为 `{ok:true,state,events}`，失败为 `{ok:false,state:原引用,reason}`；失败没有事件，池、单位/装备/工具、序号、金币、成长、来源、历史均回滚。首次成功的空托管领取、无可合星的 merge-live 或重复结算也追加事务 ID/原操作的去重事实，返回仅日志变化的新 state、空事件；之后同 ID 同操作重试返回原引用、空事件，同 ID 换操作拒绝。
+- 成功改变资源投影才发一次 `ownershipCommitted`；仅新增空操作收据不发事件；实例/消费/合星谱系从已接纳操作重演，池 holdings 的每个基础份额保留不可重复的来源键。
 
 操作：
 
@@ -61,7 +61,7 @@ serializeOwnership(state: OwnershipState, boundary: OwnershipBoundary,
 
 ## Q 条目与适用范围
 
-- **Q3（原版检索后采用的兜底项目约定）**：暂离期间不出售、不卸装、不合星；不计在场羁绊/人口，仍计所有权/卡池。倒计时是从 `boundRound`（已结算 ordinal）到 `returnRound` 的真实结算数；轮选与加时同样计一轮，不能跳号。到期满席继续托管，同一实例直到腾位。没有实现进入未知的选择、数值或成长发放。2026-10-19 按新版 Q3 核对 raw、已有文档及官方公告后，仍不能确认上述满席/交互/特殊回合边界的原版行为，故不将其标为原版已考证；具体来源、原文与证据缺口见 [Q3 来源核对](evidence/s13-d3/Q3_SOURCE_REVIEW.md)。Q6 不扩目录，Q7/Q8 本轮不做。
+- **用户10-19批准的项目约定（Q3）**：暂离期间不出售、不卸装、不合星；不计在场羁绊/人口，仍计所有权/卡池。倒计时是从 `boundRound`（已结算 ordinal）到 `returnRound` 的真实结算数；轮选与加时同样计一轮，不能跳号。到期满席继续托管，同一实例直到腾位。没有实现进入未知的选择、数值或成长发放。2026-10-19 按新版 Q3 核对 raw、已有文档及官方公告后，仍不能确认上述满席/交互/特殊回合边界的原版行为，故不将其标为原版已考证；具体来源、原文与证据缺口见 [Q3 来源核对](evidence/s13-d3/Q3_SOURCE_REVIEW.md)。Q6 不扩目录，Q7/Q8 本轮不做。
 - **Q5（边界）**：逐条列出需内容接线评审的旧约定如下；本包不以“沿用”名义默认触发它们。既有普通卖出/装备/三合一算法只由显式 `sell/equip/merge-live` 操作调用，不改原入口行为。
 
 |旧约定|本包处理 / 后续评审项|
@@ -87,4 +87,4 @@ serializeOwnership(state: OwnershipState, boundary: OwnershipBoundary,
 
 ## 验证与交付限制
 
-只 typecheck 和相关测试文件逐文件运行；结果见 `docs/evidence/s13-d3/VALIDATION.md`。没有全套测试、录制重生成、服务器或界面修改。新增模块未挂入现有生产调用图；没有修改 content digest、源码指纹或版本号，后续集成若把它接入源码指纹覆盖范围，须由集成方统一更新。D4 最小接口是只读 `OwnershipSeat.preparation` 和同源 `deploymentCap`；无 D4 文件冲突。
+只 typecheck 和相关测试文件逐文件运行；结果见 `docs/evidence/s13-d3/VALIDATION.md`。没有全套测试、录制重生成、服务器或界面修改。新增模块未挂入现有生产调用图；没有修改 content digest 或版本号；D5 按用户10-19明确授权的例外，仅更新 G2-4b 源码指纹及对应输入审计元数据并按序校验，见 [D5 修复验证](evidence/s13-d3/D5_NOOP_FIX.md)。历史 G2-3/G2-augments Herald 输入保持不变。D4 最小接口是只读 `OwnershipSeat.preparation` 和同源 `deploymentCap`；无 D4 文件冲突。

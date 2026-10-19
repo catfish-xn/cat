@@ -47,6 +47,53 @@ const acquire = (grantId: string, full: 'hold' | 'reject' = 'hold'): OwnershipOp
 const settle = (ordinal: number): OwnershipOperation => ({ kind: 'settle', roundId: getMultiplayerRoundByOrdinal(ordinal).roundId });
 
 describe('D3 resource ownership transactions (Q3/Q5)', () => {
+  it.each(['merge-live', 'settle', 'claim'] as const)('persists a successful %s no-op ID without events and rejects changed retries', kind => {
+    const { state: initial, authority, boundary } = setup('1-2');
+    const state = kind === 'claim' ? commit(initial, authority, 'full', acquire('fill'), acquire('two-units')) : initial;
+    const operation: OwnershipOperation = kind === 'merge-live' ? { kind, seatId: 'seat-0' }
+      : kind === 'settle' ? settle(state.settledOrdinal)
+      : { kind, seatId: 'seat-0', holdingId: state.held[0].id, full: 'hold' };
+    const tx: OwnershipTransaction = { id: 'accepted-no-op', operations: [operation] };
+    // This is the caller's accepted-command log, including the successful no-op.
+    const verified = [...state.transactions, tx];
+    const result = transactOwnership(freeze(state), tx, authority);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.events).toEqual([]);
+    expect(result.state).toEqual({ ...state, transactions: verified });
+    expect(transactOwnership(result.state, tx, authority)).toEqual({ ok: true, state: result.state, events: [] });
+    expect(transactOwnership(result.state, tx, authority).state).toBe(result.state);
+    reject(result.state, authority, tx.id, 'receipt-conflict', acquire('equipment-tools'));
+    expect(restoreOwnership(result.state, boundary, authority, verified)).toEqual(result.state);
+    const saved = serializeOwnership(result.state, boundary, authority, verified);
+    const restored = restoreOwnership(saved, boundary, authority, verified);
+    expect(restored).toEqual(result.state);
+    reject(restored, authority, tx.id, 'receipt-conflict', acquire('equipment-tools'));
+    oracle(result.state);
+  });
+  it('replays a trusted mixed log containing first-time no-ops without dropping receipts', () => {
+    const { state, boundary, authority } = setup();
+    const verified: OwnershipTransaction[] = [
+      { id: 'empty-merge', operations: [{ kind: 'merge-live', seatId: 'seat-0' }] },
+      { id: 'grant', operations: [acquire('equipment-tools')] },
+      { id: 'still-empty-merge', operations: [{ kind: 'merge-live', seatId: 'seat-0' }] },
+      { id: 'round', operations: [settle(1)] },
+      { id: 'repeat-round', operations: [settle(1)] },
+    ];
+    let current = state;
+    for (const [index, tx] of verified.entries()) {
+      const result = transactOwnership(freeze(current), tx, authority);
+      if (!result.ok) throw new Error(result.reason);
+      expect(result.events).toHaveLength([0, 2, 4].includes(index) ? 0 : 1);
+      current = result.state;
+      expect(current.transactions).toEqual(verified.slice(0, index + 1));
+    }
+    const restored = restoreOwnership(serializeOwnership(current, boundary, authority, verified), boundary, authority, verified);
+    expect(restored).toEqual(current);
+    expect(transactOwnership(restored, verified[0], authority)).toEqual({ ok: true, state: restored, events: [] });
+    const next: OwnershipTransaction = { id: 'next', operations: [acquire('two-units')] };
+    expect(transactOwnership(restored, next, authority)).toEqual(transactOwnership(current, next, authority));
+  });
   it('takes two real shares exactly once and keeps every other player unchanged', () => {
     const { state, authority } = setup();
     const after = commit(state, authority, 'choice', acquire('two-units'));

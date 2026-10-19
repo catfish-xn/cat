@@ -268,10 +268,11 @@ export function transactOwnership(state: OwnershipState, transaction: OwnershipT
       }
       apply(draft, op, authority, transaction.id);
     }
-    if (same(draft, state)) return { ok: true, state, events: [] };
+    // Every accepted ID is durable, even when only the command receipt changes.
+    const resourcesChanged = !same(draft, state);
     draft.transactions = [...draft.transactions, structuredClone(transaction)];
     assertOwnershipConservation(draft);
-    return { ok: true, state: draft, events: [{ type: 'ownershipCommitted', transactionId: transaction.id }] };
+    return { ok: true, state: draft, events: resourcesChanged ? [{ type: 'ownershipCommitted', transactionId: transaction.id }] : [] };
   } catch (error) {
     return { ok: false, state, reason: error instanceof OwnershipError ? error.reason : 'invalid-state' };
   }
