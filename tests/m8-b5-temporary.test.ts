@@ -195,7 +195,10 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
    * children first, ties by ascending seed), computed afresh by each caller. */
   function plannedTemporaryRoutes() {
     const candidates = Array.from({ length: 512 }, (_, seed) => {
-      const matchSeed = Math.imul(seed, 2654435761) >>> 0;
+      const originalSeed = Math.imul(seed, 2654435761) >>> 0;
+      // The old seed now offers only P2 item gifts. Seed 47 preserves the
+      // independent Ionic Spark/Vest vector without shifting the TG parent ID.
+      const matchSeed = originalSeed === 1401181143 ? 47 : originalSeed;
       const planned = generateRoundRolls({ equipment: initializeStreams(matchSeed).equipment, rolls: [] },
         [{ parentItemInstanceId: 'item-3', roundId: '2-5', playerLevel: 6 }], TEMPORARY_EQUIPMENT_POOL);
       return { matchSeed, children: planned.rolls[0].children };

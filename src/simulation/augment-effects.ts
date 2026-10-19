@@ -7,6 +7,7 @@ import { hexDistance } from './board';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { AUGMENT_BRONZE_THRESHOLDS } from './content/augment-policy';
+import { p2AugmentEffects } from './s13-augments-p2-strategy';
 const flat = (stat: 'maxHp'|'armor'|'magicResist'|'abilityPower', amount:number):Effect => ({kind:'statFlat',stat,amount});
 const speed = (bps:number):Effect => ({kind:'attackSpeedBps',bps});
 const mechanic = (name:string,values:Record<string,number>):Effect => ({kind:'mechanic',mechanic:name,values});
@@ -16,6 +17,8 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);
+    case 's13P3': return [mechanic('s13P3',{...v,stage:getMultiplayerRoundByOrdinal(state.round).stage})];
     case 'pumpingUp': {
       // I retains its established receipt-validated counter; II/III count completed
       // combat nodes from acquisition, including online overtime, never supply nodes.

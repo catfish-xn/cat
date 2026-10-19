@@ -12,8 +12,8 @@ it.each(Object.entries(P4_SOURCE))('%s retains exact raw14.24b coefficients and 
   expect(ANOMALY_DEFINITIONS[source.id].name).toBe(source.name);
   expect(ANOMALY_DEFINITIONS[source.id].description).not.toContain('@');
 });
-it('registers41anomalies, preserves raw wolf0.9 while exposing official1.0, and records the available orbit script evidence', () => {
-  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(41);
+it('registers51anomalies (30 G2-3, 3 P2, 11 P4, 7 P3), preserves raw wolf0.9 while exposing official1.0, and records the available orbit script evidence', () => {
+  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(51);
   expect(Object.values(P4_SOURCE).map(s => s.name)).toEqual(['势不可挡','深入敌阵','震撼登场','斥力发生器','隐形','最后机会','真的会蟹','双狼佣兽','渴望能量','星原之准','小我多多']);
   expect(P4_SOURCE.WolfFamiliars.values.TooltipAS).toBe(0.9);
   expect(ANOMALY_DEFINITIONS[P4_SOURCE.WolfFamiliars.id].description).toContain('1.0');

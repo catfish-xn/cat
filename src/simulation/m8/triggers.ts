@@ -91,7 +91,7 @@ export function dispatchTriggers(combatId: string, definitions: readonly TargetL
     const target=units.find(u=>u.id===context.targetId);
     const targetId=context.targetId,resist=targetId!==null&&magicResist&&readsResist(d.condition)?{targetMagicResistOf:()=>magicResist(targetId)}:{};
     if(!conditionHolds(d.condition,{holder,target,startingRows:holder.startingRows,positiveHpDamage:signal.facts.damage.some(o=>o.hpDamage>0),...(context.event==='kill-or-assist'&&signal.facts.damage[0]?{packet:signal.facts.damage[0].context}:{}),
-      killedTarget:signal.facts.damage.some(o=>o.killingPacket),criticalAttack:signal.facts.damage.some(o=>o.hit&&o.critical&&o.context.delivery==='basic-attack'),damageTypes:signal.facts.damage.filter(o=>o.hit).map(o=>o.context.damageType),...resist})) continue;
+      killedTarget:signal.facts.damage.some(o=>o.killingPacket),criticalHit:signal.facts.damage.some(o=>o.hit&&o.critical),damageDeliveries:signal.facts.damage.filter(o=>o.hit).map(o=>o.context.delivery),criticalAttack:signal.facts.damage.some(o=>o.hit&&o.critical&&o.context.delivery==='basic-attack'),damageTypes:signal.facts.damage.filter(o=>o.hit).map(o=>o.context.damageType),...resist})) continue;
     if(old.consumed || event.tick<old.nextEligibleTick || d.maxPerCombat!==null && old.triggerCount>=d.maxPerCombat) continue;
     const gate=d.gate, count=gate.kind==='always'?0:values[gate.counterId] ?? 0;
     if(gate.kind==='every-n' && (count<gate.firstAt || (count-gate.firstAt)%gate.everyN!==0)) continue;

@@ -39,7 +39,11 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
     return definition.recipe ? [...definition.recipe] : [definitionId];
   });
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  let state = equipmentPreparation(components);
+  // Keep the two-Bloodthirster control's original component births and chosen
+  // augments under P2's expanded offer pool. Other controls retain their seed.
+  let state = requested.length === 2 && requested.every(id => id === 'bloodthirster')
+    ? acquire(components, { seed: 81408, augmentPriorities: ['manaflow-i', 'pumping-up-ii'] })
+    : equipmentPreparation(components);
   const available = state.items.filter(item => item.location.kind === 'inventory');
   for (const [slot, definitionId] of requested.entries()) {
     const definition = ITEM_DEFINITIONS[definitionId];

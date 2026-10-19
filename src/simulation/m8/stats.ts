@@ -15,6 +15,8 @@ export interface StatSample {
   readonly damageTypes?: readonly DamageType[];
   readonly targetMagicResistOf?: () => number;
   readonly criticalAttack?: boolean;
+  readonly criticalHit?: boolean;
+  readonly damageDeliveries?: readonly import('./contracts').DamageDelivery[];
 }
 export function integer(value: number, minimum = 0): bigint {
   if (!Number.isSafeInteger(value) || value < minimum) throw new RangeError('Expected safe integer');
@@ -60,6 +62,12 @@ export function conditionHolds(condition: Condition, sample: StatSample): boolea
       const resist = sample.targetMagicResistOf();
       return condition.op === 'gt' ? resist > condition.value : resist <= condition.value;
     }
+    case 'critical-hit':
+      if(sample.criticalHit===undefined)throw new RangeError('Missing critical hit fact');
+      return sample.criticalHit;
+    case 'damage-delivery':
+      if(!sample.damageDeliveries)throw new RangeError('Missing delivery facts');
+      return sample.damageDeliveries.some(d=>condition.deliveries.includes(d));
     case 'critical-attack':
       if (sample.criticalAttack === undefined) throw new RangeError('Missing critical fact');
       return sample.criticalAttack;
