@@ -4,16 +4,27 @@
 
 ## 现状盘点（决定目标优先级的事实）
 
-| 维度 | 现状 | 14.24b 全量 | 差距 |
-| --- | --- | --- | --- |
-| 英雄 | 19（含技能） | 60 | 41 个英雄与技能 |
-| 羁绊 | 5 职业 | 28（13 阵营 + 15 职业） | 23 |
-| 装备 | 8 组件 / 36 成装（Codex G2-1 对账确认，PROJECT_GUIDE 的 7/9 已过时） | 8 组件 / 36 成装 + 金铲铲/转职 + 光明/神器/辅助 | 普通装备已齐；金铲铲/转职、光明/神器后置 |
-| 强化 | 6 | ≈ 300 | 先补到 40–60 个通用/经济/羁绊强化 |
-| 异变 | 3 | 60 | 57 |
-| 流程 | 开场、PvE、PvP、选择、补给、加时、淘汰、排名 | 另有 1-1 选秀、2-4/3-4/4-4/5-4/6-4 选秀、配对预告 | P6（配对预告）、P7（选秀）用户尚未拍板 |
-| 运维 | 内存态单房、手工启动 | — | 无部署脚本、健康检查、日志、异常收局回队列 |
-| 测试 | 全套 211 文件 ≈ 16 分钟，2 条耗时断言并行必挂 | — | 需要分片/串行化耗时项，否则每批验货都靠人工复跑 |
+盘点日期 2026-10-19，基线 `multiplayer` @ `bc49cac`（v12）。数字按代码运行时导出实际数出（用 esbuild 打包 `src/simulation/content/index.ts` 等导出后计数），不取自交接文档。**每次收工都要按同样口径重数并更新本表。** 2026-10-15 的旧值（英雄 19、羁绊 5、强化 6、异变 3）已作废。
+
+| 维度 | 现状（multiplayer v12） | 14.24b 全量 | 差距 | 计数来源 |
+| --- | --- | --- | --- | --- |
+| 英雄 | 60（1 费 14 / 2 费 13 / 3 费 13 / 4 费 12 / 5 费 8），商店卡池同为 60 | 60 | 已齐 | `M5_UNIT_DEFINITIONS`（`src/simulation/units.ts`）；`SHOP_CATALOG_BY_COST`（`src/simulation/match-rules.ts`）；全量取 `raw/en_us.json.gz` 中 `TFTSet13` 可上场英雄 |
+| 召唤/中立单位 | 中立 5、虚空生物 1 | — | — | `NEUTRAL_UNIT_DEFINITIONS`（`units.ts`）；`G24_VOIDSPAWN_UNITS`（`content/g2-4b-voidspawn.ts`） |
+| 羁绊 | 25 | 33（含 7 个双人关系羁绊与百变） | 8：百变（Form Swapper）+ 7 个双人关系羁绊，均在规则清单 `blocked` 中 | `TRAIT_DEFINITIONS`（`content/traits.ts`）；全量取 `raw/en_us.json.gz` `TFTSet13.traits`；缺口见 `content/rules-manifest.ts` 的 `form-swapper-trait`、`seven-teamups` |
+| 普通装备 | 8 组件 / 36 成装 / 36 光明 | 8 / 36 / 36 | 已齐 | `ITEM_DEFINITIONS`（`content/g2-3-item-registry.ts`）按 `kind` 分组；成装取非 `TFT` 前缀的 `completed` |
+| 神器 | 29 | 29（`ORNNARTIFACTS_SET6`） | 已齐 | `G24_ARTIFACT_SOURCE`（`content/g2-4-artifact-source.ts`），与 `ITEM_DEFINITIONS` 交集 29 |
+| 辅助装 | 17 | 17（`SUPPORTITEMS`） | 已齐 | `G24_SUPPORT_ITEM_SOURCE`（`content/g2-4-support-item-source.ts`），与 `ITEM_DEFINITIONS` 交集 17 |
+| 炼金男爵专属装 | 28 | 28（`raw` 中 32 个 `TFT13_Crime_*` 对象，另 3 个是消耗品、1 个是金币对象） | 已齐 | `ITEM_DEFINITIONS` 中带 `restriction: chem-baron` 的条目 |
+| 其他特殊装 | 1（战术家之冠 `TFT_Item_ForceOfNature`） | — | — | `ITEM_DEFINITIONS` 中不属于上述各类的 `completed` |
+| 消耗品/锻造器 | 3 个消耗品（磁力移除器、组件重铸器、成装重铸器）；锻造器 3 个池（成装/辅助/神器，四选一）；复制器 2 种（次级英雄、次级微光） | — | 大英雄/大微光复制器不做（用户已定） | `CONSUMABLE_DEFINITIONS`（`content/consumables.ts`）；`G24_FORGE_POOLS`（`content/g2-4-forges.ts`）；`content/g2-3-policy.ts` 复制器表 |
+| 征服者档位 | 15/15 档全部接入，无延后档 | 15 | 已齐 | `G23_CONQUEROR_CHESTS`（`content/g2-3-policy.ts`，`length:15`，`G23_DEFERRED_CONQUEROR_ITEMS` 为空） |
+| 强化 | 30（银 14 / 金 13 / 彩 3） | 310 个标准池候选（银 68 / 金 148 / 彩 94）；本阶段目标 60 | 目标差 30；全量差 280 | `AUGMENT_DEFINITIONS`（`content/augments.ts`），等级取 `AUGMENT_TIERS`（`content/augment-policy.ts`）；全量见 `planning/s13-14.24-multiplayer-audit.html`（2026-10-18 审计） |
+| 异常 | 30 | 57（`TFTSet13_Evolved` 池 61 项中非零权重 57） | 27 | `ANOMALY_DEFINITIONS`（`content/anomalies.ts`）；全量同上审计 |
+| 流程 | 开场、1-1 与 2-4/3-4/4-4/5-4/6-4 选秀、PvE、PvP、配对预告、强化选择、补给、加时、淘汰、排名 | 同左 | 流程已对齐 | `src/simulation/carousel-policy.ts`、`carousel.ts`（含 `'1-1'`）；`src/server/room/pairing.ts`（G1-P6 配对预告） |
+| 运维 | 单局服务器；`/healthz`；`deploy/deploy.sh` + `deploy/cat-game.service`（systemd） | — | 上线清单见 `planning/release-v12-checklist.md` | `src/server/net/server.ts`、`deploy/` |
+| 测试 | 317 个 `*.test.ts`；`fast` 与 `timing`（串行，7 个文件）两个 vitest project | — | 计时类断言不挡合并，改每夜报告 | `find tests -name "*.test.ts"`；`vitest.config.ts` |
+
+**集成分支，待 v13 收口（不计入上表）：** `integration/s13-augments` @ `05c6792` 已合 P2（#188）、P3（#189）、P4（#192），P1（#191）仍开着未合。运行时导出为强化 51（银 14 / 金 26 / 彩 11，即 +21）、异常 51（+21）；英雄、羁绊、装备数与 multiplayer 相同。计数口径同上，在该分支上导出 `AUGMENT_DEFINITIONS`、`ANOMALY_DEFINITIONS`。
 
 原始数据：`src/simulation/content/source/s13-14.24b/raw/en_us.json.gz`（CDragon 14.24b 全量，12 MB，SHA 已锁），`scripts/import-m8-source.py` 已能按 hash 校验抽取；图标走 `scripts/fetch-s13-assets.cjs`（communitydragon）。扩内容不缺数据，缺的是实现与测试。
 
