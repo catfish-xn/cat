@@ -27,10 +27,15 @@ describe('bounded WAD index and entry extraction', () => {
     expect(decode).not.toHaveBeenCalled();
     expect(() => extractWadEntry(bytes, entry, { decompressZstd: null })).toThrow('zstd-decoder-required');
   });
-  it('does not silently treat redirects or subchunk data as ordinary payloads', () => {
-    for (const type of [2, 4]) {
-      const { bytes } = wad(type); expect(() => extractWadEntry(bytes, readWadIndex(bytes)[0])).toThrow(`unsupported-wad-compression:${type}`);
-    }
+  it('rejects redirects and requires an explicit TOC for subchunk chains', () => {
+    const redirect = wad(2).bytes, chain = wad(4).bytes;
+    expect(() => extractWadEntry(redirect, readWadIndex(redirect)[0])).toThrow('unsupported-wad-compression:2');
+    expect(() => extractWadEntry(chain, readWadIndex(chain)[0])).toThrow('wad-subchunk-toc-required');
+  });
+  it('distinguishes the 3.3 duplicate flag from the 3.4 high subchunk index byte', () => {
+    const { bytes } = wad(); bytes[3] = 3; bytes[293] = 1; bytes.writeUInt16LE(7, 294);
+    expect(readWadIndex(bytes)[0].firstSubchunk).toBe(7);
+    bytes[3] = 4; expect(readWadIndex(bytes)[0].firstSubchunk).toBe(65543);
   });
   it('rejects output size mismatches', () => {
     const { bytes } = wad(), entry = readWadIndex(bytes)[0];

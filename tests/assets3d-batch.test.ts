@@ -1,13 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import { zstdCompressSync } from 'node:zlib';
 // @ts-expect-error Pure Node utility.
 import { buildAll, selectUnits } from '../scripts/assets3d/build-all.mjs';
 // @ts-expect-error Pure Node utility.
 import { unitDefinitions } from '../scripts/assets3d/runtime.mjs';
 // @ts-expect-error Pure Node utility.
 import { withinRoot, writeOutputFile } from '../scripts/assets3d/safe-path.mjs';
+// @ts-expect-error Pure Node utility.
+import { extractFromChunks } from '../scripts/assets3d/extract-from-chunks.mjs';
+// @ts-expect-error Pure Node utility.
+import { readWadIndex } from '../scripts/assets3d/wad.mjs';
+// @ts-expect-error Pure Node utility.
+import { riotChunkId } from '../scripts/assets3d/chunk-hash.mjs';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -67,12 +73,22 @@ describe('isolated per-unit batch build', () => {
     const raw = new Map<string, Buffer>([[`${config.base}/${config.mesh}`, f.mesh], [`${config.base}/${config.skeleton}`, f.rig],
       [`${config.base}/${config.textures.Body}`, f.texture]]);
     for (const path of Object.values(config.animationFiles) as string[]) raw.set(`${config.base}/${path}`, f.anm);
-    const files = [];
-    for (const [path, bytes] of raw) {
-      await writeOutputFile(join(source, 'extracted', path), bytes);
-      files.push({ path, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+    const wadName = 'DATA/synthetic.wad.client', wad = Buffer.alloc(272 + raw.size * 32 + [...raw.values()].reduce((n, b) => n + b.length, 0));
+    wad.write('RW'); wad[2] = 3; wad[3] = 4; wad.writeUInt32LE(raw.size, 268);
+    let offset = 272 + raw.size * 32, index = 0;
+    for (const bytes of raw.values()) {
+      const at = 272 + index * 32; wad.writeBigUInt64LE(BigInt(++index), at);
+      wad.writeUInt32LE(offset, at + 8); wad.writeUInt32LE(bytes.length, at + 12); wad.writeUInt32LE(bytes.length, at + 16);
+      bytes.copy(wad, offset); offset += bytes.length;
     }
-    await writeOutputFile(join(source, 'extraction.json'), JSON.stringify({ version: '14.24.6442327', files }));
+    const packed = zstdCompressSync(wad), id = riotChunkId(wad);
+    const chunks = [{ id, bundleId: '0000000000000001', fileOffset: 0, offset: 0, size: packed.length, targetSize: wad.length }];
+    await writeOutputFile(join(source, 'chunks', `${id}.zst`), packed);
+    const entries = readWadIndex(wad).map((e: object, i: number) => ({ ...e, wad: wadName, path: [...raw.keys()][i] }));
+    const extraction = await extractFromChunks({ source, out: join(root, 'extract-out'), units: 'vi',
+      manifest: { files: [{ name: wadName, size: wad.length, chunks }] },
+      plan: { units: { vi: { cost: 4, entries } }, wads: [{ name: wadName, entries }] } });
+    expect(extraction.status).toBe('complete');
     const result = await buildAll({ units: 'vi', source, out: join(root, 'out') });
     expect(result.units.vi).toMatchObject({ status: 'success', vertices: 3, bones: 1, textures: 1,
       particles: { available: false, reason: 'missing-source-json', mapped: null },

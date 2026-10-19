@@ -148,7 +148,7 @@ D8 v1 未完整支持，不能丢弃字段后宣称还原。这些源 JSON 与�
 
 - 其余 58 英雄的实际获取、转换及独立对照。
 - 在可证明语义等价的前提下扩展粒子合同与真实可见特效；v1 不支持的源发射器仍拒绝或跳过。
-- 生产 WAD subchunk 解包及跨 WAD 传递依赖的精确下载预算；RMAN 定向下载器代码已在下述第 3 步（a）提供，实际下载交由调度方执行。
+- 跨 WAD 传递依赖的精确下载预算及全量生产验收；RMAN 下载器和离线 WAD subchunk 解包器见下述第 3 步（a）/（c），实际下载与全量运行交由调度方执行。
 - D8 浏览器接线、截图及视觉验收。
 
 格式参考：[LTK SKN](https://wiki.leaguetoolkit.dev/reference/file-formats/skn/)、
@@ -200,7 +200,7 @@ node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-loca
 
 **构建前置条件和目前覆盖范围：**
 
-- 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`。批量构建沿用第 2 步的已解包原始资源和 SHA-256 提取记录；下载后的 WAD subchunk 解包及其生产验证仍需后续步骤。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
+- 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`；下载后须执行下述第 3 步（c）解包器。批量构建直接使用它生成/合并的原始资源及 SHA-256 提取记录，无须改接口。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
 - `unit-map.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。Corki 的 mesh/skeleton 分别是 `tft13_corkifixedskin` / `tft13_corkifixedskeleton`，Illaoi 的 mesh 使用 `_13` 后缀；不套用臆测的文件名。找不到配置或显式 missing 的单位进入报告的 mapping.missing，不调用构建器。
 - 其余 58 单位的材质与运行时动作绑定尚无确认依据，配置保持空，不凭文件名猜测材质或把任意 spell 绑定成 cast。原始动作目录已列出，batch 模式尝试按原名转换全部列出的 ANM；未确认的动作按 idle/move/attack/cast/hit/death 六项报告缺失。严格模型转换仍拒绝 `missing-material-texture:<材质>`，需要后续源材料信息补齐绑定；仅下载缓存不会消除这类失败。
 - Jinx/Vi 保留第 2 步确认的贴图和动作绑定。普通 `build.mjs` 的双单位入口保留独立参考对照和离线 fetch-plan 行为；batch 模式不为每个单位重复生成 fetch-plan，没有独立参考 GLB 时明确报告 unavailable，结构检查仍执行。有参考时照常比较。缺少源 JSON 的单位明确报告粒子不可用，不伪造效果或动作语义。
@@ -214,3 +214,41 @@ npx.cmd vitest run tests/assets3d-fetch.test.ts --configLoader runner --project 
 npx.cmd vitest run tests/assets3d-batch.test.ts --configLoader runner --project fast
 node scripts/assets3d/fetch-chunks.mjs --dry-run
 ```
+
+## D7 第 3 步（c）：从本地缓存解包 WAD 条目
+
+`extract-from-chunks.mjs` 只读本地 manifest、fetch-plan 和压缩块；不联网、不调用 Python、exe 或外部转换器。默认 source 为 `assets3d-local/trial/local`，plan 为 `assets3d-local/out/fetch-plan.json`，报告为 `assets3d-local/out/extract-report.json`。所有写入经过 `safe-path.mjs`，限于仓库内的 `assets3d-local/`，条目路径另行拒绝越界、Windows 特殊路径与链接逃逸。
+
+调度方下载完成后运行（同一 source 的批次须顺序执行，避免 extraction.json 并发合并覆盖）：
+
+```powershell
+# 小范围回归：即使已有文件哈希正确，也从缓存重新解码并比对既有记录，不重写一致文件
+node scripts/assets3d/extract-from-chunks.mjs --units jinx,vi --verify-existing
+
+# 与 build-all 相同的两批费用过滤；每批报告使用不同 out，保留独立证据
+node scripts/assets3d/extract-from-chunks.mjs --units all --cost 1,2 --out assets3d-local/out/extract-cost12
+node scripts/assets3d/build-all.mjs --units all --cost 1,2 --out assets3d-local/out/batch-cost12
+node scripts/assets3d/extract-from-chunks.mjs --units all --cost 3,4,5 --out assets3d-local/out/extract-cost345
+node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-local/out/batch-cost345
+
+# 不过滤时另含 plan.wads 中保守的共享候选条目（未解析路径会明确失败）
+# node scripts/assets3d/extract-from-chunks.mjs
+```
+
+`--units`、`--cost` 直接复用 build-all 的选择与排序函数，可叠加取交集；费用为 1–5 的逗号列表，单位为 plan 中的 ID 或 `all`。还支持 `--source <目录>`、`--plan <文件>`、`--out <报告目录>`。重复运行自动跳过已存在且与提取记录 SHA-256/长度一致的条目，无须 `--force`；`--verify-existing` 强制重解码后再比对，适合生产回归。已有文件与记录或新解包结果冲突时严格失败，不覆盖。缺失的文件可从缓存恢复，但必须符合已有记录哈希。进程中断后可重跑；原始文件和记录分别原子写入，中断期间可能留下未登记但完整的原始文件，重跑时比对后补登记。
+
+校验顺序与格式：
+
+- 入口验证 plan 的 manifest SHA-256；WAD 元数据从 RMAN 缓存重读索引，plan 的 hash、偏移、压缩/原始长度、类型和 subchunk 索引须完全匹配。块 ID 由 manifest 提供；每次读块验证压缩长度、解压长度和 `verifyChunk()` 的内容哈希，不因曾下载过而信任损坏缓存。
+- 继续使用 `readCachedRange()`，保留单块解压 16 MiB、每个范围全部涉及块解压累计 64 MiB 的预检上限。WAD 单条输出最多 64 MiB，解码器另按声明长度限额。不会拼出整个 WAD 或缓存所有解压后的块。
+- 支持 type 0 原始、type 1 gzip、type 3 zstd、type 4 subchunk 链。type 4 从同 WAD 的 `.subchunktoc` 读取 `<压缩长度 u32, 原始长度 u32, 压缩字节 XXH3-64 u64>`；先核对整链范围和两种总长度，再逐段检查 XXH3、按等长原始段/不等长 zstd 段解包、检查逐段和最终长度。XXH3 用纯 JS/BigInt，无原生扩展。3.0–3.3 的 duplicate 字节不作为索引高位，3.4 才组合高 8 位；type 2 重定向明确失败，不暗中跟随或复制。
+- 格式依据为仓库原有 [CommunityDragon WAD 规范](https://www.communitydragon.org/docs/wad)，离线对照 `trial/tools/extract-wad.py` 和其本地 CDTB `wad.py` 源码；未请求这些链接或执行 Python。TOC 缺失或损坏时不尝试降级猜测解压。
+- 写入 `<source>/extracted/<path>` 和 `<source>/extraction.json`。与已有 Jinx/Vi 完全同格式：`version: "14.24.6442327"`，`files: [{wad, path, bytes, sha256}]`；长度字段是 **bytes**，并非另造 `size` 字段。保留现有顶层元数据、文件记录及其全部字段，只追加成功的新路径。既有记录是不可替换的哈希基准；校验失败的条目不新增记录。未影响的已有记录保留，不代表本次重新验证了它们。
+
+报告的 `units.<id>`、`shared` 含 entries/success/written/skipped/failed、成功原始字节 bytes、新写入字节 writtenBytes，以及每条的 wad/hash/path/status/reason/bytes/sha256。单位可能共享依赖，`totals` 对条目去重，不等于分项相加。无过滤的全量模式才处理剩余共享候选；分批仍自动读取各条目的同 WAD TOC，单位 entries 中已规划的跨 WAD 直接依赖照常处理。它不会发现尚未进入 plan 的传递依赖。
+
+`missingChunks` 为本次尝试范围的全局去重缺块列表，含 manifest 的 bundleId/offset/size/targetSize 及 requiredBy 的 WAD/条目路径或 index/subchunk-toc。它包含索引和 TOC 隐式依赖，也包含不在 plan.chunks 中的实际 manifest 块；不会仅因下载计划说齐全就忽略缺块。缺块、校验或解包失败逐条记录并继续其他条目；成功退出 0，部分失败退出 1。非法参数、manifest 不符或既有记录格式非法属于入口失败，直接退出 1，不覆盖旧报告。缺块证据仅覆盖本次选中并实际尝试的范围；不能据此声称未选中的 WAD 或未知传递依赖完整。
+
+合成测试新增 `tests/assets3d-extract.test.ts`，覆盖四种编码、多段 subchunk、跨块索引/条目拼接、哈希、合并保留、重复跳过、缺块/TOC 报告、逐条失败和路径拒绝；batch 测试先从合成缓存解包，再直接调用真实 build-all 管线。原有材质绑定、动作语义、源 JSON 与独立参考限制仍如上，不由本步骤补齐。
+
+本次交付检查时尚无 `out/fetch-report.json`，未执行完整 Jinx/Vi 写入回归或 60 单位全量运行。现有缓存只读抽查中，Jinx/Vi 的 121 个 type 4 条目通过 TOC 段哈希与解包长度检查，其中 39 个可与既有提取记录对照的 SHA-256 全部一致；另 32 个条目因缺块未验证。这项抽查不等于完整单位回归，下载完成后仍应执行上面的 `--units jinx,vi --verify-existing`。
