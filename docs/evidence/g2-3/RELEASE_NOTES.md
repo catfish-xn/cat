@@ -4,7 +4,7 @@
 
 按用户 2026-10-19 08:15 约定，每个强化节点全员同级、三个候选同级，默认每次提供可免费整组刷新一次且锁级；三等级等权为缺少原版概率资料时的项目默认、待确认。独立派生等级不推进各席 RNG，原有提供/成功刷新各用三个 choice 词。详见 [Match 合同](../../MATCH_CONTRACT.md) 与 [实现交接](../../AUGMENT_TIER_V14_IMPLEMENTATION.md)。
 
-运行时规则/内容身份已升至 `s13-g2-3-v14` / `s13-14.24b-g2-3-v14`，旧存档不迁移。发布级录制（release states、M5 golden、Herald raw、输入审计、P1 dual commands）已在沙箱外按发布审计基线 73ff522 重录，各 --check 与 verify 通过。
+运行时规则/内容身份已升至 `s13-g2-3-v14` / `s13-14.24b-g2-3-v14`，旧存档不迁移。发布级录制（release states、M5 golden、Herald raw、输入审计、P1 dual commands）已在沙箱外按发布审计基线 73ff522 重录，各 --check 与 verify 通过。#208 合入 multiplayer `4300175` 后，G2-4b release states、Herald raw、输入审计、live-reveal 审计和 P1 dual commands 改按该基线重录，各 --check 通过。
 
 rules `s13-g2-3-v3`、content `s13-14.24b-g2-3-v3`统一发布；旧存档及旧回放输入失效，不能继续旧局。schema7/save3/replay3保持，不提供内容迁移。
 
