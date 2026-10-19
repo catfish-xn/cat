@@ -90,6 +90,41 @@ describe('targeted RMAN downloader with synthetic chunks and injected fetch', ()
     const exact = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, dryRun: true, fetchFn });
     expect(exact.status).toBe('planned');
   });
+  it('accepts a verified 206 response that exactly exhausts the byte budget', async () => {
+    const f = fixture(), opts = await options();
+    const fetchFn = vi.fn(async () => response(f.bundle, 0, f.bundle.length));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, fetchFn });
+    expect(result).toMatchObject({ status: 'complete', requests: 1, downloadBytes: f.bundle.length, failed: [] });
+    expect(result.downloaded).toHaveLength(2);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < f.chunks.length; i++)
+      expect(await readFile(join(opts.cache, `${f.chunks[i].id}.zst`))).toEqual(f.packed[i]);
+  });
+  it.each([0, 1])('does not retry a 503 when only %i budget bytes remain', async remaining => {
+    const f = fixture(), opts = await options(), wait = vi.fn(async () => {});
+    const spent = f.bundle.length - remaining;
+    const fetchFn = vi.fn(async () => response(f.bundle.subarray(0, spent), 0, f.bundle.length, 503));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, retries: 2, fetchFn, wait });
+    expect(result).toMatchObject({ status: 'failed', requests: 1, downloadBytes: spent, downloaded: [] });
+    expect(result.failed).toEqual(f.chunks.map(c => ({ id: c.id, reason: 'runtime-byte-limit' })));
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
+    for (const c of f.chunks)
+      await expect(readFile(join(opts.cache, `${c.id}.zst`))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+  it.each([0, 1])('does not dispatch another range when only %i budget bytes remain', async remaining => {
+    const f = fixture(), opts = await options();
+    f.chunks[1].offset++;
+    const spent = f.bundle.length - remaining;
+    const fetchFn = vi.fn(async () => response(Buffer.alloc(spent), 0, f.chunks[0].size));
+    const result = await fetchChunks({ ...f, ...opts, maxBytes: f.bundle.length, concurrency: 1, fetchFn });
+    expect(result).toMatchObject({ status: 'failed', requests: 1, downloadBytes: spent, downloaded: [] });
+    expect(result.failed).toEqual([
+      { id: f.chunks[0].id, reason: 'range-body-too-large' },
+      { id: f.chunks[1].id, reason: 'runtime-byte-limit' }
+    ]);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
   it('counts actual streamed bytes, aborts all requests at the runtime cap and starts no further range', async () => {
     const f = fixture(), opts = await options();
     f.chunks[1].offset++; // Two ranges, first returns too many actual bytes.

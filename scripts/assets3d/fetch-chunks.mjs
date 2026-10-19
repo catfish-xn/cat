@@ -117,7 +117,14 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
       throw abort.signal.reason;
     }
   };
+  const checkBudget = range => {
+    const remaining = maxBytes - report.downloadBytes;
+    if (remaining <= 0 || remaining < range.end - range.start) throw new Error('runtime-byte-limit');
+  };
   async function request(range) {
+    if (abort.signal.aborted) throw abort.signal.reason;
+    // Check every dispatch, including retries; an exact-size successful body may still finish.
+    checkBudget(range);
     const url = bundleUrl(range.bundleId), controller = new AbortController();
     let response, reader, timer;
     const cancel = () => controller.abort(abort.signal.reason);
@@ -173,6 +180,7 @@ export async function fetchChunks({ plan, manifest, cache = 'assets3d-local/tria
             const retryable = /^(request-timeout|fetch failed|http-status:(429|5\d\d)|range-size-mismatch)$/.test(error.message)
               || error instanceof TypeError;
             if (abort.signal.aborted || !retryable || attempt === retries) throw error;
+            checkBudget(range);
             await wait(backoffMs * 2 ** attempt, undefined, { signal: abort.signal });
           }
         }
