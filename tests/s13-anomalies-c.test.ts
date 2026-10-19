@@ -86,6 +86,7 @@ it('two untargetable wolves attack at1.0AS for50% owner AD using derived streams
   expect(state.units.filter(u => u.anomalySummon).map(u => u.anomalyState!.attackStream!.draws)).toEqual([2, 2]);
   const ended = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, hp: 1 } : u.id === 'e' ? { ...u, cooldownTicks: 0 } : u) });
   expect(ended.events.filter(e => e.type === 'unitRemoved')).toHaveLength(2);
+  expect(ended.events.filter(e=>e.type==='unitRemoved').map(e=>e.unitId)).toEqual(wolves.map(u=>u.id).sort());
   expect(ended.state.units.filter(u => u.anomalySummon)).toHaveLength(0);
 });
 it('Hunger for Power freezes donor values and ID tie-breaks; consuming does not change preparation or frozen traits', () => {
@@ -97,4 +98,19 @@ it('Hunger for Power freezes donor values and ID tie-breaks; consuming does not 
   expect(p.maxHp).toBe(860); expect(readCombatStats(p, state).attackDamage).toBe(63);
   expect(state.units.find(u => u.id === 'a')).toMatchObject({ hp: 0, alive: false });
   expect(state.strategy!.traits.find(t => t.traitId === 'conqueror' && t.team === 'player')!.count).toBe(1);
+});
+it.each(['WolfFamiliars','DeftHands'])('%s keeps its bound agents while their living owner is temporarily absent', suffix => {
+  let state = startAnomaly(suffix);
+  const count = suffix === 'WolfFamiliars' ? 2 : 3;
+  state = { ...state, units: state.units.map(u => u.anomalySummon ? u : { ...u, cooldownTicks: 1000, moveCooldownTicks: 1000,
+    mana: 0, maxMana: 0, ...(u.id === 'p' ? { itemBanish: { ownerId: 'e', itemInstanceId: 'zephyr', untilTick: 3 } } : {}) }) };
+  for(let i=0;i<2;i++){
+    const step=stepCombat(state);state=step.state;
+    expect(state.units.filter(u=>u.anomalySummon)).toHaveLength(count);
+    expect(step.events.filter(e=>e.type==='unitRemoved')).toHaveLength(0);
+    expect(state.units.filter(u=>u.anomalySummon).every(u=>u.anomalyState!.attackStream!.draws===0)).toBe(true);
+  }
+  const returned=stepCombat(state);
+  expect(returned.state.units.filter(u=>u.anomalySummon)).toHaveLength(count);
+  expect(returned.events.filter(e=>e.type==='unitRemoved')).toHaveLength(0);
 });

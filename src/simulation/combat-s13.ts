@@ -408,7 +408,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (outcome.deferred) target.deferredItemDamage=[...target.deferredItemDamage??[],{
       packetId:context.packetId,startedAtTick:tick,amount:outcome.deferred,paid:0,elapsedTicks:0}];
     recordG23SkillDamage(ctx,units.find(u=>u.id===packet.source.ownerId),target,actual,packet);
-    recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed);
+    recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed,context.redirected);
     recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
     recordG2Damage(ctx, units.find(u => u.id === packet.source.ownerId), target, actual, absorbed, packet, Math.max(0, (virtualHp.get(target.id) ?? 0) - actual));
     const broken: number[] = [];
@@ -626,7 +626,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive));
-  const anomalyRemoved=removeBoundAnomalySummons(ctx);
+  const anomalyRemoved=removeBoundAnomalySummons(ctx,fullRoster);
   if(hasBanish&&anomalyRemoved.length)for(let i=fullRoster.length-1;i>=0;i--)if(anomalyRemoved.includes(fullRoster[i].id))fullRoster.splice(i,1);
   if (companionState) {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));

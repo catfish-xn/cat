@@ -80,14 +80,13 @@ export function recordAnomalyProxyHit(ctx: AbilityContext, proxy: S13Unit | unde
   applyStatus(target, source, 'resistanceFlat', -P4_SOURCE.DeftHands.values.ArmorReduction, 1201 - ctx.tick,
     ctx.tick, ctx.events, true, 'armor:' + JSON.stringify([seq, proxy.anomalySummon.ordinal, target.id]));
 }
-export function removeBoundAnomalySummons(ctx: AbilityContext): string[] {
+export function removeBoundAnomalySummons(ctx: AbilityContext, roster: readonly S13Unit[] = ctx.units): string[] {
   const removed: string[] = [];
-  for (let i = ctx.units.length - 1; i >= 0; i--) {
-    const unit = ctx.units[i];
+  for (const unit of [...ctx.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)) {
     if (!isAttackProxy(unit)) continue;
-    const owner = ctx.units.find(u => u.id === unit.anomalySummon!.ownerId);
+    const owner = roster.find(u => u.id === unit.anomalySummon!.ownerId);
     if (owner?.alive && owner.hp > 0) continue;
-    removed.unshift(unit.id); ctx.units.splice(i, 1);
+    removed.push(unit.id); ctx.units.splice(ctx.units.indexOf(unit), 1);
     ctx.events.push({ type: 'unitRemoved', tick: ctx.tick, unitId: unit.id, reason: 'anomaly-owner-death' });
   }
   return removed;

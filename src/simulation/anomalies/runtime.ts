@@ -32,7 +32,7 @@ export function castAnomaly(ctx: AbilityContext, unit: S13Unit, target: S13Unit)
   each(unit, (m, source) => m.cast?.(ctx, unit, target, source));
 }
 export function takedownAnomalies(ctx: AbilityContext, killed: ReadonlyMap<string, CombatOrigin>, contributors: Readonly<Record<string, readonly string[]>>): void {
-  for (const [victim, killer] of killed) for (const unit of ctx.units.filter(u => u.alive && u.hp > 0
+  for (const [victim, killer] of [...killed].sort(([a],[b])=>a<b?-1:a>b?1:0)) for (const unit of ctx.units.filter(u => u.alive && u.hp > 0
     && (u.id === killer.ownerId || contributors[victim]?.includes(u.id))))
     each(unit, (m, source) => m.takedown?.(ctx, unit, victim, source));
 }

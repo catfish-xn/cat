@@ -8,12 +8,14 @@ import type { RoomState, TwoSidedBattleResult } from '../src/server/room/types';
 import { applyCombatReplayTick } from '../src/simulation/combat-replay-view';
 import { anomalyId } from './helpers/s13-anomalies';
 
-it.each(['ScuttleFamiliar', 'WolfFamiliars', 'DramaticEntrance', 'EvenInDeath', 'CenteroftheUniverse', 'DeftHands'])('%s full server projection has no replay error across movement, birth and removal', suffix => {
+it.each(['ScuttleFamiliar', 'WolfFamiliars', 'DramaticEntrance', 'EvenInDeath', 'CenteroftheUniverse', 'DeftHands', 'WolfFamiliars+Zephyr'])('%s full server projection has no replay error across movement, birth and removal', scenario => {
+  const suffix = scenario.split('+')[0];
   const base = createMatch(42), round = getCatalogRoundById('2-1');
   const seat = (definitionId: string, starLevel: 1 | 3, binding: boolean) => ({ ...base, level: 9,
     round: round.ordinal, roundDefinitionId: round.roundId, m8: { ...base.m8, round },
     preparation: { ...base.preparation, units: [{ id: 'unit-1', definitionId, starLevel, team: 'player' as const,
       location: { kind: 'board' as const, cell: { col: 3, row: 7 } } }] },
+    items: !binding && scenario.includes('+Zephyr') ? [{ id: 'item-1', definitionId: 'TFT_Item_Zephyr', location: { kind: 'unit' as const, unitId: 'unit-1', slot: 0 as const } }] : [],
     anomalyBinding: binding ? { unitId: 'unit-1', definitionId: anomalyId(suffix), choiceId: 'anomaly', boundRound: 1 } : null });
   const input = compileBattle(snapshotForBattle(seat('lux', 1, true), 'A'), snapshotForBattle(seat('garen', 3, false), 'B'), 42, { battleId: 'p4-replay-' + suffix });
   const battle = resolveTwoSidedBattle(input, 1201);

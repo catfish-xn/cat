@@ -16,8 +16,8 @@ export function recordG23Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:numbe
   ctx.packets.push({source,targetId:t.id,raw:v.BaseTrueDamage+count*v.BonusTrueDamage,damageType:'true',actionSeq:seq,ordinal:9000,
     delivery:'attack-extra',critEligibility:'never',area:false,triggeringCastActionSeq:null});
 }
-export function recordG23Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet,absorbed=0):void{
-  if(u&&packet.source.definitionId==='one-thousand-cuts'&&actual+absorbed>0){const s=g23State(u);s.cuts[packet.targetId]=(s.cuts[packet.targetId]??0)+1;}
+export function recordG23Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet,absorbed=0,redirected=false):void{
+  if(!redirected&&u&&packet.source.definitionId==='one-thousand-cuts'&&actual+absorbed>0){const s=g23State(u);s.cuts[packet.targetId]=(s.cuts[packet.targetId]??0)+1;}
   if(!u||actual<=0||packet.source.definitionId!=='slime-time')return;
   ctx.heals.push({source:packet.source,targetId:u.id,amount:actual});
 }
