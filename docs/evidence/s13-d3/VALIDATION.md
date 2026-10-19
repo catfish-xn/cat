@@ -70,3 +70,9 @@
 - 没有修改 src/server、src/rendering、src/presentation、历史 raw、已有测试或规则数值/content digest/版本号。
 - 没有重录共享录制/种子路线或更新源码指纹；集成接入调用图后如需更新，由集成方统一处理。
 - 未合并 D4 未审代码；D4 最小对接数据为只读 OwnershipSeat.preparation 与 deploymentCap。独立评审由调度方另行安排。
+
+## 2026-10-19 Q3 来源补记（仅文档）
+
+- [Q3 来源核对](Q3_SOURCE_REVIEW.md)：原版 raw 仅能确认暂离/归来语义，满席处理、交互禁用和轮选/加时计数不能确认；按新版 Q3 标为兜底项目约定。Q6 不扩目录，Q7/Q8 不做。
+- 原本地测试和 [CI #627](https://github.com/catfish-xn/cat/actions/runs/39198450528) completed/success 固定绑定 `2989cc38353232d2f169ece6ee939b7839254c0c`，不代表文档追加提交已取得新 CI 成功。
+- 本次只补三份 Markdown/PR 说明；不改实现、数值、测试、指纹或版本，不重跑代码测试。以 diff/check 和文件范围核验。
