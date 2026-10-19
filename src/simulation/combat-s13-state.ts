@@ -1,4 +1,6 @@
 import { shortestPath, startingRows } from './m8/targeting';
+import { isPresent, isSelectable } from './anomalies/availability';
+import { P4_SOURCE } from './anomalies/source';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatUnit, CombatOrigin, CombatRuntime, CombatStatus, ShieldLayer, CombatTask, CombatEvent } from './combat-types';
@@ -6,7 +8,7 @@ import { attackInterval, evaluateAmount, resolveStat, type HpSample } from './m8
 import { authorizeSpellCrit, validateSpellCrit } from './m8/crit';
 import type { SpellCritAuthorization, StatModifier, StatusApplication, StatusContribution, StatusGroup, Effect, CombatActivity } from './m8/contracts';
 import { effectIdentity } from './m8/identity';
-import { applyStatusContribution, isEffective, effectiveStatuses } from './m8/status';
+import { applyStatusContribution, isEffective } from './m8/status';
 import { grantShieldState } from './m8/shield';
 import { EMPTY_MECHANISMS } from './m8/runtime-types';
 import { asSource, flatAmount } from './m8/s13-definitions';
@@ -113,7 +115,8 @@ export function interval(unit: S13Unit, tick: number): number {
   const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
   if (locks.length) return attackInterval(Math.min(...locks), 0);
   const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
-  const bankSpeed=gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0;
+  const bankSpeed=(gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0)
+    + (unit.anomalyState?.firstCastTick !== undefined ? Math.round(P4_SOURCE.CertainDeath.values.BonusAS * 10000) : 0);
   const speedBps = bankSpeed + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
@@ -121,8 +124,8 @@ export function interval(unit: S13Unit, tick: number): number {
 export function byDistance(from: CombatUnit, list: readonly S13Unit[], farthest = false): S13Unit[] {
   return [...list].sort((a, b) => (farthest ? -1 : 1) * (hexDistance(from.cell, a.cell) - hexDistance(from.cell, b.cell)) || compareText(a.id, b.id));
 }
-export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team); }
-export function enemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team && !effectiveStatuses(u.mechanismState?.statuses ?? [], unit.mechanismState?.sampledAtTick ?? 0).some(g => g.kind === 'untargetable')); }
+export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => isPresent(u, unit.mechanismState?.sampledAtTick ?? 0) && u.team !== unit.team); }
+export function enemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.team !== unit.team && isSelectable(u, unit.mechanismState?.sampledAtTick ?? 0)); }
 export function neighborsOf(unit: CombatUnit, units: readonly S13Unit[], radius = 1): S13Unit[] {
   return areaEnemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
 }

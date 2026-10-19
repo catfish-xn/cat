@@ -1,4 +1,6 @@
 import {splitTrenchHolders} from './combat-g2-4b-trench';
+import { castAnomaly, tickAnomalies, takedownAnomalies } from './anomalies/runtime';
+import { isPresent } from './anomalies/availability';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -151,9 +153,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
       moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
   }).sort(compareIds);
-  const hasBanish=units.some(u=>u.itemBanish);
+  const hasBanish=units.some(u=>u.itemBanish || u.anomalyState?.absentUntilTick !== undefined);
   const fullRoster=hasBanish?[...units]:units;
-  const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if((units[i].itemBanish?.untilTick??0)>tick)units.splice(i,1);};
+  const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if(units[i].alive&&!isPresent(units[i],tick))units.splice(i,1);};
   if(hasBanish&&state.tick>0)suspendBanished();
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
   let itemRandomStreams = state.itemRandomStreams;
@@ -174,6 +176,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   };
   if(hasBanish)returnZephyrUnits(ctx);
   ctx.defenses = (unit, armor) => defenses(unit, armor, ctx.tick, units);
+  if(hasBanish){
+    const activeUnits=ctx.units;ctx.units=fullRoster;
+    tickAnomalies(ctx,()=>actionSeq++);ctx.units=activeUnits;
+  }
   initializeMechanisms(ctx);
   if (state.tick === 0) {
     // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
@@ -233,6 +239,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
+  if(!hasBanish)tickAnomalies(ctx,()=>actionSeq++);
   for(const unit of units){
     if(!unit.itemMogulHits)continue;
     const mogul=unit.mechanics?.find(m=>m.mechanic==='g24Mogul');
@@ -309,6 +316,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
       if(unit.unreavedMaxMana!==undefined)unit.maxMana=unit.unreavedMaxMana;
       const oldInterval = interval(unit, tick);
+      castAnomaly(ctx,unit,target);
       const targets = planS13Cast(ctx, unit, target, seq);
       const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
       (ctx.castReceipts ??= []).push(receipt);
@@ -382,7 +390,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
-  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
+  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.mechanics?.some(m=>m.mechanic==='s13Anomaly')||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
   const damageContributors = { ...state.damageContributors };
 
   ctx.virtualHp = virtualHp;
@@ -533,6 +541,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     events.push({type:'maxHpChanged',tick,unitId:unit.id,source:asSource(mogul.source),beforeMax,afterMax:unit.maxHp,beforeHp,afterHp:unit.hp,countsAsHeal:false});
   }
   settleShieldEnds(ctx, () => actionSeq++);
+  takedownAnomalies(ctx,killed,damageContributors);
   // Every vamp condition samples the same healing-entry HP, before any queued heal.
   const rates = new Map(units.map(unit => [unit.id, vampRates(unit, unit.hp)]));
   for (const { owner, source, seq, outcomes, hpAmount, heal: positiveHeal } of damageByAction.values()) {
@@ -589,7 +598,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
   }
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
-  if(hasBanish){const suspended=fullRoster.filter(u=>(u.itemBanish?.untilTick??0)>tick);fullRoster.splice(0,fullRoster.length,...units,...suspended);}
+  if(hasBanish){const suspended=fullRoster.filter(u=>u.alive&&!isPresent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
   // G2-4b: only true zero-HP deaths notify item declarations before cleanup.
   // Trench replacement removes a surviving holder and must not emit holder-death.
   if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
