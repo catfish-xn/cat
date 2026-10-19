@@ -14,6 +14,10 @@ export const dramaticEntrance: AnomalyModule = {
     const to = nearestLanding(ctx, unit.startingCell ?? unit.cell, unit.id);
     if (!to) { state.absentUntilTick = ctx.tick + 1; return; } // Reserve no occupied cell; retry next tick.
     state.enteredAtTick = ctx.tick;
+    if(unit.mechanismState)unit.mechanismState={...unit.mechanismState,periodicTasks:unit.mechanismState.periodicTasks.map(t=>{
+      const skipped=Math.max(0,Math.ceil((ctx.tick-t.nextPulseAtTick)/t.periodTicks));
+      return {...t,nextPulseAtTick:t.nextPulseAtTick+skipped*t.periodTicks,pulseOrdinal:t.pulseOrdinal+skipped};
+    })};
     relocate(ctx, unit, to);
     const beforeMax = unit.maxHp, beforeHp = unit.hp;
     unit.maxHpBasis = { ...unit.maxHpBasis!, bonusBps: unit.maxHpBasis!.bonusBps + Math.round(v.IncreasedMaxHealthPercent * 10000) };

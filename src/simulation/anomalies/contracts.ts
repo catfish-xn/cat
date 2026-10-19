@@ -5,6 +5,7 @@ import type { S13Unit } from '../combat-s13-state';
 
 /** Optional, serializable receipts; exact trusted-input replay authenticates them. */
 export interface AnomalyRuntime {
+  attackStream?: { state: number; draws: number };
   absentUntilTick?: number;
   enteredAtTick?: number;
   firstCastTick?: number;

@@ -67,7 +67,8 @@ export function applyCombatStart(state: CombatState): CombatStep {
     for (const unit of mechanismUnits) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
     startG22Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('G22 starts cannot draw RNG');}});
     refreshMechanismAuras({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Auras cannot draw RNG');}});
-    startAnomalies({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Anomaly starts cannot draw main RNG');}});
+    startAnomalies({tick:0,anomalySeed:state.rngState,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Anomaly starts cannot draw main RNG');}});
+    for (const unit of mechanismUnits) if (!units.some(u=>u.id===unit.id)) units.push(unit);
   }
   return stampCombatStep({ ...state, units, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

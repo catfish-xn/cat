@@ -6,5 +6,8 @@ export function anomalyVamp(unit: CombatUnit): VampRate[] {
   const active = unit.anomalyState?.firstCastTick !== undefined;
   const source = active && unit.mechanics?.find(m => m.mechanic === 's13Anomaly'
     && m.source.definitionId === P4_SOURCE.CertainDeath.id)?.source;
-  return source ? [{ source: asSource(source), bps: Math.round(P4_SOURCE.CertainDeath.values.BonusOmnivamp * 10000), allyBps: 0 }] : [];
+  const revive = unit.anomalyState?.revivedAtTick !== undefined && unit.mechanics?.find(m => m.mechanic === 's13Anomaly'
+    && m.source.definitionId === P4_SOURCE.EvenInDeath.id)?.source;
+  return [...(source ? [{ source: asSource(source), bps: Math.round(P4_SOURCE.CertainDeath.values.BonusOmnivamp * 10000), allyBps: 0 }] : []),
+    ...(revive ? [{ source: asSource(revive), bps: Math.round(P4_SOURCE.EvenInDeath.values.BonusOmnivamp * 10000), allyBps: 0 }] : [])];
 }

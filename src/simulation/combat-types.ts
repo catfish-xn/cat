@@ -132,7 +132,7 @@ export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | Le
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {
-  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'player');
-  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'enemy');
+  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && !['wolf','mini'].includes(unit.anomalySummon?.kind??'') && unit.team === 'player');
+  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && !['wolf','mini'].includes(unit.anomalySummon?.kind??'') && unit.team === 'enemy');
   return player && enemy ? null : player ? 'playerWin' : enemy ? 'enemyWin' : 'draw';
 }

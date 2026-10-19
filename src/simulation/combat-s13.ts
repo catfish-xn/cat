@@ -1,6 +1,7 @@
 import {splitTrenchHolders} from './combat-g2-4b-trench';
-import { castAnomaly, tickAnomalies, takedownAnomalies } from './anomalies/runtime';
-import { isPresent } from './anomalies/availability';
+import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies } from './anomalies/runtime';
+import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons } from './anomalies/summons';
+import { isAbsent } from './anomalies/availability';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -155,7 +156,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }).sort(compareIds);
   const hasBanish=units.some(u=>u.itemBanish || u.anomalyState?.absentUntilTick !== undefined);
   const fullRoster=hasBanish?[...units]:units;
-  const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if(units[i].alive&&!isPresent(units[i],tick))units.splice(i,1);};
+  const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if(isAbsent(units[i],tick))units.splice(i,1);};
   if(hasBanish&&state.tick>0)suspendBanished();
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
   let itemRandomStreams = state.itemRandomStreams;
@@ -178,7 +179,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.defenses = (unit, armor) => defenses(unit, armor, ctx.tick, units);
   if(hasBanish){
     const activeUnits=ctx.units;ctx.units=fullRoster;
-    tickAnomalies(ctx,()=>actionSeq++);ctx.units=activeUnits;
+    tickAnomalies(ctx,()=>actionSeq++,true);ctx.units=activeUnits;
+    if(state.tick>0)suspendBanished();
   }
   initializeMechanisms(ctx);
   if (state.tick === 0) {
@@ -239,7 +241,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
-  if(!hasBanish)tickAnomalies(ctx,()=>actionSeq++);
+  tickAnomalies(ctx,()=>actionSeq++);
   for(const unit of units){
     if(!unit.itemMogulHits)continue;
     const mogul=unit.mechanics?.find(m=>m.mechanic==='g24Mogul');
@@ -260,9 +262,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     maintainActivities(ctx, unit, controlled);
     if (controlled) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
   }
-  const occupied = new Set(units.filter(u => u.alive).map(u => key(u.cell))), reserved = new Set<string>();
+  const occupied = new Set(units.filter(u => u.alive&&!isAttackProxy(u)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
-    if (unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
+    if (isAttackProxy(unit)||unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
     const target = byDistance(unit, enemies(unit, units))[0];
     if (g23Anomaly(unit,'deep-roots')) return undefined;
     if (!target || unit.moveCooldownTicks > 0 || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
@@ -287,6 +289,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
   for (const unit of units) {
     const firstPacket = ctx.packets.length;
+    if(isAttackProxy(unit))continue;
+    let guaranteedAttackSeq: number | undefined;
     const target = byDistance(unit, enemies(unit, units))[0];
     if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
     const previousTarget = unit.targetId;
@@ -303,10 +307,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const piercing = champion(unit) === 'twitch' && packet.delivery === 'basic-attack';
         const shared = piercing ? piercingCrit.get(packet.actionSeq) : undefined;
         packet.critical = shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!), ctx.draw));
+        if(packet.actionSeq===guaranteedAttackSeq&&packet.critEligibility==='basic')packet.critical=true;
         if (piercing) piercingCrit.set(packet.actionSeq, packet.critical);
       }
     };
-    if (unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
+    if (unit.definitionId==='g23-forge'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
@@ -344,6 +349,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         }
       }
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
+      if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
       const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); unit.cooldownTicks = oldInterval;
       const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
       if(gambler)awardItemGold(unit,gambler,'gamblers-blade',unit.runtime.attackCount-1);
@@ -353,6 +359,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
     rollPlannedPackets();
   }
+  scheduleAnomalyAttacks(ctx,()=>actionSeq++);
   // G2-4b: each stun applied (or refreshed) on an enemy is one stun-applied occurrence of its source owner.
   let stunScan = 0;
   const emitStuns = () => {
@@ -422,7 +429,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     hpLost.set(target.id, (hpLost.get(target.id) ?? 0) + actual);
     if (absorbed + actual > 0) {
       positiveDamage.add(target.id);
-      if (trackAssists) damageContributors[target.id] = [...new Set([...(damageContributors[target.id] ?? []), context.source.ownerId])].sort(compareText);
+      if (trackAssists) damageContributors[target.id] = [...new Set([...(damageContributors[target.id] ?? []), context.source.ownerId,
+        ...units.filter(u=>u.id===context.source.ownerId&&isAttackProxy(u)).map(u=>u.anomalySummon!.ownerId)])].sort(compareText);
     }
     // B9 replay2: the frozen DamageOutcome is the packet event payload.
     events.push({ type: 'packetDamage', tick, outcome });
@@ -478,7 +486,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   for (let packetIndex = 0; packetIndex < ctx.packets.length; packetIndex++) {
     let packet = ctx.packets[packetIndex]; const beforeDerived = ctx.packets.length;
-    const target = units.find(u => u.id === packet.targetId); if (!target || !target.alive) continue;
+    const target = units.find(u => u.id === packet.targetId); if (!target || !target.alive || isAttackProxy(target)) continue;
     const owner = units.find(u => u.id === packet.source.ownerId);
     if (owner) for (const prefix of packet.beforeDamage ?? []) executeMechanismEffect(ctx, owner, prefix.source, target, prefix.effect, packet.actionSeq, prefix.ordinal);
     const damageType = damageTypeForTarget(packet.damageType, targetUnit(target, tick), ctx.resolutionFacts!);
@@ -598,7 +606,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
   }
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
-  if(hasBanish){const suspended=fullRoster.filter(u=>u.alive&&!isPresent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
+  deathAnomalies(ctx);
+  if(hasBanish){const suspended=fullRoster.filter(u=>isAbsent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
   // G2-4b: only true zero-HP deaths notify item declarations before cleanup.
   // Trench replacement removes a surviving holder and must not emit holder-death.
   if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
@@ -616,6 +625,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive));
+  const anomalyRemoved=removeBoundAnomalySummons(ctx);
+  if(hasBanish&&anomalyRemoved.length)for(let i=fullRoster.length-1;i>=0;i--)if(anomalyRemoved.includes(fullRoster[i].id))fullRoster.splice(i,1);
   if (companionState) {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));
@@ -637,5 +648,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const order=new Map(state.units.map((u,i)=>[u.id,i]));
     fullRoster.sort((a,b)=>(order.get(a.id)??state.units.length)-(order.get(b.id)??state.units.length));
   }
-  return stampCombatStep({ ...state,...trenchMembership, ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state,...trenchMembership, ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }
