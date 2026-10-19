@@ -175,7 +175,8 @@ describe('Room: real resolver end to end', () => {
 
 describe('Room: choice window and stuck seats', () => {
   it('opens a choice window at a round with a pending choice and moves on as soon as every seat chose', () => {
-    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    // Room seed 1: every seat's first offer at 2-1 closes the choice (no follow-up forge choice from the chosen augment).
+    const { room, clock } = makeRoom(new PlaceholderBattleResolver(), { seed: 1 });
     room.start();
     runUntil(room, clock, current => current.round === 4);
     expect(room.state.phase).toBe('choice');

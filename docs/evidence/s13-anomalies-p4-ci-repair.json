@@ -1,0 +1,266 @@
+{
+  "initialHead": "7a53acb52c3fa9633feb40adf596b1f07ba7b574",
+  "multiplayerBaseline": "a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+  "mergeCommit": "040425bab7a192c47048391359dba05af68702b6",
+  "summary": "原 13 条失败修复 9 条；其余 4 条完整异常池契约断言按用户要求保留。",
+  "changes": [
+    "ability-display.ts 从现有 S13_ANOMALY_SUMMON_ABILITIES 读取 crab/wolf/mini 的显示定义；未新设数值。",
+    "m5-combat 的显式单位名册加入三个召唤体；m8-ability-contracts 的显式技能名册加入三个技能。同步后的准确总数为 70（原 66 + multiplayer 的 voidspawn 1 + P4 3），两个标题据实更新。",
+    "公开命令路线增加可选 goldReserves 参数及类型声明，默认路线保留原预算。",
+    "transferPreparation 保持 seed=4，在 4-5 保留 40 金币预算，少买经验以支付 mage-armor 的 44 次重掷；单位、装备、67 条来源账本断言不变。",
+    "m8-b8-live-reveal 保持 seed=42，明确选择原 protective-shielding，并在 4-7 使用零保留商店预算补齐阵容；tick=51、eventSeq=447/448、四球及恢复断言不变。",
+    "G-C06 改为 seed=4，经公开卖出非持有者备战单位腾出空位后测试真实吸收；G-C08 eagle-eye 改为 seed=3，one-thousand-cuts 保持 seed=42。",
+    "合并冲突的生成物先采用 multiplayer，再通过现有记录器重录 g2-4b Herald、输入指纹和发布夹具。"
+  ],
+  "requestedVerification": {
+    "files": 15,
+    "total": 270,
+    "passed": 266,
+    "failed": 4
+  },
+  "testTimingBasis": "秒；Vitest JSON 的最后 endTime 减 startTime，含收集与执行，不含 npm 启动。每个文件独立执行且文件间串行。",
+  "tests": [
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "total": 34,
+      "passed": 34,
+      "failed": 0,
+      "durationSeconds": 16.478,
+      "failures": []
+    },
+    {
+      "file": "tests/g2-2-ability-display.test.ts",
+      "total": 73,
+      "passed": 73,
+      "failed": 0,
+      "durationSeconds": 0.34,
+      "failures": []
+    },
+    {
+      "file": "tests/m5-audit-boundaries.test.ts",
+      "total": 20,
+      "passed": 16,
+      "failed": 4,
+      "durationSeconds": 9.109,
+      "failures": [
+        "M5 audit: normal empty-roster recovery and full-range anomaly sampling maps one complete random word at each draw and revisits all offers, seed 0",
+        "M5 audit: normal empty-roster recovery and full-range anomaly sampling maps one complete random word at each draw and revisits all offers, seed 1",
+        "M5 audit: normal empty-roster recovery and full-range anomaly sampling maps one complete random word at each draw and revisits all offers, seed 42",
+        "M5 audit: normal empty-roster recovery and full-range anomaly sampling maps one complete random word at each draw and revisits all offers, seed 4294967295"
+      ]
+    },
+    {
+      "file": "tests/m5-combat.test.ts",
+      "total": 48,
+      "passed": 48,
+      "failed": 0,
+      "durationSeconds": 1.328,
+      "failures": []
+    },
+    {
+      "file": "tests/m8-ability-contracts.test.ts",
+      "total": 21,
+      "passed": 21,
+      "failed": 0,
+      "durationSeconds": 0.245,
+      "failures": []
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "durationSeconds": 7.672,
+      "failures": []
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "total": 19,
+      "passed": 19,
+      "failed": 0,
+      "durationSeconds": 7.796,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-b.test.ts",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "durationSeconds": 1.265,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-c.test.ts",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "durationSeconds": 1.31,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-d.test.ts",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "durationSeconds": 1.352,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-redirect.test.ts",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "durationSeconds": 1.448,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-replay.test.ts",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "durationSeconds": 2.234,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-restore.test.ts",
+      "total": 11,
+      "passed": 11,
+      "failed": 0,
+      "durationSeconds": 2.181,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-settlement.test.ts",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "durationSeconds": 1.494,
+      "failures": []
+    },
+    {
+      "file": "tests/s13-anomalies-source.test.ts",
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "durationSeconds": 0.781,
+      "failures": []
+    }
+  ],
+  "selfDecisions": [
+    "从远端确认的 7a53acb 继续，合入本次 fetch 时最新 multiplayer a4871fa（v12）。simulation 无合并冲突。",
+    "使用同步后准确名册 70，而非同步前的 69。",
+    "仅通过公开命令的种子、选择、金币支出与部署路线恢复原局面，保留全部既有断言和时限。",
+    "发布基线因合并保留了 multiplayer 内容摘要，额外运行既有发布记录器以消除夹具身份不一致。"
+  ],
+  "uncompleted": [
+    {
+      "file": "tests/m5-audit-boundaries.test.ts",
+      "location": "第 73–91 行，4 个 seed 参数实例",
+      "reason": "运行时异常池 41 项，G23_ANOMALY_SOURCE 预期池 30 项，差集为 P4 的 11 项。测试同时以旧池长度计算每次随机映射，并要求最终遍历结果严格等于旧池。改种子无法把 41 项池变成 30 项；需变更完整池契约期望，因此按指令未改文件和断言。"
+    }
+  ],
+  "guardrails": {
+    "authoredServerChanges": false,
+    "authoredRenderingChanges": false,
+    "historicalHeraldBytesChanged": false,
+    "dependencyVersionsChanged": false,
+    "gameplayNumbersChanged": false,
+    "testTimeoutsChanged": false,
+    "testsRemovedOrSkipped": false,
+    "validationWeakened": false,
+    "rulesVersion": "s13-g2-3-v12",
+    "contentVersion": "s13-14.24b-g2-3-v12"
+  },
+  "risks": [
+    "m5-audit-boundaries 的 4 条失败仍会使对应 CI 分片失败。"
+  ],
+  "checks": {
+    "typecheck": {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 11.249
+    },
+    "herald-write": {
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 39.072
+    },
+    "inputs-write": {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 3.125
+    },
+    "inputs-check": {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+        "--check"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 3.433
+    },
+    "herald-check": {
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 38.905
+    },
+    "release-write": {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 49.345
+    },
+    "release-check": {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+        "--check"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 49.036
+    }
+  },
+  "additionalRelatedTests": [
+    {
+      "file": "tests/t12-offline-transfer.test.ts",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "durationSeconds": 6.249
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "durationSeconds": 5.77
+    }
+  ],
+  "additionalRelatedTestsReason": "transferPreparation 的另外两个直接测试消费者，按文件串行补验。",
+  "allExecutedVerification": {
+    "files": 17,
+    "total": 274,
+    "passed": 270,
+    "failed": 4
+  }
+}

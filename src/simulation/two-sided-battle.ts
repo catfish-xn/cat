@@ -136,7 +136,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
  * every terminal field and event against that result's original tick-zero state;
  * the validated BattleInput boundary remains startTwoSidedBattle above. */
 function validateDynamicResult(result:BattleResult):void {
-  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
+  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'));
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
     return;

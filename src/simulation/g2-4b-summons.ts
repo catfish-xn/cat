@@ -7,6 +7,7 @@ import { g23FormStats } from './g2-3-forms';
 import { resolveAbility } from './combat-abilities';
 import { effectKey, resolveEffects } from './effects';
 import type {CombatUnit,CombatEvent} from './combat-types';
+import {p2Bonus} from './s13-augments-p2-combat';
 import {changeMaxHp} from './m8/stats';
 
 /** User approved 2026-10-17: copy actual opening maximum HP, never naked HP.
@@ -16,10 +17,11 @@ export function initializeMirrorHealth(units:readonly CombatUnit[],events:Combat
     if(unit.itemSummon?.kind!=='mirror')continue;
     const owner=units.find(u=>u.id===unit.itemSummon!.ownerId);
     if(!owner)throw new RangeError('Missing Mirror owner');
-    const maximum=scaleItemSummonHp(unit,owner.maxHp);
+    const flat=p2Bonus(unit,'health');
+    const maximum=scaleItemSummonHp(unit,owner.maxHp+flat);
     const change=changeMaxHp(unit.maxHp,unit.hp,maximum);
     Object.assign(unit,{itemSummonOpeningMaxHp:owner.maxHp,maxHp:maximum,hp:maximum,
-      maxHpBasis:{base:owner.maxHp,flat:0,bps:0,bonusBps:0}});
+      maxHpBasis:{base:owner.maxHp,flat,bps:0,bonusBps:0}});
     if(change.beforeMax!==change.afterMax)events.push({type:'maxHpChanged',tick:0,unitId:unit.id,
       source:{ownerId:owner.id,sourceKind:'item',definitionId:'TFT9_Item_OrnnTrickstersGlass',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0,parentItemInstanceId:null},...change});
   }
@@ -36,8 +38,9 @@ export interface ItemSummonOrigin {
   readonly formCell:HexCell;
   readonly healthBps:number;
 }
-export function scaleItemSummonHp(unit:{readonly itemSummon?:ItemSummonOrigin}, health:number):number {
-  return unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health;
+export function scaleItemSummonHp(unit:{readonly itemSummon?:ItemSummonOrigin;readonly anomalyState?:import('./anomalies/contracts').AnomalyRuntime}, health:number):number {
+  return (unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health)
+    + (unit.anomalyState?.consumed?.health??0);
 }
 
 /** Approved convention: other stats use naked same-star/form + active traits.

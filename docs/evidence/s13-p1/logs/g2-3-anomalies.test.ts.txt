@@ -1,0 +1,59 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-3-anomalies.test.ts --reporter=verbose
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+ ✓ |fast| tests/g2-3-anomalies.test.ts > admits thirty historical anomalies plus P1 Dual Wielding and excludes Cosmic Rhythm/PBE-only entries 3ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > titanic-strikes compiles and validates its detached combat-start program 47ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > mage-armor compiles and validates its detached combat-start program 15ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > kill-streak compiles and validates its detached combat-start program 9ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > fortified compiles and validates its detached combat-start program 13ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > comeback-story compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > bulwark compiles and validates its detached combat-start program 11ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > defense-expert compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > slime-time compiles and validates its detached combat-start program 11ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > freestyling compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > legacy-of-shurima compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > power-absorption compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > energy-absorption compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > arcana-overwhelming compiles and validates its detached combat-start program 11ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > avalanche-of-armor compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > giant-sized compiles and validates its detached combat-start program 5ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > deep-roots compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > eagle-eye compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > laser-eyes compiles and validates its detached combat-start program 5ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > magic-training compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > one-thousand-cuts compiles and validates its detached combat-start program 5ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > bully compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > force-of-friendship compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > berserker-rage compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > hypervelocity compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > slow-cooker compiles and validates its detached combat-start program 14ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > protective-shielding compiles and validates its detached combat-start program 9ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > magic-expert compiles and validates its detached combat-start program 5ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > attack-expert compiles and validates its detached combat-start program 5ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > strength-training compiles and validates its detached combat-start program 7ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > heavy-hitter compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > dual-wielding compiles and validates its detached combat-start program 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Fortified applies twelve percent health at start and again at four seconds 22ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Heavy Hitter adds twenty percent holder HP with a 2.5-second cooldown 6ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > expert multipliers read resolved combat values, including dynamic contributions 11ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > One Thousand Cuts counts hits separately for each target 21ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Hypervelocity stacking survives generic program restoration after multiple casts 10ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Comeback Story uses the frozen player HP, not unit health 3ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Protective Shielding restores the exact carried fractional shield at its second pulse 76ms
+ ✓ |fast| tests/g2-3-anomalies.test.ts > Power Absorption adds fixed AD after percentage AD, once per dead ally, and restores its contribution 14ms
+
+ Test Files  1 passed (1)
+      Tests  40 passed (40)
+   Start at  18:31:06
+   Duration  2.84s (transform 70%, tests 17%, import 12%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

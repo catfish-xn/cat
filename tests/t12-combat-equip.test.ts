@@ -370,7 +370,7 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
 
 
 it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
-  const acquired=publicInventory(['gloves','gloves']);let state=acquired.state;
+  const acquired=publicInventory(['gloves','gloves'],false,9);let state=acquired.state;
   while(state.roundDefinitionId!=='4-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(resolvePublicEquipmentChoices(state))),state.round));
   expect(state.pendingChoice!.kind).toBe('component');
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);

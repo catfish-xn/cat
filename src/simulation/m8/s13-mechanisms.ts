@@ -1,3 +1,5 @@
+import { occupiesCell } from '../anomalies/availability';
+import { anomalyVamp } from '../anomalies/bonuses';
 import {scaleItemSummonHp} from '../g2-4b-summons';
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
 import { canonicalContent } from '../content';
@@ -134,7 +136,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
     case 'leap': {
       if (hexDistance(holder.cell, target.cell) <= 1) break;
       const free = Array.from({ length: ctx.board.rows }, (_, row) => Array.from({ length: ctx.board.columns }, (_, col) => ({ col, row }))).flat()
-        .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => u.alive && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
+        .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(holder.cell, a) - hexDistance(holder.cell, b) || a.row - b.row || a.col - b.col)[0];
       if (!free) break;
       ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); holder.cell = free; break;
@@ -317,10 +319,10 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
     executeMechanismEffect(ctx, holder, { ...definition.source, effectIndex: definition.source.effectIndex + index }, holder, effect, 0, index, sample);
 }
 export function vampRates(unit: S13Unit, hp: number): VampRate[] {
-  return unit.mechanismDefinitions!.vamp.map(def => {
+  return [...anomalyVamp(unit), ...unit.mechanismDefinitions!.vamp.map(def => {
     const sample = { holder: { id: unit.id, hp, maxHp: unit.maxHp } };
     return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0, ...(def.damageTypes ? { damageTypes: def.damageTypes } : {}) };
-  });
+  })];
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {
   const target = ctx.units.find(u => u.id === entry.targetId); if (!target || target.hp <= 0 || !target.alive) return;

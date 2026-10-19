@@ -1,5 +1,11 @@
 # G2-3 发布说明（#134 接入）
 
+## v14 强化等级与免费刷新（2026-10-19）
+
+按用户 2026-10-19 08:15 约定，每个强化节点全员同级、三个候选同级，默认每次提供可免费整组刷新一次且锁级；三等级等权为缺少原版概率资料时的项目默认、待确认。独立派生等级不推进各席 RNG，原有提供/成功刷新各用三个 choice 词。详见 [Match 合同](../../MATCH_CONTRACT.md) 与 [实现交接](../../AUGMENT_TIER_V14_IMPLEMENTATION.md)。
+
+运行时规则/内容身份已升至 `s13-g2-3-v14` / `s13-14.24b-g2-3-v14`，旧存档不迁移。发布级录制（release states、M5 golden、Herald raw、输入审计、P1 dual commands）已在沙箱外按发布审计基线 73ff522 重录，各 --check 与 verify 通过。#208 合入 multiplayer `4300175` 后，G2-4b release states、Herald raw、输入审计、live-reveal 审计和 P1 dual commands 改按该基线重录，各 --check 通过。
+
 rules `s13-g2-3-v3`、content `s13-14.24b-g2-3-v3`统一发布；旧存档及旧回放输入失效，不能继续旧局。schema7/save3/replay3保持，不提供内容迁移。
 
 本批增加12位英雄、4套按开战站位冻结的远程形态、其余羁绊规则和30个异变。征服者启用15箱，16–20无源阈值不启用；仅含延后物品的档位按Gold=max(原金币,map22整档估值)折金，并保留已实现奖励。已有拆卸器、重铸器保留。第14档60金+光明装备+拆卸器，第15档200金+本局永久光明转化。Rumble三星自爆采用官方20000%。
@@ -67,3 +73,10 @@ M1：冠冕历史恢复改为复用现有完整回放，逐轮核对开战资格
 - 终身黄铜 I/II 补齐 9 个 S13 铜级羁绊（伏击者、先知、炼金男爵、统治者、搏击手、实验体、斗士、黑玫瑰、迅击战士），首档阈值取自原始数据 style 1，只在当前激活档等于铜档时计数；该强化不改羁绊计数，战斗和结算的征服者/炼金男爵档位一致。
 - 超高速规则不变，测试改为真实施法两次并核对攻击间隔。
 - schema/save/replay/command 保持 7/3/3/3，v11 存档按既有不迁移政策拒绝。G2-4b 证据按 MIGRATION.md 顺序重录（baseline `075e9a4`），四项 `--check` 通过；G2-3 与 g2-augments 历史目录不改。
+
+## v13：S13 强化与异常批次（P1–P4，集成分支 `integration/s13-augments`）
+
+- 起点 multiplayer `73ff522`（v12）。rules `s13-g2-3-v13`、content `s13-14.24b-g2-3-v13`、policy `g2-4b-s13-augments-anomalies-v13`；content digest `fnv1a32-utf16:a1fc26ff`。
+- 合入 P4 #192、P2 #188、P3 #189、P1 #191，以及机制包 D3 #198（资源所有权）、D4 #197（羁绊投影）：强化 57 个、异常 52 个（各包内容与数值依据见各自 PR 和 `docs/evidence/s13-augments/`）。规则数值不因合包改变；池变大使固定种子的报价、商店和战斗走向变化，相关测试的处理见 `docs/evidence/s13-augments/SEED_ROUTE_DEFERRED.md`。
+- 合包时修正穿刺莲花读档校验：后一次暴击刷新同一状态时到期顺延，读档接受该顺延。
+- schema/save/replay/command 保持 7/3/3/3，v12 存档按既有不迁移政策拒绝。G2-4b 证据按 MIGRATION.md 顺序重录（baseline `73ff522`），S13 P1 双选录制重录；G2-3 与 g2-augments 历史目录不改。

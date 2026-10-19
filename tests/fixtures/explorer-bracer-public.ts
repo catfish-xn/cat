@@ -1,6 +1,6 @@
 import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../../src/simulation/seat-mechanics';
-import { publicEquipmentPreparation } from './m8-b4-match';
+import { publicEquipmentPreparation } from './b8-public-equipment';
 
 export const BRACER = 'TFT_Item_Artifact_SeekersArmguard';
 const accepted = (r: MatchCommandResult): MatchState => {
@@ -9,7 +9,9 @@ const accepted = (r: MatchCommandResult): MatchState => {
 };
 /** Public commands only: no battle facts or stats are edited. */
 export function startBracerFight(twoHolders = false): MatchState {
-  let state = publicEquipmentPreparation(['rod']);
+  // Seed 3151248's 2-1 offer no longer contains a Manaflow augment; the equally
+  // back-row-only Glass Cannon II keeps the row-4 Lux fight unchanged.
+  let state = publicEquipmentPreparation(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
   for (const definitionId of twoHolders ? ['lux', 'irelia'] : ['lux'])
     for (let i = 0; i < 8; i++) state = accepted(grantMechanicUnit(state, { receiptId: `${definitionId}-${i}`, source: 'test', definitionId }));
   for (const [i, definitionId] of (twoHolders ? ['lux', 'irelia'] : ['lux']).entries()) {

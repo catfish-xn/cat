@@ -4,9 +4,9 @@
     "cannon": {
       "versions": {
         "schemaVersion": 7,
-        "rulesVersion": "s13-g2-3-v12",
-        "contentVersion": "s13-14.24b-g2-3-v12",
-        "contentDigest": "fnv1a32-utf16:9535ffff",
+        "rulesVersion": "s13-g2-3-v14",
+        "contentVersion": "s13-14.24b-g2-3-v14",
+        "contentDigest": "fnv1a32-utf16:ea6b11b6",
         "commandProtocolVersion": 3,
         "rngAlgorithm": "lcg32-v1",
         "tickMs": 50
@@ -69,7 +69,7 @@
           "type": "select",
           "choiceId": "round:2-1:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-i"
+          "definitionId": "item-collector-i"
         },
         {
           "type": "buy",
@@ -219,7 +219,7 @@
           "type": "select",
           "choiceId": "round:3-2:augment",
           "generation": 0,
-          "definitionId": "pumping-up-ii"
+          "definitionId": "pumping-up-i"
         },
         {
           "type": "start"
@@ -321,6 +321,12 @@
           "generation": 23
         },
         {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
           "type": "deploy",
           "id": "unit-5",
           "target": {
@@ -394,17 +400,6 @@
         },
         {
           "type": "buy",
-          "slot": 1,
-          "generation": 26
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
           "slot": 3,
           "generation": 28
         },
@@ -417,11 +412,7 @@
           "generation": 29
         },
         {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 15
+          "type": "reroll"
         },
         {
           "type": "buy",
@@ -435,14 +426,14 @@
           "type": "reroll"
         },
         {
-          "type": "reroll"
-        },
-        {
           "type": "start"
         },
         {
           "type": "continue",
-          "round": 16
+          "round": 15
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "buy",
@@ -450,25 +441,27 @@
           "generation": 34
         },
         {
-          "type": "buyXp"
+          "type": "reroll"
         },
         {
-          "type": "buyXp"
+          "type": "reroll"
         },
         {
-          "type": "buyXp"
+          "type": "buy",
+          "slot": 2,
+          "generation": 36
         },
         {
           "type": "deploy",
           "id": "unit-12",
           "target": {
             "kind": "bench",
-            "slot": 1
+            "slot": 0
           }
         },
         {
           "type": "deploy",
-          "id": "unit-23",
+          "id": "unit-22",
           "target": {
             "kind": "board",
             "cell": {
@@ -482,7 +475,28 @@
         },
         {
           "type": "continue",
+          "round": 16
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
           "round": 17
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 38
         },
         {
           "type": "buyXp"
@@ -514,16 +528,21 @@
           "type": "select",
           "choiceId": "round:4-2:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-ii"
+          "definitionId": "radiant-relics"
+        },
+        {
+          "type": "select",
+          "choiceId": "s13-augment:round:4-2:augment:radiant-relics:forge",
+          "generation": 0,
+          "definitionId": "TFT5_Item_SunfireCapeRadiant"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 39
         },
         {
           "type": "buyXp"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -556,12 +575,12 @@
           "type": "reroll"
         },
         {
-          "type": "reroll"
-        },
-        {
           "type": "buy",
           "slot": 2,
           "generation": 44
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "start"
@@ -614,12 +633,12 @@
           "type": "combine",
           "ids": [
             "item-10",
-            "item-12"
+            "item-13"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-13",
+          "itemId": "item-14",
           "unitId": "unit-14",
           "slot": 0
         },
@@ -645,7 +664,7 @@
           "type": "select",
           "choiceId": "round:4-6:anomaly",
           "generation": 2,
-          "definitionId": "protective-shielding"
+          "definitionId": "share-your-energy"
         },
         {
           "type": "reroll"
@@ -655,11 +674,6 @@
         },
         {
           "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 2,
-          "generation": 50
         },
         {
           "type": "deploy",
@@ -674,7 +688,7 @@
         },
         {
           "type": "equip",
-          "itemId": "item-5",
+          "itemId": "item-12",
           "unitId": "unit-6",
           "slot": 0
         },
@@ -689,22 +703,10 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 0,
-          "generation": 52
-        },
-        {
           "type": "reroll"
         },
         {
           "type": "reroll"
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 24
         },
         {
           "type": "buy",
@@ -712,36 +714,14 @@
           "generation": 55
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
           "type": "sell",
           "id": "unit-5"
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-15",
-            "item-14"
-          ]
         },
         {
           "type": "equip",
           "itemId": "item-11",
           "unitId": "unit-27",
           "slot": 0
-        },
-        {
-          "type": "equip",
-          "itemId": "item-16",
-          "unitId": "unit-14",
-          "slot": 1
         },
         {
           "type": "equip",
@@ -765,7 +745,16 @@
         },
         {
           "type": "continue",
-          "round": 25
+          "round": 24
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -774,6 +763,32 @@
           "type": "buy",
           "slot": 0,
           "generation": 60
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-15",
+            "item-5"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-17",
+          "unitId": "unit-14",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -793,15 +808,6 @@
         {
           "type": "continue",
           "round": 26
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -858,13 +864,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-17",
-            "item-19"
+            "item-18",
+            "item-20"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-20",
+          "itemId": "item-21",
           "unitId": "unit-27",
           "slot": 2
         },
@@ -900,6 +906,19 @@
           "round": 35
         },
         {
+          "type": "combine",
+          "ids": [
+            "item-16",
+            "item-22"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-23",
+          "unitId": "unit-14",
+          "slot": 2
+        },
+        {
           "type": "start"
         },
         {
@@ -920,177 +939,177 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "b9f70645712ab7e2acdde6e7cb1b392fc057951fb6d1c5c25e3cb1a546f13752",
+          "stateHash": "b26adef628cd2632bbd48a8c1ba774334da8de933aa27aab896da4c89f916115",
           "eventsHash": "a846919fced91b05dae7195d7ce76d78255bf31c128decf9896e9c569528931c"
         },
         {
           "round": 2,
-          "stateHash": "2bfbae6112ec1b12f769b6823fc017dd4ad284b5ea900792b43a0fbd4de6fd18",
+          "stateHash": "48baa171dbda33ef752806eb7b716c6a0c74de4820e7dce161f84e67acaf1b58",
           "eventsHash": "665943026c990e7aab8c16997b8de7a16db25578e354b896bca1606e56c120fb"
         },
         {
           "round": 3,
-          "stateHash": "38552cb6d420496bc63e9adae6727b130a49099db3245a1abdfbed81c6058493",
+          "stateHash": "4700c69737933af81999616f53a23796938d016cdea8a04d828807685547a3be",
           "eventsHash": "7d5b7b483bf6b5b61325673012e6d8bc6f259f14a2dff260d4c86d98537ba423"
         },
         {
           "round": 4,
-          "stateHash": "984b82a57f274fb7fd461938f0eeefddea0b12388a8f7cdd0b543984cb0fd306",
-          "eventsHash": "5656541fe1793f3d154c31d3701aca1bee3286683a891dcc3c4780b68c9591c5"
+          "stateHash": "5205f608b3c5d19601714c6fb074d18a49318d4b523681a57e128e41dcb61660",
+          "eventsHash": "310698057c90645d9e4d5938d7043d2caee6683f653e20970e53e882c3b0b717"
         },
         {
           "round": 5,
-          "stateHash": "e948aae13d8fd0260de8f0e200bb236a0e1058e3a8fcbab978d139825b5544f6",
-          "eventsHash": "90acb07e9ad11b671aba46f22ad17525955502cbefc152d2dcf5a49640155da3"
+          "stateHash": "7a01515fc6833e69137138a1671a4a34b11209b01659348d2e5e54a40fa18556",
+          "eventsHash": "386dcd3486362c77f06038f9f3ceb2d2592834ad440e678dd37a2f21a29d923d"
         },
         {
           "round": 6,
-          "stateHash": "6c8a6ce131505cf2257b19726dc77b65be47731bb70ab1ce7d3bce1ae933b353",
-          "eventsHash": "ec91fde4369c76f2c3bdb62823c828dc58fad51b66c803eac415dcf2a8e06169"
+          "stateHash": "1fde88d176f9ed8945d97f4324d3676795be0871cc83b54a646164db90514a3d",
+          "eventsHash": "02a72befc3320f34aac365c78d3304ed6b2dd74be6cefdeba9aedc5c0bef9ed7"
         },
         {
           "round": 8,
-          "stateHash": "cd51d81310016d816c6a34aa65ee3010b6c656ea63ec950b701cd7e5d706736a",
-          "eventsHash": "5f2d9ed743c1e0fd946137dfa745f58896ba7d52d00eb14a7ee6f5ea3b0586d6"
+          "stateHash": "66c1fad6be1fb1a59656b144520e9bab2a540227f68498170ba7ee8a80df7757",
+          "eventsHash": "1fcf93f09b64e838116dd4438598977d02d7d5789f09f8a816afff2cea31235e"
         },
         {
           "round": 9,
-          "stateHash": "5874e499369d74b00a3b4dad151842a7daa351a8b0e1c6a26e0d1749bed84aeb",
-          "eventsHash": "9b056d2f488195cbf1ba358e76074804a768daee0a39dec0835050f6c0245e8a"
+          "stateHash": "29a83e737f6b3df8723da4b9bceac4d034ca221f15469edd7ef630808588e953",
+          "eventsHash": "c99784695e229632b185ec165f81881e165552a71d808b5511cd2b1b769be2d3"
         },
         {
           "round": 10,
-          "stateHash": "2f4008ec708359c142fc67e170ba2fe6b4826db9c40e5d9568afc08c5a8cd025",
-          "eventsHash": "b878264dde2f0e2468bb42131806f8f99154d2ce8e357cab86eb41a8447cfc50"
+          "stateHash": "96833913c178a08bddac1a3365c0e157b5021b7d8187794c98945a8668fde651",
+          "eventsHash": "03adf9136205c36d6dcfa71ba5d09cf811f543f7a58cc3ff45809a33fdca5b22"
         },
         {
           "round": 11,
-          "stateHash": "e175dea76cfa2075c83c94503c0a1cfa82d85caafaeae4dc5e7726f162c34da7",
-          "eventsHash": "92f01998d67f3758e907c98ce03e687c78751f13811e0ddbcff358d1c7853e9d"
+          "stateHash": "fdc4f159a3b81020998535eff5cb1fdfc62d02efa5dd5710b894d8815b5bb2af",
+          "eventsHash": "ab611ec010512f12cf258fd433ce6d0a4d6a8cc528f79c15fdaf8a84eed3d289"
         },
         {
           "round": 12,
-          "stateHash": "2d7bbb70a01e2734c886c6a4e0dc3f0e784460b7e3d7791370903592c60226fa",
-          "eventsHash": "c0e5f987452675f788d043f57d9f585bacbbdbb2ab9e7259050ff9b70cec0474"
+          "stateHash": "61ce850024896ce2cf745bb737973897eab9abdc53a34af756680b46a2456f6d",
+          "eventsHash": "b5e5e8cd52eb78c11242cb9bbe150adb76bf3fcfaef45f8a46bcf95d5269dfb3"
         },
         {
           "round": 13,
-          "stateHash": "5456203aad6f91edcbedc3660c67250c4526745950580a3ca8f8b60f9e5217c4",
-          "eventsHash": "2dce7419c11e0bf363cfd988553d02d8590f3c1c39dc3519f576ce68bb2bfcf8"
+          "stateHash": "5d83f35d99ad614a2aa18662b01cd7d3e532743237438057d6ebbce2b483e663",
+          "eventsHash": "676f5d0138d9235fe133819ca4ef3e6968e3adfeed2a0c933708820430aae09e"
         },
         {
           "round": 15,
-          "stateHash": "cd78a021d890ab501dee457f6bfc675e077da19d04a62724f950e12835559aed",
-          "eventsHash": "eb76c5755dcc89f64d08c4a610c4c160058a0f3791dbbe615c41008209b23c6b"
+          "stateHash": "f7459d3688da22f1e77ca0fdff1b25d4949755270cee6ce5e6ef76eef194fd73",
+          "eventsHash": "777c21285ac029bccb769b6dcc0cfa94f0980bf36398b1a7e092326ed63e410c"
         },
         {
           "round": 16,
-          "stateHash": "451c9c058ffd5e9c5648bf67c6672e52fb24397093a308277caef9308a3fb4ce",
-          "eventsHash": "3d1de6777cebf78ce444c8de23eef702eb12597da4fe7190c581e8a31a21c024"
+          "stateHash": "ea8d35fb8ebce16b218edc4f0894021088b594281c16cfbf245928d9cfd69a90",
+          "eventsHash": "90570a5ca6eb0537aa7cefde307e53e17116120b0467c9664a7b17687b11100d"
         },
         {
           "round": 17,
-          "stateHash": "d64c75160523dd89d2e0d3a251eb06b0fe647aaa885f55b31e437071da8fbc68",
-          "eventsHash": "5ba76b716e62a575b76457e2e2f88179435377e95e2607cb8766d69b820bf591"
+          "stateHash": "c3580be7778673146b8b460d52e5daf8ce450d532b2638fa86c8a9a8fe02877e",
+          "eventsHash": "4211ef5ee7c36150e76a3cb5aa64c63187ab6d0b65e8f04b065492418b04973b"
         },
         {
           "round": 18,
-          "stateHash": "7aea5e0bd53746ee5bcb6c239d5ce4e9bf0c60ad4b301dbf920b592fba8f60af",
-          "eventsHash": "12d3e90d6bf113839d3aac09b062fa34d30b090d961d661d9e96b60d1f1ef6c8"
+          "stateHash": "d7e0553733d1b36c709291a05410e25f6e186783028e5d391518320665a2b210",
+          "eventsHash": "c5e58d3149c1bc21bad1174f2dbcd7288ed43e3bcd44c055021480d2e0448c04"
         },
         {
           "round": 19,
-          "stateHash": "22ffd91dd2f183cb3fcd9692452019b0842f7edc46be6e4940e3430641118203",
-          "eventsHash": "6c771047862f01b0e6b7c14ec6e72cd824b308d2fdd8565edabb0d961b1e645a"
+          "stateHash": "94993eb87b43b1ced71c283bc30376f3af69fe533df3ba34d92c3114e78a0610",
+          "eventsHash": "6eeda0cf3de52fc71e803421419d3c4f9e31ea1ac76eb80a382814024776d03c"
         },
         {
           "round": 20,
-          "stateHash": "7328bc57934ec28646884e39775fa52cea596f41bbd6c2818a2ae6368735812f",
-          "eventsHash": "1cca4dd3e158df5029678e96bf647c2e730980cf94f5c40e98d1a9d3f5abcbc1"
+          "stateHash": "a45c0665467999389764cf4ee45b5fc0463cafa5c5a3e743fcd63c89581e203b",
+          "eventsHash": "0f32546a98162866ffdd1e3304b33a5e948ebc1d5ef9672de9883aa6c3156652"
         },
         {
           "round": 22,
-          "stateHash": "0b1d1b0491561cd188ac33713b8cc2412db4c8d259c1375b98f4fb605dcdcf21",
-          "eventsHash": "2bbfc591d0b8eb44ecc5da2c8c33a500b9ff5277b260b21bceaefb268f673150"
+          "stateHash": "f67240d22e868a4eaa9deb75b71acec537f9b9301a65c445a026ad5313f6849d",
+          "eventsHash": "c79102aa7bdc31df56c53088b69d527f8058cd4250162bbb08ec82360af3c11e"
         },
         {
           "round": 23,
-          "stateHash": "efce891f124a6fed6654cc34933b4a895f28a8934b6a74b36717ad74e0ee9e98",
-          "eventsHash": "005ef87356166567a569e8516d8b65adc5078027e5c983c4844e9423c11f8ea0"
+          "stateHash": "37cd6488ab53ed9849de71f9685628d6a9ba6954dbbb0773e571e5525f50248c",
+          "eventsHash": "442a227e9617dae912d3450a14d1221b79f10f1d88f989fa80e28555801d1e7f"
         },
         {
           "round": 24,
-          "stateHash": "6b080ed83e234bc6f7e16db03f96b143bdb9db4454fce5f6f43ba2ffdaafc55e",
-          "eventsHash": "0d53277d494f4be02e14cc543e00ecd689ffca955d8c8378fdc7f19955798a66"
+          "stateHash": "832ea03504f9d55b788c9e01aa0124fde8ee017299ec6a1b4890b50e1baedb32",
+          "eventsHash": "e1c0e5e3ab98173d21a9eb4c5a456b63865809b6a7b82239c7c63257e75c29a8"
         },
         {
           "round": 25,
-          "stateHash": "e6b8e50d49f61ebecd174eeec7fa9a377b6e098aa65a4fe4b79b22d499c85174",
-          "eventsHash": "64279ea85a95fcede491dbc0682f3dd5d65f3f49f8b2ff40d19ba2476f9ec8ea"
+          "stateHash": "5fa693ee7428df93c8ceaa1b26ffc464a2e259485277dbde736707b1e718a806",
+          "eventsHash": "b66e72f6b982271fa54c984203045b2bd8c4faf063a4eb797e48cc3bf27bd63c"
         },
         {
           "round": 26,
-          "stateHash": "99c772392af1443dd28e2df4b1bf45b097250fe3366af21c42390e3ad9b56e54",
-          "eventsHash": "3fb859b5234dcf3390e02a9b3582d2afff43226c854a798fe2341e7637aff98c"
+          "stateHash": "f7d198d5664f759121ce555bbdcdcb4d48d13cb0b729a35d54d84b0b00629e28",
+          "eventsHash": "52f4b6818974b70450fce1c4b97c43eff732d399738f3a7c67cb85a2ba762a89"
         },
         {
           "round": 27,
-          "stateHash": "94ea764af77e45acdfe66f3719036e874e8c56d978b3368a652a13b804747650",
-          "eventsHash": "676ded8ec65b84ec4b8a48647c8e30c1499827066e59120e41c2896264fe4a18"
+          "stateHash": "d3f8a4ed864dc0e268eca8b33aab0146a844bae8088fa02917b984cafb368d73",
+          "eventsHash": "8d8d0efe5ce50b3aaeef52088a4fbd14241c69b3b84e19b06c8576e79ba6988d"
         },
         {
           "round": 29,
-          "stateHash": "82fd564f28b86e7fa925b8bd4c22d7fb7a4086157364eed2708ed11feddfd2f8",
-          "eventsHash": "035e7f241b0a5e77bc2a5f4f484471a4c6bb95117a746ad2f988212ba45220be"
+          "stateHash": "119e27429ed85f528a06d6fa414a3cc17a1daf11cf47106775fbc396ca627231",
+          "eventsHash": "c5d2f97486eda0a40797a2758f29a2ffee5e7db1664beb46c9c2e65b1bddfb01"
         },
         {
           "round": 30,
-          "stateHash": "b363b5e8f88cc54de76d78862acafe327c7018b8ba584cd6942e5162f3a5b1ee",
-          "eventsHash": "b6bbf322dd1479a904a36c188049de0aa07548e3f11bcd411395be6b11fa50b6"
+          "stateHash": "9c94a632172572d3497e8874ca94048fd11e71ee32b23cd88a7a529023be79df",
+          "eventsHash": "2c5aec8e528af428d28127230ed0729297cb3c31864483d47306da2e00ba2011"
         },
         {
           "round": 31,
-          "stateHash": "7f92370c7cac58ad6d87740f277ac3f533a3833fbad2bcd559a2448eb7a89d84",
-          "eventsHash": "ce01db81b6e5e85264ebe57aa33b4d7a0df580d4bcb7dea34f2219649717e19a"
+          "stateHash": "bdeccdd42a2d5d38084e39a1b422e87fe466e8d7c37a762add5c6c694a331b2f",
+          "eventsHash": "025e389feeac0449ceca1656009c2fb60dfeab94d8f87f57ae93bb2f194015ef"
         },
         {
           "round": 32,
-          "stateHash": "6588220557031d63d0e46dda68d5cc39adf3c80e2369881d58bd562fceaa008d",
-          "eventsHash": "9b8bc821535276b7bbdc11202fa69127fcb8d899a4c61451fc3271727d003ff1"
+          "stateHash": "55dae44600f89caf144e5b6b55d0f7cc33c6daedc967215abd6cbd519032e6cd",
+          "eventsHash": "33fc787a038f98a3455b733c775070b0cf12bb8383dcb7d61ae81b20fea6e7bf"
         },
         {
           "round": 33,
-          "stateHash": "e5232b4fba8c15a5b3698c90549dc968bc5fbba85e54a064331adca7936b895c",
-          "eventsHash": "25d9e30208f45c1ec902a352ce65e50a5b5aac3b1370805dd98e1ce69fef44de"
+          "stateHash": "8955b7adf376ae519870f7423728d1a2ed2b044a25aca03368d04cd1eb7872bf",
+          "eventsHash": "987977ceb6f7193d7c0cc9a44433fd3dd27e6c1b7df48176202ad4e69ebb8fc1"
         },
         {
           "round": 34,
-          "stateHash": "31e48e8f92907f82b497f30a1bcb4113dd923a7b70a2fba7e60760c81013d210",
-          "eventsHash": "59c37cdbe5833993d305258f6ebbb8da36e938d64d49f9870cc8a37c6895aa78"
+          "stateHash": "f6b0458074f996c779a1cba855b2cb6ba69a13faca7f352e8f9cdcc805fe8d2c",
+          "eventsHash": "4dcbfa657d6698e353f8e1c0944cb8a8a58c76ced272e3b2617194bfe9afb15a"
         },
         {
           "round": 36,
-          "stateHash": "2ccbed80e94da14bc546c061dc95980246853d74523b6660e940344440b4a09d",
-          "eventsHash": "8ecd6420f7327e901591d4121e05ccb9fce555a350d26fb3ebae56e002a417b0"
+          "stateHash": "b8344bf117af3ac0020454ff6642821a781764af9041d6f32d63ec165f7a740a",
+          "eventsHash": "1e1350495574772f55f9bbbb2186358b534a614e1f24dcce6169f9d7a8e53eff"
         },
         {
           "round": 37,
-          "stateHash": "326684a8b9aeb696d9aed1920ca3baf63234633aaf9af95d6d294d64638da75a",
-          "eventsHash": "ebc8580fa2e8a36962639c19451969a27d5209e0388abab11e822f580b5d36ab"
+          "stateHash": "75478de89fc3fcad3c6422d5d222e2c916cc978d25bca117589ed0c245907b48",
+          "eventsHash": "909e7adaadd4d40e0a61cb0058146eed3f8ca0a54cb35450396e7d74ebf3df08"
         },
         {
           "round": 38,
-          "stateHash": "7e064b09537066f034106d6f222ff113a5a2eecdb7594de2bf3ed92913c8e3aa",
-          "eventsHash": "b04ea1cc4048d480e9d8e8b084da475e9476b028fbd8307035444fcfd5fca113"
+          "stateHash": "d5eb4ceacd409466f54fe40fb5fb2a18c7da64a8144d811a565ed84785a3b5b9",
+          "eventsHash": "3e98d4015a8d625ca6212db6ac05353adfb290d6925333f7428fea7575998019"
         }
       ]
     },
     "sniper": {
       "versions": {
         "schemaVersion": 7,
-        "rulesVersion": "s13-g2-3-v12",
-        "contentVersion": "s13-14.24b-g2-3-v12",
-        "contentDigest": "fnv1a32-utf16:9535ffff",
+        "rulesVersion": "s13-g2-3-v14",
+        "contentVersion": "s13-14.24b-g2-3-v14",
+        "contentDigest": "fnv1a32-utf16:ea6b11b6",
         "commandProtocolVersion": 3,
         "rngAlgorithm": "lcg32-v1",
         "tickMs": 50
@@ -1147,7 +1166,7 @@
           "type": "select",
           "choiceId": "round:2-1:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-i"
+          "definitionId": "item-collector-i"
         },
         {
           "type": "buy",
@@ -1333,7 +1352,7 @@
           "type": "select",
           "choiceId": "round:3-2:augment",
           "generation": 0,
-          "definitionId": "pumping-up-ii"
+          "definitionId": "pumping-up-i"
         },
         {
           "type": "buy",
@@ -1622,7 +1641,13 @@
           "type": "select",
           "choiceId": "round:4-2:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-ii"
+          "definitionId": "radiant-relics"
+        },
+        {
+          "type": "select",
+          "choiceId": "s13-augment:round:4-2:augment:radiant-relics:forge",
+          "generation": 0,
+          "definitionId": "TFT5_Item_SunfireCapeRadiant"
         },
         {
           "type": "reroll"
@@ -1730,12 +1755,12 @@
           "type": "combine",
           "ids": [
             "item-11",
-            "item-12"
+            "item-13"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-13",
+          "itemId": "item-14",
           "unitId": "unit-1",
           "slot": 2
         },
@@ -1761,7 +1786,7 @@
           "type": "select",
           "choiceId": "round:4-6:anomaly",
           "generation": 2,
-          "definitionId": "protective-shielding"
+          "definitionId": "share-your-energy"
         },
         {
           "type": "buyXp"
@@ -1827,12 +1852,12 @@
           "type": "combine",
           "ids": [
             "item-10",
-            "item-15"
+            "item-16"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-16",
+          "itemId": "item-17",
           "unitId": "unit-15",
           "slot": 1
         },
@@ -1925,13 +1950,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-14",
-            "item-17"
+            "item-15",
+            "item-18"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-18",
+          "itemId": "item-19",
           "unitId": "unit-25",
           "slot": 0
         },
@@ -1990,13 +2015,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-19",
-            "item-21"
+            "item-20",
+            "item-22"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-22",
+          "itemId": "item-23",
           "unitId": "unit-25",
           "slot": 1
         },
@@ -2021,177 +2046,177 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "b9f70645712ab7e2acdde6e7cb1b392fc057951fb6d1c5c25e3cb1a546f13752",
+          "stateHash": "b26adef628cd2632bbd48a8c1ba774334da8de933aa27aab896da4c89f916115",
           "eventsHash": "a846919fced91b05dae7195d7ce76d78255bf31c128decf9896e9c569528931c"
         },
         {
           "round": 2,
-          "stateHash": "a51a80ea8f8d3086e48aeee7db3f0794f216bca8277f19da733a26fcdbefdee6",
+          "stateHash": "01a847ac3d3f55f37fa10bdc7a368f43993bde9b6ab75a1812477837eaa1f91f",
           "eventsHash": "3e86aeabdfad4769af89bc7815b76428bc5b00459bec716d7d571bd7ab26155c"
         },
         {
           "round": 3,
-          "stateHash": "7f929f29c69e9f6129784681f7449ac9500618a28fe054dfd073aeeee82c0018",
+          "stateHash": "2d173db8c5c1afdf312d9b43d4523bfb04edcc1a1a5431436039af014df6ce3e",
           "eventsHash": "7f50171caf601690d7dfdf395f0dfb1fe47e8531fee15152e2887c15fbc186b4"
         },
         {
           "round": 4,
-          "stateHash": "74eb176e455e25b3920f2d5e2d2a718328fd62733d0dedaeb02988391044fc18",
-          "eventsHash": "dbd77d1c452714a670e27d89bf783177167ae833d955f6b99b577a051f8f1367"
+          "stateHash": "806d6568c4fa52c85c9b03ad90660b24e5da2617b138fd5faaba5c8d017bf6bf",
+          "eventsHash": "0830b38e3a266ccb284dfb5d916b6d0c217c69ec810dd88cbff32f811fc9cb79"
         },
         {
           "round": 5,
-          "stateHash": "87ace86cdc0f123c2288a0bdfe46c72633968c1b98f255a82e405cefad4f3b3e",
-          "eventsHash": "f06727cde47cbacbbec4f7d97c8e64543902e54c7a4e9d2a8cbe6bd78c9318cc"
+          "stateHash": "afba37450c1cc4a4a524e64ab72b1dcc1fe9d975acc46818525f1335d354e6ff",
+          "eventsHash": "f050fe2e75e755e42897f5014acaf7b90b28a9f487368b383058ddd265719944"
         },
         {
           "round": 6,
-          "stateHash": "cfcdcf5fbbbad191efb4c730a431071a0b16c57e1926941ac310fe2ba3adb1a9",
-          "eventsHash": "09b74b4a09b3aff76bb4c810402cf6be6b5614f16149b702ef2bb9f5a1511f5b"
+          "stateHash": "c214b465c7c80cfe9a1d2d06b614e9cbe150188433c3ddca1ffb1deedb31d3fc",
+          "eventsHash": "5e5b4b6b8ef69231610f3560a4d4423b562d22f1d7bdbbb8bb992c29b1de0795"
         },
         {
           "round": 8,
-          "stateHash": "f7be9df18d03f48d72b4dccd8c4666e34bee35159d14cd9d513212a75fa1502a",
-          "eventsHash": "5a0f7eb9e98a74cb034460cedc61a94b34026147ca9c2a768ff2f2f36c95f45b"
+          "stateHash": "557a136f7b77e8cba261ce7303fa286f61da155349c666ce8182ce554762495a",
+          "eventsHash": "ef66b84a0ebe5349ddbe2b6597234dd78fe65654c5da8de63ebd49cf735f375d"
         },
         {
           "round": 9,
-          "stateHash": "6e135cbe51d806c752199374709e124e720c99d8f9236c77d141fd0db562eb64",
-          "eventsHash": "6acae6e9e63e418119e8170acd243201587f9aa88e5633f5afbb5d8844854a69"
+          "stateHash": "dbca201b64df8365be344e29690fa368f9ec923c68cb00ebb36e8ecc0d24daff",
+          "eventsHash": "b05ea9755d46f0868fd922cb0528b54035a805d476f3bcea31c538d1fc98ac3b"
         },
         {
           "round": 10,
-          "stateHash": "01a4c3ec2fbebf6482ce67d7647d2d79d7bb78c77dbcf433b5491163888c6994",
-          "eventsHash": "68db819382bc0a642d5726d533003b9209f36d655bcba98bb1680b7f180938d3"
+          "stateHash": "95ba1377a262edec45c2f1d7880a5831ecd52f2b6ad6a4d28c65677b633c2c88",
+          "eventsHash": "d6693dd54e512833f034a21375f90a4a17c9a7d724ce5cc747b91ede5ed632e5"
         },
         {
           "round": 11,
-          "stateHash": "47092249ee202c97b5aa9f83a85e176b92b7ab3d3d7d3b9d2fc5dd168c08e6ea",
-          "eventsHash": "40434c83300845da6029d101a1ed5ca519b0ef8faa6154681cb361fed4452368"
+          "stateHash": "9759ec36bed4af7d2b5e652b9b7cbcf815fc21e97a6f65bcc70e7b330666d81a",
+          "eventsHash": "eb49563e12da6658fc0ea142b8482c259f5762f4a7cd60241ee01b7f7503cc67"
         },
         {
           "round": 12,
-          "stateHash": "c0133dcdf7db73e2b5ed9b9b6c591f372f67ad3a1a7fc8fe4134972f7b187f23",
-          "eventsHash": "88e63f9ce7d771c0dfc847cb8809e2244ff9d49d99c936a07f5cf337df111da9"
+          "stateHash": "4ac966a3b9ba4333e22fc65848f65324800d1734827fb34f53dce9a09472eed3",
+          "eventsHash": "274af0b67bdf57819c8d9387f8b011f5a2be894317c0d30ca0374c1372149cfe"
         },
         {
           "round": 13,
-          "stateHash": "41f4e41e70ff88eefd277135177eadf458573a8eb4af7e807166ee2d1fd79494",
-          "eventsHash": "b35293f1aed62ac1ba1ac502357a80daa14c04d6d044e9cd18f1e0462b778514"
+          "stateHash": "e90dc83c7e8e7110e1d55ed03845baf9ef310ddae9cac582f9afca4dc899a896",
+          "eventsHash": "e5d9985c9beb1451afbe0cad994808e24525a95b9b5783b22fc745202af02dcd"
         },
         {
           "round": 15,
-          "stateHash": "3b168cf949dec7290ad29dcfa403c85c68771b042a152ab0ae87478e11cdea70",
-          "eventsHash": "4cde23bf2f265acac0294faeb545739ffe00a8825edb2e5518674a6e00b11d92"
+          "stateHash": "7a6de6738189e6f0daa3e3395e3016d06c8ddaa0c8ee5343ba65d03d4e1e8729",
+          "eventsHash": "0379d357b050e1506dd716582defa7421835d69f1fa82cfc196f7671d0bd302c"
         },
         {
           "round": 16,
-          "stateHash": "e922c785694288104be1226f40e37a4a3503837924e9cd5096e0cbf2fd7b2c70",
-          "eventsHash": "78e0db38d7cf734a329c69348cf11be42f563401bafa4728fb55f2eed3526e28"
+          "stateHash": "a4e6ecddefa4146f9d96478bc4ae34830e074132e7ff89cdeb66bdb7a1b7d40b",
+          "eventsHash": "57c2255c136786f3c0b051dd5ba67793b2f9d0796286c3649feddedfbb785e61"
         },
         {
           "round": 17,
-          "stateHash": "7cd1d25cc0f29775cef308c0045703c772ceda6fa37d72b134e5a49f654ccd95",
-          "eventsHash": "858deb1858cabed4dbe4f11df6bff9e98ee30b3cb820840531242b4a787981f5"
+          "stateHash": "3c0af4ca0370cf3d02bab75a96ebd832ba1915cd0273e61bd0e6ad3ee4644868",
+          "eventsHash": "e4a347abe27172e725c59bb7886b6f709aed6649fb492cd8cc31b706ba2ec4d5"
         },
         {
           "round": 18,
-          "stateHash": "7ac03d92a0e0054d07f085c4e088dda5b5bc6d5e11fd157a8d2b58d197fd0a2c",
-          "eventsHash": "5eea54341af08a303c79730c0026a1bfd6f0829926105a4fcc1c06b45c037831"
+          "stateHash": "73d2388e4b156bb4bea1ab5de13f5be738914fa139c298a92828d4e228b1e161",
+          "eventsHash": "1e92a1d4a415c507d90ed89c5bfdd724bb5702611fc16ab28bed42ac4c4e9cc7"
         },
         {
           "round": 19,
-          "stateHash": "071268c7f7d46f3a69020708f010fff9a363c9de4827390c1ddfa09154320128",
-          "eventsHash": "a9780835e47372ced58b8ba0aea699166e599380bda847170d2b9c8589ec344b"
+          "stateHash": "9d64e67d68deaad94b3d99634f59403baf312e1ebcf35b66d6089bf0dbd3f8b5",
+          "eventsHash": "425baf957b942c9355c99a58fef41a191bf03a4a121f8fd4a8ebe8dbde257234"
         },
         {
           "round": 20,
-          "stateHash": "1e587bf3ae2d32c9edcaee67af7557baf12e11f43b3faa3e2680fabbf83edf1f",
-          "eventsHash": "5695c9954576a5e5c68bdb6824496e25506e2ddacf1be5e4a08c28b190ac7baa"
+          "stateHash": "8bcc41d08b22d7a32a85c466e6836b62fa994978debb3c2b8540071569d8b0f9",
+          "eventsHash": "0314f7614ab6626ea452595d77d20e909d3b7104a97b6ef229c8d948543ca31a"
         },
         {
           "round": 22,
-          "stateHash": "21e211ff211418d3814a134e36fd491e73bc61d8f69d8f81be2554aad4a8e8b0",
-          "eventsHash": "1e6348e4b885113f1bc8bd1d885c28a21c8a434fda473207658297a99b2f4b8f"
+          "stateHash": "d5d6b51b8dbece53e8f2abedb5fee16cdc93205ab8ce9e87be391e937ff0e272",
+          "eventsHash": "08d7d7a36ead496239b1a2c8a3cca749bd78ccea069606e6aa6528f4f19e6c7f"
         },
         {
           "round": 23,
-          "stateHash": "e0baf58130481f9200d952380aa8578f08d9259b804de9d1f29e0f16df465b36",
-          "eventsHash": "54dfbcefec2ade67d2b421cf85f84e7d576e0aca7b570979daf2b65afbe22297"
+          "stateHash": "9d30a858465e58bf13fdba716b265bdcb5dcae7c138867f0c230a321a47c45a4",
+          "eventsHash": "4eba20c6088c101ec22be6dae3bb2dadee9d7e0812d2966533a00330b0724c5b"
         },
         {
           "round": 24,
-          "stateHash": "c60ab3cb267220e3539a22e1de993f5bd0e2818a35f516de062bf53ce85c1c2c",
-          "eventsHash": "6b9721a46c2190e491936f1710b6413d4f772c4fd5caccffb7d8a8b2c95423d2"
+          "stateHash": "dcef97912ba151d56b7f96d93dedbada87b5a068af027497b34f2ada8810cee9",
+          "eventsHash": "c6258dae24efb0fa33053a7c0b69e78ff20585c6f2c8d50252e4a441290f5503"
         },
         {
           "round": 25,
-          "stateHash": "a4b37c7e21fde5802322f794eab61fb5388b3c379c04fea3bab9facbc5fa58f2",
-          "eventsHash": "c76816a6befbd59397ee0a629dfe8e77515b9ab4f43e5f756a04bb4a9229ba46"
+          "stateHash": "62a32b1159a3f6d1b70c0e77f6ad6d3ceb7e7522c61032ebfe028810425522af",
+          "eventsHash": "19151654ba42f888161d2997c4bf281abf0ffe1dbf627814dbc0839b8845efa5"
         },
         {
           "round": 26,
-          "stateHash": "ee027f853ecda2585857eea24663bd65c4bed162c86db19f3b793b25b0d4a67c",
-          "eventsHash": "3d01b412831b66ede10bf690749b02a509b676df9b5fae70bf7f5f52dbb461dd"
+          "stateHash": "fb989146ef95d216055a59673e6e9e3f707d0f4d86db041a9b1b5318ccb0aeaa",
+          "eventsHash": "bb0d504b438f9ec8a045348ea2d17a52450cc09f657a09f5bcc5cc655164b338"
         },
         {
           "round": 27,
-          "stateHash": "6fab75e7318cbdc9262861a3f7a51ee5d37a6a14459f870c7094d9212290e5de",
-          "eventsHash": "254878bd178b9e93583ccc68753cab4606b1661a35acaec4609d215041de2535"
+          "stateHash": "8cf5c17e2e1d3da62ac79b0783f5f197ff5cc1fa08c70be010ff0ce96e552647",
+          "eventsHash": "466522d5788f4253f8ac2c6ac5dd650d29a06be44a93300a854c5d2b40a70af6"
         },
         {
           "round": 29,
-          "stateHash": "106ddefa67c627bfe44a45b8f14689f97588fe2f54d3c7307a3041e57e5b2263",
-          "eventsHash": "632c5011a943bd726c1dc39973b837f8809e277e08041a0c93061a9c9317489c"
+          "stateHash": "95f4228559905ce67e19d1f78176e5d8db1a562af6cee2cff8253041fe12401b",
+          "eventsHash": "d163d322efaf390aae6fa2d479bf09255348a5f051c0728616f8826439cc4ec9"
         },
         {
           "round": 30,
-          "stateHash": "497030149506c347f06940179db688b9f72bbbaf0f65e74599f550f01a11dc84",
-          "eventsHash": "f26dff94ddc42597ad06eba52a92f9b3c565ec401cb9e4394176eb279a860478"
+          "stateHash": "1c27465418d5d10ab1b34175e9dd59b57f8741bda0b2ade356c674a35bd670ea",
+          "eventsHash": "bf2d105b53f7ddc1d0a82c83be9cd78d39de62101b54606b675766219aab8532"
         },
         {
           "round": 31,
-          "stateHash": "7709bd104c08fc3ac48960017675e5304cce3ecdb58adc1cb43682782cb6a0b3",
-          "eventsHash": "96ad691112ae9575f8c170673a52d1f103f2dc5609e2b1d8492c8265fd959580"
+          "stateHash": "db2a3697182845f423cebcb81ba03ad1257c3984c45e3bdfc96b886a9aeb056b",
+          "eventsHash": "866702f9153f92f4830d7f5941c1c5e2903d8dc127b0ed6899d4ab2fa7702cad"
         },
         {
           "round": 32,
-          "stateHash": "447744e91f29a77d03168eff882c680112d3672ff2f42de0dd034c961fe21944",
-          "eventsHash": "45a45904770bf94fe3b26cfc74b402570dcdbfb1903e4e3394a040d4fa7f9239"
+          "stateHash": "be23356d420de0e45a4c1483c845fd30a1e07cc61fcbca62818d2829e02adc88",
+          "eventsHash": "4a0835226c8f9d745d95a15519cd9b72dc6e34b30aec31ae63bcfa932a23a84e"
         },
         {
           "round": 33,
-          "stateHash": "6e383cf513c99675bfd6ce53b48858e2bbc3854533a99f8e93fbd88a90467dbb",
-          "eventsHash": "b766c98fe36bb2b82949759c80a51ed089ae976524d9476f88f05f5fbbba4b36"
+          "stateHash": "e380f95403dfa341c34c140cb23dee7d381005870969f2d9d7c7288c5657408b",
+          "eventsHash": "e55e025425c7e6eaca3e1845d15a1e3ca9be359a71f88a0b06a2272f242ea9e9"
         },
         {
           "round": 34,
-          "stateHash": "19adce93195df0a143753deb02f87cb55c428fc7e5adf73ed80ee3742f4e6a37",
-          "eventsHash": "43bef64b67db972b973ea104d4ff7813480d878b64d52a3e2450d3ff740468c5"
+          "stateHash": "c47e8d586d32dafc1e2feb8da26386178fa9dbca97dc9d46d858c9b329d1d0bb",
+          "eventsHash": "b679582e95b3b5c05d2907b573fc8e0c886ddf29b35e2bbea3f2d1ed05948466"
         },
         {
           "round": 36,
-          "stateHash": "8d002818797410f8f4693e85f493556c6c9784718bcd1cfb3bc73699260845eb",
-          "eventsHash": "52e20235bd93608c51863e6ca75d27524586a89d464c998f3c50c696f8bb3858"
+          "stateHash": "1392f3d5dd69e496da6d2d1418c236e321e61b8ffd0a227fb100951514defa0f",
+          "eventsHash": "69816687bd79b50966bdba938d34cba3ccf20ce21ead20f870d21f20d79cf428"
         },
         {
           "round": 37,
-          "stateHash": "71445d0c0fae3b060e3f40714934a44252f3ebf187e789dc8bb1a74e2da95129",
-          "eventsHash": "03454d819896bf2d1e6c7f58799f80bdb3959093767736b518a575aa7b52691c"
+          "stateHash": "734a799090fee4a8b5e685b170338a4cb668773288177161fbedc347534b1552",
+          "eventsHash": "6fd7e10ccd41186d6c088f30f3822cbf5c7e6feb39ae92290fcf94035301f22e"
         },
         {
           "round": 38,
-          "stateHash": "9f13edcae47934266e193381c2a91be049a059d52fb87ce988c3846318d75042",
-          "eventsHash": "8b12d7fa9ca526af3385626072ba2559bae0b96653c6a7b035c8e61fdce0b86f"
+          "stateHash": "a593872f21cd0df9d728ebcf733866e1c2e18b48136e1b5c1e60c4d388b28b2f",
+          "eventsHash": "711f4b674da1fdfb1cc3440335e0fd22448fad9f3bba71b8ff8c1faa915c7819"
         }
       ]
     },
     "mage": {
       "versions": {
         "schemaVersion": 7,
-        "rulesVersion": "s13-g2-3-v12",
-        "contentVersion": "s13-14.24b-g2-3-v12",
-        "contentDigest": "fnv1a32-utf16:9535ffff",
+        "rulesVersion": "s13-g2-3-v14",
+        "contentVersion": "s13-14.24b-g2-3-v14",
+        "contentDigest": "fnv1a32-utf16:ea6b11b6",
         "commandProtocolVersion": 3,
         "rngAlgorithm": "lcg32-v1",
         "tickMs": 50
@@ -2248,7 +2273,7 @@
           "type": "select",
           "choiceId": "round:2-1:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-i"
+          "definitionId": "item-collector-i"
         },
         {
           "type": "buy",
@@ -2418,7 +2443,7 @@
           "type": "select",
           "choiceId": "round:3-2:augment",
           "generation": 0,
-          "definitionId": "pumping-up-ii"
+          "definitionId": "pumping-up-i"
         },
         {
           "type": "buy",
@@ -2721,7 +2746,13 @@
           "type": "select",
           "choiceId": "round:4-2:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-ii"
+          "definitionId": "radiant-relics"
+        },
+        {
+          "type": "select",
+          "choiceId": "s13-augment:round:4-2:augment:radiant-relics:forge",
+          "generation": 0,
+          "definitionId": "TFT5_Item_SunfireCapeRadiant"
         },
         {
           "type": "buyXp"
@@ -2820,13 +2851,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-12",
+            "item-13",
             "item-5"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-13",
+          "itemId": "item-14",
           "unitId": "unit-21",
           "slot": 0
         },
@@ -2852,7 +2883,7 @@
           "type": "select",
           "choiceId": "round:4-6:anomaly",
           "generation": 2,
-          "definitionId": "protective-shielding"
+          "definitionId": "share-your-energy"
         },
         {
           "type": "buy",
@@ -2944,12 +2975,12 @@
           "type": "combine",
           "ids": [
             "item-10",
-            "item-16"
+            "item-17"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-17",
+          "itemId": "item-18",
           "unitId": "unit-21",
           "slot": 1
         },
@@ -3008,13 +3039,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-14",
-            "item-20"
+            "item-15",
+            "item-21"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-21",
+          "itemId": "item-22",
           "unitId": "unit-21",
           "slot": 2
         },
@@ -3039,177 +3070,177 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "b9f70645712ab7e2acdde6e7cb1b392fc057951fb6d1c5c25e3cb1a546f13752",
+          "stateHash": "b26adef628cd2632bbd48a8c1ba774334da8de933aa27aab896da4c89f916115",
           "eventsHash": "a846919fced91b05dae7195d7ce76d78255bf31c128decf9896e9c569528931c"
         },
         {
           "round": 2,
-          "stateHash": "52116f9df583bc51d05b54a518e8ff1bec339ee055fa09cac25848c2a234128f",
+          "stateHash": "402182dbbb44679ea6721ae5021eadb3acfe0c858faac15255a076cf29a77d74",
           "eventsHash": "640b1a03202d509b758116a3864ee6fd04e13f89d8bd6d5fc548765ae8b559d2"
         },
         {
           "round": 3,
-          "stateHash": "436512a796431be1ab1548d5e2a71137be581d53d81cb212793cba608a4aac7c",
+          "stateHash": "211d1f4e4d97db5cca11ef86453065ff4aa444ed2857ab13725bb061262ab3c1",
           "eventsHash": "7d5b7b483bf6b5b61325673012e6d8bc6f259f14a2dff260d4c86d98537ba423"
         },
         {
           "round": 4,
-          "stateHash": "91ae7fde7354ec328fa63ef6d51ce576886df4735ca532d790c03f1e2fb6822b",
-          "eventsHash": "4a495941f889fb7b41d9e8dec03fd459dff6e4ebccb0d1cf8f48eaa22a32aca2"
+          "stateHash": "f7eea4960c994d5eda5447d0ded4af41bc00813909407807d399f8e58b3d8126",
+          "eventsHash": "a1c726039e9c809748ef8ca97507d5f8c776136cc1bca0c5e93b275150965013"
         },
         {
           "round": 5,
-          "stateHash": "2f0877960ef59bd08d39d0476d7c5b0f6fd853a419ec73dff22fca39203de9b6",
-          "eventsHash": "efc6a2cd517bb282f27a2a1f21cdde8e68be8a785a02b15d6f6456426f811a64"
+          "stateHash": "ba4c18a845e7c58f2edf0eaf1efef63beaca5fe20ee3c351bde787c18c4fbc9b",
+          "eventsHash": "25ba5b8c45c327cdc520fcd0f54e5315f917bf6691005a8844d197ed44a10fbc"
         },
         {
           "round": 6,
-          "stateHash": "ad76e8e3f0af5377623f2ecfeab409398562fe36d3a71db18b0e4b95c5c4fb73",
-          "eventsHash": "3524e0f8b74608d2e0af5e9143d8b3a42b821c49a3b67ceb553a754bbbc55bf2"
+          "stateHash": "7ed2dffa4bb4d0561d103956d4cf281326877aec0aeefb4e010a647afae454ac",
+          "eventsHash": "8a951c4a40b3954b14fdcfa1305f2aa2fe7082c28b8e48ee8d9d608fc040c0c3"
         },
         {
           "round": 8,
-          "stateHash": "16d8958364458982d5b2581b99f26fd24d67437db6c998bf6b91296adc1f45d1",
-          "eventsHash": "6bc0bab8667f501115a126c06dac931b477ee0f67d6d481a8550d0d1e18f7a56"
+          "stateHash": "2a11371ef3a9e4c248d0b685fc8bf94d427ecb462cb58ae53e19e1ec45f348c3",
+          "eventsHash": "a52dffb37b726e6281b84f24419a9b481cf4b98d1831690d2de2e6f489a75e78"
         },
         {
           "round": 9,
-          "stateHash": "451e90f7ded299131aced00677694fee2ad57fd2e4f513ede341db743c17a9c3",
-          "eventsHash": "f28da300f4ce544e07da44f7fe533a4f7754f791fe03cbb52123576ce6cd1f93"
+          "stateHash": "ed107128f4b24823acb89cc0f4e373fa8fdabfa66ce8e25c0b72b3618deadfba",
+          "eventsHash": "b551490cc572023e9b2ff3e4da2271ca8616ea2edc191fd2b7f4409489b54464"
         },
         {
           "round": 10,
-          "stateHash": "e6b6b31699f1db3aad5d46f697dfb5248f51205ad7ed1d91e342efc3f34c32d1",
-          "eventsHash": "64a54c0bdeee5059fbedbb9a0d32cc16be4fcf02c890d4625b4a0b4a3cc97e30"
+          "stateHash": "ff8f4cd73c8f857155dfe07a2d07cfa262389d1c37937e22c52084431d61b55e",
+          "eventsHash": "093a8b37967deb441e51d51d6dcad543867bbd24ab7227a72e3863586c577d3e"
         },
         {
           "round": 11,
-          "stateHash": "e5053e7f7825949d38b44dca96a9d6d53410063e7a92321cbe97975dc6a0a584",
-          "eventsHash": "dfc045e0bd3c548f6db3c434b8a69276a84a4598b5d8e595453596219909132f"
+          "stateHash": "2451a7c3734960fa5561aec166a0f318d55f9b1186f3e893c0cf3981e6cb1bf3",
+          "eventsHash": "bce2aa7192f8e701b0af3332c75991ebd8af3cadb985358f49d66f294bb98fbd"
         },
         {
           "round": 12,
-          "stateHash": "8e34a7606cef7e5aa074ffb738cda13d2893337c711c5bed262420bea5073712",
-          "eventsHash": "dbbddcab7bb4aed589eec34800adfd624083c6671340fc56efe78cd23b1ca854"
+          "stateHash": "e59a5af9b1c25d8c22d4887ff87fe2028953324cf7c45621f591e3c26bd43b69",
+          "eventsHash": "21856cd02d56e06d568bb25e98be120a8bd2b3bf8d7edf96d0ea211e65aae207"
         },
         {
           "round": 13,
-          "stateHash": "3b162f18103de2c48f42237b405a27412bc2d791359017662298dbe1092c33a5",
-          "eventsHash": "4a41b94a8c9f08d38820b5cc350538bb1dc859e15c2f6ca9920958caf89057ff"
+          "stateHash": "502f1e973fc86c22d5540570b382e5ec6f130947ade90380b7531ba1f9437b96",
+          "eventsHash": "19c6a894cfc97abeac20ba4411e33c012a5df4fe987584eb09867f5a884e3743"
         },
         {
           "round": 15,
-          "stateHash": "dea3efb98736c7d7d72e36bb222bdb881bb3cdd007dbc8f1f6c9e85b60bb3356",
-          "eventsHash": "65e604e69addf1a9082bdcf33c786edefec2a98ce5317fc08ee07163f164cdf3"
+          "stateHash": "ea1d504111020ff0b3d2339c666020d546425a734277283a38fe78d01d521ce5",
+          "eventsHash": "9b7fb5c5cf6858e16bd79a85faec7697776fd37f269941545122c5cc52771e4b"
         },
         {
           "round": 16,
-          "stateHash": "3472ec5215991e0748a156755f3e4dc3faa14206d07df15e1f7f283108b854f9",
-          "eventsHash": "644fdd9e74bdf2d7b4562838aaadc200d4acce36f4f9e206b41d82a74838a3fd"
+          "stateHash": "94733797759d3ddcdcedac9ff7be6c49a2c769e6482e3f02bbfd7bb9c04a00a4",
+          "eventsHash": "e7cba71aa844e02407deaa54c6d6224b639cec10610e893367218af7dd5bb7cd"
         },
         {
           "round": 17,
-          "stateHash": "756edc2b0f2bf641465f64fa3afb75a5c138ff8b10e9e67da99b6ee01124c805",
-          "eventsHash": "a0338720a3c0f2523c0e8e219681f6f13d4f4b3224205ca56a2a7c6a2fc4fa1f"
+          "stateHash": "2ee0cc219626a720714890b2f9323c4e2b6c9d09ca9cb04c7c2129b8f531a694",
+          "eventsHash": "5d35b3efa975eecef54465666eb67237d431efd43a18624fc972ef0abb37d4d7"
         },
         {
           "round": 18,
-          "stateHash": "cebc0f11c2eb1e434284ddd04f03dd446422d9986d16b59d71bb2c9fbd228abc",
-          "eventsHash": "826ef452b3a57dc70e6e53fe849793e3767dcceb2f8523f5ef7334b49b8ee4cc"
+          "stateHash": "dac82f240490e9d17432a7b8e348b924cef38d43115f707f70f4a7d43ace70bf",
+          "eventsHash": "21108eaeb78681604d4baaba196f60fa5feb0be22078b3840378e44456af8fd3"
         },
         {
           "round": 19,
-          "stateHash": "09a2711c1105a3a695056d2dd44166288d80da031e23ea034074d860b3aeebe6",
-          "eventsHash": "e64dddefd0a2c98f6cbbf2775e8717f98f35139921729ad2185926ebb0df7e44"
+          "stateHash": "7693e011b456d5c4f9c0c6b058f7bccbcaf3ac44aa684e648b0702d65d4e7bed",
+          "eventsHash": "79b941b544bbb12ef252b8cd6938b48e582faf969d1719b3481fe5054a93c474"
         },
         {
           "round": 20,
-          "stateHash": "797e213dd6bf2df74d53672c1b7043649d275d4846caff58291424a46777bf72",
-          "eventsHash": "b20c5e82318d55e51970e1eaf04e03bbd9ebb47538108b55e66aeb8fe4e70fc2"
+          "stateHash": "4909299366146d34c09a482ed56a1bb9575335f8c7502721039437555f664480",
+          "eventsHash": "2db5ca82ddfe913f3276110884a5d60f767693a42af96a94f79ab8c4c46591a1"
         },
         {
           "round": 22,
-          "stateHash": "1821563e630eb1913efb654539768227aaf60dfe9dcb7a199eaa5d7cf3e382b7",
-          "eventsHash": "ad4aaeea2d22eeaf5e720359191fcef957e33fc9db2e581747523795b5f8cc59"
+          "stateHash": "9cfdd657afd80a615dfb3b87d01412b83a8a777256d70e4da58f676f46d3d32b",
+          "eventsHash": "7ee815ce296bd8acf08a6d21fcd9dc6e06a03e8e4d6617bb4f79dda103a28cd9"
         },
         {
           "round": 23,
-          "stateHash": "6c10849f65816acabec921ac17ed5241e6aa782588bb2b6284be64f1f8da96a4",
-          "eventsHash": "5b54424324a45d0c64b1cea8505aaaefd50bd97b10b2f451292027af90313653"
+          "stateHash": "aae4f445f0266b6a281df7d2afd37da28f0dcf71ea99afea6c9a8b89334f3502",
+          "eventsHash": "c577b36020a969a3701f698e384724754d5a6b743f0b6210ba355617394c7f8d"
         },
         {
           "round": 24,
-          "stateHash": "1622147844ae1224387247ae02e14d776dd6a94f9266a9e058c5bf641f0555f4",
-          "eventsHash": "a5fd856ac404ee934a4190a1ba6ab4917ddc2f62e10da78e0ebc2ed8fcc0ee68"
+          "stateHash": "5375c405033686a451ac0dfbfcab3a071a1782eb26382080d8a67654bc25ca7c",
+          "eventsHash": "ed634f31ce4bd546268046a7eeec54df9c7c1c09d9cab536c18b4a5c815f5225"
         },
         {
           "round": 25,
-          "stateHash": "2855046196d8fe7f50628a738109cfd89a886c2b6c84f81c175ba035c9db82ee",
-          "eventsHash": "f7017179bbac75a9cb6c13b6fae4a53d3571e05f2e40a364ee33334eebc85860"
+          "stateHash": "0ddfa3f96be3f7fc008ec5a92a0dd61780c7104e550f58242e145483f5f775b5",
+          "eventsHash": "9e38fe23a709c4f71f39127d6b3f6398d32874ade3319dc430e682dc1f5c502a"
         },
         {
           "round": 26,
-          "stateHash": "4e08208b51fbf468ae87279c9258274159063e33ddc3d80667c259d2125ee2dc",
-          "eventsHash": "69727949e7e5aca7f6d0a51733824f0ed7e2a54917aed03a49e0e1faca25dc54"
+          "stateHash": "ef62f8ad93191176a3962cc86f5f764a32e79ce4de456fc514d2961d55741e58",
+          "eventsHash": "92d4e8e97a59b5bb37cb7a19237bc21e2b3bf11aa2b36d957dee26aa243bc513"
         },
         {
           "round": 27,
-          "stateHash": "37ba80dcbec2d7b1cca2d8b37b2ab86c1ceb26909178bc33da7aa77ad57532d7",
-          "eventsHash": "ec452a24c453c78ec95373e45030a61469f3d1859223f3acf337330309270172"
+          "stateHash": "04ac9a1c967029bfcce6fe1ce94e53c68e5145c3e488ee66b9c08e7eaf70b87c",
+          "eventsHash": "c0c1febf3695af3daddd857c5544fd4860446486b528b16f4b450167d9522438"
         },
         {
           "round": 29,
-          "stateHash": "c56ca19d0733215170e19bb7ecf6ed7419a640e0c92bfaa89708ec78ea430f04",
-          "eventsHash": "6a78ac2f4a7db3e6e6286b7e866105d3024812d53a70d4d21ea89082e73b90e3"
+          "stateHash": "14f5718c52455f0a39d1972d74aeea0a11054849e580c16d50cc272239f8478d",
+          "eventsHash": "99881d39164112173efd2f78cf347c5d622b4771e68d78e722e9c3608a05810d"
         },
         {
           "round": 30,
-          "stateHash": "2f609017136d4a99c6e81b2f3ce5b382e6446abd557f9c700d707be21a0306b0",
-          "eventsHash": "fe2b4d4fc94bef3d245a38c720ea299f36df9ca091a6ef50dfe3ee0ccc0d33fe"
+          "stateHash": "5f3948d80d522afbb86fa49f37211cfb60f712849c8f3aeadbb9d09b85b010db",
+          "eventsHash": "799e63c5e6d223a737cea54699fa7a3025365cc2ceca9652ba69d7e596bcdc12"
         },
         {
           "round": 31,
-          "stateHash": "ef6018e4e143553be2ba78bd2aa10d85893d38e0939c5567234ad797de2690b3",
-          "eventsHash": "be2b756f1f6a517bf45622b9a8ee25b2f9e4297ff130e987abfa7f938da7721a"
+          "stateHash": "bb52940d6a161640c176724170d63abed79b0ba4b4a432ce8046b2b7ef7e23dc",
+          "eventsHash": "1b18aa3bdda3059246cf8a6dcfcee65b13f59d3c257be1834d70a50ee9fc6d3e"
         },
         {
           "round": 32,
-          "stateHash": "a74a8bdbebf5024c3626831cf72ba6729ebc0dae2902cdffd34ef44a251ea631",
-          "eventsHash": "a654a4d9af96927fb4250da40d9e6e31c9a8c567f45e414d88d9dca2debcf944"
+          "stateHash": "d2898946fd0d1c2ff0ef0016f296cf0f0c4490d0bd0aa4925ec209d03dc1ea1d",
+          "eventsHash": "68dc452fc13d2f616e43d6c0f4598368179ce1384439c775a687d206e4a92fe9"
         },
         {
           "round": 33,
-          "stateHash": "480f0356fcb424c28b18468bbb3256f1c8b727d417d3bd8f5e55accede29fded",
-          "eventsHash": "72afabd8779ff8426f44da3469d7d48f1fadedbf43f7c7a986e4c3024c6468e3"
+          "stateHash": "4d22fb00f6333b4bbce8a9d431e15e7e7875e370c1650716f55ed5141ff41402",
+          "eventsHash": "0cb75d643508537147080990956ea34f3a74296841883f1cc30f0a8401738dc4"
         },
         {
           "round": 34,
-          "stateHash": "22ebfb5db325049682fb9cc9ee9e07f6c3b940b0c2f46f061898c30a6f4c5631",
-          "eventsHash": "e14032feab36cf7759f8d857420a32964d5f78173acb44833a9da700402d5f13"
+          "stateHash": "0d6d4112af00e73d1c1674a20a6fbf8e6c89c703795975b37d058f4e4b2ca635",
+          "eventsHash": "d20ddbbaf4c9583ce68d6d54d1cc1658897c5eb0939d6e03d3c6cfcda0a1a31e"
         },
         {
           "round": 36,
-          "stateHash": "2d3e532724b02863c14afcf2dd6761a6feaa47e7670345d6b7d64cc0f42ced5f",
-          "eventsHash": "23d961a4118e686c5aef21ab938934125b7b04f8067548226f8503d2c093547d"
+          "stateHash": "837876572a58e82c333f920e19c54afc6afb3c254723a7c85049b020229b2f6a",
+          "eventsHash": "bc15f8be11e6185d8e0efb057f8251541803b07577e9b0ff194a46f6a850065a"
         },
         {
           "round": 37,
-          "stateHash": "fdcaf8c3f89a3fde587e923fcfc32fb4973de0bdc724328b2996b8264e6b4677",
-          "eventsHash": "0622ee48a405cd3b99f804a8e0ea4fa4d34a294d533c1c3db832778582fe06ae"
+          "stateHash": "38d8314a73fd4bae0ca62a30bdc9db68450642c1f37633a5e043b188639158d1",
+          "eventsHash": "6a100d284a20e85407956f1acca778a331403cdba716a3dd591d9a56430befbe"
         },
         {
           "round": 38,
-          "stateHash": "99a3bca4be4f829835f403330b052d157598ca1fe2e35ed80fa29639d327dff8",
-          "eventsHash": "905a7470b3cedda4b54b097608161a4bd672982fc0d5790af4f6bb607dd220af"
+          "stateHash": "f860b1417d50e33b7fbda416fdc7179fa0b1e92474d3bbebee947ca99f0513c6",
+          "eventsHash": "f672a1c1a2967d1aa10de6608da304d82f0c243e92f7aec7500fb956aa3eff08"
         }
       ]
     },
     "sniper-caitlyn": {
       "versions": {
         "schemaVersion": 7,
-        "rulesVersion": "s13-g2-3-v12",
-        "contentVersion": "s13-14.24b-g2-3-v12",
-        "contentDigest": "fnv1a32-utf16:9535ffff",
+        "rulesVersion": "s13-g2-3-v14",
+        "contentVersion": "s13-14.24b-g2-3-v14",
+        "contentDigest": "fnv1a32-utf16:ea6b11b6",
         "commandProtocolVersion": 3,
         "rngAlgorithm": "lcg32-v1",
         "tickMs": 50
@@ -3266,7 +3297,7 @@
           "type": "select",
           "choiceId": "round:2-1:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-i"
+          "definitionId": "item-collector-i"
         },
         {
           "type": "buy",
@@ -3452,7 +3483,7 @@
           "type": "select",
           "choiceId": "round:3-2:augment",
           "generation": 0,
-          "definitionId": "pumping-up-ii"
+          "definitionId": "pumping-up-i"
         },
         {
           "type": "buy",
@@ -3741,7 +3772,13 @@
           "type": "select",
           "choiceId": "round:4-2:augment",
           "generation": 0,
-          "definitionId": "bronze-for-life-ii"
+          "definitionId": "radiant-relics"
+        },
+        {
+          "type": "select",
+          "choiceId": "s13-augment:round:4-2:augment:radiant-relics:forge",
+          "generation": 0,
+          "definitionId": "TFT5_Item_SunfireCapeRadiant"
         },
         {
           "type": "reroll"
@@ -3849,12 +3886,12 @@
           "type": "combine",
           "ids": [
             "item-11",
-            "item-12"
+            "item-13"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-13",
+          "itemId": "item-14",
           "unitId": "unit-1",
           "slot": 2
         },
@@ -3880,7 +3917,7 @@
           "type": "select",
           "choiceId": "round:4-6:anomaly",
           "generation": 2,
-          "definitionId": "protective-shielding"
+          "definitionId": "share-your-energy"
         },
         {
           "type": "buyXp"
@@ -3946,12 +3983,12 @@
           "type": "combine",
           "ids": [
             "item-10",
-            "item-15"
+            "item-16"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-16",
+          "itemId": "item-17",
           "unitId": "unit-15",
           "slot": 1
         },
@@ -4062,13 +4099,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-14",
-            "item-17"
+            "item-15",
+            "item-18"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-18",
+          "itemId": "item-19",
           "unitId": "unit-25",
           "slot": 0
         },
@@ -4205,13 +4242,13 @@
         {
           "type": "combine",
           "ids": [
-            "item-19",
-            "item-21"
+            "item-20",
+            "item-22"
           ]
         },
         {
           "type": "equip",
-          "itemId": "item-22",
+          "itemId": "item-23",
           "unitId": "unit-25",
           "slot": 1
         },
@@ -4260,168 +4297,168 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "b9f70645712ab7e2acdde6e7cb1b392fc057951fb6d1c5c25e3cb1a546f13752",
+          "stateHash": "b26adef628cd2632bbd48a8c1ba774334da8de933aa27aab896da4c89f916115",
           "eventsHash": "a846919fced91b05dae7195d7ce76d78255bf31c128decf9896e9c569528931c"
         },
         {
           "round": 2,
-          "stateHash": "a51a80ea8f8d3086e48aeee7db3f0794f216bca8277f19da733a26fcdbefdee6",
+          "stateHash": "01a847ac3d3f55f37fa10bdc7a368f43993bde9b6ab75a1812477837eaa1f91f",
           "eventsHash": "3e86aeabdfad4769af89bc7815b76428bc5b00459bec716d7d571bd7ab26155c"
         },
         {
           "round": 3,
-          "stateHash": "7f929f29c69e9f6129784681f7449ac9500618a28fe054dfd073aeeee82c0018",
+          "stateHash": "2d173db8c5c1afdf312d9b43d4523bfb04edcc1a1a5431436039af014df6ce3e",
           "eventsHash": "7f50171caf601690d7dfdf395f0dfb1fe47e8531fee15152e2887c15fbc186b4"
         },
         {
           "round": 4,
-          "stateHash": "74eb176e455e25b3920f2d5e2d2a718328fd62733d0dedaeb02988391044fc18",
-          "eventsHash": "dbd77d1c452714a670e27d89bf783177167ae833d955f6b99b577a051f8f1367"
+          "stateHash": "806d6568c4fa52c85c9b03ad90660b24e5da2617b138fd5faaba5c8d017bf6bf",
+          "eventsHash": "0830b38e3a266ccb284dfb5d916b6d0c217c69ec810dd88cbff32f811fc9cb79"
         },
         {
           "round": 5,
-          "stateHash": "87ace86cdc0f123c2288a0bdfe46c72633968c1b98f255a82e405cefad4f3b3e",
-          "eventsHash": "f06727cde47cbacbbec4f7d97c8e64543902e54c7a4e9d2a8cbe6bd78c9318cc"
+          "stateHash": "afba37450c1cc4a4a524e64ab72b1dcc1fe9d975acc46818525f1335d354e6ff",
+          "eventsHash": "f050fe2e75e755e42897f5014acaf7b90b28a9f487368b383058ddd265719944"
         },
         {
           "round": 6,
-          "stateHash": "cfcdcf5fbbbad191efb4c730a431071a0b16c57e1926941ac310fe2ba3adb1a9",
-          "eventsHash": "09b74b4a09b3aff76bb4c810402cf6be6b5614f16149b702ef2bb9f5a1511f5b"
+          "stateHash": "c214b465c7c80cfe9a1d2d06b614e9cbe150188433c3ddca1ffb1deedb31d3fc",
+          "eventsHash": "5e5b4b6b8ef69231610f3560a4d4423b562d22f1d7bdbbb8bb992c29b1de0795"
         },
         {
           "round": 8,
-          "stateHash": "f7be9df18d03f48d72b4dccd8c4666e34bee35159d14cd9d513212a75fa1502a",
-          "eventsHash": "5a0f7eb9e98a74cb034460cedc61a94b34026147ca9c2a768ff2f2f36c95f45b"
+          "stateHash": "557a136f7b77e8cba261ce7303fa286f61da155349c666ce8182ce554762495a",
+          "eventsHash": "ef66b84a0ebe5349ddbe2b6597234dd78fe65654c5da8de63ebd49cf735f375d"
         },
         {
           "round": 9,
-          "stateHash": "6e135cbe51d806c752199374709e124e720c99d8f9236c77d141fd0db562eb64",
-          "eventsHash": "6acae6e9e63e418119e8170acd243201587f9aa88e5633f5afbb5d8844854a69"
+          "stateHash": "dbca201b64df8365be344e29690fa368f9ec923c68cb00ebb36e8ecc0d24daff",
+          "eventsHash": "b05ea9755d46f0868fd922cb0528b54035a805d476f3bcea31c538d1fc98ac3b"
         },
         {
           "round": 10,
-          "stateHash": "01a4c3ec2fbebf6482ce67d7647d2d79d7bb78c77dbcf433b5491163888c6994",
-          "eventsHash": "68db819382bc0a642d5726d533003b9209f36d655bcba98bb1680b7f180938d3"
+          "stateHash": "95ba1377a262edec45c2f1d7880a5831ecd52f2b6ad6a4d28c65677b633c2c88",
+          "eventsHash": "d6693dd54e512833f034a21375f90a4a17c9a7d724ce5cc747b91ede5ed632e5"
         },
         {
           "round": 11,
-          "stateHash": "47092249ee202c97b5aa9f83a85e176b92b7ab3d3d7d3b9d2fc5dd168c08e6ea",
-          "eventsHash": "40434c83300845da6029d101a1ed5ca519b0ef8faa6154681cb361fed4452368"
+          "stateHash": "9759ec36bed4af7d2b5e652b9b7cbcf815fc21e97a6f65bcc70e7b330666d81a",
+          "eventsHash": "eb49563e12da6658fc0ea142b8482c259f5762f4a7cd60241ee01b7f7503cc67"
         },
         {
           "round": 12,
-          "stateHash": "c0133dcdf7db73e2b5ed9b9b6c591f372f67ad3a1a7fc8fe4134972f7b187f23",
-          "eventsHash": "88e63f9ce7d771c0dfc847cb8809e2244ff9d49d99c936a07f5cf337df111da9"
+          "stateHash": "4ac966a3b9ba4333e22fc65848f65324800d1734827fb34f53dce9a09472eed3",
+          "eventsHash": "274af0b67bdf57819c8d9387f8b011f5a2be894317c0d30ca0374c1372149cfe"
         },
         {
           "round": 13,
-          "stateHash": "41f4e41e70ff88eefd277135177eadf458573a8eb4af7e807166ee2d1fd79494",
-          "eventsHash": "b35293f1aed62ac1ba1ac502357a80daa14c04d6d044e9cd18f1e0462b778514"
+          "stateHash": "e90dc83c7e8e7110e1d55ed03845baf9ef310ddae9cac582f9afca4dc899a896",
+          "eventsHash": "e5d9985c9beb1451afbe0cad994808e24525a95b9b5783b22fc745202af02dcd"
         },
         {
           "round": 15,
-          "stateHash": "3b168cf949dec7290ad29dcfa403c85c68771b042a152ab0ae87478e11cdea70",
-          "eventsHash": "4cde23bf2f265acac0294faeb545739ffe00a8825edb2e5518674a6e00b11d92"
+          "stateHash": "7a6de6738189e6f0daa3e3395e3016d06c8ddaa0c8ee5343ba65d03d4e1e8729",
+          "eventsHash": "0379d357b050e1506dd716582defa7421835d69f1fa82cfc196f7671d0bd302c"
         },
         {
           "round": 16,
-          "stateHash": "e922c785694288104be1226f40e37a4a3503837924e9cd5096e0cbf2fd7b2c70",
-          "eventsHash": "78e0db38d7cf734a329c69348cf11be42f563401bafa4728fb55f2eed3526e28"
+          "stateHash": "a4e6ecddefa4146f9d96478bc4ae34830e074132e7ff89cdeb66bdb7a1b7d40b",
+          "eventsHash": "57c2255c136786f3c0b051dd5ba67793b2f9d0796286c3649feddedfbb785e61"
         },
         {
           "round": 17,
-          "stateHash": "7cd1d25cc0f29775cef308c0045703c772ceda6fa37d72b134e5a49f654ccd95",
-          "eventsHash": "858deb1858cabed4dbe4f11df6bff9e98ee30b3cb820840531242b4a787981f5"
+          "stateHash": "3c0af4ca0370cf3d02bab75a96ebd832ba1915cd0273e61bd0e6ad3ee4644868",
+          "eventsHash": "e4a347abe27172e725c59bb7886b6f709aed6649fb492cd8cc31b706ba2ec4d5"
         },
         {
           "round": 18,
-          "stateHash": "7ac03d92a0e0054d07f085c4e088dda5b5bc6d5e11fd157a8d2b58d197fd0a2c",
-          "eventsHash": "5eea54341af08a303c79730c0026a1bfd6f0829926105a4fcc1c06b45c037831"
+          "stateHash": "73d2388e4b156bb4bea1ab5de13f5be738914fa139c298a92828d4e228b1e161",
+          "eventsHash": "1e92a1d4a415c507d90ed89c5bfdd724bb5702611fc16ab28bed42ac4c4e9cc7"
         },
         {
           "round": 19,
-          "stateHash": "071268c7f7d46f3a69020708f010fff9a363c9de4827390c1ddfa09154320128",
-          "eventsHash": "a9780835e47372ced58b8ba0aea699166e599380bda847170d2b9c8589ec344b"
+          "stateHash": "9d64e67d68deaad94b3d99634f59403baf312e1ebcf35b66d6089bf0dbd3f8b5",
+          "eventsHash": "425baf957b942c9355c99a58fef41a191bf03a4a121f8fd4a8ebe8dbde257234"
         },
         {
           "round": 20,
-          "stateHash": "1e587bf3ae2d32c9edcaee67af7557baf12e11f43b3faa3e2680fabbf83edf1f",
-          "eventsHash": "5695c9954576a5e5c68bdb6824496e25506e2ddacf1be5e4a08c28b190ac7baa"
+          "stateHash": "8bcc41d08b22d7a32a85c466e6836b62fa994978debb3c2b8540071569d8b0f9",
+          "eventsHash": "0314f7614ab6626ea452595d77d20e909d3b7104a97b6ef229c8d948543ca31a"
         },
         {
           "round": 22,
-          "stateHash": "21e211ff211418d3814a134e36fd491e73bc61d8f69d8f81be2554aad4a8e8b0",
-          "eventsHash": "1e6348e4b885113f1bc8bd1d885c28a21c8a434fda473207658297a99b2f4b8f"
+          "stateHash": "d5d6b51b8dbece53e8f2abedb5fee16cdc93205ab8ce9e87be391e937ff0e272",
+          "eventsHash": "08d7d7a36ead496239b1a2c8a3cca749bd78ccea069606e6aa6528f4f19e6c7f"
         },
         {
           "round": 23,
-          "stateHash": "e0baf58130481f9200d952380aa8578f08d9259b804de9d1f29e0f16df465b36",
-          "eventsHash": "54dfbcefec2ade67d2b421cf85f84e7d576e0aca7b570979daf2b65afbe22297"
+          "stateHash": "9d30a858465e58bf13fdba716b265bdcb5dcae7c138867f0c230a321a47c45a4",
+          "eventsHash": "4eba20c6088c101ec22be6dae3bb2dadee9d7e0812d2966533a00330b0724c5b"
         },
         {
           "round": 24,
-          "stateHash": "c60ab3cb267220e3539a22e1de993f5bd0e2818a35f516de062bf53ce85c1c2c",
-          "eventsHash": "6b9721a46c2190e491936f1710b6413d4f772c4fd5caccffb7d8a8b2c95423d2"
+          "stateHash": "dcef97912ba151d56b7f96d93dedbada87b5a068af027497b34f2ada8810cee9",
+          "eventsHash": "c6258dae24efb0fa33053a7c0b69e78ff20585c6f2c8d50252e4a441290f5503"
         },
         {
           "round": 25,
-          "stateHash": "a4b37c7e21fde5802322f794eab61fb5388b3c379c04fea3bab9facbc5fa58f2",
-          "eventsHash": "c76816a6befbd59397ee0a629dfe8e77515b9ab4f43e5f756a04bb4a9229ba46"
+          "stateHash": "62a32b1159a3f6d1b70c0e77f6ad6d3ceb7e7522c61032ebfe028810425522af",
+          "eventsHash": "19151654ba42f888161d2997c4bf281abf0ffe1dbf627814dbc0839b8845efa5"
         },
         {
           "round": 26,
-          "stateHash": "ee027f853ecda2585857eea24663bd65c4bed162c86db19f3b793b25b0d4a67c",
-          "eventsHash": "3d01b412831b66ede10bf690749b02a509b676df9b5fae70bf7f5f52dbb461dd"
+          "stateHash": "fb989146ef95d216055a59673e6e9e3f707d0f4d86db041a9b1b5318ccb0aeaa",
+          "eventsHash": "bb0d504b438f9ec8a045348ea2d17a52450cc09f657a09f5bcc5cc655164b338"
         },
         {
           "round": 27,
-          "stateHash": "6fab75e7318cbdc9262861a3f7a51ee5d37a6a14459f870c7094d9212290e5de",
-          "eventsHash": "254878bd178b9e93583ccc68753cab4606b1661a35acaec4609d215041de2535"
+          "stateHash": "8cf5c17e2e1d3da62ac79b0783f5f197ff5cc1fa08c70be010ff0ce96e552647",
+          "eventsHash": "466522d5788f4253f8ac2c6ac5dd650d29a06be44a93300a854c5d2b40a70af6"
         },
         {
           "round": 29,
-          "stateHash": "2f40395a30d4df26bd9f00738a652a174c5ad577599dacffe73462e11bd090b5",
-          "eventsHash": "632c5011a943bd726c1dc39973b837f8809e277e08041a0c93061a9c9317489c"
+          "stateHash": "cf2cdc8bfd6ad5c9c32e7cab99a3ec9f4a346bf41971c996aec08adfc4e8d47b",
+          "eventsHash": "d163d322efaf390aae6fa2d479bf09255348a5f051c0728616f8826439cc4ec9"
         },
         {
           "round": 30,
-          "stateHash": "cdcf05c3f2b496fadbdcc3f1b9153c44c956f9aa712f6e52e4276cbb5978bff6",
-          "eventsHash": "f26dff94ddc42597ad06eba52a92f9b3c565ec401cb9e4394176eb279a860478"
+          "stateHash": "7ce3791727458042c24542ba1690c0c16cb9d03eb5b865b0fff708864dbeccc0",
+          "eventsHash": "bf2d105b53f7ddc1d0a82c83be9cd78d39de62101b54606b675766219aab8532"
         },
         {
           "round": 31,
-          "stateHash": "b6170e6cddaa34aa611dda78d8da8b5a652590c944588964bb36757c8dd608ca",
-          "eventsHash": "96ad691112ae9575f8c170673a52d1f103f2dc5609e2b1d8492c8265fd959580"
+          "stateHash": "d023b55ae0ce2a819d8585110e2cf35a6487120b7bc9375f2d8f6ccdc3d5b7ad",
+          "eventsHash": "866702f9153f92f4830d7f5941c1c5e2903d8dc127b0ed6899d4ab2fa7702cad"
         },
         {
           "round": 32,
-          "stateHash": "a76912b48a3e3673a70e3024c8af60a0942a59ff1b3bf260a0f7b618bf18874c",
-          "eventsHash": "45a45904770bf94fe3b26cfc74b402570dcdbfb1903e4e3394a040d4fa7f9239"
+          "stateHash": "777f11f1ebab9faf2ba53c2e5101bc981ec808d7a59a26a5e75938effaf8ce5f",
+          "eventsHash": "4a0835226c8f9d745d95a15519cd9b72dc6e34b30aec31ae63bcfa932a23a84e"
         },
         {
           "round": 33,
-          "stateHash": "2c29438939d9aa434d13b651d28843a3c2a898b64da9855b35d14f67403781be",
-          "eventsHash": "b766c98fe36bb2b82949759c80a51ed089ae976524d9476f88f05f5fbbba4b36"
+          "stateHash": "a719c765ab419d9a2b35198d6d0662b215892366891953d6d6998668eea849f1",
+          "eventsHash": "e55e025425c7e6eaca3e1845d15a1e3ca9be359a71f88a0b06a2272f242ea9e9"
         },
         {
           "round": 34,
-          "stateHash": "56cf48a4f96a29bf4886492855b2772d1e55793e1c8f2f597ad3367d1ae039df",
-          "eventsHash": "43bef64b67db972b973ea104d4ff7813480d878b64d52a3e2450d3ff740468c5"
+          "stateHash": "a089179e0226cd765c200162cb02596b1f05a6b8ee6999f689b4c253b1bbab2f",
+          "eventsHash": "b679582e95b3b5c05d2907b573fc8e0c886ddf29b35e2bbea3f2d1ed05948466"
         },
         {
           "round": 36,
-          "stateHash": "398cc00ea01d9412d31468e89308d7bd374fc500d75f4047cb0ddbeb1f217ee6",
-          "eventsHash": "52e20235bd93608c51863e6ca75d27524586a89d464c998f3c50c696f8bb3858"
+          "stateHash": "29033b216bcb839270adf65d84382f28ad69b30ad74afdf21259fb3ca5592d18",
+          "eventsHash": "69816687bd79b50966bdba938d34cba3ccf20ce21ead20f870d21f20d79cf428"
         },
         {
           "round": 37,
-          "stateHash": "45b1d7c6a9239da508778a01c6c3d653514e7ba03fd8dc6bfd1d9cf86b390fd2",
-          "eventsHash": "dabf2f2bcf1821bdd72a8d76ec57bc196b9e7853ad5cfb6a77f48f2ea0a053b0"
+          "stateHash": "d543c705d79719d30d02dfa9c376c1682a37cd08b00bae787c399bbf34c2cdc0",
+          "eventsHash": "9652f2a6a595a513965317a5a88ad3ef1799d23f5f4280b35910e506ad4c9e99"
         },
         {
           "round": 38,
-          "stateHash": "2f87cb00d7e600e8561c7ae4a890dc1b685bd1ad4135cacef7ac42d30fde0839",
-          "eventsHash": "281eebaf600dd09e48310560b4d854672a9f095eb173c8e74e88317d99c457ed"
+          "stateHash": "f85e8e98062bb49c8426479ea768ee3e983e4ccd17b8ad33623ad2c28213195a",
+          "eventsHash": "8304d54fbd084a9927a87ed1e60f52e52e0d13d7e564b1cca89a35eb58fdde1a"
         }
       ]
     }

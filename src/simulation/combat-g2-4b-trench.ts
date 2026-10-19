@@ -1,3 +1,4 @@
+import { occupiesCell } from './anomalies/availability';
 import type {CombatState,CombatUnit,CombatMechanic} from './combat-types';
 import type {HexCell} from './board';
 import type {AbilityContext} from './combat-s13-abilities';
@@ -66,7 +67,7 @@ export function splitTrenchHolders(ctx:AbilityContext,state:CombatState,eligible
   if(!holder||!item||!holder.alive||holder.hp<=0)continue;
   const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
   const zone=ctx.board.deploymentZones[holder.team];
-  const available=cells.filter(c=>c.row>=zone.firstRow&&c.row<=zone.lastRow&&!membership.units.some(u=>u.id!==holder.id&&u.alive&&u.cell.col===c.col&&u.cell.row===c.row));
+  const available=cells.filter(c=>c.row>=zone.firstRow&&c.row<=zone.lastRow&&!membership.units.some(u=>u.id!==holder.id&&occupiesCell(u,ctx.tick)&&u.cell.col===c.col&&u.cell.row===c.row));
   // Atomic replacement: defer if three legal cells cannot be reserved.
   if(available.length<3)continue;
   const selected:HexCell[]=[];
@@ -75,7 +76,7 @@ export function splitTrenchHolders(ctx:AbilityContext,state:CombatState,eligible
   if(membership.units.some(u=>u.id===holder.id+':g23-forge')){const forgeRemoved=removeCombatUnit(membership,holder.id+':g23-forge','trench-owner-replaced',ctx.tick);membership=forgeRemoved.state;ctx.events.push(...forgeRemoved.events);}
   const copies=selected.map((cell,ordinal)=>createTrenchCopy(holder,item,ordinal,cell,ctx.tick,maximum)),born:CombatUnit[]=[];
   for(const copy of copies){const spawned=spawnCombatUnit(membership,copy,item.source,ctx.tick);membership=spawned.state;ctx.events.push(...spawned.events);born.push(copy);}
-  for(const copy of copies){const forge=createG23Forge(copy,membership.units,ctx.board);if(!forge)continue;const spawned=spawnCombatUnit(membership,forge,{ownerId:copy.id,sourceKind:'ability',definitionId:copy.ability.id,instanceId:copy.id,effectIndex:0},ctx.tick);membership=spawned.state;ctx.events.push(...spawned.events);born.push(forge);}
+  for(const copy of copies){const forge=createG23Forge(copy,membership.units,ctx.board,ctx.tick);if(!forge)continue;const spawned=spawnCombatUnit(membership,forge,{ownerId:copy.id,sourceKind:'ability',definitionId:copy.ability.id,instanceId:copy.id,effectIndex:0},ctx.tick);membership=spawned.state;ctx.events.push(...spawned.events);born.push(forge);}
   initializeBornUnits(ctx,born);
   receipts.push({ownerId:holder.id,itemInstanceId:item.source.instanceId,tick:ctx.tick,maxHp:maximum,permanentAdBps:holder.runtime?.permanentAdBps??0,copyIds:copies.map(c=>c.id),...(holder.g23?{g23:{conquestTakedowns:[...holder.g23.conquestTakedowns],highRoller:structuredClone(holder.g23.highRoller)}}:{})});
  }

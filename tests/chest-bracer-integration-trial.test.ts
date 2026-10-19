@@ -21,7 +21,8 @@ const accepted = (result: MatchCommandResult): MatchState => {
  * "test"), equip/deploy/start/step. The special items are NOT claimed to be
  * naturally rolled by the acquisition route. No combat facts, stats or RNG edits. */
 function startFight(): { state: MatchState; receiverId: string; chestHolderId: string } {
-  let state = publicEquipmentPreparation(['rod'], { seed: 19 });
+  // Seed 580279 retains Manaflow I, the 2-4 rod choice and the natural 2-5 chest/stack ticks under v14.
+  let state = publicEquipmentPreparation(['rod'], { seed:580279, augmentPriorities:['manaflow-i'] });
   const chestHolderId = state.preparation.units.find(u => u.team === 'player' && u.definitionId !== 'lux')!.id;
   for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.definitionId !== 'lux' && u.id !== chestHolderId))
     state = accepted(sellUnit(state, unit.id));

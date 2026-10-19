@@ -1,5 +1,16 @@
 # Set13 八人联机合同草案
 
+## 强化同轮同级与整组刷新：v14（用户约定 2026-10-19）
+
+等级、来源、派生公式、刷新语义和读档以 [Match 合同“强化等级与刷新”](MATCH_CONTRACT.md) 为准。三等级等权是缺少概率/权重资料时的项目默认、待用户确认。initializeSharedSeat 将 SharedPoolState.seed（即房间 options.seed）绑定到 augmentTierSeed；nextSharedRound/advanceMultiplayerRound 与单人共用 deriveAugmentTier，每个强化节点八席同级，各席候选仍从自己的 choiceRngState 抽取，服务器不计算规则。
+
+新增 SeatCommand/ClientCommand/WireCommand：{type:'rerollAugment',choiceId:string,generation:number}。net/messages.validateClientCommand 只接受这三个字段，校验非空 ID 和非负整数 generation。room.ROOM_COMMAND_GATE 仅 preparation/choice 允许，applySeatCommand 原样调用 simulation.rerollAugment；其余房间阶段拒绝，沿用身份、round/seatRevision、去重和回执机制。成功改变席位状态，共享卡池不变；失败保留原 room/pool/seat 引用。领域失败枚举：wrong-phase、stale-choice、augment-rerolls-exhausted、augment-pool-too-small；外层身份/轮次/席位错误沿用原协议。
+
+owner 私有视图 pendingChoice 透传 augmentTier、rerollsRemaining，保留 rerollCount（已用）、generation、offers。toPrivateSeatView 按白名单复制，toSeatPrivateView 直接透传，不公开其他席候选、seed 或未来节点等级。本次不增加界面按钮。NET3 维持现有部署线：新增命令须由新服务端处理，旧服务端会拒绝未知命令，前后端需同批部署；旧客户端仍可选择，缺少刷新入口。
+
+公共签名：rerollAugment(state:MatchState,choiceId:string,generation:number):MatchCommandResult；deriveAugmentTier(seed:number,choiceId:string):AugmentTier；augmentRerollLimit(augments:readonly OwnedAugment[]):number，均从 server-entry 导出。每节点默认免费整组刷新一次，锁级、排除当前和已持有，不足三项原子拒绝；额度扩展只读取此前已获取的准入强化定义 augmentRerolls.extraRolls，不接受服务器自行传入额度。
+
+
 ## G2-3 当前实现与接入合同（2026-10-16）
 
 本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。
