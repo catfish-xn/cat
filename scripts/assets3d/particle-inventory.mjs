@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { safeOutputPath, writeOutputFile } from './safe-path.mjs';
 
 /** Lossless source inventory, NOT a renderable D8 particle document. */
 export function inventoryParticles(source) {
@@ -45,8 +46,11 @@ export function inventoryParticles(source) {
     systemCount: systems.length, emitterCount: systems.reduce((n, s) => n + s.emitters.length, 0), systems };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv.length !== 4) throw new Error('usage: <source.cdtb.bin.json> <ignored-output.json>');
-  const report = inventoryParticles(JSON.parse(await readFile(process.argv[2], 'utf8')));
-  await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
+  const args = process.argv.slice(2), force = args.includes('--force');
+  const paths = args.filter(arg => arg !== '--force');
+  if (paths.length !== 2) throw new Error('usage: <source.cdtb.bin.json> <assets3d-local/output.json> [--force]');
+  const output = await safeOutputPath(paths[1], { force });
+  const report = inventoryParticles(JSON.parse(await readFile(paths[0], 'utf8')));
+  await writeOutputFile(output, `${JSON.stringify(report, null, 2)}\n`, { force });
   console.log(JSON.stringify({ systems: report.systemCount, emitters: report.emitterCount, renderable: false }));
 }

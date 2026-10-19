@@ -14,6 +14,12 @@ node scripts/assets3d/prepare-existing.mjs --source assets3d-local/3d-trial --ou
 ```
 
 `--source` 必填，指向旧试验目录；`--output` 可选，默认 `assets3d-local/prepared`。
+两个入口的相对输出路径均相对于仓库根目录解析，绝对输出路径也必须位于该仓库的
+`assets3d-local/` 内。共享 `safeOutputPath` 在创建目录或写文件前逐层 realpath 检查，
+拒绝任何 `..` 路径分量、绝对路径逃逸，以及指向边界外的符号链接或 Windows 目录联接
+（包括 `assets3d-local/` 自身）。缺失的输出父目录会自动创建。
+默认拒绝覆盖任何已有文件，包括本工具的旧产物；确认需要重跑覆盖时显式加 `--force`。
+`--force` 不放宽路径边界，也不允许覆盖文件符号链接。
 输入根目录 `assets3d-local/3d-trial/` 内采用 2026-10-18 试验的目录结构：
 
 - `.local/extraction.json`：14.24.6442327 提取记录。
@@ -28,7 +34,10 @@ animation 描述不变。新增的只是贴图数据及材质引用，避免 D8 
 输出目录内包含 `models/{jinx,vi}/model.glb`、`manifest.json` 和 `preparation-report.json`。
 
 这是**已有 GLB 整理入口**，不是已经实现原始 ANM 解码。当前不下载、不运行第三方
-转换程序、不修改原试验目录。输出路径不能位于输入目录内部。符号链接不能逃逸根目录。
+转换程序、不修改原试验目录。输出路径不能位于输入目录内部。
+输入根目录的 realpath 是读取边界：`.local/extracted`、`.local/extraction.json` 与清单中
+**每个条目**（含未选英雄）解析后的实际路径都必须位于输入根内；条目还须位于实际提取根内。
+所选英雄的文件另核验大小和哈希；已有 GLB/PNG 的实际路径也必须位于输入根内。
 
 ## 当前可运行入口：粒子无损盘点
 
@@ -36,7 +45,7 @@ animation 描述不变。新增的只是贴图数据及材质引用，避免 D8 
 node scripts/assets3d/particle-inventory.mjs assets3d-local/particle-source/jinx.cdtb.bin.json assets3d-local/particle-inventory/jinx.json
 ```
 
-两个位置参数依次为 CDTB 粒子源 JSON 和盘点输出 JSON；输出父目录须事先存在。
+两个位置参数依次为 CDTB 粒子源 JSON 和盘点输出 JSON；可加 `--force` 显式覆盖已有输出。
 产物格式为 `d7-lossless-particle-inventory-v1`，明确标记 `renderable: false`，
 保留源发射器参数并列出表达缺口，**不是 D8 可直接加载的特效定义**。
 
@@ -47,8 +56,10 @@ node scripts/assets3d/particle-inventory.mjs assets3d-local/particle-source/jinx
 - `glb.mjs`：GLB 块/范围检查、确定性写出、嵌入 PNG、统计。
 - `inspect-source.mjs`：有界 SKN v4 / 现代 SKL 读取、ANM 格式识别；先核对文件长度再枚举。
 - `verify-source.mjs`：提取清单与实际输入逐文件核验。
+- `safe-path.mjs`：共享的输入 realpath 边界、`safeOutputPath` 及受限文件写入。
 - `wad.mjs`：WAD 3.x 索引，以及未压缩/gzip/zstd 单条目解包；路径哈希由调用者显式传入。
   解压前限制输出大小，默认单条目 64 MiB，调用者可以明确设置其它预算。
+  未压缩条目也在分配/复制输出前检查实际 payload 长度、声明大小与预算，不信任声明值。
   Node 24 内置 zstd；不提供内置 zstd 的 Node 22 可注入可信解码器，未注入则明确报错。
   重定向及 subchunk 压缩暂明确拒绝，不将未支持的数据当原始文件输出。
 

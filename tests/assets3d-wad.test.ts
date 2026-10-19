@@ -36,4 +36,19 @@ describe('bounded WAD index and entry extraction', () => {
     const { bytes } = wad(), entry = readWadIndex(bytes)[0];
     expect(() => extractWadEntry(bytes, { ...entry, size: entry.size + 1 })).toThrow('wad-size-mismatch');
   });
+  it('checks actual uncompressed size and budget before allocating or copying output', () => {
+    const { bytes } = wad(), entry = readWadIndex(bytes)[0];
+    const from = vi.spyOn(Buffer, 'from'), alloc = vi.spyOn(Buffer, 'alloc'), unsafe = vi.spyOn(Buffer, 'allocUnsafe');
+    let budgetError: unknown, sizeError: unknown;
+    let copies: number, allocations: number;
+    try {
+      try { extractWadEntry(bytes, { ...entry, size: 1 }, { maxOutputBytes: 1 }); } catch (error) { budgetError = error; }
+      try { extractWadEntry(bytes, { ...entry, size: 1 }); } catch (error) { sizeError = error; }
+      copies = from.mock.calls.length;
+      allocations = alloc.mock.calls.length + unsafe.mock.calls.length;
+    } finally { vi.restoreAllMocks(); }
+    expect(budgetError).toEqual(new Error('wad-output-budget'));
+    expect(sizeError).toEqual(new Error('wad-size-mismatch'));
+    expect(copies).toBe(0); expect(allocations).toBe(0);
+  });
 });

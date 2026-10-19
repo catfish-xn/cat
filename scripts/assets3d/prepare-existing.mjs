@@ -1,25 +1,25 @@
 // Import existing, locally extracted 14.24 trial assets without executing legacy tools.
-import { readFile, writeFile, mkdir, readdir, realpath } from 'node:fs/promises';
-import { resolve, relative, join, dirname, isAbsolute } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { resolve, relative, join, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { embedDiffuse, readGlb, summarizeGlb } from './glb.mjs';
 import { verifySource } from './verify-source.mjs';
+import { safeInputPath, safeOutputPath, writeOutputFile } from './safe-path.mjs';
 
 export const CLIPS = {
   jinx: { idle: 'tft13_jinx_idle1', move: 'tft13_jinx_minigun_run', attack: 'tft13_jinx_minigun_attack1', cast: 'tft13_jinx_spell_deathrocket', death: 'jinx_minigun_death' },
   vi: { idle: 'vi_idle1', move: 'vi_run1', attack: 'vi_attack1', cast: 'vi_spell4_hit', death: 'vi_death' },
 };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-function within(root, candidate) {
+function outside(root, candidate) {
   const path = relative(root, candidate);
-  if (path === '..' || path.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) || isAbsolute(path)) throw new Error('path-outside-root');
-  return candidate;
+  return path === '..' || path.startsWith(`..${sep}`) || isAbsolute(path);
 }
-async function inputFile(root, path) { return readFile(within(root, await realpath(join(root, path)))); }
-export async function prepareExisting(source, output, heroes = ['jinx', 'vi']) {
-  const sourceRoot = await realpath(source), out = resolve(output);
-  if (sourceRoot === out || relative(sourceRoot, out).startsWith('..') === false) throw new Error('output-must-not-modify-source');
+async function inputFile(root, path) { return readFile(await safeInputPath(root, join(root, path))); }
+export async function prepareExisting(source, output, heroes = ['jinx', 'vi'], { force = false } = {}) {
+  const sourceRoot = await realpath(source), out = await safeOutputPath(output, { directory: true });
+  if (!outside(sourceRoot, out)) throw new Error('output-must-not-modify-source');
   if (!heroes.length || heroes.some(id => !Object.hasOwn(CLIPS, id)) || new Set(heroes).size !== heroes.length) throw new Error('invalid-hero-selection');
   const sourceVerification = await verifySource(sourceRoot, heroes);
   const manifest = { schemaVersion: 1, models: {}, effects: {}, files: {} };
@@ -48,29 +48,21 @@ export async function prepareExisting(source, output, heroes = ['jinx', 'vi']) {
       outputSha256: hash(result), animationSources: CLIPS[id], preservedBinaryBytes: before.binary.length };
     prepared.push({ path, result });
   }
-  await mkdir(out, { recursive: true });
-  const actualOutput = await realpath(out);
-  if (actualOutput === sourceRoot || !relative(sourceRoot, actualOutput).startsWith('..')) throw new Error('output-must-not-modify-source');
-  for (const { path, result } of prepared) {
-    const dest = within(actualOutput, resolve(actualOutput, path));
-    await mkdir(dirname(dest), { recursive: true });
-    within(actualOutput, await realpath(dirname(dest)));
-    // Never follow an existing output symlink.
-    const entries = await readdir(dirname(dest), { withFileTypes: true });
-    if (entries.some(e => e.name === 'model.glb' && e.isSymbolicLink())) throw new Error('output-symlink');
-    await writeFile(dest, result);
-  }
+  // Preflight all destinations: a late collision must not partially overwrite a prior run.
   for (const [name, data] of [['manifest.json', manifest], ['preparation-report.json', report]]) {
-    const entries = await readdir(actualOutput, { withFileTypes: true });
-    if (entries.some(e => e.name === name && e.isSymbolicLink())) throw new Error('output-symlink');
-    await writeFile(join(actualOutput, name), `${JSON.stringify(data, null, 2)}\n`);
+    prepared.push({ path: name, result: `${JSON.stringify(data, null, 2)}\n` });
   }
+  for (const { path } of prepared) {
+    const dest = await safeOutputPath(join(out, path), { force });
+    if (!outside(sourceRoot, dest)) throw new Error('output-must-not-modify-source');
+  }
+  for (const { path, result } of prepared) await writeOutputFile(join(out, path), result, { force });
   return { manifest, report };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2), source = args[args.indexOf('--source') + 1];
   const output = args.includes('--output') ? args[args.indexOf('--output') + 1] : 'assets3d-local/prepared';
-  if (!args.includes('--source') || !source || source.startsWith('--')) throw new Error('usage: --source <trial-directory> [--output <ignored-directory>]');
-  const result = await prepareExisting(source, output);
+  if (!args.includes('--source') || !source || source.startsWith('--') || !output || output.startsWith('--')) throw new Error('usage: --source <trial-directory> [--output <assets3d-local/directory>] [--force]');
+  const result = await prepareExisting(source, output, undefined, { force: args.includes('--force') });
   console.log(JSON.stringify(result.report, null, 2));
 }

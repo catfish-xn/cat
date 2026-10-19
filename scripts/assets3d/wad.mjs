@@ -29,7 +29,11 @@ export function extractWadEntry(bytes, entry, { maxOutputBytes = 64 * 1024 * 102
   new BinaryReader(bytes).range(entry.offset, entry.compressedSize);
   const payload = bytes.subarray(entry.offset, entry.offset + entry.compressedSize);
   let result;
-  if (entry.type === 0) result = Buffer.from(payload);
+  if (entry.type === 0) {
+    if (payload.length > maxOutputBytes) throw new Error('wad-output-budget');
+    if (payload.length !== entry.size) throw new Error('wad-size-mismatch');
+    result = Buffer.from(payload);
+  }
   else if (entry.type === 1) result = zlib.gunzipSync(payload, { maxOutputLength: maxOutputBytes });
   else if (entry.type === 3) {
     if (!decompressZstd) throw new Error('zstd-decoder-required');

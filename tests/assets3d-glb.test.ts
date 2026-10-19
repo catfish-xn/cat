@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 // @ts-expect-error Build-time Node utility intentionally ships as JavaScript.
 import { writeGlb, readGlb, embedDiffuse, summarizeGlb } from '../scripts/assets3d/glb.mjs';
@@ -54,7 +53,8 @@ describe('local-only GLB asset preparation', () => {
     expect(() => embedDiffuse(writeGlb(document, binary), Buffer.alloc(24))).toThrow('invalid-png');
   });
   it('creates the D8 manifest deterministically, leaving source files unchanged', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'assets3d-'));
+    await mkdir(resolve('assets3d-local'), { recursive: true });
+    const root = await mkdtemp(resolve('assets3d-local/assets3d-test-'));
     try {
       const source = join(root, 'source'), dir = join(source, 'public/assets/jinx'), out = join(root, 'out');
       await mkdir(dir, { recursive: true }); const { glb } = synthetic();
@@ -66,12 +66,20 @@ describe('local-only GLB asset preparation', () => {
         files: [{ path, bytes: png().length, sha256: createHash('sha256').update(png()).digest('hex') }] }));
       const first = await prepareExisting(source, out, ['jinx']);
       const firstBytes = await readFile(join(out, 'models/jinx/model.glb'));
-      const second = await prepareExisting(source, out, ['jinx']);
+      await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('output-exists-use-force');
+      const second = await prepareExisting(source, out, ['jinx'], { force: true });
       expect(second).toEqual(first); expect(await readFile(join(out, 'models/jinx/model.glb'))).toEqual(firstBytes);
       expect(await readFile(join(dir, 'rigged.glb'))).toEqual(glb);
       expect(first.manifest).toMatchObject({ schemaVersion: 1, models: { jinx: { path: 'models/jinx/model.glb', animations: { cast: 'cast' } } } });
       await expect(prepareExisting(source, source, ['jinx'])).rejects.toThrow('output-must-not-modify-source');
+      await expect(prepareExisting(source, resolve('src'), ['jinx'], { force: true })).rejects.toThrow('unsafe-output-path');
       await expect(prepareExisting(source, out, ['../escape'])).rejects.toThrow('invalid-hero-selection');
+      // Check every destination before writing any of them, including manifest collisions.
+      await rm(join(out, 'models/jinx/model.glb'));
+      await writeFile(join(out, 'manifest.json'), 'user-owned');
+      await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('output-exists-use-force');
+      await expect(readFile(join(out, 'models/jinx/model.glb'))).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(join(out, 'manifest.json'), 'utf8')).toBe('user-owned');
       await writeFile(raw, Buffer.alloc(24));
       await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('source-hash-mismatch');
     } finally { await rm(root, { recursive: true, force: true }); }
