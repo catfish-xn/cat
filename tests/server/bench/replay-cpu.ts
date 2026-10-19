@@ -63,7 +63,7 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
       totalMs: 0, battleMs: 0, replayMs: 0, commitMs: 0, pushMs: 0, resimMs: 0, compareMs: 0 });
     return entry!;
   };
-  let pushPending: RoomState | null = null;
+  let pushPending: RoomState | null = null, referencePending: RoomState | null = null;
   const pushed = new Set<number>();
   const clock: Clock = {
     now: () => manual.now(),
@@ -83,6 +83,8 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
         const spent = performance.now() - pushStart;
         target.pushMs += spent; target.totalMs += spent;
       }
+      // After the callback and outside every timed span, so it never inflates the round's CPU.
+      if (referencePending) { const state = referencePending; referencePending = null; reference(state, target); }
     }),
   };
   // The network server's withReplayWarmup, with each part of a job timed.
@@ -122,10 +124,11 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
   });
   let lastFrozenRound = -1;
   room.subscribe(state => {
-    // Off-clock reference measurements, once per round, on the battles just resolved.
     if (state.phase !== 'battle' || lastFrozenRound === state.round) return;
-    lastFrozenRound = state.round;
-    const entry = sample();
+    lastFrozenRound = state.round; referencePending = state;
+  });
+  /** Off-clock reference measurements, once per round, on the battles just resolved. */
+  function reference(state: RoomState, entry: RoundSample): void {
     for (const battle of state.battles) {
       const combats = battle.kind === 'two-sided' ? [battle.battle] : battle.outcomes.flatMap(outcome => outcome.combat ? [outcome.combat] : []);
       for (const combat of combats) { entry.battles++; entry.combatTicks += combat.terminal.tick; }
@@ -135,7 +138,6 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
       if (!(battle.kind === 'two-sided' ? battle.participants : battle.outcomes.map(o => o.seatId)).some(id => attended.includes(id))) continue;
       const combats = battle.kind === 'two-sided' ? [battle.battle] : battle.outcomes.filter(o => attended.includes(o.seatId) && o.combat).map(o => o.combat!);
       for (const combat of combats) {
-        // Not counted in totalMs: these run outside the clock callbacks.
         let t = performance.now();
         let current: CombatState = structuredClone(combat.initial) as CombatState;
         while (current.status === 'running' && current.tick < combat.terminal.tick) current = stepCombat(current).state;
@@ -148,7 +150,7 @@ function playMatch(seed: number, mode: Mode): RoundSample[] {
         entry.compareMs += performance.now() - t;
       }
     }
-  });
+  }
   room.start();
   for (let fired = 0; room.state.phase !== 'ended' && fired < 200_000; fired++) if (!manual.runNext()) break;
   if (room.state.phase !== 'ended' || room.state.fault) throw new Error(`match did not end cleanly: ${room.state.phase} ${JSON.stringify(room.state.fault)}`);
