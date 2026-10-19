@@ -274,7 +274,7 @@
     "tests/fixtures/m5/oracle.g2.cjs": "066edb21bfdddccf46401fe50deed96c29065dc216736edc649c90f37832373a",
     "tests/fixtures/record-g2-4b-herald.cjs": "a6cd232d913d30e1b7d8db408574a2d9680e5fd74eaf2e1a5398b9d0b3bfbd56"
   },
-  "baseCommit": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "baseCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
   "baseline": {
     "contentDigest": "fnv1a32-utf16:9535ffff",
     "lootReplayDigest": "fnv1a32-utf16:498a92d1",

@@ -1,5 +1,5 @@
 {
-  "baseCommit": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "baseCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
   "sourceDigests": {
     "scripts/g2-4b-fixture-audit.cjs": "d450e2434e6a707afafea87e968dbf466cfd707f3e337eec69211cd0414367ae",
     "scripts/generate-m5-route.cjs": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
@@ -327,7 +327,7 @@
     }
   },
   "byteEvidence": {
-    "previousCommit": "075e9a494758b13620c8ae36e55364cc214fd364",
+    "previousCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
     "previousBytes": 8126,
     "currentBytes": 8126,
     "previousSha256": "f7f8acc7da0786bc2912223c9407dd90874e4e2e544564cb73413b857deaebc5",
