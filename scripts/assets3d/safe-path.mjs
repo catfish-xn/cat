@@ -1,4 +1,5 @@
-import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, realpath, writeFile, rename, unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,4 +54,17 @@ export async function writeOutputFile(output, data, options = {}) {
   await mkdir(dirname(target), { recursive: true });
   const checked = await safeOutputPath(target, options);
   await writeFile(checked, data, { flag: options.force ? 'w' : 'wx' });
+}
+
+/** A complete validated payload becomes visible in one rename; no partial cache files. */
+export async function writeOutputFileAtomic(output, data, options = {}) {
+  const target = await safeOutputPath(output, options);
+  const temporary = `${target}.${randomUUID()}.tmp`;
+  try {
+    await writeOutputFile(temporary, data);
+    await rename(await safeOutputPath(temporary, { force: true }), await safeOutputPath(target, options));
+  } finally {
+    try { await unlink(await safeOutputPath(temporary, { force: true })); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
 }

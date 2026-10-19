@@ -106,6 +106,36 @@ export function decodeAnm(bytes) {
         }
         return { ...info, flags, duration, fps, tracks: [...tracks.values()], sample: (track, time) => sampleSpline(track.keys, Math.floor(Math.max(0, Math.min(1, time / duration)) * 65535) / 65535 * duration, track.path === 'rotation', (flags & 4) !== 0) };
     }
+    if (info.format === 'uncompressed' && info.version === 4) {
+        r.seek(28);
+        const jointCount = r.u32(), frameCount = r.u32(), step = r.f32();
+        r.seek(52);
+        const vectorOffset = r.u32() + 12, rotationOffset = r.u32() + 12, frameOffset = r.u32() + 12;
+        if (frameCount < 1 || step <= 0) throw new Error('invalid-anm-timing');
+        assertAnimationBudget(frameCount, jointCount * 10);
+        r.range(frameOffset, frameCount * jointCount * 12);
+        if (vectorOffset < 76 || rotationOffset < vectorOffset || frameOffset < rotationOffset) throw new Error('invalid-anm-pools');
+        const tracks = [];
+        for (let j = 0; j < jointCount; j++) {
+            const hash = bytes.readUInt32LE(frameOffset + j * 12);
+            for (const [type, path] of paths.entries()) {
+                const keys = [];
+                for (let f = 0; f < frameCount; f++) {
+                    const o = frameOffset + (f * jointCount + j) * 12;
+                    if (bytes.readUInt32LE(o) !== hash) throw new Error('anm-v4-frame-hash-mismatch');
+                    const idx = bytes.readUInt16LE(o + (type === 0 ? 8 : type === 1 ? 4 : 6));
+                    const offset = (type === 0 ? rotationOffset : vectorOffset) + idx * (type === 0 ? 16 : 12);
+                    const size = type === 0 ? 16 : 12, boundary = type === 0 ? frameOffset : rotationOffset;
+                    if (offset + size > boundary) throw new Error('invalid-anm-pool-index');
+                    r.seek(offset); const value = Array.from({ length: size / 4 }, () => r.f32());
+                    keys.push({ time: Math.fround(f * step), value });
+                }
+                tracks.push({ hash, path, keys });
+            }
+        }
+        return { ...info, duration: Math.fround((frameCount - 1) * step), fps: 1 / step, tracks,
+            sample: (track, time) => track.keys[Math.min(frameCount - 1, Math.max(0, Math.round(time / step)))].value };
+    }
     if (info.format === 'uncompressed' && info.version === 5) {
         r.seek(28);
         const jointCount = r.u32(), frameCount = r.u32(), step = r.f32(), hashOffset = r.u32() + 12;

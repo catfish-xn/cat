@@ -124,7 +124,7 @@ describe('raw ANM decoding', () => {
         expect(() => assertAnimationBudget(1, MAX_ANIMATION_ELEMENTS)).not.toThrow();
         expect(() => assertAnimationBudget(1, MAX_ANIMATION_ELEMENTS + 1)).toThrow('animation-elements-budget');
     });
-    it.each([['r3d2canm', 2], ['r3d2canm', 3], ['r3d2anmd', 3], ['r3d2anmd', 4]] as const)('keeps unsupported %s v%s allocation-free', (magic, version) => {
+    it.each([['r3d2canm', 2], ['r3d2canm', 3], ['r3d2anmd', 3]] as const)('keeps unsupported %s v%s allocation-free', (magic, version) => {
         const b = Buffer.alloc(12);
         b.write(magic);
         b.writeUInt32LE(version, 8);
