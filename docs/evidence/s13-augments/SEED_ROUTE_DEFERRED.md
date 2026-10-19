@@ -112,6 +112,6 @@ m8-b4-r3b、m8-b8-live-capacity、m8-b8-live-growth、task-mechanism-restore ›
   - 服务器 5 个文件：`7d51beb9`
   - 护臂与任务机制：`0e428c6f`、`6febce7e`
   - m8-b8：`a35e8c35`、`df33cd94`、`a5b3db50`、`a09988b8`
-- 2 条换种子保不住原期望，用户 10-19 07:49 确认按现值改期望（提交 f8149f01 的拣选）：
+- 2 条换种子保不住原期望，用户 10-19 07:49 确认按现值改期望（提交 dfd2b4af）：
   - `tests/m8-b8-live-transfer.test.ts`：异常 mage-armor → slime-time。原值要重掷 133 次（133 金），路线只有 32 金。
   - `tests/m8-b8-live-reveal.test.ts` 同 tick 双死亡：tick 51 → 44，eventSeq 447/448 → 382/383。所需强化在 v13 下刷不出；60 个保留原强化的候选种子里 eventSeq 最高约 310。同 tick 双死亡和四个掉落归属不变。
