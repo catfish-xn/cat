@@ -916,7 +916,8 @@ export class BoardScene extends Phaser.Scene {
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
-        starLevel: token.getData('starLevel'), x: token.x, y: token.y, visible: token.visible && token.alpha > 0 })) };
+        starLevel: token.getData('starLevel'), x: token.x, y: token.y, visible: token.visible && token.alpha > 0 })),
+      fighting: this.session.combatView !== null };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

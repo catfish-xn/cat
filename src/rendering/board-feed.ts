@@ -13,6 +13,8 @@ export interface BoardFrame {
   readonly rows: number; readonly columns: number; readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number };
   readonly bench: readonly { readonly x: number; readonly y: number }[];
   readonly pieces: readonly BoardPiece[];
+  /** True while a combat is shown; the 3D layer resets per-unit action state when this flips. */
+  readonly fighting: boolean;
 }
 export interface BoardFeedListener { frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void }
 

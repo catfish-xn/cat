@@ -47,7 +47,7 @@ async function openModels(assetBase: string | null): Promise<Models> {
 }
 
 interface PieceView {
-  readonly root: Group; readonly ring: Mesh; readonly state: UnitActionState;
+  readonly root: Group; readonly ring: Mesh; state: UnitActionState;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
 }
@@ -160,14 +160,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachBody(view);
     return view;
   };
+  // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
+  // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
+  const resetAction = (view: PieceView, id: string) => {
+    view.state = new UnitActionState(id);
+    view.mixer?.dispose(); view.mixer = null;
+    if (view.lease) { view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames); view.mixer.apply(view.state.output); }
+  };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
     view.mixer?.dispose(); view.lease?.release();
     view.root.removeFromParent();
   };
 
+  let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
+    if (fighting !== null && fighting !== frame.fighting) for (const [id, view] of pieces) resetAction(view, id);
+    fighting = frame.fighting;
     const seen = new Set<string>();
     for (const piece of frame.pieces) {
       if (!piece.definitionId || (piece.team !== 'player' && piece.team !== 'enemy')) continue;
@@ -177,6 +187,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
+      if (piece.visible && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = piece.visible;
       view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
