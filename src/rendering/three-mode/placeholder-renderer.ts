@@ -183,6 +183,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
+    // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
+    if (dragging && frame.dragging !== dragging) endDrag();
     if (fighting !== null && fighting !== frame.fighting) for (const [id, view] of pieces) resetAction(view, id);
     fighting = frame.fighting;
     const seen = new Set<string>();
@@ -243,7 +245,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const material = marker.material as MeshStandardMaterial;
     material.color.set(color); material.emissive.set(color);
   };
-  const endDrag = () => { dragging = null; press = null; marker.visible = false; canvas.style.cursor = ''; };
+  const endDrag = () => {
+    if (press && canvas.hasPointerCapture(press.pointerId)) canvas.releasePointerCapture(press.pointerId);
+    dragging = null; press = null; marker.visible = false; canvas.style.cursor = '';
+  };
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0 || press) return;
     const id = unitAt(event);

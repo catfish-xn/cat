@@ -16,6 +16,8 @@ export interface BoardFrame {
   readonly pieces: readonly BoardPiece[];
   /** True while a combat is shown; the 3D layer resets per-unit action state when this flips. */
   readonly fighting: boolean;
+  /** The unit BoardScene is dragging (either input), or null; the 3D layer drops its own drag once this clears. */
+  readonly dragging: string | null;
 }
 export interface BoardDropHint {
   /** Where the dragged unit would land, as BoardScene's own hit test reads the point; undefined over nothing. */

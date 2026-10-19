@@ -898,7 +898,7 @@ export class BoardScene extends Phaser.Scene {
       const point = this.position(dragged.location);
       this.tokens.get(dragged.id)?.setPosition(point.x, point.y);
     }
-    this.draggingId = null;
+    this.draggingId = null; this.gesture3d = null;
     for (const pointer of this.input.manager.pointers) this.input.setDragState(pointer, 0);
     for (const token of this.tokens.values()) token.setScale(1).setDepth(0);
     this.overlay.clear();
@@ -977,7 +977,7 @@ export class BoardScene extends Phaser.Scene {
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), x: token.x, y: token.y, visible: token.visible && token.alpha > 0 })),
-      fighting: this.session.combatView !== null };
+      fighting: this.session.combatView !== null, dragging: this.draggingId };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {
