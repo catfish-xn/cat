@@ -93,3 +93,52 @@ describe('T9 measurement semantics',()=>{
     const a=randomPicker(42),b=randomPicker(42);expect(Array.from({length:20},()=>a(list))).toEqual(Array.from({length:20},()=>b(list)));
   });
 });
+
+describe('T9 additional memory observations and serial comparison',()=>{
+  const runtime=(platform:string)=>({platform,
+    memoryUsage:()=>({rss:100,heapUsed:20,heapTotal:60,external:8,arrayBuffers:4}),
+    resourceUsage:()=>({maxRSS:2})});
+  it('records all additional fields after GC and preserves the existing sampling order',()=>{
+    const order:string[]=[],base=runtime('linux');
+    const result=sampleMemory(true,{...base,memoryUsage:()=>{order.push('memory');return base.memoryUsage();}},
+      ()=>order.push('gc'),()=>{order.push('proc');return 'Name:\tnode\nRssAnon:\t 123 kB\nVmRSS: 999 kB\n';});
+    expect(order).toEqual(['gc','memory','proc']);
+    expect(result).toMatchObject({rssBytes:100,heapUsedBytes:20,heapTotalBytes:60,externalBytes:8,
+      arrayBuffersBytes:4,rssAnonBytes:123*1024,gcApplied:true,processLifetimeMaxRssBytes:2048});
+  });
+  it('does not read proc on other platforms and tolerates Linux read failures',()=>{
+    const read=vi.fn(()=>{throw new Error('unavailable');});
+    for(const platform of ['win32','darwin'])expect(sampleMemory(false,runtime(platform),null,read).rssAnonBytes).toBeNull();
+    expect(read).not.toHaveBeenCalled();
+    expect(sampleMemory(false,runtime('linux'),null,read).rssAnonBytes).toBeNull();
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+  it('parses only a complete Linux RssAnon kB line, including zero and CRLF',()=>{
+    for(const [status,expected] of [['RssAnon: 0 kB\r\n',0],['VmRSS: 9 kB\nRssAnon: 42 kB\n',43008],
+      ['VmRSS: 42 kB\n',null],['RssAnon: invalid kB\n',null],['RssAnon: 2 MB\n',null],
+      ['RssAnon: 999999999999999999999 kB\n',null]] as const)
+      expect(sampleMemory(false,runtime('linux'),null,()=>status).rssAnonBytes).toBe(expected);
+  });
+  it('adds aligned heapTotal and RssAnon trends without treating unavailable values as zero',()=>{
+    const samples=[{status:'complete',server:{memoryEnd:{rssBytes:100,heapTotalBytes:60,rssAnonBytes:80}}},
+      {status:'failed',server:{memoryEnd:{rssBytes:999,heapTotalBytes:999,rssAnonBytes:999}}},
+      {status:'complete',server:{memoryEnd:{rssBytes:90,heapTotalBytes:50,rssAnonBytes:null}}}];
+    expect(memoryTrend(samples,1)).toMatchObject({postMatchRssBytes:[100,90],postMatchHeapTotalBytes:[60,50],postMatchRssAnonBytes:[80,null]});
+  });
+  it('summarizes complete matches with means, maxima and explicit missing GC metrics',()=>{
+    const {summarizeReport,markdown,compareOptions}=createRequire(import.meta.url)('../scripts/loadtest-compare.cjs');
+    const match=(rss:number,gcApplied:boolean)=>({status:'complete',finalRound:35,
+      server:{memoryEnd:{rssBytes:rss,heapUsedBytes:20,heapTotalBytes:rss/2,rssAnonBytes:null,gcApplied},sliceWallMs:{max:rss/10}},
+      preparationCommands:{rttMs:{p99:2}},choiceCommands:{rttMs:{p99:3}},rounds:[{preparationCommands:{rttMs:{p99:rss/20}}}]});
+    const result=summarizeReport({status:'complete',matches:[match(100,true),match(200,false),{...match(999,true),status:'failed'}]});
+    expect(result.completedMatches).toBe(2);
+    expect(result.metrics).toEqual({rssBytes:{count:2,mean:150,worst:200},gcHeapUsedBytes:{count:1,mean:20,worst:20},
+      heapTotalBytes:{count:2,mean:75,worst:100},rssAnonBytes:{count:0,mean:null,worst:null},
+      worstRttP99Ms:{count:2,mean:7.5,worst:10},maxSliceMs:{count:2,mean:15,worst:20}});
+    expect(markdown({before:result,after:result})).toContain('| rssBytes | 2 | 150 | 200 | 2 | 150 | 200 |');
+    expect(compareOptions(['before','after']).config).toMatchObject({seats:8,rounds:6,warmup:1});
+    expect(compareOptions(['before','after','--rounds','7','--warmup','2']).config).toMatchObject({rounds:7,warmup:2});
+    expect(()=>compareOptions(['before','after','--url','ws://localhost'])).toThrow();
+    expect(()=>compareOptions(['before','after','--seats','2'])).toThrow();
+  });
+});
