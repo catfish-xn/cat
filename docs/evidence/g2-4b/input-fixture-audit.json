@@ -261,6 +261,8 @@
     "src/simulation/opening-unit.ts": "7629ff7f7d931e9f19d75ef64d152e49de2e6c160cebb033df4c4e230c136e42",
     "src/simulation/operation-policy.ts": "af069a8c9529485f8a7f9242ae11c907c28aebc9eb39ee761afaf3524fb201e3",
     "src/simulation/orb-layout.ts": "12d4bb8568aef5487d226cd1ac215eb8216d369395ee0b8127b8d966879c76d3",
+    "src/simulation/owned-resources/index.ts": "7b5bf5a69f0525e9af1c638083090c979f95cbdcb8bc4df652b80b6208eaf9f5",
+    "src/simulation/owned-resources/types.ts": "4f6648022926dfe0e2a6642cd1b34db8892c4554646e583421bb7544c1150645",
     "src/simulation/private-seat-view.ts": "99b5bf6116178b4444fb41eca8b3adb0c144ffa8a42dabc82ed5dbf2aa029665",
     "src/simulation/progression.ts": "bf9df858df4e3fde5f7296e988ad09bfd93c30b0b101fd92a406b67685b05669",
     "src/simulation/resource-provenance.ts": "f210c548befb79b81c17f50b916d2303c87e88c4b7f60b7ed66f5f7128c8f93a",
@@ -365,9 +367,9 @@
     },
     "tests/fixtures/g2-4b-herald-raw/manifest.json": {
       "previousBytes": 29874,
-      "currentBytes": 35027,
+      "currentBytes": 35245,
       "previousSha256": "f76d874a352a1b156ff97dbc7e59f64c6e8f1865656328de3b6fc633ebd6fd72",
-      "currentSha256": "d610505553a90417a8623fed49038c8bf4d1675471810cce1d25b1acd0cde730",
+      "currentSha256": "0e0284c6ed04b7472ad5ab3b3103a4a85bfeea2ea93a5a2ba5b787e9be04f516",
       "firstDifferentByte": 135
     },
     "tests/fixtures/g2-4b-herald-raw/trajectory.json": {
