@@ -1,0 +1,933 @@
+{
+  "base": "8b614fc9c3a51eaefd3397b61aeac745b298b2f9",
+  "node": "22.23.3",
+  "warmupsPerGroup": 1,
+  "measuredMatchesPerGroup": 3,
+  "commands": [
+    "node scripts/loadtest-room.cjs --seats 8 --rounds 3",
+    "node --expose-gc scripts/loadtest-room.cjs --seats 8 --rounds 3"
+  ],
+  "groups": {
+    "before-load": {
+      "matches": [
+        {
+          "number": 1,
+          "rounds": 33,
+          "durationMs": 60775.11137299999,
+          "rssBytes": 708759552,
+          "heapUsedBytes": 353352912,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 725372928,
+          "rttP99Ms": 117.05301799999143,
+          "commandAttempts": 812,
+          "acceptedCommands": 807,
+          "longestSliceMs": 140.2825659999944,
+          "sliceCpuMs": 56119.98799999997,
+          "sliceWallMs": 47879.64232199998,
+          "sliceSamples": 1951
+        },
+        {
+          "number": 2,
+          "rounds": 39,
+          "durationMs": 76070.425659,
+          "rssBytes": 731955200,
+          "heapUsedBytes": 436833016,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 732934144,
+          "rttP99Ms": 249.64632200001506,
+          "commandAttempts": 838,
+          "acceptedCommands": 815,
+          "longestSliceMs": 337.01932099999976,
+          "sliceCpuMs": 70460.04399999994,
+          "sliceWallMs": 60176.46430800039,
+          "sliceSamples": 2214
+        },
+        {
+          "number": 3,
+          "rounds": 37,
+          "durationMs": 57500.48031499999,
+          "rssBytes": 710135808,
+          "heapUsedBytes": 345048560,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 734052352,
+          "rttP99Ms": 108.23037800000748,
+          "commandAttempts": 800,
+          "acceptedCommands": 800,
+          "longestSliceMs": 191.1567619999987,
+          "sliceCpuMs": 48502.36299999996,
+          "sliceWallMs": 43140.218353000295,
+          "sliceSamples": 1734
+        }
+      ],
+      "meanRssBytes": 716950186.6666666,
+      "meanHeapBytes": 378411496,
+      "meanSliceCpuMs": 58360.79833333329,
+      "maxPeakRssBytes": 734052352,
+      "longestSliceMs": 337.01932099999976,
+      "rawReportSha256": "095b0c9d1c4c0deb37e4bad8a198b5c852a38b3be6c2466145d32ac6e669bf33"
+    },
+    "before-gc": {
+      "matches": [
+        {
+          "number": 1,
+          "rounds": 33,
+          "durationMs": 63436.93781399999,
+          "rssBytes": 567406592,
+          "heapUsedBytes": 113342400,
+          "gcApplied": true,
+          "gcWallMs": 38.730956999992486,
+          "peakRssBytes": 592990208,
+          "rttP99Ms": 172.49658099999942,
+          "commandAttempts": 775,
+          "acceptedCommands": 752,
+          "longestSliceMs": 491.8209000000061,
+          "sliceCpuMs": 59177.899999999965,
+          "sliceWallMs": 49866.874171000105,
+          "sliceSamples": 1852
+        },
+        {
+          "number": 2,
+          "rounds": 39,
+          "durationMs": 57260.120979,
+          "rssBytes": 556470272,
+          "heapUsedBytes": 96641424,
+          "gcApplied": true,
+          "gcWallMs": 33.66343000001507,
+          "peakRssBytes": 599670784,
+          "rttP99Ms": 127.72984000001452,
+          "commandAttempts": 815,
+          "acceptedCommands": 808,
+          "longestSliceMs": 233.9799279999861,
+          "sliceCpuMs": 51003.82700000014,
+          "sliceWallMs": 42841.838022000535,
+          "sliceSamples": 1728
+        },
+        {
+          "number": 3,
+          "rounds": 37,
+          "durationMs": 52753.748078000004,
+          "rssBytes": 585613312,
+          "heapUsedBytes": 101221632,
+          "gcApplied": true,
+          "gcWallMs": 41.09056800001417,
+          "peakRssBytes": 610562048,
+          "rttP99Ms": 89.62159900000552,
+          "commandAttempts": 800,
+          "acceptedCommands": 798,
+          "longestSliceMs": 192.23022700002184,
+          "sliceCpuMs": 46342.36499999993,
+          "sliceWallMs": 39170.191368000174,
+          "sliceSamples": 1634
+        }
+      ],
+      "meanRssBytes": 569830058.6666666,
+      "meanHeapBytes": 103735152,
+      "meanSliceCpuMs": 52174.697333333344,
+      "maxPeakRssBytes": 610562048,
+      "longestSliceMs": 491.8209000000061,
+      "rawReportSha256": "6d45481a04344540cf1a69895c620066242c033975273ae8a8c0f728fbacd647"
+    },
+    "after-load": {
+      "matches": [
+        {
+          "number": 1,
+          "rounds": 34,
+          "durationMs": 55317.409554,
+          "rssBytes": 630697984,
+          "heapUsedBytes": 272952032,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 644104192,
+          "rttP99Ms": 91.53682199999457,
+          "commandAttempts": 816,
+          "acceptedCommands": 809,
+          "longestSliceMs": 184.85089499999594,
+          "sliceCpuMs": 49773.20699999991,
+          "sliceWallMs": 41986.91211100015,
+          "sliceSamples": 1765
+        },
+        {
+          "number": 2,
+          "rounds": 36,
+          "durationMs": 50947.026891,
+          "rssBytes": 630353920,
+          "heapUsedBytes": 201960592,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 658067456,
+          "rttP99Ms": 46.21300899999915,
+          "commandAttempts": 832,
+          "acceptedCommands": 832,
+          "longestSliceMs": 223.1455549999955,
+          "sliceCpuMs": 43989.82799999996,
+          "sliceWallMs": 37499.73762400026,
+          "sliceSamples": 1554
+        },
+        {
+          "number": 3,
+          "rounds": 36,
+          "durationMs": 43370.29608900001,
+          "rssBytes": 625307648,
+          "heapUsedBytes": 274345024,
+          "gcApplied": false,
+          "gcWallMs": null,
+          "peakRssBytes": 653918208,
+          "rttP99Ms": 136.85929800002486,
+          "commandAttempts": 773,
+          "acceptedCommands": 765,
+          "longestSliceMs": 260.8109140000015,
+          "sliceCpuMs": 35238.18099999994,
+          "sliceWallMs": 30711.12332400013,
+          "sliceSamples": 1363
+        }
+      ],
+      "meanRssBytes": 628786517.3333334,
+      "meanHeapBytes": 249752549.33333334,
+      "meanSliceCpuMs": 43000.40533333326,
+      "maxPeakRssBytes": 658067456,
+      "longestSliceMs": 260.8109140000015,
+      "rawReportSha256": "2b27f636200f84b1cb292fb17e484e8ce4f8bdaa80b84c43fa3e68801a7d8fe0"
+    },
+    "after-gc": {
+      "matches": [
+        {
+          "number": 1,
+          "rounds": 36,
+          "durationMs": 48131.230341,
+          "rssBytes": 468262912,
+          "heapUsedBytes": 78170720,
+          "gcApplied": true,
+          "gcWallMs": 50.255524000007426,
+          "peakRssBytes": 482795520,
+          "rttP99Ms": 100.96331500000088,
+          "commandAttempts": 794,
+          "acceptedCommands": 789,
+          "longestSliceMs": 230.10944000000018,
+          "sliceCpuMs": 41602.21000000004,
+          "sliceWallMs": 34663.09872699991,
+          "sliceSamples": 1453
+        },
+        {
+          "number": 2,
+          "rounds": 39,
+          "durationMs": 66411.343251,
+          "rssBytes": 844566528,
+          "heapUsedBytes": 110158824,
+          "gcApplied": true,
+          "gcWallMs": 48.599254000000656,
+          "peakRssBytes": 917602304,
+          "rttP99Ms": 317.35619799999404,
+          "commandAttempts": 840,
+          "acceptedCommands": 826,
+          "longestSliceMs": 208.74737399999867,
+          "sliceCpuMs": 61063.2920000001,
+          "sliceWallMs": 50954.5514070003,
+          "sliceSamples": 1956
+        },
+        {
+          "number": 3,
+          "rounds": 39,
+          "durationMs": 45741.867903999984,
+          "rssBytes": 849698816,
+          "heapUsedBytes": 102582568,
+          "gcApplied": true,
+          "gcWallMs": 88.49357200000668,
+          "peakRssBytes": 879292416,
+          "rttP99Ms": 203.86523399999714,
+          "commandAttempts": 788,
+          "acceptedCommands": 764,
+          "longestSliceMs": 208.29791900000419,
+          "sliceCpuMs": 37099.630999999965,
+          "sliceWallMs": 31811.26365500022,
+          "sliceSamples": 1395
+        }
+      ],
+      "meanRssBytes": 720842752,
+      "meanHeapBytes": 96970704,
+      "meanSliceCpuMs": 46588.3776666667,
+      "maxPeakRssBytes": 917602304,
+      "longestSliceMs": 230.10944000000018,
+      "rawReportSha256": "ca5cbe4dad5e0af1a48489ea08d4d808b1132f2b50be136e82256e24f69907bc"
+    }
+  },
+  "tests": {
+    "files": 67,
+    "uniqueCases": 1217,
+    "passed": 1217,
+    "failed": 0,
+    "pending": 0,
+    "initialRun": {
+      "files": 67,
+      "total": 1215,
+      "passed": 1214,
+      "failed": 1,
+      "durationMs": 982109.2194824219,
+      "failures": [
+        {
+          "file": "tests/m8-b8-copy-semantics.test.ts",
+          "test": "B8 node-one Q1: original copy semantics on the public step entry a getter that first returns a function is read once and fails with DataCloneError"
+        }
+      ]
+    },
+    "finalBoundaryRecheck": {
+      "files": 3,
+      "total": 24,
+      "passed": 24,
+      "failed": 0,
+      "durationMs": 1853.7666015625
+    },
+    "note": "Initial 67-file serial run retained. The sole native DataCloneError regression was fixed; the 3 affected copy/cache files were rerun serially, including two added non-cloneable-value cases. Completed route tests are not claimed to have been rerun after that rejection-only fix; final-source full-match byte probes were rerun.",
+    "selectedFiles": [
+      "tests/combat-abilities.test.ts",
+      "tests/combat-contract.test.ts",
+      "tests/combat-damage.test.ts",
+      "tests/combat-mana.test.ts",
+      "tests/combat-simulation.test.ts",
+      "tests/combat-start.test.ts",
+      "tests/g2-1-content.test.ts",
+      "tests/g2-1-skills.test.ts",
+      "tests/g2-2-skills.test.ts",
+      "tests/g2-2-traits.test.ts",
+      "tests/g2-3-anomalies.test.ts",
+      "tests/g2-3-content.test.ts",
+      "tests/g2-3-integration.test.ts",
+      "tests/g2-3-skills.test.ts",
+      "tests/g2-3-traits.test.ts",
+      "tests/g2-4b-artifact-forge.test.ts",
+      "tests/g2-4b-artifacts.test.ts",
+      "tests/g2-4b-pr161-restore.test.ts",
+      "tests/g2-4b-resists-restore.test.ts",
+      "tests/g2-4b-reward-order.test.ts",
+      "tests/g2-4b-support-items.test.ts",
+      "tests/g2-4b-unstable-chest.test.ts",
+      "tests/g2-augments-choice.test.ts",
+      "tests/g2-augments-combat.test.ts",
+      "tests/g2-augments-identity.test.ts",
+      "tests/g2-augments-multiplayer.test.ts",
+      "tests/g2-augments-static.test.ts",
+      "tests/g4-reference-cache.test.ts",
+      "tests/g4-replay-snapshot.test.ts",
+      "tests/g5-combat-summary.test.ts",
+      "tests/m4-effect-combat.test.ts",
+      "tests/m5-combat.test.ts",
+      "tests/m5-content.test.ts",
+      "tests/m5-replay-cannon.test.ts",
+      "tests/m5-replay-mage.test.ts",
+      "tests/m5-replay-sniper-caitlyn.test.ts",
+      "tests/m5-replay.test.ts",
+      "tests/m6-replay.test.ts",
+      "tests/m8-b10-item-save-replay.test.ts",
+      "tests/m8-b10-temporary-replay.test.ts",
+      "tests/m8-b8-combat-input.test.ts",
+      "tests/m8-b8-copy-semantics.test.ts",
+      "tests/m8-b8-loot-freeze.test.ts",
+      "tests/m8-b9-activity-log.test.ts",
+      "tests/m8-b9-compatibility.test.ts",
+      "tests/m8-b9-status-events.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/mp-sim-perf.test.ts",
+      "tests/restore-audit/cd-replay-facts.test.ts",
+      "tests/restore-audit/combat-accumulators.test.ts",
+      "tests/server/bot-driver-timing.test.ts",
+      "tests/server/c15-replay-unit-ids.test.ts",
+      "tests/server/g2-3-replay-mirror.test.ts",
+      "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "tests/server/local-room-client-full-match.test.ts",
+      "tests/server/replay-client.test.ts",
+      "tests/server/round-commit-timing.test.ts",
+      "tests/server/round-commit.test.ts",
+      "tests/server/t10-combat-ops.test.ts",
+      "tests/server/two-sided-resolver.test.ts",
+      "tests/t10-combat-ops.test.ts",
+      "tests/t12-combat-equip.test.ts",
+      "tests/t2-two-sided-battle.test.ts",
+      "tests/t3-round-settlement.test.ts",
+      "tests/t5r-combat-replay.test.ts",
+      "tests/t9-loadtest.test.ts",
+      "tests/task-mechanism-restore.test.ts"
+    ],
+    "results": [
+      {
+        "file": "tests/m5-replay-cannon.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 132622.943359375
+      },
+      {
+        "file": "tests/server/bot-driver-timing.test.ts",
+        "status": "passed",
+        "tests": 2,
+        "durationMs": 60158.219482421875
+      },
+      {
+        "file": "tests/server/local-room-client-full-match.test.ts",
+        "status": "passed",
+        "tests": 2,
+        "durationMs": 32779.051513671875
+      },
+      {
+        "file": "tests/server/round-commit-timing.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 15505.388427734375
+      },
+      {
+        "file": "tests/combat-abilities.test.ts",
+        "status": "passed",
+        "tests": 27,
+        "durationMs": 12.376708984375
+      },
+      {
+        "file": "tests/combat-contract.test.ts",
+        "status": "passed",
+        "tests": 6,
+        "durationMs": 26.290771484375
+      },
+      {
+        "file": "tests/combat-damage.test.ts",
+        "status": "passed",
+        "tests": 12,
+        "durationMs": 1.6484375
+      },
+      {
+        "file": "tests/combat-mana.test.ts",
+        "status": "passed",
+        "tests": 7,
+        "durationMs": 2.411865234375
+      },
+      {
+        "file": "tests/combat-simulation.test.ts",
+        "status": "passed",
+        "tests": 17,
+        "durationMs": 31.673583984375
+      },
+      {
+        "file": "tests/combat-start.test.ts",
+        "status": "passed",
+        "tests": 7,
+        "durationMs": 0.211181640625
+      },
+      {
+        "file": "tests/g2-1-content.test.ts",
+        "status": "passed",
+        "tests": 33,
+        "durationMs": 405.28955078125
+      },
+      {
+        "file": "tests/g2-1-skills.test.ts",
+        "status": "passed",
+        "tests": 19,
+        "durationMs": 120.845458984375
+      },
+      {
+        "file": "tests/g2-2-skills.test.ts",
+        "status": "passed",
+        "tests": 19,
+        "durationMs": 39.173583984375
+      },
+      {
+        "file": "tests/g2-2-traits.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 36.4150390625
+      },
+      {
+        "file": "tests/g2-3-anomalies.test.ts",
+        "status": "passed",
+        "tests": 39,
+        "durationMs": 331.881103515625
+      },
+      {
+        "file": "tests/g2-3-content.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 364.08837890625
+      },
+      {
+        "file": "tests/g2-3-integration.test.ts",
+        "status": "passed",
+        "tests": 18,
+        "durationMs": 923.350341796875
+      },
+      {
+        "file": "tests/g2-3-skills.test.ts",
+        "status": "passed",
+        "tests": 18,
+        "durationMs": 50.88671875
+      },
+      {
+        "file": "tests/g2-3-traits.test.ts",
+        "status": "passed",
+        "tests": 19,
+        "durationMs": 58.859375
+      },
+      {
+        "file": "tests/g2-4b-artifact-forge.test.ts",
+        "status": "passed",
+        "tests": 7,
+        "durationMs": 1045.8662109375
+      },
+      {
+        "file": "tests/g2-4b-artifacts.test.ts",
+        "status": "passed",
+        "tests": 49,
+        "durationMs": 1220.2734375
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "status": "passed",
+        "tests": 11,
+        "durationMs": 11927.3349609375
+      },
+      {
+        "file": "tests/g2-4b-resists-restore.test.ts",
+        "status": "passed",
+        "tests": 21,
+        "durationMs": 6221.1337890625
+      },
+      {
+        "file": "tests/g2-4b-reward-order.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 8.029541015625
+      },
+      {
+        "file": "tests/g2-4b-support-items.test.ts",
+        "status": "passed",
+        "tests": 15,
+        "durationMs": 529.48291015625
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "status": "passed",
+        "tests": 39,
+        "durationMs": 19401.12646484375
+      },
+      {
+        "file": "tests/g2-augments-choice.test.ts",
+        "status": "passed",
+        "tests": 35,
+        "durationMs": 3204.48486328125
+      },
+      {
+        "file": "tests/g2-augments-combat.test.ts",
+        "status": "passed",
+        "tests": 16,
+        "durationMs": 2181.901611328125
+      },
+      {
+        "file": "tests/g2-augments-identity.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 138.459228515625
+      },
+      {
+        "file": "tests/g2-augments-multiplayer.test.ts",
+        "status": "passed",
+        "tests": 4,
+        "durationMs": 18.613525390625
+      },
+      {
+        "file": "tests/g2-augments-static.test.ts",
+        "status": "passed",
+        "tests": 60,
+        "durationMs": 153.412353515625
+      },
+      {
+        "file": "tests/g4-reference-cache.test.ts",
+        "status": "passed",
+        "tests": 8,
+        "durationMs": 38.856689453125
+      },
+      {
+        "file": "tests/g4-replay-snapshot.test.ts",
+        "status": "passed",
+        "tests": 4,
+        "durationMs": 109.57177734375
+      },
+      {
+        "file": "tests/g5-combat-summary.test.ts",
+        "status": "passed",
+        "tests": 9,
+        "durationMs": 4273.827392578125
+      },
+      {
+        "file": "tests/m4-effect-combat.test.ts",
+        "status": "passed",
+        "tests": 7,
+        "durationMs": 58.80029296875
+      },
+      {
+        "file": "tests/m5-combat.test.ts",
+        "status": "passed",
+        "tests": 48,
+        "durationMs": 317.9013671875
+      },
+      {
+        "file": "tests/m5-content.test.ts",
+        "status": "passed",
+        "tests": 9,
+        "durationMs": 23.060791015625
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 151131.77807617188
+      },
+      {
+        "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 159116.09912109375
+      },
+      {
+        "file": "tests/m5-replay.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 161521.19067382812
+      },
+      {
+        "file": "tests/m6-replay.test.ts",
+        "status": "passed",
+        "tests": 9,
+        "durationMs": 1669.388427734375
+      },
+      {
+        "file": "tests/m8-b10-item-save-replay.test.ts",
+        "status": "passed",
+        "tests": 45,
+        "durationMs": 17561.22216796875
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "status": "passed",
+        "tests": 3,
+        "durationMs": 836.811279296875
+      },
+      {
+        "file": "tests/m8-b8-combat-input.test.ts",
+        "status": "passed",
+        "tests": 38,
+        "durationMs": 364.40966796875
+      },
+      {
+        "file": "tests/m8-b8-copy-semantics.test.ts",
+        "status": "passed",
+        "tests": 6,
+        "durationMs": 56.828369140625
+      },
+      {
+        "file": "tests/m8-b8-loot-freeze.test.ts",
+        "status": "passed",
+        "tests": 67,
+        "durationMs": 128.19873046875
+      },
+      {
+        "file": "tests/m8-b9-activity-log.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 23235.28125
+      },
+      {
+        "file": "tests/m8-b9-compatibility.test.ts",
+        "status": "passed",
+        "tests": 11,
+        "durationMs": 1222.3857421875
+      },
+      {
+        "file": "tests/m8-b9-status-events.test.ts",
+        "status": "passed",
+        "tests": 2,
+        "durationMs": 8.605712890625
+      },
+      {
+        "file": "tests/m8-content-equivalence.test.ts",
+        "status": "passed",
+        "tests": 138,
+        "durationMs": 19480.873779296875
+      },
+      {
+        "file": "tests/mp-sim-perf.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 32.7666015625
+      },
+      {
+        "file": "tests/t10-combat-ops.test.ts",
+        "status": "passed",
+        "tests": 37,
+        "durationMs": 284.42822265625
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "status": "passed",
+        "tests": 48,
+        "durationMs": 6403.5419921875
+      },
+      {
+        "file": "tests/t2-two-sided-battle.test.ts",
+        "status": "passed",
+        "tests": 21,
+        "durationMs": 972.588623046875
+      },
+      {
+        "file": "tests/t3-round-settlement.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 1755.44140625
+      },
+      {
+        "file": "tests/t5r-combat-replay.test.ts",
+        "status": "passed",
+        "tests": 46,
+        "durationMs": 8323.033447265625
+      },
+      {
+        "file": "tests/t9-loadtest.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 11.604736328125
+      },
+      {
+        "file": "tests/task-mechanism-restore.test.ts",
+        "status": "passed",
+        "tests": 20,
+        "durationMs": 14209.16259765625
+      },
+      {
+        "file": "tests/restore-audit/cd-replay-facts.test.ts",
+        "status": "passed",
+        "tests": 34,
+        "durationMs": 18210.481201171875
+      },
+      {
+        "file": "tests/restore-audit/combat-accumulators.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 22.4970703125
+      },
+      {
+        "file": "tests/server/c15-replay-unit-ids.test.ts",
+        "status": "passed",
+        "tests": 4,
+        "durationMs": 3227.080810546875
+      },
+      {
+        "file": "tests/server/g2-3-replay-mirror.test.ts",
+        "status": "passed",
+        "tests": 1,
+        "durationMs": 0.604736328125
+      },
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "status": "passed",
+        "tests": 5,
+        "durationMs": 12561.403076171875
+      },
+      {
+        "file": "tests/server/replay-client.test.ts",
+        "status": "passed",
+        "tests": 6,
+        "durationMs": 3168.663330078125
+      },
+      {
+        "file": "tests/server/round-commit.test.ts",
+        "status": "passed",
+        "tests": 6,
+        "durationMs": 11696.487548828125
+      },
+      {
+        "file": "tests/server/t10-combat-ops.test.ts",
+        "status": "passed",
+        "tests": 10,
+        "durationMs": 32190.255126953125
+      },
+      {
+        "file": "tests/server/two-sided-resolver.test.ts",
+        "status": "passed",
+        "tests": 14,
+        "durationMs": 9904.676025390625
+      }
+    ]
+  },
+  "equivalence": {
+    "result": "PASS: final source; 3 seeds; all terminal, ledger and intention bytes identical after decompression.",
+    "before": [
+      {
+        "seed": 42,
+        "round": 39,
+        "terminalBytes": 944503,
+        "terminalSha256": "1247da754d5d8de9138939fbadec394e8e191fb8afd97422a96231ae44ec7092",
+        "ledgerSha256": "24e0858928dcbcb31aeef30b08ea011a302392c613f27e86dbca33b47d9fcbc1",
+        "battles": 168,
+        "events": 99863,
+        "intentionsSha256": "73fe1a4aa9b95f6167e7436a35b09c7d6f0bf3e16c8a6d2e04705ad9e4169bcc",
+        "steps": 1497,
+        "durationMs": 39705.591437
+      },
+      {
+        "seed": 7,
+        "round": 34,
+        "terminalBytes": 919469,
+        "terminalSha256": "9e07f3150d669cf870ad647935db85f2bc2c806d0958f138801d9b094436933b",
+        "ledgerSha256": "68398d1013a814645bea2d63aa4adde0561dd224716a608d4a4f13354f2330d4",
+        "battles": 159,
+        "events": 116364,
+        "intentionsSha256": "55fd8f9be2d96c0ad7de0d0bb4021c3ba9a5f7d73a7aa6b64b287596ce3c3535",
+        "steps": 1417,
+        "durationMs": 35032.003192000004
+      },
+      {
+        "seed": 11,
+        "round": 36,
+        "terminalBytes": 890594,
+        "terminalSha256": "c61fe1e0d4ca377f6e11bfaaf3509b92c549fc01189ecaaf3d3c960f5da49192",
+        "ledgerSha256": "bc1d7f8d038ed7d06309f48dd5049297f5db426debf8a64f24c63bda43ca5312",
+        "battles": 154,
+        "events": 111700,
+        "intentionsSha256": "bc9a9ba25dda5a00d281c7fc77e6e0b52606153079928add75be17b53219e8a0",
+        "steps": 1432,
+        "durationMs": 33488.31035599999
+      }
+    ],
+    "after": [
+      {
+        "seed": 42,
+        "round": 39,
+        "terminalBytes": 944503,
+        "terminalSha256": "1247da754d5d8de9138939fbadec394e8e191fb8afd97422a96231ae44ec7092",
+        "ledgerSha256": "24e0858928dcbcb31aeef30b08ea011a302392c613f27e86dbca33b47d9fcbc1",
+        "battles": 168,
+        "events": 99863,
+        "intentionsSha256": "73fe1a4aa9b95f6167e7436a35b09c7d6f0bf3e16c8a6d2e04705ad9e4169bcc",
+        "steps": 1497,
+        "durationMs": 34105.007796
+      },
+      {
+        "seed": 7,
+        "round": 34,
+        "terminalBytes": 919469,
+        "terminalSha256": "9e07f3150d669cf870ad647935db85f2bc2c806d0958f138801d9b094436933b",
+        "ledgerSha256": "68398d1013a814645bea2d63aa4adde0561dd224716a608d4a4f13354f2330d4",
+        "battles": 159,
+        "events": 116364,
+        "intentionsSha256": "55fd8f9be2d96c0ad7de0d0bb4021c3ba9a5f7d73a7aa6b64b287596ce3c3535",
+        "steps": 1417,
+        "durationMs": 27664.929703
+      },
+      {
+        "seed": 11,
+        "round": 36,
+        "terminalBytes": 890594,
+        "terminalSha256": "c61fe1e0d4ca377f6e11bfaaf3509b92c549fc01189ecaaf3d3c960f5da49192",
+        "ledgerSha256": "bc1d7f8d038ed7d06309f48dd5049297f5db426debf8a64f24c63bda43ca5312",
+        "battles": 154,
+        "events": 111700,
+        "intentionsSha256": "bc9a9ba25dda5a00d281c7fc77e6e0b52606153079928add75be17b53219e8a0",
+        "steps": 1432,
+        "durationMs": 28255.839273999998
+      }
+    ]
+  },
+  "diagnosticGcProbe": {
+    "note": "Supplemental deterministic eight-bot matches; GC after terminal/ledger output; file encoding/buffer allocation included. Not a replacement for RealClock/WebSocket pressure; rule-output fingerprints identical.",
+    "before": [
+      {
+        "gcApplied": true,
+        "rssBytes": 855154688,
+        "heapUsedBytes": 102937224,
+        "seed": 42,
+        "round": 39,
+        "terminalBytes": 944503,
+        "terminalSha256": "1247da754d5d8de9138939fbadec394e8e191fb8afd97422a96231ae44ec7092",
+        "ledgerSha256": "24e0858928dcbcb31aeef30b08ea011a302392c613f27e86dbca33b47d9fcbc1",
+        "battles": 168,
+        "events": 99863,
+        "intentionsSha256": "73fe1a4aa9b95f6167e7436a35b09c7d6f0bf3e16c8a6d2e04705ad9e4169bcc",
+        "steps": 1497,
+        "durationMs": 44972.270346
+      },
+      {
+        "gcApplied": true,
+        "rssBytes": 1197047808,
+        "heapUsedBytes": 145656600,
+        "seed": 7,
+        "round": 34,
+        "terminalBytes": 919469,
+        "terminalSha256": "9e07f3150d669cf870ad647935db85f2bc2c806d0958f138801d9b094436933b",
+        "ledgerSha256": "68398d1013a814645bea2d63aa4adde0561dd224716a608d4a4f13354f2330d4",
+        "battles": 159,
+        "events": 116364,
+        "intentionsSha256": "55fd8f9be2d96c0ad7de0d0bb4021c3ba9a5f7d73a7aa6b64b287596ce3c3535",
+        "steps": 1417,
+        "durationMs": 34648.104714
+      },
+      {
+        "gcApplied": true,
+        "rssBytes": 1229631488,
+        "heapUsedBytes": 188374680,
+        "seed": 11,
+        "round": 36,
+        "terminalBytes": 890594,
+        "terminalSha256": "c61fe1e0d4ca377f6e11bfaaf3509b92c549fc01189ecaaf3d3c960f5da49192",
+        "ledgerSha256": "bc1d7f8d038ed7d06309f48dd5049297f5db426debf8a64f24c63bda43ca5312",
+        "battles": 154,
+        "events": 111700,
+        "intentionsSha256": "bc9a9ba25dda5a00d281c7fc77e6e0b52606153079928add75be17b53219e8a0",
+        "steps": 1432,
+        "durationMs": 34352.844637
+      }
+    ],
+    "after": [
+      {
+        "gcApplied": true,
+        "rssBytes": 853708800,
+        "heapUsedBytes": 89726888,
+        "seed": 42,
+        "round": 39,
+        "terminalBytes": 944503,
+        "terminalSha256": "1247da754d5d8de9138939fbadec394e8e191fb8afd97422a96231ae44ec7092",
+        "ledgerSha256": "24e0858928dcbcb31aeef30b08ea011a302392c613f27e86dbca33b47d9fcbc1",
+        "battles": 168,
+        "events": 99863,
+        "intentionsSha256": "73fe1a4aa9b95f6167e7436a35b09c7d6f0bf3e16c8a6d2e04705ad9e4169bcc",
+        "steps": 1497,
+        "durationMs": 34363.214582
+      },
+      {
+        "gcApplied": true,
+        "rssBytes": 1057472512,
+        "heapUsedBytes": 118277336,
+        "seed": 7,
+        "round": 34,
+        "terminalBytes": 919469,
+        "terminalSha256": "9e07f3150d669cf870ad647935db85f2bc2c806d0958f138801d9b094436933b",
+        "ledgerSha256": "68398d1013a814645bea2d63aa4adde0561dd224716a608d4a4f13354f2330d4",
+        "battles": 159,
+        "events": 116364,
+        "intentionsSha256": "55fd8f9be2d96c0ad7de0d0bb4021c3ba9a5f7d73a7aa6b64b287596ce3c3535",
+        "steps": 1417,
+        "durationMs": 30245.956722000003
+      },
+      {
+        "gcApplied": true,
+        "rssBytes": 1141227520,
+        "heapUsedBytes": 142063872,
+        "seed": 11,
+        "round": 36,
+        "terminalBytes": 890594,
+        "terminalSha256": "c61fe1e0d4ca377f6e11bfaaf3509b92c549fc01189ecaaf3d3c960f5da49192",
+        "ledgerSha256": "bc1d7f8d038ed7d06309f48dd5049297f5db426debf8a64f24c63bda43ca5312",
+        "battles": 154,
+        "events": 111700,
+        "intentionsSha256": "bc9a9ba25dda5a00d281c7fc77e6e0b52606153079928add75be17b53219e8a0",
+        "steps": 1432,
+        "durationMs": 29187.284368999994
+      }
+    ]
+  }
+}

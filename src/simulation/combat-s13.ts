@@ -10,7 +10,7 @@ import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG2
 import { advanceAugmentCombat, settleAugmentDeaths } from './combat-augment-effects';
 import { advanceG22Traits, recordG22Damage, shareStebHeal } from './combat-g2-2';
 import { advanceG2Passives, recordG2Damage } from './combat-g2';
-import { freezeCombatDeclarations, sharedCombatDeclarations } from './combat-static';
+import { copyCombatUnitForTick } from './combat-static';
 import { startingRows } from './m8/targeting';
 import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
@@ -128,23 +128,8 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
 export function advanceS13Tick(state: CombatState): CombatStep {
   const tick = state.tick + 1, events: CombatEvent[] = [];
   const units: S13Unit[] = state.units.map(unit => {
-    // Legacy mutable fields are detached once. Frozen mechanism declarations and
-    // ledgers use copy-on-write updates; sharing them preserves historical inputs.
-    const shared = sharedCombatDeclarations(unit);
-    const omitted = Object.fromEntries(Object.keys(shared).map(key => [key, undefined]));
-    const copy = structuredClone({ ...unit, ...omitted,
-      ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
-      ...(unit.mechanismState ? { mechanismState: undefined } : {}),
-      ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
-    // A mutable checkpoint is copied first. Only our new declarations freeze;
-    // the caller retains its independent mutable input. Later ticks can share.
-    freezeCombatDeclarations(copy);
-    // The native clone is fresh and has not escaped. Assign the overrides to it
-    // instead of spreading the entire detached unit into a second large object.
-    return Object.assign(copy, { ...shared,
-      ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),
-      ...(unit.mechanismState ? { mechanismState: unit.mechanismState } : {}),
-      ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}),
+    const copy = copyCombatUnitForTick(unit);
+    return Object.assign(copy, {
       startingCell: unit.startingCell ?? { ...unit.cell },
       runtime: { ...EMPTY_RUNTIME, ...copy.runtime }, statuses: (copy.statuses ?? []) as S13Unit['statuses'],
       shieldLayers: (copy.shieldLayers ?? []) as S13Unit['shieldLayers'], tasks: (copy.tasks ?? []) as S13Unit['tasks'],

@@ -4,7 +4,7 @@ import {g23BattleFacts} from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
 import { canonicalContent, digestContent } from './content';
-import { freezeContent } from './content/freeze';
+import { createScopedContentFreezer, freezeContent } from './content/freeze';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -84,11 +84,13 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
   const mirrorOfSeatId = identity?.mirrorOfSeatId ?? null;
   if (mirrorOfSeatId !== null && mirrorOfSeatId !== right.seatId) throw new BattleValidationError('invalid-mirror');
   const x = compileSide(left,'player'), y = compileSide(right,'enemy');
-  return freezeContent(structuredClone({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
+  // Restored snapshots are detached and deeply frozen; compilation owns every
+  // new record. Re-cloning this entire derived graph would only copy owned data.
+  return freezeContent({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
     strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
-  }));
+  });
 }
 
 /** Recompile descriptors and compare every derived field; never disable Match restore checks. */
@@ -155,11 +157,26 @@ export interface BattleTask {
   advance(maxTicks: number): BattleResult | null;
 }
 
+// Only exact, immutable results whose entire JSON graph was checked below can
+// reuse that work. Clones, spreads and external results keep full validation.
+const checkedResults = new WeakMap<BattleResult, ReturnType<typeof createScopedContentFreezer>>();
+
 /** In-memory continuation. A slice budget never changes the Combat's own tick limit. */
 export function startTwoSidedBattle(input: BattleInput): BattleTask {
   const checked = restoreBattleInput(input);
   const start = createCombatWithEvents(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
-  const events = [...toLedgerEvents(start.events)];
+  const freezeBattle = createScopedContentFreezer();
+  freezeBattle(start.state);
+  canonicalContent(start.state);
+  const events: BattleResult['events'][number][] = [];
+  const appendEvents = (step: CombatStep) => {
+    for (const event of toLedgerEvents(step.events)) {
+      freezeBattle(event);
+      canonicalContent(event);
+      events.push(event);
+    }
+  };
+  appendEvents(start);
   let terminal = start.state;
   let result: BattleResult | null = null;
   return { advance(maxTicks) {
@@ -167,13 +184,19 @@ export function startTwoSidedBattle(input: BattleInput): BattleTask {
     if (result) return result;
     let steps = 0;
     while (terminal.status === 'running' && steps < maxTicks) {
-      const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events)); steps++;
+      const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
     }
     if (terminal.status !== 'finished') return null;
-    result = freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
+    freezeBattle(events);
+    result = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
       winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
       a:sideResult(checked.a.seatId,checked.mapping,terminal,start.state), b:sideResult(checked.b.seatId,checked.mapping,terminal,start.state,checked.mirrorOfSeatId !== null),
       mapping:checked.mapping,initial:start.state,terminal,events});
+    // Initial and each ledger element were fully checked and frozen before
+    // scheduling pauses. Check every remaining field now, without regenerating
+    // a whole-battle string. Array ordering and all settlement checks stay below.
+    canonicalContent({...result,initial:null,events:[]});
+    checkedResults.set(result, freezeBattle);
     return result;
   } };
 }
@@ -189,7 +212,8 @@ export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): Bat
 /** Trusted rules output only. No Match mutation, HP clamp, income, receipt or elimination. */
 export function proposeSettlement(result: BattleResult): { readonly a: SideProposal; readonly b: SideProposal } {
   try {
-    canonicalContent(result);
+    const freezeResult = checkedResults.get(result);
+    if (!freezeResult) canonicalContent(result);
     validateDynamicResult(result);
     const stage = getMultiplayerRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
@@ -211,7 +235,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       damage:own.seatId === result.mirrorOfSeatId || result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
       growth:own.growth,events:result.events,...(own.seatId===result.mirrorOfSeatId?{}:{g23Facts:g23BattleFacts(result.terminal,own.seatId===result.a.seatId?'player':'enemy',stage.ordinal,'pvp',result.initial.units)}),
     });
-    return freezeContent({a:side(result.a,result.b),b:side(result.b,result.a)});
+    return (freezeResult ?? freezeContent)({a:side(result.a,result.b),b:side(result.b,result.a)});
   } catch (error) {
     if (error instanceof BattleValidationError) throw error;
     throw new BattleValidationError('invalid-result');
