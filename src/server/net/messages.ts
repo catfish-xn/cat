@@ -200,6 +200,8 @@ export function validateClientCommand(value: unknown): WireCommand {
       return { type: 'choose', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), definitionId: str(value.definitionId, `${w}.definitionId`) };
     case 'anomalyTarget': onlyKeys(value, ['type', 'choiceId', 'generation', 'unitId'], w);
       return { type: 'anomalyTarget', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), unitId: str(value.unitId, `${w}.unitId`, LIMITS.idChars, true) };
+    case 'rerollAugment': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
+      return { type: 'rerollAugment', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
     case 'anomalyReroll': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
       return { type: 'anomalyReroll', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
     case 'carousel-pick': onlyKeys(value, ['type', 'carouselId', 'revision', 'slot'], w);

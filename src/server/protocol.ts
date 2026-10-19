@@ -198,6 +198,7 @@ export type ClientCommand =
   | { readonly type: 'equip'; readonly itemId: string; readonly unitId: string; readonly slot: number }
   | { readonly type: 'choose'; readonly choiceId: string; readonly generation: number; readonly definitionId: string }
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
+  | { readonly type: 'rerollAugment'; readonly choiceId: string; readonly generation: number }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
 export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
 /**
