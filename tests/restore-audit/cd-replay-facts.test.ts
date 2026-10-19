@@ -37,8 +37,8 @@ function until(initial: MatchState, found: (s: MatchState) => boolean): MatchSta
   return state;
 }
 const player = (s: MatchState) => s.combat!.units.find(u => u.team === 'player')!;
-function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[]): MatchState {
-  let state = emptyBoard(reachRound('2-1', true, 5));
+function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[], seed = 5): MatchState {
+  let state = emptyBoard(reachRound('2-1', true, seed));
   state = accepted(grantMechanicGold(state, { receiptId: 'cd-funding', source: 'test', amount: 200 }));
   while (state.level < definitions.length) state = accepted(buyXp(state));
   for (const [i, definitionId] of definitions.entries()) {
@@ -135,9 +135,10 @@ it('G-C07 authenticates burn phase even when the group and task agree', () => {
 });
 
 it('G-C08 rejects invented Experiment takedowns plus matching maximum health', () => {
-  const seed = readG23Progress(reachRound('2-1', true, 5))!.seed;
+  // Seed 1: after the augment pool grew, seed 5's route holds a sampled shield whose check fires before the G23 facts.
+  const seed = readG23Progress(reachRound('2-1', true, 1))!.seed;
   const labs = g23Laboratories(seed, 'player', 3);
-  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }]);
+  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], 1);
   const eligible = (s: MatchState) => s.combat!.units.find(u => u.team === 'player' && u.mechanics?.some(m => m.mechanic === 'g23Experiment' && m.values.mundo > 0)
     && s.combat!.units.some(v => v.team === 'enemy' && !v.alive && !u.g23?.experimentTakedowns.includes(v.id)));
   const legal = until(initial, s => !!eligible(s));
@@ -219,7 +220,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 3 : 42, anomalyDefinitionId });
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId });
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;

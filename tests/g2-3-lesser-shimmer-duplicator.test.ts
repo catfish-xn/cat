@@ -13,16 +13,26 @@ import {readG23MechanismState} from '../src/simulation/g2-3-view';
 import type {G23RewardBundle} from '../src/simulation/g2-3-economy';
 import {advanceG23Economy,decideG23Market,type G23BattleFacts} from '../src/simulation/g2-3-economy';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
+import {augmentAcquisition} from '../src/simulation/augment-acquisition';
+import {P2_ITEM_GRANTS} from '../src/simulation/content/s13-augments-p2';
 
 const shimmer='TFT13_Crime_Consumable_LesserShimmerDuplicator';
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 const ok=<T extends {ok:boolean;state:MatchState}>(r:T):MatchState=>{if(!r.ok)throw Error('Public fixture command refused');return r.state;};
+/** Take the first offer, except augments: their first offer that grants no item, forge or remover. */
+function choose(state:MatchState):MatchState{
+ const c=state.pendingChoice!;
+ const grants=(definitionId:string)=>{const a=augmentAcquisition({definitionId,choiceId:c.choiceId,acquiredRound:state.round});
+  return definitionId in P2_ITEM_GRANTS||a.items.length>0||a.forge!==null||a.remover;};
+ const id=c.kind==='augment'?c.offers.find(id=>!grants(id))??c.offers[0]:c.offers[0];
+ return ok(selectChoice(state,c.choiceId,c.generation,id));
+}
 function preparation(input:MatchState):MatchState{
  let state=input;
  for(let guard=0;guard<20;guard++){
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
-   const c=state.pendingChoice!;state=ok(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+   state=choose(state);
   }else if(state.phase==='settlement')state=ok(nextRound(state,state.round));
   else throw Error(`Unexpected public fixture phase ${state.phase}`);
  }
@@ -120,7 +130,7 @@ function publicMarket():MatchState{
     expect(readG23Progress(state)!.chem.offer).toMatchObject({tier:1,optionId:'TFT13_Crime_LootA4'});
     pendingMarket=state;return state;
    }
-   const c=state.pendingChoice!;state=ok(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+   state=choose(state);
   }
   state=preparation(state);
  }
