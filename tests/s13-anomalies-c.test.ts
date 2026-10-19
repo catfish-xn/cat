@@ -8,6 +8,7 @@ import type { S13Unit } from '../src/simulation/combat-s13-state';
 import { countsG23SurvivorDamage } from '../src/simulation/g2-3-summons';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { packets } from './helpers/replay2-views';
+import { g23BattleFacts } from '../src/simulation/g2-3-settlement';
 
 it('Invisibility every six seconds is unselectable for exactly20ticks and gives one guaranteed critical attack', () => {
   let state = quiet(startAnomaly('Invisibility'));
@@ -48,14 +49,30 @@ it('Scuttle Familiar spawns once with100% resolved HP/armor/MR and a membership 
   expect(crab).toMatchObject({ hp: 500, maxHp: 500, armor: 20, magicResist: 20, anomalySummon: { ownerId: 'p', bornAtTick: 1 } });
   expect(step.events.filter(e => e.type === 'unitSpawned')).toHaveLength(1);
   expect(step.state.status).toBe('running'); expect(countsG23SurvivorDamage(crab)).toBe(false);
+  expect(g23BattleFacts({ ...step.state, result: 'draw' }, 'player', 4, 'pvp', state.units).alliedDeaths).toBe(1);
   expect(UNIT_DEFINITIONS[crab.definitionId]).toMatchObject({ traits: [], summon: { countsTowardPopulation: false } });
   const next = stepCombat(step.state);
   expect(next.events.filter(e => e.type === 'unitSpawned')).toHaveLength(0);
+});
+it('Last Chance carries fractional health loss, expires at eight seconds, and cannot attack on its lethal loss tick', () => {
+  let state = quiet(startAnomaly('EvenInDeath'));
+  state = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, hp: 1 } : { ...u, cooldownTicks: 0 }) }).state;
+  state = quiet(state);
+  for (let i = 0; i < 159; i++) state = stepCombat(state).state;
+  expect(state.tick).toBe(160); expect(state.units.find(u => u.id === 'p')!.hp).toBe(63);
+  const final = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) });
+  expect(final.state).toMatchObject({ tick: 161, status: 'finished', result: 'enemyWin' });
+  expect(final.state.units.find(u => u.id === 'p')).toMatchObject({ hp: 0, alive: false });
+  expect(final.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toHaveLength(0);
+  expect(packets(final.events).filter(p => p.source.definitionId.endsWith('EvenInDeath')).map(p => p.hpDamage)).toEqual([63]);
 });
 it('two untargetable wolves attack at1.0AS for50% owner AD using derived streams, then disappear with owner', () => {
   let state = startAnomaly('WolfFamiliars');
   const wolves = state.units.filter(u => u.anomalySummon?.kind === 'wolf');
   expect(wolves).toHaveLength(2);
+  const cast = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, mana: u.maxMana } : u) });
+  expect(cast.events.filter(e => e.type === 'shieldLayerChanged' && e.layer.source.ownerId === 'p')
+    .every(e => e.type === 'shieldLayerChanged' && e.layer.targetId === 'p')).toBe(true);
   for (const w of wolves) {
     expect(w.baseAttackSpeedBps).toBe(10000); expect(isSelectable(w, 0)).toBe(false);
     expect(countsG23SurvivorDamage(w)).toBe(false); expect(UNIT_DEFINITIONS[w.definitionId].traits).toEqual([]);

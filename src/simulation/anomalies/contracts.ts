@@ -6,6 +6,7 @@ import type { S13Unit } from '../combat-s13-state';
 /** Optional, serializable receipts; exact trusted-input replay authenticates them. */
 export interface AnomalyRuntime {
   attackStream?: { state: number; draws: number };
+  pendingAttacks?: { targetId: string; executeAtTick: number; rootActionSeq: number; raw: number }[];
   absentUntilTick?: number;
   enteredAtTick?: number;
   firstCastTick?: number;
@@ -13,8 +14,9 @@ export interface AnomalyRuntime {
   invisibleUntilTick?: number;
   critReady?: boolean;
   revivedAtTick?: number;
+  decayRemainder?: number;
   consumed?: { unitId: string; health: number; attackDamage: number };
-  orbit?: { radiusMilli: number; hits: Record<string, number> };
+  orbit?: { radiusMilli: number; hits: Record<string, number>; center: import('../board').HexCell; tick: number };
 }
 export interface AnomalySummon {
   readonly kind: 'crab' | 'wolf' | 'mini';

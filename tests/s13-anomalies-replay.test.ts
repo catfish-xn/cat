@@ -8,7 +8,7 @@ import type { RoomState, TwoSidedBattleResult } from '../src/server/room/types';
 import { applyCombatReplayTick } from '../src/simulation/combat-replay-view';
 import { anomalyId } from './helpers/s13-anomalies';
 
-it.each(['ScuttleFamiliar', 'WolfFamiliars', 'DramaticEntrance'])('%s full server projection has no replay error across movement, birth and removal', suffix => {
+it.each(['ScuttleFamiliar', 'WolfFamiliars', 'DramaticEntrance', 'EvenInDeath', 'CenteroftheUniverse', 'DeftHands'])('%s full server projection has no replay error across movement, birth and removal', suffix => {
   const base = createMatch(42), round = getCatalogRoundById('2-1');
   const seat = (definitionId: string, starLevel: 1 | 3, binding: boolean) => ({ ...base, level: 9,
     round: round.ordinal, roundDefinitionId: round.roundId, m8: { ...base.m8, round },

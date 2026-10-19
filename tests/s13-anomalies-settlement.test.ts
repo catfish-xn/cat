@@ -7,6 +7,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import type { MatchState } from '../src/simulation/match-types';
 import { anomalyId } from './helpers/s13-anomalies';
+import { createCombatWithEvents } from '../src/simulation/combat';
 
 const accepted = (result: MultiplayerCommandResult): MatchState => { if (!result.ok) throw Error(result.reason); return result.state; };
 let opening: MatchState | undefined;
@@ -36,6 +37,12 @@ it.each([
     anomalyBinding: { unitId: 'unit-1', definitionId: anomalyId('WolfFamiliars'), choiceId: 'p4', boundRound: 1 } };
   const strategy = buildStrategySnapshot(state);
   expect(strategy.traits.find(t => t.team === 'player' && t.traitId === trait)!.tier).toBe(tier);
+  const combat = createCombatWithEvents({ ...state.preparation, units: [...state.preparation.units,
+    { id: 'enemy', definitionId: 'garen', team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col: 6, row: 0 } } }] },
+    buildStrategySnapshot({ ...state, preparation: { ...state.preparation, units: [...state.preparation.units,
+      { id: 'enemy', definitionId: 'garen', team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col: 6, row: 0 } } }] } }), 'p4-trait-battle').state;
+  expect(combat.units.filter(u => u.anomalySummon?.kind === 'wolf')).toHaveLength(2);
+  expect(combat.strategy!.traits.find(t => t.team === 'player' && t.traitId === trait)!.tier).toBe(tier);
   const facts = { battleId: 'p4-tier', round: state.round, roundKind: 'pvp' as const, result: 'win' as const,
     conquerorTier: trait === 'conqueror' ? tier : 0, conquestTakedowns: [], chemBaronTier: trait === 'chem-baron' ? tier : 0,
     alliedDeaths: 0, rumbleStar: 0 as const, highRollerGold: 0 };

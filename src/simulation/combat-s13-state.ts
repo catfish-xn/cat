@@ -1,5 +1,5 @@
 import { shortestPath, startingRows } from './m8/targeting';
-import { isPresent, isSelectable } from './anomalies/availability';
+import { isPresent, isSelectable, isAttackProxy } from './anomalies/availability';
 import { P4_SOURCE } from './anomalies/source';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { hexDistance, type Board, type HexCell } from './board';
@@ -125,13 +125,13 @@ export function interval(unit: S13Unit, tick: number): number {
 export function byDistance(from: CombatUnit, list: readonly S13Unit[], farthest = false): S13Unit[] {
   return [...list].sort((a, b) => (farthest ? -1 : 1) * (hexDistance(from.cell, a.cell) - hexDistance(from.cell, b.cell)) || compareText(a.id, b.id));
 }
-export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => isPresent(u, unit.mechanismState?.sampledAtTick ?? 0) && u.team !== unit.team); }
+export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => !isAttackProxy(u) && isPresent(u, unit.mechanismState?.sampledAtTick ?? 0) && u.team !== unit.team); }
 export function enemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.team !== unit.team && isSelectable(u, unit.mechanismState?.sampledAtTick ?? 0)); }
 export function neighborsOf(unit: CombatUnit, units: readonly S13Unit[], radius = 1): S13Unit[] {
   return areaEnemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
 }
 export function lowestAlly(unit: CombatUnit, units: readonly S13Unit[], current = false): S13Unit | undefined {
-  return units.filter(u => u.alive && u.team === unit.team).sort((a, b) =>
+  return units.filter(u => u.alive && !isAttackProxy(u) && u.team === unit.team).sort((a, b) =>
     (current ? a.hp - b.hp : a.hp * b.maxHp - b.hp * a.maxHp) || hexDistance(unit.cell, a.cell) - hexDistance(unit.cell, b.cell) || compareText(a.id, b.id))[0];
 }
 export function path(board: Board, from: HexCell, to: HexCell): HexCell[] { return shortestPath(board, from, to); }

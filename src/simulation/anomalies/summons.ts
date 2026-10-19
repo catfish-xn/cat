@@ -1,9 +1,11 @@
 import type { AbilityContext } from '../combat-s13-abilities';
 import type { CombatOrigin } from '../combat-types';
-import { byDistance, enemies, ad, EMPTY_RUNTIME, type S13Unit } from '../combat-s13-state';
+import { byDistance, enemies, ad, applyStatus, EMPTY_RUNTIME, type S13Unit } from '../combat-s13-state';
 import type { AnomalySummon } from './contracts';
 import { nearestLanding, relocate } from './shared';
-import { isPresent } from './availability';
+import { isPresent, isAttackProxy } from './availability';
+import { isSelectable } from './availability';
+import { P4_SOURCE } from './source';
 import { nextRandom } from '../rng';
 import { initializeMechanisms } from '../m8/s13-mechanisms';
 import { compileCombatInitialInputs } from '../combat-initialization';
@@ -11,8 +13,7 @@ import { getUnitStats } from '../unit-stats';
 import { resolveAbility } from '../combat-abilities';
 import { freezeCombatDeclarations } from '../combat-static';
 
-export const isAttackProxy = (unit: Pick<S13Unit, 'anomalySummon'>): boolean =>
-  unit.anomalySummon?.kind === 'wolf' || unit.anomalySummon?.kind === 'mini';
+export { isAttackProxy } from './availability';
 export function appendAnomalySummon(ctx: AbilityContext, owner: S13Unit, source: CombatOrigin,
   kind: AnomalySummon['kind'], ordinal: number, stats: { health: number; armor: number; magicResist: number; attack: number }): S13Unit | undefined {
   const id = JSON.stringify([owner.id, source.instanceId, 'anomaly', kind, ordinal]);
@@ -43,6 +44,22 @@ export function scheduleAnomalyAttacks(ctx: AbilityContext, nextSeq: () => numbe
     const origin = proxy.anomalySummon!, owner = ctx.units.find(u => u.id === origin.ownerId);
     if (!owner || !isPresent(owner, ctx.tick)) continue;
     relocate(ctx, proxy, owner.cell);
+    if (origin.kind === 'mini') {
+      const state = proxy.anomalyState!, due = (state.pendingAttacks ?? []).filter(t => t.executeAtTick <= ctx.tick);
+      state.pendingAttacks = (state.pendingAttacks ?? []).filter(t => t.executeAtTick > ctx.tick);
+      for (const task of due) {
+        const target = ctx.units.find(u => u.id === task.targetId && u.team !== owner.team && isSelectable(u, ctx.tick));
+        if (!target) continue; // Frozen target; never switch a projectile to another enemy.
+        const draw = nextRandom(state.attackStream!.state); state.attackStream!.state = draw.state; state.attackStream!.draws++;
+        proxy.runtime.attackCount++;
+        ctx.packets.push({ source: { ...origin.source, ownerId: proxy.id, instanceId: proxy.id }, targetId: target.id,
+          raw: task.raw, damageType: 'physical', delivery: 'attack-extra', critEligibility: 'never', critical: false,
+          actionSeq: nextSeq(), rootActionSeq: task.rootActionSeq, ordinal: origin.ordinal, area: false, triggeringCastActionSeq: null });
+      }
+      continue;
+    }
+    proxy.attackDamage = Math.floor(ad(owner) * Math.round(P4_SOURCE.WolfFamiliars.values.PercentAD * 10000) / 10000);
+    proxy.attackDamageBase = proxy.attackDamage;
     if (origin.kind !== 'wolf' || proxy.cooldownTicks > 0) continue;
     const eligible = enemies(owner, ctx.units), target = eligible.find(u => u.id === owner.targetId) ?? byDistance(owner, eligible)[0];
     if (!target) continue;
@@ -53,9 +70,15 @@ export function scheduleAnomalyAttacks(ctx: AbilityContext, nextSeq: () => numbe
     proxy.runtime.attackCount++; proxy.cooldownTicks = 20; proxy.targetId = target.id;
     ctx.events.push({ type: 'attack', tick: ctx.tick, attackerId: proxy.id, targetId: target.id });
     ctx.packets.push({ source: { ...origin.source, ownerId: proxy.id, instanceId: proxy.id }, targetId: target.id,
-      raw: Math.floor(ad(owner) * 5000 / 10000), damageType: 'physical', delivery: 'basic-attack',
+      raw: proxy.attackDamage, damageType: 'physical', delivery: 'basic-attack',
       critEligibility: 'never', critical: false, actionSeq: seq, ordinal: 0, area: false, triggeringCastActionSeq: null });
   }
+}
+export function recordAnomalyProxyHit(ctx: AbilityContext, proxy: S13Unit | undefined, target: S13Unit, seq: number): void {
+  if (proxy?.anomalySummon?.kind !== 'mini' || (ctx.virtualHp?.get(target.id) ?? target.hp) <= 0) return;
+  const source = { ...proxy.anomalySummon.source, ownerId: proxy.id, instanceId: proxy.id };
+  applyStatus(target, source, 'resistanceFlat', -P4_SOURCE.DeftHands.values.ArmorReduction, 1201 - ctx.tick,
+    ctx.tick, ctx.events, true, 'armor:' + JSON.stringify([seq, proxy.anomalySummon.ordinal, target.id]));
 }
 export function removeBoundAnomalySummons(ctx: AbilityContext): string[] {
   const removed: string[] = [];

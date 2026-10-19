@@ -11,13 +11,16 @@ export const evenInDeath: AnomalyModule = {
     const state = unit.anomalyState ??= {};
     if (state.revivedAtTick !== undefined) return;
     state.revivedAtTick = ctx.tick;
+    state.decayRemainder = 0;
     unit.hp = unit.maxHp;
     ctx.events.push({ type: 'unitRevived', tick: ctx.tick, unitId: unit.id, source, hp: unit.hp });
   },
   tick(ctx, unit, source, nextSeq) {
     const at = unit.anomalyState?.revivedAtTick;
     if (at === undefined || ctx.tick <= at || (ctx.tick - at) % 20) return;
-    const raw = Math.floor(unit.maxHp * v.PercentHealthLoss), loss = Math.min(unit.hp, raw), seq = nextSeq();
+    const numerator = unit.maxHp * Math.round(v.PercentHealthLoss * 10000) + (unit.anomalyState!.decayRemainder ?? 0);
+    const raw = Math.floor(numerator / 10000), loss = Math.min(unit.hp, raw), seq = nextSeq();
+    unit.anomalyState!.decayRemainder = numerator % 10000;
     // Unshielded health loss: no offensive, healing or equipment callbacks.
     const partial: DamageContext = { source: asSource(source), targetId: unit.id, damageType: 'true',
       delivery: 'equipment-proc', critEligibility: 'never', actionSeq: seq, rootActionSeq: seq,

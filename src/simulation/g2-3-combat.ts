@@ -85,7 +85,7 @@ export function settleG23ExperimentKills(ctx:AbilityContext,killed:ReadonlyMap<s
 }
 
 export function recordG23Conquest(ctx:AbilityContext,id:string,contributors:readonly string[]):void{
- const victim=ctx.units.find(u=>u.id===id);if(!victim||victim.definitionId.startsWith('g23-'))return;
+ const victim=ctx.units.find(u=>u.id===id);if(!victim||victim.anomalySummon||victim.definitionId.startsWith('g23-'))return;
  for(const u of ctx.units.filter(u=>contributors.includes(u.id)&&u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'))){
   const ids=g23State(u).conquestTakedowns;if(!ids.includes(id))ids.push(id);
  }

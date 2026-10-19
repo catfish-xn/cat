@@ -3,16 +3,10 @@ import { hexDistance, sameCell } from '../board';
 import type { CombatUnit } from '../combat-types';
 import type { AbilityContext } from '../combat-s13-abilities';
 import type { S13Unit } from '../combat-s13-state';
-import type { ChoiceDefinition, Effect } from '../strategy-types';
-import { P4_SOURCE } from './source';
 import { isPresent } from './availability';
 import { effectiveStatuses } from '../m8/status';
 
-export function definition(name: keyof typeof P4_SOURCE, effects: readonly Effect[] = []): ChoiceDefinition {
-  const d = P4_SOURCE[name];
-  return { id: d.id, name: d.name, description: d.description, effects: [...effects,
-    { kind: 'mechanic', mechanic: 's13Anomaly', values: { enabled: 1 } }] };
-}
+export { definition } from './definitions';
 export const cells = (board: Board): HexCell[] => Array.from({ length: board.rows }, (_, row) =>
   Array.from({ length: board.columns }, (_, col) => ({ col, row }))).flat();
 export const cellOrder = (a: HexCell, b: HexCell): number => a.row - b.row || a.col - b.col;

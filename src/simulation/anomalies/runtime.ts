@@ -40,3 +40,6 @@ export function takedownAnomalies(ctx: AbilityContext, killed: ReadonlyMap<strin
 export function deathAnomalies(ctx: AbilityContext): void {
   for (const unit of [...ctx.units].filter(u => u.alive && u.hp === 0)) each(unit, (m, source) => m.death?.(ctx, unit, source));
 }
+export function attackAnomaly(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): void {
+  each(unit, (m, source) => m.attack?.(ctx, unit, target, seq, source));
+}

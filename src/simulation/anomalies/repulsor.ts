@@ -4,7 +4,7 @@ import { hexDistance } from '../board';
 import { P4_SOURCE } from './source';
 const v = P4_SOURCE.Repulsor.values;
 export const repulsor: AnomalyModule = {
-  definition: definition('Repulsor', [{ kind: 'attackSpeedBps', bps: Math.round(v.BonusAS * 10000) }]),
+  definition: definition('Repulsor'),
   cast(ctx, unit, target) {
     const distance = hexDistance(unit.cell, target.cell);
     if (distance > v.KnockbackRange || !canDisplace(target, ctx.tick)) return;
