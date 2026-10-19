@@ -1,3 +1,4 @@
+import { p2Bonus } from '../s13-augments-p2-combat';
 import { g23FormStats } from '../g2-3-forms';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { M5_UNIT_DEFINITIONS } from '../units';
@@ -27,11 +28,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   // G2-4b: health of items gained during combat is part of the basis from their grant on.
   const granted = grantedMaxHpBasis(unit);
   const expectedBasis = { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.itemSummon?.formCell.row ?? unit.startingCell?.row ?? unit.cell.row).health,
-    flat: granted.flat+(unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
+    flat: p2Bonus(unit,'health')+granted.flat+(unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
     bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0)+granted.bps, bonusBps: 0 };
   if(unit.itemSummon?.kind==='mirror'){
     expectedBasis.base=unit.itemSummonOpeningMaxHp!;expectedBasis.bps=granted.bps;
-    expectedBasis.flat=granted.flat+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0);
+    expectedBasis.flat=p2Bonus(unit,'health')+granted.flat+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0);
   }
   expectedBasis.flat+=(unit.itemMogulHits?.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0);
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
@@ -49,6 +50,10 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           check(owner.team !== unit.team && c.appliedAtTick > 0 && c.appliedAtTick <= tick
             && owner.triggerLedger?.runtimes.some(r => r.source.definitionId === c.source.definitionId && r.source.instanceId === c.source.instanceId
               && r.source.effectIndex <= c.source.effectIndex && c.source.effectIndex < r.source.effectIndex + 2 && r.triggerCount > 0 && r.startsAtTick <= c.appliedAtTick), 'augment attack status receipt');
+        } else if (c.source.sourceKind === 'augment' && ['piercing-lotus-i','piercing-lotus-ii'].includes(c.source.definitionId)) {
+          const owner=units.find(u=>u.id===c.source.ownerId)!;
+          const d=owner.mechanismDefinitions?.eventTriggers?.find(t=>t.id==='lotus-critical'&&t.source.effectIndex<=c.source.effectIndex&&c.source.effectIndex<t.source.effectIndex+t.effects.length);
+          check(owner.team!==unit.team&&d&&owner.mechanics?.some(m=>m.mechanic==='s13P3'&&m.source.definitionId===c.source.definitionId)&&c.expiresAtTick===c.appliedAtTick+60&&c.appliedAtTick>0&&c.appliedAtTick<=tick&&owner.triggerLedger?.runtimes.some(r=>canonicalSource(r.source)===canonicalSource(d.source)&&r.triggerCount>0&&r.startsAtTick<=c.appliedAtTick),'P3 lotus critical receipt');
         } else if (c.source.sourceKind === 'augment') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
           const m = owner.mechanics?.find(m => canonicalSource(asSource(m.source)) === canonicalSource(c.source));
@@ -157,7 +162,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         continue;
       }
     }
-    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'):undefined;
+    const declared=(['item','trait','anomaly'].includes(shield.source.sourceKind)||shield.source.sourceKind==='augment'&&shield.source.definitionId==='defense-call')?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'):undefined;
     if(declared) {
       check(same(declared.effect,grant), 'declared shield grant');
       validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);

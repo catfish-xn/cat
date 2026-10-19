@@ -1,4 +1,5 @@
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
+import {drainP2Gifts} from './s13-augments-p2-grants';
 import {transferUpgradeResources} from './upgrades';
 import type {MatchState,MatchEvent,MatchFailure} from './match-types';
 import type {UnitLootPolicy} from './loot-runtime';
@@ -36,7 +37,7 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
 }
 /** Escrow only unresolved item selections and bench-full heroes. A pool-empty hero commits a gold receipt. */
 export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
- let state=initial;const p=readG23Progress(state);if(!p)return state;
+ let state=drainP2Gifts(initial,policy);const p=readG23Progress(state);if(!p)return state;
  for(const bundle of p.rewards)for(const atom of g23RewardAtoms(bundle,p.seed)){
   if(atom.options.length>1&&atom.kind!=='duplicator')continue;
   while(readG23Progress(state)!.rewardClaims.filter(c=>c.atomId===atom.id).length<atom.quantity){

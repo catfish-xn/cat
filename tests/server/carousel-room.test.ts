@@ -432,14 +432,15 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
       death ??= { state, afterCarousel: opened.at(-1)!, fightsSinceCarousel };
     });
     room.start();
-    // s0 stays a connected human that sells everything it did not get from a carousel, so it loses every fight while keeping
-    // its picks (the deadline picks for it as `timeout`); s1–s3 are taken over, so they are picked for when released.
+    // s0 stays connected and retains the timeout carousel picks through 5-4. From 5-5 it sells the older picks,
+    // keeping the latest pick for the elimination/pool-return assertion. s1–s3 use takeover picks.
     for (const seatId of ['s1', 's2', 's3']) { room.setConnected(seatId, false); expect(room.takeOver(seatId)).toBe(true); }
     const prepared = new Set<string>();
     for (let fired = 0; fired < 200_000 && room.state.phase !== 'ended'; fired++) {
       if (room.state.phase === 'preparation' && seat('s0').alive && !prepared.has(room.state.roundId)) {
         prepared.add(room.state.roundId);
-        const picks = new Set(seat('s0').match.carousel!.receipts.map(receipt => receipt.unitId));
+        const receipts = seat('s0').match.carousel!.receipts;
+        const picks = new Set((room.state.roundId >= '5-5' ? receipts.slice(-1) : receipts).map(receipt => receipt.unitId));
         for (const unit of unitsOf(room, 's0').filter(candidate => !picks.has(candidate.id))) expect(room.handle('s0', { type: 'sell', unitId: unit.id }).ok).toBe(true);
       }
       if (!clock.runNext()) break;

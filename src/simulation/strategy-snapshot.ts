@@ -1,3 +1,4 @@
+import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
 import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
@@ -10,6 +11,7 @@ import { modifier,stat,trigger } from './content/item-programs';
 import { g23FormStats } from './g2-3-forms';
 import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-programs';
 import { compileAugmentEffect } from './augment-effects';
+import { p2ItemDefinition, p2SupportDeclaration, p2AugmentProgram } from './s13-augments-p2-strategy';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram, type ItemProgram } from './m8/item-program';
 import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
@@ -73,7 +75,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
   if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
   const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
-    held, strategyStage(state.round));
+    held, strategyStage(state.round),(holder,item,declaration)=>holder.team==='player'?p2SupportDeclaration(declaration,item.definition.id,state):declaration);
 
   const shrouds=equipment.flatMap(item=>{
     const definition=catalog.items[item.definitionId];
@@ -97,7 +99,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:stageProgram(definition.combatProgram,state.round)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:p3ItemProgram(definition.id,stageProgram(definition.combatProgram,state.round),unit.team==='player'?state.augments.map(a=>a.definitionId):[],strategyStage(state.round))});
     };
     // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
     const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
@@ -112,17 +114,19 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.team === 'player') {
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
-        const definition = lookup(catalog.items, conversions.get(item.id) ?? item.definitionId);
+        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
-        const definition = lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId);
+        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId),state);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
+        const program=p2AugmentProgram(augment.definitionId);
+        if(program)itemPrograms.push({source:{ownerId:unit.id,sourceKind:'augment',definitionId:augment.definitionId,instanceId:augment.choiceId,effectIndex:65536,parentItemInstanceId:null},program});
         sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
           if (effect.kind !== 'mechanic') return [effect];
           if (effect.mechanic === 'investment') return [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }];
@@ -173,7 +177,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
     }
     for(const m of resolved.mechanics ?? []) {
-      const program=m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
+      const program=m.mechanic==='s13P3'?p3Program(m.source.definitionId,strategyStage(state.round)):m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
       if(m.mechanic==='g23Anomaly'){
         const conversion=g23ConversionProgramValues(m.source.definitionId,resolved.stats.armor,resolved.stats.magicResist);
         if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});

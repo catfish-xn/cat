@@ -97,6 +97,17 @@ export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_ScuttleFamiliar", "en": "Scuttle Familiar", "zh": "真的会蟹"},
   {"apiName": "TFT13_GoopBuff_UnstoppableForce", "en": "Unstoppable Force", "zh": "势不可挡"},
   {"apiName": "TFT13_GoopBuff_WolfFamiliars", "en": "Wolf Familiars", "zh": "双狼佣兽"},
+  {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
+  {"apiName": "TFT13_GoopBuff_CullTheWeak", "en": "Cull The Weak", "zh": "剔除弱者"},
+  {"apiName": "TFT13_GoopBuff_Stoneskin", "en": "Stoneskin", "zh": "石头皮肤"},
+  // P3 names from the archived 14.24 stringtables.
+  {"apiName": "TFT13_GoopBuff_TheFinisher", "en": "The Finisher", "zh": "终结者"},
+  {"apiName": "TFT13_GoopBuff_TouchofFrost", "en": "Touch of Frost", "zh": "冰霜触摸"},
+  {"apiName": "TFT13_GoopBuff_Fireball", "en": "Fireball", "zh": "火球"},
+  {"apiName": "TFT13_GoopBuff_Dragonsoul", "en": "Dragonsoul", "zh": "龙魂"},
+  {"apiName": "TFT13_GoopBuff_NothingWasted", "en": "Nothing Wasted", "zh": "绝不浪费"},
+  {"apiName": "TFT13_GoopBuff_Thornskin", "en": "Thornskin", "zh": "荆棘满途"},
+  {"apiName": "TFT13_GoopBuff_Knockout", "en": "Knockout", "zh": "地下拳王"},
 ];
 /**
  * Radiant (光明) version of each of the 36 completed items, keyed by the base item apiName. Five base items use an older
