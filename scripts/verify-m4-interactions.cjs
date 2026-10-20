@@ -97,7 +97,6 @@ module.exports = async function verifyInteractions({ page, context, read, click,
     return snapshot.state;
   }
   async function itemPoint(id = 'item-1') {
-    await click('panel:items');
     await page.locator(`[data-debug="item:${id}"]`).scrollIntoViewIfNeeded();
     return (await read()).bounds[`item:${id}`];
   }
@@ -170,30 +169,6 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       await page.mouse.up(); await sameState(sold, 'late release cannot resurrect a sold unit');
       await record('unit-drag-E-sale-late-release', beforeFailure);
 
-      // Real keyboard activation can buy a shop card while a mouse owns a
-      // dragged unit. The second Mystic purchase consumes the dragged copy.
-      await reset(); await click('panel:units');
-      assert.equal((await state()).shop.slots[0].definitionId, 'mystic');
-      assert.equal((await state()).shop.slots[2].definitionId, 'mystic');
-      await click('mobile:buy-0');
-      await page.locator('[data-debug="mobile:buy-2"]').scrollIntoViewIfNeeded();
-      const mergeDrag = await startUnitDrag('unit-6');
-      let focusedShop = false;
-      for (let attempt = 0; attempt < 40; attempt++) {
-        await page.keyboard.press('Tab');
-        focusedShop = await page.evaluate(() => document.activeElement?.getAttribute('data-debug') === 'mobile:buy-2');
-        assert.deepEqual((await read()).gesture, mergeDrag.gesture, 'keyboard shop navigation preserves the unit owner');
-        if (focusedShop) break;
-      }
-      assert(focusedShop, 'ordinary Tab navigation reaches the second Mystic offer');
-      await page.keyboard.press('Enter');
-      const merged = await state();
-      assert(!merged.preparation.units.some(unit => unit.id === 'unit-6'));
-      assert.equal(merged.preparation.units.find(unit => unit.id === 'unit-3').starLevel, 2);
-      assert.equal((await read()).gesture, null); assert.equal((await read()).draggingId, null);
-      await page.mouse.up(); await sameState(merged, 'late release cannot recreate a merge-consumed unit');
-      await record('unit-drag-shop-buy-merge-removes-owner', mergeDrag.state, { consumedId: 'unit-6', survivorId: 'unit-3', input: 'native Tab / Enter with mouse held' });
-
       await reset();
       let snapshot = await read(), token = snapshot.tokens.find(unit => unit.id === 'unit-1');
       await page.mouse.click(token.screenX, token.screenY);
@@ -241,6 +216,31 @@ module.exports = async function verifyInteractions({ page, context, read, click,
         scrollBefore: scrollTop, scrollAfter: await page.locator('#strategy-root').evaluate(node => node.scrollTop), input: 'trusted mouse wheel',
       });
       await resizeViewport(page, viewport);
+
+      // Real keyboard activation can buy a shop card while a mouse owns a
+      // dragged unit. The second Mystic purchase consumes the dragged copy.
+      await reset(); await click('panel:units');
+      assert.equal((await state()).shop.slots[0].definitionId, 'mystic');
+      assert.equal((await state()).shop.slots[2].definitionId, 'mystic');
+      await click('mobile:buy-0');
+      await page.locator('[data-debug="mobile:buy-2"]').scrollIntoViewIfNeeded();
+      const mergeDrag = await startUnitDrag('unit-6');
+      let focusedShop = false;
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await page.keyboard.press('Tab');
+        focusedShop = await page.evaluate(() => document.activeElement?.getAttribute('data-debug') === 'mobile:buy-2');
+        assert.deepEqual((await read()).gesture, mergeDrag.gesture, 'keyboard shop navigation preserves the unit owner');
+        if (focusedShop) break;
+      }
+      assert(focusedShop, 'ordinary Tab navigation reaches the second Mystic offer');
+      await page.keyboard.press('Enter');
+      const merged = await state();
+      assert(!merged.preparation.units.some(unit => unit.id === 'unit-6'));
+      assert.equal(merged.preparation.units.find(unit => unit.id === 'unit-3').starLevel, 2);
+      assert.equal((await read()).gesture, null); assert.equal((await read()).draggingId, null);
+      await page.mouse.up(); await sameState(merged, 'late release cannot recreate a merge-consumed unit');
+      await record('unit-drag-shop-buy-merge-removes-owner', mergeDrag.state, { consumedId: 'unit-6', survivorId: 'unit-3', input: 'native Tab / Enter with mouse held' });
+
 
       // Enter is a real activation while the pointer still owns the old choice
       // card. Releasing that now-detached card must not activate anything below.
@@ -315,18 +315,23 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       // A touchscreen laptop can produce touch and mouse concurrently. The
       // second input must not equip/combine a selection owned by the first.
       await resizeViewport(page, { width: 1440, height: 1000 });
-      await click('panel:items'); await click('item:item-1'); await click('item:item-2');
+      await click('item:item-1'); await click('item:item-2');
       snapshot = await read();
       const mixedBounds = snapshot.bounds['item:item-1'];
       const mixed = { id: 5, x: mixedBounds.centerX, y: mixedBounds.centerY };
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [mixed] });
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...mixed, x: mixed.x - 10 }] });
       const mixedOwner = (await read()).gesture; assert.equal(mixedOwner?.id, 'item-1');
-      for (const name of ['equipment:unit-1:0', 'combine-items']) {
-        const bounds = (await read()).bounds[name];
-        await page.mouse.click(bounds.centerX, bounds.centerY);
+      for (const name of ['unit-drop', 'component-drop']) {
+        const current = await read(), other = current.bounds['item:item-2'], unit = current.tokens.find(unit => unit.id === 'unit-1');
+        const target = name === 'unit-drop' ? { x: unit.screenX, y: unit.screenY } : { x: mixedBounds.centerX, y: mixedBounds.centerY };
+        await page.mouse.move(other.centerX, other.centerY); await page.mouse.down();
+        await page.mouse.move(target.x, target.y, { steps: 6 }); await page.mouse.up();
         await sameState(before, `mixed pointer ${name} must not take the active item`);
         assert.deepEqual((await read()).gesture, mixedOwner);
+        // Removed equip/combine controls cannot be activated by Enter. Blur the
+        // card on the board, then prove no keyboard transaction steals the owner.
+        await page.mouse.click(unit.screenX, unit.screenY);
         await page.keyboard.press('Enter');
         await sameState(before, `keyboard ${name} must not take the active item`);
         assert.deepEqual((await read()).gesture, mixedOwner);
@@ -346,7 +351,6 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       await record('touch-viewport-cancel-late-release', before, { viewport: { width: 844, height: 390 } });
 
       await resizeViewport(page, { width: 390, height: 844 });
-      await click('panel:items');
       const heading = page.locator('.item-panel > h3').first(); await heading.scrollIntoViewIfNeeded();
       const headingBounds = await heading.boundingBox();
       const bodyScroll = await page.evaluate(() => window.scrollY), scrollState = await state();

@@ -1,4 +1,5 @@
-/* Full ordinary Match via trusted Chromium input; the only browser interface is read-only. */
+const { installEquipmentCommands, equipmentCommand } = require('./equipment-input.cjs');
+/* Full ordinary Match: native Chromium input; equipment setup uses existing application command callbacks. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');const path=require('node:path');
 const {spawn,execFileSync}=require('node:child_process');const {chromium}=require('playwright');
@@ -38,8 +39,8 @@ async function input(c){
  case 'buyXp':if(touch)await click('mobile:buy-xp');else await page.keyboard.press('f');break;
  case 'sell':if(touch){await tab('units');await click(`mobile:unit:${c.id}`);await click('mobile:sell');}else{const t=(await read()).tokens.find(t=>t.id===c.id);assert(t);await page.mouse.move(t.screenX,t.screenY);await page.keyboard.press('e');}break;
  case 'deploy':if(touch){await tab('units');await click(`mobile:unit:${c.id}`);await click(c.target.kind==='board'?`deploy:${c.target.cell.col},${c.target.cell.row}`:`mobile:bench:${c.target.slot}`);}else await drag(c.id,c.target);break;
- case 'combine':await tab('items');for(const id of c.ids)await click(`item:${id}`);await click('combine-items');break;
- case 'equip':await tab('items');await click(`item:${c.itemId}`);await click(`equipment:${c.unitId}:${c.slot}`);break;
+ case 'combine':await equipmentCommand(page,'combine',...c.ids);break;
+ case 'equip':await equipmentCommand(page,'equip',c.itemId,c.unitId,c.slot);break;
  case 'target':await click(`anomaly-target:${c.unitId}`);break;
  case 'select':await click(`choice:${c.definitionId}`);break;
  case 'anomalyReroll':if(touch)await click('anomaly-reroll');else{const before=await read(),b=before.bounds[`choice:${before.state.pendingChoice.offers[0]}`];await page.mouse.move(b.centerX,b.centerY);await page.mouse.down();for(let i=0;i<3;i++)await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('data-debug')),'anomaly-reroll');await page.keyboard.press('Enter');const rerolled=(await read()).state;assert.equal(rerolled.pendingChoice.generation,before.state.pendingChoice.generation+1);await page.mouse.up();assert.deepEqual((await read()).state,rerolled,'old offer pointer release cannot choose after reroll');}break;
@@ -92,7 +93,7 @@ async function newContext(mobile=false){touch=mobile;context=await browser.newCo
  // Explicit milestone PNGs retain the canvas; trace keeps native actions and DOM snapshots.
  await context.tracing.start({screenshots:false,snapshots:true});
 
- page=await context.newPage();page.on('pageerror',e=>report.errors.push(`pageerror:${e.message}`));page.on('console',e=>{report.console.push({type:e.type(),text:e.text()});if(e.type()==='error')report.errors.push(`console:${e.text()}`);});await page.goto(url);await until(s=>s.state.phase==='preparation');
+ page=await context.newPage();page.on('pageerror',e=>report.errors.push(`pageerror:${e.message}`));page.on('console',e=>{report.console.push({type:e.type(),text:e.text()});if(e.type()==='error')report.errors.push(`console:${e.text()}`);});await installEquipmentCommands(page);await page.goto(url);await until(s=>s.state.phase==='preparation');
  // Registered after the product listener: this same native dispatch must already see the committed state.
  await page.evaluate(()=>{window.__M4_KEYS__=[];window.addEventListener('keydown',e=>{if(['KeyD','KeyF','KeyE'].includes(e.code))window.__M4_KEYS__.push({code:e.code,repeat:e.repeat,trusted:e.isTrusted,timeStamp:e.timeStamp,observedAt:performance.now(),state:window.__CAT_DEBUG__.read().state});});});}
 async function desktopEdges(){
@@ -106,7 +107,7 @@ async function desktopEdges(){
  const keys=await page.evaluate(()=>window.__M4_KEYS__);assert(keys.every(k=>k.trusted));assert(keys.some(k=>k.repeat));fs.writeFileSync(path.join(output,'inputs.json'),JSON.stringify(keys));
  report.keydowns=keys.length;await checkpoint('native-repeat-exhaustion');
  // Reset through normal UI for item drag/input conflicts; these supplement the completed full Match.
- await click('debug-new-match');await tab('items');await click('item:item-1');
+ await click('debug-new-match');await click('item:item-1');
  const item=page.locator('[data-debug="item:item-1"]');await item.scrollIntoViewIfNeeded();let snap=await read(),b=snap.bounds['item:item-1'];
  await page.mouse.move(b.centerX,b.centerY);await page.mouse.down();await page.mouse.move(b.centerX-20,b.centerY+8,{steps:3});
  assert.equal((await read()).gesture?.kind,'item');const original=(await read()).state;await page.keyboard.press('e');assert.deepEqual((await read()).state,original);
@@ -122,8 +123,8 @@ async function desktopEdges(){
  for(const stream of[server.stdout,server.stderr])stream.on('data',data=>fs.appendFileSync(path.join(output,'server.log'),data));
  for(let i=0;i<100;i++){if(server.exitCode!==null)throw Error(`Server exited ${server.exitCode}`);try{if((await fetch(url)).ok)break;}catch{}if(i===99)throw Error('Server failed');await delay(100);}
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});report.chromium=browser.version();
- await newContext();await play();await desktopEdges();await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'desktop-trace.zip')});await context.close();
- await newContext(true);await play(8);await checkpoint('touch-two-anomaly-battles');await page.setViewportSize({width:844,height:390});await checkpoint('touch-landscape');await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'touch-trace.zip')});await context.close();context=null;
+ await newContext();await play();await desktopEdges();await context.tracing.stop({path:path.join(output,'desktop-trace.zip')});await context.close();await newContext();await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'desktop-interactions-trace.zip')});await context.close();
+ await newContext(true);await play(8);await checkpoint('touch-two-anomaly-battles');await page.setViewportSize({width:844,height:390});await checkpoint('touch-landscape');await context.tracing.stop({path:path.join(output,'touch-trace.zip')});await context.close();await newContext(true);await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'touch-interactions-trace.zip')});await context.close();context=null;
  await verifyInputBoundaries({browser,url,report,output});
  assert.deepEqual(report.errors,[]);report.passed=true;
 }catch(error){report.failure=error.stack;console.error(error);process.exitCode=1;try{if(page&&!page.isClosed())await page.screenshot({path:path.join(output,'failure.png')});if(context)await context.tracing.stop({path:path.join(output,'failure-trace.zip')});}catch{}

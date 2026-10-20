@@ -11,7 +11,7 @@
  * Screenshots go to artifacts/c7/ (not committed). CHROMIUM overrides the browser path.
  */
 import { writeFileSync } from 'node:fs';
-import { click, collectErrors, joinOnline, launchBrowser, onWire, onlineUrl, outDir, read, startGameServer, startVite, stopAll, strictCheck as check, text, waitRead } from './harness.mjs';
+import { click, equipmentCommand, collectErrors, joinOnline, launchBrowser, onWire, onlineUrl, outDir, read, startGameServer, startVite, stopAll, strictCheck as check, text, waitRead } from './harness.mjs';
 import { runSwapChecks, swapReady } from './swap-checks.mjs';
 
 const OUT = outDir('c7');
@@ -120,23 +120,19 @@ async function main() {
     }
 
     /* ---------------- combine in 2-1 ---------------- */
-    await click(page, 'panel:items');
     await page.waitForTimeout(200);
     let s = await read(page);
     const inventory = s.state.items.filter(i => i.location.kind === 'inventory');
     console.log(`2-1 inventory: ${inventory.map(i => `${i.id}:${i.definitionId}`).join(', ')}`);
     if (inventory.length >= 2) {
-      for (const item of inventory.slice(0, 2)) {
-        const box = await page.locator(`[data-debug="item:${item.id}"]`).boundingBox();
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.up();
-        await page.waitForTimeout(150);
-      }
-      const label = await text(page, '[data-debug="combine-items"]');
-      const disabled = await page.evaluate(() => document.querySelector('[data-debug="combine-items"]')?.disabled ?? null);
-      const selection = await text(page, '.combine-selection');
+      const preview = await page.evaluate(async ids => {
+        const { previewCombine } = await import('/src/simulation/item-selectors.ts');
+        return previewCombine(window.__CAT_DEBUG__.read().state, ...ids);
+      }, inventory.slice(0, 2).map(item => item.id));
+      const label = 'public combine command', disabled = !preview.allowed, selection = inventory.slice(0, 2).map(item => item.id).join(' + ');
       await page.screenshot({ path: `${OUT}/2-1-5-combine-selected.png` });
       const before = receipts.length;
-      await click(page, 'combine-items');
+      await equipmentCommand(page, 'combine', ...inventory.slice(0, 2).map(item => item.id));
       await page.waitForTimeout(1500);
       s = await read(page);
       report.combine = { label, disabled, selection, receipts: receipts.slice(before), inventoryBefore: inventory.map(i => i.definitionId), inventoryAfter: s.state.items.filter(i => i.location.kind === 'inventory').map(i => i.definitionId), status: await text(page, '.panel-status') };

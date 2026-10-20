@@ -1,3 +1,4 @@
+const { installEquipmentCommands } = require('./equipment-input.cjs');
 /* UR-U3-07: production preview, real app, native inputs, authoritative catalogue.
  * Inventory/equipped popovers use a public seed-42 route imported through the save UI.
  * Run after npm run build. CHROMIUM_PATH and U3_STATIC_EVIDENCE_DIR are optional.
@@ -27,8 +28,8 @@ const output = path.resolve(process.env.U3_STATIC_EVIDENCE_DIR || 'artifacts/m8-
     page.on('pageerror', error => report.errors.push(error.message));
     page.on('response', response => { if (response.status() >= 400) report.errors.push(`${response.status()} ${response.url()}`); });
     page.on('dialog', dialog => dialog.accept());
-    await h.boot(page, app.url); await h.importFixture(page, fixture);
-    await page.locator(h.debug('panel:items')).click();
+    await installEquipmentCommands(page); await h.boot(page, app.url); await h.importFixture(page, fixture);
+
     const before = await h.read(page);
     const unchanged = async () => { const after = await h.read(page); assert.deepEqual(after.state, before.state); assert.deepEqual(after.combatEvents, before.combatEvents); };
     async function check(name, fn) {
@@ -94,8 +95,10 @@ const output = path.resolve(process.env.U3_STATIC_EVIDENCE_DIR || 'artifacts/m8-
     });
     await check('inventory-and-equipped-popovers', async () => {
       const inventory = page.locator('.item-inventory [data-item-def]').first();
-      const equipped = page.locator('[data-equip-unit][data-item-def]').first();
-      assert(await inventory.count(), 'public fixture has inventory'); assert(await equipped.count(), 'public fixture has equipment');
+      const worn = before.state.items.find(item => item.location.kind === 'unit');
+      assert(worn, 'public fixture has equipment');
+      const equipped = page.locator(`[data-codex-item="${worn.definitionId}"]`);
+      assert(await inventory.count(), 'public fixture has inventory'); assert(await equipped.count(), 'equipped definition has a catalogue anchor');
       for (const anchor of [inventory, equipped]) { const id = await anchor.getAttribute('data-item-def'); await description(anchor, id, 'hover'); await description(anchor, id); }
     });
     await check('search-shortcuts-are-read-only', async () => {
@@ -115,7 +118,7 @@ const output = path.resolve(process.env.U3_STATIC_EVIDENCE_DIR || 'artifacts/m8-
     broken.on('pageerror', error => report.errors.push(error.message));
     const sword = assets.find(a => a.kind === 'item' && a.id === 'sword'); let intercepted = 0;
     await broken.route(`**/${sword.path}`, route => { intercepted++; report.expected404.push(route.request().url()); return route.fulfill({ status: 404, body: 'B10 controlled icon failure' }); });
-    await h.boot(broken, app.url); await broken.locator(h.debug('panel:items')).click(); await broken.locator(h.debug('item-codex-toggle')).click();
+    await installEquipmentCommands(broken); await h.boot(broken, app.url);  await broken.locator(h.debug('item-codex-toggle')).click();
     const swordTile = broken.locator('[data-codex-item="sword"]'); await swordTile.scrollIntoViewIfNeeded();
     await broken.waitForFunction(() => { const tile = document.querySelector('[data-codex-item="sword"]'); return tile && !tile.querySelector('img') && tile.querySelector('.item-glyph'); });
     assert(intercepted > 0); assert.equal(await swordTile.locator('.item-glyph').innerText(), [...catalog.find(e => e.id === 'sword').name].slice(0, 2).join(''));

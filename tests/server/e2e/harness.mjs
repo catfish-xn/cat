@@ -12,6 +12,8 @@ import { spawn } from 'node:child_process';
 import { watchServerReplayErrors } from '../../../scripts/replay-error-guard.cjs';
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
+import equipment from '../../../scripts/equipment-input.cjs';
+export const { installEquipmentCommands, equipmentCommand, dragEquipment, unitPoint } = equipment;
 
 export const ROOT = new URL('../../../', import.meta.url).pathname;
 export const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -143,6 +145,7 @@ export function trackCommands(page) {
 }
 /** Opens the lobby at `url`, joins as `name` and (unless `startMatch` is false) presses start. */
 export async function joinOnline(page, url, name, { startMatch = true } = {}) {
+  await equipment.installEquipmentCommands(page);
   await page.goto(url);
   await page.waitForSelector('[data-debug="online:join"]');
   await page.fill('[data-debug="online:name"]', name); await page.click('[data-debug="online:join"]');

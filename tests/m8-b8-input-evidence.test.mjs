@@ -32,11 +32,11 @@ function genuine() {
   }
   const receipt = id => state.m8.loot.receipts.find(r => r.payload.kind === 'item' && r.payload.definitionId === id).grantedItemIds[0];
   const combined = accepted(api.combineItems(state, receipt('bow'), receipt('rod')));
-  steps.push({ name: 'normal-opening-rageblade-recipe', before: state, expected: combined, targets: ['panel:items', `item:${receipt('bow')}`, `item:${receipt('rod')}`, 'combine-items'] });
+  steps.push({ name: 'normal-opening-rageblade-recipe', before: state, expected: combined, command: { type: 'combine', a: receipt('bow'), b: receipt('rod') } });
   const blade = combined.items.find(item => item.definitionId === 'rageblade');
   const lux = combined.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'lux');
   const equipped = accepted(api.equipItem(combined, blade.id, lux.id, 0));
-  steps.push({ name: 'normal-opening-rageblade-equipped', before: combined, expected: equipped, targets: [`item:${blade.id}`, `equipment:${lux.id}:0`] });
+  steps.push({ name: 'normal-opening-rageblade-equipped', before: combined, expected: equipped, drag: { itemId: blade.id, unitId: lux.id } });
   const fielded = accepted(api.deployMatchUnit(equipped, lux.id, { kind: 'board', cell: { col: 3, row: 7 } }));
   steps.push({ name: 'b8-rageblade-lux-deployed', before: equipped, expected: fielded, targets: ['panel:units', `mobile:unit:${lux.id}`, 'deploy:3,7'] });
   const started = api.startMatchCombat(fielded); let fought = accepted(started);
@@ -48,7 +48,10 @@ function genuine() {
   const interactions = steps.map((step, index) => {
     const artifact = `input-${String(index).padStart(2, '0')}.json`;
     fs.writeFileSync(path.join(dir, artifact), JSON.stringify({ name: step.name, before: step.before, expected: step.expected,
-      actual: { state: step.expected, combatEvents: step.events ?? [] }, inputs: clicks(step.targets) }));
+      actual: { state: step.expected, combatEvents: step.events ?? [], tokens: step.drag ? [{ id: step.drag.unitId, owner: step.drag.unitId, visible: true, screenX: 600, screenY: 400 }] : [] },
+      ...(step.command ? { command: step.command, evidenceKind: 'public-command' } : {}),
+      ...(step.drag ? { drop: { unitId: step.drag.unitId, x: 600, y: 400 } } : {}),
+      inputs: step.command ? [] : step.drag ? clicks([`item:${step.drag.itemId}`]).slice(0, 4).map((event, i) => ({ ...event, x: i < 2 ? 100 : 600, y: i < 2 ? 100 : 400 })) : clicks(step.targets) }));
     return { name: step.name, beforeHash: hash(step.before), stateHash: hash(step.expected), artifact };
   });
   const manifest = { interactions, b8RagebladeChain: { roundId: '2-1', luxId: lux.id, ragebladeId: blade.id, combatTicks: fought.combat.tick,
@@ -79,8 +82,8 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
     expect(base.manifest.b8RagebladeChain.currentAttackIntervalTicks).toBeLessThan(base.manifest.b8RagebladeChain.frozenAttackIntervalTicks);
   });
   it('accepts the legal differences of real DOM input: hover events, redraw release target, no click on a non-committing control', () => {
-    const run = variant((m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => {
-      // The real gate's recipe record: item presses end with mouseup on SECTION after the inventory redraw and no click.
+    const run = variant((m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => {
+      // The real gate's drag record: item presses end with mouseup on SECTION after the inventory redraw and no click.
       a.inputs = a.inputs.flatMap(input => input.target.startsWith('item:') && input.type === 'click' ? []
         : input.target.startsWith('item:') && input.type === 'mouseup' ? [{ ...input, target: 'SECTION' }]
           : input.type === 'pointerdown' ? [{ ...input, type: 'pointerout', target: 'CANVAS' }, { ...input, type: 'mouseout', pointerType: null, target: 'CANVAS' }, input] : [input]);
@@ -88,6 +91,11 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
     expect(run).not.toThrow();
   });
   it.each([
+    ['forged combine command', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => { a.command.b = a.command.a; }), /public command identity/],
+    ['combine presented as native input', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => { a.inputs = clicks(['item:forged']); }), /must not claim native input/],
+    ['missing drag release', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.inputs = a.inputs.filter(input => input.type !== 'pointerup'); }), /drag expected pointerup/],
+    ['drag released beside the token', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.inputs.find(input => input.type === 'pointerup').x += 100; }), /release on the equipped unit token/],
+    ['wrong drag destination identity', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.drop.unitId = 'another-unit'; }), /recorded destination unit/],
     ['deleted combat artifact', (m, dir) => fs.rmSync(path.join(dir, combatArtifact(m))), /missing artifact/],
     ['deleted recipe interaction', (m) => { m.interactions = m.interactions.filter((e) => e.name !== 'normal-opening-rageblade-recipe'); }, /route order \(expected normal-opening-rageblade-recipe\)/],
     ['deleted Rageblade events', (m, dir) => edit(dir, combatArtifact(m), a => {
@@ -103,12 +111,12 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
       /input type undefined is not a native mouse event/],
     ['start pressed on the canvas instead of the Start control', (m, dir) => edit(dir, combatArtifact(m), a => { for (const input of a.inputs) input.target = 'CANVAS'; }),
       /pointer operations hit the command's controls/],
-    ['equip operations in the wrong order', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.inputs = [...a.inputs.slice(5), ...a.inputs.slice(0, 5)]
-      .map((input, index) => ({ ...input, time: 1000 + index })); }), /pointer operations hit the command's controls/],
+    ['equip operations in the wrong order', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.inputs = [a.inputs[1], a.inputs[0], ...a.inputs.slice(2)]
+      .map((input, index) => ({ ...input, time: 1000 + index })); }), /drag expected pointerdown/],
     ['touch input substituted for the mouse pick', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs[0].type = 'touchstart'; }),
       /input type touchstart is not a native mouse event/],
-    ['committing click removed', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => { a.inputs = a.inputs.filter(input => input.type !== 'click' || input.target !== 'combine-items'); }),
-      /committing click on combine-items/],
+    ['committing click removed', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs = a.inputs.filter(input => input.type !== 'click'); }),
+      /committing click on mobile:start-combat/],
     // Round-three originals: a click moved ahead of its release with timestamps still increasing, and an
     // extra reroll click appended after the legal operation.
     ['committing click before its release with increasing timestamps', (m, dir) => edit(dir, combatArtifact(m), a => {
@@ -119,7 +127,7 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
       a.inputs.push({ type: 'click', time: a.inputs.at(-1).time + 1, trusted: true, pointerType: 'mouse', target: 'mobile:reroll' }); }),
       /extra committing click on mobile:reroll/],
     ['reroll click between two operations', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => {
-      a.inputs.splice(5, 0, { ...a.inputs[4], target: 'mobile:reroll' }); }), /extra committing click on mobile:reroll/],
+      a.inputs.splice(2, 0, { ...a.inputs[1], type: 'click', pointerType: 'mouse', target: 'mobile:reroll' }); }), /extra committing click on mobile:reroll/],
     ['missing mousedown', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs = a.inputs.filter(input => input.type !== 'mousedown'); }),
       /operation 1 on choice:[^:]+: expected mousedown, got pointerup/],
     ['duplicated release', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs.splice(3, 0, { ...a.inputs[2] }); }),

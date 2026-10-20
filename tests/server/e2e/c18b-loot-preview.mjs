@@ -116,33 +116,43 @@ async function main() {
       if (!remover) { await page.waitForTimeout(100); continue; }
       if (!wearer || !s.state.items.some(item => item.location.kind === 'unit' && item.location.unitId === wearer)) {
         if (!inPreparation(s)) { await page.waitForTimeout(100); continue; }
-        await click(page, 'panel:items'); await page.waitForTimeout(150);
+        await page.waitForTimeout(150);
         const now = await read(page), item = inventory(now.state)[0];
         const unit = mine(now.state).find(entry => entry.location.kind === 'board' && now.tokens.some(token => token.id === entry.id && token.visible));
         if (!item || !unit || !now.strategy.bounds[`item:${item.id}`]) { await page.waitForTimeout(100); continue; }
-        // A click on the card selects it, a click on a slot equips it (C16 path).
-        const card = now.strategy.bounds[`item:${item.id}`]; await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(100);
-        const slot = (await read(page)).strategy.bounds[`equipment:${unit.id}:0`]; if (!slot) continue;
-        await page.mouse.click(slot.centerX, slot.centerY); await page.waitForTimeout(400);
+        // Native item-bench drag to the board token.
+        const card = now.strategy.bounds[`item:${item.id}`], token = now.tokens.find(entry => entry.id === unit.id && entry.visible);
+        if (!token) continue;
+        await page.mouse.move(card.centerX, card.centerY); await page.mouse.down(); await page.waitForTimeout(100);
+        await page.mouse.move(token.screenX, token.screenY, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(400);
         if ((await read(page)).state.items.some(entry => entry.location.kind === 'unit' && entry.location.unitId === unit.id)) wearer = unit.id;
         continue;
       }
       // My battle, early enough that the token still stands when the drag ends.
       if (!(inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 30)) { await page.waitForTimeout(60); continue; }
-      await click(page, 'panel:items'); await page.waitForTimeout(150);
+      await page.waitForTimeout(150);
       const now = await read(page), fighting = new Set(now.combatView?.units.map(unit => unit.id));
       const token = now.tokens.find(entry => entry.owner === wearer && entry.visible && fighting.has(entry.id));
-      const card = now.strategy.bounds[`consumable:${remover.consumableId}`], row = now.strategy.bounds[`equipment:${wearer}:0`];
-      if (!token || !card || !row) { await page.waitForTimeout(60); continue; }
-      // Picking the tool outlines exactly the units the server's consumableTargets allow.
+      const card = now.strategy.bounds[`consumable:${remover.consumableId}`];
+      if (!token || !card) { await page.waitForTimeout(60); continue; }
+      // Public consumable previews agree with the server's allowed target projection.
       await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(120);
-      const outlined = await page.evaluate(() => Array.from(document.querySelectorAll('.equipment-row.consumable-candidate')).map(row => row.dataset.unitId));
       const allowed = now.state.consumableTargets.find(row => row.consumableId === remover.consumableId).targets.filter(entry => entry.allowed && entry.target.kind === 'unit').map(entry => entry.target.unitId);
+      // The server's target projection replaces the removed equipment-row outlines.
+      const outlined = await page.evaluate(async consumableId => {
+        const { previewConsumable } = await import('/src/rendering/online/loot-fields.ts');
+        const state = window.__CAT_DEBUG__.read().state;
+        return state.preparation.units.filter(unit => unit.team === 'player'
+          && previewConsumable(state, consumableId, { kind: 'unit', unitId: unit.id }).ok).map(unit => unit.id);
+      }, remover.consumableId);
       await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(120); // unpick
       const iconsBefore = token.equipped, items = wornBy(now.state, wearer).map(item => item.id), tools = now.state.consumables.length, before = new Set(sent.keys());
       const from = (await read(page)).strategy.bounds[`consumable:${remover.consumableId}`];
       await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();
-      await page.mouse.move(row.centerX, row.centerY, { steps: 8 }); await page.waitForTimeout(80);
+      await page.mouse.move(token.screenX, token.screenY, { steps: 8 }); await page.waitForTimeout(80);
+      const standing = (await read(page)).tokens.find(entry => entry.id === token.id && entry.visible);
+      if (!standing) throw new Error('remover target disappeared during drag');
+      await page.mouse.move(standing.screenX, standing.screenY);
       const hover = await status(page);
       await page.mouse.up();
       let receipt = null; const until = Date.now() + 5_000;
@@ -156,8 +166,8 @@ async function main() {
       used = { round: now.state.roundDefinitionId, wearer, items, hover, receipt, commands, outlined, allowed, iconsBefore, iconsAfter: tokenAfter?.equipped, tools, toolsAfter: after.state.consumables.length, record: record.slice(0, 200) };
       report.remover = used;
       console.log(JSON.stringify(used));
-      check(JSON.stringify([...outlined].sort()) === JSON.stringify([...allowed].sort()), `picking the remover outlines exactly the allowed units (${outlined} vs ${allowed})`);
-      check(hover.includes('拆卸器 →') && hover.includes('将拆下') && !items.some(id => hover.includes(id)), `hovering its equipment row names what will be removed, by item name ("${hover}")`);
+      check(JSON.stringify([...outlined].sort()) === JSON.stringify([...allowed].sort()), `public remover previews name exactly the allowed units (${outlined} vs ${allowed})`);
+      check(hover.includes('拆卸器 →') && hover.includes('将拆下') && !items.some(id => hover.includes(id)), `hovering its unit token names what will be removed, by item name ("${hover}")`);
       check(commands.length === 1 && commands[0].consumableId === remover.consumableId && commands[0].target.kind === 'unit' && commands[0].target.unitId === wearer, `one useConsumable for ${wearer} (${JSON.stringify(commands)})`);
       check(receipt === 'consumable-used', `the receipt is consumable-used (${receipt})`);
       check(items.length > 0 && items.every(id => after.state.items.some(item => item.id === id && item.location.kind === 'inventory')), `the unit's items ${items.join(', ')} are back in the inventory with their ids`);

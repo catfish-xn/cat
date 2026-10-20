@@ -13,7 +13,7 @@
  *            replay keeps playing, and the gold/level chips and the shop cards show the pushed state. From the 2-1
  *            preparation until this check ran, 甲 skips its policy turn to keep the gold for it and sells one bench unit
  *            when the bench is full, so a battle starts with gold, an offer and bench space.
- *   T13-A    a component clicked onto an EMPTY slot of a board unit wearing one loose component (preparation): one equip,
+ *   T13-A    a component dragged onto the token of a board unit wearing one loose component (preparation): one equip,
  *            applied; afterwards the unit wears no loose component and the panel slot + token icons show what the
  *            projection says the unit wears.
  *   C18-A    an item put on a fighting unit during a battle: the panel slot is marked 下场生效, the token keeps its battle
@@ -43,7 +43,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
-import { ROOT, click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
+import { ROOT, click, equipmentCommand, dragEquipment, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
 import { showDragEndpoints } from './c19-drag-geometry.mjs';
 
 const OUT = outDir(process.env.C19_OUT ?? 'c19');
@@ -70,16 +70,20 @@ const cellKey = cell => `${cell.col},${cell.row}`;
 const sorted = list => [...list].sort();
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-/** What the page shows, read from the DOM only. */
+/** DOM displays, plus authoritative slot identities and the token's displayed pending icons. */
 const screen = page => page.evaluate(() => {
   const all = selector => Array.from(document.querySelectorAll(selector));
   const chip = kind => document.querySelector(`.hud-${kind} strong`)?.textContent ?? null;
   return {
-    gold: chip('gold'), level: chip('level'),
+    gold: chip('gold'), level: chip('level'), status: document.querySelector('.panel-status')?.textContent ?? '',
     shop: all('[data-debug^="mobile:buy-"]').filter(node => /^mobile:buy-\d+$/.test(node.dataset.debug)).map(node => ({ slot: Number(node.dataset.debug.slice('mobile:buy-'.length)), name: node.querySelector('.shop-name')?.textContent ?? '', cost: node.dataset.cost ?? null })),
     inventory: all('.item-inventory [data-item-id]').map(node => ({ id: node.dataset.itemId, definitionId: node.dataset.itemDef })),
     tools: all('[data-debug^="consumable:"]').map(node => ({ id: node.dataset.debug.slice('consumable:'.length), definitionId: node.dataset.consumableDef })),
-    slots: all('[data-equip-unit]').map(node => ({ unit: node.dataset.equipUnit, slot: Number(node.dataset.equipSlot), itemId: node.dataset.itemId ?? null, definitionId: node.dataset.itemDef ?? null, pending: node.dataset.pending ?? null, text: node.textContent, title: node.title })),
+    // Slot identity is authoritative state; pending feedback is the actual token display.
+    slots: (() => { const snapshot = window.__CAT_DEBUG__.read(); return snapshot.state.items.filter(item => item.location.kind === 'unit').map(item => ({
+      unit: item.location.unitId, slot: item.location.slot, itemId: item.id, definitionId: item.definitionId,
+      pending: snapshot.tokens.some(token => token.owner === item.location.unitId && token.pendingEquipped.includes(item.definitionId)) ? 'next-battle' : null,
+    })); })(),
     orbs: (() => {
       const panel = document.querySelector('[data-debug="orb-loot"]');
       if (!panel || panel.closest('[hidden]')) return null;
@@ -214,7 +218,7 @@ async function play(human, tables, kindOf, role) {
       await page.waitForTimeout(50);
     }
   };
-  const items = async () => { await click(page, 'panel:items'); await page.waitForTimeout(120); };
+  const items = async () => { await page.waitForTimeout(120); };
 
   for (;;) {
     if (Date.now() > deadline) throw new Error(`${name}: the match did not end within 75 minutes`);
@@ -351,7 +355,7 @@ async function play(human, tables, kindOf, role) {
       const token = now.tokens.find(entry => entry.owner === pending.unitId && entry.visible);
       const worn = now.state.items.find(item => item.id === pending.itemId);
       report.pendingNext = { roundId: now.state.roundDefinitionId, worn: worn?.location ?? null, marks: view.slots.filter(slot => slot.pending), equipped: token?.equipped, pendingEquipped: token?.pendingEquipped };
-      check(view.slots.every(slot => !slot.pending && !slot.text.includes(NEXT_BATTLE)), `C18-A ${now.state.roundDefinitionId}: no slot is marked ${NEXT_BATTLE} in the next preparation`);
+      check(view.slots.every(slot => !slot.pending), `C18-A ${now.state.roundDefinitionId}: no slot is marked ${NEXT_BATTLE} in the next preparation`);
       check(Boolean(worn && token && token.equipped.includes(worn.definitionId) && token.pendingEquipped.length === 0), `C18-A ${now.state.roundDefinitionId}: the token's icons now include ${worn?.definitionId} and nothing is pending (${token?.equipped} / ${token?.pendingEquipped})`);
       pending = null;
       return false;
@@ -370,14 +374,21 @@ async function play(human, tables, kindOf, role) {
       const tool = (now.state.consumables ?? []).find(entry => entry.consumableId === toolTask.tool.consumableId);
       const row = tool && now.state.consumableTargets.find(entry => entry.consumableId === tool.consumableId);
       const target = row?.targets.find(entry => usable(toolTask.task, now.state, entry)
-        && now.strategy.bounds[entry.target.kind === 'unit' ? `equipment:${entry.target.unitId}:0` : itemBoundsKey(now.state, entry.target.itemId)]);
+        && dropPoint(now, entry.target.kind === 'unit' ? `unit:${entry.target.unitId}` : itemBoundsKey(now.state, entry.target.itemId))
+        && (entry.target.kind !== 'item' || (() => {
+          const item = now.state.items.find(item => item.id === entry.target.itemId);
+          if (item?.location.kind !== 'unit') return true;
+          // A tool on a whole token routes to its first allowed worn item.
+          return wornBy(now.state, item.location.unitId).sort((a, b) => a.location.slot - b.location.slot)
+            .find(item => row.targets.some(candidate => candidate.allowed && candidate.target.kind === 'item' && candidate.target.itemId === item.id))?.id === item.id;
+        })()));
       const from = tool && now.strategy.bounds[`consumable:${tool.consumableId}`];
       if (target && from && claim(toolTask.task)) {
         const sourceKey = `consumable:${tool.consumableId}`;
-        const targetKey = target.target.kind === 'unit' ? `equipment:${target.target.unitId}:0` : itemBoundsKey(now.state, target.target.itemId);
+        const targetKey = target.target.kind === 'unit' ? `unit:${target.target.unitId}` : itemBoundsKey(now.state, target.target.itemId);
         await showDragEndpoints(page, sourceKey, targetKey);
         const positioned = await read(page);
-        const from = positioned.strategy.bounds[sourceKey], to = positioned.strategy.bounds[targetKey];
+        const from = positioned.strategy.bounds[sourceKey], to = dropPoint(positioned, targetKey);
         const affected = target.target.kind === 'unit' ? wornBy(now.state, target.target.unitId).map(item => item.id) : [target.target.itemId];
         const before = wire.mark();
         await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();
@@ -440,15 +451,12 @@ async function play(human, tables, kindOf, role) {
       const now = await read(page), fighting = new Set(now.combatView?.units.map(unit => unit.id));
       const token = now.tokens.find(entry => entry.visible && fighting.has(entry.id) && entry.owner && mine(now.state).some(unit => unit.id === entry.owner && unit.location.kind === 'board'));
       const unitId = token?.owner;
-      const empty = unitId === undefined ? undefined : [0, 1, 2].find(slot => !wornBy(now.state, unitId).some(item => item.location.slot === slot) && now.strategy.bounds[`equipment:${unitId}:${slot}`]);
+      const empty = unitId === undefined ? undefined : [0, 1, 2].find(slot => !wornBy(now.state, unitId).some(item => item.location.slot === slot));
       const item = inventory(now.state).find(entry => now.strategy.bounds[`item:${entry.id}`]);
       if (inBattle(now) && token && empty !== undefined && item && claim('pending')) {
         const iconsBefore = token.equipped, wornBefore = new Set(wornBy(now.state, unitId).map(entry => entry.id));
         const before = wire.mark();
-        const card = now.strategy.bounds[`item:${item.id}`];
-        await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(100);
-        const slotButton = (await read(page)).strategy.bounds[`equipment:${unitId}:${empty}`];
-        await page.mouse.click(slotButton.centerX, slotButton.centerY);
+        await dragEquipment(page, item.id, unitId); await page.waitForTimeout(100);
         const receipt = await wire.receiptSince(before, 'equip');
         const after = await pushed(x => !inventory(x.state).some(entry => entry.id === item.id));
         await page.waitForTimeout(200);
@@ -459,7 +467,8 @@ async function play(human, tables, kindOf, role) {
         report.pending = { human: name, roundId: now.state.roundDefinitionId, unitId, item: item.id, receipt, added, mark, iconsBefore, iconsAfter: tokenAfter?.equipped, pendingEquipped: tokenAfter?.pendingEquipped };
         await page.screenshot({ path: `${OUT}/pending-${now.state.roundDefinitionId}.png` });
         check(receipt === 'applied' && after !== null && inBattle(latest), `C18-A ${now.state.roundDefinitionId}: ${item.id} put on ${unitId} during the battle (${receipt})`);
-        check(Boolean(added && mark?.itemId === added.id && mark.pending === 'next-battle' && mark.text.includes(NEXT_BATTLE)), `C18-A: the panel slot holding the projected ${added?.definitionId} is marked ${NEXT_BATTLE} (${JSON.stringify(mark)})`);
+        check(Boolean(added && mark?.itemId === added.id && mark.pending === 'next-battle') && view.status.includes(NEXT_BATTLE),
+          `C18-A: slot ${added?.location.slot} is pending and the drop status says ${NEXT_BATTLE} (${JSON.stringify(mark)} / ${view.status})`);
         check(same(tokenAfter?.equipped, iconsBefore) && Boolean(added && tokenAfter?.pendingEquipped.includes(added.definitionId)), `C18-A: the token keeps its battle icons (${iconsBefore} → ${tokenAfter?.equipped}) and lists ${added?.definitionId} as pending (${tokenAfter?.pendingEquipped})`);
         if (receipt === 'applied' && added) pending = { human: name, round: now.state.round, unitId, itemId: added.id };
         return false;
@@ -554,7 +563,15 @@ async function carouselPick(human, s, carousel, pushed) {
 function itemBoundsKey(state, itemId) {
   const item = state.items.find(entry => entry.id === itemId);
   if (!item) return null;
-  return item.location.kind === 'unit' ? `equipment:${item.location.unitId}:${item.location.slot}` : `item:${itemId}`;
+  return item.location.kind === 'unit' ? `unit:${item.location.unitId}` : `item:${itemId}`;
+}
+
+/** Native drop endpoint: persistent inventory card or own board/bench token. */
+function dropPoint(snapshot, key) {
+  if (!key) return null;
+  if (!key.startsWith('unit:')) return snapshot.strategy.bounds[key];
+  const token = snapshot.tokens.find(token => token.visible && token.owner === key.slice(5));
+  return token ? { centerX: token.screenX, centerY: token.screenY } : null;
 }
 
 /**
@@ -595,8 +612,6 @@ const fingerprint = state => JSON.stringify([state.gold, state.level, state.xp, 
 async function perform(human, action, act, items) {
   const { page, wire } = human;
   const units = async () => { await click(page, 'panel:units'); await page.waitForTimeout(80); };
-  /** A real click in the middle of a panel node (item cards select on pointer up, not on a synthetic click). */
-  const press = async key => { const box = (await read(page)).strategy.bounds[key]; if (!box) return false; await page.mouse.click(box.centerX, box.centerY); await page.waitForTimeout(80); return true; };
   switch (action.type) {
     case 'buy': return act(`mobile:buy-${action.slot}`, 'buy');
     case 'reroll': return act('mobile:reroll', 'reroll');
@@ -610,13 +625,14 @@ async function perform(human, action, act, items) {
     }
     case 'combine': {
       await items();
-      for (const id of [action.a, action.b]) if (!(await press(`item:${id}`))) return 'disabled';
-      return act('combine-items', 'combine');
+      const before = wire.mark();
+      await equipmentCommand(page, 'combine', action.a, action.b);
+      return wire.receiptSince(before, 'combine');
     }
     case 'equip': {
       await items();
       const before = wire.mark();
-      if (!(await press(`item:${action.itemId}`)) || !(await press(`equipment:${action.unitId}:${action.slot}`))) return 'disabled';
+      await equipmentCommand(page, 'equip', action.itemId, action.unitId, action.slot);
       return wire.receiptSince(before, 'equip');
     }
     default: return 'unmapped';
@@ -624,8 +640,7 @@ async function perform(human, action, act, items) {
 }
 
 /**
- * T13-A, once: with two components at hand, one is put on a board unit wearing nothing, then the other is clicked onto an
- * EMPTY slot of that unit (card, then slot: the C16 path). The policy turn does everything else.
+ * T13-A, once: with two components at hand, drag one onto an empty board unit, then drag the second onto that unit. The combining slot is asserted. The policy turn does everything else.
  */
 async function autoCombineCheck(human, kindOf, pushed, items) {
   const { name, page, wire } = human;
@@ -636,7 +651,7 @@ async function autoCombineCheck(human, kindOf, pushed, items) {
     if (!inPreparation(now)) return;
     const board = mine(now.state).filter(unit => unit.location.kind === 'board');
     const loose = unit => wornBy(now.state, unit.id).filter(item => kindOf(item.definitionId) === 'component');
-    const emptySlot = unit => [0, 1, 2].find(slot => !wornBy(now.state, unit.id).some(item => item.location.slot === slot) && now.strategy.bounds[`equipment:${unit.id}:${slot}`]);
+    const emptySlot = unit => [0, 1, 2].find(slot => !wornBy(now.state, unit.id).some(item => item.location.slot === slot));
     const components = inventory(now.state).filter(entry => now.strategy.bounds[`item:${entry.id}`] && kindOf(entry.definitionId) === 'component');
     const wearer = board.find(entry => loose(entry).length === 1 && emptySlot(entry) !== undefined);
     if (!components.length || (!wearer && components.length < 2)) return;
@@ -646,11 +661,7 @@ async function autoCombineCheck(human, kindOf, pushed, items) {
     const slot = emptySlot(unit), autoCombine = Boolean(wearer);
     const looseBefore = loose(unit)[0];
     const before = wire.mark();
-    const card = now.strategy.bounds[`item:${item.id}`];
-    await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(100);
-    const target = (await read(page)).strategy.bounds[`equipment:${unit.id}:${slot}`];
-    if (!target) return;
-    await page.mouse.click(target.centerX, target.centerY);
+    await dragEquipment(page, item.id, unit.id); await page.waitForTimeout(100);
     const receipt = await wire.receiptSince(before, 'equip');
     const after = await pushed(x => !inventory(x.state).some(entry => entry.id === item.id), 3_000);
     if (receipt !== 'applied' || !after) return;
@@ -667,7 +678,9 @@ async function autoCombineCheck(human, kindOf, pushed, items) {
       check(wire.commandsSince(before, 'equip').length === 1, `T13-A ${latest.state.roundDefinitionId}: one equip for ${item.definitionId} on empty slot ${slot} of ${unit.id} (${JSON.stringify(report.autoCombine.commands)})`);
       check(worn.filter(entry => kindOf(entry.definitionId) === 'component').length === 0 && combined && kindOf(combined.definitionId) === 'completed',
         `T13-A: the projection shows ${unit.id} wearing no loose component; slot ${looseBefore.location.slot} holds ${combined?.definitionId} (${report.autoCombine.worn.join(', ')})`);
-      check(same(sorted(shownSlots), sorted(report.autoCombine.worn)), `T13-A: the panel slots show the projected loadout (${shownSlots.join(', ')})`);
+      const command = report.autoCombine.commands[0];
+      check(command?.unitId === unit.id && command.itemId === item.id && command.slot === looseBefore.location.slot
+        && combined?.location.slot === command.slot, `T13-A: the command and the resulting item agree on the combining slot ${looseBefore.location.slot}`);
       check(same(sorted(token?.equipped ?? []), sorted(worn.map(entry => entry.definitionId))), `T13-A: the token's icons show the projected loadout (${token?.equipped})`);
     }
   }

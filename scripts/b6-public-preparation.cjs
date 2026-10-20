@@ -1,6 +1,6 @@
 /* Test preparation only: native public UI commands, unchanged combat wall clock.
  * Empty-board opening losses earn the real 2/3/5G. No state/resource injection. */
-async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy = true } = {}) {
+async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy = true, dragDeployment = false } = {}) {
   if (!['1-3', '1-4', '2-1', '2-5'].includes(roundId)) throw Error('Unsupported B6 preparation target');
   const read = () => page.evaluate(() => window.__CAT_DEBUG__.read().state);
   const click = async id => {
@@ -9,12 +9,28 @@ async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy
   };
   const initial = await read();
   if (initial.m8.round.roundId !== '1-2' || initial.phase !== 'preparation') throw Error('B6 preparation requires a fresh opening');
-  await click('panel:units'); await click('mobile:unit:unit-1'); await click('mobile:bench:0');
+  async function deploy(target) {
+    if (dragDeployment) {
+      await page.locator('canvas').scrollIntoViewIfNeeded();
+      const snapshot = await page.evaluate(() => window.__CAT_DEBUG__.read());
+      const unit = snapshot.tokens.find(unit => unit.id === 'unit-1' && unit.visible);
+      if (!unit) throw Error('B6 preparation requires a visible opening unit');
+      const point = target.kind === 'bench' ? snapshot.layout.bench[target.slot] : snapshot.layout.hexes[`${target.cell.col},${target.cell.row}`];
+      await page.mouse.move(unit.screenX, unit.screenY); await page.mouse.down();
+      await page.mouse.move(point.x, point.y, { steps: 6 }); await page.mouse.up();
+    } else {
+      await click('panel:units'); await click('mobile:unit:unit-1');
+      await click(target.kind === 'bench' ? `mobile:bench:${target.slot}` : `deploy:${target.cell.col},${target.cell.row}`);
+    }
+    const unit = (await read()).preparation.units.find(unit => unit.id === 'unit-1');
+    if (JSON.stringify(unit?.location) !== JSON.stringify(target)) throw Error('B6 native deployment did not reach its intended location');
+  }
+  await deploy({ kind: 'bench', slot: 0 });
   for (let guard = 0; guard < 40; guard++) {
     const state = await read();
     if (state.m8.round.roundId === roundId && (state.phase === 'preparation' || state.phase === 'choice' && !resolveChoices)) {
       if (redeploy && state.phase === 'preparation') {
-        await click('panel:units'); await click('mobile:unit:unit-1'); await click('deploy:1,4');
+        await deploy({ kind: 'board', cell: { col: 1, row: 4 } });
       }
       return read();
     }
