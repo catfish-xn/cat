@@ -116,6 +116,22 @@ export class RemoteSession extends MatchSession {
     this.finished = [...this.finished.filter(entry => entry.round !== battle.round), battle];
     this.notify(before, [], 'command');
   }
+  /**
+   * D11 live bank: the battle on the board was revised from some tick on. The records already shown stay (the server
+   * only revises ticks the playback has not reached, unless it lagged); the view is rebuilt on the revised records up
+   * to the same point and playback continues from there.
+   */
+  reviseReplay(replay: CombatReplay): void {
+    const current = this.replay;
+    if (!current || !replay.ticks.length || replay.initial.combatId !== current.initial.combatId) return;
+    const shown = Math.min(this.nextTick, replay.ticks.length);
+    let view: CombatViewState = replay.initial;
+    for (let index = 0; index < shown; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
+    this.replay = replay; this.nextTick = shown;
+    if (this.view !== null) this.view = shown === replay.ticks.length ? replay.terminal : view;
+    this.finished = this.finished.map(entry => entry.replay === current ? { ...entry, replay } : entry);
+    const before = this.matchState; this.notify(before, [], 'command');
+  }
   /** Display-only: my last authoritative state in the combat phase; the combat itself is `combatView`. */
   private overlay(): MatchState { return { ...(this.playbackBase ?? this.matchState), phase: 'combat', combat: null } as unknown as MatchState; }
   /** Debug/acceptance read: playback progress and how many battles a newer state cut short. */

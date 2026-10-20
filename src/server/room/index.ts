@@ -12,6 +12,7 @@ export { Room, ROOM_TIMING_DEFAULTS, applySeatCommand, type RoomOptions, type Ro
 export {
   toPlayerView, toSeatPublic, toPlayerFault, toSeatPrivateView, seatPushEvents, toCombatReplayFor, mirrorCombatReplay,
   type SeatReplay,
+  mirrorReplayTick,
 } from './projection';
 export { Lobby, type LobbyOptions, type JoinResult, type StartResult } from './lobby';
 export { BotDriver, BOT_DRIVER_DEFAULTS, deriveBotRng, type BotDriverOptions, type BotStepRecord } from './bot-driver';
