@@ -1,4 +1,56 @@
-# #265 v16 新base重录（2026-10-20）
+# #265 v16 体积方案替换（2026-10-20）
+
+本次起点：`codex/epic-loot-reforger@4406686b7bc95541fd0ca66d751b7008d74d36c6`，工作区干净。历史基线仍为 `1642beaabee7df800c15250bb07ec6cf2e6bbed0`。遵循协调者 `amend-265-bundle.md`：只读 Git、不联网、不写 `.git`，不改 `src/server/`、`src/rendering/`，不重录任何 v16 fixture 或既有证据。下文旧轮次结果仅作历史记录。
+
+## 本次实现与身份
+
+删除原生产身份构建插件及等价验证脚本、Vite 引用，保留 Phaser 独立 chunk。四表共137行，运行列放入同名 `*-runtime.ts`，原 `*-source.ts` 保存其余说明来源列并通过 `archive-source.ts` 重组完整行，仅供离线 digest 和来源测试。运行入口只依赖运行列；无开发/生产/服务器分支或转换。
+
+| 表 | 行数 | 运行列 | 说明来源列 |
+| --- | ---: | --- | --- |
+| g2-3-special-item | 65 | name / values / unique（池与光明映射同在运行文件） | apiName / description |
+| g2-3-trait | 26 | name / enabled / tiers | apiName / description |
+| g2-4-artifact | 29 | zhName / unique / values | name / apiName / description |
+| g2-4-support-item | 17 | name / unique / values | apiName / description |
+
+完整表逐行与拆分前数据深比较相同，运行投影逐行相同。`scripts/content-digest.ts`、`scripts/loot-replay-digest.ts` 保留原两项根表达式，已与 HEAD 原表达式比较完全相同；说明列仍覆盖在内容根内。`node scripts/update-content-identities.cjs --write` 从完整表生成 `src/simulation/content/identity-constants.ts`，`--check` 验证；浏览器/开发/服务器共读常量。普通 `digestContent()`、状态与账本 hash 算法仍在运行时使用，未改算法、覆盖范围、规则或版本。
+
+| digest（均带 fnv1a32-utf16: 前缀） | 替换前 | 替换后 |
+| --- | --- | --- |
+| CONTENT_DIGEST | de829c8a | de829c8a |
+| LOOT_REPLAY_DIGEST | 62c76cb9 | 62c76cb9 |
+| RULES_GAP_MANIFEST | 31950a0f | 31950a0f |
+
+新增 `tests/content-identity-constants.test.ts` 被现有 CI 的 `npm test` / fast 项目选中：重算完整两项根，常量失配时明确提示 `node scripts/update-content-identities.cjs --write`；并拒绝归档缺行/列冲突，检查浏览器入口、实际服务器入口及领域服务器入口的传递依赖均不含四表说明文件或离线重算模块。
+
+## 本次体积与验证
+
+同机 Node v22.17.0、zlib 1.3.0.1-motley-780819f；全部 `dist/assets/*.js` 各自 gzip level9 后求和，包含 Phaser，沿用 `scripts/m7-budget.cjs` 口径。分母为既有本地 M7 `15313a7` 产物 424,763 B，本次未重建或重新核验该产物来源。
+
+| 项 | 替换前（HEAD 实测） | 替换后（本工作区实测） |
+| --- | ---: | ---: |
+| JS gzip 总量 | 619,933 B | 619,825 B |
+| / M7 比值 | 1.4594797569 | **1.4592254975 ≤ 1.49** |
+| Phaser gzip | 175,652 B | 175,652 B（SHA256相同） |
+
+净减108 B；未修改预算或依赖。`node node_modules/typescript/bin/tsc --noEmit`、`npm.cmd run build -- --configLoader runner` 退出0。runner适配本地共享依赖路径下默认配置加载器的权限问题，不改变构建目标。指定回归去重后 **29文件 / 658项通过，0失败/待执行**，覆盖所有 content/identity 命名测试、epic-loot-reforger、全部d14-*、全部tests/presentation、match-session、所有直接引用四表的测试和新增常量测试；Vitest同样使用 `--configLoader runner --project fast --maxWorkers=1 --no-file-parallelism`。没有计时失败，没有放宽超时。
+
+| 检查（baseline 参数均为上述1642beaa完整SHA） | 退出码 | 结果 |
+| --- | ---: | --- |
+| update-content-identities.cjs --check | 0 | 完整根与常量一致 |
+| compare-v16-digests.cjs | 0 | v15/v16三项digest均与既有记录一致 |
+| record-v16-inputs.cjs --baseline-commit=… --check | 1 | 所有fixture字节通过，最后audit的sourceDigests失配 |
+| verify-m8-herald-fixtures.cjs | 1 | 五份raw与trajectory字节通过，最后manifest的sources/sourceSha256失配 |
+| v16-fixture-audit.cjs --baseline-commit=… | 0 | 历史字节与历史身份断言通过 |
+| record-v16-live-reveal.cjs --baseline-commit=… --check | 1 | audit的sourceDigests失配 |
+
+三项失败均保留失败退出码；另捕获其比较对象作诊断，剔除 `sourceDigests` 或 `sources/sourceSha256` 后其余字段均严格深相等。未跳过断言、未更新旧指纹、未重录；因此本次不能宣称录制校验全绿。仍需协调者决定源码指纹元数据如何收口；建议另行授权仅刷新已验证等价的元数据，保持状态、golden、raw和trajectory字节不变。
+
+本次机器结果见 [bundle-replacement-verification.json](evidence/v16/bundle-replacement-verification.json)，原始日志与前后逐JS SHA256在本地 `artifacts/v16-bundle-replacement/`。建议提交信息：`refactor(v16): split archive metadata and freeze verified content identities`。未执行Git写操作。
+
+---
+
+# 以下为新base重录历史（2026-10-20）
 
 本轮起点：`codex/epic-loot-reforger`，HEAD `622b19c5be396e14904e02f6ff1a45f0740c22d0`，工作区干净，最新v15已由用户合入。本轮只读Git，不写`.git`，不联网、不安装依赖，不修改`src/server/`、`src/rendering/`或其他表现层源码。
 
@@ -56,7 +108,7 @@ v15的23个文件与新基线逐字节相同；G2-3/G2-4b的86个历史文件及
 | `src/presentation/ability-text.ts` | v16 四星数值查询与 v15 中文名称/模板组合，普通星级查询不变。 |
 | `loot-view.ts`、`orb-loot.ts` | v16统一重铸器、两种复制器、史诗forge payload，结合v15客户端图标与fallback。 |
 | `s13-g23-manifest.ts` | 同时保留D11、D14身份映射。 |
-| `vite.config.ts` | 原样保留v16 productionIdentities/Phaser chunk方案，结合v15原stripAssetChecks；未扩展白名单或继续增加体积优化。 |
+| `vite.config.ts` | 当时保留身份构建方案并结合v15原stripAssetChecks；本次已改为源码拆表与公共身份常量，Phaser chunk保留。 |
 | `combat-first-pass-frames`、`g2-4b-artifacts` | 最新实时银行导出形状及v16 revision。 |
 | `g2-4a-crown-history`、`helpers/g24-forge-states.ts` | v16工具身份与v15法球领取、共享不可变输入准备组合；不跳过领取/恢复。 |
 | `m8-b8-live-capacity/live-transfer/loot-view` | 保留v15既有20秒时限与授权注释，重新核实真实路线、奖励、身份和账本。 |
@@ -122,7 +174,7 @@ live-reveal恢复v15原种子242874/139464/3464与原补给；tick44的eventSeq3
 
 ## 6. 构建与体积
 
-`npm.cmd run build -- --configLoader runner`通过（含tsc）。runner绕过共享node_modules联接下默认esbuild配置加载权限错误，不改变构建目标。生产裁表等价再次通过9项目录/身份及seed42/7216/6240首战状态/事件比较。
+当时 `npm.cmd run build -- --configLoader runner`通过（含tsc）。runner绕过共享node_modules联接下默认esbuild配置加载权限错误，不改变构建目标。该轮构建验证属于历史，本次替换方案与结果见本文开头。
 
 m7-budget口径：全部 `dist/assets/*.js`逐文件gzip level9求和，Phaser chunk计入。基线为此前本地保留15313a7产物，本轮不通过Git重建或核验出处。
 
@@ -133,11 +185,11 @@ m7-budget口径：全部 `dist/assets/*.js`逐文件gzip level9求和，Phaser c
 | 比值 | **1.4566216926 ≤ 1.49** |
 | 首次交互中位数（各3样本） | 基线566 ms / 当前619 ms，1.09364倍 |
 
-原1.50预算配置未改；另确认满足用户1.49要求。裁表方案仍在既有评审中，通过预算不替代评审。
+原1.50预算配置未改；该轮满足用户1.49要求；本次替换后的实测见本文开头。
 
 ## 7. 验证、复现与交接
 
-要求范围逐文件27份/635项通过，含两个服务器文件及全部8个冲突测试文件，另覆盖冲突helper；额外M5路线8项及sniper/mage/sniper-caitlyn逐命令、逐tick完整恢复重放3项通过，合计**31文件/646项**。tsc/build、生产投影等价、原流4,102种子、两份独立oracle、epoch录制/输入校验、历史哈希、浏览器38场景均通过。机器记录列明每份结果与哈希；未宣称全仓库或服务器房间整体验收。
+该轮要求范围逐文件27份/635项通过，含两个服务器文件及全部8个冲突测试文件，另覆盖冲突helper；额外M5路线8项及sniper/mage/sniper-caitlyn逐命令、逐tick完整恢复重放3项通过，合计**31文件/646项**。当时tsc/build、原流4,102种子、两份独立oracle、epoch录制/输入校验、历史哈希、浏览器38场景均通过。机器记录列明每份结果与哈希；不代表本次录制检查全部通过。
 
 浏览器约430行Lux/弓/棒原断言保留。`b6-public-preparation.cjs`在结算Continue前补与Start相同的450ms等待：空棋盘立即结束，截图提示“阶段刚切换”，过快点击会持续触发现有保护。只用真实原生输入，不注入资源、不加速战斗、不改界面。38场景、0跳过通过；增加 `M5_NO_GIT=1` 与可选runner，保留源码指纹。
 

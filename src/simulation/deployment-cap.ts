@@ -1,4 +1,4 @@
-import { G23_SPECIAL_ITEM_SOURCE } from './content/g2-3-special-item-source';
+import { G23_SPECIAL_ITEM_SOURCE } from './content/g2-3-special-item-runtime';
 import type { G23MatchProgress } from './g2-3-match-progress';
 export const TACTICIANS_CROWN_ID = 'TFT_Item_ForceOfNature';
 const CROWN_TEAM_SIZE = G23_SPECIAL_ITEM_SOURCE.TFT_Item_ForceOfNature.values.MaxArmySizeIncrease;

@@ -1,6 +1,6 @@
 import {g23RadiantProgram} from './g2-3-radiant-programs';
 import {ITEM_DEFINITIONS as ORDINARY} from './items';
-import {G23_SPECIAL_ITEM_SOURCE,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
+import {G23_SPECIAL_ITEM_SOURCE,G23_RADIANT_MAPPING} from './g2-3-special-item-runtime';
 import type {Effect,ItemDefinition} from '../strategy-types';
 import {G24_MECHANISM_ITEMS} from './g2-4b-mechanism-items';
 import type {ItemProgram} from '../m8/item-program';

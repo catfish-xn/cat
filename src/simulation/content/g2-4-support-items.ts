@@ -1,4 +1,4 @@
-/** G2-4b support items (user 2026-10-17). Parameters come from g2-4-support-item-source.ts (en_us 14.24 archive).
+/** G2-4b support items (user 2026-10-17). Parameters come from g2-4-support-item-runtime.ts (en_us 14.24 archive).
  * Combat-start buffs to the holder and nearby allies are compiled at the strategy boundary as auras (g2-4-support.ts);
  * everything that acts during combat is the holder's own declarative item program. Conventions are listed in
  * docs/evidence/g2-4/SUPPORT_ITEMS.md (G24-SUPPORT-01…03, G24-CHEST-01…04). Shroud of Stillness, Zephyr and Zz'Rot Portal
@@ -6,7 +6,7 @@
 import type { Effect, ItemDefinition } from '../strategy-types';
 import type { ItemProgram } from '../m8/item-program';
 import type { Effect as ProgramEffect } from '../m8/contracts';
-import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
+import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-runtime';
 import { amount, enemies, modifier, periodic, selector, shield, stat, status, trigger, vamp } from './item-programs';
 import { freezeContent } from './freeze';
 

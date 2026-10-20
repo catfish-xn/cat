@@ -2,6 +2,8 @@
 
 ## v16 当前身份（2026-10-20，覆盖下文历史交接状态）
 
+#265 体积方案：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用，无构建期替换。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，覆盖范围和 FNV-1a UTF-16 算法不变，四张归档表的说明来源列仍参与完整内容根。`node scripts/update-content-identities.cjs --check` 校验，`--write` 重算；CI fast 测试每次从完整表重算并对比常量。当前值仍为 CONTENT `fnv1a32-utf16:de829c8a`、LOOT `fnv1a32-utf16:62c76cb9`；规则 manifest `fnv1a32-utf16:31950a0f` 不变。规则、内容、存档与协议版本均不变。
+
 当前 rules/content 为 `s13-g2-3-v16` / `s13-14.24b-g2-3-v16`（v16 变更见下文 v16 小节与 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)；以下 v15 说明为历史）。v15 时为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
 
 用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 56、联机 55（v16 加入终极英雄、进入未知；联机仍仅排除 `avarice-incarnate`；v15 时为 54/53），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
