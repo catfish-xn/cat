@@ -72,7 +72,7 @@ const panelUnits = page => page.evaluate(() => [...document.querySelectorAll('#o
 const seatOf = page => page.evaluate(() => document.querySelector('.online-seat.me')?.dataset.debug?.replace('online:seat:', ''));
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: '8787', CAT_PREP_SEC: '3', CAT_CHOICE_SEC: '1', CAT_SETTLE_SEC: '1' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: '8787', CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '1', CAT_SETTLE_SEC: '1' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];
