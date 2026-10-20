@@ -20,7 +20,7 @@ const STEP = 14;
 /** Centre line of the row, piece-relative: just above the HP bar. */
 export const STATUS_ICON_Y = -53;
 /** Fallback under the worn-item row, for pieces too close to the canvas top (row 0) to fit the row above. */
-const STATUS_ICON_Y_BELOW = 47;
+const STATUS_ICON_Y_BELOW = 49;
 /** Piece-relative row centre for a piece whose centre is at canvas y `pieceY`. */
 export const statusIconY = (pieceY: number): number => pieceY + STATUS_ICON_Y - STATUS_ICON_RADIUS < 1 ? STATUS_ICON_Y_BELOW : STATUS_ICON_Y;
 
