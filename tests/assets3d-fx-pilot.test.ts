@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import { assertManifest } from '../src/rendering3d/contracts';
 import { parseParticleDocument } from '../src/rendering3d/particles';
 // @ts-expect-error Offline converter.
@@ -10,7 +13,9 @@ import jinx from '../scripts/assets3d/fx-bindings/jinx.mjs';
 // @ts-expect-error Explicit per-unit metadata.
 import vi from '../scripts/assets3d/fx-bindings/vi.mjs';
 // @ts-expect-error Offline shell-root merger.
-import { mergeManifestEntries, mergeManifests } from '../scripts/assets3d/merge-fx-roots.mjs';
+import { mergeFxManifestEntries, mergeFxRoots } from '../scripts/assets3d/merge-fx-roots.mjs';
+// @ts-expect-error Offline GLB utility.
+import { writeGlb } from '../scripts/assets3d/glb.mjs';
 
 // Invented names, resources and round values; never snapshots of local assets.
 function syntheticPilot() {
@@ -112,7 +117,7 @@ describe('latest approximate pilot', () => {
     after.manifest.effects[id].path = 'synthetic/replacement.json';
     after.bindings.playback[id].delay = 1;
     delete after.bindings.variants.W;
-    const merged = mergeManifestEntries([before, after]);
+    const merged = mergeFxManifestEntries([before, after]);
     assertManifest(merged.manifest);
     expect(merged.manifest.models[unit].path).toBe('roots/1/synthetic/replacement.glb');
     expect(merged.manifest.effects[id].path).toBe('roots/1/synthetic/replacement.json');
@@ -120,8 +125,67 @@ describe('latest approximate pilot', () => {
     expect(merged.bindings.variants.W).toBeUndefined();
     expect(before.manifest.models[unit].path).toBe('synthetic/model-0.glb');
   });
+  it('indexes every synthetic merged payload and refreshes sizes/hashes on a forced merge', async () => {
+    const pilot = resolve('assets3d-local/fx-pilot');
+    await mkdir(pilot, { recursive: true });
+    const root = await mkdtemp(join(pilot, 'merge-test-'));
+    try {
+      const put = async (dir: string, path: string, data: string | Buffer) => {
+        await mkdir(join(dir, path, '..'), { recursive: true });
+        await writeFile(join(dir, path), data);
+      };
+      const glb = writeGlb({ asset: { version: '2.0' }, buffers: [{ byteLength: 0 }] }, Buffer.alloc(0));
+      const effect = { schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 2 }, emitters: [
+        { kind: 'mesh', mesh: 'meshes/shape.glb', texture: 'textures/glow.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 },
+        { kind: 'screenDistortion', distortion: { normalMap: 'textures/normal.png', strength: 1 }, emission: { mode: 'burst', count: 1 }, lifetime: 1 },
+      ] };
+      const inputs = [join(root, 'a'), join(root, 'b')];
+      for (const [i, dir] of inputs.entries()) {
+        await put(dir, 'manifest.json', JSON.stringify({ schemaVersion: 1,
+          models: { [`synthetic-${i}`]: { path: 'models/model.glb' } },
+          effects: { [`synthetic-fx-${i}`]: { path: 'effects/spark.json' } } }));
+        await put(dir, 'action-bindings.json', '{}');
+        await put(dir, 'merge-report.json', '{}');
+        await put(dir, 'models/model.glb', glb);
+        await put(dir, 'effects/spark.json', JSON.stringify(effect));
+        await put(dir, 'meshes/shape.glb', glb);
+        await put(dir, 'textures/glow.png', 'synthetic-texture');
+        await put(dir, 'textures/normal.png', 'synthetic-normal');
+      }
+      const args = { roots: inputs.join(','), out: join(root, 'merged') };
+      const verify = async () => {
+        const index = JSON.parse(await readFile(join(args.out, 'precache.json'), 'utf8'));
+        const paths = (await readdir(args.out, { recursive: true, withFileTypes: true }))
+          .filter(entry => entry.isFile())
+          .map(entry => join(entry.parentPath, entry.name).slice(args.out.length + 1).replaceAll('\\', '/'))
+          .filter(path => !['manifest.json', 'action-bindings.json', 'merge-report.json', 'precache.json'].includes(path)).sort();
+        expect(index.schemaVersion).toBe(1);
+        expect(index.files.map((file: { path: string }) => file.path)).toEqual(paths);
+        expect(paths).toHaveLength(10);
+        for (const file of index.files) {
+          const data = await readFile(join(args.out, file.path));
+          expect(file).toEqual({ path: file.path, bytes: data.length,
+            sha256: createHash('sha256').update(data).digest('hex') });
+        }
+        return index;
+      };
+      await mergeFxRoots(args);
+      const before = await verify();
+      await put(inputs[1], 'textures/glow.png', 'synthetic-texture-updated');
+      effect.emitters[0].lifetime = 2;
+      await put(inputs[1], 'effects/spark.json', JSON.stringify(effect));
+      await mergeFxRoots({ ...args, force: true });
+      const after = await verify();
+      for (const path of ['roots/1/textures/glow.png', 'roots/1/effects/spark.json']) {
+        expect(after.files.find((f: { path: string }) => f.path === path))
+          .not.toEqual(before.files.find((f: { path: string }) => f.path === path));
+      }
+    } finally {
+      if (root.startsWith(pilot + '\\') || root.startsWith(pilot + '/')) await rm(root, { recursive: true, force: true });
+    }
+  });
   it('rejects merging into read-only asset roots before reading or writing', async () => {
     for (const out of ['assets3d-local/fx-trial', 'assets3d-local/fx-all', 'assets3d-local/fx-pilot'])
-      await expect(mergeManifests({ out })).rejects.toThrow('pilot-merge-output-only');
+      await expect(mergeFxRoots({ out })).rejects.toThrow('pilot-merge-output-only');
   });
 });

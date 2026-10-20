@@ -7,6 +7,11 @@ import { contracts } from './runtime.mjs';
 
 const json = value => Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+/** Sorted runtime payload index; callers supply only payload paths, excluding metadata. */
+export function createPrecache(entries) {
+  return { schemaVersion: 1, files: [...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    .map(([path, p]) => ({ path, bytes: p.bytes, sha256: p.sha256 })) };
+}
 function assetPath(path) {
   if (typeof path !== 'string' || !path || /[\\:%?#\x00-\x1f]/.test(path) || path.startsWith('/') ||
       path.split('/').some(p => !p || p === '.' || p === '..')) throw new Error('unsafe-merge-path');
@@ -103,8 +108,7 @@ export async function mergeManifests({ from, out } = {}) {
   const manifest = { schemaVersion: schemaVersion ?? 1, models, effects };
   assertManifest(manifest);
   const manifestBytes = json(manifest);
-  const precacheBytes = json({ schemaVersion: 1, files: [...plans].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    .map(([path, p]) => ({ path, bytes: p.bytes, sha256: p.sha256 })) });
+  const precacheBytes = json(createPrecache(plans));
   async function destination(path, sha256) {
     const dest = await safeOutputPath(join(output, path), { force: true });
     try {
