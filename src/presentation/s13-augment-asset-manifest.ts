@@ -251,5 +251,221 @@ export const S13_AUGMENT_ASSETS: readonly S13AugmentAsset[] = [
     "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/inspiring-epitaph-ii.png",
     "bytes": 7697,
     "sha256": "0dcd0aeb6086dbafedebb673aca5c667fa1a08b858800a73476a74be8bdad35c"
+  },
+  {
+    "apiName": "TFT9_Augment_BlindingSpeed",
+    "id": "blinding-speed",
+    "path": "assets/s13/augments/blinding-speed.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/berserk-iii.png",
+    "bytes": 6583,
+    "sha256": "54f0bc25ea73c0c40a40c709210fa5a872f72877ff215475ca5e2d588fcc2d37"
+  },
+  {
+    "apiName": "TFT6_Augment_PortableForge",
+    "id": "portable-forge",
+    "path": "assets/s13/augments/portable-forge.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/portableforge2.png",
+    "bytes": 6253,
+    "sha256": "574d213e108a779952653f9c40c32903f2ba224a25c6a053af7449e6e58e002c"
+  },
+  {
+    "apiName": "TFT6_Augment_RadiantRelics",
+    "id": "radiant-relics",
+    "path": "assets/s13/augments/radiant-relics.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/radiantrelic-iii.png",
+    "bytes": 10930,
+    "sha256": "d7b42a09596301a4ef8a80220566ef1dd30946a1bf37b14ddee88ca5822b5ccc"
+  },
+  {
+    "apiName": "TFT10_Augment_GoingLong",
+    "id": "going-long",
+    "path": "assets/s13/augments/going-long.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/going-long-iii.png",
+    "bytes": 8912,
+    "sha256": "0e3977e8c549e258a2be340898898717697f7a007c9724992a49864770a49b81"
+  },
+  {
+    "apiName": "TFT9_Augment_HedgeFund",
+    "id": "hedge-fund",
+    "path": "assets/s13/augments/hedge-fund.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/richgetricher3.png",
+    "bytes": 11238,
+    "sha256": "2ce8335784c43a420be4fb025c2e2b54894439ecbfb13b979269f9a3c8bfddcd"
+  },
+  {
+    "apiName": "TFT_Augment_InvestmentStrategy2",
+    "id": "investment-strategy-ii",
+    "path": "assets/s13/augments/investment-strategy-ii.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/investmentstrategy_iii.tft_set13.png",
+    "bytes": 9062,
+    "sha256": "03a025fe61978771ed74c115e88d64bc7eb2b140c258a3384ab8c6fe43e801fb"
+  },
+  {
+    "apiName": "TFT10_Augment_CrownGuarded",
+    "id": "crown-guarded",
+    "path": "assets/s13/augments/crown-guarded.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/crown-guarded-ii.png",
+    "bytes": 7942,
+    "sha256": "ddf078bb93c03b57ef5ef7caef77dfa0b7fe8234047070be0165ad6be4fa5acc"
+  },
+  {
+    "apiName": "TFT9_Augment_NotToday",
+    "id": "not-today",
+    "path": "assets/s13/augments/not-today.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/not-today-ii.png",
+    "bytes": 9066,
+    "sha256": "edc5560ef978b641f2a20e88ef8c515e8d404b5b2e5bd7b6b7223a1c4dd39f20"
+  },
+  {
+    "apiName": "TFT_Augment_AllForOneII",
+    "id": "all-for-one-ii",
+    "path": "assets/s13/augments/all-for-one-ii.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/allforone_ii.tft_set13.png",
+    "bytes": 9188,
+    "sha256": "d8b4d8fa2d0256a90483baed4fd9c608231e7cfe5ffe62dfcab2055c54c724b5"
+  },
+  {
+    "apiName": "TFT_Augment_BeltOverflow",
+    "id": "belt-overflow",
+    "path": "assets/s13/augments/belt-overflow.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/beltoverflow_iii.tft_set13.png",
+    "bytes": 8118,
+    "sha256": "52c8191673860503446cf46bc262b06ffd15cf9ab0d2934489a3eae0c00dcd54"
+  },
+  {
+    "apiName": "TFT_Augment_CalculatedEnhancement",
+    "id": "calculated-enhancement",
+    "path": "assets/s13/augments/calculated-enhancement.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/calculatedenhancement_iii.tft_set13.png",
+    "bytes": 8891,
+    "sha256": "db0d55eba3ab96d7f4f1cca319d32fbcda4815dd03ed65032d42773df3856efc"
+  },
+  {
+    "apiName": "TFT_Augment_CrownguardSpirit",
+    "id": "crownguard-spirit",
+    "path": "assets/s13/augments/crownguard-spirit.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/will-of-the-crown-ii.png",
+    "bytes": 8458,
+    "sha256": "adb982ed68fe1b46511591813af4b391abaf06f6fa92941284c57ae52f1242ae"
+  },
+  {
+    "apiName": "TFT_Augment_FlurryOfBlows",
+    "id": "flurry-of-blows",
+    "path": "assets/s13/augments/flurry-of-blows.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/flurryofblows_iii.tft_set13.png",
+    "bytes": 9993,
+    "sha256": "642050b85c91e80ded524d9fe15afafdd06d81f4dafc2241c4628b0bbb7dc06c"
+  },
+  {
+    "apiName": "TFT_Augment_GuardbreakerSpirit",
+    "id": "guardbreaker-spirit",
+    "path": "assets/s13/augments/guardbreaker-spirit.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/will-of-the-flail-ii.png",
+    "bytes": 8153,
+    "sha256": "158681ceef621daa43f73bbcbe9606fd6155ac29a2305fbd73b6e3a9f7ee7729"
+  },
+  {
+    "apiName": "TFT_Augment_PairOfFours",
+    "id": "pair-of-fours",
+    "path": "assets/s13/augments/pair-of-fours.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/pairoffours_ii.tft_set13.png",
+    "bytes": 7860,
+    "sha256": "663837d041a3705c85ea8420236cbf6773e945e74fde2643cbeb92f4fa200d89"
+  },
+  {
+    "apiName": "TFT_Augment_RanduinsImmovableObject",
+    "id": "immovable-object",
+    "path": "assets/s13/augments/immovable-object.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/randuinsimmovableobject_iii.tft_set12.png",
+    "bytes": 9995,
+    "sha256": "a93091b4634c2a98c149c0af6f5bfd4c9124a16d65dd29af56a9aa6415208ae5"
+  },
+  {
+    "apiName": "TFT_Augment_ShojinSpirit",
+    "id": "shojin-spirit",
+    "path": "assets/s13/augments/shojin-spirit.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/will-of-the-spear-ii.png",
+    "bytes": 8059,
+    "sha256": "29ca0250970291afbdf866e241cb365f81234c1999f4f35059cb7d791adc72a5"
+  },
+  {
+    "apiName": "TFT_Augment_SwordOverflow",
+    "id": "sword-overflow",
+    "path": "assets/s13/augments/sword-overflow.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/bladeoverflow_iii.tft_set13.png",
+    "bytes": 11350,
+    "sha256": "4a12962d99603b100f5d237683061e74d91ed3dab1ad06792e44bf56425c4dd6"
+  },
+  {
+    "apiName": "TFT_Augment_Trifecta2",
+    "id": "trifecta-ii",
+    "path": "assets/s13/augments/trifecta-ii.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/trifecta-iii.png",
+    "bytes": 8930,
+    "sha256": "99ce9ee4f8607b8017a16b4d57a9be313e0e56763b52bfbef96c8700d6e93ff2"
+  },
+  {
+    "apiName": "TFT_Augment_WandOverflow",
+    "id": "wand-overflow",
+    "path": "assets/s13/augments/wand-overflow.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/wandoverflow_iii.tft_set13.png",
+    "bytes": 10019,
+    "sha256": "49f33fa370bec648cf55bbd8f80604b32699e0ea5fc069351113fd201de10197"
+  },
+  {
+    "apiName": "TFT_Augment_DefenseCall",
+    "id": "defense-call",
+    "path": "assets/s13/augments/defense-call.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/defensive-call-ii.png",
+    "bytes": 8361,
+    "sha256": "722e9f18a3c55e088a7e7f026667c41dcbf8351e359be29d629989f6c9a8ce7c"
+  },
+  {
+    "apiName": "TFT_Augment_HighVoltage",
+    "id": "high-voltage",
+    "path": "assets/s13/augments/high-voltage.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/highvoltage_ii.tft_set12.png",
+    "bytes": 10088,
+    "sha256": "f0a395761d3c2b262348947d9435bab5172230300c8f58eac79bdd7b03cfca36"
+  },
+  {
+    "apiName": "TFT_Augment_PiercingLotus1",
+    "id": "piercing-lotus-i",
+    "path": "assets/s13/augments/piercing-lotus-i.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/piercing-lotus-ii.png",
+    "bytes": 7676,
+    "sha256": "2b29d0930b5356a65665bca40f605e7463c489a8ccf56d3171d92cd82613f544"
+  },
+  {
+    "apiName": "TFT_Augment_PiercingLotus2",
+    "id": "piercing-lotus-ii",
+    "path": "assets/s13/augments/piercing-lotus-ii.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/piercing-lotus-iii.png",
+    "bytes": 8269,
+    "sha256": "cc0f27b6b81ca7c877b2e55d780ff4acf9ee519a8cc5d96a5c09724d94e6a310"
+  },
+  {
+    "apiName": "TFT_Augment_Pyromaniac",
+    "id": "pyromaniac",
+    "path": "assets/s13/augments/pyromaniac.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/pyromaniac_ii.tft_set13.png",
+    "bytes": 8953,
+    "sha256": "b11ed634ddb925f23bd4dced855580bd03bc86cf11a091fc56b2c694e254bd34"
+  },
+  {
+    "apiName": "TFT_Augment_ThornPlatedArmor",
+    "id": "thorn-plated-armor",
+    "path": "assets/s13/augments/thorn-plated-armor.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/thornplatedarmor_ii.tft_set12.png",
+    "bytes": 10353,
+    "sha256": "c0e59e05e487e9d4ceb0fd74d12ca537ecba5b72fc0bc7ab31714ca962c60fac"
+  },
+  {
+    "apiName": "TFT_Augment_UnleashTheBeast",
+    "id": "unleash-the-beast",
+    "path": "assets/s13/augments/unleash-the-beast.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/unleashthebeast_ii.tft_set12.png",
+    "bytes": 10592,
+    "sha256": "e6c2bc012db3965c8c0cb7738ab0a60a8f0fb0a7d25d10fcb369ef82cc64bfa0"
   }
 ];
