@@ -10,11 +10,11 @@
 仅重截阿木木可追加 `--unit amumu`，验收报告写入本地 `review/amumu-report.json`。
 素材、报告和浏览器缓存仅写入 cast-picks 本地目录，来源只读；脚本不下载素材。
 
-当前分支使用 #308 的 `merge-fx-roots.mjs`，按 ID 采用最后一个根的完整模型条目及对应 GLB，无专用覆盖表。
+使用 #308 的统一入口 `build-asset-root.mjs`：后面的根按 ID 覆盖前面的根，本根放最后即可采用这五个模型的完整条目及对应 GLB，无专用覆盖表。
 合并命令（路径为占位符；输入须在 assets3d-local 内，输出须在 assets3d-local/fx-pilot 内）：
 
 ```sh
-node scripts/assets3d/merge-fx-roots.mjs --roots "<all-anim根>,<其他效果根>,<cast-picks根>" --out "<新的合并输出目录>"
+node scripts/assets3d/build-asset-root.mjs --roots "<HEROES_ROOT>" "<FX_BATCH1_ROOT>" … "<FX_PILOT_ROOT>" "<CAST_PICKS_ROOT>" --out "<OUT_DIR>" --force
 ```
 
 cast-picks 必须放在最后；完整动作映射随模型整体覆盖，其他模型及效果沿用前面的根。
