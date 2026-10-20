@@ -36,6 +36,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
     }
     const fx = new ParticleEffectV2({ ...doc, emitters: [emitter] }, { scale: 1, maxDuration: spec.maxDuration, mesh: () => geometry });
     let peak = 0, browserPeak = 0, peakAABB = 0, at = 0, nonzeroSurface = false;
+    let opacityVisiblePeak = 0, edgeAtReview = 0;
     for (let frame = 0; frame * .05 < spec.maxDuration; frame++) {
       fx.update(frame ? .05 : 0, camera); fx.object.updateMatrixWorld(true);
       for (const mesh of fx.object.children) {
@@ -45,6 +46,12 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
         const dimensions = size.multiply(basis).toArray();
         nonzeroSurface ||= dimensions.filter(n => n > 1e-8).length >= 2;
         const edge = Math.max(...dimensions);
+        // Geometry bounds do not establish visibility. Keep the old geometric
+        // measure, and separately exclude zero-area/zero-opacity samples.
+        if (dimensions.filter(n => n > 1e-8).length >= 2 && mesh.material.uniforms.opacity.value > 1 / 255) {
+          opacityVisiblePeak = Math.max(opacityVisiblePeak, edge);
+          if (frame === 6) edgeAtReview = Math.max(edgeAtReview, edge);
+        }
         if (edge > peak) { peak = edge; at = frame * .05; }
         if (frame) browserPeak = Math.max(browserPeak, edge);
         peakAABB = Math.max(peakAABB, ...new Box3().setFromObject(mesh).getSize(new Vector3()).toArray());
@@ -52,6 +59,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
     }
     emitters.push({ index, name: accepted[index].originalFields.emitterName, kind: emitter.kind,
       peakSourceEdge: peak, at, nonzeroSurface, browserSampleSourceEdge: browserPeak, cells: browserPeak * bodyScale / CELL_DISTANCE,
+      opacityVisibleCells: opacityVisiblePeak * bodyScale / CELL_DISTANCE, reviewCells: edgeAtReview * bodyScale / CELL_DISTANCE,
       peakSourceAABB: peakAABB, meshSourceXYZ: geometry ? (geometry.computeBoundingBox(), geometry.boundingBox.getSize(new Vector3()).toArray()) : undefined, mappedSize0: emitter.size0, mappedSize: emitter.size, originalFields: accepted[index].originalFields });
     fx.dispose(); geometry?.dispose();
   }
@@ -60,7 +68,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
  }
 }
 await writeOutputFile(join(root, 'size-report.json'), JSON.stringify({
-  method: 'Real ParticleEffectV2; per-particle geometry edge including mesh bounds and affine basis scale; t=0 separately, 50ms samples through each binding duration; scale=0.44 for every unit. Camera (4,6,8); default seeded RNG; no alpha crop. Source edges are orientation-independent; AABB is separate.',
+  method: 'Real ParticleEffectV2; per-particle geometry edge including mesh bounds and affine basis scale; t=0 separately, 50ms samples through each binding duration; scale=0.44 for every unit. Camera (4,6,8); default seeded RNG; no alpha crop. Source edges are orientation-independent; AABB is separate. opacityVisibleCells excludes zero-area and opacity <= 1/255; reviewCells is the same at 0.3s. Neither is a texture-visible footprint.',
   fxScale: FX_SCALE, cellDistance: CELL_DISTANCE, results,
 }, null, 2) + '\n', { force: true });
 

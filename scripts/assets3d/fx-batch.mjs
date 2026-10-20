@@ -20,6 +20,7 @@ import { contracts } from './runtime.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 import { argumentsFor } from './plan-fetch.mjs';
 import { readGlb } from './glb.mjs';
+import { readAccessor } from './model.mjs';
 
 const json = v => `${JSON.stringify(v, null, 2)}\n`;
 const read = async p => JSON.parse(await readFile(p, 'utf8'));
@@ -88,9 +89,19 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
     const textures = new Map(report.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), prefix + t.path]));
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, prefix + m.path]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+    const meshBounds = new Map();
+    for (const mesh of prior.meshes.filter(m => m.status === 'converted')) {
+      const record = records.get(canonical(mesh.source));
+      if (!record) throw new Error('missing-mesh-cache-record');
+      const bytes = await input('assets3d-local/trial/local/extracted', record.path);
+      if (bytes.length !== record.bytes || createHash('sha256').update(bytes).digest('hex') !== record.sha256) throw new Error('source-hash-mismatch');
+      const glb = readGlb(convertParticleMesh(bytes, record.path.slice(record.path.lastIndexOf('.'))).glb);
+      const positions = glb.document.meshes.flatMap(m => m.primitives.flatMap(p => readAccessor(glb, p.attributes.POSITION)));
+      meshBounds.set(mesh.source, [0, 1, 2].map(i => positions.reduce((v, p) => Math.max(v, p[i]), -Infinity) - positions.reduce((v, p) => Math.min(v, p[i]), Infinity)));
+    }
     const textureAlpha = await textureAlphaLookup(report.textures, p => input(root, p));
     const converted = convertParticles(source, p => textures.get(canonical(p)), parseParticleDocument,
-      { particleMode: 'approximate', textureAlpha, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
+      { particleMode: 'approximate', textureAlpha, approximateLinger: true, meshPath: p => meshes.get(p), meshBounds: p => meshBounds.get(p), meshReasons });
     const used = new Set(converted.systems.flatMap(s => s.document?.emitters.flatMap(e => [e.texture, e.mesh].filter(Boolean)) ?? []));
     for (const path of used) {
       const mesh = prior.meshes.find(m => prefix + m.path === path);
