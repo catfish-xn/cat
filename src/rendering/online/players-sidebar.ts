@@ -2,6 +2,7 @@ import { heroEmblemSvg } from '../../presentation/hero-identity';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { avatarUnit } from './opponent-board';
 import type { PlayerView, SeatPublic } from './protocol';
+import { StageTrack } from './stage-track';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -21,6 +22,8 @@ export class PlayersSidebar {
   private timerLabel: HTMLElement;
   private connectionBadge: HTMLElement;
   private countdownRound: HTMLElement | null = null;
+  /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
+  private stageTrack: StageTrack | null = null;
   private list: HTMLElement;
   private view: PlayerView | null = null;
   private viewing: string | null = null;
@@ -36,7 +39,8 @@ export class PlayersSidebar {
     this.timerLabel.dataset.debug = 'online:timer'; this.timerLabel.setAttribute('role', 'timer'); this.timerLabel.setAttribute('aria-label', '阶段倒计时');
     if (countdownHost) {
       countdownHost.classList.add('online-countdown'); this.countdownRound = element('span', '', 'countdown-round');
-      countdownHost.replaceChildren(this.countdownRound, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
+      this.stageTrack = new StageTrack();
+      countdownHost.replaceChildren(this.countdownRound, this.stageTrack.root, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
     } else top.append(this.phaseBadge, this.roundLabel, this.timerLabel);
     this.connectionBadge = element('span', '', 'online-connection'); this.connectionBadge.dataset.debug = 'online:connection'; this.connectionBadge.hidden = true;
     this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
@@ -57,6 +61,7 @@ export class PlayersSidebar {
     this.spectateBanner.textContent = spectateText; this.spectateBanner.hidden = !spectating;
     if (this.countdownRound) {
       this.countdownRound.textContent = spectating ? `${spectateText} · ${view.phase.roundName}` : `${view.phase.roundName} · ${PHASE_TEXT[view.phase.kind]}`;
+      this.stageTrack!.render(view.phase.kind === 'lobby' || view.phase.kind === 'ended' ? 0 : view.phase.round);
       this.countdownHost!.dataset.phase = view.phase.kind; this.countdownHost!.toggleAttribute('data-spectating', spectating);
     }
     const ordered = [...view.seats].sort(compareSeats);

@@ -644,11 +644,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const wss = new WebSocketServer({ server: http, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.on('connection', onConnection);
     wss.on('error', error => log('error', 'server.error', { error: error.message }));
-    http.once('error', reject);
+    // A failed listen (port taken) resolves nothing the caller could close: release what was built here.
+    const failed = (error: Error) => { closing = true; lobby.dispose(); wss.close(); reject(error); };
+    http.once('error', failed);
     http.listen(options.port, options.host, () => {
       const address = http.address();
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
-      http.off('error', reject);
+      http.off('error', failed);
       scheduleHeartbeat(); // only once listening: a failed listen leaves no timer behind
       http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
@@ -666,7 +668,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         close: () => new Promise<void>(resolveClose => {
           closing = true;
           if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
-          for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }
+          for (const conn of connections.values()) {
+            // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
+            if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
+            conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing');
+          }
           unsubscribeRoom?.(); unsubscribeRoom = null;
           lobby.dispose();
           wss.close(() => { http.close(() => resolveClose()); http.closeIdleConnections(); });
