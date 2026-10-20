@@ -38,60 +38,43 @@ node scripts/assets3d/fx-batch-sizes.mjs --out assets3d-local/fx-batch2
 
 ## 超过 3 格的原始数据追查
 
-逐项核对 sidecar 的 originalFields。完整原始字段、转换后 size0/size、mesh 源边长及逐发射器测量在本地 size-report.json；没有英雄特例或 3 格硬上限。
+逐项核对本地 sidecar 的原始字段；原始数值、mesh 源边长和逐发射器测量只保存在本地 `assets3d-local/fx-batch2/` 的 size-report.json 与 *.report.json，仓库文档只写比例和格数。没有英雄特例或 3 格硬上限。
 
-| 系统 / 发射器 | 源字段、几何与原因 | 处理与结果 |
+| 系统 | 原因（比例描述） | 处理与结果（FX_SCALE=0.44） |
 | --- | --- | --- |
-| Camille Q_2_cas / swipe_blend、swipe_blend1 | Q_2_swipe_arch mesh 最大源边 383.749 × birthScale0 1.3 = 498.874；alpha 曲线淡入淡出，Tech_Trail/WeaponGlow 贴图 | 源挥砍弧 mesh 本身大，保留 3.52 格 |
-| Camille Q_2_cas_child / swipe_circuits_mesh | Q_2_swipe_bits mesh 最大边 338.915 × birthScale0 1.3 = 440.589；isGroundLayer=1，alpha≈.745 后淡出 | 源地面电路挥砍，保留 3.11 格 |
-| Irelia W_Swipe / Mesh_Smoke | W_WakeMesh 源 XYZ=[437.091,41.236,327.204]；birthScale0=[.7,10,1.35]，最长 327.204×1.35=441.725；scale0 恒1，birth alpha≈.502、isGroundLayer=1 | 源地面烟尾，保留 3.11 格 |
-| Leona W_cas_hit / Anime_Swirl | Particles_1_9 mesh X/Z=184.226；birthScale0=[4,3,4]；scale0.X=.9→1.1→1.2，本绑定 .55s 时约 184.226×4×1.1357=836.913；isGroundLayer=1 | 源旋涡 mesh 与缩放本身大，保留 5.90 格；不只凭名字断言低透明度 |
-| Leona W_cas_hit / flash_Dark4、flash_Dark3、ring | birthScale0.X=700/600/500，isUniformScale=1；前两者 scale0.X=.6→1；ring birth alpha≈.37。Dark4 为 ArbitraryQuad、X=90°；ring X=-90° | 源光晕/地面环，保留 4.74/4.06/3.53 格，保持平面朝向 |
-| Nocturne P_cleave / mesh_ground1 | P_Claws mesh 最大边 1012.362；uniform birthScale0.X=.525；scale0.X 绝对值约1.30→1.31；alpha≈.21、isGroundLayer=1 | 源低透明度地面抓痕，保留 4.90 格；镜像符号沿用绝对值近似，不影响长边 |
-| Nocturne P_cleave / Slayer_Slashes、Slayer_Slashes1、cracks | Slashes mesh 最大边98.113 × uniform birthScale0.X=7，得686.794；cracks uniform birthScale0.X=650、X=-90° | 源挥砍/地面光形，保留 4.84/4.84/4.58 格 |
-| Sett E_cas_child / Nebula2（已修复） | 非等比面片，出生长宽比约3:1；X寿命缩放先为Y的两倍，再归一。旧scalar-X将Y也跨轴放大一倍 | 通用XY长边包络保留真实长边，4.23→2.12格，不改源字段 |
-| Sett E_cas_child / Under3、Floor1、Hit1、hitbox_LB1 | 长面片配球光/烟雾；部分非等比，命中框以均值概率缩放后再随寿命增长，多个出生alpha为中低水平 | 源烟雾长边保留3.53/3.17/3.17/3.05格；整个系统4.23→3.53格 |
-| Tristana R_tar / Impact_Mesh | tristana_base_r_tar_impact_mesh 源最大边140.536；birthScale0=1.5；scale0=.5→2→2.3，末端约484.850 | 源命中冲击 mesh 与成长本身大，保留 3.42 格 |
+| Camille Q_2_cas / Q_2_cas_child | 挥砍弧和地面电路 mesh 本身约 3 格长，出生缩放略大于 1，淡入淡出 | 源几何本身大，保留 3.52 / 3.11 格 |
+| Irelia W_Swipe | 地面烟尾 mesh，沿长轴出生缩放略大于 1，中等透明度 | 保留 3.11 格 |
+| Leona W_cas_hit | 旋涡 mesh 出生缩放数倍并随寿命继续放大；另有三层等比地面光晕/光环，尺寸依次递减，光环透明度较低 | 源几何与缩放本身大，保留 5.90 格（光晕各约 4.7 / 4.1 / 3.5 格），保持平面朝向 |
+| Nocturne P_cleave | 地面抓痕 mesh 很长但出生缩放约一半，透明度低；两层挥砍 mesh 出生缩放数倍；cracks 为大面片 | 保留 4.90 格（各层约 4.8 / 4.8 / 4.6 格）；镜像符号沿用绝对值近似，不影响长边 |
+| Sett E_cas_child | Nebula2 为约 3:1 的非等比面片，旧标量缩放把短边跨轴放大一倍（换算错误）；其余为长面片配烟雾 | Nebula2 通用 XY 长边包络修复，4.23→2.12 格；整个系统 4.23→3.53 格 |
+| Tristana R_tar | 命中冲击 mesh 不大，但寿命内缩放成长到原来的两倍多 | 源成长本身大，保留 3.42 格 |
 
-除 Nebula2 的跨轴放大外，上述长边均可由源几何和源缩放解释。这只是尺寸结论，不证明朝向或混合正确；浏览器复看后发现的复合旋转错误见下节。不额外压缩，不把它们全部归类为低透明度辉光，也不据数值宣称画面无遮挡。
+除 Nebula2 的跨轴放大外，上述长边都由源几何和源缩放解释。这只是尺寸结论，不代表朝向或混合正确，见下节。
 
 ## 第二轮复看：固定面片复合旋转（2026-10-20）
 
-已查看用户的 batch2-oversize.jpg，并核对本地 sidecar 的全部原始字段。中央 650 面片对应 Nocturne P_cleave / cracks；380 面片对应 Glow。完整原始数据仍只保存在本地 `assets3d-local/fx-batch2/effects/nocturne/tft13_nocturne_base_p_cleave.report.json`，未复制到 fixture。
+浏览器复看发现 Nocturne P_cleave 中一块大面片竖立成约 6 格高的深色刀片。逐发射器的 primitive、出生角、地面层标记、blendMode 与贴图引用只保存在本地 `assets3d-local/fx-batch2/effects/nocturne/*.report.json`，未进仓库。
 
-下表旋转单位为度；A=ArbitraryQuad，M=Mesh，C=缺省 CameraQuad；`—` 表示字段缺省，不等于显式 false。L/P 分别为 isLocalOrientation / particleIsLocalOrientation。概率旋转写出生采样前的向量及采样结果；贴图只列原路径末段。
+根因是复合旋转顺序，而非尺寸、度/弧度或坐标轴搞反。两个空间均为 Y-up、地面为 XZ；ArbitraryQuad 为局部 XY、法线 +Z。旧转换把同时有 X、Y 两个分量的出生角直接按 XYZ Euler 交给运行时，面片法线落到水平方向，于是长面片竖立；只绕 X 的面片原本就水平。
 
-| 发射器 | primitive | birthRotation0；近似出生采样 | L/P | isGroundLayer | blendMode | texture 末段 |
-| --- | --- | --- | --- | --- | --- | --- |
-| distort（跳过） | A | [90,0,0] | —/— | — | 1 | Z_distort.TFT_Set13.tex |
-| mesh_ground1 | M（P_Claws） | 缺省零 | —/— | 1 | 1 | TFT13_Nocturne_Base_P_WolfScratch.TFT_Set13.tex |
-| Glow | A | [90,0,0] | —/1 | 1 | 1 | TFT13_Nocturne_Base_P_TrampleAOE_Glow.TFT_Set13.tex |
-| Lightning_AOE_Ring2（跳过） | M（Lighting_Cy） | [0,1,0]×Y概率[-360,360]；[0,0,0] | 0/— | 1 | 4 | TFT_Set6_Skin14_Wisp_256.tex |
-| SmokeBurstAdd | C | [1,0,0]×X概率[0,360]；[180,0,0]，相机面片仅留Z | 0/— | — | 4 | Strawberry_MiniBoss_Artillery_Base_Wisp_Mask.tex |
-| Slayer_Slashes | M（Slashes） | [0,180,0] | —/— | — | 1 | VS_SlashUlt.tex |
-| Slayer__esh_ground（跳过） | M（weaponswipe_03） | [0,1,0]×Y概率[0,360]；[0,180,0] | 0/— | — | 1 | TFT13_Nocturne_Base_Trail_Smoke_02.TFT_Set13.tex |
-| Slayer__mesh_ground（跳过） | M（weaponswipe） | [0,1,0]×Y概率[1,360]；[0,180.5,0] | 0/— | — | 4 | TFT13_Nocturne_Base_Primary_P_Trail_Smoke.TFT_Set13.tex |
-| Slayer_spark_shoot_up | C | [0,90,0]，相机面片仅留Z | 0/— | — | 4 | TFT13_Nocturne_Base_Sparks_Blue.TFT_Set13.tex |
-| Embers2 | C | 缺省零 | —/— | — | — | Strawberry_MiniBoss_Artillery_Base_Bits_3x3.tex |
-| Slayer_Slashes1 | M（Slashes） | [0,180,0] | —/— | — | 4 | VS_SlashUlt.tex |
-| cracks | A | [-90,-90,0] | —/— | 1 | 2 | Kayn_Skin02_z_add_glow_128.tex |
-
-只有已跳过的 Lightning_AOE_Ring2 含 `rotation0`：IntegratedValueVector3，常量[0,7,0]，动态Y从7衰减到0；其余11项均缺省。近似模式仍不模拟此角速度，未把它当第二个出生角相加。原有不支持的 pivot/扭曲等跳过原因保持在 sidecar。
-
-根因是复合旋转顺序，而非尺寸、度/弧度或 Y-up/Z-up 搞反。当前转换按 X 反射位置/速度，两个空间均为 Y-up，地面为 XZ；反射后的角为 `[x,-y,-z]`。ArbitraryQuad 是局部 XY、法线+Z。旧转换直接交给 V2 的 XYZ Euler，即 Rx·Ry·Rz；cracks 得到[-90,+90,0]，法线约[-1,0,0]，于是650长面片竖立。只绕X的380 Glow原本已经水平。
-
-通用近似修法：固定 ArbitraryQuad 和 Mesh 的出生角采用 YXZ（Ry·Rx·Rz），再序列化成等价的 V2 XYZ 度数。这样 X 的俯仰先把面片放平，Y 的偏航绕地面法线旋转，Z 保留局部卷转。cracks 转换后法线约[0,+1,0]，Glow约[0,-1,0]。这一顺序是本地字段组合、地面标记与复看现象支持的预览约定；没有原引擎执行证据，不宣称严格还原。非直角、三个轴同时非零的测试用独立基向量变换验证 X 反射与顺序。
-
-只修改 `particle-approximate.mjs`，不改 V2 协议、运行时 XYZ、strict 路径或 jinx/vi strict fixture。不按英雄名、贴图名或 isGroundLayer 强制放平；故意竖立的面片仍按源角度保留。isLocalOrientation/particleIsLocalOrientation 仍是原有 host-local 近似，isGroundLayer 仍不模拟渲染层排序；它们没有被误当成角度或轴交换。
+通用近似修法：固定 ArbitraryQuad 和 Mesh 的出生角按 YXZ（Ry·Rx·Rz）解释，再序列化成等价的 XYZ 度数：先俯仰放平，再绕地面法线偏航，最后保留局部卷转。这是本地字段组合、地面标记和复看现象支持的预览约定，没有原引擎执行证据，不宣称严格还原。测试用合成基向量验证 X 反射与顺序。只改 `particle-approximate.mjs`，不改 V2 协议、运行时、strict 路径或 jinx/vi strict fixture；不按英雄名、贴图名或地面层标记强制放平。
 
 | 复核系统 | 朝向结果 | 混合与尺寸结果 |
 | --- | --- | --- |
-| Nocturne P_cleave | cracks 竖面→水平；Glow及Slashes单轴旋转不变 | cracks=2仍是未验证normal回退；Slashes=1/4分别normal/additive；源4.90格长边不缩小 |
-| Leona W_cas_hit | SpikeShapes/SpikeShapes1 复合角转为水平；flash_Dark4/ring的单轴地面辉光保持水平；Anime_Swirl概率均值出生零角不变 | 可写项1/4映射未见additive落入normal；源5.90格旋涡仍保留 |
-| Sett E_cas_child | Floor1/Hit1/Under3/Nebula2 复合角转为水平；hitbox_LT/LB的单Y角仍竖立，不强制落地 | 1/4映射保持；既有XY尺寸包络修复保持，源3.53格长边不压缩 |
-| Camille Q_2_cas（含child） | 挥砍mesh只有Y=180°或零出生角，等价不变 | 1/4映射正确沿用，3.52/3.11格来自源mesh |
-| Tristana R_tar | Impact_Mesh无出生旋转，不变；ground_burn概率均值Y=180.5°，修正复合角；ground_burn1采样Y=0°不变 | 1/4沿用，3.42格源冲击mesh保留 |
-| Irelia W_Swipe | Glow_Head/DarkGroundGlow 修正；其余X+Z地面面片仍水平；Mesh_Smoke仅Y偏航不变 | 1/4沿用，3.11格源烟尾保留 |
+| Nocturne P_cleave | 竖立大面片改为水平；单轴旋转的其余层不变 | 该层 blendMode 2，见下节混合修复；4.90 格不缩小 |
+| Leona W_cas_hit | 两层尖刺面片复合角改为水平；单轴地面光晕不变 | 4.74 格以内各层不变，旋涡 5.90 格保留 |
+| Sett E_cas_child | 四层地面面片复合角改为水平；两层只有偏航的命中框仍竖立，不强制落地 | XY 长边包络保持，3.53 格 |
+| Camille Q_2_cas（含 child） | 挥砍 mesh 只有偏航或零角，等价不变 | 3.52 / 3.11 格 |
+| Tristana R_tar | 冲击 mesh 无出生旋转；一层地面灼烧修正复合角 | 3.42 格 |
+| Irelia W_Swipe | 两层地面辉光修正；烟尾 mesh 只有偏航，不变 | 3.11 格 |
+
+### 第一批朝向变化的发射器
+
+同一出生采样下旧 XYZ 与新 YXZ 的四元数姿态对比，第一批共 49 个发射器姿态改变（逐项在本地 `assets3d-local/fx-batch1/orientation-report.json`），按系统分布：
+
+drmundo r_buf（4）、r_cas_01（2）、e_knockback_wave（4）、r_zap_aoe（2）、e_knockback_tar（1）；blitzcrank q_mis（3）、q_cas（2）；ziggs q_explosion（2）；caitlyn r_scope_hologram（1）、r_bombardment_impact（6）；darius q_heal（1）；twistedfate w_yellow_tar（1）、w_cas（1）、w_bluecard（12）、w_red_tar（1）；malzahar spell_portal_1（5）；ekko p_proc（1）。
+
+都是同时带俯仰和偏航的地面面片或 mesh。第一批复查过的三处超大地面辉光（Blitzcrank q_cas、Caitlyn 轰炸命中、Lux w_mis 中只绕 X 的那一层）姿态不变，仍平铺、尺寸不变；同系统里其他带复合角的层随本修复放平。
 
 影响范围按全部已生成效果文档（包含未绑定系统）对比**同一出生采样**的旧XYZ与新YXZ姿态：第二批21个发射器姿态改变，第一批49个。第二批还覆盖 Akali W_tar、Leona W_tar、Morgana Q_DoT、Zyra E_Outer/E_Sequence_Impact/E_plant_tar 中的同类复合角。完整逐项结果保存在两批本地 `orientation-report.json`；比较的是四元数姿态，不把Euler数值重写误报成姿态变化。
 
