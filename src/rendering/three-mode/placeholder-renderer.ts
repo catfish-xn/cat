@@ -14,8 +14,8 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick, readParticleMesh,
-  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
+  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
@@ -52,6 +52,8 @@ const DEFAULT_EFFECT_SECONDS = 1;
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 const FX_SCALE = 0.44;
+/** Overhead star row: each star this many board units wide, its center this far above the body's top. */
+const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 
@@ -62,6 +64,9 @@ export function useBoardFeed(next: BoardFeed): void { feed = next; }
 // Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
 let assetProgress: ((text: string) => void) | null = null;
 export function useAssetProgress(next: (text: string) => void): void { assetProgress = next; }
+// Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
+let starColorFor: (level: number) => string = () => '#ffd34d';
+export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
@@ -126,6 +131,8 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
 
 interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
+  /** Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body). */
+  readonly stars: StarMark; starHeight: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -229,7 +236,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
-    view.body = pawnFor(view.team); view.root.add(view.body);
+    view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
     const definitionId = view.definitionId;
     void models.cache.load(definitionId).then(lease => {
@@ -238,6 +245,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
       view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT) + STAR_GAP;
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
@@ -252,8 +260,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
     root.add(ring);
-    scene.add(root);
-    const view: PieceView = { root, ring, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them.
+    const stars = createStarMark({ effectiveStarLevel: piece.effectiveStarLevel ?? piece.starLevel, colorFor: starColorFor });
+    stars.object.scale.setScalar(STAR_SIZE);
+    scene.add(root, stars.object);
+    const view: PieceView = { root, ring, stars, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
     attachBody(view);
     return view;
@@ -267,7 +278,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
-    view.mixer?.dispose(); view.lease?.release();
+    view.mixer?.dispose(); view.lease?.release(); view.stars.dispose();
     view.root.removeFromParent();
   };
 
@@ -363,6 +374,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
+      view.stars.setLevel(piece.effectiveStarLevel ?? piece.starLevel);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -527,6 +539,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+      view.stars.object.visible = view.root.visible;
     }
     updateEffects(seconds);
     if (width > 0) renderer.render(scene, camera);
