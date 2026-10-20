@@ -9,7 +9,7 @@ import type { CombatState } from '../simulation/combat-types';
 import type { DisplayUnit } from './combat-display';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
-import { THEME, costColor, toNumber } from './theme';
+import { THEME, costColor, starColor, toNumber } from './theme';
 import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-assets';
 import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
@@ -17,8 +17,6 @@ import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
-/** TFT client convention: 1★ bronze, 2★ silver, 3★ gold; v16 Ultimate Hero's effective 4★ is prismatic cyan. */
-const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d', '#8ff3ff'] as const;
 export type RingState = 'normal' | 'selected' | 'target';
 /** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
 const ITEM_ICON = 16, ITEM_Y = 32;
@@ -71,7 +69,7 @@ export class UnitView {
     this.disc = add.circle(0, 0, PIECE_RADIUS, this.identity.colorNumber);
     this.emblem = add.graphics();
     this.label = add.text(0, 1, '', { fontSize: '15px', fontStyle: 'bold', color: this.identity.ink, resolution: 2 }).setOrigin(0.5).setName('symbol');
-    this.star = add.text(0, -PIECE_RADIUS + 1, '', { fontSize: '12px', color: STAR_COLORS[0], backgroundColor: '#0b151fd9', padding: { x: 3, y: 0 }, resolution: 2 }).setOrigin(0.5);
+    this.star = add.text(0, -PIECE_RADIUS + 1, '', { fontSize: '12px', color: starColor(1), backgroundColor: '#0b151fd9', padding: { x: 3, y: 0 }, resolution: 2 }).setOrigin(0.5);
     this.costBadge = add.circle(-20, 18, 8, toNumber(costColor(1))).setStrokeStyle(2, 0x0b151f);
     this.costText = add.text(-20, 18, '', { fontSize: '11px', fontStyle: 'bold', color: '#0b151f', resolution: 2 }).setOrigin(0.5);
     this.items = add.graphics();
@@ -122,7 +120,7 @@ export class UnitView {
     const points = EMBLEM_POINTS[this.identity.shape].map(([px, py]) => new Phaser.Math.Vector2(px * PIECE_RADIUS * 0.82, py * PIECE_RADIUS * 0.82));
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
     this.emblem.setVisible(!hasPortrait);
-    this.star.setText('★'.repeat(star)).setColor(STAR_COLORS[Math.min(STAR_COLORS.length, Math.max(1, star)) - 1]);
+    this.star.setText('★'.repeat(star)).setColor(starColor(star));
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
