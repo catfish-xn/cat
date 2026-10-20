@@ -28,7 +28,7 @@ import { getDeploymentCap } from '../simulation/match';
 import { planPurchase } from '../simulation/upgrades';
 import { isCombatRosterLocked } from '../simulation/operation-policy';
 import { getPlayerDeploymentCount } from '../simulation/game';
-import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, heroTraitTagsWithIds, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
@@ -37,7 +37,7 @@ import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHt
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
-import { TraitColumn } from './trait-column';
+import { TraitColumn, traitIconHtml } from './trait-column';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
@@ -131,7 +131,11 @@ export function shopUpgradeStars(state: MatchState): Map<number, number> {
 }
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
-  for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
+  for (const label of heroTraitTagsWithIds(definitionId)) {
+    const tag = element('span', label.name, label.open ? 'trait-open' : 'trait-closed');
+    if (label.id) tag.insertAdjacentHTML('afterbegin', traitIconHtml(label.id, 14));
+    line.append(tag);
+  }
   return line;
 }
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
@@ -929,7 +933,7 @@ export class StrategyPanel {
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
       if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
@@ -1122,7 +1126,7 @@ export class StrategyPanel {
     if (!id) return '无';
     const state = this.actions.state();
     const unit = this.actions.combat().view?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
-    return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
+    return unit ? `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}` : '历史单位';
   }
   /** Offline: the local ledger with full provenance text. Online: §14.2 wire events (reset() runs per battle). */
   observeEvents(events: readonly SceneCombatEvent[]): void {

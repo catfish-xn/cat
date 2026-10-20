@@ -40,9 +40,6 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
   plugins: [phaserFlags, stripAssetChecks],
-  build: { rollupOptions: { output: { manualChunks(id) {
-    if (/[\\/]node_modules[\\/]phaser[\\/]/.test(id)) return 'phaser';
-  } } } },
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.
@@ -50,12 +47,13 @@ export default defineConfig(({ mode }) => ({
       build.onLoad({ filter: PHASER_SRC }, async args => ({ contents: replacePhaserFlags(await import('node:fs/promises').then(fs => fs.readFile(args.path, 'utf8'))), loader: 'js' }));
     } }] },
   },
-  // Dev only (`npm run dev:online`): `?mode=online&server=ws` connects to ws://<dev host>/ws, forwarded to the game server.
   build: { rollupOptions: { output: {
-    manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : undefined),
+    // One build key: a second one silently replaced this whole block and dropped the Phaser chunk (v16 trim).
+    manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
     chunkFileNames: chunk => (chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
     // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
     assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },
+  // Dev only (`npm run dev:online`): `?mode=online&server=ws` connects to ws://<dev host>/ws, forwarded to the game server.
   server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true, rewrite: path => path.replace(/^\/ws/, '') } } },
 }));

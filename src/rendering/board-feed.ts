@@ -7,6 +7,8 @@ import type { DisplayCombatEvent } from '../presentation/combat-display';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
+  /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
+  readonly effectiveStarLevel?: 4;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */
   readonly x: number; readonly y: number;
   /** Shown on the board apart from dying: a unit killed in this combat stays visible here and is flagged by `alive`. */
