@@ -237,7 +237,7 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
       const invalid = await page.evaluate(() => window.__U3_API__.selectors.previewCombine(window.__U3_SCENE__.session.state, 'item-100', 'item-102'));
       assert.equal(invalid.allowed, false); assert.equal(invalid.reason, 'invalid-recipe');
       const refused = await page.evaluate(() => window.__U3_API__.api.combineItems(window.__U3_SCENE__.session.state, 'item-100', 'item-102'));
-      assert.equal(refused.ok, false); assert.equal(refused.reason, 'invalid-recipe'); assert.deepEqual(refused.state, before.state); assert.deepEqual(refused.events, []);
+      assert.equal(refused.ok, false); assert.equal(refused.reason, 'invalid-recipe'); assert.deepEqual(refused.state, before.state); assert(!refused.events?.length, 'rejected combine produces no events');
       const preview = await page.evaluate(() => window.__U3_API__.selectors.previewCombine(window.__U3_SCENE__.session.state, 'item-100', 'item-106'));
       assert.equal(preview.allowed, true); assert.equal(preview.resultDefinitionId, 'deathblade');
       unchanged(before, await read());

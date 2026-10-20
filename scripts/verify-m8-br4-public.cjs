@@ -1,9 +1,9 @@
-const { installEquipmentCommands, equipmentCommand, dragEquipment, unitPoint } = require('./equipment-input.cjs');
+const { installEquipmentCommands, equipmentCommand, dragEquipment } = require('./equipment-input.cjs');
 /* M8 BR4: real dev/preview application, native input plus public equipment callbacks, validated
  * saves. The route policy chooses components and leaves them in inventory; no
  * state injection, debug mutation, accelerated browser combat or changed rules.
  * Linux (after npm run build): run with EQUIPMENT_TAB=visible and EQUIPMENT_TAB=hidden.
- * Each run checks native component-on-unit synthesis in both dev and production preview.
+ * Native component synthesis runs independently in verify-equipment-synthesis.cjs.
  */
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module');
@@ -66,7 +66,7 @@ async function fixture(d, id, upgrade = false) {
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
-  const report = { ...h.identity(), equipmentTab: process.env.EQUIPMENT_TAB || 'visible', scope: 'BR4 public-command save scenarios; dev and production preview, 1440x1000; native component synthesis, full native combat and exact state/ledger checks', checks: [], fixtures: [], errors: [], passed: false };
+  const report = { ...h.identity(), equipmentTab: process.env.EQUIPMENT_TAB || 'visible', scope: 'BR4 public-command save scenarios; dev and production preview, 1440x1000; full native combat and exact state/ledger checks', checks: [], fixtures: [], errors: [], passed: false };
   let d, browser, app, page;
   const accepted = r => { assert(r.ok !== false, r.reason); return r.state; };
   const click = name => page.locator(h.debug(name)).click();
@@ -97,54 +97,8 @@ async function fixture(d, id, upgrade = false) {
       const before = await state(); await equal(before);
       const expected = accepted(d.api.equipItem(before, item, holder, slot)); await dragEquipment(page, item, holder); await equal(expected); return expected;
     }
-    async function nativeSynthesis(mode) {
-      await open(fixtures['sunfire-cape']);
-      const before = await state(), ids = ingredientIds(before, recipes['sunfire-cape']); assert(ids);
-      const holder = before.preparation.units.find(unit => unit.team === 'player' && unit.location.kind === 'board'
-        && !before.items.some(item => item.location.kind === 'unit' && item.location.unitId === unit.id));
-      assert(holder, 'native synthesis has a board unit with empty equipment slots');
-      const selectors = await d.load('/src/simulation/item-selectors.ts');
-      const drops = [];
-      let expected = before;
-      for (const [index, itemId] of ids.entries()) {
-        const preview = selectors.previewEquip(expected, itemId, holder.id, 0);
-        assert(preview.allowed, `component ${index + 1} can be dropped on the same unit`);
-        if (index === 1) assert.equal(preview.combination?.resultDefinitionId, 'sunfire-cape');
-        expected = accepted(d.api.equipItem(expected, itemId, holder.id, 0));
-        // Only native mouse input commits either component; no combine/equip callback.
-        drops.push(await dragEquipment(page, itemId, holder.id));
-        await equal(expected);
-        const observed = await state();
-        assert(!observed.items.some(item => item.id === itemId && item.location.kind === 'inventory'));
-        if (index === 0) {
-          assert.deepEqual(observed.items.find(item => item.id === itemId)?.location, { kind: 'unit', unitId: holder.id, slot: 0 });
-          assert(observed.items.some(item => item.id === ids[1] && item.location.kind === 'inventory'), 'second component remains in inventory before its drag');
-        }
-      }
-      const observed = await state(), view = selectors.readUnitEquipment(observed, holder.id);
-      const finished = observed.items.find(item => item.id === view.slots[0].itemInstanceId);
-      assert.equal(finished?.definitionId, 'sunfire-cape', 'expected finished item occupies the unit equipment slot');
-      assert.deepEqual(finished.location, { kind: 'unit', unitId: holder.id, slot: 0 });
-      for (const id of ids) {
-        assert(!observed.items.some(item => item.id === id && item.location.kind === 'inventory'), `component ${id} left inventory`);
-        assert(!observed.items.some(item => item.id === id), `component ${id} was consumed by synthesis`);
-        assert.equal(await page.locator(h.debug(`item:${id}`)).count(), 0, `component ${id} disappeared from the item bench`);
-      }
-      const point = unitPoint(await h.read(page), holder.id);
-      await page.mouse.click(point.x, point.y);
-      const collapsedStats = page.locator('details.stats-details:not([open]) > summary');
-      if (await collapsedStats.count()) await collapsedStats.click();
-      const detail = page.locator(h.debug(`unit-equipment:${holder.id}`));
-      await detail.waitFor({ state: 'visible' });
-      assert.equal(await detail.innerText(), '装备槽：1 日炎斗篷 · 2 空 · 3 空');
-      await equal(expected);
-      await page.screenshot({ path: path.join(output, `${mode}-native-component-synthesis.png`) });
-      check(`${mode}-native-component-synthesis`, { components: ids, holder: holder.id, item: finished.id, definitionId: finished.definitionId, drops, exactState: true });
-      await page.close(); page = null;
-    }
     for (const mode of ['dev', 'preview']) {
       app = await h.appServer(mode);
-      await nativeSynthesis(mode);
       for (const [id, f] of Object.entries(fixtures)) {
         await open(f); const item = await combine(id);
         const combined = await state(), spare = combined.items.find(i => i.location.kind === 'inventory' && i.id !== item); assert(spare);
