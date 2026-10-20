@@ -5,7 +5,7 @@
  *   npm run build:game && node tests/server/e2e/c16-equip-preview.mjs
  *
  * During my battle (replay playing back), with an item in my inventory and one of my board units visible on the canvas:
- *   1. the item card is selectable and its equipment row hint names previewEquip's reason (data-preview = reason);
+ *   1. the item card is selectable and the native drag preview names previewEquip's reason;
  *   2. one real mouse drag carries the item from its card onto the board token;
  *   3. the expected answer is computed here, independently, by previewEquip(state, item, unit, slot) for slots 0–2 on the
  *      page's own state (src/simulation/item-selectors.ts bundled with esbuild):
@@ -31,7 +31,7 @@ const inBattle = s => s?.m6?.phase?.kind === 'combat' && s.state.phase === 'comb
 async function loadRules() {
   const outfile = `${OUT}/rules.mjs`;
   await build({
-    stdin: { contents: "export { previewEquip } from './src/simulation/item-selectors.ts';\nexport { equipmentFailureText } from './src/presentation/equipment-feedback.ts';", resolveDir: ROOT, loader: 'ts' },
+    stdin: { contents: "export { previewEquip } from './src/simulation/item-selectors.ts';\nexport { equipmentFailureText, allowedPreviewText, pickUnitDropSlot } from './src/presentation/equipment-feedback.ts';\nexport { itemDisplayName } from './src/presentation/g23-display.ts';", resolveDir: ROOT, loader: 'ts' },
     bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'warning',
   });
   return import(`${outfile}?${Date.now()}`);
@@ -73,7 +73,6 @@ async function main() {
       // Early in a long-enough battle replay, so the board token is still standing when the drag ends.
       if (!(inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 30)) { await page.waitForTimeout(60); continue; }
       if (!s.state.items.some(item => item.location.kind === 'inventory')) { await page.waitForTimeout(60); continue; }
-      await click(page, 'panel:items');
       await page.waitForTimeout(150);
       const now = await read(page);
       const item = now.state.items.find(entry => entry.location.kind === 'inventory');
@@ -89,21 +88,15 @@ async function main() {
       // Independent expectation: previewEquip on the page's own state for every slot.
       const previews = [0, 1, 2].map(slot => rules.previewEquip(now.state, item.id, unit.id, slot));
       const allowedSlot = previews.findIndex(preview => preview.allowed);
+      const expectedSlot = rules.pickUnitDropSlot(previews);
       const main = previews.find(preview => !preview.allowed && preview.reason !== 'item-slot-occupied') ?? previews[0];
       const expectedText = allowedSlot >= 0 ? null : main.reason === 'item-slot-occupied' ? '该单位的 3 个装备槽已满' : rules.equipmentFailureText(main.reason);
 
-      // 1. Select the card (click without moving): the unit's row hint names previewEquip's reason.
+      // 1. Selecting the persistent card is read-only; the hover preview is checked during the drag below.
       await page.mouse.click(card.centerX, card.centerY);
       await page.waitForTimeout(120);
-      const row = await page.evaluate(unitId => {
-        const slot = document.querySelector(`[data-equip-unit="${unitId}"]`);
-        const hint = slot?.closest('.equipment-row')?.querySelector('.equip-hint');
-        return hint ? { preview: hint.dataset.preview, text: hint.textContent } : null;
-      }, unit.id);
       const selected = (await read(page)).strategy?.selectedItemIds ?? [];
       check(selected.includes(item.id), `selecting ${item.id} during the battle works (selected: ${selected.join(', ') || 'none'})`);
-      check(row !== null && row.preview === (allowedSlot >= 0 ? 'allowed' : main.reason),
-        `row hint of ${unit.id} shows previewEquip's answer (${row?.preview} vs ${allowedSlot >= 0 ? 'allowed' : main.reason}): ${row?.text}`);
       // Unselect again so the drag starts from a clean selection.
       await page.mouse.click(card.centerX, card.centerY);
       await page.waitForTimeout(120);
@@ -128,6 +121,10 @@ async function main() {
         standing = now;
         if (!moved && attempt > 0) break;
       }
+      const hover = await page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
+      const expectedHover = expectedSlot >= 0 ? rules.allowedPreviewText(previews[expectedSlot], expectedSlot, rules.itemDisplayName) : expectedText;
+      check(hover === expectedHover,
+        `drag preview of ${unit.id} shows previewEquip's answer: ${hover}`);
       await page.mouse.up();
       const status = await page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
       const after = await read(page);
@@ -148,6 +145,8 @@ async function main() {
         let receipt = null;
         while (!receipt && Date.now() < deadlineEquip) { receipt = equipSent.map(([id]) => applied.get(id)).find(Boolean) ?? null; if (!receipt) { await page.waitForTimeout(50); equipSent.splice(0, equipSent.length, ...[...sent].filter(([id, command]) => !sentBefore.has(id) && command.type === 'equip')); } }
         check(receipt === 'applied', `drop on board unit ${unit.id} with previewEquip allowing slot ${allowedSlot}: equip applied (${receipt})`);
+        check(equipSent.length === 1 && equipSent[0][1].itemId === item.id && equipSent[0][1].unitId === unit.id
+          && equipSent[0][1].slot === expectedSlot, `one equip for the expected item, unit and slot ${expectedSlot}`);
       }
       console.log(JSON.stringify({ ...report.case, boardStatus: undefined }));
     }

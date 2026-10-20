@@ -7,7 +7,7 @@
  *
  * Each page, independently:
  *   1. In a preparation phase with an item in its inventory, equips it on one of its units through the strategy
- *      panel (select the item, click the unit's slot 0) and waits for the state push that shows it equipped.
+ *      item bench (drag onto an empty unit, slot 0) and waits for the state push that shows it equipped.
  *   2. Waits for its first PvP replay after that (a `replay` frame with a non-empty `unitIds`; PvE frames carry none)
  *      in which the equipped unit fights, and while it plays checks: every own battle token (each `combatId` of the frame)
  *      draws exactly the item pips my state holds for its `originalId`, the equipped unit's token among them; every
@@ -16,20 +16,13 @@
  * path; C15_VITE_PORT (default 5204) and C15_WS_PORT (default 8796) override the ports.
  */
 import { writeFileSync } from 'node:fs';
-import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
+import { click, dragEquipment, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
 
 const OUT = outDir('c15');
 const VITE_PORT = Number(process.env.C15_VITE_PORT ?? 5204);
 const WS_PORT = Number(process.env.C15_WS_PORT ?? 8796);
 
 const { check, failures } = createChecks();
-/** Item cards select on Enter (the same path as a click without drag), independent of where the panel is scrolled. */
-const selectItem = (page, itemId) => page.evaluate(id => {
-  const node = document.querySelector(`[data-debug="item:${id}"]`);
-  if (!node || node.disabled) return false;
-  node.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', key: 'Enter', bubbles: true }));
-  return true;
-}, itemId);
 async function waitRead(page, predicate, timeout = 10_000) {
   const deadline = Date.now() + timeout;
   for (;;) {
@@ -73,12 +66,13 @@ async function play({ name, page, replays }) {
     // 1. Equip once: the first inventory item onto a board unit (a bench unit if none is on the board yet).
     if (!equipped && inPreparation(s)) {
       const item = s.state.items.find(candidate => candidate.location.kind === 'inventory');
-      const units = s.state.preparation.units.filter(unit => unit.team === 'player');
+      const units = s.state.preparation.units.filter(unit => unit.team === 'player' && itemsOn(s.state, unit.id).length === 0);
       const unit = units.find(candidate => candidate.location.kind === 'board') ?? units[0];
-      if (item && unit && await selectItem(page, item.id)) {
+      if (item && unit) {
         await page.waitForTimeout(80);
-        if (await click(page, `equipment:${unit.id}:0`)) {
-          const shown = await waitRead(page, x => x.state.items.some(entry => entry.id === item.id && entry.location.kind === 'unit' && entry.location.unitId === unit.id));
+        {
+          await dragEquipment(page, item.id, unit.id);
+          const shown = await waitRead(page, x => x.state.items.some(entry => entry.id === item.id && entry.location.kind === 'unit' && entry.location.unitId === unit.id && entry.location.slot === 0));
           if (shown) {
             equipped = { itemId: item.id, definitionId: item.definitionId, unitId: unit.id, round: s.state.round, at: Date.now() };
             console.log(`    ${name}: equipped ${item.definitionId} (${item.id}) on ${unit.definitionId} (${unit.id}) in round ${s.state.round}`);

@@ -200,16 +200,16 @@ async function ui() {
       if (choice && !answered.has(`${choice.choiceId}:${choice.generation}`)) { answered.add(`${choice.choiceId}:${choice.generation}`); await click(page, `choice:${choice.offers[0]}`); continue; }
       const mine = s.state.preparation.units.filter(unit => unit.team === 'player');
       if (kind === 'preparation') {
-        // Keep an item on a board unit and, when there is one, on a bench unit (a click on the card, then on a slot: C16).
+        // Keep an item on a board unit and, when there is one, on a bench unit (native item-bench drag to the unit token).
         for (const where of ['board', 'bench']) {
           const now = await read(page), units = now.state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === where);
           if (!units.length || units.some(unit => worn(now.state, unit.id).length)) continue;
           const item = now.state.items.find(entry => entry.location.kind === 'inventory');
-          await click(page, 'panel:items'); await sleep(100);
-          const bounds = (await read(page)).strategy.bounds, card = item && bounds[`item:${item.id}`], slot = bounds[`equipment:${units[0].id}:0`];
-          if (!card || !slot) continue;
-          await page.mouse.click(card.centerX, card.centerY); await sleep(100);
-          await page.mouse.click(slot.centerX, slot.centerY); await sleep(300);
+          await sleep(100);
+          const fresh = await read(page), card = item && fresh.strategy.bounds[`item:${item.id}`], token = fresh.tokens.find(entry => entry.visible && entry.owner === units[0].id);
+          if (!card || !token) continue;
+          await page.mouse.move(card.centerX, card.centerY); await page.mouse.down(); await sleep(100);
+          await page.mouse.move(token.screenX, token.screenY, { steps: 8 }); await page.mouse.up(); await sleep(300);
         }
         await sleep(150); continue;
       }
@@ -223,7 +223,7 @@ async function ui() {
       const pick = s.state.consumables.flatMap(tool => candidates.map(unit => ({ tool, unit, target: allowedOn(s.state, tool, unit) })))
         .find(({ unit, target }) => target && s.tokens.some(token => token.owner === unit.id && token.visible && (branch !== 'combat' || fighting.has(token.id))));
       if (!pick) { await sleep(100); continue; }
-      await click(page, 'panel:items'); await sleep(120);
+      await sleep(120);
       const now = await read(page), { tool, unit, target } = pick;
       const tokenOf = state => state.tokens.find(token => token.owner === unit.id && token.visible && (branch !== 'combat' || fighting.has(token.id)));
       const card = now.strategy.bounds[`consumable:${tool.consumableId}`], token = tokenOf(now);

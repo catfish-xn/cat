@@ -1,3 +1,4 @@
+const { installEquipmentCommands } = require('./equipment-input.cjs');
 /* B10 supplemental desktop acceptance. Real app, public clicks/keys and validated
  * public-route imports only. Full 33-battle/three-build journeys stay in existing CI.
  * Run after npm run build. No mobile/touch cases or logic-time acceleration.
@@ -42,9 +43,9 @@ const viewports = [{ width: 1440, height: 1000 }, { width: 1440, height: 600 }, 
         const page = await browser.newPage({ viewport }); page.setDefaultTimeout(30000);
         const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
         page.on('dialog', dialog => dialog.accept());
-        await h.boot(page, app.url);
-        for (const name of ['help-open', 'mobile:start-combat', 'panel:items', 'm6-import']) await accessible(page.locator(h.debug(name)), page);
-        await click(page, 'panel:items'); await click(page, 'item-codex-toggle');
+        await installEquipmentCommands(page); await h.boot(page, app.url);
+        for (const name of ['help-open', 'mobile:start-combat', 'item-codex-toggle', 'm6-import']) await accessible(page.locator(h.debug(name)), page);
+        await click(page, 'item-codex-toggle');
         await accessible(page.locator(h.debug('codex-search')), page);
         const beforeSearch = (await h.read(page)).state;
         await page.locator(h.debug('codex-search')).pressSequentially('dfe');

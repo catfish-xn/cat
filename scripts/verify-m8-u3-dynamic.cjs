@@ -1,3 +1,4 @@
+const { installEquipmentCommands } = require('./equipment-input.cjs');
 /* UR-U3-08: desktop native input through the real BoardScene / StrategyPanel.
  * Test-only main-module instrumentation captures the scene; fixture setup injects
  * permanent inventory after real opening progression and paid hero purchases.
@@ -48,6 +49,7 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
           x: event.clientX, y: event.clientY, target: event.target?.tagName }), true);
       }
     });
+    await installEquipmentCommands(page);
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(() => window.__CAT_DEBUG__ && window.__U3_SCENE__);
     await page.locator('[data-debug="m6-seed-input"]').fill('42');
@@ -204,35 +206,43 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
     await check('unique-preview-click-atomic', async () => {
       const before = await setup('unique'); await click('item:item-103');
       unchanged(before, await read());
-      for (let slot = 0; slot < 3; slot++) assert.equal(await page.locator(`[data-debug="equipment:unit-1:${slot}"]`).getAttribute('data-preview'), 'unique-conflict');
-      assert.match(await page.locator('[data-debug="equipment:unit-1:0"]').getAttribute('class'), /equip-conflict/);
-      assert.match(await page.locator('.equipment-row').first().innerText(), /冲突：蓝霸符/);
+      const previews = await page.evaluate(() => [0, 1, 2].map(slot => window.__U3_API__.selectors.previewEquip(window.__U3_SCENE__.session.state, 'item-103', 'unit-1', slot)));
+      for (const preview of previews) { assert.equal(preview.reason, 'unique-conflict'); assert(preview.conflictingItemIds.includes('item-102')); }
       // C16: a slot click sends only what previewEquip accepts; a refused slot names the reason and sends nothing.
-      await click('equipment:unit-1:1'); const after = await read(); unchanged(before, after);
+      const after = await drag('item-103', 'unit-1'); unchanged(before, after);
       assert.equal(after.calls.length, 0);
       assert.equal(after.status, await page.evaluate(() => window.__U3_API__.feedback.EQUIPMENT_FAILURE_TEXT['unique-conflict']));
       return { status: after.status, calls: after.calls };
     });
     await check('tg-preview-slot3-temporary-readonly', async () => {
       const before = await setup('occupied'); await click('item:item-101'); unchanged(before, await read());
-      for (let slot = 0; slot < 3; slot++) assert.equal(await page.locator(`[data-debug="equipment:unit-1:${slot}"]`).getAttribute('data-preview'), 'exclusive-slots');
-      assert.match(await page.locator('.equipment-row').nth(1).innerText(), /将占用槽 1、2、3/);
-      await click('equipment:unit-2:2'); const after = await read();
+      const previews = await page.evaluate(() => [0, 1, 2].map(slot => window.__U3_API__.selectors.previewEquip(window.__U3_SCENE__.session.state, 'item-101', 'unit-1', slot)));
+      for (const preview of previews) assert.equal(preview.reason, 'exclusive-slots');
+      const empty = await page.evaluate(() => window.__U3_API__.selectors.previewEquip(window.__U3_SCENE__.session.state, 'item-101', 'unit-2', 2));
+      assert.equal(empty.allowed, true); assert.deepEqual(empty.occupiedSlots, [0, 1, 2]);
+      const after = await drag('item-101', 'unit-2');
       assert.equal(after.calls[0].ok, true);
       assert.equal(after.state.items.find(i => i.id === 'item-101').location.slot, 0);
-      for (const slot of [1, 2]) assert.equal(await page.locator(`[data-debug="equipment:unit-2:${slot}"]`).isDisabled(), true);
-      const text = await page.locator('.equipment-row').nth(1).innerText();
+      const view = await page.evaluate(() => window.__U3_API__.selectors.readUnitEquipment(window.__U3_SCENE__.session.state, 'unit-2'));
+      for (const slot of [1, 2]) assert.equal(view.slots[slot].reservedByItemInstanceId, 'item-101');
+      const token = await page.evaluate(() => window.__CAT_DEBUG__.read().tokens.find(token => token.id === 'unit-2'));
+      await page.mouse.click(token.screenX, token.screenY);
+      const text = await page.locator('.combat-sources').innerText();
       assert.equal((text.match(/来自 窃贼手套/g) || []).length, 2);
       assert.equal((text.match(/仅 2-1 本轮有效 · 不可操作/g) || []).length, 2);
       return { text };
     });
     await check('combine-invalid-and-success', async () => {
       const before = await setup(); await click('item:item-100'); await click('item:item-102'); unchanged(before, await read());
-      assert.equal(await page.locator('[data-debug="combine-preview"]').getAttribute('data-reason'), 'invalid-recipe');
-      assert.equal(await page.locator('[data-debug="combine-items"]').isDisabled(), true);
-      await click('item:item-102'); await click('item:item-106');
-      assert.match(await page.locator('[data-debug="combine-items"]').innerText(), /合成 死亡之刃/);
-      unchanged(before, await read()); await click('combine-items'); const after = await read();
+      const invalid = await page.evaluate(() => window.__U3_API__.selectors.previewCombine(window.__U3_SCENE__.session.state, 'item-100', 'item-102'));
+      assert.equal(invalid.allowed, false); assert.equal(invalid.reason, 'invalid-recipe');
+      const refused = await page.evaluate(() => window.__U3_API__.api.combineItems(window.__U3_SCENE__.session.state, 'item-100', 'item-102'));
+      assert.equal(refused.ok, false); assert.equal(refused.reason, 'invalid-recipe'); assert.deepEqual(refused.state, before.state); assert.deepEqual(refused.events, []);
+      const preview = await page.evaluate(() => window.__U3_API__.selectors.previewCombine(window.__U3_SCENE__.session.state, 'item-100', 'item-106'));
+      assert.equal(preview.allowed, true); assert.equal(preview.resultDefinitionId, 'deathblade');
+      unchanged(before, await read());
+      await page.evaluate(() => window.__U3_SCENE__.strategyPanel.actions.combine('item-100', 'item-106'));
+      const after = await read();
       assert.equal(after.calls.length, 1); assert.equal(after.calls[0].ok, true);
       assert(after.state.items.some(i => i.definitionId === 'deathblade')); return after.calls;
     });
@@ -244,9 +254,8 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
       assert.equal((detail.match(/来自 窃贼手套/g) || []).length, 2);
       assert.equal((detail.match(/仅 2-1 本轮有效 · 不可操作/g) || []).length, 2);
       await click('item:item-100'); unchanged(before, await read());
-      assert.equal(await page.locator('[data-debug="equipment:unit-1:0"]').getAttribute('data-preview'), 'exclusive-slots');
-      assert.match(await page.locator('[data-debug="equipment:unit-1:0"]').getAttribute('class'), /equip-conflict/);
-      assert.match(await page.locator('.equipment-row').first().innerText(), /冲突：窃贼手套/);
+      const preview = await page.evaluate(() => window.__U3_API__.selectors.previewEquip(window.__U3_SCENE__.session.state, 'item-100', 'unit-1', 0));
+      assert.equal(preview.reason, 'exclusive-slots'); assert(preview.conflictingItemIds.includes('item-101'));
       assert.equal(await page.locator('.item-inventory [data-temporary-id]').count(), 0);
       return { detail, unchanged: true };
     });
@@ -262,9 +271,9 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
         for (const result of [selectors.previewCombine(state, 'item-100', 'item-100'), api.combineItems(state, 'item-100', 'item-100')])
           check(result.reason === 'same-item', 'same-item reason');
         // This selection is intentionally unreachable by ordinary clicks; copy-only check.
-        scene.strategyPanel.selectedItems = ['item-100', 'item-100']; scene.strategyPanel.render();
-        check(document.querySelector('[data-debug="combine-preview"]').textContent.includes(feedback.EQUIPMENT_FAILURE_TEXT['same-item']), 'same-item copy');
-        check(document.querySelector('[data-debug="combine-items"]').disabled, 'same-item disabled');
+        const same = selectors.previewCombine(state, 'item-100', 'item-100');
+        check(same.allowed === false, 'same-item disabled');
+        check(feedback.equipmentFailureText(same.reason) === feedback.EQUIPMENT_FAILURE_TEXT['same-item'], 'same-item copy');
         check(JSON.stringify(state) === before, 'preview and rejected commands are read-only');
         return { temporaryId: id, sameItem: true, unchanged: true };
       });

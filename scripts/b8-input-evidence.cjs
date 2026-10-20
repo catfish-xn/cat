@@ -3,9 +3,9 @@
  * domain's own public commands from createMatch(42), using the same pick policy as the gate, and
  * requires every recorded interaction (before, expected and actual state) to equal the replay; the
  * complete 2-1 combat ledger must equal the replayed ledger event by event. Each interaction's
- * inputs must be trusted native mouse events of known types, in time order, forming exactly one
- * legal press/release sequence per control of that command and ending in the committing click
- * (see checkInputs). Hashes, artifact files and the summary identities are still checked, and
+ * inputs (except the explicitly recorded public combine command) must be trusted native mouse events. Clicks form one
+ * legal press/release sequence per control and end in the committing click; equip is one native drag
+ * (see checkInputs/checkEquipDrag). Hashes, artifact files and summary identities are still checked, and
  * both attack intervals are recomputed from the replayed combat, not read from the evidence.
  */
 const assert = require('node:assert/strict');
@@ -31,8 +31,16 @@ function load(dir, interaction) {
   assert.equal(hash(artifact.before), interaction.beforeHash, `${interaction.name}: before state was modified`);
   assert.equal(hash(artifact.actual?.state), interaction.stateHash, `${interaction.name}: recorded state was modified`);
   same(artifact.actual.state, artifact.expected, `${interaction.name}: actual state equals the public command result`);
-  assert(Array.isArray(artifact.inputs) && artifact.inputs.length > 0 && artifact.inputs.every(input => input?.trusted === true),
-    `${interaction.name}: trusted native input`);
+  if (interaction.name === 'normal-opening-rageblade-recipe') {
+    assert.equal(artifact.evidenceKind, 'public-command', `${interaction.name}: explicit public command evidence`);
+    assert(Array.isArray(artifact.inputs) && artifact.inputs.every(input => input.trusted === true && HOVER_TYPES.has(input.type)),
+      `${interaction.name}: public command must not claim native input`);
+    checkInputs(interaction.name, artifact.inputs, []);
+  } else {
+    assert(!artifact.command && !artifact.evidenceKind, `${interaction.name}: native input cannot be replaced by a command`);
+    assert(Array.isArray(artifact.inputs) && artifact.inputs.length > 0 && artifact.inputs.every(input => input?.trusted === true),
+      `${interaction.name}: trusted native input`);
+  }
   return artifact;
 }
 
@@ -79,6 +87,41 @@ function checkInputs(name, inputs, targets) {
   assert(!extra, extra?.type === 'click' ? `${name}: extra committing click on ${extra.target}` : `${name}: extra ${describe(extra)} outside the command's operations`);
 }
 
+/** One native drag, captured at its inventory source and released on the actual unit token. */
+function checkEquipDrag(name, artifact, itemId, unitId) {
+  const inputs = artifact.inputs;
+  let time = -Infinity;
+  for (const input of inputs) {
+    assert(INPUT_TYPES.has(input.type), `${name}: input type ${input.type} is not a native mouse event of the gate`);
+    assert(Number.isFinite(input.time) && input.time >= time, `${name}: inputs in native time order`);
+    time = input.time;
+    assert(typeof input.target === 'string' && input.target.length > 0, `${name}: input target recorded`);
+    if (POINTER_TYPES.has(input.type)) assert.equal(input.pointerType, 'mouse', `${name}: ${input.type} pointerType`);
+  }
+  const source = `item:${itemId}`;
+  const presses = inputs.filter(input => !HOVER_TYPES.has(input.type));
+  assert.deepEqual(inputs.filter(input => input.type === 'pointerdown').map(input => input.target), [source], `${name}: pointer operations hit the command's controls`);
+  for (const [index, type] of ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].entries()) {
+    const event = presses[index];
+    assert(event?.type !== 'click', `${name}: extra committing click on ${event?.target}`);
+    assert.equal(event?.type, type, `${name}: drag expected ${type}`);
+    assert(index < 2 ? event.target === source : event.target === source || NON_CONTROL.test(event.target), `${name}: drag ${type} target`);
+  }
+  const token = artifact.actual.tokens?.find(token => token.visible && (token.owner ?? token.id) === unitId);
+  assert(token, `${name}: actual visible destination token ${unitId}`);
+  const up = presses[2];
+  assert.equal(artifact.drop?.unitId, unitId, `${name}: recorded destination unit`);
+  assert(Number.isFinite(up.x) && Number.isFinite(up.y) && Math.hypot(up.x - artifact.drop.x, up.y - artifact.drop.y) <= 2,
+    `${name}: release on the equipped unit token`);
+  assert(Number.isFinite(presses[0].x) && Number.isFinite(presses[0].y)
+    && Math.hypot(up.x - presses[0].x, up.y - presses[0].y) >= 6, `${name}: drag crosses the movement threshold`);
+  if (presses[4]) {
+    assert(presses[4].type === 'click' && (presses[4].target === source || NON_CONTROL.test(presses[4].target)),
+      `${name}: extra committing click on ${presses[4].target}`);
+  }
+  assert(presses.length <= 5, `${name}: extra committing click on ${presses[5]?.target}`);
+}
+
 /** api: the public Match module (src/simulation/match.ts); readCombatStats: src/simulation/combat-s13.ts. */
 function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   const summary = manifest.b8RagebladeChain;
@@ -102,7 +145,9 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
     const artifact = load(dir, entry);
     same(artifact.before, plain(before), `${name}: recorded before state equals the trusted replay`);
     same(artifact.expected, plain(after), `${name}: recorded result equals the replayed public command`);
-    checkInputs(name, artifact.inputs, typeof targets === 'function' ? targets(artifact) : targets);
+    if (targets.command) assert.deepEqual(artifact.command, targets.command, `${name}: replayed public command identity`);
+    else if (targets.drag) checkEquipDrag(name, artifact, ...targets.drag);
+    else checkInputs(name, artifact.inputs, typeof targets === 'function' ? targets(artifact) : targets);
     return artifact;
   };
 
@@ -134,11 +179,11 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   assert(lux && summary.luxId === lux.id, 'B8 Rageblade evidence: Lux identity (granted by its loot receipt)');
 
   const combined = accepted(api.combineItems(state, bow, rod), 'combine');
-  step('normal-opening-rageblade-recipe', state, combined, ['panel:items', `item:${bow}`, `item:${rod}`, 'combine-items']);
+  step('normal-opening-rageblade-recipe', state, combined, { command: { type: 'combine', a: bow, b: rod } });
   const blade = combined.items.find(item => item.definitionId === 'rageblade' && !state.items.some(old => old.id === item.id));
   assert(blade && summary.ragebladeId === blade.id, 'B8 Rageblade evidence: Rageblade identity');
   const equipped = accepted(api.equipItem(combined, blade.id, lux.id, 0), 'equip');
-  step('normal-opening-rageblade-equipped', combined, equipped, [`item:${blade.id}`, `equipment:${lux.id}:0`]);
+  step('normal-opening-rageblade-equipped', combined, equipped, { drag: [blade.id, lux.id] });
   state = equipped;
   if (lux.location.kind !== 'board') {
     const entry = chain[cursor];

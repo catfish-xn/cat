@@ -117,7 +117,7 @@ async function main() {
         // Only early in an 8 s preparation, so the drop and its receipt land before the deadline.
         if (inPreparation(s) && !prepSeen.has(s.state.round)) prepSeen.set(s.state.round, Date.now());
         if (!inPreparation(s) || Date.now() - prepSeen.get(s.state.round) > 3_000) { await page.waitForTimeout(60); continue; }
-        await click(page, 'panel:items'); await page.waitForTimeout(150);
+        await page.waitForTimeout(150);
         const now = await read(page);
         if (!inPreparation(now)) continue;
         const tokens = new Map(now.tokens.map(token => [token.id, token]));
@@ -145,7 +145,7 @@ async function main() {
 
       // (a) Combat: early in a long-enough battle replay, so the token is still standing when the drag ends.
       if (!(inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 30)) { await page.waitForTimeout(60); continue; }
-      await click(page, 'panel:items'); await page.waitForTimeout(150);
+      await page.waitForTimeout(150);
       const now = await read(page);
       const token = now.tokens.find(entry => entry.id === wearer && entry.visible);
       const options = inventory(now.state).filter(isComponent).map(item => {

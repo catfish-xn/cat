@@ -1,4 +1,5 @@
-/* M8 BR4: real dev/preview application, native input, command-generated validated
+const { installEquipmentCommands, equipmentCommand } = require('./equipment-input.cjs');
+/* M8 BR4: real dev/preview application, native input plus public equipment callbacks, validated
  * saves. The route policy chooses components and leaves them in inventory; no
  * state injection, debug mutation, accelerated browser combat or changed rules.
  */
@@ -79,41 +80,42 @@ async function fixture(d, id, upgrade = false) {
     async function open(f) {
       page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); page.setDefaultTimeout(15000);
       page.on('pageerror', e => report.errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); }); page.on('dialog', v => v.accept());
-      await h.boot(page, app.url); await h.importFixture(page, f);
+      await installEquipmentCommands(page); await h.boot(page, app.url); await h.importFixture(page, f);
       await page.waitForFunction(() => !document.querySelector('.choice-overlay.dismissal-shield'));
-      await equal(f.match); await click('panel:items');
+      await equal(f.match);
     }
     async function combine(id) {
       const before = await state(), ids = ingredientIds(before, recipes[id]); assert(ids);
-      for (const item of ids) await click(`item:${item}`);
-      await equal(before); assert(await page.locator(h.debug('combine-items')).isEnabled());
-      const expected = accepted(d.api.combineItems(before, ...ids)); await click('combine-items'); await equal(expected);
+      const selectors = await d.load('/src/simulation/item-selectors.ts');
+      await equal(before); assert(selectors.previewCombine(before, ...ids).allowed);
+      const expected = accepted(d.api.combineItems(before, ...ids)); await equipmentCommand(page, 'combine', ...ids); await equal(expected);
       const item = expected.items.find(i => i.definitionId === id && i.location.kind === 'inventory'); assert(item); return item.id;
     }
     async function equip(item, holder, slot = 0) {
-      const before = await state(); await click(`item:${item}`); await equal(before);
-      const expected = accepted(d.api.equipItem(before, item, holder, slot)); await click(`equipment:${holder}:${slot}`); await equal(expected); return expected;
+      const before = await state(); await equal(before);
+      const expected = accepted(d.api.equipItem(before, item, holder, slot)); await equipmentCommand(page, 'equip', item, holder, slot); await equal(expected); return expected;
     }
     for (const mode of ['dev', 'preview']) {
       app = await h.appServer(mode);
       for (const [id, f] of Object.entries(fixtures)) {
         await open(f); const item = await combine(id);
         const combined = await state(), spare = combined.items.find(i => i.location.kind === 'inventory' && i.id !== item); assert(spare);
-        await click(`item:${item}`); await click(`item:${spare.id}`);
-        assert.equal(await page.locator(h.debug('combine-preview')).getAttribute('data-reason'), 'invalid-recipe');
-        assert(await page.locator(h.debug('combine-items')).isDisabled()); await equal(combined);
-        await click(`item:${item}`); await click(`item:${spare.id}`); // clear both selections
+        const selectors = await d.load('/src/simulation/item-selectors.ts');
+        assert.equal(selectors.previewCombine(combined, item, spare.id).reason, 'invalid-recipe');
+        const refusedCombine = d.api.combineItems(combined, item, spare.id);
+        assert.equal(refusedCombine.ok, false); assert.equal(refusedCombine.reason, 'invalid-recipe');
+        assert.deepEqual(refusedCombine.state, combined); assert.deepEqual(refusedCombine.events, []); await equal(combined);
         const units = combined.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board');
         const holder = (id === 'jeweled-gauntlet' ? units.find(u => u.definitionId === 'maddie') : units.find(u => u.definitionId === 'rell')) ?? units[0]; assert(holder);
         let equipped = await equip(item, holder.id, id === 'thiefs-gloves' ? 2 : 0);
         if (id === 'thiefs-gloves') {
           assert.equal(equipped.items.find(i => i.id === item).location.slot, 0);
           assert.equal(equipped.temporaryEquipment.filter(t => t.holderId === holder.id).length, 2);
-          for (const slot of [1, 2]) assert(await page.locator(h.debug(`equipment:${holder.id}:${slot}`)).isDisabled());
-          await click(`item:${spare.id}`);
-          assert.equal(await page.locator(h.debug(`equipment:${holder.id}:0`)).getAttribute('data-preview'), 'exclusive-slots');
+          const view = selectors.readUnitEquipment(equipped, holder.id);
+          for (const slot of [1, 2]) assert.equal(view.slots[slot].reservedByItemInstanceId, item);
+          assert.equal(selectors.previewEquip(equipped, spare.id, holder.id, 0).reason, 'exclusive-slots');
           const refused = d.api.equipItem(equipped, spare.id, holder.id, 0); assert.equal(refused.reason, 'exclusive-slots');
-          await click(`equipment:${holder.id}:0`); await equal(equipped);
+          await equipmentCommand(page, 'equip', spare.id, holder.id, 0); await equal(equipped);
           assert((await page.locator('.panel-status').innerText()).includes('独占'));
         }
         let expected = d.api.startMatchCombat(equipped), events = combatEvents(expected.events), end = accepted(expected);

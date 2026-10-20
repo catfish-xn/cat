@@ -1,5 +1,6 @@
 const { prepareB6Opening } = require('./b6-public-preparation.cjs');
-/* Native Chromium input gate. Browser state is read-only. Production Match is a
+const { installEquipmentCommands, equipmentCommand, dragEquipment } = require('./equipment-input.cjs');
+/* Native Chromium input gate; two-component inventory synthesis uses the existing combine callback. Production Match is a
  * consistency model, never an independent mathematical oracle. No combat clock
  * is accelerated and no resources, fixtures, or restored states are injected. */
 const fs = require('node:fs');
@@ -55,12 +56,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         window.addEventListener(type, event => window.__M5_INPUTS__.push({ type, time: performance.now(), trusted: event.isTrusted, code: event.code ?? null,
           repeat: event.repeat ?? false, shieldActive: Boolean(document.querySelector('.choice-overlay.dismissal-shield')), pointerType: event.pointerType ?? null, pointerId: event.pointerId ?? null,
           firesTouchEvents: event.sourceCapabilities?.firesTouchEvents ?? null,
+          x: event.clientX ?? null, y: event.clientY ?? null,
           target: event.target?.closest?.('[data-debug]')?.dataset.debug ?? event.target?.tagName ?? null }), true);
     });
     page = await context.newPage();
     page.on('dialog', async dialog => { assert.equal(dialog.type(), 'confirm'); await dialog.accept(); });
     page.on('pageerror', error => report.errors.push(error.message));
     page.on('console', event => { if (event.type() === 'error') report.errors.push(event.text()); });
+    await installEquipmentCommands(page);
     await page.goto(url); await page.waitForFunction(() => window.__CAT_DEBUG__);
     const cdp = await context.newCDPSession(page);
     const read = () => page.evaluate(() => window.__CAT_DEBUG__.read());
@@ -104,7 +107,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     async function record(name, before, expected, start, extra = {}) {
       const snap = await read(); assert.deepEqual(snap.state, expected, name);
       const inputs = await page.evaluate(index => window.__M5_INPUTS__.slice(index), start);
-      assert(inputs.length && inputs.every(input => input.trusted), `${name}: trusted native input`);
+      if (extra.command) {
+        assert(inputs.every(input => input.trusted && ['pointerout', 'mouseout', 'mouseleave'].includes(input.type)),
+          `${name}: public command evidence contains no claimed native operation`);
+      } else assert(inputs.length && inputs.every(input => input.trusted), `${name}: trusted native input`);
       const index = report.interactions.length;
       const artifact = `input-${String(index).padStart(2, '0')}.json`;
       fs.writeFileSync(path.join(output, artifact), JSON.stringify({ name, before, expected, actual: snap, inputs, ...extra }));
@@ -135,7 +141,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       return prepared;
     }
     async function itemReset() {
-      await reset(); const prepared = await prepareB6Opening(page, '2-5');
+      // Independent inventory cases start with the default view. This also works
+      // before the single-player inventory becomes persistent across other tabs.
+      await page.reload(); await page.waitForFunction(() => window.__CAT_DEBUG__);
+      await startFixed42();
+      const prepared = await prepareB6Opening(page, '2-5', { dragDeployment: true });
       assert.equal(prepared.items.length, 1, 'real 2-4 supply grants the item used by native item-input tests');
       return prepared;
     }
@@ -290,9 +300,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     await resizeViewport(page, { width: 1440, height: 1000 });
     {
-      const before = await itemReset(); await click('panel:items');
-      await page.locator('[data-debug="equipment:unit-1:0"]').scrollIntoViewIfNeeded();
-      let snap = await read(); const item = snap.bounds['item:item-1'], equip = snap.bounds['equipment:unit-1:0'];
+      const before = await itemReset();
+      await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
+      let snap = await read(); const item = snap.bounds['item:item-1'], token = snap.tokens.find(unit => unit.id === 'unit-1' && unit.visible);
+      assert(token); const equip = { centerX: token.screenX, centerY: token.screenY };
       async function dragItem() {
         await touch('touchStart', [{ id: 12, x: item.centerX, y: item.centerY }]);
         await touch('touchMove', [{ id: 12, x: item.centerX - 12, y: item.centerY }]);
@@ -316,7 +327,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     await resizeViewport(page, { width: 390, height: 844 });
     {
-      const before = await itemReset(); await click('panel:items'); await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
+      const before = await itemReset(); await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
       const bounds = (await read()).bounds['item:item-1'], start = await offset();
       await touch('touchStart', [{ id: 13, x: bounds.centerX, y: bounds.centerY }]); assert.equal((await read()).gesture?.kind, 'item');
       await resizeViewport(page, { width: 844, height: 390 }); await touch('touchEnd');
@@ -335,7 +346,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
       await record('trait-team-member-and-combined-benefits-visible', traitBefore, traitBefore, traitStart);
       await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
-      const before = await itemReset(); await click('panel:items', true);
+      const before = await itemReset();
       const target = page.locator('[data-debug="item:item-1"]');
       await target.evaluate(node => node.scrollIntoView({ block: 'start' }));
       const coveredBy = await target.evaluate(node => {
@@ -405,10 +416,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     fs.writeFileSync(path.join(output, 'frame-intervals.json'), JSON.stringify(frameSamples));
     // T13 seed 14349 earns Lux, bow and rod as random opening drops
     // only for real kills, so the original Rageblade-on-Lux chain runs in the
-    // first combat that can have it (2-1) instead of 1-2. Every step is a native
-    // input whose full resulting state equals the public command's result.
+    // first combat that can have it (2-1) instead of 1-2. Synthesis is explicit
+    // public-command evidence; all other steps retain native input evidence.
     {
-      await click('mobile:new-match'); await startFixed42(14349);
+      await page.reload(); await page.waitForFunction(() => window.__CAT_DEBUG__);
+      await startFixed42(14349);
       for (let guard = 0; guard < 40; guard++) {
         const current = await state();
         if (current.m8.round.roundId === '2-1' && current.phase === 'preparation') break;
@@ -429,13 +441,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const lux = buildBefore.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'lux');
       assert(bow && rod && lux, 'real 1-3/1-4 loot granted Lux, bow and rod');
       let buildStart = await offset();
-      await click('panel:items'); await click(`item:${bow.id}`); await click(`item:${rod.id}`); await click('combine-items');
+      await equipmentCommand(page, 'combine', bow.id, rod.id);
       let buildExpected = accepted(api.combineItems(buildBefore, bow.id, rod.id));
-      await record('normal-opening-rageblade-recipe', buildBefore, buildExpected, buildStart);
+      await record('normal-opening-rageblade-recipe', buildBefore, buildExpected, buildStart,
+        { command: { type: 'combine', a: bow.id, b: rod.id }, evidenceKind: 'public-command' });
       const rageblade = buildExpected.items.find(item => item.definitionId === 'rageblade'); assert(rageblade);
-      buildBefore = buildExpected; buildStart = await offset(); await click(`item:${rageblade.id}`); await click(`equipment:${lux.id}:0`);
+      buildBefore = buildExpected; buildStart = await offset(); const drop = await dragEquipment(page, rageblade.id, lux.id);
       buildExpected = accepted(api.equipItem(buildBefore, rageblade.id, lux.id, 0));
-      await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart);
+      await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart, { drop });
       if (lux.location.kind !== 'board') {
         const zone = buildExpected.preparation.board.deploymentZones.player, used = new Set(buildExpected.preparation.units
           .flatMap(unit => unit.location.kind === 'board' ? [`${unit.location.cell.col},${unit.location.cell.row}`] : []));

@@ -37,9 +37,19 @@ const inBattle = s => s?.m6?.phase?.kind === 'combat' && s.state.phase === 'comb
 const inPreparation = s => s?.m6?.phase?.kind === 'preparation' && s.state.phase === 'preparation';
 const inventory = state => state.items.filter(item => item.location.kind === 'inventory');
 const wornBy = (state, unitId) => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId);
-/** Every equipment slot button of the panel: pending mark, text and hover title. */
-const slotMarks = page => page.evaluate(() => Array.from(document.querySelectorAll('[data-equip-unit]')).map(node => ({
-  unit: node.dataset.equipUnit, slot: Number(node.dataset.equipSlot), pending: node.dataset.pending ?? null, text: node.textContent, title: node.title })));
+/** Public slot data plus the actual token's pending icons; no equipment-panel nodes. */
+const slotMarks = page => page.evaluate(async () => {
+  const { readUnitEquipment } = await import('/src/simulation/item-selectors.ts');
+  const snapshot = window.__CAT_DEBUG__.read();
+  return snapshot.state.preparation.units.filter(unit => unit.team === 'player').flatMap(unit => {
+    const token = snapshot.tokens.find(entry => entry.visible && entry.owner === unit.id);
+    return readUnitEquipment(snapshot.state, unit.id).slots.map(slot => {
+      const item = snapshot.state.items.find(item => item.id === slot.itemInstanceId);
+      return { unit: unit.id, slot: slot.slot, itemId: slot.itemInstanceId,
+        pending: item && token?.pendingEquipped.includes(item.definitionId) ? 'next-battle' : null };
+    });
+  });
+});
 
 /** The domain preview and the content table, bundled straight from the sources (never re-implemented here). */
 async function loadRules() {
@@ -103,7 +113,7 @@ async function main() {
       // (next) The first preparation after the pending equip: marks gone, icons updated.
       if (pending) {
         if (!inPreparation(s) || s.state.round === pending.round) { await page.waitForTimeout(80); continue; }
-        await click(page, 'panel:items'); await page.waitForTimeout(250);
+        await page.waitForTimeout(250);
         const now = await read(page), marks = await slotMarks(page), token = tokenOf(now, wearer);
         await page.screenshot({ path: `${OUT}/next-preparation.png` });
         const worn = now.state.items.find(item => item.id === pending.itemId);
@@ -111,7 +121,7 @@ async function main() {
           pendingMarks: marks.filter(mark => mark.pending), loadoutTip: now.loadoutTip };
         console.log(JSON.stringify(report.next));
         check(worn?.location.kind === 'unit' && worn.location.unitId === wearer, `${pending.itemId} is still worn by ${wearer} (${JSON.stringify(worn?.location)})`);
-        check(report.next.pendingMarks.length === 0 && !marks.some(mark => mark.text.includes(NEXT_BATTLE)), `no slot is marked ${NEXT_BATTLE} in the next preparation (${JSON.stringify(report.next.pendingMarks)})`);
+        check(report.next.pendingMarks.length === 0, `no slot is pending in the next preparation (${JSON.stringify(report.next.pendingMarks)})`);
         check(token && token.equipped.includes(pending.definitionId), `the token's icons now include ${pending.definitionId} (${token?.equipped})`);
         check(token && token.pendingEquipped.length === 0, `the token shows nothing pending (${token?.pendingEquipped})`);
         check(now.loadoutTip === '', `no loadout tip outside a battle ("${now.loadoutTip}")`);
@@ -125,7 +135,7 @@ async function main() {
       if (!wearer) {
         if (inPreparation(s) && !prepSeen.has(s.state.round)) prepSeen.set(s.state.round, Date.now());
         if (!inPreparation(s) || Date.now() - prepSeen.get(s.state.round) > 3_000) { await page.waitForTimeout(60); continue; }
-        await click(page, 'panel:items'); await page.waitForTimeout(150);
+        await page.waitForTimeout(150);
         const now = await read(page);
         if (!inPreparation(now)) continue;
         const tokens = new Map(now.tokens.map(token => [token.id, token]));
@@ -148,12 +158,12 @@ async function main() {
 
       // (combat) Early in a long-enough battle in which the wearer fights.
       if (!(inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 30)) { await page.waitForTimeout(60); continue; }
-      await click(page, 'panel:items'); await page.waitForTimeout(150);
+      await page.waitForTimeout(150);
       const now = await read(page), fighting = new Set(now.combatView?.units.map(unit => unit.id));
       const token = now.tokens.find(entry => entry.owner === wearer && entry.visible && fighting.has(entry.id));
       const empty = [0, 1, 2].find(slot => !wornBy(now.state, wearer).some(item => item.location.slot === slot));
       const item = inventory(now.state).filter(isComponent).find(entry => now.strategy?.bounds[`item:${entry.id}`]);
-      if (!inBattle(now) || !token || empty === undefined || !item || !now.strategy?.bounds[`equipment:${wearer}:${empty}`]) { await page.waitForTimeout(60); continue; }
+      if (!inBattle(now) || !token || empty === undefined || !item) { await page.waitForTimeout(60); continue; }
       const previews = [0, 1, 2].map(slot => rules.previewEquip(now.state, item.id, wearer, slot));
       const combining = previews.findIndex(preview => preview.allowed && preview.combination);
       const expectedSlot = combining >= 0 ? combining : empty;
@@ -163,9 +173,11 @@ async function main() {
 
       const before = new Set(sent.keys());
       const card = now.strategy.bounds[`item:${item.id}`];
-      await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(100);
-      const slotButton = (await read(page)).strategy.bounds[`equipment:${wearer}:${empty}`];
-      await page.mouse.click(slotButton.centerX, slotButton.centerY);
+      await page.mouse.move(card.centerX, card.centerY); await page.mouse.down();
+      await page.mouse.move(token.screenX, token.screenY, { steps: 10 }); await page.waitForTimeout(100);
+      const standing = (await read(page)).tokens.find(entry => entry.id === token.id && entry.visible);
+      if (!standing) throw new Error('pending equip target disappeared during drag');
+      await page.mouse.move(standing.screenX, standing.screenY); await page.mouse.up();
       const { receipt, commands } = await equipReceipt(before);
       await page.waitForTimeout(200);
       const after = await read(page), marks = await slotMarks(page);
@@ -181,11 +193,11 @@ async function main() {
       console.log(JSON.stringify(report.combat));
       check(inBattle(after), `the equip happened during the battle (${after.m6?.phase?.kind}/${after.state.phase})`);
       check(commands.length === 1 && commands[0].itemId === item.id && commands[0].unitId === wearer && commands[0].slot === expectedSlot,
-        `clicking empty slot ${empty} sends one equip for slot ${expectedSlot}${combining >= 0 ? ' (the combining slot)' : ''} (${JSON.stringify(commands)})`);
+        `dropping on the wearer sends one equip for slot ${expectedSlot}${combining >= 0 ? ' (the combining slot)' : ''} (${JSON.stringify(commands)})`);
       check(receipt === 'applied', `combat: equip of ${item.id} on ${wearer} applied (${receipt})`);
       check(newItem?.definitionId === resultDefinition, `slot ${expectedSlot} now holds ${resultDefinition} (${newItem?.definitionId})`);
-      check(mark?.pending === 'next-battle' && mark.text.includes(NEXT_BATTLE), `panel slot ${expectedSlot} is marked ${NEXT_BATTLE} (${JSON.stringify(mark)})`);
-      check(Boolean(mark?.title.includes('本场：') && mark.title.includes('下场：')), `the slot's hover title lists both loadouts ("${mark?.title}")`);
+      check(mark?.itemId === newItem?.id && mark?.pending === 'next-battle', `slot ${expectedSlot} is pending ${NEXT_BATTLE} (${JSON.stringify(mark)})`);
+      check(tip.includes('本场：') && tip.includes('下场：'), `the token's hover lists both loadouts ("${tip}")`);
       check(JSON.stringify(tokenAfter?.equipped) === JSON.stringify(iconsBefore), `the token keeps its battle icons (${iconsBefore} → ${tokenAfter?.equipped})`);
       check(Boolean(tokenAfter?.pendingEquipped.includes(resultDefinition)), `the token shows ${resultDefinition} as pending (${tokenAfter?.pendingEquipped})`);
       check(tip.includes('本场：') && tip.includes('下场：') && tip.includes(rules.ITEM_DEFINITIONS[resultDefinition].name), `hovering the token shows "${tip}"`);

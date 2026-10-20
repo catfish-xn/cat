@@ -3,7 +3,7 @@
  * the browser makes on its own mid-drag (scroll anchoring after a layout shift) must not cancel a legal drop, and a
  * scroll the player asks for (mouse wheel) still cancels it.
  */
-import { createChecks, launchBrowser, outDir, startVite, stopAll } from './harness.mjs';
+import { installEquipmentCommands, createChecks, launchBrowser, outDir, startVite, stopAll } from './harness.mjs';
 import { showDragEndpoints } from './c19-drag-geometry.mjs';
 import { writeFileSync } from 'node:fs';
 
@@ -17,6 +17,7 @@ try {
     + '<body data-online="" data-online-mode="online-active"><div id="app"><div id="panels-root">'
     + '<div style="height:1000px" aria-label="earlier settlement content"></div><div id="strategy-root"></div></div>'
     + '<div id="board-frame"><div id="dock"></div></div></div></body></html>' }));
+  await installEquipmentCommands(page);
   await page.goto(`${base}c19-tool-microscroll`);
   await page.evaluate(async () => {
     const [{ StrategyPanel }, { InputRouter }, { createMatch }] = await Promise.all([
@@ -38,15 +39,24 @@ try {
       choose: noop, target: noop, rerollAnomaly: noop, buy: noop, deploy: noop, control: noop,
       unitAt: () => undefined, cancelGesture: () => { router.cancel(); panel.cancel(); },
       status: text => panel.status(text), help: noop, highlight: noop }, router, document.querySelector('#dock'));
-    panel.render(); document.querySelector('[data-debug="panel:items"]').click();
-    window.fixture = { read: () => ({ bounds: panel.snapshot().bounds, calls: [...calls], status: document.querySelector('.panel-status')?.textContent,
+    panel.render();
+    // The source must scroll with the document, outside the sticky board frame.
+    const dock = document.querySelector('#dock'); document.body.append(dock);
+    dock.style.cssText = 'position:absolute;left:500px;top:1200px;width:300px';
+    // Fixed bench-token hit surface: geometry regression, independent of the removed equipment panel.
+    const token = document.createElement('button'); token.dataset.debug = 'unit:holder-9'; token.dataset.unitId = 'holder-9';
+    token.textContent = 'holder-9'; token.style.cssText = 'position:absolute;left:900px;top:2400px;width:64px;height:64px';
+    document.body.append(token);
+    const bounds = () => { const result = panel.snapshot(), box = token.getBoundingClientRect();
+      return { ...result.bounds, 'unit:holder-9': { x: box.x, y: box.y, width: box.width, height: box.height, centerX: box.x + box.width / 2, centerY: box.y + box.height / 2 } }; };
+    window.fixture = { read: () => ({ bounds: bounds(), calls: [...calls], status: document.querySelector('.panel-status')?.textContent,
       statusHeight: document.querySelector('.panel-status')?.getBoundingClientRect().height, scrollY }) };
     // Every height the status line takes while a drag rewrites it: idle, the drag hint and the drop preview.
     window.statusHeights = [];
     new MutationObserver(() => window.statusHeights.push(document.querySelector('.panel-status').getBoundingClientRect().height))
       .observe(document.querySelector('.panel-status'), { childList: true, characterData: true, subtree: true });
   });
-  const source = 'consumable:consumable-5', target = 'equipment:holder-9:0';
+  const source = 'consumable:consumable-5', target = 'unit:holder-9';
   const read = () => page.evaluate(() => window.fixture.read());
   const expected = JSON.stringify([{ consumableId: 'consumable-5', target: { kind: 'item', itemId: 'item-3' } }]);
   // Starts a drag, moves halfway, runs `midway`, then finishes on the target as positioned after `midway`.
