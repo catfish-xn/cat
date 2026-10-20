@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat } from '../src/simulation/combat';
 import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
 import { battle, unit } from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /** B7 regression migrated after the approved B3 fix: never bless the historical defect. */
 describe('B7 accepts the fixed B3 charge-control ordering without changing the generic layer', () => {

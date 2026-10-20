@@ -10,6 +10,9 @@ import {DEFAULT_BOARD} from '../src/simulation/board';
 import {trigger,source,selector} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
 import {packets} from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const dummy=(id:string,team:'player'|'enemy',col:number,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,team,col,3,{ability:resolveAbility('neutral-attack',1),hp:1000,maxHp:1000,armor:0,magicResist:0,attackDamage:100,cooldownTicks:1000,moveCooldownTicks:1000,attackRange:6,mana:0,maxMana:0,runtime:{...EMPTY_RUNTIME},...patch});
 const status=(kind:'untargetable'|'damage-prevention',until=3)=>applyStatusContribution([],effectIdentity('standalone',{...source('phase','i','e'),effectIndex:kind==='damage-prevention'?1:0},'e'),{kind,magnitudeBps:10000,duration:{kind:'ticks',ticks:until},activation:'immediate',stackPolicy:{kind:'refresh-same-instance',magnitude:'replace',phase:'preserve'},removable:false,polarity:'beneficial',damageFilter:null,onEnd:null},0).groups;
 describe('G11 current eligibility independent from already-bound damage and prevention',()=>{

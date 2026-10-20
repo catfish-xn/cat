@@ -3,6 +3,9 @@ import {samplePlanBindings,planEffectApplications} from '../src/simulation/m8/pl
 import {DEFAULT_BOARD} from '../src/simulation/board';
 import {source,cast,amount} from './fixtures/m8-contract-cases';
 import type {AbilityPlan,Effect} from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const u=(id:string,col:number)=>({id,cell:{col,row:4},hp:1000,maxHp:1000,team:id==='h'?'player' as const:'enemy' as const,alive:true});
 const effect:Effect={kind:'damage',damageType:'physical',delivery:'ability-direct',critEligibility:'requires-spell-authorization',amount:amount(85)};
 describe('M9 seam: random binding and deterministic finite skill planning',()=>{

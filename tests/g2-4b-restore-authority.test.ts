@@ -4,6 +4,8 @@ import {createMatch,equipItem,startMatchCombat,stepMatch} from '../src/simulatio
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {recordItemGold} from '../src/simulation/g2-4b-item-gold';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const ids={collector:'TFT4_Item_OrnnTheCollector',gambler:'TFT7_Item_ShimmerscaleGamblersBlade',mogul:'TFT7_Item_ShimmerscaleMogulsMail',zephyr:'TFT_Item_Zephyr'};
 function checkpoint(item:string,seed=42){

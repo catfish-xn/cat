@@ -1,6 +1,9 @@
 import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('B4 sword recipes: independent hand arithmetic and actual combat',()=>{
  it('deathblade:100×1.55=155;155×1.08→167 on a real attack',()=>{const r=run(wearing('deathblade'));expect(r.p.attackDamage).toBe(155);expect(packets(r.events)[0].hpDamage).toBe(167);});
  it('giant slayer:125×1.05→131 at1750;125×1.25→156 at1751',()=>{for(const [hp,n] of [[1750,131],[1751,156]])expect(packets(run(wearing('giant-slayer'),1,[enemy('e',1,3,{hp,maxHp:hp})]).events)[0].hpDamage).toBe(n);});
