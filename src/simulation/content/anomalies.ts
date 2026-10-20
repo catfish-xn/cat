@@ -1,10 +1,12 @@
 import { P3_ANOMALIES } from './s13-p3';
+import { D11_ANOMALIES } from './d11-fill';
 import { G23_ANOMALIES } from './g2-3-anomalies';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_ANOMALIES } from './s13-augments-p2';
 import { S13_ANOMALY_DEFINITIONS } from '../anomalies/definitions';
 export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...D11_ANOMALIES,
   ...S13_P2_ANOMALIES,
   ...P3_ANOMALIES,
   "titanic-strikes": {

@@ -36,6 +36,7 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly d11Kills?:readonly {readonly eventSeq:number;readonly victimId:string}[];
   readonly s13P2Opening?: import('./s13-augments-p2-combat').P2Opening;
   readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
@@ -98,6 +99,8 @@ export interface CombatState {
   readonly board: Board; readonly units: readonly CombatUnit[]; readonly tick: number; readonly maxTicks: number;
   readonly status: 'running' | 'finished'; readonly result: CombatResult | null;
 }
+/** Private, authoritative economy inputs between combat ticks, never public replay payload. */
+export interface CombatBankSample {readonly tick:number;readonly team:Team;readonly liveGold:number}
 /** Engine-level event: every combat event carries a tick; Match/strategy combats add the ledger envelope. */
 export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readonly combatId?: string; readonly eventSeq?: number };
 /** B9 replay2: the frozen M8 ledger event (contracts.ts M8CombatEvent). Match, saves, replay, stats and UI use only this. */

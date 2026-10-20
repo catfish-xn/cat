@@ -1,4 +1,4 @@
-// Unwired D11 pack: archive identities and coefficients, never imported by production catalogs.
+// Retained D11 archive identities and coefficients; production execution reads these values.
 import { freezeContent } from './freeze';
 export const D11_FILL_SOURCE = freezeContent({
   "all-for-one-i": {

@@ -1,4 +1,6 @@
 import { isPresent, isSelectable } from './anomalies/availability';
+import { d11CombatDisplay } from './d11-display';
+import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
@@ -14,7 +16,9 @@ const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'm
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
+  const choiceEffects=d11CombatDisplay(unit);
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
+    ...(choiceEffects.length?{choiceEffects}:{}),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
@@ -79,7 +83,7 @@ export interface CombatReplay {
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;
 }
-export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events'>;
+export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>;
 /** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
 export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
   return events.flatMap(event => {
@@ -159,6 +163,8 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const recorder = createCombatReplayRecorder(battle.initial, battle.events);
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
   let state = battle.initial;
+  validateD11BankSamples(battle.bankSamples,battle.terminal.tick);
+  let bankCursor=0;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
   // but leaves no whole-battle serialization work in the final scheduling slice.
@@ -181,6 +187,9 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     if (result) return result;
     let steps = 0;
     while (steps < maxTicks && state.status === 'running' && state.tick < battle.terminal.tick) {
+      while(battle.bankSamples?.[bankCursor]?.tick===state.tick){
+        const sample=battle.bankSamples[bankCursor++];state=sampleD11CombatGold(state,sample.team,sample.liveGold);
+      }
       const next = stepCombat(state);
       const frame = recorder.record(state, next);
       state = next.state;

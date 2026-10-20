@@ -1,9 +1,9 @@
-/** Unwired content-pack APIs. Callers must supply authoritative live facts and
- * persist/validate grants and kill receipts before production activation. */
+/** D11 compilers and exactly-once acquisition. Live combat and settlement are
+ * wired by strategy-snapshot, combat-s13 and the common G23 facts envelope. */
 import type { Effect, OwnedAugment } from './strategy-types';
 import type { Unit } from './unit-types';
 import type { MatchState } from './match-types';
-import type { CombatEvent } from './combat-types';
+import type { CombatEvent, CombatState, CombatBankSample } from './combat-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import type { ItemProgram } from './m8/item-program';
 import { amount, modifier, periodic } from './content/item-programs';
@@ -94,12 +94,66 @@ export function drainD11Gifts(initial:MatchState,a:OwnedAugment,policy?:UnitLoot
   } while(progressed);
   return state;
 }
+export function drainAllD11Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
+  return initial.augments.reduce((state,a)=>drainD11Gifts(state,a,policy),initial);
+}
+/** Validate gifts against the acquired identity and deterministic plan, including
+ * after their hero was merged/sold. Resource provenance authenticates unit births. */
+export function validateD11Acquisition(state:MatchState):void {
+  const gifts=state.augments.flatMap(a=>d11GiftPlan(state,a).map(g=>({...g,round:a.acquiredRound})));
+  const selected=state.scheduleReceipts.find(r=>r.kind==='anomaly'&&r.definitionId==='avarice-incarnate');
+  const goldId=selected?JSON.stringify([source,selected.eventId,'avarice-gold']):null;
+  const receipts=state.seatMechanics?.receipts??[];
+  for(const r of receipts)if(r.source===source||r.receiptId.startsWith('["d11-fill",')){
+    const gift=gifts.find(g=>g.receiptId===r.receiptId);
+    if(r.source!==source||!(gift&&r.kind==='unit'&&r.definitionId===gift.definitionId&&r.round>=gift.round&&r.round<=state.round
+      &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:0)
+      ||r.receiptId===goldId&&r.kind==='gold'&&r.amount===D11_FILL_SOURCE['avarice-incarnate'].values.GoldCount&&r.round===selected!.round))
+      throw new RangeError('Invalid D11 acquisition authority');
+  }
+  if(goldId&&!receipts.some(r=>r.receiptId===goldId))throw new RangeError('Missing D11 acquisition gold');
+}
+/** Dedicated opening stream: independent of the four Match streams and idempotent
+ * under compilation/restore. Online choice IDs already include the seat namespace. */
+export function d11OpeningSeed(seed:number,round:number,choiceId:string):number {
+  let hash=(seed^0x6431316f^round)>>>0;
+  for(const c of choiceId)hash=Math.imul(hash^c.charCodeAt(0),0x01000193)>>>0;
+  return hash;
+}
+export function d11PriorKills(progress:import('./g2-3-match-progress').G23MatchProgress|undefined,boundRound:number):number {
+  return progress?.economyReceipts.reduce((n,r)=>n+(r.kind==='battle'&&r.facts.round>=boundRound?(r.facts.d11Headhunter?.kills.length??0):0),0)??0;
+}
 
 /** Must be evaluated from live authoritative gold at each damage/stat sample.
  * Never cache at combat start: shops and combat item payouts change gold. */
 export function d11AvariceDamageAmpBps(gold:number):number {
   integer(gold);const v=D11_FILL_SOURCE['avarice-incarnate'].values;
   return Math.min(v.GoldCap*100,v.FlatPercentDamage*100+Math.floor(gold/v.GoldIncrement)*Math.round(v.PercentDamage*10000));
+}
+/** Server-owned live bank sample before a tick. Deferred combat payouts are
+ * already earned but not yet in Match.gold, so include them exactly once here.
+ * Offline Match disallows trading during combat; online orchestration must pass
+ * a fresh sample whenever its authoritative bank changes. No Match payout occurs. */
+export function sampleD11CombatGold(combat:CombatState,team:'player'|'enemy',liveGold:number):CombatState {
+  integer(liveGold);
+  const allyIds=new Set(combat.units.filter(u=>u.team===team).map(u=>u.id));
+  const earned=(combat.itemGoldReceipts??[]).filter(r=>allyIds.has(r.ownerId)&&r.gold).length
+    +combat.units.filter(u=>u.team===team).reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0);
+  let changed=false;
+  const units=combat.units.map(u=>{
+    if(u.team!==team||!u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))return u;
+    const gold=integer(liveGold+earned);if(gold===u.currentItemBankGold)return u;
+    changed=true;return {...u,currentItemBankGold:gold};
+  });
+  return changed?{...combat,units}:combat;
+}
+/** Validate an ordered private sample transcript before replay consumes it. */
+export function validateD11BankSamples(samples:readonly CombatBankSample[]|undefined,endTick:number):void {
+  if(samples===undefined)return;
+  if(!Array.isArray(samples)||!samples.length||samples.length>100000)throw new RangeError('Invalid D11 bank samples');
+  for(const [i,s] of samples.entries())if(!s||Object.keys(s).sort().join(',')!=='liveGold,team,tick'
+    ||!Number.isSafeInteger(s.tick)||s.tick<0||s.tick>=endTick||i>0&&s.tick<samples[i-1].tick
+    ||!['player','enemy'].includes(s.team)||!Number.isSafeInteger(s.liveGold)||s.liveGold<0)throw new RangeError('Invalid D11 bank samples');
 }
 export function grantD11AvariceGold(state:MatchState) {
   const binding=state.anomalyBinding;

@@ -1,5 +1,21 @@
 # 界面数据需求（Claude → Codex）
 
+## D11-SERVER-LIVE-BANK（Codex → Claude，v15 发布阻塞）
+
+- 领域已交付：`startTwoSidedBattle` 返回任务的 `sampleBankGold(seatId:string,liveGold:number):void`。仅服务器权威 Match.gold；样本在下一 tick 前生效，不扣费、不发资源、不推进 RNG。非法席位 / 数值 / 超过 100000 条有效样本为 invalid-bank-sample；终战后 wrong-phase；相同采样无操作。
+- 现存缺口：`src/server/room/two-sided-resolver.ts` 当前从冻结快照先算完整结果，播放期间交易不回到计算。因此贪财化身不能声称已完整联机生效；需要把真实规则 tick 与交易排序关联，再在金币变化后、下一 tick 前传入权威样本。不能事后改动画或再写一套增伤公式。
+- 字段：私有 `BattleResult.bankSamples?: {tick,team,liveGold}[]`，需原样保留给 proposeSettlement 及 toCombatReplay / startCombatReplay 输入；公开 replay 输出不含银行。已有 g23Facts 整体转发同时承载 d11Headhunter 击杀事实，不要自行计数。
+- 验收：同一 PvP 内真实买卖使后续伤害双向变化；与物品 / Sevika 战斗金币相加一次；切片任务、完整账本、重放一致；镜像不发成长 / 收益，不向他席公开银行。当前仅领域任务与回放测试通过，服务器尚未接线；本轮没有修改 src/server/。
+
+## D11-DISPLAY（Codex → Claude，v15）
+
+- 名称 / ID / 等级：`all-for-one-i` 一费奉献 I（silver）、`trifecta-i` 三项赛 I（gold）、`spirit-link` 灵魂连接（gold）；`avarice-incarnate` 贪财化身、`headhunter` 猎头者。目录已有准确 name / description，数值以 d11-fill-source 为准。
+- 私有字段：`toPrivateSeatView().d11Display? = {definitions:[{definitionId,name,description,tier?}], headhunterKills?}`。仅已拥有 / 当前提供的 D11 定义；headhunterKills 为已结算永久击杀数，战中变化由战斗事件 / 权威攻速呈现。不得读 hidden.progress 给界面自行聚合。
+- 公开字段：战斗 replay 每单位可选 `choiceEffects:[{definitionId,name,description,tier?}]`；只显示已生效效果，不含其他席候选、金币、RNG 或收据。已有 readCombatStats / statChanged / heal / packetDamage / kill 继续提供表现数据；静态 PublicBoard 不增加隐藏信息。
+- 缺口：现有 augmentPlayerDescription 只允许六个旧 ID，需适配读取新增权威 description，不能把占位 mechanic d11Fill 当效果文案。灵魂连接说明必须写清开战生命与完整十点组；猎头者说明不得把召唤物 / 助攻算入。
+- 图标：现有 `s13-augment-asset-manifest.ts` 无三个新 ID 的映射，本轮无可复用 icon key，未编造路径；沿用当前无图标文字回退，表现层可按自身素材规则补映射，禁止凭等级猜文件名。
+- 验收：单机 / 联机选择与已拥有列表显示完整中文名称、说明和正确等级；公开战斗可读同一说明；不用修改规则数值、不额外发资源。没有声称已做浏览器视觉验收。完整交接：[D11_WIRING_V15](D11_WIRING_V15.md)。
+
 按 AGENTS 约定记录界面缺少的数据、命令或接线。每条写明关联任务、优先级、交付阶段、缺少的字段与含义、界面当前替代路径、交付后需要复核的内容和验收条件。界面不自行计算规则；后端交付前，界面只读已有权威字段，并在无法确定含义时使用中性文案。
 
 ## G23-SERVER-FACTS（Codex → Claude，G2-3配套P1）

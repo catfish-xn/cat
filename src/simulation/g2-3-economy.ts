@@ -5,6 +5,7 @@ import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-prog
 import type { G23MatchProgress } from './g2-3-match-progress';
 import {validateItemGoldPayouts,type ItemGoldPayout} from './g2-4b-item-gold';
 export interface G23BattleFacts {
+ readonly d11Headhunter?:import('./d11-fill').D11KillReceipt;
  readonly itemGoldPayouts?:readonly ItemGoldPayout[];
  readonly battleId:string;readonly round:number;readonly roundKind:'pve'|'pvp';readonly result:'win'|'loss'|'draw';
  readonly conquerorTier:number;readonly conquestTakedowns:readonly string[];readonly chemBaronTier:number;
@@ -23,10 +24,16 @@ export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZ
 export function validateG23BattleFacts(f:G23BattleFacts):void{
  const int=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
  const crowns=Object.hasOwn(f??{},'crowns');
- if(!f||Object.keys(f).length!==(10+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
+ if(!f||Object.keys(f).length!==(10+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1)+(f.d11Headhunter===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
  if(f.itemGoldPayouts!==undefined)validateItemGoldPayouts(f.itemGoldPayouts,f.battleId);
+ if(f.d11Headhunter!==undefined){
+  const r=f.d11Headhunter;
+  if(!r||Object.keys(r).sort().join(',')!=='combatId,holderId,kills'||r.combatId!==f.battleId||typeof r.holderId!=='string'||!r.holderId||!Array.isArray(r.kills)
+   ||r.kills.length>1200||r.kills.some((k,i)=>!k||Object.keys(k).sort().join(',')!=='eventSeq,victimId'||!int(k.eventSeq,1000000)||typeof k.victimId!=='string'||!k.victimId
+    ||i>0&&k.eventSeq<=r.kills[i-1].eventSeq))throw new RangeError('Invalid D11 kill facts');
+ }
 }
 export const EMPTY_G23_CHEM:G23ChemProgress=Object.freeze({shimmer:0,losses:0,skips:0,offeredThrough:0,offer:null});
 export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress:G23MatchProgress;gold:number}{

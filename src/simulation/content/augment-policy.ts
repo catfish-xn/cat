@@ -1,4 +1,5 @@
 import { P3_TIERS } from './s13-p3';
+import { D11_FILL_TIERS } from './d11-fill';
 import { freezeContent } from './freeze';
 import { S13_P2_TIERS } from './s13-augments-p2';
 /** User convention 2026-10-19 08:15: shared node tier and one free whole-offer reroll.
@@ -59,6 +60,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",
   "portable-forge": "gold",
   "radiant-relics": "prismatic",

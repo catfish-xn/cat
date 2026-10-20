@@ -94,7 +94,13 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
+      const hunter=state.anomalyBinding?.definitionId==='headhunter'?state.anomalyBinding:null;
+      if(facts.d11Headhunter&&(!hunter||facts.round<hunter.boundRound
+        ||facts.d11Headhunter.holderId!==JSON.stringify(['t2',multiplayer.seatId,'unit',hunter.unitId])
+        ||facts.d11Headhunter.kills.some(k=>k.eventSeq>=r.combatEventCount)))return fail(state,'invalid-receipt');
+      if(hunter&&state.preparation.units.some(u=>u.id===hunter.unitId&&u.location.kind==='board')&&!facts.d11Headhunter)return fail(state,'invalid-receipt');
     }
+    else if(state.anomalyBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===state.anomalyBinding!.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');

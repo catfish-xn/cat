@@ -1,5 +1,15 @@
 # Set13 八人联机合同草案
 
+## D11 接线与实时银行边界（2026-10-20）
+
+运行目录 60/54；新强化共用既有等级、候选和选择命令。赠送经过同事务 UnitLootPolicy，满席托管 / 池空按费用补金。双方 snapshot 编译新增内容，贪财化身开战携带 bankGold；猎头者基础 / 永久攻速及灵魂连接开战玩家生命均为本席权威输入。
+
+`G23BattleFacts.d11Headhunter?: {combatId:string,holderId:string,kills:readonly {eventSeq:number,victimId:string}[]}` 经已有 proposal.g23Facts 原样转入 settlement.g23Facts。服务器不统计击杀、不另算永久成长；镜像无 facts / 进度，重复拒绝。猎头者已部署时缺失事实、holderId 不是该席当前绑定的战斗命名空间 ID，或 eventSeq 超出账本，均按 invalid-receipt 保持原状态拒绝。
+
+现有 `startTwoSidedBattle` 返回任务新增 `sampleBankGold(seatId:string,liveGold:number):void`；非法席位 / 数值 / 样本上限为 `invalid-bank-sample`，完成后为 `wrong-phase`。样本在下一 tick 前应用，私有 `BattleResult.bankSamples?: readonly {tick:number,team:'player'|'enemy',liveGold:number}[]` 必须随完整结果传给 `proposeSettlement` 与 `toCombatReplay` / `startCombatReplay`，公开 replay 不发这些样本。原有采样缺省路径和旧结果字段不变，不加客户端“报金币”命令。
+
+**服务器配套未完成**：目前先算战斗、后播放的流程不能反映播放期间买卖。需要 Claude 调整规则推进 / 命令排序并在金币变动后向未完成任务传权威银行；仅冻结开战 gold 不满足贪财化身合同。联机 PvE stepMatch 已接实时 Match.gold。公开 replay 单位可选 choiceEffects 提供当前 D11 名称、说明、等级，私有视图 d11Display 提供已拥有 / 当前候选定义和猎头者已结算击杀数；不扩大静态 PublicBoard 的原白名单。详见 [D11_WIRING_V15](D11_WIRING_V15.md) 与 [UI_REQUESTS](UI_REQUESTS.md)。本轮版本、digest、旧指纹保持，统一 v15 后才能作为正式身份发布。
+
 ## 强化同轮同级与整组刷新：v14（用户约定 2026-10-19）
 
 等级、来源、派生公式、刷新语义和读档以 [Match 合同“强化等级与刷新”](MATCH_CONTRACT.md) 为准。三等级等权是缺少概率/权重资料时的项目默认、待用户确认。initializeSharedSeat 将 SharedPoolState.seed（即房间 options.seed）绑定到 augmentTierSeed；nextSharedRound/advanceMultiplayerRound 与单人共用 deriveAugmentTier，每个强化节点八席同级，各席候选仍从自己的 choiceRngState 抽取，服务器不计算规则。

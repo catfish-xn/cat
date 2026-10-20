@@ -1,4 +1,6 @@
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
+import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
+import { D11_FILL_TIERS, type D11AugmentId } from './content/d11-fill';
 import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
 import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
@@ -88,6 +90,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
     return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
   });
+  const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
+    compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
   const units = boardUnits.map(unit => {
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
@@ -130,6 +134,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
+        const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
+        if(grant){
+          sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,grant.effects));
+          if(Object.keys(grant.program).length)itemPrograms.push({source:{ownerId:unit.id,sourceKind:'augment',definitionId:augment.definitionId,instanceId:augment.choiceId,effectIndex:65536,parentItemInstanceId:null},program:grant.program});
+          continue;
+        }
         const program=p2AugmentProgram(augment.definitionId);
         if(program)itemPrograms.push({source:{ownerId:unit.id,sourceKind:'augment',definitionId:augment.definitionId,instanceId:augment.choiceId,effectIndex:65536,parentItemInstanceId:null},program});
         sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
@@ -146,7 +156,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       const binding = state.anomalyBinding;
       if (binding?.unitId === unit.id) {
         const definition = lookup(catalog.anomalies, binding.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, definition.effects));
+        const effects:readonly Effect[]=binding.definitionId==='avarice-incarnate'||binding.definitionId==='headhunter'
+          ?[{kind:'mechanic',mechanic:'d11Anomaly',values:{enabled:1,priorKills:binding.definitionId==='headhunter'?d11PriorKills(state.g23,binding.boundRound):0}}]:definition.effects;
+        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, effects));
       }
     } else {
       for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
@@ -197,9 +209,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       return { ...mechanic, targetId: buddy!.id };
     });
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
-    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler');
-    if(gambler&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative Gambler bank');
-    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler?{openingItemBankGold:Math.min(gambler.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
+    if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
+    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

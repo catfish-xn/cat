@@ -9,6 +9,7 @@ import { S13_P2_SOURCE } from '../src/simulation/content/s13-augments-p2-source'
 import { S13_P3_SOURCE } from '../src/simulation/content/s13-p3-source';
 import { G23_ANOMALY_SOURCE } from '../src/simulation/content/g2-3-anomaly-source';
 import { P4_SOURCE } from '../src/simulation/anomalies/source';
+import { createMatch } from '../src/simulation/match';
 const root='src/simulation/content/source/s13-14.24b/raw/';
 const load=(name:string)=>JSON.parse(gunzipSync(readFileSync(root+name)).toString());
 const raw=load('map22.bin.json.gz'), en=load('en_us.json.gz'), zh=load('zh_cn.tft.stringtable.json.gz').entries;
@@ -42,14 +43,14 @@ it('de-duplicates by API identity across aliases, including previously implement
     ...Object.values(G23_ANOMALY_SOURCE).map(s=>s.sourceName),...Object.values(P4_SOURCE).map(s=>s.id),
     'TFT6_Augment_RadiantRelics','TFT6_Augment_PortableForge','TFT9_Augment_BlindingSpeed','TFT10_Augment_GoingLong','TFT9_Augment_HedgeFund','TFT_Augment_InvestmentStrategy2']);
   for(const [id,s] of Object.entries(D11_FILL_SOURCE)){
-    expect(existing.has(s.apiName)).toBe(false);expect(AUGMENT_DEFINITIONS[id]??ANOMALY_DEFINITIONS[id]).toBeUndefined();
+    expect(existing.has(s.apiName)).toBe(false);expect((AUGMENT_DEFINITIONS[id]??ANOMALY_DEFINITIONS[id]).name).toBe(s.name);
   }
   for(const name of ['TFT13_GoopBuff_HardenedMind','TFT13_GoopBuff_MagicMind','TFT13_GoopBuff_SharpenedMind','TFT13_GoopBuff_AllForOne'])expect(existing.has(name)).toBe(true);
 });
-it('exports an inert pack while production remains 57/52 and retains all 14.24b overrides and digest',()=>{
-  expect(D11_FILL_ACTIVATION).toBe('unwired-awaiting-integration');
+it('registers the D11 pack at 60/54 and retains all 14.24b overrides and the current digest identity',()=>{
+  expect(D11_FILL_ACTIVATION).toBe('wired-pending-v15-epoch');
   expect(Object.keys(D11_FILL_DEFINITIONS)).toHaveLength(5);
-  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(57);expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(52);
-  expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:ea6b11b6');
+  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(60);expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(54);
+  expect(createMatch().contentDigest).toBe(CONTENT_DIGEST);
   expect(AUGMENT_DEFINITIONS['built-different'].effects).toContainEqual({kind:'mechanic',mechanic:'builtDifferent',values:{health2:300,health3:400,health4:500,health5:600,speed2:4500,speed3:5500,speed4:6500,speed5:7500}});
 });
