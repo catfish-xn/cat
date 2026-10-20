@@ -945,3 +945,5 @@ export class BoardScene extends Phaser.Scene {
     });
   }
 }
+
+// CI tier check (ui-only change); do not merge.
