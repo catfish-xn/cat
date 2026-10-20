@@ -999,11 +999,13 @@ export class BoardScene extends Phaser.Scene {
 
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
-    const board = this.state.board;
+    const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
-        starLevel: token.getData('starLevel'), x: token.x, y: token.y, visible: token.visible && token.alpha > 0 })),
+        starLevel: token.getData('starLevel'), x: token.x, y: token.y, alive: !fallen.has(id),
+        // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
+        visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
       fighting: this.session.combatView !== null, dragging: this.draggingId };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */

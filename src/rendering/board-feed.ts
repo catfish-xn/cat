@@ -8,7 +8,11 @@ import type { DisplayCombatEvent } from '../presentation/combat-display';
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */
-  readonly x: number; readonly y: number; readonly visible: boolean;
+  readonly x: number; readonly y: number;
+  /** Shown on the board apart from dying: a unit killed in this combat stays visible here and is flagged by `alive`. */
+  readonly visible: boolean;
+  /** False once the shown combat has killed it; the 3D layer plays the death action before hiding the piece. */
+  readonly alive: boolean;
 }
 export interface BoardFrame {
   readonly rows: number; readonly columns: number; readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number };

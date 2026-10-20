@@ -19,8 +19,15 @@ import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 
 const MANIFEST_TIMEOUT_MS = 4000;
-/** Piece height in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall. */
-const PIECE_HEIGHT = 56, PIECE_WIDTH = 40;
+/** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
+const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
+/**
+ * League models are scaled by their full bbox height alone (D7 build-report: jinx 234, vi 213 source units), so every
+ * champion stands this tall; capping width as well shrank wide silhouettes (hair, props) well below a hex.
+ */
+const MODEL_HEIGHT = 92;
+/** Seconds a dying piece stays up when its model has no death clip (or is a pawn). */
+const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
@@ -56,12 +63,21 @@ interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
+  /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
+  alive: boolean;
+  /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
+  dyingFor: number | 'loading' | null;
+}
+function deathSeconds(view: PieceView): number {
+  const lease = view.lease, name = lease?.animationNames.death ?? 'death';
+  const clip = lease?.animations.find(candidate => candidate.name === name);
+  return clip && clip.duration > 0 ? clip.duration : DEATH_FALLBACK_SECONDS;
 }
 
-/** Normalises any model to PIECE_HEIGHT × PIECE_WIDTH at most, feet on y=0 (D7 keeps League units; see planning/3d). */
-function fit(body: Object3D): Object3D {
+/** Scales a model to `height` (and at most `width` across when given), feet on y=0 (D7 keeps League units; see planning/3d). */
+function fit(body: Object3D, height: number, width = Infinity): Object3D {
   const box = new Box3().setFromObject(body), size = box.getSize(new Vector3());
-  const scale = Math.min(size.y > 0 ? PIECE_HEIGHT / size.y : Infinity, Math.max(size.x, size.z) > 0 ? PIECE_WIDTH / Math.max(size.x, size.z) : Infinity);
+  const scale = Math.min(size.y > 0 ? height / size.y : Infinity, Math.max(size.x, size.z) > 0 ? width / Math.max(size.x, size.z) : Infinity);
   if (!Number.isFinite(scale)) return body;
   body.scale.multiplyScalar(scale);
   body.position.y -= box.min.y * scale;
@@ -143,17 +159,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const body = new Mesh(pawnBody, teamMaterial[view.team]); body.position.y = 17;
       const head = new Mesh(pawnHead, teamMaterial[view.team]); head.position.y = 42;
       pawn.add(body, head);
-      view.body = fit(pawn); view.root.add(pawn);
+      view.body = fit(pawn, PAWN_HEIGHT, PAWN_WIDTH); view.root.add(pawn);
       return;
     }
     const definitionId = view.definitionId;
     void models.cache.load(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       view.lease = lease;
-      view.body = fit(lease.scene); view.root.add(lease.scene);
+      view.body = fit(lease.scene, MODEL_HEIGHT); view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
-    }).catch(() => { /* a disposed cache rejects late loads; the piece stays without a body */ });
+      if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
+    }).catch(() => {
+      // A disposed cache rejects late loads; the piece stays without a body (and a dying one hides).
+      if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
+    });
   };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
@@ -162,7 +182,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     root.add(ring);
     scene.add(root);
     const view: PieceView = { root, ring, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false };
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
     attachBody(view);
     return view;
   };
@@ -192,12 +212,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!piece.definitionId || (piece.team !== 'player' && piece.team !== 'enemy')) continue;
       seen.add(piece.id);
       let view = pieces.get(piece.id);
+      const created = !view;
       if (!view) { view = createPiece(piece); pieces.set(piece.id, view); }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
-      if (piece.visible && !view.root.visible) resetAction(view, piece.id);
-      view.root.visible = piece.visible;
+      // Dying: keep the piece up until its death action has played (the death event normally starts it already).
+      if (piece.alive) {
+        // Revived or a new combat: never stay locked in a death pose that had not finished.
+        if (!view.alive) resetAction(view, piece.id);
+        view.alive = true; view.dyingFor = null;
+      } else if (view.alive) {
+        view.alive = false;
+        const output = view.state.consume({ type: 'death', unitId: piece.id });
+        view.mixer?.apply(output);
+        view.dyingFor = created ? 0 : models.cache && !view.lease ? 'loading' : deathSeconds(view);
+      }
+      const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
+      if (shown && !view.root.visible) resetAction(view, piece.id);
+      view.root.visible = shown;
       view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
@@ -248,7 +281,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => anyTeam || view.team === 'player').map(([unitId, view]) => ({ unitId, object: view.root }));
+    const units = [...pieces].filter(([, view]) => view.alive && (anyTeam || view.team === 'player')).map(([unitId, view]) => ({ unitId, object: view.root }));
     const hit = pick(client, area, camera, grid, units);
     return hit?.kind === 'unit' ? hit.unitId : null;
   };
@@ -340,6 +373,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
         view.root.position.addScaledVector(step, follow);
       }
+      if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
     }
