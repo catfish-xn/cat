@@ -159,5 +159,7 @@ describe('game server: spot check', () => {
     const checked = records.filter(record => record.event === 'replay.spot-check').map(record => record.fields.round);
     expect(checked).toEqual([battleRounds[0], battleRounds[2]]);
     expect(records.some(record => record.event === 'replay.spot-check-failed')).toBe(false);
-  });
+    // Temporary timing-only allowance (user-approved rule 2026-10-20: about 2x the measured time): ~3.5 s locally under
+    // load, over the 5 s default twice on CI after the v17 orb combinations; no assertion is relaxed.
+  }, 12_000);
 });
