@@ -1,355 +1,460 @@
 {
-  "baseCommit": "b13373c67bf7056e1e56e99e4d7cd5f875df7712",
-  "node": "v22.17.0",
-  "zlib": "1.3.0.1-motley-780819f",
-  "status": "Implementation and requested tests passed; original scouting visibility remains unverified under the offline constraint.",
+  "task": 265,
+  "epoch": "v16",
+  "gitOperations": false,
+  "gitMetadataWrites": false,
+  "networkAccess": false,
+  "serverOrRenderingEdits": false,
+  "conflictFiles": 14,
   "identities": {
-    "contentDigest": "fnv1a32-utf16:f8a31ce9",
-    "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
-    "unchanged": true
-  },
-  "build": {
-    "command": "npm.cmd run build -- --configLoader runner",
-    "projectTypecheckPassed": true,
-    "buildPassed": true,
-    "buildPluginStrictTypecheckPassed": true,
-    "chunks": [
-      {
-        "file": "index-Cb-NjoLi.js",
-        "bytes": 1446664,
-        "gzip9Bytes": 435317,
-        "sha256": "249b2b404e564f54490889c7f4f28c7ee3d172fff5024a5b985e3b4ce3ed0f37"
-      },
-      {
-        "file": "phaser-CD8tQlfa.js",
-        "bytes": 680170,
-        "gzip9Bytes": 194304,
-        "sha256": "aa746f0b0f878ae0fde5c010c098ebbc2f49346e590b73b99658e384aeee4766"
-      }
-    ]
-  },
-  "budget": {
-    "method": "scripts/m7-budget.cjs; all assets/*.js, gzip level 9",
-    "baselineCommit": "15313a75c6e74beec739fe52a2875c104c55eae3",
-    "baselineBytes": 424763,
-    "beforeBytes": 641071,
-    "beforeRatio": 1.5092439784067821,
-    "currentBytes": 629621,
-    "currentRatio": 1.4822877698857952,
-    "savedBytes": 11450,
-    "budget": 1.5,
-    "target": 1.49,
-    "with1400ExtraBytesRatio": 1.4855837255128155,
-    "interactive": {
-      "base": [
-        802,
-        956,
-        753
-      ],
-      "current": [
-        905,
-        795,
-        756
-      ],
-      "baseMedian": 802,
-      "currentMedian": 795
+    "previousV16": {
+      "contentDigest": "fnv1a32-utf16:f8a31ce9",
+      "lootReplayDigest": "fnv1a32-utf16:cee1d7d7"
     },
-    "interactiveRatio": 0.9912718204488778,
-    "interactiveSamples": 3
+    "current": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesGapManifestDigest": "fnv1a32-utf16:31950a0f"
+    }
   },
-  "tests": {
-    "files": 13,
-    "passed": 399,
+  "rng": {
+    "namespace": "orb-duplicator-v16",
+    "input": "JSON.stringify([namespace,seatMatchSeed,orbId])",
+    "derivation": "FNV-1a UTF-16; initial 2166136261; imul XOR code unit by 16777619 modulo 2^32",
+    "sampler": "fresh lcg32-v1 rejection/modulo 100",
+    "placement": "after all original payloads in each stage1-4 non-prismatic orb",
+    "legacyCursorAdvances": 0,
+    "legacyComparison": {
+      "seeds": 4102,
+      "through": "4-7",
+      "originalPayloadsAndIdentitiesEqual": true,
+      "legacyRngEqual": true,
+      "approvedNormalization": [
+        "component-reforger -> reforger",
+        "completed-reforger -> reforger"
+      ],
+      "reference": "retained local v15-timing.tar archive; no Git provenance recheck",
+      "archiveSha256": "66ed4f67e89a8c37cb734226175d7176bc1b81e53a6637c7ce1ffb0a3e2b6df0"
+    },
+    "independentEpicOracleSeeds": 4096,
+    "independentlyRewrittenM5OracleSeeds": 4096
+  },
+  "requiredTests": {
+    "files": 27,
+    "passed": 635,
     "failed": 0,
-    "pending": 0,
     "results": [
       {
         "file": "tests/match-session.test.ts",
-        "exitCode": 0,
         "passed": 18,
         "failed": 0,
-        "pending": 0
+        "pending": 0,
+        "startedAt": "2026-10-20T11:07:34.346Z",
+        "durationMs": 1163.410400390625,
+        "report": "artifacts/v16-tests/match-session.json",
+        "reportSha256": "a9a7e94160a3b4764ce68f626aaf9157c5fa31d73ae69850d580e4b6d3808037"
       },
       {
-        "file": "tests/s13-p1-dual-wielding.test.ts",
-        "exitCode": 0,
-        "passed": 2,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/d14-anomalies-source.test.ts",
-        "exitCode": 0,
+        "file": "tests/opening-random-1cost.test.ts",
         "passed": 4,
         "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/d14-anomalies.test.ts",
-        "exitCode": 0,
-        "passed": 42,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/d14-wiring-match.test.ts",
-        "exitCode": 0,
-        "passed": 39,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/d14-ability-display.test.ts",
-        "exitCode": 0,
-        "passed": 15,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/epic-loot-reforger.test.ts",
-        "exitCode": 0,
-        "passed": 29,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/g2-2-ability-display.test.ts",
-        "exitCode": 0,
-        "passed": 73,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/presentation/choice-fallback.test.ts",
-        "exitCode": 0,
-        "passed": 15,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/presentation/g2-3-display.test.ts",
-        "exitCode": 0,
-        "passed": 16,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/presentation/g2-4a-crown-display.test.ts",
-        "exitCode": 0,
-        "passed": 1,
-        "failed": 0,
-        "pending": 0
-      },
-      {
-        "file": "tests/presentation/unit-revived-display.test.ts",
-        "exitCode": 0,
-        "passed": 3,
-        "failed": 0,
-        "pending": 0
+        "pending": 0,
+        "startedAt": "2026-10-20T11:18:25.087Z",
+        "durationMs": 164.967529296875,
+        "report": "artifacts/v16-tests/opening-random-1cost.json",
+        "reportSha256": "3f1a4bec0f8a130b8ca1742ad0c713e6d58e043eea7513200812ef7286844421"
       },
       {
         "file": "tests/opening-random-identity.test.ts",
-        "exitCode": 0,
         "passed": 142,
         "failed": 0,
-        "pending": 0
+        "pending": 0,
+        "startedAt": "2026-10-20T11:17:58.076Z",
+        "durationMs": 23566.604736328125,
+        "report": "artifacts/v16-tests/opening-random-identity.json",
+        "reportSha256": "90e9387bf3e4f3ea6a3a3a4c1dafa0c841ce9800121720d24cdd45332bf40cdc"
+      },
+      {
+        "file": "tests/m5-growth.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:04:57.882Z",
+        "durationMs": 289.160400390625,
+        "report": "artifacts/v16-tests/m5-growth.json",
+        "reportSha256": "cc1c2d3401ba13c38e97fffb9f72b88173bca0558de05ab55f05b9e71e071203"
+      },
+      {
+        "file": "tests/g2-4a-crown-history.test.ts",
+        "passed": 56,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:04:24.525Z",
+        "durationMs": 30110.035888671875,
+        "report": "artifacts/v16-tests/g2-4a-crown-history.json",
+        "reportSha256": "c979b27d08b2d1b0fbea1c1061616a5220d3470b4f974f0e447e7ece9347408a"
+      },
+      {
+        "file": "tests/d14-ability-display.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:17.654Z",
+        "durationMs": 16.250732421875,
+        "report": "artifacts/v16-tests/d14-ability-display.json",
+        "reportSha256": "c3986703c24eae26a1729348ec1cf20740a8408128fbb17aff03e1daf8c8a9e3"
+      },
+      {
+        "file": "tests/d14-anomalies-source.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:13:49.968Z",
+        "durationMs": 302.69677734375,
+        "report": "artifacts/v16-tests/d14-anomalies-source.json",
+        "reportSha256": "c683972d0b670d4eac543afbe31bedf6c09fb9da696926e1897696e11307a939"
+      },
+      {
+        "file": "tests/d14-anomalies.test.ts",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:22.254Z",
+        "durationMs": 1710.148193359375,
+        "report": "artifacts/v16-tests/d14-anomalies.json",
+        "reportSha256": "eb28509f096f6e109154dd7e81ea04e85a985ac8dc9b14ed6f7865bf9fde2b88"
+      },
+      {
+        "file": "tests/d14-wiring-match.test.ts",
+        "passed": 39,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:17:40.715Z",
+        "durationMs": 3307.042236328125,
+        "report": "artifacts/v16-tests/d14-wiring-match.json",
+        "reportSha256": "1fec0b1b5c07982e0841d5a44acdb7f4ddbf6d99407823d18a5ecea3da8bec4f"
+      },
+      {
+        "file": "tests/d14-sale-price.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:07:39.289Z",
+        "durationMs": 30.148681640625,
+        "report": "artifacts/v16-tests/d14-sale-price.json",
+        "reportSha256": "d857011a817f574fdd698f68a83e3cc35420a503a400166040bb0cf03eb1c0fe"
+      },
+      {
+        "file": "tests/epic-loot-reforger.test.ts",
+        "passed": 29,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:14:45.964Z",
+        "durationMs": 6454.374755859375,
+        "report": "artifacts/v16-tests/epic-loot-reforger.json",
+        "reportSha256": "839febecc4845c71f59995320a231ee28dc884d309b2f70a737f7297c80c320c"
+      },
+      {
+        "file": "tests/m8-b8-live-capacity.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:11:53.445Z",
+        "durationMs": 2504.54296875,
+        "report": "artifacts/v16-tests/m8-b8-live-capacity.json",
+        "reportSha256": "04aa5a9844538c6c8c890d77fe6062fd12f691f826cb3499db090ca097b1d878"
+      },
+      {
+        "file": "tests/m8-b8-live-transfer.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:13:36.940Z",
+        "durationMs": 3691.268798828125,
+        "report": "artifacts/v16-tests/m8-b8-live-transfer.json",
+        "reportSha256": "5bdfd300d59e6a8c8d697edce69ecb34b6b3dd4c0c13f16daed40a9dce77d2fe"
+      },
+      {
+        "file": "tests/m8-b8-loot-view.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:05.978Z",
+        "durationMs": 1625.0146484375,
+        "report": "artifacts/v16-tests/m8-b8-loot-view.json",
+        "reportSha256": "568ca3a3f6fa1af70328cf04dc1afa22464bd950f27907a28515cb104aa6d3d3"
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "passed": 48,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:06:02.075Z",
+        "durationMs": 8599.056640625,
+        "report": "artifacts/v16-tests/t12-combat-equip.json",
+        "reportSha256": "91ebe392afd27ff187680e25505a9fba7e51faa4e25bfc0eb62c8ab978c348bd"
+      },
+      {
+        "file": "tests/g2-4b-artifacts.test.ts",
+        "passed": 49,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:06:19.607Z",
+        "durationMs": 1741.451416015625,
+        "report": "artifacts/v16-tests/g2-4b-artifacts.json",
+        "reportSha256": "79c3af4e6a31446aa31c843d795ffeca080f3139ac69dc1fdf791e87155bc215"
+      },
+      {
+        "file": "tests/combat-first-pass-frames.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:06:24.312Z",
+        "durationMs": 1879.384033203125,
+        "report": "artifacts/v16-tests/combat-first-pass-frames.json",
+        "reportSha256": "c273317e202d9d436f9e33189b0fd2cee5a81523240d2c4c80815763fcd60ae6"
+      },
+      {
+        "file": "tests/task-mechanism-restore.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:11:36.300Z",
+        "durationMs": 12629.8759765625,
+        "report": "artifacts/v16-tests/task-mechanism-restore.json",
+        "reportSha256": "054fd9f5541d2bae106285dcabb2a8d88576b385535adccf319e5bf3ca936996"
+      },
+      {
+        "file": "tests/presentation/choice-fallback.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:44.537Z",
+        "durationMs": 30.380615234375,
+        "report": "artifacts/v16-tests/choice-fallback.json",
+        "reportSha256": "056c5a1f93dc65531abfdfd8c6b7a13aab66448445939524a7212a51e321f330"
+      },
+      {
+        "file": "tests/presentation/g2-3-display.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:46.852Z",
+        "durationMs": 229.140380859375,
+        "report": "artifacts/v16-tests/g2-3-display.json",
+        "reportSha256": "469346bd2cf7842ca412cdb594c6f4c966bfad74ae41e10996c8a4873a697dd9"
+      },
+      {
+        "file": "tests/presentation/g2-4a-crown-display.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:48.685Z",
+        "durationMs": 2.8369140625,
+        "report": "artifacts/v16-tests/g2-4a-crown-display.json",
+        "reportSha256": "37bbde716fce5e0cdf41058c596071eeeecd1170626baac19ee931f748d3a37b"
+      },
+      {
+        "file": "tests/presentation/unit-revived-display.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:50.208Z",
+        "durationMs": 9.161376953125,
+        "report": "artifacts/v16-tests/unit-revived-display.json",
+        "reportSha256": "6b4fd3962307cac9daa821bd56070daeeb340c78db741a410aa0eef3bd85c735"
+      },
+      {
+        "file": "tests/g2-2-ability-display.test.ts",
+        "passed": 73,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:12:53.563Z",
+        "durationMs": 27.705078125,
+        "report": "artifacts/v16-tests/g2-2-ability-display.json",
+        "reportSha256": "aa5ca940c9473698174b31cda0bcf2a86c55104fbd707c53e27b8f76b1314a0d"
+      },
+      {
+        "file": "tests/m8-b8-live-reveal.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:31:03.185Z",
+        "durationMs": 2983.979736328125,
+        "report": "artifacts/v16-tests/m8-b8-live-reveal.json",
+        "reportSha256": "ad76ec89755fbfe5ee939d7b1ff3c1b8a14ddfd2319d88183da5b43d542fa2ff"
+      },
+      {
+        "file": "tests/server/augment-tier-consistency.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:07:42.144Z",
+        "durationMs": 936.764404296875,
+        "report": "artifacts/v16-tests/augment-tier-consistency.json",
+        "reportSha256": "0d89d30c447eb3d7576053f535ee3a4ebc0a06bb587167500415944426187280"
+      },
+      {
+        "file": "tests/server/g2-2-emissary-wins.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:07:46.267Z",
+        "durationMs": 194.614501953125,
+        "report": "artifacts/v16-tests/g2-2-emissary-wins.json",
+        "reportSha256": "7fb5e1fccb49a0efbf7587c2ecccc28c5adc9a088bbca44464ad26a7a8755dbc"
+      },
+      {
+        "file": "tests/augment-tier-consistency.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:25:09.483Z",
+        "durationMs": 343.041259765625,
+        "report": "artifacts/v16-265/augment-tier-domain.json",
+        "reportSha256": "5714383c1fe0d2a1d503377907831c820748e799af45a0847bb3c1218e5fa57f"
       }
-    ],
-    "originalThreeFileReproduction": {
-      "passed": 162,
-      "failed": 0,
-      "dualCaseMs": 15151.602399999998
+    ]
+  },
+  "extraTests": {
+    "files": 4,
+    "passed": 11,
+    "failed": 0,
+    "results": [
+      {
+        "file": "tests/m5-replay.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:18:28.268Z",
+        "durationMs": 267102.9267578125,
+        "report": "artifacts/v16-tests/m5-replay.json",
+        "reportSha256": "822d78e4cc67df66704d7aa26266d10c6634c96b94d12caa90816148eeded319"
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:22:58.454Z",
+        "durationMs": 230296.986328125,
+        "report": "artifacts/v16-tests/m5-replay-mage.json",
+        "reportSha256": "8e29a596f09c5817fe4c32e08cef5a9eff9d86eddec6c829ebefd4bbd25208aa"
+      },
+      {
+        "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:26:52.625Z",
+        "durationMs": 247281.92700195312,
+        "report": "artifacts/v16-tests/m5-replay-sniper-caitlyn.json",
+        "reportSha256": "210fdc6d6d9675548f3fc52c758b1d0c7377aebf05b49857687fa57a9c5f334e"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "startedAt": "2026-10-20T11:32:38.885Z",
+        "durationMs": 92516.8837890625,
+        "report": "artifacts/v16-265/m5-route.json",
+        "reportSha256": "bfbda9de1a89fa40383c7eccd8b7ab3de3eaa8f0f925577ea29cc2d410858f56"
+      }
+    ]
+  },
+  "build": {
+    "command": "npm.cmd run build -- --configLoader runner",
+    "passed": true,
+    "finalTypecheckPassed": true,
+    "productionIdentityEquivalence": {
+      "catalogs": 9,
+      "battleSeeds": [
+        42,
+        7216,
+        6240
+      ],
+      "equal": true
     }
   },
-  "dual": {
-    "v15OriginalCaseMs": 11104.153,
-    "v16FinalCaseMs": 13774.3198,
-    "timeoutMs": 30000,
-    "profile": {
-      "v15": {
-        "generationMs": 7576.1883,
-        "replayMs": 3948.0242,
-        "restorePairMs": 45.783299999999144,
-        "commands": 6996,
-        "counts": {
-          "start": 19,
-          "step": 6815,
-          "continue": 22,
-          "buy": 24,
-          "sell": 3,
-          "deploy": 14,
-          "select": 6,
-          "combine": 5,
-          "equip": 7,
-          "lock": 2,
-          "buyXp": 10,
-          "reroll": 39,
-          "target": 1,
-          "anomalyReroll": 29
-        },
-        "eventCounts": {
-          "movement": 279,
-          "targetChanged": 356,
-          "attack": 1931,
-          "packetDamage": 2752,
-          "manaChanged": 2764,
-          "kill": 86,
-          "death": 86,
-          "lootRevealed": 17,
-          "cast": 243,
-          "shieldLayerChanged": 3137,
-          "combatFinished": 19,
-          "lootGranted": 17,
-          "roundSettled": 22,
-          "choiceOpened": 7,
-          "choiceSelected": 6,
-          "itemCombined": 5,
-          "itemEquipped": 7,
-          "statusChanged": 716,
-          "activityChanged": 118,
-          "heal": 627,
-          "growth": 7,
-          "unitUpgraded": 8,
-          "statChanged": 37,
-          "mechanicGranted": 1,
-          "itemsReturned": 1,
-          "anomalyTargetSelected": 1,
-          "anomalyRerolled": 29
-        },
-        "aliveUnitTicks": 54932,
-        "rounds": 22,
-        "lootReceipts": 17,
-        "provenanceEntries": 83
-      },
-      "v16": {
-        "generationMs": 7918.221999999998,
-        "replayMs": 5212.502999999997,
-        "restorePairMs": 44.62129999999888,
-        "commands": 7146,
-        "counts": {
-          "start": 19,
-          "step": 6989,
-          "continue": 22,
-          "buy": 24,
-          "sell": 3,
-          "deploy": 14,
-          "select": 6,
-          "combine": 5,
-          "equip": 6,
-          "lock": 2,
-          "buyXp": 10,
-          "reroll": 39,
-          "target": 1,
-          "anomalyReroll": 6
-        },
-        "eventCounts": {
-          "movement": 292,
-          "targetChanged": 369,
-          "attack": 1967,
-          "packetDamage": 2879,
-          "manaChanged": 2883,
-          "kill": 87,
-          "death": 87,
-          "lootRevealed": 16,
-          "cast": 251,
-          "shieldLayerChanged": 3161,
-          "combatFinished": 19,
-          "lootGranted": 16,
-          "roundSettled": 22,
-          "choiceOpened": 7,
-          "choiceSelected": 6,
-          "itemCombined": 5,
-          "itemEquipped": 8,
-          "heal": 784,
-          "statusChanged": 14583,
-          "activityChanged": 120,
-          "growth": 11,
-          "maxHpChanged": 3,
-          "unitUpgraded": 8,
-          "statChanged": 38,
-          "mechanicGranted": 1,
-          "itemsReturned": 1,
-          "anomalyTargetSelected": 1,
-          "anomalyRerolled": 6
-        },
-        "aliveUnitTicks": 56051,
-        "rounds": 22,
-        "lootReceipts": 16,
-        "provenanceEntries": 82
-      }
+  "budget": {
+    "baselineDirectories": {
+      "js": "C:\\Users\\Administrator\\Desktop\\set13-worktrees\\epic-loot\\artifacts\\premerge-265\\baseline\\dist",
+      "interactive": "C:\\Users\\Administrator\\Desktop\\set13-worktrees\\epic-loot\\artifacts\\premerge-265\\baseline\\dist"
     },
-    "interpretation": "Main cost is public-route generation and full command replay; v16 traverses a different trajectory (more combat steps, live-unit ticks, packets and casts). Strict restore pair is about 45 ms. These different trajectories do not isolate a per-tick causal regression."
-  },
-  "productionEquivalence": {
-    "checked": [
-      "CONTENT_DIGEST",
-      "ITEM_DEFINITIONS",
-      "TRAIT_DEFINITIONS",
-      "AUGMENT_DEFINITIONS",
-      "ANOMALY_DEFINITIONS",
-      "UNIT_DEFINITIONS",
-      "ABILITY_DEFINITIONS",
-      "LOOT_REPLAY_DIGEST",
-      "REFORGE_POOLS"
-    ],
-    "firstBattleSeeds": [
-      42,
-      7216,
-      6240
-    ],
-    "equal": true
-  },
-  "epoch": {
-    "releaseRecorded": true,
-    "heraldRecordedAndStrictlyVerified": true,
-    "inputsRecordedAndChecked": true,
-    "liveRevealRecordedAndChecked": true,
-    "sourceDigestsMatchWorkspace": true,
-    "historicalG23G24Files": 86,
-    "historicalV15Files": 23,
-    "historyAndHistoricalAssertionsByteIdentical": true
-  },
-  "scouting": {
-    "source": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
-    "sha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
-    "pointer": "{cf1ee294}",
-    "name": "TFT13_GoopBuff_UltimateHero",
-    "fields": [
-      "name",
-      "{900aff58}",
-      "effectAmounts",
-      "{4e874e78}",
-      "ExcludedAugments",
-      "__type"
-    ],
-    "tooltip": {
-      "name": "TFT13_GoopBuff_UltimateHero_Tooltip",
-      "TitleTra": "TFT13_GoopBuff_UltimateHero_Title",
-      "SubtitleTra": "TFT13_GoopBuff_Categories_Utility",
-      "DescriptionTra": "TFT13_GoopBuff_UltimateHero_Description",
-      "__type": "TftTooltipData"
+    "jsGzipBytes": {
+      "base": 424763,
+      "current": 618719
     },
-    "effectAmounts": [
-      {
-        "name": "NumRounds",
-        "value": 3,
-        "__type": "TftEffectAmount"
-      }
-    ],
-    "executionReferences": [
-      {
-        "pointer": "{44055224}",
-        "resolvedInArchive": false
-      },
-      {
-        "pointer": "{7fa976fb}",
-        "resolvedInArchive": false
-      }
-    ],
-    "originalOpponentVisibility": "unknown",
-    "reason": "The retained metadata archive lacks the referenced execution records and client/network star-display replication data. Rank-4 ability values and upgrade description do not establish scouting visibility.",
-    "currentProjection": "Keep publicBoard.starLevel physical 3; no inferred effectiveStarLevel. This is a conservative project fallback, not a claim that the original client hides rank 4."
+    "jsRatio": 1.4566216925673847,
+    "jsBudget": 1.5,
+    "interactiveMs": {
+      "base": [
+        606,
+        566,
+        564
+      ],
+      "current": [
+        619,
+        563,
+        650
+      ],
+      "baseMedian": 566,
+      "currentMedian": 619
+    },
+    "interactiveRatio": 1.0936395759717314,
+    "interactiveBudget": 1.2,
+    "wallClock": {
+      "enforced": true,
+      "gates": [
+        {
+          "source": "m7-budget",
+          "enforced": true,
+          "name": "firstInteractiveRatio",
+          "metric": "median ratio",
+          "actual": 1.0936395759717314,
+          "limit": 1.2,
+          "comparison": "<=",
+          "passed": true
+        }
+      ]
+    },
+    "passed": true
   },
-  "forbiddenDirectoriesUnmodified": true,
-  "suggestedCommit": "fix(v16): repair epoch audit, trim 2D bundle and expose four-star tooltips"
+  "nativeInput": {
+    "command": "M5_NO_GIT=1 VITE_CONFIG_LOADER=runner CHROMIUM_PATH=<installed Chrome> node scripts/verify-m5-input.cjs --preview",
+    "passed": true,
+    "scenarios": 38,
+    "skipped": [],
+    "durationSeconds": 162.048,
+    "originalLuxBowRodAssertionRetained": true,
+    "report": "artifacts/v16-265/input-preview-final/manifest.json",
+    "reportSha256": "fa12c0f03998214a51352ca9dd1e24171db93bb4e2fd1ae733130b892edb3628"
+  },
+  "recording": {
+    "order": [
+      "release",
+      "herald",
+      "inputs",
+      "live-reveal"
+    ],
+    "publicRouteBattles": 33,
+    "publicRouteBuilds": 4,
+    "recordedStates": {
+      "cannon": 67,
+      "sniper": 67
+    },
+    "heraldCases": 5,
+    "inputsChecked": true,
+    "liveRevealChecked": true,
+    "sourceHashesCurrent": true,
+    "historicalFilesUnchangedSinceSessionStart": 209,
+    "historyProvenance": "session-local SHA-256 pins; Git commit provenance intentionally not rechecked"
+  },
+  "limitations": [
+    "No Git index resolution, staging or commit; MERGE_HEAD retained",
+    "Existing productionIdentities/Phaser design remains under review",
+    "Not a full-repository or full-room acceptance run"
+  ],
+  "suggestedCommit": "fix(v16): merge v15 closeout, isolate orb bonus RNG and use three-star sale prices"
 }

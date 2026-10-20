@@ -1,6 +1,7 @@
+import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert';
 import { syntheticSharedRound } from './tp-helpers';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch, nextRound,
   buyUnit, buyXp, rerollShop, sellUnit, setShopLock,
@@ -369,26 +370,21 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
 });
 
 
-it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
-  const acquired=publicInventory(['gloves','gloves'],false,9);let state=acquired.state;
-  while(state.roundDefinitionId!=='4-4'){
-    state=resolvePublicEquipmentChoices(state);
-    if(state.phase==='preparation'){
-      while(state.level<7&&state.gold>=4)state=accepted(buyXp(state));
-      for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').sort((a,b)=>b.starLevel-a.starLevel)){
-        const held=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(held.length>=state.level)break;
-        const col=[1,3,5,0,6,2,4].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===4))!;
-        state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:4}}));
-      }
-      state=finishPublicEquipmentBattle(state);
-    }
-    state=resolvePublicEquipmentChoices(state);
-    state=accepted(nextRound(state,state.round));
-  }
-  expect(state.pendingChoice!.kind).toBe('component');
-  state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
-  state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',1));
-  deepStrictEqual(resolvePublicEquipmentChoices(restored(state)), resolvePublicEquipmentChoices(state));
+describe('T12 supply choice input', () => {
+  let supplyInput: { acquired: ReturnType<typeof publicInventory>; state: MatchState } | undefined;
+  beforeAll(() => {
+    const acquired=publicInventory(['gloves','gloves'],false,9);let state=acquired.state;
+    while(state.roundDefinitionId!=='4-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(resolvePublicEquipmentChoices(state))),state.round));
+    supplyInput=prepareInput({ acquired, state });
+  });
+  afterAll(() => { supplyInput = undefined; });
+  it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
+    const input=copyInput(supplyInput!),acquired=input.acquired;let state=input.state;
+    expect(state.pendingChoice!.kind).toBe('component');
+    state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
+    state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',1));
+    deepStrictEqual(resolvePublicEquipmentChoices(restored(state)), resolvePublicEquipmentChoices(state));
+  });
 });
 it('T12 an existing frozen glove roll and a new parent roll remain independent',()=>{
   const acquired=publicInventory(['thiefs-gloves','gloves','gloves']);

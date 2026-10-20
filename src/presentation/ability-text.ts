@@ -2,14 +2,16 @@
  * Ability description text for hover cards. The name and every value come from the rules' display functions
  * (`abilityDisplayName` / `abilityDisplayValues`, MATCH_CONTRACT SR-G2-01): `@Key@` and expression tokens such as
  * `@PercentShieldDamage*100@` are looked up as given, never multiplied or recomputed here. Riot markup is reduced to plain
- * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note.
+ * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note. The player sees the
+ * 14.24 zh_cn client name and tooltip (`ABILITY_ZH`, same tokens as the English content text) where the client has one.
  */
 import { abilityDisplayName, abilityDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
+import { ABILITY_ZH } from './ability-zh';
 
 export interface AbilityText {
-  /** Locked CDragon ability name (English, no inferred translation). */
+  /** zh_cn client ability name; the locked CDragon name when the client table has none. */
   readonly name: string;
   readonly text: string;
   /** Tokens left as written because the display values have no such key (in order of first appearance). */
@@ -62,17 +64,19 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
   const data = definition && Object.hasOwn(S13_ABILITY_DATA, definition.abilityId) ? S13_ABILITY_DATA[definition.abilityId] : undefined;
   if (!data) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
+  const zh = Object.hasOwn(ABILITY_ZH, data.id) ? ABILITY_ZH[data.id] : undefined;
   try {
     const values = starLevel === 4 ? ultimateHeroAbilityDisplayValues(definitionId, stats)
       : abilityDisplayValues(definitionId, star, stats);
-    return { name: abilityDisplayName(definitionId), ...fillAbilityTemplate(data.description, values) };
+    return { name: zh?.name ?? abilityDisplayName(definitionId), ...fillAbilityTemplate(zh?.text ?? data.description, values) };
   } catch (error) {
     if (error instanceof RangeError) return null;
     throw error;
   }
 }
 
-/** Locked ability name of a hero, or null when the rules have no display source for it. */
+/** Ability name of a hero (zh_cn client name when known), or null when the rules have no display source for it. */
 export function abilityNameOf(definitionId: string): string | null {
-  try { return abilityDisplayName(definitionId); } catch (error) { if (error instanceof RangeError) return null; throw error; }
+  const abilityId = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId].abilityId : `${definitionId}-ability`;
+  try { const name = abilityDisplayName(definitionId); return (Object.hasOwn(ABILITY_ZH, abilityId) ? ABILITY_ZH[abilityId].name : undefined) ?? name; } catch (error) { if (error instanceof RangeError) return null; throw error; }
 }

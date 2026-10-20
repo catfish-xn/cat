@@ -27,7 +27,12 @@ async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy
       await click(`choice:${offer}`);
     } else if (state.phase === 'preparation') {
       await page.waitForTimeout(450); await click('mobile:start-combat');
-    } else if (state.phase === 'settlement') await click('mobile:continue');
+    } else if (state.phase === 'settlement') {
+      // Empty-board battles finish immediately. Let the existing phase-change
+      // input guard expire before the next native click, as for Start above;
+      // repeatedly clicking during that guard only prolongs the rejected burst.
+      await page.waitForTimeout(450); await click('mobile:continue');
+    }
     else if (state.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
     else throw Error(`Opening preparation ended at ${state.phase}`);
   }

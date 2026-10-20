@@ -77,6 +77,7 @@ if(!prefix)throw Error('D11 public prefix unavailable');
 // Every case still checks its own combat and all changed history/receipts.
 restoreMatch(serializeMatch(prefix,history.completedRecords),history.completedRecords);
 
+// Temporarily allow full historical replay under CI contention (user-approved 2026-10-20).
 it.each(['avarice-incarnate','headhunter'])('%s acquires a real 4-6 offer, fights, settles once and restores with independent historical evidence',id=>{
   const h=new BattleHistory(history.runId,history.completedRecords);
   let s=prefix!;
@@ -123,4 +124,4 @@ it.each(['avarice-incarnate','headhunter'])('%s acquires a real 4-6 offer, fight
     const strategy=buildStrategySnapshot(s);
     if(id==='headhunter')expect(strategy.units.find(u=>u.unitId===target.id)?.mechanics).toContainEqual(expect.objectContaining({mechanic:'d11Anomaly',values:{enabled:1,priorKills:d11PriorKills(readG23Progress(s),s.anomalyBinding!.boundRound)}}));
   }
-});
+}, 60000);

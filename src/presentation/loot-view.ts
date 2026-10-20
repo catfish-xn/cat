@@ -13,6 +13,7 @@ import type { PendingChoice } from '../simulation/strategy-types';
 import { displayUnitName } from '../rendering/display-names';
 import { heroEmblemSvg } from './hero-identity';
 import { itemDescriptions, itemMarkHtml } from './item-codex';
+import { toolMark } from './orb-loot';
 import { itemDisplayName } from './g23-display';
 
 export interface LootLabels {
@@ -47,7 +48,7 @@ export function continueBlockText(reason: NonNullable<LootView['reason']>): stri
 
 function payloadLabel(payload: Payload): { icon: string; text: string } {
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
-  if (payload.kind === 'consumable') return { icon: '', text: CONSUMABLE_DEFINITIONS[payload.definitionId].name };
+  if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: CONSUMABLE_DEFINITIONS[payload.definitionId].name };
   if (payload.kind === 'forge') return { icon: '', text: EPIC_REWARD_NAMES[payload.definitionId as keyof typeof EPIC_REWARD_NAMES] ?? itemName(payload.definitionId) };
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   return payload.kind === 'item'

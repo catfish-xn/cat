@@ -8,7 +8,7 @@
 - preparation/settlement/choice 可即时领；combat 或冻结 PvP 阵容接受并排队，battle/awaiting-settlement 必须转发。重复排队沿用 already-claimed，失败枚举不新增；另有 unknown-orb / seat-eliminated / stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 和池校验；失败不改 state/pool/RNG。接受排队只写席位私有 m8.loot.queuedOrbClaims（string[] FIFO），不改备战席/金币/卡池库存/预留/RNG，无领取事件/收据；包装仅更新 revision。
 - 战后在本轮经济/HP/成长、G23 钩子、延迟升星完成之后、战后选择之前按 FIFO 结算（PvE withCombat / PvP applyRoundSettlement）。以此时容量和库存执行同一领取逻辑，每颗后 drain 原机制奖励并同步装备；淘汰先清队列并 forfeited，不补金、不扣池。领取本身 0 RNG；原装备钩子按 FIFO/父装备 ID 顺序消费 equipment 流并记 roll，详见 MATCH_CONTRACT。完整最新席位快照必须持久化队列；重连只投影 queued，不再次排队或自动发奖，不用战前副本覆盖最新状态。
 - 服务器 `src/server/net/messages.ts` 的 NET_PROTOCOL_VERSION 必须 3→4，目标值由 simulation/m8/version.ts 的 MULTIPLAYER_NET_PROTOCOL_VERSION 导出；本任务禁改服务器目录，当前该服务器常量仍为 3。
-- bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；终局调用 forfeitUnclaimedOrbs，按现有规则分配事件序号。淘汰清理已由领域接上。
+- bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；整局终局对赢家及其他存活席位调用 `forfeitTerminalOrbs(state: MatchState): MatchStep`（server-entry 公共导出），提交返回 state/events；领域已按 Match 规则编号，服务器不得重复编号。无失败枚举、重复调用无新事件或收据；调用者负责确认整局结束，不要求席位已淘汰。淘汰清理已由领域接上。详见 MATCH_CONTRACT 的 #260 / #262 终局入口。
 - 验收：战斗点击接受且 queued=true，当时资源不变；重复点击失败无变化；战后才入库/按最终容量折金，先淘汰则 forfeited；排队前后重连/恢复不丢不重发；公共不泄露内容或 queued；截止/跨轮不消失，bot 准备入口领完。约定值：完整星级缺货整条按费用补金一次，奖励法球 gray；跨席竞争沿原结算提交顺序。完整签名、恢复边界和 PR 草稿：[v15 交接](LOOT_ORB_CLAIM_V15.md)。
 
 ## D11-SERVER-LIVE-BANK（Codex → Claude，v15 发布阻塞）
@@ -388,7 +388,7 @@
 | --- | --- | --- | --- | --- |
 | `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
 | `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
-| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5） | 该席场上单位与所持装备定义（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读 | 只含上场的本席单位；不含备战席、商店、金币、经验、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
+| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5）；`bench[{definitionId,starLevel,slot,items[]}]`、`looseItems[]`、`augments[]`、单位上的 `anomaly?`（2026-10-20，合同 §27） | 该席场上与备战席单位、所持与未装备的装备定义、单位异常、已有强化（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读（只算棋盘） | 不含连胜/连败、商店、金币、经验、待选强化、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
 | `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
@@ -874,7 +874,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 候选：排除最近 `avoidRecentRounds` 轮对手；为空则窗口减 1，直到 0（全部存活席）。若各席候选互不相容、凑不出完整配对，全体同时减 1 再试（2 → 1 → 0），保证开战抽到的对手一定在准备期展示的候选里。不消耗 RNG。
 - 时机：回合进入时只算候选（`RoomState.opponentCandidates`）；配对与全部 `battleSeeds` 挪到准备截止冻结时抽取，抽取顺序仍是"洗牌 → 奇数镜像来源 → 每场种子"。空历史时与原先无约束洗牌逐位相同。配对历史 `RoomState.pairingHistory` 在房间状态里，断线、接管、重连后候选不变。
 - 投影：`PlayerView.opponentCandidates?: string[]`（选择/准备期、PvP 轮，按座位序，只含存活、不含自己；其它时候为空）；`opponentSeatId` 在冻结前为 null。`NET_PROTOCOL_VERSION` 保持 2（只增视图字段，依据写在 `messages.ts`）。
-- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。
+- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。2026-10-20 起另显示对方强化、异常、备战席和未装备装备，不显示连胜/连败（合同 §27）。
 
 ### SR-G1-01 请 Codex 用 §10 规则替换占位数值（P2，只改参数）
 
@@ -1054,7 +1054,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
 
 - `PrivateSeatView.d14Display?`：`anomalyId, choiceId, unitId, phase(waiting/promoted/absent/returned/retired), dueOrdinal, remainingSettlements, effectiveStarLevel, physicalStarLevel`。进入未知 absent 时另有仅本席可见的 `heldUnit, heldItems`；它们已从 `preparation.units/items` 移出，不提供出售/装备/复制控件。满席到期显示等待空位，不能当成已获得增益。
-- 终极英雄私有单位行在 promoted 时有 `starLevel:3, effectiveStarLevel:4, sellGold:9, poolCopies:9`；`d14Display` 也提供 `sellGold:9,poolCopies:9`。显示为四星，但出售说明明确写 **“四星卖9金（专用永久晋升，物理9份）”**，不可按通用四星27份推导售价或退池数。
+- 终极英雄私有单位行在 promoted 时有 `starLevel:3, effectiveStarLevel:4, sellGold, poolCopies:9`；`d14Display` 也提供同一 sellGold/poolCopies。sellGold 直接查询该英雄三星售价（1费9、2费17），出售说明写 **“与该英雄三星同价（专用永久晋升，物理9份）”**，不可写死9金或按通用四星27份推导售价/退池数；目标准入仍仅一费。
 - 公共 `CombatViewUnit.effectiveStarLevel?`：晋升单位为4，其余省略并读取已有 starLevel；`choiceEffects` 包含两个异常的名称/说明。物理 starLevel 仍1–3，UI 不能把它写回4。
 - 私有 `d11Display.definitions` 现在也提供两个 D14 异常的名称/说明；待选择的报价也可读取。`remainingSettlements` 是权威数据，不按动画、计时器或 Continue 点击次数另算。
 - 验收：3星1费目标能看到终极英雄、其它目标不提供；选择后3次真实结算晋升显示四星且卖9金；进入未知携装备离场，倒数归零满席仍等待，腾位归来显示永久+50%AD/+50AP；读档/重连不重复发放。其它席的候选和托管装备不进入公共投影。

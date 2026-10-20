@@ -9,6 +9,9 @@ import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equi
 import { accepted, emptyBoard, freeze } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { publicGlovesInventory } from './fixtures/t13-public-gloves';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
 // Its public control uses level 5, which has the identical <=6 equipment pool.

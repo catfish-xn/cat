@@ -1,0 +1,12 @@
+{
+  "seeds": 4102,
+  "through": "4-7",
+  "originalPayloadsAndIdentitiesEqual": true,
+  "legacyRngEqual": true,
+  "approvedNormalization": [
+    "component-reforger -> reforger",
+    "completed-reforger -> reforger"
+  ],
+  "reference": "retained local v15-timing.tar archive; no Git provenance recheck",
+  "archiveSha256": "66ed4f67e89a8c37cb734226175d7176bc1b81e53a6637c7ce1ffb0a3e2b6df0"
+}

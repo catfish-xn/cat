@@ -799,7 +799,9 @@ type SharedMatchCommand =
 
 对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot/claimOrb，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 保留原选择默认值，claimLoot 仅处理原有组件自选等选择，不领取、不丢弃法球；nextRound 不因未领法球阻塞。`claimOrb(state,orbId,expectedRound)` 允许 preparation/combat/settlement/choice，集中于 ORB_CLAIM_PHASES；combat 或 PvP combatRosterLocked 接受并排队，其余允许阶段即时领取（用户 10-20 02:26 已定）。expectedRound 为当前操作轮；失败 already-claimed（含重复排队）/ unknown-orb / seat-eliminated，另保留 stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 及原池校验枚举；失败原 state/pool、无事件、无 RNG 或池变化。其他 TP 包装与 PvP/T2/T3 路径保持。服务器应将 `{type:'claimOrb',round,orbId}` 原样转发包装，网络协议目标 4（服务器禁改目录由 Claude 接线）。
 
-私有投影增加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，提供所有已揭示、已赚且未领的跨轮法球；`claimReceipts` / private `orbClaimReceipts` 含 resolution、gold、claimedRoundId。公共只给 `{count,tiers}`，不暴露 queued。P2/征服者/黑市英雄先写 resolution=orb 的机制收据，再走同一领取命令；完整星级占一格并沿用升星。bot 准备入口调用 claimBotPreparationOrbs，按 orbId 代码点顺序领完；终局调用 forfeitUnclaimedOrbs。合同版本 `multiplayer-orb-claim-v2`，网络目标仍为 4，完整签名、恢复边界、约定值及服务器交接见 [v15 实现说明](LOOT_ORB_CLAIM_V15.md)。
+私有投影增加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，提供所有已揭示、已赚且未领的跨轮法球；`claimReceipts` / private `orbClaimReceipts` 含 resolution、gold、claimedRoundId。公共只给 `{count,tiers}`，不暴露 queued。P2/征服者/黑市英雄先写 resolution=orb 的机制收据，再走同一领取命令；完整星级占一格并沿用升星。bot 准备入口调用 claimBotPreparationOrbs，按 orbId 代码点顺序领完；终局调用下述 forfeitTerminalOrbs。合同版本 `multiplayer-orb-claim-v2`，网络目标仍为 4，完整签名、恢复边界、约定值及服务器交接见 [v15 实现说明](LOOT_ORB_CLAIM_V15.md)。
+
+**#260 → #262 终局入口**：`forfeitTerminalOrbs(state: MatchState): MatchStep`，从 `src/server-entry/index.ts` 导出，返回 `{state, events}`，无失败枚举。服务器确定整局结束后逐席调用并提交返回状态和事件，含赢家及其他仍 active 的存活席位；不要求席位已转 gameOver/eliminated，也不自行更改 phase/status。此可信钩子不接入客户端白名单、普通轮次截止或共享池命令包装。清空领取队列，按原计划顺序对已赚未领条目各写一张 forfeited/gold=0/claimedRoundId=当前轮的唯一收据，逐条发 lootForfeited 再 lootGranted；事件带 domain=match、从该席 nextMatchEventSeq 连续编号并推进状态计数，服务器不得再编号。已领及未赚 planned 条目保留；无扣池、发钱、入库、RNG 消耗或其他获取/选择钩子。单机为空操作；重复调用或快照恢复后再调用不产生新事件/收据，空队列时保留原 state 引用。旧 forfeitUnclaimedOrbs 仅作未编号计划器保留；完整语义见 [Match 合同](MATCH_CONTRACT.md#联机整局终局法球清理260--262)。
 
 排队持久字段为席位私有 `m8.loot.queuedOrbClaims?:readonly string[]`（缺省空，按提交顺序），队列中的 direct 仍为 revealed。接受排队无领取事件或收据，不改军队/金币/库存/预留/RNG；包装仍更新 pool/seat revision。PvE withCombat 与 PvP applyRoundSettlement 在收入/利息、XP/HP/成长、G23 钩子、延迟升星之后，战后选择之前统一处理：淘汰先作废全部已赚未领并清空队列；存活按 FIFO、颗内 entryOrdinal 调用同一领取逻辑，以结算时备战席和卡池决定入库/折金/缺货。每颗后 drain 机制奖励、同步临时装备，新法球不自动排队。收据和清空队列与本轮结算原子提交；失败整体回滚，重连/恢复/重复结算不重发。
 
@@ -1809,6 +1811,20 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 **公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
 
 **机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。
+
+## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
+
+用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
+
+**投影**：`SeatPublic.publicBoard`（`PublicBoard`）在原 `units` 之外由 `toPublicBoard` 逐字段新增三个字段，均为可选类型、房间总是填写：
+- `bench: PublicBenchUnit[]`：本席 `preparation.units` 中 `team:'player'`、位于备战席的单位，`{definitionId, starLevel, slot, items[]}`，按 slot 升序；`items` 为该单位所持装备定义 id，按装备槽序。
+- `looseItems: string[]`：`location.kind === 'inventory'`（未装备）的装备定义 id，按 `MatchState.items` 原顺序。
+- `augments: string[]`：已拥有强化的定义 id，按 `MatchState.augments` 顺序（获得顺序）。
+- `anomaly?: string`（加在 `units[]` 与 `bench[]` 的单位上）：`anomalyBinding.unitId` 指向该单位时为其异常定义 id，否则省略该键。不带 `choiceId`、`boundRound`、单位 id。
+
+不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
+
+**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
 
 ### First-pass replay capture supplement
 

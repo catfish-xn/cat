@@ -7,3 +7,5 @@ export function bonus(tier:string,stage:number,index:number):string[];
 export function copper(index:number):string;
 export function silver(index:number):string;
 export function variant(index:number):string;
+
+export function bonusIndex(seed:number,orbId:string):number;

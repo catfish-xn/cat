@@ -1,3 +1,4 @@
+import { getUnitSellPrice } from './unit-stats';
 import { D14_POLICY } from './content/d14-anomalies';
 import type { MatchState } from './match-types';
 import { d11PrivateDisplay } from './d11-display';
@@ -35,7 +36,7 @@ function d14PrivateDisplay(state:MatchState){
   const d=state.d14;if(!d)return undefined;
   return {anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+D14_POLICY.numRounds,
     remainingSettlements:Math.max(0,d.atOrdinal+D14_POLICY.numRounds-state.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel),
-    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:D14_POLICY.ultimateSellGold,poolCopies:D14_POLICY.ultimateShares}:{}),
+    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:getUnitSellPrice({definitionId:d.originalUnit.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{}),
     ...(d.held?{heldUnit:heldUnitView(d.held.unit),heldItems:d.held.items.map(itemView)}:{})};
 }
 
@@ -108,7 +109,7 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
-      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:D14_POLICY.ultimateSellGold,poolCopies:D14_POLICY.ultimateShares}:{})})) },
+      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:getUnitSellPrice({definitionId:u.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{})})) },
     items: items.map(itemView),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId
       && item.expiresAfterRoundId === state.roundDefinitionId && ids.has(item.holderId)

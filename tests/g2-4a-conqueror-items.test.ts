@@ -8,6 +8,9 @@ import {readG23Progress,writeG23Progress,validateG23MechanicLinks} from '../src/
 import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
 import {openG23Choice,drainG23Rewards,claimG23Atom} from '../src/simulation/g2-3-runtime';
 import type {G23BattleFacts} from '../src/simulation/g2-3-economy';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const ok=<T extends {ok:boolean}>(r:T):Extract<T,{ok:true}>=>{if(!r.ok)throw Error(JSON.stringify(r));return r as Extract<T,{ok:true}>;};
 const chest=(tier:number)=>G23_CONQUEROR_CHESTS[tier-1];
 const ordinary=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed'&&i.recipe).map(i=>i.id);

@@ -3,6 +3,8 @@ import type { Unit } from '../src/simulation/units';
 import type { CombatState, CombatUnit } from '../src/simulation/combat-types';
 import { createMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { MatchSession } from '../src/rendering/match-session';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /** Display-only substitutes. No Match state, reward, phase or command is mocked. */
 const display = vi.hoisted(() => {

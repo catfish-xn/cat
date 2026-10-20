@@ -84,10 +84,13 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
+  return { ok: true, ...stampMatchEvents(state, events) };
+};
+function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
-  return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
-};
+  return { state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+}
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
   // Choice-phase trading can consume/sell the currently selected anomaly target.
   // Follow an upgrade survivor, or ask for a new target without offering a free reroll.
@@ -612,6 +615,13 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
     const marked=accept(selected.state,[{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'first-offer'}]);
     return marked.ok ? {...marked,events:[...events,...selected.events,...marked.events]} : fail(state,marked.reason);
   } catch { return multiplayerFail(state,'invalid-choice'); }
+}
+
+/** Trusted match-finalization hook: the room may end while surviving seats are
+ * still in preparation/combat/settlement. Do not run acquisition/choice hooks. */
+export function forfeitTerminalOrbs(state: MatchState): MatchStep {
+  const result = forfeitUnclaimedOrbs(state);
+  return result.events.length ? stampMatchEvents(result.state, result.events) : result;
 }
 
 export function claimOrb(state: MatchState, orbId: string, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {

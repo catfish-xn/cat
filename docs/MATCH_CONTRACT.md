@@ -33,6 +33,12 @@ RNG：排队、出队、领取、折金、缺货与扣池本身各消耗 0 词�
 
 P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolution=orb，含 orbId/starLevel、unitId=null、gold=0；最终领取记 LootReceipt resolution=held/gold/capacity-sold/forfeited、gold、claimedRoundId，原 payload 保留星级。私有 LootView/PrivateSeatView 加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，领取回执位于 claimReceipts / orbClaimReceipts；公共只给 count/tiers。claimLoot 截止不丢弃法球，nextRound 不阻塞；淘汰/终局作废一次，断线保留。bot 准备入口函数 claimBotPreparationOrbs 按 orbId 代码点顺序领取。单机、冻结表、售价公式及 5-7/6-7 不变。完整恢复边界、服务器协议 4 接线与约定值见 [实现交接](LOOT_ORB_CLAIM_V15.md)。
 
+### 联机整局终局法球清理（#260 / #262）
+
+`forfeitTerminalOrbs(state: MatchState): MatchStep` 从 `simulation/match` 和 `server-entry` 公共导出，返回 `{state, events}`，无失败枚举。这是服务器确认**整局终局**后对每席调用的可信领域钩子，不是客户端命令；房间终局不等于席位淘汰，因此不要求 `phase=gameOver` 或 `multiplayer.status=eliminated`，赢家及其他 active 存活席位同样要调用。调用者负责终局判定及提交返回的 state/事件，不能在普通轮次截止调用。
+
+清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机为空操作；重复调用（包括 JSON 快照恢复后）无新事件或收据，队列也为空时返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
+
 ## 强化等级与按卡刷新：待 v15 收口（用户确认 2026-10-20）
 
 本节覆盖旧整组刷新与“精选混合池”描述。用户明确“三个海克斯下面各一个刷新”及“刷掉的海克斯永远刷不回来了”。每个槽位在本次选择各免费一次是本轮任务约定；旧实现/合同实际为整组共一次，没有既有按卡计次依据。不声称是已核实的原版 14.24b 行为。本轮不升版本、不改 digest、不重录指纹；与法球及 #231 接线统一升 v15，清单见 [交付说明](AUGMENT_CARD_REROLL_V15.md)。
@@ -665,6 +671,8 @@ P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循�
 
 ## v16：史诗奖励、复制器、统一重铸器（2026-10-20）
 
+#265 方案 A：1–4阶段原法球先完成全部原内容抽取，再追加独立复制器抽签。派生种子为 `JSON.stringify(['orb-duplicator-v16', state.seed, orbId])` 的 FNV-1a UTF-16（初值2166136261，逐字符 XOR 后乘16777619取uint32），随后使用全新 lcg32-v1 拒绝采样 `%100`；各珠独立，棱彩及5阶段以后不执行。原 loot/layout/shop/choice 流均不推进，1-3/1-4原掉落保持v15；新增entry排在原珠内容之后。完整次序及抽样界限见 M8B_LOOT §11。
+
 本节覆盖旧 R4 的两个重铸器及旧 5-7/6-7 奖励说明。完整冻结表、预算、RNG 次序、约定值与验收记录见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md) 和 [M8B_LOOT §11](M8B_LOOT.md#11)。规则身份为 s13-g2-3-v16，内容身份为 s13-14.24b-g2-3-v16；旧存档严格拒绝，不迁移。schema7/save3/replay3/command4 保持。
 
 公共命令 useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult 与 previewUseConsumable(state:Readonly<MatchState>,consumableId:string,target:ConsumableTarget):ConsumablePreview 签名不变。definitionId 仅 magnetic-remover、reforger、TFT_Consumable_ChampionDuplicator_III、TFT_Consumable_NeekosHelp；客户端传唯一实例 consumableId。target 的兼容联合仍接受 item 形状，但本版四种工具都只接受己方 unit 目标。成功 effect 是 remove-all / reforge-all / duplicate-unit；预览不抽随机结果、不授予资源。
@@ -683,7 +691,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 
 `MatchBase.d14?:D14Progress` 是私有持久状态；生产证书只由已接纳选择收据、资源事实与结算历史认证，不单凭存档 phase 授权。`readCombatStrategyInputs` 和 `PlayerBattleSnapshot` 可含 `d14Combat:{unitId,anomalyId,phase:'waiting'|'promoted'|'returned'}`，仅对可见绑定有效；离场单位不编入人口/羁绊/战斗。`restorePlayerBattleSnapshot` 结构校验，来源认证仍由上游可信 Match 完成；offline `restoreMatch` 继续拒绝联机完整存档。
 
-真实结算三次后准备边界生效，满席进入未知继续托管；解锁的 deploy/sell/claim 等资源命令后重试。新 `d14Promoted` / `d14Returned` Match 事件只表示阶段转换；资源账本的 `d14-selected`（含已验证装备清单）/`d14-returned`（含真实结算 ordinal）不产生资源奖励。物理三星不改，专用有效四星基础58320Bps、一费售价9/退池9是明确项目约定；不提供通用四星合成接口。完整来源、时序和显示字段见 EPIC_LOOT_V16 与 UI_REQUESTS V16-UI-250。
+真实结算三次后准备边界生效，满席进入未知继续托管；解锁的 deploy/sell/claim 等资源命令后重试。新 `d14Promoted` / `d14Returned` Match 事件只表示阶段转换；资源账本的 `d14-selected`（含已验证装备清单）/`d14-returned`（含真实结算 ordinal）不产生资源奖励。物理三星不改，专用有效四星基础58320Bps、售价与该英雄三星同价、退池9份是明确项目约定；出售及私有 sellGold 均复用 `getUnitSellPrice({definitionId,starLevel:3})`（1费9、2费17），不保留写死售价，不扩大仅一费的目标准入；不提供通用四星合成接口。完整来源、时序和显示字段见 EPIC_LOOT_V16 与 UI_REQUESTS V16-UI-250。
 
 调用方继续使用 Match 公共命令与 `snapshotForBattle(state:MatchState,seatId:string):PlayerBattleSnapshot`；不应直接调用下面的规则内部接线函数。既有命令失败枚举不增加：目标资格失败为 `invalid-target`，过期 choice/generation、阶段错误与金币不足沿用原合同。内部恢复失败抛出 `RangeError`，不是可提交的部分成功。
 

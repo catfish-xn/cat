@@ -5,6 +5,9 @@ import type { ResourceProvenanceEntry } from '../src/simulation/resource-provena
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, plan, reserveExcept } from './fixtures/t13-loot-public';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const copy = <T>(value:T):T => structuredClone(value);
 import { run } from '../scripts/generate-m5-route.cjs';
 import * as api from '../src/simulation/match';

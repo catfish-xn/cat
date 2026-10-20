@@ -8,6 +8,9 @@ import { createRoundEnemies } from '../src/simulation/round-enemies';
 import { getCatalogRoundByOrdinal } from '../src/simulation/round-selectors';
 import { appendResourceProvenance, RESOURCE_PROVENANCE_VERSION } from '../src/simulation/resource-provenance';
 import type { Unit } from '../src/simulation/unit-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Pure runtime vectors intentionally isolate the award transaction from Match phase/settlement.
 // The integration suite separately exercises real ticks, commands, economy and restoration.

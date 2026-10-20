@@ -133,7 +133,68 @@ const counterKey=id=>JSON.stringify(['s13-orbs-project-v16',id,'components-grant
 const receiptId=id=>JSON.stringify([id,'grant']);
 const choiceId=id=>JSON.stringify(['m8b-loot-choice',id]);
 function lootIndex(rng,n){const limit=4294967296n/BigInt(n)*BigInt(n);let state=rng.state,draws=rng.draws;do{state=word(state);draws++;}while(BigInt(state)>=limit);return {index:state%n,rng:{state,draws}};}
-function lootPlan(seed,ordinal){const {rng,rounds}=require('../epic-loot-oracle.cjs').lootPlan(seed,ordinal);return {rng,rounds};}
+// Independently rewritten for #265: M5 never calls the production planner or the
+// epic test oracle. Literal contract rows, separate BigInt RNG/hash arithmetic.
+function lootPlan(seed,ordinal){
+ const mkStream=initial=>{let value=BigInt(initial>>>0),draws=0;return {
+  take(size){const n=BigInt(size),cut=4294967296n/n*n;do{value=(value*1664525n+1013904223n)&0xffffffffn;draws++;}while(value>=cut);return Number(value%n);},
+  snapshot:()=>({state:Number(value),draws})};};
+ const loot=mkStream((seed^0xdeadbeef)>>>0),layout=mkStream((seed^0x4f524253)>>>0),rounds=[];
+ const small=[[],['darius','irelia','lux','maddie','zyra'],['leona','vander','rell','tristana','urgot'],['loris','ezreal','scar','kogmaw','nami']];
+ const completed=['adaptive-helm','archangel','bloodthirster','blue-buff','bramble-vest','crownguard','deathblade','dragons-claw','protectors-vow','gargoyle','edge-of-night','rageblade','gunblade','infinity-edge','ionic-spark','jeweled-gauntlet','last-whisper','nashors-tooth','giant-slayer','morellonomicon','steadfast-heart','guardbreaker','quicksilver','deathcap','red-buff','sunfire-cape','redemption','runaans-hurricane','shojin','evenshroud','statikk-shiv','steraks-gage','thiefs-gloves','titans-resolve','hand-of-justice','warmog'];
+ const tool=id=>({kind:'consumable',definitionId:id,quantity:1}),item=id=>({kind:'item',definitionId:id,quantity:1}),gold=n=>({kind:'gold',quantity:n});
+ const hero=(cost,epic=false)=>{const names=epic?CATALOG[cost]:small[cost];return {kind:'unit',definitionId:names[loot.take(names.length)],quantity:1};};
+ const component=()=>item(COMPONENTS[loot.take(8)]),remover=()=>tool('magnetic-remover'),reforger=()=>tool('reforger');
+ const lesser='TFT_Consumable_ChampionDuplicator_III',full='TFT_Consumable_NeekosHelp';
+ const sources=[['1-2','minions-a-v1','m01'],['1-3','minions-b-v1','m01'],['1-4','minions-c-v1','m01'],['2-7','krugs-v1','k01'],['3-7','wolves-v1','w00'],['4-7','razorbeaks-v1','r00'],['5-7','elder-dragon-v1','d01'],['6-7','rift-herald-v1','h01']];
+ for(const [roundId,encounterId,local] of sources){
+  if(roundOrdinal(roundId)>ordinal)break;
+  const stage=Number(roundId[0]),drops=[],orbs=[];
+  const add=(source,slotOrdinal,tier,templateId,payloads,appendBonus=true)=>{
+   const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,source]);
+   const orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]);
+   if(appendBonus&&stage<=4&&tier!=='prismatic'){
+    let hash=2166136261n;const name=JSON.stringify(['orb-duplicator-v16',seed,orbId]);
+    for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)&0xffffffffn;
+    const roll=mkStream(Number(hash)).take(100);let ids=[];
+    if(tier==='gray'&&roll===99)ids=[lesser];
+    if(tier==='blue')ids=stage<4?(roll>=99?[full]:roll>=97?[lesser]:[]):roll===99?[full]:[];
+    if(tier==='gold')ids=stage<4?(roll>=97?[full,lesser]:roll>=94?[full]:[]):roll>=95?[full]:[];
+    payloads.push(...ids.map(tool));
+   }
+   const identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};
+   const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));
+   drops.push(...entries);orbs.push({...identity,tier,templateId,entries});
+  };
+  if(stage===1){
+   if(roundId!=='1-4')add('m01',0,'gray','opening-unit',[hero(1),remover()]);
+   else add('m01',0,'gray','remover',[remover()]);
+   if(roundId!=='1-2')add('r01',0,'blue','component',[component()]);
+   if(roundId==='1-4'){const blue=layout.take(100)<50;add('r02',0,blue?'blue':'gray',blue?'component':'opening-gold',blue?[component()]:[gold(3)]);}
+  }else if(stage<=4){
+   const color=layout.take(100);
+   if(color<90)add(local,0,'blue','blue-pair',[component(),component()]);
+   else if(color<99)add(local,0,'gold','gold-pair',[component(),component(),gold(4)]);
+   else add(local,0,'prismatic','prismatic-standard',[item(completed[loot.take(36)]),gold(8),reforger(),reforger()]);
+   const cost=stage-1,payloads=[loot.take(100)<75?gold(cost):hero(cost),remover()];
+   if(loot.take(100)>=80)payloads.push(reforger());
+   add(local,1,'gray',`gray-${cost}`,payloads);
+  }else{
+   const v=loot.take(1000),c=v===999?null:loot.take(100),silvers=Array.from({length:v===999?2:1},()=>loot.take(100));
+   let slot=0;
+   if(v===999)add(local,slot++,'gold','epic-crown',[item('TFT_Item_ForceOfNature')],false);
+   else{
+    add(local,slot++,'gold','epic-completed-forge',[{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1}],false);
+    if(v>=899)add(local,slot++,'gold','epic-artifact-forge',[{kind:'forge',definitionId:'TFT_ArmoryKeyOrnn',quantity:1}],false);
+    const payloads=c<49?[hero(3,true)]:c<95?[hero(2,true),gold(1)]:c<98?[gold(3),reforger()]:c<99?[gold(3),remover()]:[tool(lesser)];
+    add(local,slot++,'gray','epic-copper',payloads,false);
+   }
+   for(const row of silvers){const payloads=row<49?[hero(4,true),gold(4)]:row<96?[hero(3,true),hero(3,true),gold(2)]:row<99?[gold(8),reforger()]:[gold(3),tool(full)];add(local,slot++,'blue','epic-silver',payloads,false);}
+  }
+  rounds.push({encounterPlan:{roundId,encounterId,policyVersion:'m8b-pve-project-v2',drops},choices:[],orbs});
+ }
+ return {rng:loot.snapshot(),rounds};
+}
 
 function appended(before,after,key,label){assert.deepEqual(after.slice(0,before.length),before,`${label} append-only`);assert.equal(new Set(after.map(x=>x[key])).size,after.length,`${label} unique identity`);return after.slice(before.length);}
 function bare(event){const {domain,eventSeq,...value}=event;return value;}

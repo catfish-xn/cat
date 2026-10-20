@@ -9,6 +9,9 @@ import type { SessionChange } from '../src/m6/contracts';
 import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
 import { transferPreparation } from './fixtures/t13-loot-public';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const SURVIVOR = 'unit-20', DONOR = 'unit-16', TG = 'item-13';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */

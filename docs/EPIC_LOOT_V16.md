@@ -2,7 +2,7 @@
 
 基线：codex/epic-loot-reforger @ 46454b77348c86b70a4fec57869f95c22ecf9682（v15、PR #260已收口）。本次只留工作区，不提交、不联网、不安装依赖、不改.git。用户已批准规则与拒绝旧存档，无迁移。规则实现和测试完成情况以下列实际记录为准；界面目录的明确禁改边界仍有效。
 
-交付状态：领域、90份测试和v16录制已完成；整体验收因明确禁改的两个界面文件仍有6条tsc错误，尚未通过。
+当前 #265 收口状态与验证以 [V16_PREMERGE_265](V16_PREMERGE_265.md) 为准：合并冲突已消除，tsc/build通过。下文保留开发阶段记录，旧的6条界面编译阻塞描述已被本次获准的冲突合并修复取代。
 
 ## 身份与digest
 
@@ -15,9 +15,9 @@
 | ORB_RULES.freeze / LOOT_FREEZE_ALGORITHM.revision / LOOT_FREEZE_VERSION | s13-orb-freeze-v1 | s13-orb-freeze-v16 |
 | CONSUMABLE_RULES.version | s13-consumables-project-v1 | s13-consumables-project-v16 |
 | G23_POLICY.revision | g2-4b-multiplayer-orb-claim-v15 | g2-4b-epic-loot-reforger-v16 |
-| CONTENT_DIGEST | fnv1a32-utf16:70dbb056 | fnv1a32-utf16:7181dce2 |
-| LOOT_REPLAY_DIGEST | fnv1a32-utf16:61568ec0 | fnv1a32-utf16:cee1d7d7 |
-| RULES_GAP_MANIFEST digest | fnv1a32-utf16:97c14bf3 | fnv1a32-utf16:81596be6 |
+| CONTENT_DIGEST | fnv1a32-utf16:70dbb056 | fnv1a32-utf16:de829c8a |
+| LOOT_REPLAY_DIGEST | fnv1a32-utf16:61568ec0 | fnv1a32-utf16:62c76cb9 |
+| RULES_GAP_MANIFEST digest | fnv1a32-utf16:97c14bf3 | fnv1a32-utf16:31950a0f |
 
 CONSUMABLE_RULES.reforge由s13-reforge-v1改为s13-reforge-all-v16。schema7/save3/replay3/command4、netProtocol目标4保持。digest由实际v15 Git归档与当前源码分别加载计算，命令node scripts/compare-v16-digests.cjs，输出artifacts/v16-recording/digest-comparison.json；未手写指纹。旧存档仅拒绝，没有兼容别名、版本归一化或迁移分支。
 
@@ -44,7 +44,7 @@ CONSUMABLE_RULES.reforge由s13-reforge-v1改为s13-reforge-all-v16。schema7/sav
 所有领域随机仍lcg32-v1，无真实时钟/Math.random。
 
 1. layout流：(roomSeed XOR 0x4f524253)>>>0；逐轮、sourceUnitId代码点→slotOrdinal数值。1-4组合抽1词、2-7/3-7/4-7装备颜色各1词，合计4个接受词；史诗占位不抽layout词。
-2. 每席loot流：(seatMatchSeed XOR 0xdeadbeef)>>>0。早期每珠先原基础内容，再追加复制器的独立100桶抽签；灰收益先类别，再可选英雄，再80/20工具，再复制器。棱彩只抽普通成装，不抽复制器追加词。none照常消耗追加抽签词。金珠3%普通或3%普通+次级、蓝珠2%次级或1%普通为同一个互斥桶。
+2. 每席loot流：(seatMatchSeed XOR 0xdeadbeef)>>>0，只抽原内容：灰收益先类别、再可选英雄、再80/20工具。每珠原内容全部抽完后，从 `JSON.stringify(['orb-duplicator-v16', seatMatchSeed, orbId])` 的 FNV-1a UTF-16 派生独立 lcg32-v1 流，拒绝采样100桶追加复制器（详见 M8B_LOOT §11）；none也在这条独立流抽词，不推进原loot游标。棱彩及5阶段以后不抽追加词。金珠3%普通或3%普通+次级、蓝珠2%次级或1%普通为同一个互斥桶。1-3/1-4原掉落与v15保持一致。
 3. 史诗每轮固定变体1000→铜箱100（冠冕省略）→银箱100（冠冕独立两次）→铜箱英雄→银箱1英雄→银箱2英雄。双英雄各抽一次，可重复，固定1星payload；正常获取时仍沿用既有升星，不预制2星。英雄池按已上线商店id升序：2/3费各13、4费12；不重抽缺货英雄。
 4. 所有上述整数桶使用uint32拒绝采样，拒绝词也计draw；1000 limit=4294967000、100 limit=4294967200、13 limit=4294967287、12 limit=4294967292。
 5. 四选一沿用G24：seedText为seed+冒号+JSON['epic-forge',lootReceiptId]；从0x67323372逐字符 seed=imul(seed,31)+charCode，再逐词LCG、floor(word*remaining.length/2^32)无放回抽4项。独立派生，不消费loot/equipment/reforge流；超时与单机终局首候选沿用现有策略。
@@ -232,7 +232,7 @@ feat(simulation): add v16 epic PvE rewards and unify reforger
 
 ### #250 约定值（须随 PR 正文保留）
 
-四星基础 HP/AD **583.2%（58320Bps）**：从一星生产底值 floor；这是按100/180/324序列续推的项目约定，**不是原版已证实倍率**。专用晋升的一费单位仍按9个物理份额出售：**9金、退池9**，不是原版四星售价的考证。NumRounds=3、GainedAD=0.5、GainedAP=50、14个一费实际 rank4 技能来自 #250 的本地14.24来源档案；计数时机、满席托管和归位规则仍是已批准的项目政策。
+四星基础 HP/AD **583.2%（58320Bps）**：从一星生产底值 floor；这是按100/180/324序列续推的项目约定，**不是原版已证实倍率**。专用晋升售价**与该英雄三星同价**，直接调用 `getUnitSellPrice({definitionId,starLevel:3})`（1费9金、2费17金），退池仍9份；不是原版四星售价的考证，也不扩大终极英雄仅一费的目标准入。NumRounds=3、GainedAD=0.5、GainedAP=50、14个一费实际 rank4 技能来自 #250 的本地14.24来源档案；计数时机、满席托管和归位规则仍是已批准的项目政策。
 
 界面需求见 `UI_REQUESTS.md` 的 V16-UI-250；本轮不修改任何服务器/界面目录。
 

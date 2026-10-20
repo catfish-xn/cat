@@ -1,4 +1,4 @@
-import { sampleOrbDuplicatorBonus } from './orb-bonuses';
+import { sampleOrbDuplicatorBonus, orbDuplicatorIndex } from './orb-bonuses';
 import { EPIC_LOOT } from './content/loot';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { ConsumableDefinitionId } from './consumable-types';
@@ -106,9 +106,9 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
       default:throw new RangeError('Invalid box');
     }
   };
-  const duplicateBonus=(tier:import('./orb-layout').OrbTier,stage:number):LootPayload[]=>{
+  const duplicateBonus=(tier:import('./orb-layout').OrbTier,stage:number,orbId:string):LootPayload[]=>{
     if(stage>4||tier==='prismatic')return [];
-    return sampleOrbDuplicatorBonus(tier,stage,draw(100)).map(tool);
+    return sampleOrbDuplicatorBonus(tier,stage,orbDuplicatorIndex(seed,orbId)).map(tool);
   };
   for(const round of ROUND_CATALOG) {
     if(round.ordinal>throughRoundOrdinal)break;if(round.kind!=='pve')continue;
@@ -158,7 +158,7 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
           const extra=draw(100);if(extra>=ORB_RULES.grayToolWeights[0])payloads.push(tool('reforger'));
         }
       }
-      payloads.push(...duplicateBonus(orb.tier,round.stage));
+      payloads.push(...duplicateBonus(orb.tier,round.stage,lootOrbId(round.roundId,round.encounterId!,orb.sourceUnitId,orb.slotOrdinal)));
       add(orb,payloads);
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});

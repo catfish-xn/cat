@@ -1,61 +1,108 @@
-# #265 v16 合并前修复
+# #265 v16 下一轮收口（2026-10-20）
 
-工作基线：`codex/epic-loot-reforger @ b13373c67bf7056e1e56e99e4d7cd5f875df7712`。不联网、不安装依赖、不写 Git 元数据；未改 `src/server/`、`src/rendering/`。表现层只改 `ability-text.ts` 的数值查询映射。
+用户指定现场：`codex/epic-loot-reforger` 正在合并 `origin/codex/loot-orb-claim`。本轮未执行任何 Git 命令、未写 `.git`、未联网或安装依赖；未修改 `src/server/`、`src/rendering/`。工作区冲突标记已清除；索引和 MERGE_HEAD 仍留给协调者处理。
 
-## 1. Herald 身份链
+## 1. 合并冲突：14个文件
 
-原输入审计仍固定 `e6c0921f…`，但 b13373c6 的 manifest 为 `789593e8…`。逐字段比较 b13373c6 与父提交：只改变 `sourceSha256/sources`，涉及 projection、d14-runtime、private-seat-view 三个源码哈希；五份 raw 和 trajectory 字节全部相同。因此原失败属于合法源码清单重录后的审计遗漏。
+| 文件/组 | 保留内容与依据 |
+| --- | --- |
+| `src/presentation/ability-text.ts` | v16 四星数值查询与 v15 中文名称/模板组合，普通星级查询不变。 |
+| `loot-view.ts`、`orb-loot.ts` | v16统一重铸器、两种复制器、史诗forge payload，结合v15客户端图标与fallback。 |
+| `s13-g23-manifest.ts` | 同时保留D11、D14身份映射。 |
+| `vite.config.ts` | 原样保留v16 productionIdentities/Phaser chunk方案，结合v15原stripAssetChecks；未扩展白名单或继续增加体积优化。 |
+| `combat-first-pass-frames`、`g2-4b-artifacts` | 最新实时银行导出形状及v16 revision。 |
+| `g2-4a-crown-history`、`helpers/g24-forge-states.ts` | v16工具身份与v15法球领取、共享不可变输入准备组合；不跳过领取/恢复。 |
+| `m8-b8-live-capacity/live-transfer/loot-view` | 保留v15既有20秒时限与授权注释，重新核实真实路线、奖励、身份和账本。 |
+| `t12-combat-equip` | 保留v15 beforeAll/copyInput；真实路线到4-4验证选择与恢复。 |
+| `task-mechanism-restore` | 保留真实触发的v15位置/强化；弗拉基米尔按定义与阵营定位，仍验证castCount及篡改拒绝。 |
 
-本次新增技能说明查询后，按 v16 epoch 重新执行 release → Herald `--write` → inputs → live-reveal，manifest 现为 `4a25dc59…`，输入审计由录制器自动绑定最新字节。五份 raw、trajectory、golden、两个检查点解压后的内容仍与 b13373c6 相同；两个 gzip 仅第9字节的操作系统标识变化。没有手改夹具或摘要。
+测试侧9个冲突文件中，8个测试文件逐文件通过，1个helper由冠冕等真实路线覆盖。法球领取、按卡刷新、终局作废、D11显示、侦察显示和20秒既有时限随最新base保留，未另改这些规则。
 
-`node scripts/audit-herald-refresh.cjs` 重现以上比较，结果见 [Herald 审计](evidence/v16/premerge-265-herald-audit.json)。`node scripts/v16-fixture-audit.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682` 验证 G2-3/G2-4b 的86份历史文件、v15的23份历史文件及历史身份断言不变。inputs/live-reveal 的 `--check` 均通过。
+## 2. 方案A：复制器独立流
 
-## 2. 2D 生产包
+生产实现 `orb-bonuses.ts::orbDuplicatorIndex`，在该珠**全部原内容抽完后**调用，结果只追加末尾entry。
 
-使用同一 Node 22.17.0、同一共享依赖，直接从 Git 归档重建 `15313a7`；不建立 worktree 或写 `.git`。测量严格沿用 `scripts/m7-budget.cjs`：全部 `dist/assets/*.js` 逐文件 gzip level9 后求和，拆出的 Phaser 也计入。
+1. `text = JSON.stringify(['orb-duplicator-v16', seatMatchSeed, orbId])`。
+2. FNV-1a UTF-16：`h=2166136261`，逐个code unit执行 `h=imul(h XOR codeUnit,16777619)>>>0`，无额外XOR salt。
+3. h作为全新lcg32-v1初态、draws=0，每词 `(1664525*state+1013904223) mod 2^32`；拒绝 `word >= floor(2^32/100)*100`，首个合法词 `%100`。
+4. 每珠独立重建，仅1–4阶段非棱彩执行。原loot/layout/shop/choice等流均不推进，恢复重建相同追加结果。
 
-| 构建 | gzip 字节 | 相对15313a7 |
-| --- | ---: | ---: |
-| 15313a7 | 424,763 | 1.000000 |
-| b13373c6 修复前 | 641,071 | 1.509244 |
-| 本次修复后 | 629,621 | **1.482288** |
-| 修复后再加1,400 B | 631,021 | 1.485584 |
+派生元数据进入ORB_RULES/digest；合同已更新：[M8B_LOOT §11](M8B_LOOT.md)、[MATCH_CONTRACT v16](MATCH_CONTRACT.md)。
 
-节省11,450 B；距1.49目标尚余约3,276 B，1.50门槛未改。前后均实际运行预算脚本；修复前按预期返回失败，修复后通过。修复后首次可交互中位数802→795 ms（3个正式样本），比值0.991272；这是辅助观测，未以此代替确定性 JS 预算。
+史诗oracle以独立BigInt FNV/LCG核对4,096种子的全部payload、身份、顺序、游标。M5 `oracle.g2.cjs::lootPlan`按冻结表独立重写，不再调用史诗测试oracle，两份oracle在4,096种子上一致，均不导入生产实现。
 
-实现为 Phaser 独立 chunk，以及 `scripts/production-identities.ts` 的生产构建投影：通过原始领域模块计算 CONTENT_DIGEST/LOOT_REPLAY_DIGEST，只把两个身份根的静态摘要常量化；动态状态/账本散列仍执行原函数。四张原始来源目录仅向浏览器保留已有消费者读取的列，归档说明、来源元数据不随包发送。仓库完整源表、摘要输入和原有冻结调用均保留；没有删除物品、技能、池或校验逻辑。
+另实际加载本地保留的v15源码冻结器，比对4,102种子至4-7：去除追加复制器、仅把两个旧重铸器名称映射为已批准的reforger后，**原payload/身份/顺序和主RNG全部相同**。见[原流证据](evidence/v16/premerge-265-legacy-loot.json)。未重新核验该本地归档的提交来源。
 
-`node scripts/verify-production-identities.cjs` 在完整来源与生产投影两套 SSR 环境比较9项身份/编译目录（包括全体单位、技能、物品、羁绊、强化、异常、重铸池），并逐步比较 seed42/7216/6240 的首战状态与事件，全部相同。浏览器预算脚本也实际加载拆包产物并等待可交互。未来来源表消费者若需要额外列，应同步构建白名单并运行此等价性检查。
+MatchSession恢复Lux、Irelia、cloak断言，18项通过。独立算术证明seed7216/6240原1-3均为Lux；第二条为保留用户指定Irelia断言，改用真实seed6160，不伪造6240结果。浏览器seed14349原Lux、弓、棒及羊刀战斗/攻速链均保持原值并通过。
 
-两个摘要保持 `CONTENT_DIGEST=fnv1a32-utf16:f8a31ce9`、`LOOT_REPLAY_DIGEST=fnv1a32-utf16:cee1d7d7`。
+## 3. 四星售价
 
-## 3. MatchSession 的旧奖励期望
+删除 `D14_POLICY.ultimateSellGold`，文档改为“与该英雄三星同价”。两处私有sellGold投影直接调用 `getUnitSellPrice({definitionId,starLevel:3})`；原出售命令本来就按物理三星调用此函数，继续使用唯一公式。
 
-英雄候选池未变。按已批准的 v16 法球合同，每颗普通法球在基础奖励后额外消耗一次复制器抽签，推进同一奖励 RNG，后续英雄/组件因而改变。新 BigInt 独立拒绝采样向量不用生产 RNG，实现和期望分别核对：
+新增 `d14-sale-price.test.ts`：一费Lux有效四星9金、二费Rell有效四星17金，同时核对单位行、d14Display、真实三星出售差额与9份投影。二费是售价投影边界向量，不扩大终极英雄仅一费的目标准入。退池9份不变。
 
-| seed | 1-2英雄/bonus/1-3英雄/bonus/组件/bonus 的索引 | 正确奖励 |
+## 4. 五个红项及真实路线
+
+| 项 | 合并/方案A后的结果与依据 |
+| --- | --- |
+| crown-history | 56项通过，整文件约30秒；保留v15共享准备优化，未新增时限放宽。 |
+| m5-growth | 2项通过；seed8真实资源路线恢复，不再撞异常选择，未削减成长断言。 |
+| opening-random-1cost | 4项通过；seed42仍是Irelia，原奖励流/游标恢复。 |
+| augment-tier-consistency | 领域7项、服务器2项通过。三张各一次，所以节点初始剩余3、刷一张后2；augmentRerollLimit=1指单卡。base已包含正确实现/期望。 |
+| g2-2-emissary-wins | 服务器2项通过。base后排Ambessa已隔离lineup前排防御修正；仅报告，未改服务器及其测试。 |
+
+其他严格向量：capacity seed36为18金、reveal117/final137；transfer seed18619真实触发两张付费Ezreal、slime-time、窃贼手套与奖励合星，19项通过；终局seed38末尾新增次级复制器，精确校验5条状态、4张领取收据，不截掉奖励。进入未知在恢复原流后首空位为bench0，改为严格断言0。
+
+live-reveal恢复v15原种子242874/139464/3464与原补给；tick44的eventSeq382/383、Loris381、Zyra152和4/0收据原断言通过，没有放宽为区间。
+
+额外M5路线：独立表证明seed42两次均为standard史诗变体，严格期望为2锻造器，8原组件+5补给+4锻造等价=17。四份seed42完整golden仍逐项比较；Caitlyn至少两战施法/伤害另由真实付费seed44路线验证（4场、6次施法），保留原次数下界。
+
+本轮未新增超时放宽；既有用户批准的20秒/长重放时限保持。
+
+## 5. 最终v16 epoch
+
+最终源码按release → Herald → inputs → live-reveal完成录制。四条release路线各33战；cannon/sniper各67状态均验证文本/对象恢复、再次序列化字节。Herald五份输入在导入恢复器前先导出raw，再验证原状态及开战后15tick恢复。inputs/live-reveal的`--check`均通过。
+
+| 身份 | 上轮v16录制值 | 本轮最终值 |
 | --- | --- | --- |
-| 7216 | 3/77/1/91/6/41 | Maddie → Irelia，组件为拳套 |
-| 6240 | 3/37/3/95/6/89 | 1-3为Maddie |
+| CONTENT_DIGEST | `fnv1a32-utf16:f8a31ce9` | `fnv1a32-utf16:de829c8a` |
+| LOOT_REPLAY_DIGEST | `fnv1a32-utf16:cee1d7d7` | `fnv1a32-utf16:62c76cb9` |
+| RULES_GAP_MANIFEST | `fnv1a32-utf16:81596be6` | `fnv1a32-utf16:31950a0f` |
 
-更新两个 roster/收据期望，以及被先前 roster 失败挡住的 cloak→gloves 期望。保留单位序号、来源、原始死亡证据、幂等、资源和不可变性断言。18项通过，无规则实现修改。
+保留v15 baseline为CONTENT `70dbb056`、LOOT `61568ec0`。规则/内容仍v16；无迁移、兼容别名或历史目录重写。209份历史文件与本轮开始时SHA-256快照相同。
 
-## 4. 双刀流超时
+因用户禁止Git，录制器新增显式 `V16_HISTORY_SNAPSHOT` 模式，从本轮固定哈希的本地历史文件读取；只证明本轮历史未变，**不冒充重新核验提交出处**。普通Git归档模式保留。详见[机器记录](evidence/v16/premerge-265-verification.json)。
 
-原20秒在并行竞争下超时，逐文件运行全部断言通过，实测12.66–13.77秒。原v15归档中的同一测试在相同工具链独立运行11.10秒。分阶段对比及负载计数见 [机器验证记录](evidence/v16/premerge-265-verification.json)：耗时主要在真实路线生成及整段命令重放；严格恢复对约数十毫秒，未出现恢复卡死。v16的奖励/RNG与异常池变化使路线及战斗负载不同，不能将这两条不同轨迹的时间差全归因于单个新增函数。
+## 6. 构建与体积
 
-按用户04:22授权，将此用例临时上限设为30秒，约为实测两倍并向上取整；注释明确临时和授权来源。原先三份失败文件额外并行复跑162项全部通过，双刀流15.15秒。没有缩减命令、断言、恢复次数或全局门槛。若未来在相同机器逐文件运行持续接近30秒，应另行调查，不能自动继续放宽。
+`npm.cmd run build -- --configLoader runner`通过（含tsc）。runner绕过共享node_modules联接下默认esbuild配置加载权限错误，不改变构建目标。生产裁表等价再次通过9项目录/身份及seed42/7216/6240首战状态/事件比较。
 
-## 5. #270 数据需求
+m7-budget口径：全部 `dist/assets/*.js`逐文件gzip level9求和，Phaser chunk计入。基线为此前本地保留15313a7产物，本轮不通过Git重建或核验出处。
 
-`ultimateHeroAbilityDisplayValues(definitionId, stats?)` 已从 `src/simulation/ability-display.ts` 导出纯函数。复用专用四星基础与实际 rank4 技能表、14.24b辛吉德60%减伤覆盖；返回模板 token 和派生值，既有AD/AP边界不变。`abilityText(id,4,stats)` 仅映射到该查询，1–3星仍走原路径。14个一费英雄均无残留 token；Lux1260伤害/300护盾，150AP时1890/450。新增15项及原73项说明回归通过。
+| 项 | 测量 |
+| --- | ---: |
+| 基线gzip | 424,763 B |
+| 本轮gzip | 618,719 B |
+| 比值 | **1.4566216926 ≤ 1.49** |
+| 首次交互中位数（各3样本） | 基线566 ms / 当前619 ms，1.09364倍 |
 
-原版侦察可见性仍为 **Unknown**：本地14.24元数据缺少两个执行引用，也没有客户端显示/网络复制字段。实际rank4技能和升级说明不足以证明对手是否可见。遵守“有依据才加”，保持公共物理3星，没有越界修改服务器；撤掉 UI_REQUESTS 中把它称为“有意设计”的表述，记录保守回退与证据缺口。复核：`node scripts/audit-d14-scouting.cjs`；[证据](evidence/v16/scouting-visibility-audit.json)。需要原版客户端执行/同步资料或可核验录像才能给出确定结论；本次没有伪称已证明隐藏。
+原1.50预算配置未改；另确认满足用户1.49要求。裁表方案仍在既有评审中，通过预算不替代评审。
 
-## 验证与提交建议
+## 7. 验证、复现与交接
 
-`npm.cmd run build -- --configLoader runner`（含项目 `tsc --noEmit`）通过；构建插件/Vite配置另外用严格 `tsc --noEmit` 检查通过。runner 参数用于绕过本机共享联接下默认 esbuild 配置加载的目录访问错误，不改变构建目标或编译器。Playwright使用本机已安装Chrome，没有下载。
+要求范围逐文件27份/635项通过，含两个服务器文件及全部8个冲突测试文件，另覆盖冲突helper；额外M5路线8项及sniper/mage/sniper-caitlyn逐命令、逐tick完整恢复重放3项通过，合计**31文件/646项**。tsc/build、生产投影等价、原流4,102种子、两份独立oracle、epoch录制/输入校验、历史哈希、浏览器38场景均通过。机器记录列明每份结果与哈希；未宣称全仓库或服务器房间整体验收。
 
-逐文件执行 opening-random-identity、match-session、s13-p1-dual-wielding、全部d14-*、epic-loot-reforger、g2-2-ability-display及presentation目录四文件：**13文件/399项全部通过**。生产投影等价检查、历史字节检查和 v16 输入/揭示复核均通过。没有声称跑过完整仓库或联机房间验收。
+浏览器约430行Lux/弓/棒原断言保留。`b6-public-preparation.cjs`在结算Continue前补与Start相同的450ms等待：空棋盘立即结束，截图提示“阶段刚切换”，过快点击会持续触发现有保护。只用真实原生输入，不注入资源、不加速战斗、不改界面。38场景、0跳过通过；增加 `M5_NO_GIT=1` 与可选runner，保留源码指纹。
 
-建议提交：`fix(v16): repair epoch audit, trim 2D bundle and expose four-star tooltips`。仅工作区修改，尚未提交。机器数据见 [验证记录](evidence/v16/premerge-265-verification.json)。
+PowerShell复现（先build，使用本机Chrome，无下载）：
+
+```powershell
+$env:M5_NO_GIT='1'
+$env:VITE_CONFIG_LOADER='runner'
+$env:CHROMIUM_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
+node scripts/verify-m5-input.cjs --preview
+```
+
+建议提交：`fix(v16): merge v15 closeout, isolate orb bonus RNG and use three-star sale prices`。
+
+未暂存、提交或结束合并，这是用户要求保留的现场。协调者继续既有裁表评审并处理索引/提交；无需新的玩法决定。

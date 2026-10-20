@@ -16,6 +16,8 @@ function bonus(tier,stage,index){
 function copper(index){return index<49?'three-cost':index<95?'two-cost-gold':index<98?'reforger':index<99?'remover':'lesser';}
 function silver(index){return index<49?'four-cost-gold':index<96?'three-cost-pair':index<99?'reforger':'duplicator';}
 function variant(index){return index<899?'standard':index<999?'artifact':'crown';}
+// Independent BigInt FNV multiplication: no production hash/RNG helpers.
+function bonusIndex(seed,orbId){let hash=2166136261n;for(const c of JSON.stringify(['orb-duplicator-v16',seed,orbId]))hash=((hash^BigInt(c.charCodeAt(0)))*16777619n)&0xffffffffn;return stream(Number(hash)).draw(100);}
 function lootPlan(seed,ordinal=38,roomSeed=seed){
  const rng=stream((seed^0xdeadbeef)>>>0),layout=stream((roomSeed^0x4f524253)>>>0),rounds=[],rolls=[];
  const hero=(cost,live=false)=>{const pool=(live?LIVE:EARLY)[cost];return {kind:'unit',definitionId:pool[rng.draw(pool.length)],quantity:1};};
@@ -38,11 +40,15 @@ function lootPlan(seed,ordinal=38,roomSeed=seed){
    if(kind==='bonus'){const roll=layout.draw(100);tier=roll<50?'blue':'gray';templateId=roll<50?'component':'opening-gold';payloads=roll<50?[component()]:[gold(3)];}
    if(kind==='equipment'){const roll=layout.draw(100);tier=roll<90?'blue':roll<99?'gold':'prismatic';templateId=roll<90?'blue-pair':roll<99?'gold-pair':'prismatic-standard';payloads=roll<90?[component(),component()]:roll<99?[component(),component(),gold(4)]:[item(COMPLETED[rng.draw(36)]),gold(8),tool('reforger'),tool('reforger')];}
    if(kind==='extra'){templateId=`gray-${cost}`;payloads=[rng.draw(100)<75?gold(cost):hero(cost),remover()];if(rng.draw(100)>=80)payloads.push(tool('reforger'));}
-   if(tier!=='prismatic')payloads.push(...bonus(tier,stage,rng.draw(100)).map(tool));
+   if(stage<=4&&tier!=='prismatic'){
+    const source=JSON.stringify(['pve',roundId,encounterId,local]);
+    const orbId=JSON.stringify(['orb',roundId,encounterId,source,slot]);
+    payloads.push(...bonus(tier,stage,bonusIndex(seed,orbId)).map(tool));
+   }
    add(local,slot,tier,templateId,payloads);
   }
   rounds.push({encounterPlan:{roundId,encounterId,policyVersion:'m8b-pve-project-v2',drops},choices:[],orbs});
  }
  return {rng:rng.value(),layoutRng:layout.value(),rounds,rolls};
 }
-module.exports={lootPlan,stream,bonus,copper,silver,variant,COMPLETED,COMPONENTS,LIVE,LESSER,DUPLICATOR};
+module.exports={bonusIndex,lootPlan,stream,bonus,copper,silver,variant,COMPLETED,COMPONENTS,LIVE,LESSER,DUPLICATOR};

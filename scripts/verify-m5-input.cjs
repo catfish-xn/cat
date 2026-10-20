@@ -13,6 +13,10 @@ const { resizeViewport } = require('./verify-m4-interactions.cjs');
 const preview = process.argv.includes('--preview');
 const mode = preview ? 'preview' : 'dev';
 const metricsOnly = process.argv.includes('--metrics-only');
+// Merge workspaces may prohibit even read-only Git; fingerprints still identify
+// the actual source bytes. This mode makes no HEAD/clean-worktree claim.
+const noGit = process.env.M5_NO_GIT === '1';
+const configLoader = process.env.VITE_CONFIG_LOADER;
 const port = Number(process.env.M5_PORT ?? (preview ? 4189 : 5189));
 const url = `http://127.0.0.1:${port}`;
 const output = process.env.M5_EVIDENCE_DIR ?? `artifacts/m5-${metricsOnly ? 'observation' : 'input'}-${mode}`;
@@ -20,20 +24,20 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   fs.mkdirSync(output, { recursive: true });
   const started = Date.now();
-  const report = { mode, coverage: metricsOnly ? 'observation-only' : 'full-input-gate', sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-    status: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), node: process.version,
+  const report = { mode, coverage: metricsOnly ? 'observation-only' : 'full-input-gate', sha: noGit ? null : execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    status: noGit ? 'not-read;Git-prohibited' : execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), node: process.version,
     sourceFingerprint: sourceFingerprint(), runnerHash: hash(fs.readFileSync(__filename, 'utf8')), context: { hasTouch: true, isMobile: false }, evidenceKind: 'production-model browser consistency; not independent rule answers',
     interactions: [], errors: [], passed: false, acceptanceScope: 'B6 unskipped checks', fullOpeningItemScenarioPassed: false };
   let server, model, browser, context, page;
   try {
     const { createServer } = await import('vite');
-    model = await createServer({ root: path.resolve(__dirname, '..'), server: { middlewareMode: true, ws: false },
+    model = await createServer({ root: path.resolve(__dirname, '..'), ...(configLoader ? { configLoader } : {}), server: { middlewareMode: true, ws: false },
       optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom' });
     const api = await model.ssrLoadModule('/src/simulation/match.ts');
     const { readCombatStats } = await model.ssrLoadModule('/src/simulation/combat-s13.ts');
     const accepted = result => { assert(result.ok, result.reason); return structuredClone(result.state); };
     server = spawn(process.execPath, [path.join(path.dirname(require.resolve('vite/package.json')), 'bin/vite.js'),
-      ...(preview ? ['preview'] : []), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      ...(preview ? ['preview'] : []), ...(configLoader ? ['--configLoader', configLoader] : []), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
     for (const stream of [server.stdout, server.stderr]) stream.on('data', data => fs.appendFileSync(path.join(output, 'server.log'), data));
     for (let i = 0; i < 100; i++) { try { if ((await fetch(url)).ok) break; } catch {}
       assert(server.exitCode === null, 'server exited'); if (i === 99) throw Error('server not ready'); await delay(100); }
