@@ -1,0 +1,10 @@
+import renni from './renni.mjs';
+import rumble from './rumble.mjs';
+import scar from './scar.mjs';
+import sevika from './sevika.mjs';
+import silco from './silco.mjs';
+import smeech from './smeech.mjs';
+import swain from './swain.mjs';
+import twitch from './twitch.mjs';
+import zoe from './zoe.mjs';
+export const batch6Tables = { renni, rumble, scar, sevika, silco, smeech, swain, twitch, zoe };
