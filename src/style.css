@@ -596,6 +596,7 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
+img.consumable-icon { display: inline-block; object-fit: cover; background: #0b151f; flex: none; }
 .consumable-candidate { outline: 2px dashed #68ddd0 !important; outline-offset: -2px; }
 .consumable-hint { color: #9ff0e4 !important; }
 
