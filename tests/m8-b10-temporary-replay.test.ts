@@ -1,7 +1,7 @@
 /** B10 (M8_PLAN §7.4): a battle fought with Thief's Gloves temporary children is rebuilt by replay from its
  * recorded context alone, at 1×/2×/4× and by seek, and a forged child in the context is rejected.
- * Route: real seed-18619 cannon commands with the same public branch as m8-b8-live-transfer
- * (gloves + gloves → Thief's Gloves on unit-20 at 4-7). No state is injected. */
+ * Route: real seed-4 cannon commands with the same public branch as m8-b8-live-transfer
+ * (gloves + gloves → Thief's Gloves on unit-13 at 4-7). No state is injected. */
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match';
@@ -13,7 +13,7 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-const SURVIVOR = 'unit-24', DONOR = 'unit-20', TG = 'item-10';
+const SURVIVOR = 'unit-9', DONOR = 'unit-13', TG = 'item-9';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
   const history = new BattleHistory('b10-temporary'), ticks = new Map<number, MatchState>();
