@@ -8,8 +8,10 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 const prefix=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']);
-// One public hex move preserves the independent reveal-117 / final-137 boundary under v14.
-const prepared=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
+// v15's expanded augment pool changes the real combat program. Two public
+// moves retain the original exact reveal-117 / final-137 boundary and resources.
+const moved=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
+const prepared=accepted(api.deployMatchUnit(moved,'unit-1',{kind:'board',cell:{col:3,row:4}}));
 const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 const soldUnit=bench(waiting)[0];

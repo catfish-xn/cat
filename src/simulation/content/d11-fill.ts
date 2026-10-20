@@ -2,9 +2,19 @@ import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { D11_FILL_SOURCE } from './d11-fill-source';
 
-/** Pending pack only. Definitions require the explicit d11-fill compiler/grant API;
- * importing this module never registers content or changes the production digest. */
-export const D11_FILL_ACTIVATION = 'unwired-awaiting-integration' as const;
+/** Registered by the production catalogs; execution lives in d11-fill and strategy-snapshot. */
+export const D11_FILL_ACTIVATION = 'wired-v15' as const;
+/** Executable conventions are digested with the retained source coefficients. */
+export const D11_EXECUTION_POLICY = freezeContent({
+  revision:'d11-wired-v15', openingStream:'g23-seed-xor-0x6431316f-xor-round-fnv-choiceId',
+  openingSampling:'unit-id-codepoint-partial-fisher-yates-modulo',
+  giftStream:'match-seed-xor-fnv-json-d11-fill-seat-choice-definition-lcg32-scaled-index',
+  gifts:'two-source-bound-receipts-solo-deferred-online-reward-orb',
+  spiritLink:'combat-start-player-hp-full-ten-missing-hp-groups',
+  avarice:'live-bank-before-next-tick-plus-pending-combat-income-private-sample-replay',
+  headhunter:'holder-enemy-champion-kill-eventSeq-exclude-assists-neutrals-summons-mirrors',
+  growth:'unique-combat-holder-eventSeq-victim-receipt-trusted-battle-history',
+} as const);
 export type D11ChoiceId = keyof typeof D11_FILL_SOURCE;
 export type D11AugmentId = 'all-for-one-i' | 'trifecta-i' | 'spirit-link';
 export type D11PendingDefinition = Omit<ChoiceDefinition, 'effects'> & { readonly execution: 'requires-d11-compiler' };
@@ -16,3 +26,11 @@ export const D11_FILL_DEFINITIONS: Readonly<Record<D11ChoiceId, D11PendingDefini
   headhunter: { id:'headhunter', name:'猎头者', description:'获得15%攻速，每击杀一个敌方弈子永久增加1个百分点。', execution:'requires-d11-compiler' },
 });
 export const D11_FILL_TIERS = freezeContent({ 'all-for-one-i':'silver', 'trifecta-i':'gold', 'spirit-link':'gold' } as const);
+export function d11Definition(id:D11ChoiceId):ChoiceDefinition {
+  const {execution:_execution,...definition}=D11_FILL_DEFINITIONS[id];
+  return {...definition,effects:[{kind:'mechanic',mechanic:'d11Fill',values:{enabled:1}}]};
+}
+export const D11_AUGMENTS = freezeContent(Object.fromEntries(
+  (['all-for-one-i','trifecta-i','spirit-link'] as const).map(id=>[id,d11Definition(id)])));
+export const D11_ANOMALIES = freezeContent(Object.fromEntries(
+  (['avarice-incarnate','headhunter'] as const).map(id=>[id,d11Definition(id)])));

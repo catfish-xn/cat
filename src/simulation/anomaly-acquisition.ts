@@ -1,4 +1,5 @@
 import {traceBoundUnitIdentity} from './bound-unit-identity';
+import { grantD11AvariceGold } from './d11-fill';
 import {getCatalogRoundByOrdinal} from './round-selectors';
 import {DUAL_WIELDING_POOLS,DUAL_WIELDING_ROLES} from './content/s13-p1-dual-wielding';
 import {nextRandom} from './rng';
@@ -21,6 +22,12 @@ export function dualWieldingItems(seed:number,choiceId:string,definitionId:strin
 }
 /** Existing equipment stays untouched. Both new items are permanently owned in inventory. */
 export function grantAnomalyAcquisition(initial:MatchState):{state:MatchState;events:MatchEvent[]}{
+ if(initial.anomalyBinding?.definitionId==='avarice-incarnate'){
+  if(initial.seatMechanics?.receipts.some(r=>r.receiptId===JSON.stringify(['d11-fill',initial.anomalyBinding!.choiceId,'avarice-gold'])))return {state:initial,events:[]};
+  const granted=grantD11AvariceGold(initial);
+  if(!granted.ok)throw new RangeError('Invalid D11 acquisition');
+  return {state:granted.state,events:[...granted.events]};
+ }
  const binding=initial.anomalyBinding;if(binding?.definitionId!=='dual-wielding')return {state:initial,events:[]};
  const target=initial.preparation.units.find(u=>u.id===binding.unitId);
  if(!target)throw new RangeError('Missing anomaly acquisition target');

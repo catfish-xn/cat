@@ -18,13 +18,13 @@ export function mechanicGrantEvents(before:MatchState,after:MatchState):MatchEve
   ...(after.seatMechanics?.receipts??[]).filter(r=>!ids.has(r.receiptId)).map(receipt=>({type:'mechanicGranted' as const,receipt}))];
 }
 export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):{ok:true;state:MatchState;events:readonly MatchEvent[]}|{ok:false;state:MatchState;reason:MatchFailure}{
- const p=readG23Progress(state),bundle=p?.rewards.find(b=>g23RewardAtoms(b,p.seed).some(a=>a.id===atomId)),atom=bundle&&g23RewardAtoms(bundle,p!.seed).find(a=>a.id===atomId);
+ const p=readG23Progress(state),bundle=p?.rewards.find(b=>g23RewardAtoms(b,p.seed,!!state.multiplayer).some(a=>a.id===atomId)),atom=bundle&&g23RewardAtoms(bundle,p!.seed,!!state.multiplayer).find(a=>a.id===atomId);
  if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
  if(copy>=atom.quantity||atom.kind!=='gold'&&!atom.options.includes(definitionId)||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
  if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'
    &&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return {ok:false,state,reason:'stale-choice'};
- const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId};
+ const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId,...(atom.starLevel?{starLevel:atom.starLevel}:{})};
  if(atom.kind==='tool'){
   const consumableId=`consumable-${state.nextConsumableSerial}`;
   const receipt={...request,kind:'consumable' as const,round:state.round,roundId:state.roundDefinitionId,consumableId};
@@ -35,10 +35,10 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
  if(!granted.ok)return granted;
  return {ok:true,state:granted.state,events:granted.events};
 }
-/** Escrow only unresolved item selections and bench-full heroes. A pool-empty hero commits a gold receipt. */
+/** Unresolved item/target selections stay pending. Online heroes enqueue orbs; offline capacity retries remain. */
 export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
  let state=drainP2Gifts(initial,policy);const p=readG23Progress(state);if(!p)return state;
- for(const bundle of p.rewards)for(const atom of g23RewardAtoms(bundle,p.seed)){
+ for(const bundle of p.rewards)for(const atom of g23RewardAtoms(bundle,p.seed,!!state.multiplayer)){
   if(atom.options.length>1&&atom.kind!=='duplicator')continue;
   while(readG23Progress(state)!.rewardClaims.filter(c=>c.atomId===atom.id).length<atom.quantity){
    const definitionId=atom.kind==='duplicator'?atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id)):atom.options[0]??'';
@@ -57,7 +57,7 @@ export function openG23Choice(state:MatchState):{state:MatchState;events:readonl
  const offer=p.chem.offer;
  if(offer){
   const reward=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===offer.optionId)!.reward;
-  const atom=g23RewardAtoms({id:offer.id,round:offer.round,source:'black-market',tier:offer.tier,reward},p.seed).find(a=>a.kind==='item');
+  const atom=g23RewardAtoms({id:offer.id,round:offer.round,source:'black-market',tier:offer.tier,reward},p.seed,!!state.multiplayer).find(a=>a.kind==='item');
   {const opened=openMechanicChoice(state,{choiceId:offer.id,returnPhase,offers:atom?.options??[offer.optionId],payload:{kind:'blackMarket',...(atom?{}:{grantItem:false}),source:'black-market',skippable:true,skipReward:{kind:'health-per-skip',amount:1},timeoutOption:'@skip'}});if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;}
  }
  const menu=returnPhase==='preparation'?g23JunkerMenu(state):null;
@@ -67,7 +67,7 @@ export function openG23Choice(state:MatchState):{state:MatchState;events:readonl
   const opened=openMechanicChoice(state,{choiceId:menu.id,returnPhase,offers:menu.choices,payload:{kind:'armory',source:'junker-king',prices,timeoutOption}});
   if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;
  }
- for(const b of p.rewards)for(const atom of g23RewardAtoms(b,p.seed)){
+ for(const b of p.rewards)for(const atom of g23RewardAtoms(b,p.seed,!!state.multiplayer)){
   const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
   if(atom.kind!=='item'||atom.options.length<2||copy>=atom.quantity)continue;
   const opened=openMechanicChoice(state,{choiceId:`${atom.id}:copy:${copy}`,returnPhase,offers:atom.options,payload:{kind:'forge',source:b.source,timeoutOption:atom.options[0]}});

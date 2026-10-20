@@ -28,7 +28,7 @@ interface ReceiptIdentity {
 export type MechanicReceipt =
   | (ReceiptIdentity & { readonly kind: 'gold'; readonly amount: number })
   /** `held`: a unit was born (unitId). `gold`: the shared pool had no copy, `gold` = unit cost, like PvE unit loot. */
-  | (ReceiptIdentity & { readonly kind: 'unit'; readonly definitionId: string; readonly resolution: 'held' | 'gold'; readonly unitId: string | null; readonly gold: number })
+  | (ReceiptIdentity & { readonly kind: 'unit'; readonly definitionId: string; readonly resolution: 'held' | 'gold' | 'orb'; readonly unitId: string | null; readonly gold: number; readonly orbId?:string; readonly starLevel?:1|2|3 })
   | (ReceiptIdentity & { readonly kind: 'consumable'; readonly definitionId:string; readonly consumableId:string })
   | (ReceiptIdentity & { readonly kind: 'item'; readonly definitionId: string; readonly itemId: string })
   /** One resolved forge/blackMarket/armory choice. receiptId === choiceId. itemId only when the option granted an item. */

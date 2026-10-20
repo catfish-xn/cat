@@ -130,7 +130,7 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   return restorePlayerBattleSnapshot({
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
-    ...(state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),

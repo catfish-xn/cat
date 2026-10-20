@@ -1,5 +1,6 @@
-/** Acquisition gifts use existing exactly-once grants, pool policy and bench-full escrow. */
+/** Exactly-once acquisition gifts: online heroes enqueue reward orbs; offline heroes retain capacity escrow. */
 import type { MatchState } from './match-types';
+import { drainAllD11Gifts } from './d11-fill';
 import type { UnitLootPolicy } from './loot-runtime';
 import { grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
@@ -42,7 +43,7 @@ export function drainP2Gifts(initial: MatchState, policy?: UnitLootPolicy): Matc
       else if(result.reason!=='bench-full')throw new RangeError(`P2 grant: ${result.reason}`);
     }
   } while(progressed);
-  return state;
+  return drainAllD11Gifts(state,policy);
 }
 /** No candidate receipt selects its own reward, cost or acquisition authority. */
 export function validateP2Gifts(state: MatchState): void {

@@ -1,10 +1,12 @@
 import { P3_ANOMALIES } from './s13-p3';
+import { D11_ANOMALIES } from './d11-fill';
 import { G23_ANOMALIES } from './g2-3-anomalies';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_ANOMALIES } from './s13-augments-p2';
 import { S13_ANOMALY_DEFINITIONS } from '../anomalies/definitions';
 export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...D11_ANOMALIES,
   ...S13_P2_ANOMALIES,
   ...P3_ANOMALIES,
   "titanic-strikes": {
@@ -54,3 +56,15 @@ export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...S13_ANOMALY_DEFINITIONS,
   'dual-wielding':{id:'dual-wielding',name:'双刀流',description:'获得2件符合该英雄定位的成装。',effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}}]},
 });
+
+/** Online Avarice requires authoritative bank samples before each combat tick.
+ * Keep its definition and solo acquisition executable while server support is pending. */
+export const ANOMALY_OFFER_POLICY = freezeContent({
+  revision: 'anomaly-offers-v15-online-avarice-deferred',
+  multiplayerExcluded: ['avarice-incarnate'],
+  resumeWhen: 'server-sampleBankGold-before-next-tick',
+} as const);
+export function anomalyCandidates(multiplayer: boolean): string[] {
+  return Object.keys(ANOMALY_DEFINITIONS).filter(id => !multiplayer
+    || !ANOMALY_OFFER_POLICY.multiplayerExcluded.some(excluded => excluded === id));
+}

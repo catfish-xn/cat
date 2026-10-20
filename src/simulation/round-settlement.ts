@@ -1,4 +1,5 @@
 import type {TraitProjectionContext} from './traits/effective-membership';
+import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
 import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
@@ -15,7 +16,7 @@ import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResul
 
 export type MultiplayerFailure = MatchFailure | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
   | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled' | 'seat-eliminated'
-  | 'no-pending-choice' | 'invalid-loot' | 'shared-pool-required' | 'invalid-round';
+  | 'no-pending-choice' | 'invalid-loot' | 'shared-pool-required' | 'invalid-round' | 'already-claimed' | 'unknown-orb';
 export type MultiplayerCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MultiplayerFailure };
 
@@ -94,7 +95,13 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
+      const hunter=state.anomalyBinding?.definitionId==='headhunter'?state.anomalyBinding:null;
+      if(facts.d11Headhunter&&(!hunter||facts.round<hunter.boundRound
+        ||facts.d11Headhunter.holderId!==JSON.stringify(['t2',multiplayer.seatId,'unit',hunter.unitId])
+        ||facts.d11Headhunter.kills.some(k=>k.eventSeq>=r.combatEventCount)))return fail(state,'invalid-receipt');
+      if(hunter&&state.preparation.units.some(u=>u.id===hunter.unitId&&u.location.kind==='board')&&!facts.d11Headhunter)return fail(state,'invalid-receipt');
     }
+    else if(state.anomalyBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===state.anomalyBinding!.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');
@@ -143,8 +150,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
-    const opened=openG23Choice(merged.state);
-    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...opened.events];
+    const forfeited=hpAfter===0?forfeitUnclaimedOrbs(merged.state):settleQueuedOrbClaims(merged.state,unitLootPolicy);
+    const opened=openG23Choice(forfeited.state);
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

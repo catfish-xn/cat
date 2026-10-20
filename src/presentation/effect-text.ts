@@ -15,6 +15,8 @@ export const term = (value: string) => TERM[value] ?? value;
 
 export function describeEffect(effect: Effect): string {
   if (effect.kind === 'mechanic') {
+    // v15 D11: `d11Fill` only marks the wired D11 program; the player text is the definition's description (D11-DISPLAY).
+    if (effect.mechanic === 'd11Fill') return '';
     const v = effect.values, pct = (key: string) => `${v[key] / 100}%`;
     const descriptions: Record<string, string> = {
       rageblade: `每次普攻叠加 ${pct('attackSpeedBps')} 攻速`, damageAmp: `伤害增幅 ${pct('bps')}`,

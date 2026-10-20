@@ -11,37 +11,41 @@ import { accept,batch,room,conserved,rejected,fight,fullBench } from './tp-helpe
 describe('TP opening and earned reward sources',()=>{
   it('frozen future rewards reserve nothing; earned hero competes for one last copy then compensates gold once',()=>{
     const {pool,states}=room({irelia:2,darius:1});expect(pool.pending).toEqual([]);expect(pool.available.darius).toBe(1);
-    const a=fight(pool,states[0]);expect(a.pool.available.darius).toBe(0);
+    const revealedA=fight(pool,states[0]);expect(revealedA.pool.available.darius).toBe(1);expect(revealedA.pool.pending).toEqual([]);
+    const a=accept(runSharedMatchCommand(revealedA.pool,revealedA.state,{type:'claimOrb',round:1,orbId:readLootView(revealedA.state).unclaimedOrbs![0].orbId}));expect(a.pool.available.darius).toBe(0);
     expect(a.pool.rewards[0]).toMatchObject({seatId:'seat-0',definitionId:'darius',resolution:'held',gold:0});
-    const b=fight(a.pool,states[1]);
+    const revealedB=fight(a.pool,states[1]),b=accept(runSharedMatchCommand(revealedB.pool,revealedB.state,{type:'claimOrb',round:1,orbId:readLootView(revealedB.state).unclaimedOrbs![0].orbId}));
     expect(b.pool.rewards[1]).toMatchObject({seatId:'seat-1',definitionId:'darius',resolution:'gold',gold:1});
     expect(b.state.gold-a.state.gold).toBe(1); // same battle/economy, only shortage conversion differs
     expect(b.state.preparation.units.filter(u=>u.team==='player')).toHaveLength(1);
-    expect(b.state.m8.loot.receipts[0].payload).toEqual({kind:'gold',quantity:1});
-    expect(readLootView(b.state).revealedDrops[0].payload).toEqual({kind:'gold',quantity:1});
+    expect(b.state.m8.loot.receipts[0]).toMatchObject({payload:{kind:'unit',definitionId:'darius',quantity:1},resolution:'gold',gold:1});
+    expect(readLootView(b.state).claimReceipts![0]).toMatchObject({resolution:'gold',gold:1});
     const again=accept(runSharedMatchCommand(b.pool,b.state,{type:'claimLoot',round:1}));
     expect(again.pool).toBe(b.pool);expect(again.state).toBe(b.state);expect(again.events).toEqual([]);
     conserved(b.pool,[a.state,b.state]);
   });
-  it('full bench reserves earned hero, timeout discards once and returns that exact copy',()=>{
+  it('full bench reserves nothing at reveal or deadline; explicit claim sells once',()=>{
     const full=fullBench(),available=full.pool.available.darius;
     const pending=fight(full.pool,full.state);
-    expect(pending.pool.pending).toHaveLength(1);expect(pending.pool.available.darius).toBe(available-1);
-    expect(pending.state.m8.loot.direct[0].status).toBe('pending-capacity');
+    expect(pending.pool.pending).toHaveLength(0);expect(pending.pool.available.darius).toBe(available);
+    expect(pending.state.m8.loot.direct[0].status).toBe('revealed');
     const discard=accept(runSharedMatchCommand(freeze(pending.pool),freeze(pending.state),{type:'claimLoot',round:1}));
     expect(discard.pool.pending).toEqual([]);expect(discard.pool.available.darius).toBe(available);
-    expect(discard.pool.rewards.at(-1)?.resolution).toBe('forfeited');
+    expect(discard.pool.rewards).toEqual([]);expect(discard.state.m8.loot.direct[0].status).toBe('revealed');
+    const claimed=accept(runSharedMatchCommand(discard.pool,discard.state,{type:'claimOrb',round:1,orbId:readLootView(discard.state).unclaimedOrbs![0].orbId}));
+    expect(claimed.pool.rewards.at(-1)).toMatchObject({resolution:'capacity-sold',gold:1});expect(claimed.pool.available.darius).toBe(available);conserved(claimed.pool,[claimed.state]);
     const again=accept(runSharedMatchCommand(discard.pool,discard.state,{type:'claimLoot',round:1}));expect(again.pool).toBe(discard.pool);
     const next=batch(nextSharedRound(discard.pool,[discard.state],1));expect(next.states[0].round).toBe(2);conserved(next.pool,next.states);
   });
-  it('selling to make space transfers a pending reservation to held and preserves the unique source',()=>{
+  it('selling to make space leaves the orb untouched until claim transfers a unique source',()=>{
     const full=fullBench(),pending=fight(full.pool,full.state);
     const unit=pending.state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;
     const sold=accept(sellSharedUnit(pending.pool,pending.state,unit.id));
     expect(sold.pool.pending).toEqual([]);expect(sold.pool.available[unit.definitionId]).toBe(pending.pool.available[unit.definitionId]+1);
-    expect(sold.pool.available.darius).toBe(pending.pool.available.darius);
-    expect(sold.pool.rewards.at(-1)?.resolution).toBe('held');
-    expect(sold.pool.holdings.some(h=>h.definitionId==='darius')).toBe(true);conserved(sold.pool,[sold.state]);
+    expect(sold.pool.available.darius).toBe(pending.pool.available.darius);expect(sold.pool.rewards).toEqual([]);
+    const claimed=accept(runSharedMatchCommand(sold.pool,sold.state,{type:'claimOrb',round:1,orbId:readLootView(sold.state).unclaimedOrbs![0].orbId}));
+    expect(claimed.pool.available.darius).toBe(sold.pool.available.darius-1);expect(claimed.pool.rewards.at(-1)?.resolution).toBe('held');
+    expect(claimed.pool.holdings.some(h=>h.definitionId==='darius')).toBe(true);conserved(claimed.pool,[claimed.state]);
   });
   it('elimination returns pending, held and shop copies without granting sale gold; duplicate is inert',()=>{
     const full=fullBench(),pending=fight(full.pool,full.state);
@@ -60,7 +64,7 @@ describe('TP opening and earned reward sources',()=>{
     const sold=accept(sellSharedUnit(r.pool,r.state,one.id));
     const bought=accept(buySharedUnit(sold.pool,sold.state,2,1));
     expect(bought.pool.available.darius).toBe(1);
-    const won=fight(bought.pool,bought.state),held=won.pool.holdings.find(h=>h.definitionId==='darius')!;
+    const finished=fight(bought.pool,bought.state),won=accept(runSharedMatchCommand(finished.pool,finished.state,{type:'claimOrb',round:1,orbId:readLootView(finished.state).unclaimedOrbs![0].orbId})),held=won.pool.holdings.find(h=>h.definitionId==='darius')!;
     expect(held.sources).toHaveLength(3);expect(won.state.preparation.units.find(u=>u.id===held.unitId)?.starLevel).toBe(2);
     expect(won.pool.rewards.at(-1)?.resolution).toBe('held');conserved(won.pool,[won.state]);
   });
@@ -72,7 +76,7 @@ describe('TP opening and earned reward sources',()=>{
     const revealed=revealMatchLoot(r.state,combat).state;
     const state:MatchState={...revealed,gold:Number.MAX_SAFE_INTEGER,phase:'settlement',combat:{...combat,status:'finished',result:combat.result}};
     const before=JSON.stringify([r.pool,state]);
-    rejected(runSharedMatchCommand(freeze(r.pool),freeze(state),{type:'claimLoot',round:1}),r.pool,state,'invalid-loot');
+    rejected(runSharedMatchCommand(freeze(r.pool),freeze(state),{type:'claimOrb',round:1,orbId:readLootView(state).unclaimedOrbs![0].orbId}),r.pool,state,'invalid-loot');
     expect(JSON.stringify([r.pool,state])).toBe(before);
   });
   it('unearned neutral drops never reserve or compensate; mirrors and combat summons never appear in holdings',()=>{

@@ -1,3 +1,4 @@
+import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert/strict';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, buyUnit, rerollShop, selectChoice, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
@@ -52,7 +53,7 @@ describe('M1 crown history authority', () => {
   it('rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history', () => {
     const { forged, live } = forgedHistory();
     for (const input of [forged, JSON.stringify(forged)]) {
-      expect(() => restoreMatch(input)).toThrow(/缺少冠冕历史证据/);
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
       expect(() => restoreMatch(input, live.battles)).toThrow(/历史经济收据/);
     }
   });
@@ -69,7 +70,7 @@ describe('M1 crown history authority', () => {
     const { forged, live } = forgedHistory();
     const second = recordedCrownBattle(forged, live.history);
     expect(() => restoreMatch(second.state, second.battles)).toThrow(/历史经济收据/);
-    expect(() => validateBattleRecord(second.battles[1])).toThrow(/缺少冠冕历史证据/);
+    expect(() => validateBattleRecord(second.battles[1])).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
     expect(() => validateBattleRecord(second.battles[1], [second.battles[0]])).toThrow(/历史经济收据/);
   });
   it('accepts the public-command no-crown control and resumes identically', () => {
@@ -86,7 +87,7 @@ describe('M1 crown history authority', () => {
       opening = accepted(equipItem(opening, opening.items.at(-1)!.id, holder.id, slot));
     }
     const first = recordedCrownBattle(opening), state = advance(first.state);
-    expect(() => restoreMatch(state)).toThrow(/缺少冠冕历史证据/);
+    expect(() => restoreMatch(state)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
     expect(() => restoreMatch(state, [])).toThrow(/缺少历史证据/);
     const text = serializeMatch(state, first.battles);
     const restored = restoreMatch(text, first.battles);
@@ -467,14 +468,17 @@ describe('M7/S7 combat equipment command replay', () => {
   // The shared opening is recorded and its battle history verified once here;
   // each reforger case still validates its own prefix and full history against it.
   beforeAll(() => { const opening = recordedReforgerOpening(); validateMatchHistory(opening.state, opening.battles); });
+  let removerOpening: { state: MatchState; battles: readonly BattleRecord[] };
+  beforeAll(() => {
+    const live = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
+    removerOpening = prepareInput({ state: advance(live.finish().state), battles: live.history.completedRecords });
+  });
   function usedEquipment(mode: ConsumableScenario) {
     const reforge = mode === 'component-reforger' || mode === 'completed-reforger';
-    const first = reforge ? recordedReforgerOpening()
-      : (() => {
-        const live = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
-        return {state:advance(live.finish().state),battles:live.history.completedRecords};
-      })();
-    let opening = first.state;
+    const first = reforge ? recordedReforgerOpening() : removerOpening;
+    // BattleHistory records are already recursively immutable. Keep their
+    // identities while each scenario owns its mutable MatchState input.
+    let opening = copyInput(first.state);
     const inputId = `item-${opening.nextItemSerial}`;
     if (reforge) opening = accepted(grantMechanicItem(opening,{receiptId:`m10:${mode}`,source:'test',
       definitionId:mode === 'component-reforger' ? 'sword' : 'deathblade'}));

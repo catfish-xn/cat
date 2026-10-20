@@ -40,14 +40,18 @@ describe('T11 signed opening economy', () => {
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
   });
 
-  it('seed 42 eight-seat room reaches 2-1 before the augment timeout with the same economy in every seat', () => {
+  it('seed 42 eight-seat room reaches 2-1 with the same earned income before explicit orb claims', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     runUntil(room, clock, s => s.roundId === '2-1' && s.phase === 'choice');
     expect(room.state.fault).toBeNull();
     expect(room.state.seats).toHaveLength(8);
     for (const seat of room.state.seats) {
-      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 13 });
+      // v15 online loot is earned but not banked until claimOrb. The 3G
+      // opening bonus remains unclaimed; signed income itself is 2 + 3 + 5.
+      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 10 });
+      expect(seat.match.roundResults.map(r => r.goldAfter)).toEqual([2, 5, 10]);
+      expect(seat.match.m8.loot.receipts.filter(r => r.payload.kind === 'gold')).toEqual([]);
       expect(seat.match.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     }
   }, 30_000);

@@ -17,6 +17,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { G23_ANOMALY_SOURCE } from '../simulation/content/g2-3-anomaly-source';
+import { D11_FILL_SOURCE } from '../simulation/content/d11-fill-source';
 import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
@@ -98,7 +99,11 @@ export function g23AnomalyApiName(id: string): string | undefined {
   const row = ANOMALY_BY_ID.get(id) ?? ANOMALY_BY_ID.get(lower(id));
   if (row) return row.apiName;
   const name = Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined;
-  return name ? ANOMALY_BY_ZH.get(name)?.apiName : undefined;
+  const zh = name ? ANOMALY_BY_ZH.get(name)?.apiName : undefined;
+  if (zh) return zh;
+  // v15 D11 anomalies (贪财化身, 猎头者) keep their client api name in the D11 source table.
+  const d11 = (D11_FILL_SOURCE as Readonly<Record<string, { readonly kind: string; readonly apiName: string }>>)[id];
+  return d11?.kind === 'anomaly' ? d11.apiName : undefined;
 }
 
 /** zh_CN client name of a G2-3 hero/summon content id; undefined when not a G2-3 unit or the client has no string. */

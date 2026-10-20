@@ -76,9 +76,9 @@ function battleLine(stats: UnitBattleStats): HTMLElement {
 
 /**
  * Card body for a unit definition at a star level; `null` when the definition is unknown to the content. `battle` (online)
- * adds the G5 battle stats line when the unit or its kind has fought this match.
+ * adds the G5 battle stats line when the unit or its kind has fought this match; `gear` (board pieces) lists what it carries.
  */
-export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null): HTMLElement | null {
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = ''): HTMLElement | null {
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
@@ -111,6 +111,7 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     grid.append(el('dt', label), el('dd', String(value)));
   }
   body.append(grid);
+  if (gear) { const line = el('p', `已装备：${gear}`, 'unit-card-text'); line.dataset.debug = 'unit-card:gear'; body.append(line); }
   if (battle && (battle.battle || battle.match)) body.append(battleLine(battle));
   return body;
 }

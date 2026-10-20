@@ -26,6 +26,8 @@ import type { LootReceipt } from './m8/contracts';
 import { planCombine, planEquip } from './inventory';
 import type { ItemInstance } from './strategy-types';
 import type { GameState } from './game';
+import { validateMultiplayerOrbLedger } from './orb-restore';
+export { validateMultiplayerOrbLedger } from './orb-restore';
 
 function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new RangeError(`Invalid B8 Match: ${message}`);
@@ -151,6 +153,12 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
 export function validateB8Loot(state: MatchState, parsedJsonInput = false): boolean {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+  if(state.multiplayer) {
+    validateMultiplayerOrbLedger(state);
+    const unresolved=orderedUnresolvedLootChoices(allChoices(state),state.m8.loot.choiceEligibility,state.m8.loot.choiceResolutions);
+    if(unresolved.length) check(state.phase==='choice'&&equal(state.pendingChoice,makeLootPendingChoice(unresolved[0])),'first multiplayer loot choice');
+    return unresolved.length>0;
+  }
   const loot = state.m8.loot;
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
@@ -241,7 +249,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
 }
 
 /** Verify all births/consumption and independently compile the immutable combat prefix. */
-export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
+export function validateB8Resources(state: MatchState, parsedJsonInput = false, deferInputFreeze = false): { basis: CombatInputBasis | null; saleGold: number } {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
   validateG23Restoration(state,parsedJsonInput);
@@ -276,7 +284,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
     resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput),equipmentRolls:state.equipmentState.rolls,
-    equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults}, parsedJsonInput);
+    equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults}, parsedJsonInput, deferInputFreeze);
   check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');

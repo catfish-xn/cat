@@ -1,3 +1,4 @@
+import { freezeContent } from '../src/simulation/content/freeze';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
@@ -29,6 +30,12 @@ function forgedChain(items: readonly ItemInstance[]): MatchState {
 }
 
 describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
+  // Build only legal input fixtures here; each case owns a detached copy.
+  // Plans, duplicate grants and all restore validation remain in the case.
+  const legalInventories = new Map<string, ReturnType<typeof publicInventory>>();
+  for (const definitionId of ['sword', 'gloves', 'blue-buff', 'thiefs-gloves']) {
+    beforeAll(() => { legalInventories.set(definitionId, freezeContent(publicInventory([definitionId]))); });
+  }
   it.each(['sword', 'gloves', 'blue-buff', 'thiefs-gloves'])('plans exactly one permanent %s with no receipt/economy/RNG work', definitionId => {
     const state = freeze(readyMatch()), before = JSON.stringify(state);
     const plan = planPermanentItemGrant(state, { definitionId, receiptId: 'reward-1' }, []);
@@ -43,7 +50,9 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
     expect(plan.state.scheduleReceipts).toBe(state.scheduleReceipts);
     expect(() => restoreMatch(serializeMatch(plan.state))).toThrow('Invalid B8 Match: current resource fold');
     // The same definition is restorable only after a real choice (and recipe for a completed item).
-    const legal = publicInventory([definitionId]);
+    const legal = structuredClone(legalInventories.get(definitionId)!);
+    freezeContent(legal.state.m8); freezeContent(legal.state.resourceProvenance);
+    if (legal.state.combatInputBasis) freezeContent(legal.state.combatInputBasis);
     expect(legal.state.items.find(item => item.id === legal.itemIds[0])?.definitionId).toBe(definitionId);
     expect(restoreMatch(serializeMatch(legal.state))).toEqual(legal.state);
     // Caller commits its receipt with the inventory plan, then supplies that ledger on retry.

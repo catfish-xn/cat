@@ -36,7 +36,7 @@ describe('net/messages: validation', () => {
   });
   it('refuses the wrong protocol version, bad ids and non-JSON, keeping the commandId when usable', () => {
     // T13-B (contract §18.7): protocol 2; a protocol 1 client is refused.
-    expect(parseClientMessage(JSON.stringify({ protocolVersion: 1, commandId: 9, type: 'start' }))).toEqual({ ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION}`, commandId: 9 });
+    expect(parseClientMessage(JSON.stringify({ protocolVersion: 1, commandId: 9, type: 'start' }))).toEqual({ ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION} (got 1): client and server versions differ, reload the page`, commandId: 9 });
     expect(parseClientMessage(JSON.stringify({ protocolVersion: NET_PROTOCOL_VERSION, commandId: 0, type: 'start' }))).toMatchObject({ ok: false, code: 'invalid-message', commandId: null });
     expect(parseClientMessage(JSON.stringify({ protocolVersion: NET_PROTOCOL_VERSION, commandId: '1', type: 'start' }))).toMatchObject({ ok: false, code: 'invalid-message', commandId: null });
     expect(parseClientMessage('{not json')).toEqual({ ok: false, code: 'invalid-json', detail: 'message is not valid JSON', commandId: null });

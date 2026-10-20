@@ -1,6 +1,6 @@
 # M4 ACCEPTANCE — 测试矩阵与完整 Match 证据
 
-状态：实施验收清单；实际执行记录见 [M4_VALIDATION](docs/M4_VALIDATION.md)，未执行项不能记为通过。基线 `133a41b4ef4257bee1b4bd458103393177fdf93e`；范围与冻结点见 [PLAN](M4_PLAN.md)，以下测试的唯一规则oracle来源是 [RULES](M4_RULES.md)。不得将“计划覆盖”写成“已经通过”。
+状态：实施验收清单；实际执行记录见 [M4_VALIDATION](../M4_VALIDATION.md)，未执行项不能记为通过。基线 `133a41b4ef4257bee1b4bd458103393177fdf93e`；范围与冻结点见 [PLAN](M4_PLAN.md)，以下测试的唯一规则oracle来源是 [RULES](M4_RULES.md)。不得将“计划覆盖”写成“已经通过”。
 
 ## A1. 总门禁
 
@@ -134,4 +134,4 @@ M3“最近200条+JSON.stringify去重”不适用密集effect。实施时提供
 
 最终交付说明逐项链接T01–T19与A4节点证据；明确任何实际未跑项目。主agent签收ownership集成、F1/F2/F3/F4、全部门禁后才可称“完整M4”。不以“以后M5补测试/普通获取/两战持续性”关闭本阶段。
 
-原计划阶段已经结束；后续 `/goal` 授权实施及 CI。实际签收结果以 [M4_VALIDATION](docs/M4_VALIDATION.md) 和最终提交的 CI artifacts 为准。
+原计划阶段已经结束；后续 `/goal` 授权实施及 CI。实际签收结果以 [M4_VALIDATION](../M4_VALIDATION.md) 和最终提交的 CI artifacts 为准。

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assertSharedPoolConservation, generateSharedShop, runSharedMatchCommand } from '../src/simulation/shared-pool';
+import {readLootView} from '../src/simulation/loot-view';
 import { freezeContent } from '../src/simulation/content/freeze';
 import { accept, room } from './tp-helpers';
 
@@ -19,6 +20,13 @@ describe('shared loot validation cache boundaries', () => {
       if (live.state.phase === 'settlement') break;
     }
     expect(live.state.phase).toBe('settlement');
+    expect(awarded).toBe(false);
+    for(const orb of readLootView(live.state).unclaimedOrbs!) {
+      const command={type:'claimOrb' as const,round:live.state.round,orbId:orb.orbId};
+      live=accept(runSharedMatchCommand(live.pool,live.state,command));
+      const cold=JSON.parse(JSON.stringify(restored));restored=accept(runSharedMatchCommand(cold.pool,cold.state,command));
+      expect(restored).toEqual(live);awarded ||=live.poolEvents.some(e=>e.type==='sharedRewardResolved');
+    }
     expect(awarded).toBe(true);
   });
 

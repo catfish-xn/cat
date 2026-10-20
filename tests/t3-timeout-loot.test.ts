@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, enableMultiplayerSettlement, claimOrDiscardLoot, nextRound, startMatchCombat, stepMatch,
+import { createMatch, enableMultiplayerSettlement, claimOrDiscardLoot, claimOrb, nextRound, startMatchCombat, stepMatch,
   type MatchState, type MultiplayerCommandResult } from '../src/server-entry';
 import { createCombat } from '../src/simulation/combat';
 import { prepareMatchLoot, revealMatchLoot, unresolvedLootChoices } from '../src/simulation/loot-runtime';
@@ -26,20 +26,28 @@ function fullBench(state:MatchState):MatchState {
   return {...state,nextUnitSerial:20,preparation:{...state.preparation,units:[...state.preparation.units,
     ...Array.from({length:9},(_,slot):Unit=>({id:`unit-${slot+2}`,definitionId:'irelia',team:'player',starLevel:3,location:{kind:'bench',slot}}))]}};
 }
+function claimAll(state:MatchState):MatchState {
+  const orbs=state.m8.loot.frozen.rounds.flatMap(r=>r.orbs).filter(o=>o.entries.every(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')));
+  for(const orb of orbs)state=accept(claimOrb(state,orb.orbId,state.round));return state;
+}
 function retry(next:MatchState) {
   expect(claimOrDiscardLoot(freeze(next),next.round)).toEqual({ok:true,state:next,events:[]});
 }
 describe('T3 earned loot timeout transaction',()=>{
   it('grants the earned hero once, with original lineage and zero gold spent',()=>{
-    const state=fixture(),next=accept(claimOrDiscardLoot(freeze(state),state.round));
+    const state=fixture(),deadline=accept(claimOrDiscardLoot(freeze(state),state.round));
+    expect(deadline).toBe(state);expect(deadline.m8.loot.receipts).toEqual([]);
+    const next=claimAll(deadline);
     expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(2);expect(next.consumables).toHaveLength(1);
     expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
     expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'darius',location:{kind:'bench',slot:0}});
     retry(next);
   });
-  it('discards a capacity-blocked hero once, without allocating a unit or reward receipt',()=>{
-    const state=fullBench(fixture()),next=accept(claimOrDiscardLoot(freeze(state),state.round));
-    expect(next.m8.loot.direct[0].status).toBe('forfeited');expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['consumable']);expect(next.consumables).toHaveLength(1);
+  it('keeps a capacity-blocked orb at deadline and sells its hero only on explicit claim',()=>{
+    const state=fullBench(fixture()),deadline=accept(claimOrDiscardLoot(freeze(state),state.round));
+    expect(deadline).toBe(state);expect(deadline.m8.loot.direct[0].status).toBe('revealed');
+    const next=claimAll(deadline);
+    expect(next.m8.loot.direct[0].status).toBe('granted');expect(next.m8.loot.receipts[0]).toMatchObject({resolution:'capacity-sold',gold:1,grantedUnitIds:[]});expect(next.gold).toBe(state.gold+1);expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['unit','consumable']);expect(next.consumables).toHaveLength(1);
     expect(next.preparation).toEqual(state.preparation);expect(next.nextUnitSerial).toBe(20);retry(next);
     // A real public settlement has the same blocker and can now advance.
     let live=accept(startMatchCombat(fullBench(accept(enableMultiplayerSettlement(createMatch(5),'A')))));
@@ -52,7 +60,8 @@ describe('T3 earned loot timeout transaction',()=>{
     expect(unresolvedLootChoices(state)).toEqual([]);
     const gold=plan.encounterPlan.drops.reduce((sum,d)=>sum+(d.payload.kind==='gold'?d.payload.quantity:0),0);
     expect(gold).toBeGreaterThan(0);
-    const next=accept(claimOrDiscardLoot(freeze(state),state.round));
+    const deadline=accept(claimOrDiscardLoot(freeze(state),state.round));expect(deadline).toBe(state);
+    const next=claimAll(deadline);
     expect(next.gold).toBe(state.gold+gold);
     expect(next.items.map(i=>i.definitionId)).toEqual(plan.encounterPlan.drops.flatMap(d=>d.payload.kind==='item'?[d.payload.definitionId]:[]));
     expect(next.m8.loot.receipts.map(r=>r.payload)).toEqual(plan.encounterPlan.drops.map(d=>d.payload));
@@ -60,9 +69,10 @@ describe('T3 earned loot timeout transaction',()=>{
     expect(next.m8.loot.direct.filter(d=>d.status==='planned')).toEqual(state.m8.loot.direct.filter(d=>d.status==='planned'));
     retry(next);
   });
-  it('rolls back earlier component grants if a later gold grant overflows',()=>{
+  it('rolls back the entire clicked orb if a gold grant overflows',()=>{
     const state={...fixture('2-7'),gold:Number.MAX_SAFE_INTEGER},before=JSON.stringify(state);
-    expect(claimOrDiscardLoot(freeze(state),state.round)).toEqual({ok:false,state,reason:'invalid-loot'});
+    const orb=state.m8.loot.frozen.rounds.at(-1)!.orbs.find(o=>o.entries.some(e=>e.payload.kind==='gold'))!;
+    expect(claimOrb(freeze(state),orb.orbId,state.round)).toEqual({ok:false,state,reason:'invalid-loot'});
     expect(JSON.stringify(state)).toBe(before);
   });
   it('online PvE HP zero eliminates without single-player gameOver; offline remains gameOver',()=>{

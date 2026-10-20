@@ -173,6 +173,11 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .hud-chip strong { font-size: var(--font-hud); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-label { font-size: var(--font-small); color: var(--c-text-muted); }
 .hud-hp strong { color: var(--c-danger); } .hud-gold strong { color: var(--c-gold); } .hud-pop strong { color: var(--c-accent); }
+.hud-interest-pips { display: flex; gap: 3px; align-items: center; height: 8px; }
+.hud-interest-pips .pip { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #c9a24a99; background: transparent; box-sizing: border-box; }
+.hud-interest-pips .pip.on { border-color: #ffe08a; background: radial-gradient(circle at 35% 35%, #fff2b8, var(--c-gold) 60%, #a8781e); box-shadow: 0 0 3px #ffd36a99; }
+.hud-xp-bar { display: block; height: 5px; border-radius: 3px; background: #0c1820; border: 1px solid #2f5566; overflow: hidden; }
+.hud-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #2f8fd8, #6cd0ff); transition: width .25s ease-out; }
 .hud-hint { margin: 0 !important; font-size: var(--font-small) !important; color: var(--c-text-muted); }
 .action-bar { display: grid; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .primary-action { width: 100%; min-height: 52px; font-size: 17px !important; font-weight: 700; background: var(--c-accent-strong); border-color: var(--c-accent); }
@@ -196,6 +201,14 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .shop-card.unaffordable .shop-emblem, .shop-card.unaffordable .shop-name { opacity: .55; }
 .shop-odds { color: var(--c-text-muted); }
 @media (max-width: 420px) { .shop-trait { display: none; } .shop-card { min-height: 78px; } .hud-chip { padding: 4px 5px; } }
+/* A card whose purchase stars up one of my heroes (TFT shop glow); the stars name the resulting level. */
+.shop-card.upgrade, .shop-dock .shop-card.upgrade[data-cost] { border-color: #ffd36a; animation: shop-upgrade-glow 1.6s ease-in-out infinite alternate;
+  box-shadow: 0 0 0 1px #ffd36a, 0 0 10px #ffc93c99, inset 0 0 14px #ffc93c55; }
+.shop-upgrade { position: absolute; z-index: 2; top: 3px; right: 3px; padding: 0 3px; border-radius: 4px; background: #0b151fd9; color: #ffd36a;
+  font-size: 11px; line-height: 15px; letter-spacing: -1px; text-shadow: 0 0 4px #ffc93c; pointer-events: none; }
+.shop-card.upgrade:not(.shop-dock *) .shop-cost { top: auto; bottom: 3px; }
+@keyframes shop-upgrade-glow { to { box-shadow: 0 0 0 1px #ffe39a, 0 0 16px #ffc93ccc, inset 0 0 20px #ffc93c77; } }
+@media (prefers-reduced-motion: reduce) { .shop-card.upgrade, .shop-dock .shop-card.upgrade[data-cost] { animation: none; } }
 .primary-action.waiting { background: var(--c-surface-raised); border-color: var(--c-border-strong); color: var(--c-text-muted); }
 .mobile-controls.locked .economy-action { opacity: .5; }
 .shop-trait { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
@@ -439,12 +452,58 @@ body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), c
 .item-dock .item-glyph { font-size: 12px; line-height: 1; }
 .item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
 .item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
+/* v15: unclaimed orbs in the board's right gutter (mirror of the item bench). Tier colours follow the 14.24 client: grey
+   (silver-white), blue, gold and prismatic; a reward orb from an augment / conqueror / black market carries a "奖" mark. */
+.orb-dock { position: absolute; z-index: 20; right: 0; width: calc(var(--item-gutter, 56px) - 6px); top: calc(var(--online-countdown-h) + var(--online-gap));
+  bottom: calc(var(--online-dock-h) + var(--online-gap) + 8px); pointer-events: none; }
+.orb-dock:empty { display: none; }
+.orb-dock-list { display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; height: 100%; }
+.orb-token { position: relative; pointer-events: auto; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.orb-token:disabled { cursor: default; }
+.orb-token-gem { position: absolute; inset: 3px; border-radius: 50%; box-shadow: 0 0 10px var(--orb-glow), inset 0 -4px 8px #0006, inset 0 3px 6px #fff8;
+  background: radial-gradient(circle at 35% 30%, #fff 0 8%, var(--orb-light) 22%, var(--orb-base) 62%, var(--orb-dark) 100%); animation: orb-float 2.4s ease-in-out infinite; }
+.orb-gray { --orb-light: #f2f4f6; --orb-base: #aeb7bf; --orb-dark: #5d6871; --orb-glow: #d9e1e8aa; }
+.orb-blue { --orb-light: #b9e4ff; --orb-base: #3d8fe0; --orb-dark: #173f80; --orb-glow: #4aa6ffbb; }
+.orb-gold { --orb-light: #fff1b8; --orb-base: #e9b43c; --orb-dark: #8a5a12; --orb-glow: #ffc94dcc; }
+.orb-prismatic { --orb-light: #ffffff; --orb-base: #c69bff; --orb-dark: #3d6fb5; --orb-glow: #f3a6ffcc; }
+.orb-prismatic .orb-token-gem { background: radial-gradient(circle at 35% 30%, #fff 0 8%, #fff0 30%), conic-gradient(from 30deg, #ff8ad8, #ffd36b, #7dffb2, #6cc8ff, #b48bff, #ff8ad8); }
+.orb-token:hover .orb-token-gem, .orb-token:focus-visible .orb-token-gem { filter: brightness(1.18); box-shadow: 0 0 16px var(--orb-glow), inset 0 -4px 8px #0006, inset 0 3px 6px #fff8; }
+.orb-token[data-queued="true"] .orb-token-gem { filter: saturate(.55) brightness(.85); animation: none; }
+.orb-token-mark { position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #3a2b10; border: 1px solid #ffd782;
+  color: #ffe39b; font-size: 10px; line-height: 14px; font-weight: 700; }
+.orb-token-queued { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); white-space: nowrap; padding: 0 4px; border-radius: 6px; background: #24404d;
+  color: #ffe39b; font-size: 10px; line-height: 15px; }
+.orb-opening .orb-token-gem { animation: orb-open .45s ease-out forwards; }
+.orb-tip { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: none; width: max-content; max-width: 220px; padding: 8px 10px;
+  border-radius: 8px; border: 1px solid #304653; background: #0f1a24f2; color: #e2eef1; text-align: left; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 24px #000a; z-index: 30; }
+.orb-token:hover .orb-tip, .orb-token:focus-visible .orb-tip { display: grid; gap: 4px; }
+.orb-tip-entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.orb-tip-entries li { display: flex; align-items: center; gap: 6px; }
+.orb-tip-hint { color: #9aaeb9; }
+.orb-result { position: absolute; right: calc(100% + 8px); bottom: 0; width: max-content; max-width: 240px; padding: 8px 10px; border-radius: 8px; border: 1px solid #ffd782;
+  background: #1b2a33f2; color: #e2eef1; font-size: 13px; line-height: 1.5; pointer-events: none; animation: orb-result-in .25s ease-out; }
+.orb-result p { margin: 0; }
+.orb-result .orb-result-sold { color: #ffe39b; }
+@keyframes orb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes orb-open { 0% { transform: scale(1); } 50% { transform: scale(1.25); filter: brightness(1.6); } 100% { transform: scale(.6); opacity: .2; } }
+@keyframes orb-result-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .orb-token-gem, .orb-opening .orb-token-gem, .orb-result { animation: none; } }
+.public-orbs { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: #c9d6dc; }
+.public-orb { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--orb-light), var(--orb-base) 60%, var(--orb-dark)); box-shadow: 0 0 4px var(--orb-glow); }
+.public-orb.orb-prismatic { background: conic-gradient(#ff8ad8, #ffd36b, #7dffb2, #6cc8ff, #b48bff, #ff8ad8); }
+.public-orbs-count { margin-left: 2px; }
+/* v15: one reroll button under each augment card. */
+.choice-cards .augment-slot { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; }
+.choice-cards .augment-slot > button:first-child { height: 100%; }
+.choice-cards button.augment-slot-reroll { min-height: 0; padding: 6px 8px; font-size: 14px; line-height: 1.3; }
 .equip-details, .stats-details { margin: 8px 0; }
 .stats-details:has(> .combat-sources:empty) { display: none; }
 .equip-details > summary, .stats-details > summary { padding: 6px 0; font-weight: 600; cursor: pointer; }
 @media (max-width: 700px) {
   body[data-online] { --item-gutter: 0px; }
   .item-dock { position: static; width: auto; flex-direction: row; flex-wrap: wrap; }
+  .orb-dock { position: static; width: auto; }
+  .orb-dock-list { flex-direction: row; flex-wrap: wrap; height: auto; }
   .item-dock .item-inventory, .item-dock .consumable-row { flex-direction: row; flex-wrap: wrap; }
   .item-dock > * { min-width: 0; max-width: 100%; }
 }
@@ -672,6 +731,13 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .trait-row:focus-visible { outline: 2px solid #68ddd0; outline-offset: 1px; }
 .trait-count { font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .trait-row.active .trait-count { color: #68ddd0; }
+/* Reached breakpoint colour (TFT bronze / silver / gold / prismatic; unique for one-unit traits), from presentation/trait-styles. */
+.trait-row[data-style] { --trait-tier: #68ddd0; background: linear-gradient(90deg, color-mix(in srgb, var(--trait-tier) 42%, #1a2c36), #1a2c36 72%); box-shadow: inset 3px 0 0 var(--trait-tier); }
+.trait-row[data-style="bronze"] { --trait-tier: #b07a52; } .trait-row[data-style="silver"] { --trait-tier: #a9bccb; }
+.trait-row[data-style="gold"] { --trait-tier: #e6bc4a; } .trait-row[data-style="unique"] { --trait-tier: #e8803a; }
+.trait-row[data-style="prismatic"] { --trait-tier: #d7a6ff; background: linear-gradient(90deg, #4f8fbf8c, #9d6fd18c 30%, #d17fa38c 55%, #1a2c36 80%); }
+.trait-row[data-style] .trait-count { color: var(--trait-tier); }
+.trait-row[data-style] .trait-step.current { background: var(--trait-tier); }
 .trait-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trait-steps { display: inline-flex; gap: 2px; font-size: 11px; color: #5d7280; font-variant-numeric: tabular-nums; }
 .trait-step.reached { color: #9aaeb9; }
@@ -826,3 +892,6 @@ body[data-sell-drag] .hover-card { visibility: hidden; }
    ~ not +: online inserts #shop-dock between #board-root and #feedback-root. */
 #board-root:has(> .render3d-layer) ~ #feedback-root { z-index: 6; }
 .loadout-tip-3d { position: fixed; z-index: 79; pointer-events: none; white-space: pre; padding: 3px 5px; border-radius: 4px; background: #0b151fe6; color: #9ff0e4; font-size: 12px; line-height: 1.35; }
+
+/* Dragging an item or tool from the item bench: hover cards stay shut so the target piece stays in view. */
+body:has(.item-card.dragging, .consumable-card.dragging) :is(.hover-card, .item-popover) { visibility: hidden; }

@@ -1,0 +1,1113 @@
+{
+  "local_parent_head": "07af2bfbde736685ba88c23d55623c4aa4f93dee",
+  "local_parent_tree": "ab138503db7f46fc1eec34b35b9386ee23b817b1",
+  "source_ci_run": 39372322168,
+  "source_ci_job": 118462717843,
+  "source_ci_head": "1f8a921e06095a545f6874c328a6bd154a431d3c",
+  "source_ci_is_a_different_production_revision": true,
+  "publication": "local only; CI/push paused by user; no new push or rerun after pause notification",
+  "machine": {
+    "os": "Debian13.6",
+    "kernel": "Linux6.18.55 x86_64",
+    "cpu": "AMD EPYC9V74,5 logical CPUs",
+    "memory_mib": 18007,
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "vitest": "5.0.3",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  },
+  "cases": [
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "pools the 35 ordinary completed items except Thief's Gloves, in apiName order, each as a valid program",
+      "before_ms": 6.251,
+      "after_ms": 4.715,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rewrites legacy mechanic tags and strategy stats into declarative programs (G24-CHEST-04)",
+      "before_ms": 1.144,
+      "after_ms": 1.443,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "declares one holder-death grant to four allies ordered by health ratio then id",
+      "before_ms": 0.676,
+      "after_ms": 0.693,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "the four healthiest allies by ratio each gain one item when the holder dies; ties break by id; full units still receive",
+      "before_ms": 45.494,
+      "after_ms": 24.014,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "summons and structures never receive an item (user 2026-10-17 06:25); the next healthiest champion does",
+      "before_ms": 22.525,
+      "after_ms": 14.27,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "every pool item gained mid-combat applies its stats and start effects at once and passes restore validation for the rest of the fight",
+      "before_ms": 3601.812,
+      "after_ms": 2976.189,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "granted periodic and stacking items keep working after the grant",
+      "before_ms": 56.651,
+      "after_ms": 27.98,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a mid-combat JSON save continues to the identical terminal state and ledger",
+      "before_ms": 524.792,
+      "after_ms": 431.45,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "M1: Lux casts after receiving Nashor, accepts 594 magic damage and rejects 595",
+      "before_ms": 11.432,
+      "after_ms": 11.54,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "M1: Lux casts at two Archangel pulses, accepts 972 magic damage and rejects 973",
+      "before_ms": 27.058,
+      "after_ms": 22.653,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "M1: Vander casts before Shojin arrives, accepts the old 540 physical damage and rejects 541",
+      "before_ms": 8.666,
+      "after_ms": 8.045,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "M2: Lux dies after casting at two granted Archangel pulses; 972 magic restores and continues identically",
+      "before_ms": 287.263,
+      "after_ms": 230.423,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "M2: Lux shields Irelia after two granted Archangel pulses, then dies; the ally shield restores and continues identically",
+      "before_ms": 275.338,
+      "after_ms": 224.277,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "granted periodic candidates stay bounded by the save clock even without live tasks or a known sample tick",
+      "before_ms": 23.38,
+      "after_ms": 15.311,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "three Titans plus three granted Archangels restore after eight pulses without expanding 102 million histories",
+      "before_ms": 99.581,
+      "after_ms": 95.517,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "every AP and AD a receiver had since the grant is among the restore candidates for that sample",
+      "before_ms": 1031.714,
+      "after_ms": 855.165,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "receivers that attack and cast after the grant keep every mid-combat save valid",
+      "before_ms": 7739.448,
+      "after_ms": 7404.954,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "accepts the genuine grants",
+      "before_ms": 0.896,
+      "after_ms": 1.048,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects an item outside the pool",
+      "before_ms": 0.631,
+      "after_ms": 0.629,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a future tick",
+      "before_ms": 0.581,
+      "after_ms": 0.578,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a different tick from its siblings",
+      "before_ms": 0.489,
+      "after_ms": 0.482,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a duplicated ordinal",
+      "before_ms": 0.626,
+      "after_ms": 0.556,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a fifth grant",
+      "before_ms": 0.916,
+      "after_ms": 0.592,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a second grant to one receiver",
+      "before_ms": 0.631,
+      "after_ms": 0.512,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects an enemy receiver",
+      "before_ms": 0.592,
+      "after_ms": 0.51,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects a living holder",
+      "before_ms": 0.54,
+      "after_ms": 0.465,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects an unfired chest",
+      "before_ms": 0.5,
+      "after_ms": 0.513,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "rejects an extra field",
+      "before_ms": 0.497,
+      "after_ms": 0.513,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save whose unit claims an item it never received is rejected",
+      "before_ms": 1214.934,
+      "after_ms": 29.18,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with not an array as combat item grants is an invalid save",
+      "before_ms": 6.006,
+      "after_ms": 5.862,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with a null record as combat item grants is an invalid save",
+      "before_ms": 5.781,
+      "after_ms": 5.7,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with an item outside the pool as combat item grants is an invalid save",
+      "before_ms": 5.46,
+      "after_ms": 6.41,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with an unknown item as combat item grants is an invalid save",
+      "before_ms": 5.123,
+      "after_ms": 5.566,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with a missing chest as combat item grants is an invalid save",
+      "before_ms": 5.706,
+      "after_ms": 6.757,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with a text ordinal as combat item grants is an invalid save",
+      "before_ms": 5.464,
+      "after_ms": 4.952,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a Match save with a fractional tick as combat item grants is an invalid save",
+      "before_ms": 5.189,
+      "after_ms": 4.908,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "A holds the chest: grants go to the holder's own seat and every tick restores",
+      "before_ms": 782.869,
+      "after_ms": 734.99,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "B holds the chest: grants go to the holder's own seat and every tick restores",
+      "before_ms": 740.808,
+      "after_ms": 723.789,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "name": "a mirror copy of the chest seat fights the identical battle",
+      "before_ms": 300.021,
+      "after_ms": 310.589,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "a holder-owned summon kills as itself; holder contribution=false controls only assists, with identical restored ticks",
+      "before_ms": 3635.855,
+      "after_ms": 3318.859,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "a holder-owned summon kills as itself; holder contribution=true controls only assists, with identical restored ticks",
+      "before_ms": 3318.912,
+      "after_ms": 3003.684,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "saves Morgana curse without a summon or bracer, restores object/JSON, and continues every tick",
+      "before_ms": 245.2,
+      "after_ms": 193.164,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects altered or invented target reave facts beside the legal seed 3151248 curse",
+      "before_ms": 86.629,
+      "after_ms": 66.324,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "restores the legal target reave and retains Irelia shielding at tick 104",
+      "before_ms": 37.66,
+      "after_ms": 33.693,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects forged Black Rose member cast counts, including redistribution with an unchanged team total",
+      "before_ms": 547.2,
+      "after_ms": 86.845,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "restores legal Black Rose member counts and keeps Sion bound at tick 21",
+      "before_ms": 45.72,
+      "after_ms": 34.825,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse attachment binding for object and JSON beside a valid control",
+      "before_ms": 33.409,
+      "after_ms": 35.843,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse source binding for object and JSON beside a valid control",
+      "before_ms": 42.992,
+      "after_ms": 35.355,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse timing binding for object and JSON beside a valid control",
+      "before_ms": 40.61,
+      "after_ms": 53.197,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse action binding for object and JSON beside a valid control",
+      "before_ms": 34.029,
+      "after_ms": 32.973,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse amount binding for object and JSON beside a valid control",
+      "before_ms": 35.377,
+      "after_ms": 46.572,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects corrupted curse missing binding for object and JSON beside a valid control",
+      "before_ms": 31.108,
+      "after_ms": 35.863,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects transferring pulses to another real Morgana even with rebuilt source/holder/key identities",
+      "before_ms": 54.599,
+      "after_ms": 58.659,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "rejects an appended fake bleed while retaining every genuine Morgana curse pulse",
+      "before_ms": 34.615,
+      "after_ms": 35.346,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge",
+      "before_ms": 788.956,
+      "after_ms": 668.743,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "compares every restore for tasks only while reusing only exact detached replay evidence",
+      "before_ms": 84.961,
+      "after_ms": 69.569,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "compares every restore for bracer and tasks while reusing only exact detached replay evidence",
+      "before_ms": 101.707,
+      "after_ms": 87.326,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "bounds replay evidence, separates complete input contents and detaches every returned graph",
+      "before_ms": 37.687,
+      "after_ms": 35.11,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "name": "reuses verified hashes and incrementally hashes appended events against the full-ledger oracle",
+      "before_ms": 116.624,
+      "after_ms": 101.338,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pve preparation: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 8.328,
+      "after_ms": 9.01,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pve combat: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 4.984,
+      "after_ms": 4.897,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pve choice: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 4.797,
+      "after_ms": 4.814,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pve settlement: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 4.068,
+      "after_ms": 4.416,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pvp preparation: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 6.312,
+      "after_ms": 6.28,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pvp combat: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 6.111,
+      "after_ms": 6.208,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pvp choice: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 6.956,
+      "after_ms": 6.052,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "offline pvp settlement: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 5.901,
+      "after_ms": 5.891,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pve preparation: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 3.477,
+      "after_ms": 3.618,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pve combat: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 5.76,
+      "after_ms": 3.466,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pve choice: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 2.973,
+      "after_ms": 2.949,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pve settlement: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 3.088,
+      "after_ms": 5.533,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pvp preparation: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 5.305,
+      "after_ms": 5.059,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pvp combat: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 5.139,
+      "after_ms": 5.143,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pvp choice: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 4.851,
+      "after_ms": 4.469,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online pvp settlement: inventory, bench, board and in-place combine; ownership/phase rejects",
+      "before_ms": 4.591,
+      "after_ms": 4.669,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "sword + worn sword yields deathblade with one permanent ID",
+      "before_ms": 3.128,
+      "after_ms": 2.935,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "rod + worn rod yields deathcap with one permanent ID",
+      "before_ms": 2.249,
+      "after_ms": 2.163,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "bow + worn bow yields red-buff with one permanent ID",
+      "before_ms": 2.053,
+      "after_ms": 2.317,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "sword + worn rod yields gunblade with one permanent ID",
+      "before_ms": 2.254,
+      "after_ms": 2.3,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "sword + worn bow yields giant-slayer with one permanent ID",
+      "before_ms": 2.009,
+      "after_ms": 2.048,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "rod + worn bow yields rageblade with one permanent ID",
+      "before_ms": 1.953,
+      "after_ms": 2.143,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "tear + worn tear yields blue-buff with one permanent ID",
+      "before_ms": 2.012,
+      "after_ms": 2.191,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "vest + worn vest yields bramble-vest with one permanent ID",
+      "before_ms": 1.906,
+      "after_ms": 1.98,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "gloves + worn gloves yields thiefs-gloves with one permanent ID",
+      "before_ms": 3.567,
+      "after_ms": 3.078,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "also accepts every current ordinary recipe with a full final three-slot set",
+      "before_ms": 64.632,
+      "after_ms": 65.723,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "retains ownership, slot, unique and exclusive failures without a resource/ID/RNG/event change",
+      "before_ms": 3.766,
+      "after_ms": 3.675,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-5 sword+rod: consumed frozen component survives restoration; every tick is unchanged",
+      "before_ms": 356.143,
+      "after_ms": 355.792,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-5 gloves+gloves: consumed frozen component survives restoration; every tick is unchanged",
+      "before_ms": 309.395,
+      "after_ms": 308.261,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-7 sword+rod: consumed frozen component survives restoration; every tick is unchanged",
+      "before_ms": 341.339,
+      "after_ms": 328.636,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-7 gloves+gloves: consumed frozen component survives restoration; every tick is unchanged",
+      "before_ms": 363.772,
+      "after_ms": 323.224,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "running restore rejects free detachment, cross-unit combining, non-equipment mutation and illegal suffixes",
+      "before_ms": 25.499,
+      "after_ms": 18.071,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "online PvE equipment commands conserve pool holdings and failed transactions retain both references",
+      "before_ms": 10.492,
+      "after_ms": 12.615,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "locked live-seat in-place combination preserves both sides and mirror frozen result byte-for-byte",
+      "before_ms": 288.288,
+      "after_ms": 256.972,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-5 preparation: equip and in-place combine restore and continue identically",
+      "before_ms": 21.27,
+      "after_ms": 17.901,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-5 settlement: equip and in-place combine restore and continue identically",
+      "before_ms": 49.011,
+      "after_ms": 40.901,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-7 preparation: equip and in-place combine restore and continue identically",
+      "before_ms": 17.589,
+      "after_ms": 18.265,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "3-7 settlement: equip and in-place combine restore and continue identically",
+      "before_ms": 35.341,
+      "after_ms": 34.864,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "augment choice and supply choice retain offers while equipment saves resume",
+      "before_ms": 624.05,
+      "after_ms": 529.032,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "PvE settlement permits in-place combination and preserves direct grant order on restore",
+      "before_ms": 126.199,
+      "after_ms": 104.441,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "rejects the T11 digest without migration",
+      "before_ms": 2.887,
+      "after_ms": 2.888,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "a permanent unit killed in this combat can equip; next battle uses the new stats",
+      "before_ms": 829.414,
+      "after_ms": 636.445,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "pve: latest board/bench gear migrates after deferred merge, frozen rewards commit once",
+      "before_ms": 61.294,
+      "after_ms": 55.434,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "pvp: latest board/bench gear migrates after deferred merge, frozen rewards commit once",
+      "before_ms": 110.962,
+      "after_ms": 95.506,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "T12 supply choice permits fresh component transactions and single-save continuation",
+      "before_ms": 1638.757,
+      "after_ms": 19.675,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "T12 an existing frozen glove roll and a new parent roll remain independent",
+      "before_ms": 457.34,
+      "after_ms": 433.11,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "T12 online PvE restores the frozen player descriptor and keeps every live-seat combat tick unchanged",
+      "before_ms": 119.452,
+      "after_ms": 134.533,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "name": "T12 restore rejects a fabricated cross-unit recipe although births and recipe are valid",
+      "before_ms": 10.479,
+      "after_ms": 11.072,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot",
+      "before_ms": 140.368,
+      "after_ms": 117.788,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "keeps the fault snapshot projected",
+      "before_ms": 125.051,
+      "after_ms": 112.932,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "hands the local client the same projection on pushes, accepted and refused commands",
+      "before_ms": 43.403,
+      "after_ms": 35.345,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "mirrors side B (cells, movement, cast cells, unitUpdated, teams, result) and plays to the terminal view",
+      "before_ms": 2454.732,
+      "after_ms": 178.431,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "mirrors every coordinate-bearing replay field, including ones a short battle may not produce",
+      "before_ms": 1.516,
+      "after_ms": 1.384,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "builds PvE replays from the rules own combat (start, finish and ledger; no per-tick frames kept)",
+      "before_ms": 442.233,
+      "after_ms": 437.857,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "sends each battle once as the room's own replay and never as combat frames (C6)",
+      "before_ms": 462.579,
+      "after_ms": 441.147,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "runs a match past 6-7 into overtime-N rounds and ends with a unique ranking",
+      "before_ms": 12472.794,
+      "after_ms": 12094.403,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "name": "ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP)",
+      "before_ms": 797.081,
+      "after_ms": 876.323,
+      "before_status": "passed",
+      "after_status": "passed"
+    }
+  ],
+  "checks": {
+    "tests/g2-4b-unstable-chest.test.ts": {
+      "before_passed": 39,
+      "after_passed": 39,
+      "before_json_file_interval_ms": 16851.021,
+      "after_json_file_interval_ms": 15523.589
+    },
+    "tests/task-mechanism-restore.test.ts": {
+      "before_passed": 20,
+      "after_passed": 20,
+      "before_json_file_interval_ms": 9355.625,
+      "after_json_file_interval_ms": 8035.338
+    },
+    "tests/t12-combat-equip.test.ts": {
+      "before_passed": 48,
+      "after_passed": 48,
+      "before_json_file_interval_ms": 5975.479,
+      "after_json_file_interval_ms": 5541.072
+    },
+    "tests/server/projection-wire.test.ts": {
+      "before_passed": 9,
+      "after_passed": 9,
+      "before_json_file_interval_ms": 16940.081,
+      "after_json_file_interval_ms": 16619.323
+    }
+  },
+  "shuffles": {
+    "42": {
+      "passed": 116,
+      "failed": 0,
+      "success": true
+    },
+    "20261020": {
+      "passed": 116,
+      "failed": 0,
+      "success": true
+    }
+  },
+  "assertions": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "before": 218,
+      "after": 218,
+      "testCallbacks": 12,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "before": 256,
+      "after": 256,
+      "testCallbacks": 27,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "before": 40,
+      "after": 40,
+      "testCallbacks": 3,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "before": 194,
+      "after": 194,
+      "testCallbacks": 23,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "before": 96,
+      "after": 96,
+      "testCallbacks": 2,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "before": 135,
+      "after": 135,
+      "testCallbacks": 8,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "before": 37,
+      "after": 37,
+      "testCallbacks": 21,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "before": 111,
+      "after": 111,
+      "testCallbacks": 5,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "before": 92,
+      "after": 92,
+      "testCallbacks": 6,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/pairing-room.test.ts",
+      "before": 38,
+      "after": 38,
+      "testCallbacks": 3,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "before": 148,
+      "after": 148,
+      "testCallbacks": 9,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "before": 64,
+      "after": 64,
+      "testCallbacks": 6,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "before": 155,
+      "after": 155,
+      "testCallbacks": 18,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "before": 226,
+      "after": 226,
+      "testCallbacks": 13,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    }
+  ],
+  "tested_source_sha256": {
+    "tests/g2-4b-unstable-chest.test.ts": "1134070b59009f03f4eef806eec161afc133b13290dadbf63959f027327a20e0",
+    "tests/task-mechanism-restore.test.ts": "ff0a4fc50d509f46629268e3f5e19031f8233ac2cac13d7ecbddb7ff05880b68",
+    "tests/t12-combat-equip.test.ts": "1ba22d63acf2c8e621eb5a98f8c55c75a09a9da7eb40bf46a0412ece836f1ee6",
+    "tests/server/projection-wire.test.ts": "f06d98ac9e882d464754fa592223e4b1d16db78e7f9e460bac243d0707bb6136"
+  },
+  "notes": [
+    "JSON file interval is endTime-startTime from Vitest JSON, not shell process wall time or a CI CPU measurement.",
+    "Case-budget reductions include moving preparation to hooks; do not interpret them as equal reductions in file or CI job duration.",
+    "Prior154 published cases were verified separately; this local follow-up runs exactly these116 cases, not a combined270-case shuffled run."
+  ]
+}

@@ -1,6 +1,9 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
+// v15 independent-oracle seed search preserves the original exact partial-death assertions.
+export const PARTIAL_REVEAL_SEEDS = {loris:139464,zyra:3464} as const;
+
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment

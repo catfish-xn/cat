@@ -19,27 +19,31 @@ it('single-player nodes choose a deterministic shared tier without consuming cho
     let rng = (seed ^ 0x9e3779b9) >>> 0;
     for (let word = 0; word < 3; word++) rng = nextRandom(rng).state;
     expect(state.choiceRngState).toBe(rng);
-    expect(state.augmentOffers).toEqual([{choiceId:c.choiceId,tier,rerollCount:0}]);
-    expect(c.rerollsRemaining).toBe(1);
+    expect(state.augmentOffers).toEqual([{choiceId:c.choiceId,tier,rerollCount:0,rerolledIndices:[]}]);
+    expect(c.rerollsRemaining).toBe(3);
+    expect(c.rerolledSlots).toEqual([false,false,false]);
   }
   expect(seen.size).toBe(3);
 });
 
-it('free reroll replaces the whole offer, locks tier, consumes exactly three words and exhausts once', () => {
+it('free reroll replaces one card, locks tier, consumes one word and exhausts that slot once', () => {
   const before = freeze(reachRound('2-1', false)), c = before.pendingChoice!;
-  const result = rerollAugment(before, c.choiceId, c.generation);
+  const result = rerollAugment(before, c.choiceId, c.generation, 1);
   const after = accepted(result), next = after.pendingChoice!;
-  expect(next.offers.every(id => !c.offers.includes(id))).toBe(true);
+  expect(next.offers[0]).toBe(c.offers[0]); expect(next.offers[2]).toBe(c.offers[2]);
+  expect(c.offers).not.toContain(next.offers[1]);
   expect(next.offers.every(id => AUGMENT_TIERS[id] === c.augmentTier)).toBe(true);
-  expect(next).toMatchObject({augmentTier:c.augmentTier,generation:1,rerollCount:1,rerollsRemaining:0});
+  expect(next).toMatchObject({augmentTier:c.augmentTier,generation:1,rerollCount:1,rerollsRemaining:2,rerolledSlots:[false,true,false]});
+  expect(after.removedAugmentIds).toEqual([c.offers[1]]);
   expect(after.gold).toBe(before.gold);
-  let rng = before.choiceRngState; for (let i = 0; i < 3; i++) rng = nextRandom(rng).state;
+  const rng = nextRandom(before.choiceRngState).state;
   expect(after.choiceRngState).toBe(rng);
   expect(result.ok && result.events).toMatchObject([{type:'choiceOpened',choice:next}]);
-  const exhausted = rerollAugment(after, next.choiceId, 1);
+  const exhausted = rerollAugment(after, next.choiceId, 1, 1);
   expect(exhausted).toEqual({ok:false,state:after,reason:'augment-rerolls-exhausted'});
   expect(exhausted.state).toBe(after); expect('events' in exhausted).toBe(false);
-  expect(toPrivateSeatView(after).pendingChoice).toMatchObject({augmentTier:next.augmentTier,rerollsRemaining:0});
+  expect(toPrivateSeatView(after).pendingChoice).toMatchObject({augmentTier:next.augmentTier,rerollsRemaining:2,
+    augmentOptions:next.offers.map((definitionId,optionIndex)=>({definitionId,optionIndex,rerollAvailable:optionIndex!==1}))});
 });
 
 it('wrong phase, wrong node and stale generation fail with original state, no events and no RNG use', () => {
@@ -50,7 +54,7 @@ it('wrong phase, wrong node and stale generation fail with original state, no ev
     [states[1], states[1].pendingChoice!.choiceId, 99, 'stale-choice'],
   ] as const) {
     freeze(state); const snapshot = JSON.stringify(state);
-    const result = rerollAugment(state,id,generation);
+    const result = rerollAugment(state,id,generation,0);
     expect(result).toEqual({ok:false,state,reason});
     expect(result.state).toBe(state); expect('events' in result).toBe(false);
     expect(JSON.stringify(state)).toBe(snapshot);
@@ -59,7 +63,9 @@ it('wrong phase, wrong node and stale generation fail with original state, no ev
 
 it('the next node resets its free allowance and its generation after an earlier reroll', () => {
   let state = reachRound('2-1', false), c = state.pendingChoice!;
-  state = accepted(rerollAugment(state,c.choiceId,0));
+  state = accepted(rerollAugment(state,c.choiceId,0,0));
+  const removed = [...state.removedAugmentIds];
+  state = restoreMatch(serializeMatch(state));
   state = resolveM5Choices(state);
   while (state.roundDefinitionId !== '3-2') {
     state = resolveM5Choices(state);
@@ -68,15 +74,17 @@ it('the next node resets its free allowance and its generation after an earlier 
     state = accepted(nextRound(state,state.round));
   }
   c = state.pendingChoice!;
-  expect(c).toMatchObject({kind:'augment',rerollCount:0,rerollsRemaining:1,generation:0});
+  expect(c).toMatchObject({kind:'augment',rerollCount:0,rerollsRemaining:3,generation:0,rerolledSlots:[false,false,false]});
   expect(c.offers.every(id => AUGMENT_TIERS[id] === c.augmentTier)).toBe(true);
+  expect(c.offers.every(id => !removed.includes(id))).toBe(true);
+  expect(state.removedAugmentIds).toEqual(removed);
   expect(state.augmentOffers.map(r => r.rerollCount)).toEqual([1,0]);
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
 });
 
 it('restores rerolled offers and rejects forged tier, candidates, counters, seed and history', () => {
   const initial = reachRound('2-1',false), c = initial.pendingChoice!;
-  const state = accepted(rerollAugment(initial,c.choiceId,0));
+  const state = accepted(rerollAugment(initial,c.choiceId,0,0));
   const serialized = serializeMatch(state);
   expect(restoreMatch(serialized)).toEqual(state);
   expect(restoreMatch(JSON.parse(serialized))).toEqual(state);
@@ -91,6 +99,14 @@ it('restores rerolled offers and rejects forged tier, candidates, counters, seed
   mutate(s => { s.augmentTierSeed ^= 1; });
   mutate(s => { s.augmentOffers[0].rerollCount = 0; });
   mutate(s => { s.augmentOffers[0].tier = 'invalid'; });
+  mutate(s => { s.augmentOffers[0].rerolledIndices = [1]; });
+  mutate(s => { s.augmentOffers[0].rerolledIndices = [0,0]; s.augmentOffers[0].rerollCount = 2; });
+  mutate(s => { s.augmentOffers[0].rerolledIndices = [3]; });
+  mutate(s => { s.pendingChoice.rerolledSlots[0] = false; });
+  mutate(s => { s.removedAugmentIds = []; });
+  mutate(s => { s.removedAugmentIds.push(c.offers[0]); });
+  mutate(s => { s.removedAugmentIds = [s.pendingChoice.offers[0]]; });
+  mutate(s => { delete s.removedAugmentIds; });
   mutate(s => { s.choiceRngState ^= 1; });
   const selected = accepted(selectChoice(state,c.choiceId,1,state.pendingChoice!.offers[0]));
   expect(restoreMatch(serializeMatch(selected))).toEqual(selected);
@@ -100,12 +116,13 @@ it('restores rerolled offers and rejects forged tier, candidates, counters, seed
   expect(() => restoreMatch(forged)).toThrow();
 });
 
-it('registered tier pools support whole replacements after excluding up to two owned augments', () => {
+it('registered tier pools support all three card rerolls at all nodes even at the smallest tier', () => {
   for (const tier of ['silver','gold','prismatic'] as const) {
     const ids = augmentCandidates(tier,[]);
     expect(ids.length).toBeGreaterThanOrEqual(8);
     const owned = ids.slice(0,2).map(definitionId => ({definitionId,choiceId:'previous',acquiredRound:1}));
-    expect(augmentCandidates(tier,owned,ids.slice(2,5)).length).toBeGreaterThanOrEqual(3);
+    // Third node: six removed earlier, two owned, three current, two removed here.
+    expect(augmentCandidates(tier,owned,ids.slice(2,13)).length).toBeGreaterThanOrEqual(1);
   }
   expect(Object.keys(AUGMENT_DEFINITIONS).every(id => AUGMENT_TIERS[id] !== undefined)).toBe(true);
   expect(augmentRerollLimit([])).toBe(1);
@@ -115,10 +132,11 @@ it('registered tier pools support whole replacements after excluding up to two o
 it('a depleted same-tier pool refuses atomically instead of repeating or crossing tiers', () => {
   const state = reachRound('2-1',false), c = state.pendingChoice!;
   // Isolated future-content shortage vector; current admitted pools cannot naturally exhaust this way.
-  const owned = augmentCandidates(c.augmentTier!,[],c.offers).slice(2)
+  const owned = augmentCandidates(c.augmentTier!,[],c.offers)
     .map(definitionId => ({definitionId,choiceId:'prior',acquiredRound:1}));
   const before = freeze({...state,augments:owned});
-  const result = rerollAugment(before,c.choiceId,c.generation);
+  const result = rerollAugment(before,c.choiceId,c.generation,0);
   expect(result).toEqual({ok:false,state:before,reason:'augment-pool-too-small'});
   expect(result.state).toBe(before); expect('events' in result).toBe(false);
+  expect(toPrivateSeatView(before).pendingChoice!.augmentOptions!.every(o=>!o.rerollAvailable)).toBe(true);
 });

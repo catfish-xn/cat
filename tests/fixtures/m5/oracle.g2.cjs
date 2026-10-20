@@ -20,6 +20,10 @@ function p2Gifts(state){const gifts=new Map();for(const a of state.augments){
  const namespace=`s13-augments-p2/${state.multiplayer?.seatId??'solo'}/${a.choiceId}`;let hash=2166136261n;
  for(const c of namespace)hash=((hash^BigInt(c.charCodeAt(0)))*16777619n)%4294967296n;
  let rng=Number(BigInt(state.seed)^hash);for(let i=0;i<units[1];i++){rng=word(rng);const pool=CATALOG[units[0]],id=pool[Number(BigInt(rng)*BigInt(pool.length)/4294967296n)];gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'unit',i]),{kind:'unit',definitionId:id});}
+ }for(const a of state.augments){
+ const tier={'all-for-one-i':1,'trifecta-i':3}[a.definitionId];if(!tier)continue;
+ let h=2166136261n;for(const c of JSON.stringify(['d11-fill',state.multiplayer?.seatId??'solo',a.choiceId,a.definitionId]))h=((h^BigInt(c.charCodeAt(0)))*16777619n)%4294967296n;
+ let rng=Number(BigInt(state.seed)^h);for(let i=0;i<2;i++){rng=word(rng);const pool=CATALOG[tier];gifts.set(JSON.stringify(['d11-fill',a.choiceId,a.definitionId,'unit',i]),{kind:'unit',definitionId:pool[Number(BigInt(rng)*BigInt(pool.length)/4294967296n)]});}
  }return gifts;}
 // P3 literal union: independent from production registration.
 AUGMENTS.push('defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast');AUGMENTS.sort();
@@ -28,12 +32,16 @@ ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-
 // P1 literal union: independent from production registration.
 AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','hedge-fund','investment-strategy-ii');AUGMENTS.sort();
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
+// D11 raw identities/tags, independently transcribed from the retained archive.
+AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link');AUGMENTS.sort();
+ANOMALIES.push('avarice-incarnate','headhunter');ANOMALIES.sort();
 // Literal tier identities, transcribed independently; no runtime content imports.
 const AUGMENT_POOLS={
  silver:['backup','blistering-strikes','bulky-buddies-i','climb-the-ladder-i','find-your-center','glass-cannon-i','item-collector-i','lineup','lone-hero','manaflow-i','mentorship-i','placebo','placebo-plus','pumping-up-i'],
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 function augmentTier(seed,node){
  let hash=2166136261n;
@@ -47,9 +55,15 @@ function augmentDraw(rng,tier,owned,excluded=[]){
  for(let i=0;i<3;i++){rng=word(rng);const j=i+rng%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
  return {offers:pool.slice(0,3),rng};
 }
-// No admitted definition grants ExtraRolls; future content must extend this literal expectation.
-const AUGMENT_EXTRA_ROLLS={};
-function augmentLimit(owned){return 1+owned.reduce((n,a)=>n+(AUGMENT_EXTRA_ROLLS[a.definitionId]??0),0);}
+// User-approved card reroll: exactly one use per slot, permanently remove discarded IDs.
+function augmentCardDraw(before,index){
+ const c=before.pendingChoice,tier=augmentTier(augmentSeed(before),c.choiceId);
+ const pool=augmentPool(tier,before.augments,[...before.removedAugmentIds,...c.offers]);
+ assert(pool.length>0,'independent card pool nonempty');
+ const rng=word(before.choiceRngState),offers=[...c.offers],rerolledSlots=[...c.rerolledSlots];
+ offers[index]=pool[rng%pool.length];rerolledSlots[index]=true;
+ return {rng,offers,rerolledSlots};
+}
 function augmentSeed(state){
  if(!state.multiplayer)assert.equal(state.augmentTierSeed,state.seed,'independent solo tier seed binding');
  return state.augmentTierSeed;
@@ -57,16 +71,18 @@ function augmentSeed(state){
 function validateAugmentReroll(before,result,command){
  assert.equal(command.type,'rerollAugment');const c=before.pendingChoice;
  let reason=null,tier;
- if(before.phase!=='choice'||c?.kind!=='augment'||c.step!=='offer')reason='wrong-phase';
+ if(before.phase!=='choice'||c?.kind!=='augment'||c.step!=='offer'||before.multiplayer?.combatRosterLocked||before.multiplayer?.status==='eliminated')reason='wrong-phase';
  else if(command.choiceId!==c.choiceId||command.generation!==c.generation)reason='stale-choice';
- else if(c.rerollCount>=augmentLimit(before.augments))reason='augment-rerolls-exhausted';
- else {tier=augmentTier(augmentSeed(before),c.choiceId);if(augmentPool(tier,before.augments,c.offers).length<3)reason='augment-pool-too-small';}
+ else if(!Number.isSafeInteger(command.optionIndex)||command.optionIndex<0||command.optionIndex>=c.offers.length)reason='invalid-slot';
+ else if(c.rerolledSlots[command.optionIndex])reason='augment-rerolls-exhausted';
+ else {tier=augmentTier(augmentSeed(before),c.choiceId);if(!augmentPool(tier,before.augments,[...before.removedAugmentIds,...c.offers]).length)reason='augment-pool-too-small';}
  if(reason){assert.deepEqual(result,{ok:false,state:before,reason},'independent reroll rejection');assert.equal(result.state,before,'failed reroll preserves state reference');return;}
- assert.equal(result.ok,true);const after=result.state,draw=augmentDraw(before.choiceRngState,tier,before.augments,c.offers);
- const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:augmentLimit(before.augments)-c.rerollCount-1};
+ assert.equal(result.ok,true);const after=result.state,draw=augmentCardDraw(before,command.optionIndex);
+ const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:3-c.rerollCount-1,rerolledSlots:draw.rerolledSlots};
  assert.equal(c.augmentTier,tier,'reroll locks node tier');
  assert.deepEqual(after,{...before,choiceRngState:draw.rng,pendingChoice:next,nextMatchEventSeq:before.nextMatchEventSeq+1,
-  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount}:r)},'independent free atomic reroll state');
+  removedAugmentIds:[...before.removedAugmentIds,c.offers[command.optionIndex]],
+  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount,rerolledIndices:[...r.rerolledIndices,command.optionIndex]}:r)},'independent free atomic reroll state');
  assert.deepEqual(result.events,[{domain:'match',eventSeq:before.nextMatchEventSeq,type:'choiceOpened',choice:next}],'independent reroll event');
 }
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
@@ -256,13 +272,13 @@ class Ledger {
    if(event.type==='choiceOpened'&&event.choice.kind==='augment'){
     const c=event.choice,tier=augmentTier(augmentSeed(after),c.choiceId),rerolled=command?.type==='rerollAugment';
     assert.equal(c.choiceId,`round:${after.roundDefinitionId}:augment`,'independent scheduled augment node identity');
-    const draw=augmentDraw(choice,tier,after.augments,rerolled?before.pendingChoice.offers:[]);choice=draw.rng;
+    const draw=rerolled?augmentCardDraw(before,command.optionIndex):augmentDraw(choice,tier,after.augments,after.removedAugmentIds);choice=draw.rng;
     assert.deepEqual(c.offers,draw.offers,'independent augment offers');
     const used=rerolled?before.pendingChoice.rerollCount+1:0;
     assert.deepEqual(c,{kind:'augment',step:'offer',choiceId:c.choiceId,eventId:c.choiceId,generation:used,offers:draw.offers,targetId:null,
-     rerollCount:used,augmentTier:tier,rerollsRemaining:augmentLimit(after.augments)-used,returnPhase:'preparation'},'independent augment node/reset metadata');
+     rerollCount:used,augmentTier:tier,rerollsRemaining:3-used,rerolledSlots:rerolled?draw.rerolledSlots:[false,false,false],returnPhase:'preparation'},'independent augment node/reset metadata');
     assert.deepEqual(after.pendingChoice,c,'augment event equals pending state');
-    const record={choiceId:c.choiceId,tier,rerollCount:used};
+    const record={choiceId:c.choiceId,tier,rerollCount:used,rerolledIndices:rerolled?[...before.augmentOffers.find(r=>r.choiceId===c.choiceId).rerolledIndices,command.optionIndex]:[]};
     assert.deepEqual(after.augmentOffers,rerolled?before.augmentOffers.map(r=>r.choiceId===c.choiceId?record:r):[...before.augmentOffers,record],'independent augment history');
    }
    if(event.type==='rewardGranted'){reward=word(reward);assert.equal(event.receipt.itemIds.length,1);assert.equal(after.items.find(i=>i.id===event.receipt.itemIds[0]).definitionId,COMPONENTS[reward%8],'independent random component');}
@@ -276,7 +292,12 @@ class Ledger {
   for(const [type,cost,key] of [['reroll',2,'rerolls'],['buyXp',4,'xp'],['anomalyReroll',1,'anomaly']])if(command?.type===type){this.gold-=cost;costs[key]+=cost;}
   for(const receipt of lootReceipts){if(receipt.payload.kind==='gold'){this.gold+=receipt.payload.quantity;costs.rewards+=receipt.payload.quantity;}
    if(receipt.payload.kind==='unit'){assert.deepEqual(receipt.grantedUnitIds,[`unit-${serial}`],'true loot candidate serial');units.set(`unit-${serial++}`,{definitionId:receipt.payload.definitionId,starLevel:1});this.cards++;}}
-  const mechanicGifts=appended(before.seatMechanics?.receipts??[],after.seatMechanics?.receipts??[],'receiptId','mechanic gifts').filter(r=>r.source==='s13-augments-p2'),giftPlan=p2Gifts(after);
+  const appendedMechanics=appended(before.seatMechanics?.receipts??[],after.seatMechanics?.receipts??[],'receiptId','mechanic gifts');
+  const mechanicGifts=appendedMechanics.filter(r=>r.source==='s13-augments-p2'||r.source==='d11-fill'&&r.kind==='unit'),giftPlan=p2Gifts(after);
+  for(const r of appendedMechanics.filter(r=>r.source==='d11-fill'&&r.kind==='gold')){
+   assert.equal(command?.type,'select');assert.equal(command.definitionId,'avarice-incarnate');assert.equal(r.amount,5);
+   assert.equal(r.receiptId,JSON.stringify(['d11-fill',before.pendingChoice.choiceId,'avarice-gold']));this.gold+=5;costs.rewards+=5;
+  }
   for(const receipt of mechanicGifts){const expected=giftPlan.get(receipt.receiptId);assert(expected,'independent P2 gift identity');assert.equal(receipt.kind,expected.kind);assert.equal(receipt.definitionId,expected.definitionId,'independent P2 gift definition');
    if(receipt.kind==='unit'){if(receipt.resolution==='gold'){assert.equal(receipt.gold,COST[receipt.definitionId]);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}else{assert.equal(receipt.unitId,`unit-${serial}`);units.set(`unit-${serial++}`,{definitionId:receipt.definitionId,starLevel:1});this.cards++;}}}
   assert.equal(after.nextUnitSerial,serial,'unit serial accounting');

@@ -115,15 +115,20 @@ describe('SR-C7-02 revealed loot whitelist',()=>{
     detached(view);
   });
   it('shows real shared-pool shortage compensation from the paid receipt, not the frozen hero plan',()=>{
-    const {pool,states}=room({irelia:2,darius:1}),first=fight(pool,states[0]),second=fight(first.pool,states[1]);
+    const {pool,states}=room({irelia:2,darius:1}),a=fight(pool,states[0]);
+    const first=accept(runSharedMatchCommand(a.pool,a.state,{type:'claimOrb',round:1,orbId:readLootView(a.state).unclaimedOrbs![0].orbId})),b=fight(first.pool,states[1]);
+    const second=accept(runSharedMatchCommand(b.pool,b.state,{type:'claimOrb',round:1,orbId:readLootView(b.state).unclaimedOrbs![0].orbId}));
     expect(check(first.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
-    expect(check(second.state).revealedDrops[0].payload).toEqual({kind:'gold',quantity:1});
+    expect(check(second.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
+    expect(toPrivateSeatView(second.state).orbClaimReceipts![0]).toMatchObject({resolution:'gold',gold:1,grantedUnitIds:[]});
   });
-  it('shows a real pending-capacity reward and retains its timeout forfeiture',()=>{
+  it('shows an unclaimed full-bench orb at deadline and its explicit capacity sale',()=>{
     const full=fullBench(),pending=fight(full.pool,full.state);
-    expect(check(pending.state).revealedDrops[0]).toMatchObject({status:'pending-capacity',reason:'bench-full'});
+    expect(check(pending.state).revealedDrops[0]).toMatchObject({status:'revealed',reason:'awaiting-claim'});
     const discarded=accept(runSharedMatchCommand(pending.pool,pending.state,{type:'claimLoot',round:pending.state.round}));
-    expect(check(discarded.state).revealedDrops[0]).toMatchObject({status:'forfeited',reason:'timeout-forfeited'});
+    expect(check(discarded.state).revealedDrops[0]).toMatchObject({status:'revealed',reason:'awaiting-claim'});
+    const paid=accept(runSharedMatchCommand(discarded.pool,discarded.state,{type:'claimOrb',round:1,orbId:readLootView(discarded.state).unclaimedOrbs![0].orbId}));
+    expect(check(paid.state).revealedDrops[0].status).toBe('granted');expect(toPrivateSeatView(paid.state).orbClaimReceipts![0]).toMatchObject({resolution:'capacity-sold',gold:1});
     expect(check(discarded.state).revealedDrops[1].payload.kind).toBe('consumable');
   });
 });

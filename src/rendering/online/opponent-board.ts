@@ -19,6 +19,7 @@ import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../
 import type { PublicBenchUnit, PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
 import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../../presentation/augment-display';
+import { publicOrbsElement, readPublicOrbs } from './orb-dock';
 
 /** Bench slots drawn when the seat's bench is shorter (TFT bench width); a longer bench draws every slot. */
 const BENCH_SLOTS = 9;
@@ -95,6 +96,9 @@ export class OpponentBoardPanel {
     const head = element('header', '', 'opponent-head');
     head.append(element('strong', `${seat.name}${mine ? '（我）' : ''} 的阵容`, 'opponent-name'),
       element('span', seat.alive ? `生命 ${seat.hp} · Lv ${seat.level}` : `已淘汰 · 第 ${seat.rank ?? '?'} 名`, 'opponent-meta'));
+    // v15: the seat's unclaimed orbs, count and tiers only (SeatPublic.orbs).
+    const orbs = publicOrbsElement(readPublicOrbs(seat));
+    if (orbs) head.append(orbs);
     const close = element('button', '关闭', 'opponent-close'); close.type = 'button'; close.dataset.debug = 'online:opponent-close';
     close.setAttribute('aria-label', '关闭对方阵容（Esc）'); close.addEventListener('click', () => this.close()); head.append(close);
 

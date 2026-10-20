@@ -1,6 +1,7 @@
 import { syntheticSharedRound } from './tp-helpers';
 import { expect, it } from 'vitest';
-import { createMatch, selectChoice, deployMatchUnit } from '../src/simulation/match';
+import { createMatch, selectChoice, deployMatchUnit, claimOrb } from '../src/simulation/match';
+import { readLootView } from '../src/simulation/loot-view';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { compileBattle, resolveTwoSidedBattle, proposeSettlement } from '../src/simulation/two-sided-battle';
 import { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt } from '../src/simulation/round-settlement';
@@ -28,6 +29,13 @@ it.each(IDS.flatMap(id=>['conqueror','chem-baron'].map(trait=>({id,trait}))))('$
   const enabled=enableMultiplayerSettlement({...base,seed,level:9,xp:0,nextUnitSerial:200,items:[],temporaryEquipment:[],augments:[],preparation:{...base.preparation,units},pendingChoice:{...c,offers:[id]}},'A');if(!enabled.ok)throw Error(enabled.reason);let state=enabled.state;
   const beforeTier=deriveTraits(state.preparation,'player').find(t=>t.traitId===trait)!.tier;expect(beforeTier).toBe(0);
   state=accepted(selectChoice(state,c.choiceId,c.generation,id));
+  if(cost){
+    const orbs=readLootView(state).unclaimedOrbs!.filter(o=>o.source==='mechanic');
+    expect(orbs).toHaveLength(p2GiftPlan(state).filter(g=>g.kind==='unit').length);expect(state.preparation.units).toEqual(units);
+    for(const orb of orbs){
+      const claimed=claimOrb(state,orb.orbId,state.round);if(!claimed.ok)throw Error(claimed.reason);state=claimed.state;
+    }
+  }
   const target=state.preparation.units.find(u=>u.definitionId===incoming&&u.location.kind==='bench')!;expect(target).toBeTruthy();
   state=accepted(deployMatchUnit(state,target.id,{kind:'board',cell:{col:3,row:7}}));
   const afterTier=deriveTraits(state.preparation,'player').find(t=>t.traitId===trait)!.tier;expect(afterTier).toBe(trait==='conqueror'?2:3);
@@ -47,8 +55,21 @@ it.each(['all-for-one-ii','pair-of-fours','trifecta-ii'].flatMap(id=>[false,true
   const state={...base,m8:{...base.m8,loot:layout.states[0].m8.loot},preparation:born.state.preparation,shop:born.state.shop,rngState:born.state.rngState,resourceProvenance:born.state.resourceProvenance,sharedPool:born.state.sharedPool,multiplayer:born.state.multiplayer,pendingChoice:c};
   const selected=runSharedMatchCommand(pool,state,{type:'choose',choiceId:c.choiceId,generation:0,definitionId:id});if(!selected.ok)throw Error(selected.reason);expect(selected.ok).toBe(true);
   assertSharedPoolConservation(selected.pool,[selected.state]);
-  const gifts=p2GiftPlan(selected.state);expect(selected.pool.holdings.reduce((n,h)=>n+h.sources.length,0)).toBe(1+(exhausted?0:gifts.length));
-  expect(selected.state.gold-state.gold).toBe(exhausted?gifts.reduce((n,g)=>n+UNIT_DEFINITIONS[g.definitionId].cost,0):0);
-  for(const r of selected.state.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2'))expect(r).toMatchObject({kind:'unit',resolution:exhausted?'gold':'held'});
+  const gifts=p2GiftPlan(selected.state),orbs=readLootView(selected.state).unclaimedOrbs!.filter(o=>o.source==='mechanic');
+  expect(orbs).toHaveLength(gifts.length);
+  expect(selected.pool.holdings).toEqual(pool.holdings);expect(selected.pool.available).toEqual(pool.available);
+  expect(selected.state.gold).toBe(state.gold);expect(selected.state.preparation).toEqual(state.preparation);
+  for(const r of selected.state.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2'))expect(r).toMatchObject({kind:'unit',resolution:'orb',gold:0,unitId:null});
+  let claimed=selected;
+  for(const orb of orbs){
+    const result=runSharedMatchCommand(claimed.pool,claimed.state,{type:'claimOrb',round:claimed.state.round,orbId:orb.orbId});
+    if(!result.ok)throw Error(result.reason);claimed=result;
+    assertSharedPoolConservation(claimed.pool,[claimed.state]);
+  }
+  expect(claimed.pool.holdings.reduce((n,h)=>n+h.sources.length,0)).toBe(1+(exhausted?0:gifts.length));
+  expect(claimed.state.gold-state.gold).toBe(exhausted?gifts.reduce((n,g)=>n+UNIT_DEFINITIONS[g.definitionId].cost,0):0);
+  const receipts=readLootView(claimed.state).claimReceipts!;
+  for(const orb of orbs)expect(receipts.find(r=>r.dropId===claimed.state.m8.loot.rewardOrbs!.find(o=>o.orbId===orb.orbId)!.entries[0].dropId))
+    .toMatchObject({resolution:exhausted?'gold':'held'});
   const duplicate=runSharedMatchCommand(selected.pool,selected.state,{type:'choose',choiceId:c.choiceId,generation:0,definitionId:id});expect(duplicate.ok).toBe(false);expect(duplicate.pool).toBe(selected.pool);
 });

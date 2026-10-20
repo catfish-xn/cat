@@ -11,6 +11,7 @@ import { fillAbilityTemplate } from './ability-text';
 import { AUGMENT_ZH_TEMPLATES } from './augment-zh';
 import { describeEffect } from './effect-text';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
+import { d11ChoiceDisplay } from '../simulation/d11-display';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const ICONS = new Map(S13_AUGMENT_ASSETS.map(asset => [asset.id, asset.path]));
@@ -60,8 +61,9 @@ function p3Description(id: string): string | null {
   for (const [key, value] of Object.entries(sources[id].values)) { values[key.toLowerCase()] = value; values[`${key.toLowerCase()}*100`] = value * 100; }
   return fillAbilityTemplate(AUGMENT_ZH_TEMPLATES[id].replace(/@[^@<>\s]+@/g, token => token.toLowerCase()), values).text;
 }
+// v15 D11 choices use the rules' display text; other augments retain the P2/P3 player descriptions.
 export const augmentPlayerDescription = (id: string): string | null =>
-  p3Description(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+  d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
 /**
  * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
  * `s13P2Augment`) are left out when the augment has a player description, which already says what they do; so is the

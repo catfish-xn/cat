@@ -1,0 +1,174 @@
+{
+  "head": "1f8a921e06095a545f6874c328a6bd154a431d3c",
+  "run": 39372322168,
+  "collectedAt": "2026-10-20 05:20:38 UTC",
+  "targetSeconds": {
+    "sniper": 325.790615272,
+    "sniper-caitlyn": 329.74671361599997
+  },
+  "targetMet": false,
+  "jobs": [
+    {
+      "id": 118462717750,
+      "name": "m7-presentation-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717825,
+      "name": "test-and-build-tests-1-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717843,
+      "name": "test-and-build-tests-3-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717850,
+      "name": "input-preview-touch-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717867,
+      "name": "browser-dev-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717868,
+      "name": "test-and-build-tests-2-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717881,
+      "name": "test-and-build-headless-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717890,
+      "name": "input-dev-input-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717897,
+      "name": "input-dev-m6-performance-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717899,
+      "name": "m8-u3-dynamic",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717923,
+      "name": "m6-retention",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462717925,
+      "name": "browser-preview-mage-sample1",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 118462717928,
+      "name": "test-and-build-timing-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717935,
+      "name": "browser-preview-cannon-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717946,
+      "name": "browser-dev-cannon-sample1",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462717949,
+      "name": "test-and-build-tests-4-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717979,
+      "name": "test-and-build-performance-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717989,
+      "name": "input-preview-input-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462717993,
+      "name": "browser-preview-sniper-sample1",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 118462718001,
+      "name": "input-dev-archives-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462718024,
+      "name": "m8-u6-loot",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462718069,
+      "name": "browser-dev-mage-sample1",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462718088,
+      "name": "input-preview-layout-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118462718089,
+      "name": "input-dev-touch-sample1",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462718090,
+      "name": "input-dev-layout-sample1",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 118462718560,
+      "name": "warmup-experiment",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 118462719241,
+      "name": "heap-diagnostics",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ]
+}
