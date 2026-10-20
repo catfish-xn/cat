@@ -2,12 +2,18 @@
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { safeInputPath, writeOutputFile } from './safe-path.mjs';
 import { argumentsFor } from './plan-fetch.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
 
 const args = argumentsFor(process.argv.slice(2), ['--out', '--effect']);
 const root = await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
- const server = await createServer({ configFile: false, cacheDir: 'assets3d-local/browser-cache', server: { host: '127.0.0.1', port: 5197 } });
+const sizes = await readFile(await safeInputPath(root, resolve(root, 'size-report.json')), 'utf8').then(JSON.parse);
+const evidence = [];
+ const server = await createServer({ configFile: false, cacheDir: resolve(root, 'browser-cache'),
+  resolve: { preserveSymlinks: true }, optimizeDeps: { noDiscovery: true, entries: [] },
+  server: { host: '127.0.0.1', port: 5197 } });
 let browser;
 try {
  await server.listen();
@@ -19,10 +25,11 @@ try {
  page.on('requestfailed', r => console.log('failed', r.url(), r.failure()));
  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
  await page.route('http://127.0.0.1:*/review', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
- await page.goto(server.resolvedUrls.local[0] + 'review');
+ await page.goto(server.resolvedUrls.local[0] + 'review', { waitUntil: 'domcontentloaded' });
  for (const effect of (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',')) {
- await page.goto(server.resolvedUrls.local[0] + 'review');
- const result = await page.evaluate(async ({ base, effect }) => {
+ console.log('review-effect', effect);
+ const samples = sizes.results.find(r => r.effectId === effect)?.emitters.map(e => ({ index: e.index, time: e.opacityVisibleAt ?? e.at })) ?? [];
+ const result = await page.evaluate(async ({ base, effect, samples }) => {
   const T = await import('/node_modules/three/build/three.module.js');
   const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
   const { ParticleEffectV2 } = await import('/src/rendering3d/particles-v2.ts');
@@ -42,22 +49,30 @@ try {
   }
   const renderer = new T.WebGLRenderer({ preserveDrawingBuffer: true }); renderer.setSize(300, 220);
   for (let i = 0; i < doc.emitters.length; i++) {
-   const box = document.createElement('div'); box.textContent = i + ' ' + doc.emitters[i].kind; document.body.append(box);
+   const time = Math.max(.001, samples.find(s => s.index === i)?.time ?? .3);
+   const box = document.createElement('div'); box.textContent = i + ' ' + doc.emitters[i].kind + ' t=' + time.toFixed(3); document.body.append(box);
    const scene = new T.Scene(); scene.background = new T.Color('#15202b');
    const camera = new T.PerspectiveCamera(45,300/220,1,10000); camera.position.set(0,500,600); camera.lookAt(0,0,0);
-   const grid = new T.GridHelper(600,10,0x667788,0x334455); scene.add(grid);
+   const grid = new T.GridHelper(624,10,0x667788,0x334455); scene.add(grid);
    const fx = new ParticleEffectV2({ ...doc, emitters: [doc.emitters[i]] }, { scale: .44, texture: p => textures.get(p), mesh: p => meshes.get(p) });
-   scene.add(fx.object); fx.update(.3,camera); renderer.render(scene,camera);
+   scene.add(fx.object);
+   // Match the size audit's 50ms integration, including the initial spawn.
+   fx.update(0, camera);
+   let elapsed = 0;
+   while (elapsed < time - 1e-8) { const dt = Math.min(.05, time - elapsed); fx.update(dt, camera); elapsed += dt; }
+   renderer.render(scene,camera);
    const img = document.createElement('img'); img.src = renderer.domElement.toDataURL(); box.append(img);
    fx.dispose(); grid.geometry.dispose(); grid.material.dispose();
   }
   renderer.dispose(); renderer.forceContextLoss();
   textures.forEach(t => t.dispose()); meshes.forEach(g => g.dispose());
   return { id, emitters: doc.emitters.length, errors };
- }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect });
+ }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples });
  await page.screenshot({ path: resolve(root, 'browser-review-' + result.id + '.png'), fullPage: true });
  console.log(JSON.stringify(result));
+ evidence.push({ ...result, samples });
  }
+ await writeOutputFile(resolve(root, 'browser-review-report.json'), JSON.stringify(evidence, null, 2) + '\n', { force: true });
 } finally { await browser?.close(); await server.close(); }
 
 

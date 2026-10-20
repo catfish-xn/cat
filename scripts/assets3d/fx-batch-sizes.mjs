@@ -36,7 +36,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
     }
     const fx = new ParticleEffectV2({ ...doc, emitters: [emitter] }, { scale: 1, maxDuration: spec.maxDuration, mesh: () => geometry });
     let peak = 0, browserPeak = 0, peakAABB = 0, at = 0, nonzeroSurface = false;
-    let opacityVisiblePeak = 0, edgeAtReview = 0;
+    let opacityVisiblePeak = 0, opacityVisibleAt = 0, edgeAtReview = 0;
     for (let frame = 0; frame * .05 < spec.maxDuration; frame++) {
       fx.update(frame ? .05 : 0, camera); fx.object.updateMatrixWorld(true);
       for (const mesh of fx.object.children) {
@@ -49,7 +49,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
         // Geometry bounds do not establish visibility. Keep the old geometric
         // measure, and separately exclude zero-area/zero-opacity samples.
         if (dimensions.filter(n => n > 1e-8).length >= 2 && mesh.material.uniforms.opacity.value > 1 / 255) {
-          opacityVisiblePeak = Math.max(opacityVisiblePeak, edge);
+          if (edge > opacityVisiblePeak) { opacityVisiblePeak = edge; opacityVisibleAt = frame * .05; }
           if (frame === 6) edgeAtReview = Math.max(edgeAtReview, edge);
         }
         if (edge > peak) { peak = edge; at = frame * .05; }
@@ -59,7 +59,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
     }
     emitters.push({ index, name: accepted[index].originalFields.emitterName, kind: emitter.kind,
       peakSourceEdge: peak, at, nonzeroSurface, browserSampleSourceEdge: browserPeak, cells: browserPeak * bodyScale / CELL_DISTANCE,
-      opacityVisibleCells: opacityVisiblePeak * bodyScale / CELL_DISTANCE, reviewCells: edgeAtReview * bodyScale / CELL_DISTANCE,
+      opacityVisibleCells: opacityVisiblePeak * bodyScale / CELL_DISTANCE, opacityVisibleAt, reviewCells: edgeAtReview * bodyScale / CELL_DISTANCE,
       peakSourceAABB: peakAABB, meshSourceXYZ: geometry ? (geometry.computeBoundingBox(), geometry.boundingBox.getSize(new Vector3()).toArray()) : undefined, mappedSize0: emitter.size0, mappedSize: emitter.size, originalFields: accepted[index].originalFields });
     fx.dispose(); geometry?.dispose();
   }
