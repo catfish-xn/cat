@@ -115,6 +115,38 @@ export function approximateEmitter(input, system = {}) {
     const size = source.birthScale0?.constantValue;
     if (Array.isArray(size)) source.birthScale0 = defaultCurve([size[0], size[0], size[0]]);
   }
+  // V2 has a scalar lifetime size curve. For nonuniform XY planes retain the
+  // authored longest edge, rather than multiplying Y by X's unrelated curve.
+  // Aspect ratio animation remains approximated; strict conversion is unchanged.
+  const plane = ['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveCameraQuad'].includes(source.primitive?.__type);
+  const birth = source.birthScale0?.constantValue;
+  if (plane && !source.isUniformScale && vector(birth) && birth[0] >= 0 && birth[1] >= 0 && Math.max(...birth.slice(0, 2)) > 0 && source.scale0) {
+    const curve = source.scale0, values = curve.dynamics?.values ?? [curve.constantValue];
+    if (values.every(vector) && values.some(v => v[0] !== v[1])) {
+      note('scale0', input.scale0, 'scalar-v2-XY-long-edge-envelope-static-aspect-ratio');
+      const width = Math.max(birth[0], birth[1]);
+      const edge = v => Math.max(Math.abs(birth[0] * v[0]), Math.abs(birth[1] * v[1])) / width;
+      if (!curve.dynamics) source.scale0 = defaultCurve(Array(3).fill(edge(values[0])));
+      else {
+        const times = curve.dynamics.times, keys = new Map();
+        for (let i = 0; i < times.length; i++) {
+          keys.set(times[i], edge(values[i]));
+          if (!i || times[i] <= times[i - 1]) continue;
+          const a = values[i - 1], b = values[i];
+          // Max of four signed linear functions; insert every crossing so the
+          // interpolated scalar preserves the long edge between source keys.
+          const lines = [0, 1].flatMap(axis => [1, -1].map(sign => [birth[axis] * a[axis] * sign, birth[axis] * b[axis] * sign]));
+          for (let j = 0; j < lines.length; j++) for (let k = j + 1; k < lines.length; k++) {
+            const [a0, a1] = lines[j], [b0, b1] = lines[k];
+            const den = (a1 - a0) - (b1 - b0), f = (b0 - a0) / den;
+            if (Number.isFinite(f) && f > 0 && f < 1) keys.set(times[i - 1] + f * (times[i] - times[i - 1]), edge(a.map((v, axis) => v + f * (b[axis] - v))));
+          }
+        }
+        const sorted = [...keys].sort(([a], [b]) => a - b);
+        source.scale0 = { dynamics: { times: sorted.map(([t]) => t), values: sorted.map(([, n]) => [n, n, n]) } };
+      }
+    }
+  }
   if (source.scale0) {
     const s = source.scale0;
     const uniform = v => Array.isArray(v) ? [Math.abs(v[0]), Math.abs(v[0]), Math.abs(v[0])] : v;

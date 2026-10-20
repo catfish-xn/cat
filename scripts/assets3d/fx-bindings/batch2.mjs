@@ -1,0 +1,11 @@
+import akali from './akali.mjs';
+import amumu from './amumu.mjs';
+import camille from './camille.mjs';
+import irelia from './irelia.mjs';
+import leona from './leona.mjs';
+import morgana from './morgana.mjs';
+import nocturne from './nocturne.mjs';
+import sett from './sett.mjs';
+import tristana from './tristana.mjs';
+import zyra from './zyra.mjs';
+export const batch2Tables = { akali, amumu, camille, irelia, leona, morgana, nocturne, sett, tristana, zyra };
