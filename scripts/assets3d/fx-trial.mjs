@@ -121,8 +121,11 @@ export function trialActionBindings(manifest, systemRows, sharedRows = []) {
       ...(bone ? { bone } : {}), delay, maxDuration };
   };
   for (const [unit, rows] of Object.entries({ jinx: jinxBindings, vi: viBindings })) {
-    for (const [action, variant, suffix, phase, anchor, bone, delay, duration] of rows)
-      select(unit, suffix, variant ? variants[variant][unit][action] : actionEffects[unit][action], phase, anchor, bone, delay, duration);
+    // Keep the legacy strict output shape while sharing the per-unit tables.
+    for (const spec of rows.attack.filter(s => s.system !== '@shared-hit'))
+      select(unit, spec.system, actionEffects[unit].attack, spec.phase, spec.anchor, spec.bone, spec.delay, spec.maxDuration);
+    for (const [variant, actions] of Object.entries(rows.variants)) for (const spec of actions.cast)
+      select(unit, spec.system, variants[variant][unit].cast, spec.phase, spec.anchor, spec.bone, spec.delay, spec.maxDuration);
   }
   actionEffects.jinx.cast = [...variants.R.jinx.cast]; actionEffects.vi.cast = [...variants.Q.vi.cast];
   const missingShared = [], unboundShared = [];
