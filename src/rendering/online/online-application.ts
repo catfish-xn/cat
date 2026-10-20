@@ -202,6 +202,11 @@ export class OnlineApplication implements SceneApplication {
       const kept = new Set(after.preparation.units.map(unit => unit.id));
       if (before.preparation.units.some(unit => unit.team === 'player' && !kept.has(unit.id))) cue = 'sell';
     }
+    // A move between bench and board (or a swap) with no gold change: a soft placement thud.
+    else if (after.gold === before.gold) {
+      const spot = (state: typeof after) => state.preparation.units.filter(unit => unit.team === 'player').map(unit => `${unit.id}:${JSON.stringify(unit.location)}`).sort().join('|');
+      if (spot(before) !== spot(after)) cue = 'place';
+    }
     if (upgraded) cue = 'starUp';
     if (cue) this.sound.play(cue);
   }
@@ -213,6 +218,7 @@ export class OnlineApplication implements SceneApplication {
     if (!previous || previous.phase.kind === view.phase.kind) return;
     if (view.phase.kind === 'preparation') this.sound.play('prep');
     else if (view.phase.kind === 'combat') this.sound.play('combat');
+    else if (view.phase.kind === 'choice') this.sound.play('choice');
     else if (view.phase.kind === 'ended' && me?.rank != null) this.sound.play(me.rank <= 4 ? 'win' : 'lose');
   }
   private lastTick: number | null = null;
