@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { periodicAmount, clearRemainder, cleanPeriodicTasks, advancePeriodicTask, splitTotal, validatePeriodicTask } from '../src/simulation/m8/periodic';
 import type { PeriodicTask } from '../src/simulation/m8/contracts';
 import { amount, key, selector, source } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const task = (patch: Partial<PeriodicTask> = {}): PeriodicTask => ({ key: key(source(), 'u1'), source: source(), targetId: 'u1', nextPulseAtTick: 100, periodTicks: 100, endsAtTick: null,
   pulseOrdinal: 0, pulseLimit: null, remainders: [], finalPulse: 'none', onSourceDeath: 'cancel', onTargetDeath: 'cancel', program: {
     definitionId: 'redemption-pulse', targetSnapshot: 'once-per-pulse', selector: selector({ relation: 'ally', radius: 1, maxTargets: 100, sample: 'each-pulse' }),

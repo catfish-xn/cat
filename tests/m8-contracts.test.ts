@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CastReceipt, DamageContext, Effect, EquipmentRoundRoll, HealOutcome, M8Version, PeriodicTask, Source, SpellCritAuthorization, StatusGroup, SurvivalSample, TriggerDefinition } from '../src/simulation/m8/contracts';
 import type { CompatibilityView, LootView, RevealedDropView } from '../src/simulation/m8/ui-contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const source: Source = { ownerId: 'u1', sourceKind: 'item', definitionId: 'TFT_Item_Morellonomicon', instanceId: 'i1', effectIndex: 0, parentItemInstanceId: null };
 const burn: PeriodicTask = {

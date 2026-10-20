@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { authorizeSpellCrit, rollCrit } from '../src/simulation/m8/crit';
 import { source } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('G03 hand-calculated execution vectors', () => {
   const ie = source('ie', 'i1'), jg = source('jg', 'i2'), trait = { ...source('trait'), sourceKind: 'trait' as const };
   it('counts redundant equipment authorizations independently of slot and prior nonitem sources', () => {

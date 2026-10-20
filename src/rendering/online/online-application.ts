@@ -9,6 +9,7 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
+import { BattleOutcome } from './battle-outcome';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
@@ -17,7 +18,9 @@ import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
 import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
-import { RankingOverlay } from './ranking';
+import { EliminationCard, RankingOverlay } from './ranking';
+import { rankBattle } from '../../presentation/battle-ranking';
+import type { CombatReplay } from '../../simulation/combat-replay-view';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { OnlineBoardMounts } from '../app-shell';
@@ -74,6 +77,16 @@ export class OnlineApplication implements SceneApplication {
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
   private ranking: RankingOverlay;
+  /** Item 7 of the 2D gap list: result banner when my battle ends, bolts into my HP bar when I lose HP. */
+  private outcome: BattleOutcome;
+  /** Item 3: placement card the moment I am eliminated while the match goes on. */
+  private elimination: EliminationCard;
+  /** My battle seen playing back (its replay and PvP opponent name), so its end shows the banner once. */
+  private watched: { readonly replay: CombatReplay; readonly opponent: string | null } | null = null;
+  /** HP I lost in the last view push, and my rank if that push eliminated me: both wait for the playback to end. */
+  private pendingHit: number | null = null;
+  private pendingRank: number | null | undefined = undefined;
+  private hitLanding = false;
   private view: PlayerView | null = null;
   /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
   get roomInCombat(): boolean { return this.view?.phase.kind === 'combat'; }
@@ -98,6 +111,8 @@ export class OnlineApplication implements SceneApplication {
     this.leftToggle = new LeftPanelToggle();
     const topbar = this.sidebar.root.querySelector('.online-topbar'); topbar?.insertBefore(this.sound.createToggle(), topbar.querySelector('.online-connection'));
     this.ranking = new RankingOverlay(document.body, () => this.again());
+    this.outcome = new BattleOutcome(frame);
+    this.elimination = new EliminationCard(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); this.commandSound(change); });
     document.addEventListener('visibilitychange', this.visibility);
@@ -199,6 +214,7 @@ export class OnlineApplication implements SceneApplication {
   private lastTick: number | null = null;
   private onView(view: PlayerView) {
     if (this.mode !== 'online-lobby') this.viewSound(view);
+    if (this.mode === 'active') this.noteOutcome(view);
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     this.syncSpectating(view);
     this.syncCarousel(view);
@@ -206,6 +222,7 @@ export class OnlineApplication implements SceneApplication {
     if (view.phase.kind === 'ended') {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
+      this.elimination.hide(); this.pendingHit = null; this.pendingRank = undefined;
       if (view.ranking) this.ranking.render(view.ranking, view.mySeatId);
       else if (view.fault) { this.ranking.renderFault(view.fault.detail); this.hooks.status(`对局异常结束：${view.fault.detail}`); }
       return;
@@ -217,6 +234,43 @@ export class OnlineApplication implements SceneApplication {
     this.syncStatus(view);
   }
   private lastPhase = '';
+  /** Remembers what the last push did to my seat (HP lost, eliminated); `flushOutcome` shows it once my battle stops playing. */
+  private noteOutcome(view: PlayerView) {
+    const me = view.seats.find(seat => seat.seatId === view.mySeatId);
+    const before = this.view?.seats.find(seat => seat.seatId === view.mySeatId);
+    if (!me || !before || view.phase.kind === 'ended') return;
+    if (me.hp < before.hp) this.pendingHit = (this.pendingHit ?? 0) + before.hp - me.hp;
+    if (before.alive && !me.alive) this.pendingRank = me.rank;
+  }
+  /** Per frame: the banner when my battle stops playing back, then the bolts, then the placement card. */
+  private flushOutcome() {
+    const live = this.session.liveBattle;
+    if (live) {
+      if (this.watched?.replay !== live.replay) {
+        const opponent = this.view?.seats.find(seat => seat.seatId === this.view?.opponentSeatId)?.name ?? null;
+        this.watched = { replay: live.replay, opponent };
+      }
+      return;
+    }
+    const watched = this.watched;
+    if (watched) {
+      this.watched = null;
+      if (this.mode === 'active' && this.session.lastBattle?.replay === watched.replay) this.outcome.showResult(watched.replay.terminal.result ?? null, watched.opponent);
+    }
+    if (this.mode !== 'active' || this.hitLanding) return;
+    if (this.pendingHit !== null) {
+      const damage = this.pendingHit; this.pendingHit = null;
+      const source = document.getElementById('board-root'), target = this.sidebar.root.querySelector<HTMLElement>('.online-seat.me .seat-bar');
+      if (source && target) {
+        // One bolt per enemy unit still standing at the end of my last battle (TFT); at least one.
+        const battle = this.session.lastBattle, survivors = battle ? rankBattle(battle.replay).rows.filter(row => row.team !== 'player' && row.alive).length : 1;
+        this.hitLanding = true;
+        this.outcome.hit(source, target, survivors, damage, () => { this.hitLanding = false; });
+        return;
+      }
+    }
+    if (this.pendingRank !== undefined) { const rank = this.pendingRank; this.pendingRank = undefined; this.elimination.show(rank); }
+  }
   /** G1-P7: the carousel panel shows exactly while the server view carries one. */
   private syncCarousel(view: PlayerView) {
     if (view.carousel) this.carousel.render(view.carousel, view.seats, view.mySeatId, view.phase.serverNow);
@@ -256,6 +310,7 @@ export class OnlineApplication implements SceneApplication {
   private toggleBoard(seatId: string) {
     const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
     if (!view || !seat) return;
+    this.elimination.hide(); // opening a board means watching on
     this.opponentBoard.toggle(seat, seatId === view.mySeatId);
     this.sidebar.setViewing(this.opponentBoard.openSeatId);
   }
@@ -290,7 +345,8 @@ export class OnlineApplication implements SceneApplication {
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
-    this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
+    this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
+    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();
@@ -298,7 +354,7 @@ export class OnlineApplication implements SceneApplication {
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
-    this.sidebar.tick(); this.carousel.tick(); this.syncSummary();
+    this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
     // Last three seconds of a preparation: one tick per second.
     const seconds = this.mode === 'active' && !this.spectating && this.view?.phase.kind === 'preparation' ? this.sidebar.secondsLeft() : null;
     if (seconds !== this.lastTick) { this.lastTick = seconds; if (seconds !== null && seconds >= 1 && seconds <= 3) this.sound.play('tick'); }
@@ -327,7 +383,7 @@ export class OnlineApplication implements SceneApplication {
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, leftCollapsed: this.leftToggle.isCollapsed, sound: { muted: this.sound.isMuted, played: [...this.sound.played] }, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
-    battleSummary: this.summary.debug(), economy: this.economy.debug(),
+    battleSummary: this.summary.debug(), outcome: this.outcome.debug(), eliminationCard: this.elimination.showing, economy: this.economy.debug(),
     opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselSide: this.carousel.showing, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
@@ -335,7 +391,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

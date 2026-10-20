@@ -4,6 +4,9 @@ import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 // v15 seed selected by the independent loot/augment oracle, then verified via
 // public commands: same 65G/73HP/128 investment base and exact 2-7 loot vector.
 let preparation=api.createMatch(3374947733);

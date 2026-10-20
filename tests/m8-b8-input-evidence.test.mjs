@@ -6,6 +6,9 @@ import * as api from '../src/simulation/match';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { validateB8RagebladeEvidence } from '../scripts/b8-input-evidence.cjs';
 import { hash } from '../scripts/m4-evidence.cjs';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /* Audit P2-2 negative controls for the final comparator's B8 Rageblade gate. A genuine
  * evidence set is produced from public commands exactly as the input gate records it

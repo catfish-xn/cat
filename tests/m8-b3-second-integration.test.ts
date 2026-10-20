@@ -12,6 +12,9 @@ import { aggregateStats } from '../src/stats/aggregate';
 import { amount, source, trigger, modifier } from './fixtures/m8-contract-cases';
 import { battle, unit } from './combat-helpers';
 import { activityEvents, healView, heals as healViews, packets, statusEvents } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const s = (id: string, owner = 'p') => source(id, id, owner);
 function dummy(id: string, team: 'player' | 'enemy', col: number, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, team, col, 3, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1), hp: 10000, maxHp: 10000, armor: 0, magicResist: 0,

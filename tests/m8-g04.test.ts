@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { applyStatusContribution, effectiveStatuses, endStatuses, cleanseStatuses, advanceBurnClock } from '../src/simulation/m8/status';
 import type { StatusApplication, StatusGroup } from '../src/simulation/m8/contracts';
 import { key, source } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const app = (kind: StatusApplication['kind'], magnitudeBps: number, ticks: number, activation: StatusApplication['activation'] = 'immediate'): StatusApplication => ({
   kind, magnitudeBps, activation, duration: { kind: 'ticks', ticks }, stackPolicy: { kind: 'strongest-category', category: kind, retainSuppressed: true },
   polarity: 'harmful', removable: true, damageFilter: null, onEnd: null,

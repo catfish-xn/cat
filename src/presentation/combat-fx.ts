@@ -69,10 +69,8 @@ export class CombatFx {
         const from = at(spec.at);
         const effect = add.graphics().setDepth(20).lineStyle(5, spec.color, 0.95).strokeCircle(from.x, from.y, 34).lineStyle(2, 0xffffff, 0.8).strokeCircle(from.x, from.y, 38);
         for (const cell of spec.targets) { const to = at(cell); effect.lineStyle(3, spec.color, 0.85).lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 30); }
-        this.host.fade(effect, spec.duration - 100);
-        const label = add.text(from.x, from.y, spec.label, { fontSize: '13px', fontStyle: 'bold', color: '#ffffff',
-          backgroundColor: Phaser.Display.Color.IntegerToColor(spec.color).rgba, padding: { x: 4, y: 1 }, resolution: 2 }).setOrigin(0.5).setDepth(22);
-        this.place(label, from, -58, spec.duration + 100); this.casts++;
+        // I3: rings only; the 14.24 client names no ability on the board.
+        this.host.fade(effect, spec.duration - 100); this.casts++;
       } else if (spec.kind === 'ring') {
         const p = at(spec.at);
         this.host.fade(add.graphics().setDepth(20).lineStyle(4, spec.color, 0.95).strokeCircle(p.x, p.y, spec.radius), spec.duration);

@@ -19,17 +19,20 @@ import type { CombatState } from '../simulation/combat-types';
 import { isLedgerEvent, type CombatViewState, type SceneCombatEvent } from '../presentation/combat-display';
 import { readCombatStats } from '../simulation/combat-s13';
 import { previewRoundEconomy } from '../simulation/economy-preview';
+import { ECONOMY_RULES } from '../simulation/match-rules';
 import { combatEventText, originLabel, viewEventLine } from './combat-feedback';
 import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
+import { planPurchase } from '../simulation/upgrades';
+import { isCombatRosterLocked } from '../simulation/operation-policy';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
@@ -103,6 +106,28 @@ interface PanelActions {
 
 /** Fired on the panel root (bubbling) for every explicit status message. */
 export const PANEL_STATUS_EVENT = 'hex-panel-status';
+/**
+ * Shop slots whose purchase would star up one of my heroes, with the resulting star (TFT shop glow). Each hero's copies
+ * in the shop are bought in slot order through the rules' own `planPurchase`; once a purchase merges, every copy of
+ * that hero lights up (any of them completes the set). Gold is ignored as in TFT; a roster the planner rejects shows no glow.
+ */
+export function shopUpgradeStars(state: MatchState): Map<number, number> {
+  const result = new Map<number, number>(), benchOnly = isCombatRosterLocked(state), slotsOf = new Map<string, number[]>();
+  state.shop.slots.forEach((offer, slot) => { if (offer.status === 'available') slotsOf.set(offer.definitionId, [...slotsOf.get(offer.definitionId) ?? [], slot]); });
+  for (const [definitionId, slots] of slotsOf) {
+    try {
+      let preparation = state.preparation;
+      for (let index = 0; index < slots.length; index++) {
+        const plan = planPurchase(preparation, definitionId, `shop-preview-${index}`, benchOnly);
+        if (!plan.ok) break;
+        const star = Math.max(0, ...plan.events.map(event => event.toStar));
+        if (star) { for (const slot of slots) result.set(slot, star); break; }
+        preparation = plan.preparation;
+      }
+    } catch { /* unknown definition or invalid roster: no glow */ }
+  }
+  return result;
+}
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
   for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
@@ -187,7 +212,7 @@ export class StrategyPanel {
     private readonly itemDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     if (this.shopDock) this.shopDock.classList.add('shop-dock');
-    if (this.itemDock) { this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
+    if (this.itemDock) { this.tab = 'traits'; this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
@@ -336,7 +361,7 @@ export class StrategyPanel {
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
-    chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).filter(Boolean).join('；')].filter(Boolean).join('\n');
+    chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
     chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
     return chip;
   }
@@ -457,11 +482,17 @@ export class StrategyPanel {
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
-    const chip = (label: string, value: string, kind: string) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); stats.append(node); };
+    const chip = (label: string, value: string, kind: string, extra?: HTMLElement) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); stats.append(node); };
+    // TFT's interest pips: one per 10 banked gold, five at most. Display only; the payout itself is the economy preview's.
+    const pipCount = Math.min(ECONOMY_RULES.interestCap, Math.floor(state.gold / ECONOMY_RULES.interestDivisor));
+    const pips = element('span', '', 'hud-interest-pips'); pips.dataset.count = String(pipCount); pips.title = `利息档 ${pipCount}/${ECONOMY_RULES.interestCap}（每 ${ECONOMY_RULES.interestDivisor} 金一档）`;
+    for (let i = 0; i < ECONOMY_RULES.interestCap; i += 1) pips.append(element('i', '', i < pipCount ? 'pip on' : 'pip'));
+    const xpBar = element('span', '', 'hud-xp-bar'); xpBar.title = xp === null ? '已满级' : `经验 ${state.xp}/${xp}`;
+    const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill);
     // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
-    if (dock) chip('金币', `${state.gold}`, 'gold'); else chip('生命', String(state.playerHp), 'hp');
-    if (!dock) chip('金币', `${state.gold}`, 'gold');
-    chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level');
+    if (dock) chip('金币', `${state.gold}`, 'gold', pips); else chip('生命', String(state.playerHp), 'hp');
+    if (!dock) chip('金币', `${state.gold}`, 'gold', pips);
+    chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level', xpBar);
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
     if (dock) dock.append(stats); else head.append(stats);
@@ -532,15 +563,18 @@ export class StrategyPanel {
     // Online keeps an empty slot so the panel can appear once my battle has played out (updateCombat).
     this.lootSection = this.lootPanel(state) ?? (isOnline() ? Object.assign(element('section'), { hidden: true }) : null);
     if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? (this.itemDock ? '把装备栏的物品拖到棋子上装备；两件组件在棋子身上合成。' : '点物品选择；两件组件可合成；选物品后点空装备槽。') : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     // Online (docked) drops the battle-record tab: rounds move on by themselves and there is nothing to look back at.
     const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const;
-    if (this.itemDock && this.tab === 'events') this.tab = 'items';
+    if (this.itemDock && this.tab === 'events') this.tab = 'traits';
     for (const [tab, label] of tabList.filter(([tab]) => !this.itemDock || tab !== 'events')) {
       const button = this.button(`panel:${tab}`, label, () => { this.actions.cancelGesture(); this.tab = tab; this.render(); });
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
+      // Docked (online, TFT): items are dragged from the board's item bench onto a piece, so the click-to-equip tab is
+      // hidden; its markup stays until the scripted checks that drive it move to drags.
+      if (this.itemDock && tab === 'items') button.hidden = true;
     }
     this.root.append(tabs);
     this.combatText = element('section', '', 'combat-sources');
@@ -877,7 +911,7 @@ export class StrategyPanel {
     const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验${generic ? '：收起弹窗即可操作' : '（D 刷新、F 购买经验）'}。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
@@ -887,6 +921,7 @@ export class StrategyPanel {
       const targets = element('div', '', 'choice-targets');
       for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
+      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
       if (choice.kind === 'anomaly') {
         const target = state.preparation.units.find(unit => unit.id === choice.targetId);
@@ -899,7 +934,7 @@ export class StrategyPanel {
         if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
         // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
-        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；')
+        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
           : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
         const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
@@ -922,13 +957,7 @@ export class StrategyPanel {
         slot.append(button, reroll); offers.append(slot);
       }
       card.append(offers);
-      if (generic) {
-        // Extras slot: skip only when the choice declares it (disabled until a command is wired); fold always.
-        const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-        if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
-        row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
-        card.append(row);
-      }
+      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
     this.modal.append(card);
@@ -951,6 +980,14 @@ export class StrategyPanel {
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
+  /** Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments and anomaly targets can be hidden to view the board. */
+  private choiceExtras(choice: MatchState['pendingChoice'] & object, title: string, generic: boolean, extras: ReturnType<typeof readChoiceExtras>): HTMLElement {
+    const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
+    if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+    row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
+    return row;
+  }
+
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
@@ -1095,6 +1132,7 @@ export class StrategyPanel {
   private renderShop(state: MatchState, ready: boolean): void {
     const section = element('section', '', 'shop-panel');
     const shop = element('div', '', 'touch-shop');
+    const upgrades = shopUpgradeStars(state);
     state.shop.slots.forEach((offer, slot) => {
       const definition = offer.status === 'available' ? UNIT_DEFINITIONS[offer.definitionId] : null;
       const affordable = definition ? state.gold >= definition.cost : false;
@@ -1106,7 +1144,12 @@ export class StrategyPanel {
         button.dataset.unitDef = definition.id; button.dataset.unitStar = '1';
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
         button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
-        button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
+        const upgrade = upgrades.get(slot);
+        if (upgrade) {
+          button.classList.add('upgrade'); button.dataset.upgradeStar = String(upgrade);
+          const badge = element('span', '★'.repeat(upgrade), 'shop-upgrade'); badge.dataset.debug = `shop:upgrade-${slot}`; button.append(badge);
+        }
+        button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}${upgrade ? `，可升 ${upgrade} 星` : ''}`);
       } else {
         // A shared-pool empty slot (online, §12.3) is out of stock, not a purchase; neither shows a hero.
         const empty = isEmptyShopSlot(offer);

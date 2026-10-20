@@ -4,6 +4,12 @@
  * the UI shows the 14.24 zh_CN client name for every augment (user decision 2026-10-16).
  */
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
+import { S13_P2_SOURCE } from '../simulation/content/s13-augments-p2-source';
+import { S13_P3_SOURCE } from '../simulation/content/s13-p3-source';
+import type { Effect } from '../simulation/strategy-types';
+import { fillAbilityTemplate } from './ability-text';
+import { AUGMENT_ZH_TEMPLATES } from './augment-zh';
+import { describeEffect } from './effect-text';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
 import { d11ChoiceDisplay } from '../simulation/d11-display';
 
@@ -38,16 +44,35 @@ export function augmentIconHtml(id: string, size: number, className = 'augment-i
 }
 
 /**
- * The first six augments were authored with a player-facing description; the W4 batch's
- * `description` is an implementation note, so the choice card shows only the effect text.
+ * Augments whose content `description` is player text: the first six authored ones, the economy/acquisition batch, and the
+ * P2 batch (14.24 zh_cn client text with its source values already written in). The W4 batch's `description` is an
+ * implementation note, so the choice card shows only the effect text for those.
  */
-const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i', 'pumping-up-i', 'investment-strategy-i', 'bulky-buddies-i']);
+const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i', 'pumping-up-i', 'investment-strategy-i', 'bulky-buddies-i',
+  'blinding-speed', 'portable-forge', 'radiant-relics', 'going-long', 'hedge-fund', 'investment-strategy-ii', ...Object.keys(S13_P2_SOURCE)]);
 /**
- * Player text of an augment: the authored description of the first six, and (v15 D11-DISPLAY) the rules' own display
- * description of 一费奉献 I / 三项赛 I / 灵魂连接 (d11ChoiceDisplay, the same text the private view's d11Display carries).
+ * P3 augments: the zh_cn client template (`augment-zh.ts`) filled with the rules' source values. Tokens match keys
+ * case-insensitively as the client does; `@Key*100@` is the source fraction shown as a percent. Formatting only.
  */
-export const augmentPlayerDescription = (id: string): string | null => AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null
-  : d11ChoiceDisplay(id)?.description ?? null;
+function p3Description(id: string): string | null {
+  const sources: Readonly<Record<string, { readonly values: Readonly<Record<string, number>> }>> = S13_P3_SOURCE;
+  if (!Object.hasOwn(AUGMENT_ZH_TEMPLATES, id) || !Object.hasOwn(sources, id)) return null;
+  const values: Record<string, number> = {};
+  for (const [key, value] of Object.entries(sources[id].values)) { values[key.toLowerCase()] = value; values[`${key.toLowerCase()}*100`] = value * 100; }
+  return fillAbilityTemplate(AUGMENT_ZH_TEMPLATES[id].replace(/@[^@<>\s]+@/g, token => token.toLowerCase()), values).text;
+}
+// v15 D11 choices use the rules' display text; other augments retain the P2/P3 player descriptions.
+export const augmentPlayerDescription = (id: string): string | null =>
+  d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+/**
+ * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
+ * `s13P2Augment`) are left out when the augment has a player description, which already says what they do; so is the
+ * one-off gold (`acquisitionGold`), which every such description already states (对冲基金, 安慰剂: no gold twice).
+ */
+export function augmentEffectText(id: string): string {
+  const effects: readonly Effect[] = AUGMENT_DEFINITIONS[id]?.effects ?? [], described = augmentPlayerDescription(id) !== null;
+  return effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；');
+}
 
 /** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */
 export const AUGMENT_TIER_TEXT: Readonly<Record<import('../simulation/augment-offers').AugmentTier, string>> = {

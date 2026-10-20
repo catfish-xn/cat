@@ -14,7 +14,7 @@ import { heroEmblemSvg } from './hero-identity';
 import { itemMarkHtml } from './item-codex';
 import type { LootLabels } from './loot-view';
 import { NEXT_BATTLE_TEXT, takesEffectNextBattle } from './equipment-feedback';
-import { itemDisplayName } from './g23-display';
+import { itemDisplayName, lootEntry } from './g23-display';
 
 /** The orb part of a LootView, or of the private view's revealedLoot (§18.4): the same three fields. */
 export type OrbLoot = Pick<LootView, 'roundId' | 'revealedDrops' | 'revealedOrbs'>;
@@ -39,10 +39,21 @@ const FORFEIT_TEXT: Readonly<Record<'timeout-forfeited' | 'eliminated-forfeited'
   'eliminated-forfeited': '本席已淘汰，未入库的奖励已放弃',
 };
 
-/** A one-glyph mark per tool kind (presentation only; the name and description are the content table's). */
-const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, string>> = { 'magnetic-remover': '拆', 'component-reforger': '铸', 'completed-reforger': '铸' };
+/**
+ * Tool icon: the 14.24 client icon of the matching consumable (both reforgers use the one Reforger icon), with a
+ * one-glyph mark as fallback (presentation only; the name and description are the content table's).
+ */
+const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: string; readonly apiName: string }>> = {
+  'magnetic-remover': { glyph: '拆', apiName: 'TFT_Consumable_ItemRemover' },
+  'component-reforger': { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
+  'completed-reforger': { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
+};
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
-const toolMark = (id: string) => `<span class="consumable-mark" aria-hidden="true">${TOOL_MARK[id as ConsumableDefinitionId] ?? '?'}</span>`;
+export function toolMark(id: string): string {
+  const mark = TOOL_MARK[id as ConsumableDefinitionId], url = mark ? lootEntry(mark.apiName)?.iconUrl : null;
+  return url ? `<img class="consumable-mark consumable-icon" data-glyph="${mark!.glyph}" src="${url}" alt="" draggable="false" loading="lazy" decoding="async">`
+    : `<span class="consumable-mark" aria-hidden="true">${mark?.glyph ?? '?'}</span>`;
+}
 
 /** §18.8 03 wording for the seven ConsumableFailure codes. */
 export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>> = {

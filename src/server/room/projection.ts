@@ -1,7 +1,7 @@
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized. Other seats'
- * deployed units and their items are public (C5, `publicBoard`). A seat's own state leaves only
+ * board and bench units, items and augments are public (C5, `publicBoard`). A seat's own state leaves only
  * as the rules' `toPrivateSeatView` (B7, contract §14.1), its battle as a compact replay (§14.2).
  */
 import type { HexCell } from '../../simulation/board';
@@ -10,7 +10,7 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, ItemSummonView, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
 import { listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
 import { findPairing } from './pairing';
@@ -32,17 +32,21 @@ export function toPublicOrbs(match: MatchState): PublicOrbSummary {
 }
 
 /**
- * Public build of one seat (C5): its own units deployed on the board, each with the definition ids of the
- * items it holds. Built field by field from the preparation state; bench, shop, gold, XP, item instance ids
- * and RNG never leave the room. Sorted by cell so equal boards serialize identically.
+ * Public build of one seat (C5, 2026-10-20 scouting): its own board and bench units, each with the definition ids
+ * of the items it holds and of its bound anomaly, its unequipped item definitions and its owned augment definitions. Built field by field
+ * from the preparation state; shop, gold, XP, streak, pending choices, unit/item instance ids and RNG never leave
+ * the room. Board sorted by cell and bench by slot so equal builds serialize identically.
  */
 export function toPublicBoard(match: MatchState): PublicBoard {
-  const units: PublicBoardUnit[] = [];
+  const units: PublicBoardUnit[] = [], bench: PublicBenchUnit[] = [];
+  const heldBy = (unitId: string) => match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
+    .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0))
+    .map(item => item.definitionId);
+  const anomalyOf = (unitId: string) => match.anomalyBinding?.unitId === unitId ? { anomaly: match.anomalyBinding.definitionId } : {};
   for (const unit of match.preparation.units) {
-    if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
-    const held = match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
-      .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
-    units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: held.map(item => item.definitionId) });
+    if (unit.team !== 'player') continue;
+    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });
+    else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id), ...anomalyOf(unit.id) });
   }
   // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
   for (const summon of readItemSummons(match)) {
@@ -51,7 +55,9 @@ export function toPublicBoard(match: MatchState): PublicBoard {
     units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: [], summon: true });
   }
   units.sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
-  return { units };
+  bench.sort((a, b) => a.slot - b.slot);
+  return { units, bench, looseItems: match.items.filter(item => item.location.kind === 'inventory').map(item => item.definitionId),
+    augments: match.augments.map(augment => augment.definitionId) };
 }
 
 export function toPlayerView(room: RoomState, seatId: string, serverNow: number): PlayerView {

@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import * as replayCombat from '../src/simulation/combat';
 import * as content from '../src/simulation/content';
 import { BattleHistory } from '../src/replay/history';
@@ -12,6 +12,13 @@ import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
+
+// Acquisition is input preparation; all behavior and restoration stay in cases.
+for (const options of [
+  { seed: 77 }, { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] },
+  { seed: 42 }, { seed: 112 },
+]) beforeAll(() => { acquireEquipment(['rod'], options); });
+beforeAll(() => { publicEquipmentPreparation(['rod']); });
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
 // The two public Sion positions are copied from c0fe4c1; no battle facts are patched.

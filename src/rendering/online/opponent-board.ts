@@ -1,8 +1,9 @@
 /**
  * Read-only "对方阵容" panel (work order C5): opened by clicking a seat in the right column, it floats over
  * the top of my board without replacing it. It shows what the server published as that seat's public
- * board (deployed units, stars, items) and the traits those units activate. It sends no command and
- * reads no private state: everything comes from `SeatPublic.publicBoard`.
+ * build (board and bench units, stars, items, anomalies, unequipped items, augments) and the traits the board units
+ * activate. Streak, gold and shop are not published. It sends no command and reads no private state:
+ * everything comes from `SeatPublic.publicBoard`.
  */
 import type { Board } from '../../simulation/board';
 import type { GameState } from '../../simulation/game';
@@ -15,9 +16,13 @@ import { attachItemPopover } from '../../presentation/item-codex';
 import { traitHoverCard } from '../../presentation/hover-card';
 import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
-import type { PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
-import { itemDisplayName } from '../../presentation/g23-display';
+import type { PublicBenchUnit, PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
+import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../../presentation/g23-display';
+import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../../presentation/augment-display';
 import { publicOrbsElement, readPublicOrbs } from './orb-dock';
+
+/** Bench slots drawn when the seat's bench is shorter (TFT bench width); a longer bench draws every slot. */
+const BENCH_SLOTS = 9;
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -108,7 +113,7 @@ export class OpponentBoardPanel {
       for (let col = 0; col < layout.columns; col++) {
         const unit = byCell.get(`${col},${row}`);
         const cell = element('div', '', `opponent-cell${unit ? ' filled' : ''}`);
-        if (unit) cell.append(this.unitChip(unit));
+        if (unit) cell.append(this.unitChip(unit, `${unit.cell.col},${unit.cell.row}`));
         line.append(cell);
       }
       grid.append(line);
@@ -118,20 +123,63 @@ export class OpponentBoardPanel {
     const traits = renderTraitRows(this.rows, 'online:opponent-traits', board.units.some(unit => !unit.summon) ? '无羁绊' : '场上暂无单位');
     traits.classList.add('opponent-traits');
     for (const row of Array.from(traits.children)) row.classList.add('opponent-trait');
-    traits.title = '只读 · 仅显示场上单位与装备（不含备战席、商店、金币）';
-    this.root.replaceChildren(head, grid, traits);
+    traits.title = '只读 · 羁绊按场上单位计算（不含商店、金币、连胜）';
+    this.root.replaceChildren(head, this.augmentRow(board.augments ?? []), grid, this.benchRow(board.bench ?? []), this.looseItemRow(board.looseItems ?? []), traits);
   }
-  private unitChip(unit: PublicBoardUnit): HTMLElement {
+  /** 2026-10-20 scouting: the seat's owned augments, in the order acquired. */
+  private augmentRow(augments: readonly string[]): HTMLElement {
+    const row = element('div', '', 'opponent-augments'); row.dataset.debug = 'online:opponent-augments';
+    if (!augments.length) { row.append(element('span', '暂无强化', 'opponent-empty')); return row; }
+    for (const id of augments) {
+      const chip = element('span', augmentDisplayName(id), 'opponent-augment'); chip.dataset.augment = id;
+      chip.title = [augmentDisplayName(id), augmentPlayerDescription(id)].filter(Boolean).join('\n');
+      chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 18));
+      row.append(chip);
+    }
+    return row;
+  }
+  /** 2026-10-20 scouting: the seat's bench, slot by slot, with the items its units hold. */
+  private benchRow(bench: readonly PublicBenchUnit[]): HTMLElement {
+    const row = element('div', '', 'opponent-bench'); row.dataset.debug = 'online:opponent-bench'; row.setAttribute('aria-label', '备战席');
+    const bySlot = new Map(bench.map(unit => [unit.slot, unit]));
+    const slots = Math.max(BENCH_SLOTS, ...bench.map(unit => unit.slot + 1));
+    for (let slot = 0; slot < slots; slot++) {
+      const unit = bySlot.get(slot), cell = element('div', '', `opponent-cell${unit ? ' filled' : ''}`);
+      if (unit) cell.append(this.unitChip(unit, `bench-${slot}`));
+      row.append(cell);
+    }
+    return row;
+  }
+  /** 2026-10-20 scouting: items no unit holds (the item bench). */
+  private looseItemRow(items: readonly string[]): HTMLElement {
+    const row = element('div', '', 'opponent-loose-items'); row.dataset.debug = 'online:opponent-loose-items';
+    if (!items.length) { row.hidden = true; return row; }
+    row.append(element('span', '装备', 'opponent-loose-label'));
+    for (const id of items) {
+      const mark = element('span', '', 'opponent-item'); mark.dataset.itemDef = id; mark.title = itemDisplayName(id);
+      mark.insertAdjacentHTML('afterbegin', itemMarkHtml(id, 18)); row.append(mark);
+    }
+    return row;
+  }
+  private unitChip(unit: PublicBoardUnit | PublicBenchUnit, place: string): HTMLElement {
     const identity = getHeroIdentity(unit.definitionId);
     const chip = element('div', '', `opponent-unit cost-${UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0}`);
-    chip.dataset.debug = `online:opponent-unit:${unit.cell.col},${unit.cell.row}`;
+    chip.dataset.debug = `online:opponent-unit:${place}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(unit.starLevel);
     // G2-4b: a summon's card would show champion base stats, not its stage values; its title names it instead.
-    if (unit.summon) chip.dataset.summon = 'true';
+    const summon = 'summon' in unit && unit.summon === true;
+    if (summon) chip.dataset.summon = 'true';
     else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel); }
-    chip.title = `${identity.name}${unit.summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
+    chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
+    if (unit.anomaly) {
+      // 2026-10-20 scouting: the anomaly bound to this unit, marked on its portrait with the shared anomaly icon.
+      const name = anomalyDisplayName(unit.anomaly), mark = element('span', '', 'opponent-anomaly');
+      mark.dataset.anomaly = unit.anomaly; mark.title = [`异常：${name}`, anomalyPlayerDescription(unit.anomaly)].filter(Boolean).join('\n');
+      mark.insertAdjacentHTML('afterbegin', anomalyIconHtml(14) || '<b>异</b>');
+      chip.title += ` · 异常：${name}`; chip.append(mark);
+    }
     if (unit.items.length) {
       const items = element('span', '', 'opponent-items');
       for (const id of unit.items) {

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 describe('B8 public equipment fixture provenance', () => {
   it('wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword', () => {
