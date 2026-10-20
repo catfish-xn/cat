@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toPlayerView } from '../../src/server/room/projection';
 import type { RoomState } from '../../src/server/room/types';
@@ -10,6 +10,14 @@ const opponentOf = (state: RoomState, seatId: string): string | null => {
 };
 
 describe('G1-P6 room: candidates in preparation, opponent at the freeze', () => {
+  let connectionInput: ReturnType<typeof makeRoom>;
+  beforeAll(() => {
+    connectionInput = makeRoom(new TwoSidedBattleResolver());
+    connectionInput.room.start();
+    runUntil(connectionInput.room, connectionInput.clock, state => state.roundKind === 'pvp' && state.phase === 'preparation' && Object.keys(state.pairingHistory).length > 0, 2_000);
+  });
+  afterAll(() => { connectionInput.room.dispose(); });
+
   it('every frozen opponent was a shown candidate; only PvP rounds grow the history', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     const shown = new Map<number, Map<string, readonly string[]>>();
@@ -47,9 +55,7 @@ describe('G1-P6 room: candidates in preparation, opponent at the freeze', () => 
   }, 60_000);
 
   it('a disconnect, a takeover and a resume leave the candidates unchanged (they live in the room state)', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
-    runUntil(room, clock, state => state.roundKind === 'pvp' && state.phase === 'preparation' && Object.keys(state.pairingHistory).length > 0, 2_000);
+    const { room, clock } = connectionInput;
     const before = toPlayerView(room.state, 's0', clock.now()).opponentCandidates;
     expect(room.setConnected('s0', false)).toBe(true);
     expect(room.takeOver('s0')).toBe(true);

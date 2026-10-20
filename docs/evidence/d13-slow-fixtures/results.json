@@ -325,6 +325,926 @@
       "after_ms": 38.5,
       "before_status": "passed",
       "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "name": "pins all eleven exact Set13 identities, bilingual descriptions and map22 values",
+      "before_ms": 1392.131,
+      "after_ms": 13.306,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "name": "keeps normal-mode economy values and the original 14.24 trench threshold",
+      "before_ms": 1.116,
+      "after_ms": 0.604,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "name": "keeps every admitted runtime identity/name/uniqueness equal to the pinned original data",
+      "before_ms": 0.582,
+      "after_ms": 0.626,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C02 rejects invented processed keys on a holder without triggers",
+      "before_ms": 89.613,
+      "after_ms": 56.037,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+      "before_ms": 32.584,
+      "after_ms": 27.511,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+      "before_ms": 31.296,
+      "after_ms": 30.28,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+      "before_ms": 26.258,
+      "after_ms": 22.494,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: victim",
+      "before_ms": 30.699,
+      "after_ms": 24.133,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: holder",
+      "before_ms": 21.784,
+      "after_ms": 21.953,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+      "before_ms": 23.827,
+      "after_ms": 24.87,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: rngState",
+      "before_ms": 52.098,
+      "after_ms": 35.269,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: rngDraws",
+      "before_ms": 38.07,
+      "after_ms": 24.959,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: nextActionSeq",
+      "before_ms": 28.283,
+      "after_ms": 26.873,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: nextEventSeq",
+      "before_ms": 31.527,
+      "after_ms": 25.132,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+      "before_ms": 687.483,
+      "after_ms": 106.506,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+      "before_ms": 3945.462,
+      "after_ms": 167.913,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C07 authenticates a live periodic fractional account",
+      "before_ms": 815.391,
+      "after_ms": 100.096,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C07 authenticates burn phase even when the group and task agree",
+      "before_ms": 119.564,
+      "after_ms": 85.769,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+      "before_ms": 277.752,
+      "after_ms": 219.99,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+      "before_ms": 85.71,
+      "after_ms": 76.782,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C09 binds the activity duration even with a matching legacy status",
+      "before_ms": 60.965,
+      "after_ms": 68.969,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C09 binds the activity share even with a matching legacy status",
+      "before_ms": 52.761,
+      "after_ms": 57.761,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+      "before_ms": 20.787,
+      "after_ms": 20.926,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+      "before_ms": 19.225,
+      "after_ms": 17.425,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+      "before_ms": 23.759,
+      "after_ms": 18.259,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+      "before_ms": 20.938,
+      "after_ms": 22.104,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+      "before_ms": 18.403,
+      "after_ms": 17.151,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+      "before_ms": 18.52,
+      "after_ms": 16.756,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+      "before_ms": 18.142,
+      "after_ms": 14.122,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+      "before_ms": 42.815,
+      "after_ms": 42.643,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+      "before_ms": 57.292,
+      "after_ms": 58.3,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+      "before_ms": 58.668,
+      "after_ms": 64.378,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds real one-thousand-cuts history",
+      "before_ms": 4811.211,
+      "after_ms": 135.288,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds real eagle-eye history",
+      "before_ms": 4719.193,
+      "after_ms": 125.804,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Swain ascension timing",
+      "before_ms": 103.037,
+      "after_ms": 68.664,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Conqueror receipts after an actual takedown",
+      "before_ms": 239.35,
+      "after_ms": 239.225,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+      "before_ms": 74.005,
+      "after_ms": 65.219,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history",
+      "before_ms": 196.657,
+      "after_ms": 154.008,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously",
+      "before_ms": 228.468,
+      "after_ms": 186.252,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "does not let a later record context authorize its own forged historical prefix",
+      "before_ms": 239.953,
+      "after_ms": 222.225,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts the public-command no-crown control and resumes identically",
+      "before_ms": 201.364,
+      "after_ms": 205.258,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "restores and continues a legal provenance-backed crown control, seed 1",
+      "before_ms": 409.389,
+      "after_ms": 301.896,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "restores and continues a legal provenance-backed crown control, seed 42",
+      "before_ms": 381.314,
+      "after_ms": 267.673,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards",
+      "before_ms": 315.296,
+      "after_ms": 241.823,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal sale and subsequent re-equipping",
+      "before_ms": 458.701,
+      "after_ms": 343.495,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal remover and subsequent re-equipping",
+      "before_ms": 493.491,
+      "after_ms": 313.326,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal upgrade and subsequent re-equipping",
+      "before_ms": 464.842,
+      "after_ms": 316.331,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal upgrade-remover-equip and subsequent re-equipping",
+      "before_ms": 401.44,
+      "after_ms": 339.109,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal combine-equip and subsequent re-equipping",
+      "before_ms": 381.276,
+      "after_ms": 269.086,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "replays survivor equipment before-upgrade in exact order (M4)",
+      "before_ms": 304.159,
+      "after_ms": 254.197,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "replays survivor equipment after-upgrade in exact order (M4)",
+      "before_ms": 359.541,
+      "after_ms": 258.027,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "also rejects moving a non-crown equipped instance",
+      "before_ms": 27.025,
+      "after_ms": 19.466,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "replays combat equip before settlement, restores through all three entries and continues tick for tick",
+      "before_ms": 462.868,
+      "after_ms": 362.084,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects a claimed pre-first-battle equip left in inventory, with or without an empty history",
+      "before_ms": 69.923,
+      "after_ms": 47.237,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts legal pre-first-battle equipment and validates the first opening prefix",
+      "before_ms": 336.347,
+      "after_ms": 239.53,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records combat consumable use with remove at all three entries and resumes tick for tick (M10)",
+      "before_ms": 578.614,
+      "after_ms": 457.79,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records combat consumable use with reequip at all three entries and resumes tick for tick (M10)",
+      "before_ms": 524.572,
+      "after_ms": 414.644,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records combat consumable use with combine at all three entries and resumes tick for tick (M10)",
+      "before_ms": 428.946,
+      "after_ms": 356.602,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10)",
+      "before_ms": 1919.462,
+      "after_ms": 1572.878,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10)",
+      "before_ms": 1685.438,
+      "after_ms": 1530.337,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the remove command tick at all three entries (M10)",
+      "before_ms": 247.102,
+      "after_ms": 191.716,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the component-reforger command tick at all three entries (M10)",
+      "before_ms": 901.399,
+      "after_ms": 706.058,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the completed-reforger command tick at all three entries (M10)",
+      "before_ms": 793.421,
+      "after_ms": 707.959,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the remove resource tick at all three entries (M10)",
+      "before_ms": 140.972,
+      "after_ms": 148.391,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the component-reforger resource tick at all three entries (M10)",
+      "before_ms": 507.006,
+      "after_ms": 402.747,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing the completed-reforger resource tick at all three entries (M10)",
+      "before_ms": 410.96,
+      "after_ms": 393.461,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)",
+      "before_ms": 302.133,
+      "after_ms": 353.007,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)",
+      "before_ms": 176.883,
+      "after_ms": 190.404,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)",
+      "before_ms": 302.683,
+      "after_ms": 300.247,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing only the command tick to 0, 2 or 69 for in-place (M9)",
+      "before_ms": 274.708,
+      "after_ms": 275.877,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects changing only the command tick to 0, 2 or 69 for inventory (M9)",
+      "before_ms": 293.44,
+      "after_ms": 308.623,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "certifies the same ordered result when both tick claims move to 0 (M9 boundary)",
+      "before_ms": 214.265,
+      "after_ms": 201.174,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "certifies the same ordered result when both tick claims move to 2 (M9 boundary)",
+      "before_ms": 220.292,
+      "after_ms": 203.84,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "certifies the same ordered result when both tick claims move to 69 (M9 boundary)",
+      "before_ms": 221.575,
+      "after_ms": 219.693,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects existing-target in-place combination tampering at all three entries",
+      "before_ms": 97.957,
+      "after_ms": 112.851,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects missing-first in-place combination tampering at all three entries",
+      "before_ms": 29.438,
+      "after_ms": 30.258,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects missing-second in-place combination tampering at all three entries",
+      "before_ms": 30.309,
+      "after_ms": 27.599,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects ordinary-equip in-place combination tampering at all three entries",
+      "before_ms": 27.482,
+      "after_ms": 28.692,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects missing-first inventory combination commands at all three entries",
+      "before_ms": 36.669,
+      "after_ms": 37.524,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects missing-second inventory combination commands at all three entries",
+      "before_ms": 34.959,
+      "after_ms": 35.679,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects ordinary-equip inventory combination commands at all three entries",
+      "before_ms": 102.703,
+      "after_ms": 95.762,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects a structurally valid command with an invalid recipe through production replay",
+      "before_ms": 53.189,
+      "after_ms": 53.221,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "binds combat equip order to the temporary item roll prefix (M9)",
+      "before_ms": 142.265,
+      "after_ms": 144.206,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "keeps combat equips before terminal resources and crown gold (M9)",
+      "before_ms": 155.606,
+      "after_ms": 153.068,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick",
+      "before_ms": 296.104,
+      "after_ms": 302.99,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick",
+      "before_ms": 299.699,
+      "after_ms": 294.366,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects reordered commands at all three save/restore entries",
+      "before_ms": 186.509,
+      "after_ms": 134.923,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects duplicated commands at all three save/restore entries",
+      "before_ms": 64.518,
+      "after_ms": 71.233,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects extra commands at all three save/restore entries",
+      "before_ms": 114.888,
+      "after_ms": 125.879,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects missing commands at all three save/restore entries",
+      "before_ms": 119.683,
+      "after_ms": 136.304,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "rejects unknown-target commands at all three save/restore entries",
+      "before_ms": 67.88,
+      "after_ms": 68.749,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts combat equipment targeting a bench unit at all three entries",
+      "before_ms": 64.56,
+      "after_ms": 64.755,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "name": "accepts combat equipment targeting a dead unit at all three entries",
+      "before_ms": 338.069,
+      "after_ms": 348.741,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "applies every tick record in order and ends exactly on the terminal view (A and mirrored B)",
+      "before_ms": 2611.918,
+      "after_ms": 117.508,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "a keyframe replaces the whole view; diffs between keyframes agree with it",
+      "before_ms": 5.695,
+      "after_ms": 71.659,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "side B sees every cell row-flipped and teams swapped, values unchanged",
+      "before_ms": 7.469,
+      "after_ms": 69.527,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "skips to the terminal view when the tab returns and drops the battle once the settled state arrives",
+      "before_ms": 2.886,
+      "after_ms": 63.784,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "catches up with wall time when frames were dropped, never runs ahead of it",
+      "before_ms": 3.318,
+      "after_ms": 67.473,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "name": "projects a local ledger exactly like the server replay events (PvP and PvE)",
+      "before_ms": 24.526,
+      "after_ms": 79.852,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "name": "retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+      "before_ms": 7689.295,
+      "after_ms": 419.261,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "name": "retains actual tick-zero combat events returned from Start commands",
+      "before_ms": 6.492,
+      "after_ms": 5.382,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "name": "tier 10 opens 神器锻造器 with four distinct artifacts and the deadline grants the first offer once",
+      "before_ms": 2425.869,
+      "after_ms": 26.44,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "name": "a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+      "before_ms": 1854.816,
+      "after_ms": 5.906,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "name": "tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+      "before_ms": 1626.478,
+      "after_ms": 9.414,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "name": "never shows the artifact offers to another seat, in its view or its pushes",
+      "before_ms": 1544.527,
+      "after_ms": 8.284,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "name": "a resumed seat gets the same artifact popup and the unchanged deadline, and can still pick",
+      "before_ms": 1976.372,
+      "after_ms": 2275.439,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/pairing-room.test.ts",
+      "name": "every frozen opponent was a shown candidate; only PvP rounds grow the history",
+      "before_ms": 2838.873,
+      "after_ms": 2418.445,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/pairing-room.test.ts",
+      "name": "a disconnect, a takeover and a resume leave the candidates unchanged (they live in the room state)",
+      "before_ms": 1810.394,
+      "after_ms": 101.741,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/pairing-room.test.ts",
+      "name": "the same seed gives the same candidates and pairings",
+      "before_ms": 3542.854,
+      "after_ms": 4311.661,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "returns timers and room leftovers to the baseline after every match and disposes the replaced room",
+      "before_ms": 255.588,
+      "after_ms": 284.242,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches",
+      "before_ms": 576.162,
+      "after_ms": 614.059,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "publishes the same rounds whether a frozen round is resolved in one go or in slices of a few ticks",
+      "before_ms": 3875.585,
+      "after_ms": 3833.469,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "refuses commands while the round is frozen and resolves one slice per clock turn",
+      "before_ms": 1727.648,
+      "after_ms": 195.346,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round",
+      "before_ms": 3160.919,
+      "after_ms": 444.034,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "name": "stops resolving and publishes nothing once disposed in the middle of a frozen round",
+      "before_ms": 1402.726,
+      "after_ms": 11.881,
+      "before_status": "passed",
+      "after_status": "passed"
     }
   ],
   "checks": {
@@ -364,13 +1284,158 @@
       "file": "tests/bracer-multikill-stacks.test.ts",
       "before": 218,
       "after": 218,
-      "identical": true
+      "testCallbacks": 12,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "before": 256,
+      "after": 256,
+      "testCallbacks": 27,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "before": 40,
+      "after": 40,
+      "testCallbacks": 3,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "before": 96,
+      "after": 96,
+      "testCallbacks": 2,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
     },
     {
       "file": "tests/m8-b5-grant-upgrade.test.ts",
       "before": 135,
       "after": 135,
-      "identical": true
+      "testCallbacks": 8,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "before": 37,
+      "after": 37,
+      "testCallbacks": 21,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "before": 111,
+      "after": 111,
+      "testCallbacks": 5,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "before": 92,
+      "after": 92,
+      "testCallbacks": 6,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/pairing-room.test.ts",
+      "before": 38,
+      "after": 38,
+      "testCallbacks": 3,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "before": 64,
+      "after": 64,
+      "testCallbacks": 6,
+      "identical": true,
+      "eachCallbackAssertionsAndTimeoutIdentical": true
     }
-  ]
+  ],
+  "expanded_from_head": "6940b097f2968c8a7cb1963c2c7136ba70dc266a",
+  "expanded_from_tree": "3b47bccbcd3e5573bd0b61e91377598b6a2cc7f5",
+  "expanded_checks": {
+    "tests/g2-4b-source-pins.test.ts": {
+      "before_passed": 3,
+      "after_passed": 3,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/restore-audit/cd-replay-facts.test.ts": {
+      "before_passed": 34,
+      "after_passed": 34,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/g2-4a-crown-history.test.ts": {
+      "before_passed": 56,
+      "after_passed": 56,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/server/replay-client.test.ts": {
+      "before_passed": 6,
+      "after_passed": 6,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/m4-ledger-bound.test.ts": {
+      "before_passed": 2,
+      "after_passed": 2,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/server/g2-4b-artifact-forge-room.test.ts": {
+      "before_passed": 5,
+      "after_passed": 5,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/server/pairing-room.test.ts": {
+      "before_passed": 3,
+      "after_passed": 3,
+      "before_success": true,
+      "after_success": true
+    },
+    "tests/server/lifecycle.test.ts": {
+      "before_passed": 6,
+      "after_passed": 6,
+      "before_success": true,
+      "after_success": true
+    }
+  },
+  "expanded_shuffles": {
+    "42": {
+      "passed": 154,
+      "failed": 0,
+      "success": true
+    },
+    "20261020": {
+      "passed": 154,
+      "failed": 0,
+      "success": true
+    }
+  },
+  "tested_code_sha256": {
+    "tests/bracer-multikill-stacks.test.ts": "a51196962ca05c835aca0a0726f633e2064775a239dbc7847b514cb96730d0a1",
+    "tests/m8-b5-grant-upgrade.test.ts": "80a6d37011ade2da3394338410cfaf5f4309174f03c1cdbb30040716c7adc5ea",
+    "tests/g2-4b-source-pins.test.ts": "d82ca3b6ddeeb17bf58176cf533bae0c8ecdfb7ada8c1ff8ab6902d0657bf9a7",
+    "tests/restore-audit/cd-replay-facts.test.ts": "d643119e7608cb416ffafdcc7f355411ff823ec8926d26d1e8a2c92cd0612e14",
+    "tests/g2-4a-crown-history.test.ts": "cda7bd510dc41f76322fa139904b6dc08f4f89cdde36d6e8a8c3e2aba230428b",
+    "tests/server/replay-client.test.ts": "6d66892613681eee1d5f2358cdee6b78036c560d61d3e036f417a60c260c02b4",
+    "tests/m4-ledger-bound.test.ts": "062fcad947a3da784846182ebddeaced3dc5666bc6ee109fd1d2e70c333a4439",
+    "tests/server/g2-4b-artifact-forge-room.test.ts": "296e1899be12a94f76dc7349a0ef8ba477d31c00009fb694737ed562ecee7d1d",
+    "tests/server/pairing-room.test.ts": "ed17836b652246f3343c94adee0a251a8fe9ecc3b1123a5c68ec7845b9711e67",
+    "tests/server/lifecycle.test.ts": "ea37cf51a915cef8f6c07294b87fb1b3b80a5eae48bd7be9f986a99591f34ced",
+    "tests/fixtures/prepared-input.ts": "122e412c9d6d8e79de471085a3a3a6b672fb6bf5b2273c24b9a1c465041cefc1"
+  }
 }
