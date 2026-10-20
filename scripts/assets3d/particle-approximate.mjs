@@ -58,8 +58,14 @@ export function approximateEmitter(input, system = {}) {
       delete d.probabilityTables;
     }
     if (d && Object.hasOwn(v, 'constantValue')) {
-      note(field, { constantValue: v.constantValue, dynamics: d }, 'constant-times-curve');
-      if (d.values) d.values = d.values.map(x => multiply(v.constantValue, x));
+      // Size ValueVector3 curves already contain the authored value (including
+      // a repeated birth size or scale endpoint). They are not multipliers of
+      // constantValue. Apply probability factors once, above, then use the
+      // curve instead of the fallback constant. Keep other preview policies.
+      const sizeValue = field === 'birthScale0' || field === 'scale0';
+      note(field, { constantValue: v.constantValue, dynamics: d }, sizeValue
+        ? 'size-dynamics-replace-fallback-constant' : 'constant-times-curve');
+      if (!sizeValue && d.values) d.values = d.values.map(x => multiply(v.constantValue, x));
       delete v.constantValue;
     }
     if (!animated && d) {

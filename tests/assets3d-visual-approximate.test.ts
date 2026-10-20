@@ -135,6 +135,44 @@ describe('explicit visual preview adapter', () => {
     expect(row.approximations.map((r: { handling: string }) => r.handling)).toContain('constant-times-curve');
     expect(row.approximations.map((r: { handling: string }) => r.handling)).toContain('deterministic-mean-keyValue-multiplier-empty-table-one');
   });
+  it.each([
+    { birth: c([25, 95, 0]), scale: { dynamics: { times: [0, 1], values: [[1, 1, 1], [2, 2, 2]] } }, expected: [37.5, 142.5, 0] },
+    { birth: { constantValue: [90, 1, 1], dynamics: { times: [0], values: [[90, 1, 1]] } },
+      scale: c([2, 2, 2]), expected: [180, 2, 2] },
+    // Curve values can differ from the fallback; do not rely on equality or
+    // normalize by the final key (which may legitimately be zero).
+    { birth: { constantValue: [999, 1, 1], dynamics: { times: [0], values: [[350, 1, 1]], probabilityTables: [{ keyValues: [.5, 1.5] }, {}, {}] } },
+      scale: { constantValue: [3, 3, 3], dynamics: { times: [0, 1], values: [[2, 2, 2], [0, 0, 0]] } }, expected: [350, 1, 1] },
+    { birth: { constantValue: [90, 1, 1], dynamics: { times: [0], values: [[90, 1, 1]], probabilityTables: [{ keyValues: [1, 2] }, {}, {}] } },
+      scale: { constantValue: [2, 2, 2], dynamics: { times: [0, 1], values: [[1, 1, 1], [3, 3, 3]], probabilityTables: [{ keyValues: [.5, 1] }, {}, {}] } },
+      expected: [202.5, 1.5, 1.5] },
+  ])('converts size values once and applies only the lifetime scale multiplier: $expected', ({ birth, scale, expected }) => {
+    const fields = { birthScale0: birth, scale0: scale };
+    const original = structuredClone(fields);
+    const { e, doc, row } = mapped(fields);
+    const fx = new ParticleEffect(doc, { scale: 1 });
+    try {
+      fx.update(.5);
+      expect(fx.object.children[0].scale.toArray()).toEqual(expected);
+      expect(fields).toEqual(original);
+      if ('dynamics' in birth) expect(row.approximations).toContainEqual(expect.objectContaining({ field: 'birthScale0', handling: 'size-dynamics-replace-fallback-constant' }));
+      expect(e.size).toBeDefined();
+    } finally { fx.dispose(); }
+  });
+  it('keeps uniform birth size and affine scale separate from the size multiplier', () => {
+    const { doc } = mapped({ isUniformScale: 1,
+      birthScale0: { constantValue: [350, 0, 0], dynamics: { times: [0], values: [[350, 0, 0]] } },
+      scale0: { constantValue: [3, 0, 0], dynamics: { times: [0, 1], values: [[2, 0, 0], [0, 0, 0]] } },
+    }, { transform: [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [10, 0, 0, 1]] });
+    const fx = new ParticleEffect(doc, { scale: 1 });
+    try {
+      fx.update(.5);
+      const mesh = fx.object.children[0];
+      expect(mesh.scale.toArray()).toEqual([350, 350, 350]);
+      expect(new Vector3().setFromMatrixScale(mesh.matrix).toArray()).toEqual([700, 1050, 1400]);
+      expect(mesh.position.x).toBe(-10);
+    } finally { fx.dispose(); }
+  });
   it('bounds preview timing, atlas and integration and traces each fallback', () => {
     const { e, row } = mapped({ isSingleParticle: false, lifetime: -1, particleLifetime: c(-1), rate: c(5), texDiv: [2, 2], numFrames: 3,
       worldAcceleration: { __type: 'IntegratedValueVector3', constantValue: [0, -10, 0] }, birthAcceleration: c([0, 2, 0]),

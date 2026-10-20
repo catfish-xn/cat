@@ -42,7 +42,7 @@ node scripts/assets3d/fx-trial.mjs --particle-mode strict --out assets3d-local/f
 | isUniformScale=1 | birthScale0 的 X 分量用于 XYZ 等比尺寸。v2 标量 scale0 曲线统一取 abs(X)，逐项标记。 |
 | 系统 4×4 transform | 行主序、行向量、最后一行平移；X 反射共轭后存为 v2 localTransform。形状/位置/速度/加速度先在局部求值，再作用仿射矩阵；面片/mesh 的朝向、缩放和 shear 由线性部分作用。非仿射/非有限矩阵拒绝。 |
 | CameraTrail / ArbitraryTrail | 现有 v2 trail，宽取 mTrail.mBirthTilingSize.X（缺省 1）；birthScale 归 1；尾寿命 0.3 秒、32 段、stretch UV；不复刻模式、平滑和采样限制。需宿主/弹道移动才产生长度。 |
-| constantValue + dynamics | 常量 × 曲线，逐分量；出生/发射参数取首个 key，color/scale 保留时间曲线。该约定也用于出生字段，可能放大源中重复存储的基值，属于视觉近似残差。 |
+| constantValue + dynamics | **尺寸例外**：birthScale0 / scale0 的 dynamics 是该字段的值曲线，覆盖回退 constantValue，不再乘常量；birthScale0 取首 key，scale0 保留整条曲线。其他字段仍沿用逐分量常量 × 曲线的既有预览约定。 |
 | probabilityTables | 每通道 keyValues 的算术均值当确定性乘数；空表=1；不声称保留随机分布。 |
 | IntegratedValue | 取其 Value 数据，省略源积分层；世界加速度仍由 v2 解析积分；birthAcceleration 常量加到 gravity。 |
 | 曲线时间越界 | clamp 到 [0,1]，同时间最后 key 胜出；其他无效曲线继续由 v2 拒绝。 |
@@ -315,3 +315,23 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 - 已重跑 approximate 与 verify-fx-trial；仍是 38 份既有 v2 文档、104 张被引用 PNG、11 份 mesh 的运行时烟测通过。共享 Hit/Crit 仅有拒绝报告，不计入已验证文档。
 
 建议英文提交信息：`fix(assets3d): bound global BIN parsing and resolve shared attack VFX`
+
+## 2026-10-20 尺寸重复换算修复
+
+- 根因在 approximate adapter：`birthScale0.constantValue=[45,45,50]` 与 `dynamics.values=[[45,45,50]]` 被相乘为 `[2025,2025,2500]`；Vi 的 350 与约 350 变成约 122500。`scale0` 也可能重复存终值（例如 3 与从 3 到 2.4 的曲线），旧逻辑又乘一次 3。
+- 近似尺寸约定：有 dynamics 时用其 values，无 dynamics 时用 constantValue；概率表均值仅乘曲线一次。出生尺寸取首 key；`scale0` 是相对出生尺寸的无量纲生命周期倍率，v2 写为 `size`。最终局部 `mesh.scale = size0 × sampleCurve(size, age/lifetime)`。不按曲线终值归一化，不作百分数除以 100，不加经验限幅。
+- `isUniformScale=1` 继续把出生 X 扩到 XYZ；v2 的标量 size 曲线仍取 abs(X)，各向异性曲线的视觉近似限制不变。系统 transform 的线性部分只在 mesh.matrix 中应用一次；宿主缩放在父对象上另行应用，不折进 size0。Jinx muzzle 的 transform 三轴长度约为 1，其余三个系统没有 transform，均不是本次数量级膨胀来源。
+- 只修改近似转换器；严格模式、v1/v2 schema 和解释器均未修改。颜色、速度、寿命等非尺寸字段继续使用既有约定，不扩大本次范围。
+
+同一源 sidecar，以 HEAD 转换器与修后转换器分别转换、运行真实解释器；`scale=1`，`update(0.1)`，下表选择出生于 t=0 的具名粒子，比较局部 `mesh.scale.x`（不含父级/棋盘缩放）。mesh 类型用单位面片提供资源，几何不参与 mesh.scale 计算；实际 GLB 资源另经 verify-fx-trial 验证。
+
+| 系统 / 发射器 | 修前 | 修后 | 源尺寸依据 |
+| --- | ---: | ---: | --- |
+| Jinx BA_Minigun_Cas_Medium / Alpha_Smoke | 703.527 | 15.634 | birth X=45，倍率在 0.1 秒约 0.347421 |
+| Jinx R_Tar / Mesh_Ring_Blue | 1726.032 | 35.959 | birth X=48，概率均值 0.975，生命周期倍率约 0.768355 |
+| Vi Q_Landing_AoE / onKill_GlowDecal | 124949.991 | 357.000 | birth X≈350，倍率约 1.02 |
+| TFT_Global_BA_Hit / Temp_GroundGlow1 | 60.606 | 60.606 | birth X=100，无重复常量，保持不变 |
+
+原调度方的首粒子读数（约 1196/1041/118090/40）未在当前磁盘产物精确 0.1 秒条件下复现，不能直接与上表混用。粒子过期/mesh 资源是否提供都会改变“首个 child”身份，故回归比较使用同名、同出生时间粒子。Jinx R 的 Add_BotGlow_Purple 源 X=1250，0.1 秒仍为 1127.054；这是源数据本身的量级，不能把它当重复换算而强制压到几百。
+
+本地数值证据：`assets3d-local/fx-trial/size-comparison.json`；生成物不提交。测试增加转换 → v2 解释的合成尺寸断言，覆盖非相等回退常量、概率表、零终值、uniform 和仿射缩放，无单条 timeout。
