@@ -7,7 +7,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
 import { THEME, costColor } from '../presentation/theme';
-import { canvasPen, drawStatusIcons, statusIcons, STATUS_ICON_Y } from '../presentation/status-icons';
+import { canvasPen, drawStatusIcons, statusIconY, statusIcons } from '../presentation/status-icons';
 import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
@@ -115,7 +115,7 @@ export class ReplayView {
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
         // Same status icons as the live piece, read from this snapshot's own mechanism store.
-        drawStatusIcons(canvasPen(ctx), statusIcons(state, unit), p.x, p.y + STATUS_ICON_Y);
+        drawStatusIcons(canvasPen(ctx), statusIcons(state, unit), p.x, p.y + statusIconY(p.y));
       }
     }
     ctx.globalAlpha = 1;

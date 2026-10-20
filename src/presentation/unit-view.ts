@@ -11,7 +11,7 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
 import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-assets';
-import { drawStatusIcons, statusIcons, STATUS_ICON_Y, type IconPen } from './status-icons';
+import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
 
 export const PIECE_RADIUS = 27;
@@ -218,11 +218,13 @@ export class UnitView {
     this.shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: width * shieldRatio });
     // I3: the amount stays readable for debug/acceptance; on the board the shield is the ring, bar segment and icon.
     this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(false);
-    const icons = statusIcons(runtime, unit), key = icons.map(icon => `${icon.harmful ? '-' : '+'}${icon.kind}`).join(',');
+    // Row 0 pieces sit too close to the canvas top for the row above the HP bar: draw it below them instead.
+    const icons = statusIcons(runtime, unit), y = statusIconY(this.token.y);
+    const key = icons.map(icon => `${icon.harmful ? '-' : '+'}${icon.kind}`).join(',') + (icons.length ? `@${y}` : '');
     if (key !== this.statusKey) {
       this.statusKey = key;
       this.statusIcons.clear().setVisible(icons.length > 0);
-      drawStatusIcons(graphicsPen(this.statusIcons), icons, 0, STATUS_ICON_Y);
+      drawStatusIcons(graphicsPen(this.statusIcons), icons, 0, y);
       const glyphs = (harmful: boolean) => icons.filter(icon => icon.harmful === harmful && icon.badge).map(icon => icon.badge).join('');
       this.strip = { harmful: glyphs(true), beneficial: glyphs(false) };
     }
