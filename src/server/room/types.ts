@@ -245,3 +245,15 @@ export type RoomCommandResult =
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */
   | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure; readonly state: MatchState | null };
 export type { MatchCommandResult };
+/**
+ * v15: a claimOrb accepted while the round was `frozen` (RoomCommandResult ok, nothing published) that the rules refused
+ * when the room handed it over at battle entry; the seat is unchanged and the orb stays unclaimed. Goes to that seat only.
+ */
+export interface OrbClaimRefusedNotice {
+  readonly type: 'orb-claim-refused';
+  readonly seatId: string;
+  readonly round: number;
+  readonly orbId: string;
+  readonly reason: Extract<RoomCommandResult, { ok: false }>['reason'];
+}
+export type RoomNotice = OrbClaimRefusedNotice;

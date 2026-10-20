@@ -277,6 +277,7 @@ export class WsGameClient implements GameClient {
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
       case 'heartbeat': return this.onHeartbeat(message.intervalMs);
+      case 'notice': if (message.roomId === this.roomId) this.listeners?.notice?.(message.notice); return;
     }
   }
   /** The first beat arms the liveness deadline (armLiveness already ran for this message, so arm it now). */
