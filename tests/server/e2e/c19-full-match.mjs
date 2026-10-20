@@ -21,6 +21,8 @@
  *   orbs     every PvE round, once its battle played out: one orb card per `revealedLoot.revealedOrbs` entry with the
  *            server's tier and status (both humans, all rounds); the tiers seen are reported, and the page's own presenter
  *            renders all four tiers (gray/blue/gold/prismatic) with their tier marks.
+ *   claims   (v15) at the start of each preparation a human clicks every orb of its own in the orb dock; each claimOrb
+ *            is applied and the orb leaves the pushed list.
  *   .4       with the shared carousel (the production default, C19_CAROUSEL=1): at every x-4 carousel a living human picks
  *            by hand on the ring once released; the server applies the carousel-pick, the view marks my slot, and the
  *            unit (on the bench, the board or the holding slot) and its item arrive in my state; no component choice opens
@@ -121,7 +123,7 @@ async function loadTables() {
   return import(`${outfile}?${Date.now()}`);
 }
 
-const report = { ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], carousel: [], x4Choices: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
+const report = { claims: [], ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], carousel: [], x4Choices: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
 /** Global once-only tasks; a human claims one synchronously before awaiting anything. */
 const claimed = new Set();
 const claim = task => { if (claimed.has(task)) return false; claimed.add(task); return true; };
@@ -154,6 +156,8 @@ async function main() {
     const seen = new Set(report.orbs.map(entry => entry.tiers).flat());
     report.tiersSeen = TIERS.filter(tier => seen.has(tier));
     check(report.orbs.length > 0 && report.orbs.every(entry => entry.ok), `orb cards equal revealedOrbs in all ${report.orbs.length} PvE settlements (${report.orbs.filter(entry => !entry.ok).map(entry => `${entry.human} ${entry.roundId}`).join(', ') || 'none differ'}); tiers seen live: ${report.tiersSeen.join('/') || 'none'}`);
+    const claimFailures = report.claims.filter(entry => entry.receipt !== 'applied' || !entry.pushed);
+    check(report.claims.length > 0 && claimFailures.length === 0, `orbs claimed through the dock: ${report.claims.length} claim(s), all applied and pushed (${JSON.stringify(claimFailures)})`);
     // All four tiers through the page's own presenter (one live match cannot be made to drop every tier).
     report.tierPresenter = await jia.page.evaluate(async tiers => {
       const { orbLootSection } = await import('/src/presentation/orb-loot.ts');
@@ -474,6 +478,7 @@ async function play(human, tables, kindOf, role) {
       const ready = name === '甲' ? waited > 3_500 : turns.get(s.state.round) === 'done' || !jia?.alive || waited > 10_000;
       if (!ready) { await page.waitForTimeout(80); return false; }
       lastPrep = s.state.round;
+      await claimOrbs(human, pushed);
       await autoCombineCheck(human, kindOf, pushed, items);
       // Until the in-battle ops ran, 甲 keeps its gold for them and makes room on the bench (see the header).
       if (role.ops && !report.ops && s.state.round >= OPS_FROM_ROUND) await keepForOps(human, act, items);
@@ -483,6 +488,27 @@ async function play(human, tables, kindOf, role) {
     }
     await page.waitForTimeout(80);
     return false;
+  }
+}
+
+/** Clicks the orb dock's button for one orb (orb ids hold quotes, so it is matched by dataset, not a selector). */
+const clickOrb = (page, orbId) => page.evaluate(id => {
+  const node = [...document.querySelectorAll('[data-debug^="orb-claim:"]')].find(button => button.dataset.debug === `orb-claim:${id}`);
+  if (node && !node.disabled) { node.click(); return true; }
+  return false;
+}, orbId);
+
+/**
+ * v15: orbs stay on the board until clicked. At the start of each preparation a human claims every orb the server lists
+ * as its own through the orb dock's button; each claim must be applied and the orb leave the pushed list.
+ */
+async function claimOrbs(human, pushed) {
+  const s = await read(human.page);
+  for (const orb of s.state.unclaimedOrbs ?? []) {
+    const before = human.wire.mark();
+    const receipt = await clickOrb(human.page, orb.orbId) ? await human.wire.receiptSince(before, 'claimOrb') : 'no button';
+    const after = receipt === 'applied' ? await pushed(x => !(x.state.unclaimedOrbs ?? []).some(entry => entry.orbId === orb.orbId)) : null;
+    report.claims.push({ human: human.name, roundId: s.state.roundDefinitionId, tier: orb.tier, receipt, pushed: after !== null });
   }
 }
 
