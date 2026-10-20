@@ -10,7 +10,7 @@ const piece = (changes: Partial<BoardPiece> = {}): BoardPiece => ({
 });
 const frame = (changes: Partial<BoardFrame> = {}): BoardFrame => ({
   rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces: [], fighting: false, dragging: null,
-  orbs: [], orbsGranted: 0, hit: null, ...changes,
+  orbs: [], openedOrbs: [], hit: null, ...changes,
 });
 const orb = (orbId: string, tier: BoardOrb['tier'] = 'blue', queued = false): BoardOrb => ({ orbId, tier, queued });
 
@@ -43,7 +43,7 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
 
   it('shows an opponent legend only while a battle against another board is shown', () => {
     const { tabletop, step } = setup();
-    tabletop.frame(frame({ fighting: true, pieces: [piece({ definitionId: 'pve-krug' })] }));
+    tabletop.frame(frame({ fighting: true, pieces: [piece({ definitionId: 'pve-krug', neutral: true })] }));
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
     tabletop.frame(frame({ fighting: true, pieces: [piece()] }));
     expect(tabletop.debug().legends).toContain('legend:opponent:standin');
@@ -52,24 +52,32 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
   });
 
-  it('draws orbs by id, opens one only when a grant arrives with its removal, and never replays on mount', () => {
+  it('draws orbs by id, opens only an orb a granted receipt names, and never replays on mount', async () => {
     const { tabletop } = setup();
-    // Mounted with orbs already there and receipts already granted: nothing opens.
-    tabletop.frame(frame({ orbs: [orb('a', 'gray'), orb('b', 'gold')], orbsGranted: 3 }));
-    expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['a', 'b']);
+    // Mounted with orbs already there: nothing opens.
+    tabletop.frame(frame({ orbs: [orb('a', 'gray'), orb('b', 'gold'), orb('c', 'blue')], openedOrbs: ['old'] }));
+    expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['a', 'b', 'c']);
     expect(tabletop.debug().opening).toBe(0);
     // Queued in battle: still drawn, not opened.
-    tabletop.frame(frame({ orbs: [orb('a', 'gray', true), orb('b', 'gold')], orbsGranted: 3 }));
+    tabletop.frame(frame({ orbs: [orb('a', 'gray', true), orb('b', 'gold'), orb('c', 'blue')], openedOrbs: ['old'] }));
     expect(tabletop.debug().opening).toBe(0);
-    // Settled: 'a' leaves together with a new grant -> opening.
-    tabletop.frame(frame({ orbs: [orb('b', 'gold')], orbsGranted: 4 }));
-    return flush().then(() => {
-      expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['b']);
-      expect(tabletop.debug().opening).toBe(1);
-      // Removed without any grant (forfeited): just gone.
-      tabletop.frame(frame({ orbs: [], orbsGranted: 4 }));
-      return flush();
-    }).then(() => expect(tabletop.debug().opening).toBe(1));
+    // Same frame: 'a' granted, 'b' forfeited (no granted receipt names it) -> only 'a' opens.
+    tabletop.frame(frame({ orbs: [orb('c', 'blue')], openedOrbs: ['old', 'a'] }));
+    await flush();
+    expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['c']);
+    expect(tabletop.debug().opening).toBe(1);
+    // Removed without any grant: just gone.
+    tabletop.frame(frame({ orbs: [], openedOrbs: ['old', 'a'] }));
+    await flush();
+    expect(tabletop.debug().opening).toBe(1);
+  });
+
+  it('names an orb as opened from its entry receipts, skipping forfeited ones', async () => {
+    const { grantedOrbIds } = await import('../src/rendering/online/orb-dock');
+    const receipt = (dropId: string, resolution?: 'held' | 'forfeited') => ({ receiptId: `${dropId}:r`, dropId, resolution,
+      payload: { kind: 'gold' as const, quantity: 1 }, grantedItemIds: [], grantedUnitIds: [] });
+    expect(grantedOrbIds([receipt(JSON.stringify(['orb-a', 0])), receipt(JSON.stringify(['orb-a', 1])),
+      receipt(JSON.stringify(['orb-b', 0]), 'forfeited'), receipt('not-json'), receipt(JSON.stringify([3, 0]))])).toEqual(['orb-a']);
   });
 
   it('plays a settled HP loss once: cast lead, travel, then impact on my legend', async () => {
@@ -103,7 +111,7 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(tabletop.debug().legends).toEqual(['legend:me:model']);
     expect(loadEffect).toHaveBeenCalledWith('orb-prismatic-idle', 3600);
     expect(tabletop.debug().orbs[0]!.effect).toBe(true);
-    tabletop.frame(frame({ orbs: [], orbsGranted: 1 }));
+    tabletop.frame(frame({ orbs: [], openedOrbs: ['p'] }));
     tabletop.frame(frame({ hit: { key: 'round:5:2-3', damage: 4 } }));
     step(0.3); await flush(); step(1.1); await flush();
     expect(Object.keys(effects).sort()).toEqual(['orb-gold-open', 'orb-prismatic-idle', 'player-damage-mis', 'player-damage-tar']);

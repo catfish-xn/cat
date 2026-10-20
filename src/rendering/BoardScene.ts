@@ -46,7 +46,7 @@ import { itemDisplayName } from '../presentation/g23-display';
 import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
-import { OrbDock, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
+import { OrbDock, grantedOrbIds, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -1180,7 +1180,7 @@ export class BoardScene extends Phaser.Scene {
         visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
       orbs: readUnclaimedOrbs(this.session.state).map(orb => ({ orbId: orb.orbId, tier: orb.tier, queued: orb.queued })),
-      orbsGranted: readOrbClaimReceipts(this.session.state).filter(receipt => receipt.resolution !== 'forfeited').length,
+      openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
