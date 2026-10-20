@@ -129,11 +129,12 @@ async function main() {
     check(viewsA.length > 0 && viewsA.every(message => message.view.seats.every(seat => seat.publicBoard && Array.isArray(seat.publicBoard.units))) && leaks.length === 0,
       `${viewsA.length} view frames: every seat has publicBoard, no ${forbidden.join('/')} keys`);
 
-    // B keeps a unit; A sells everything it has deployed so it loses every round (bench units do not fight).
+    // B keeps a unit; A sells every unit it owns so it loses every round. Bench units are sold too: the deadline
+    // auto-deployment (contract §15.4) would otherwise move them onto the empty board.
     const sellAll = async () => {
       const state = (await read(a)).state;
       if (state.phase !== 'preparation') return 0;
-      const mine = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
+      const mine = state.preparation.units.filter(unit => unit.team === 'player');
       if (!mine.length) return 0;
       await a.click('[data-debug="panel:units"]').catch(() => {});
       for (const unit of mine) {
