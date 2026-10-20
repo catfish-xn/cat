@@ -201,6 +201,10 @@ const done = (commandId: number, result: ReceiptResult): ReceiptMessage => ({ ty
 
 export function createGameServer(options: GameServerOptions): Promise<GameServer> {
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
+  const heartbeat = options.heartbeat ?? null;
+  if (heartbeat !== null && !(Number.isSafeInteger(heartbeat.intervalMs) && heartbeat.intervalMs > 0 && Number.isSafeInteger(heartbeat.timeoutMs) && heartbeat.timeoutMs > heartbeat.intervalMs)) {
+    return Promise.reject(new RangeError(`heartbeat expects positive integer intervalMs < timeoutMs, got ${JSON.stringify(heartbeat)}`));
+  }
   const log: Logger = options.logger ?? (options.log ? textLogger(options.log) : () => {});
   const clock = options.clock;
   const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
@@ -572,7 +576,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   /* ---------------- heartbeat ---------------- */
 
-  const heartbeat = options.heartbeat ?? null;
   let heartbeatHandle: ClockHandle | null = null;
   function scheduleHeartbeat(): void {
     if (heartbeat === null || closing) return;
@@ -595,7 +598,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     }
     scheduleHeartbeat();
   }
-  scheduleHeartbeat();
 
   /* ---------------- health (G3) ---------------- */
 
@@ -647,6 +649,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const address = http.address();
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
       http.off('error', reject);
+      scheduleHeartbeat(); // only once listening: a failed listen leaves no timer behind
       http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
         get port() { return port; },

@@ -9,6 +9,8 @@ import { WebSocket as WsSocket } from 'ws';
 import { NET_PROTOCOL_VERSION, type ServerMessage } from '../../../src/server/net/messages';
 import { HEARTBEAT_MISSED, HEARTBEAT_TIMEOUT_CLOSE, WsGameClient } from '../../../src/rendering/online/ws-client';
 import type { ConnectionStatus } from '../../../src/rendering/online/protocol';
+import { ManualClock } from '../../../src/server/room/clock';
+import { createGameServer } from '../../../src/server/net/server';
 import { TIMINGS } from '../helpers';
 import { expectOk, flush, messagesOfType, seatTwo, startServer, type NetHarness } from './helpers';
 
@@ -29,8 +31,35 @@ function silentPeer(url: string): Promise<{ socket: WsSocket; inbox: ServerMessa
   });
 }
 
+/** Polls a condition on the event loop instead of sleeping a fixed time (loopback delivery under a busy CI). */
+async function until(predicate: () => boolean, what: string, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+}
+
 /** One interval of the manual clock, then time for pings, pongs and pushes to cross the loopback. */
 async function beat(h: NetHarness): Promise<void> { h.clock.advance(HEARTBEAT.intervalMs); await flush(); }
+
+describe('server heartbeat options', () => {
+  it('starts no heartbeat timer when listening fails', async () => {
+    const holder = await startServer();
+    const clock = new ManualClock();
+    await expect(createGameServer({ port: holder.server.port, host: '127.0.0.1', clock, seed: 1, heartbeat: HEARTBEAT })).rejects.toThrow();
+    expect(clock.pending).toBe(0);
+    await holder.close();
+  });
+
+  it('refuses intervals that are not positive integers below the timeout', async () => {
+    const clock = new ManualClock();
+    for (const heartbeat of [{ intervalMs: 0, timeoutMs: 10 }, { intervalMs: 1_000, timeoutMs: 1_000 }, { intervalMs: 1.5, timeoutMs: 10 }]) {
+      await expect(createGameServer({ port: 0, host: '127.0.0.1', clock, seed: 1, heartbeat })).rejects.toThrow(RangeError);
+    }
+    expect(clock.pending).toBe(0);
+  });
+});
 
 describe('server heartbeat', () => {
   it('sends nothing extra when the option is off', async () => {
@@ -44,7 +73,10 @@ describe('server heartbeat', () => {
   it('keeps answering peers connected and sends them a heartbeat every interval', async () => {
     harness = await startServer({ heartbeat: HEARTBEAT });
     const client = await harness.connect();
-    for (let index = 0; index < 5; index++) await beat(harness);
+    for (let index = 1; index <= 5; index++) {
+      harness.clock.advance(HEARTBEAT.intervalMs);
+      await until(() => messagesOfType(client.inbox, 'heartbeat').length === index, `heartbeat ${index}`);
+    }
     expect(client.isOpen).toBe(true);
     const beats = messagesOfType(client.inbox, 'heartbeat');
     expect(beats.length).toBe(5);
@@ -59,23 +91,20 @@ describe('server heartbeat', () => {
     // A's seat moves to a connection that never answers a ping (the old tab is superseded and closed).
     const silent = await silentPeer(harness.url);
     silent.socket.send(JSON.stringify({ type: 'resume', token, protocolVersion: NET_PROTOCOL_VERSION, commandId: 10_000 }));
-    await flush(100);
-    expect(silent.inbox.some(message => message.type === 'receipt' && message.ok && message.result.kind === 'resumed')).toBe(true);
+    await until(() => silent.inbox.some(message => message.type === 'receipt' && message.ok && message.result.kind === 'resumed'), 'silent peer resumed');
     harness.clock.advance(1_000); await a.closed; // the superseded tab closes after its grace period
     await flush();
 
     for (let index = 0; index < 3; index++) await beat(harness);
     expect(await silent.closed).toBe(1006); // terminated: no close handshake
-    await flush();
-    expect(b.view!.seats.find(seat => seat.seatId === seatA)!.connected).toBe(false);
+    await until(() => b.view!.seats.find(seat => seat.seatId === seatA)!.connected === false, 'B sees A offline');
     expect(b.isOpen).toBe(true);
 
     const back = await harness.connect();
     const receipt = await back.resume(token);
     expectOk(receipt);
     expect(receipt.ok && receipt.result.kind === 'resumed' && receipt.result.seatId).toBe(seatA);
-    await flush();
-    expect(b.view!.seats.find(seat => seat.seatId === seatA)!.connected).toBe(true);
+    await until(() => b.view!.seats.find(seat => seat.seatId === seatA)!.connected === true, 'B sees A back');
   });
 });
 
