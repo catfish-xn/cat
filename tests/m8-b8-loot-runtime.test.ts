@@ -116,7 +116,8 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
   });
 
   it('uses two real purchase upgrades including a changed survivor, carrying stock, equipment and anomaly', () => {
-    const original = fixture(17, 0);
+    // Both independent loot oracles pin a real Tristana drop at seed48, 3-7.
+    const original = fixture(17, 48);
     const players: Unit[] = [
       { id: 'unit-1', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 4 } } },
       { id: 'unit-2', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } },

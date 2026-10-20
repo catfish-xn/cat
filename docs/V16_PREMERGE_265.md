@@ -1,6 +1,53 @@
-# #265 v16 下一轮收口（2026-10-20）
+# #265 v16 新base重录（2026-10-20）
 
-用户指定现场：`codex/epic-loot-reforger` 正在合并 `origin/codex/loot-orb-claim`。本轮未执行任何 Git 命令、未写 `.git`、未联网或安装依赖；未修改 `src/server/`、`src/rendering/`。工作区冲突标记已清除；索引和 MERGE_HEAD 仍留给协调者处理。
+本轮起点：`codex/epic-loot-reforger`，HEAD `622b19c5be396e14904e02f6ff1a45f0740c22d0`，工作区干净，最新v15已由用户合入。本轮只读Git，不写`.git`，不联网、不安装依赖，不修改`src/server/`、`src/rendering/`或其他表现层源码。
+
+历史基线改为v15收口提交 **`1642beaabee7df800c15250bb07ec6cf2e6bbed0`**，包含#258实时金币导出和v15 Herald/证据重录。`scripts/v16-fixture-audit.cjs`与`scripts/compare-v16-digests.cjs`均使用该完整SHA；测试中没有旧SHA字面量需要替换。本轮不使用`V16_HISTORY_SNAPSHOT`，以只读Git归档核验提交中的真实字节。
+
+9步重录命令及退出码见[EPIC_LOOT_V16录制结果](EPIC_LOOT_V16.md#录制结果)和自动生成的[verification.json](evidence/v16/verification.json)，按以下顺序执行，退出码全部为0：
+
+```text
+node scripts/record-v16-release.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0
+node tests/fixtures/record-v16-herald.cjs --write
+node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0
+node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0
+node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check
+node scripts/verify-m8-herald-fixtures.cjs
+node scripts/v16-fixture-audit.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0
+node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check
+node scripts/compare-v16-digests.cjs
+```
+
+v15的23个文件与新基线逐字节相同；G2-3/G2-4b的86个历史文件及历史身份断言字节不变。四条release路线各33战，cannon/sniper各67状态；Herald五份raw在导入恢复器前导出，随后验证严格恢复及15tick。实际重跑后，状态、golden和Herald raw字节没有变化；差异是基线元数据和源码指纹。
+
+| digest | 新v15基线 | 本轮v16（与本轮起点相同） |
+| --- | --- | --- |
+| CONTENT_DIGEST | `70dbb056` | `de829c8a` |
+| LOOT_REPLAY_DIGEST | `61568ec0` | `62c76cb9` |
+| RULES_GAP_MANIFEST | `97c14bf3` | `31950a0f` |
+
+上表均带`fnv1a32-utf16:`前缀，由两边实际源码重算；本轮没有规则修改或版本变化。
+
+`node node_modules/typescript/bin/tsc --noEmit`和`npm.cmd run build -- --configLoader runner`退出码均为0。体积口径仍为全部`dist/assets/*.js`分别gzip level9后求和，含Phaser：基线424,763 B，当前619,933 B，**比值1.4594797569 ≤ 1.49**。分母为已有本地15313a7构建，本轮未重建该历史产物；文件SHA-256收录于机器记录。
+
+本轮最终测试为**50文件、1,079项通过、0失败、0待执行**。覆盖指定的match-session、opening-random-*、m5-growth、crown-history、两份augment-tier-consistency、g2-2-emissary-wins、d14-*、epic-loot-reforger、live-gold-exports，以及全部直接引用v16的测试和Herald相关行为/恢复/历史golden用例。逐文件、单worker运行，未覆盖全仓库、浏览器或完整网络对局；每份最终结果及首次失败记录均保存在verification.json。
+
+首轮发现4个旧向量问题，仅修改测试，完整复跑4份后全部通过，未修改生产规则、未放宽时限或断言：
+
+| 文件 | 修正与独立依据 |
+| --- | --- |
+| `m8-b10-encounter-outcomes` | 两份独立BigInt oracle及真实路线一致：seed42的6-7完整顺序为锻造器、Leona、1金、Ekko、4金，替换独立追加流拆分前的旧向量。 |
+| `m8-b8-live-growth` | seed48在现行真实路线下两来源前序成长均为0；改为seed74，两张原始Tristana各实际赚取250 Bps，保留双来源、当前战斗2条成长事实、奖励合星、严格恢复及全部篡改拒绝要求，26项通过。 |
+| `m8-b8-loot-runtime` | 两份独立字面表oracle确认seed48在3-7掉落Tristana；将原seed0改为48，保留两级合星、1,750 Bps存量、装备/异常转移和出生来源链全部断言。 |
+| `m8-b8-token-lifecycle` | 原seed427在1-3掉Maddie；独立商店/掉落表确认seed12的1/4槽可真实购买两张Lux、1-3再获Lux，保留自动合星与所有Combat视图销毁/恢复断言。 |
+
+四个测试文件均不在录制器的sourceDigests/Herald sources集合内；修正后继续核对所有录制源码指纹，验证本轮录制仍对应当前工作区。全部`src/`源码与开工快照一致。建议提交信息：`fix(v16): re-record v15 closeout evidence and refresh reward vectors`。本轮未暂存、提交或执行其他Git写操作，无待决定的玩法问题。
+
+下文是上一轮历史记录，不代表本轮验收。
+
+## 上一轮合并与规则修复记录（归档）
+
+上一轮现场：`codex/epic-loot-reforger` 正在合并 `origin/codex/loot-orb-claim`。该轮未执行任何Git命令、未写`.git`、未联网或安装依赖；未修改`src/server/`、`src/rendering/`。以下合并现场、快照验证和体积数据仅保留为该轮记录；当前以本文开头的新base重录结果为准。
 
 ## 1. 合并冲突：14个文件
 

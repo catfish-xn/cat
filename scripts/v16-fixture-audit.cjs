@@ -1,7 +1,7 @@
 /* v16 records only a new epoch; v15 and earlier remain immutable. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),cp=require('node:child_process'),{createHash}=require('node:crypto');
 const previous=require('./v15-fixture-audit.cjs');
-const BASELINE='46454b77348c86b70a4fec57869f95c22ecf9682',sha=b=>createHash('sha256').update(b).digest('hex');
+const BASELINE='1642beaabee7df800c15250bb07ec6cf2e6bbed0',sha=b=>createHash('sha256').update(b).digest('hex');
 // Explicit offline mode for a merge workspace where even read-only Git is forbidden.
 // This proves session-local historical immutability, not commit provenance.
 const localSnapshot=process.env.V16_HISTORY_SNAPSHOT

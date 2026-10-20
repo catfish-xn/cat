@@ -1,8 +1,10 @@
 # v16：5-7/6-7史诗奖励、英雄复制器与统一重铸器
 
-基线：codex/epic-loot-reforger @ 46454b77348c86b70a4fec57869f95c22ecf9682（v15、PR #260已收口）。本次只留工作区，不提交、不联网、不安装依赖、不改.git。用户已批准规则与拒绝旧存档，无迁移。规则实现和测试完成情况以下列实际记录为准；界面目录的明确禁改边界仍有效。
+基线：codex/epic-loot-reforger @ 1642beaabee7df800c15250bb07ec6cf2e6bbed0（最新v15收口，含#258实时金币导出及Herald/证据重录）。本次只留工作区，不提交、不联网、不安装依赖、不改.git；允许只读Git核验历史字节。用户已批准规则与拒绝旧存档，无迁移。规则实现和测试完成情况以下列实际记录为准；界面目录的明确禁改边界仍有效。
 
 当前 #265 收口状态与验证以 [V16_PREMERGE_265](V16_PREMERGE_265.md) 为准：合并冲突已消除，tsc/build通过。下文保留开发阶段记录，旧的6条界面编译阻塞描述已被本次获准的冲突合并修复取代。
+
+2026-10-20新base重录：历史基线已更新为上述最新v15完整SHA，9步流水线全部退出0；v15的23个文件与该提交逐字节相同，G2-3/G2-4b的86个历史文件未动。三项v16 digest与本轮起点相同，状态/golden/Herald raw字节不变，基线元数据及源码指纹重新生成。指定回归及v16/Herald相关测试最终50文件、1,079项通过，0失败/待执行；4个旧测试向量经独立oracle及真实路线核对后修正，未改生产规则或放宽时限。tsc/build通过，JS gzip level9总量619,933 B / 424,763 B = **1.4594797569 ≤ 1.49**。本轮最新机器结果见[verification.json](evidence/v16/verification.json)，下文开发阶段及后续增量记录均作为历史保留。
 
 ## 身份与digest
 
@@ -77,21 +79,21 @@ M5 oracle重新独立实现v16法球表；路线只用公共命令。mage用已�
 
 | 阶段 | 命令 | 退出码 |
 | --- | --- | ---: |
-| release | node scripts/record-v16-release.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 | 0 |
+| release | node scripts/record-v16-release.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
 | herald-write | node tests/fixtures/record-v16-herald.cjs --write | 0 |
-| inputs | node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 | 0 |
-| live-reveal | node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 | 0 |
-| inputs-check | node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check | 0 |
+| inputs | node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| live-reveal | node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| inputs-check | node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check | 0 |
 | herald-verify | node scripts/verify-m8-herald-fixtures.cjs | 0 |
-| history | node scripts/v16-fixture-audit.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 | 0 |
-| live-reveal-check | node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check | 0 |
+| history | node scripts/v16-fixture-audit.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| live-reveal-check | node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check | 0 |
 | digests | node scripts/compare-v16-digests.cjs | 0 |
 
 release四路线各33场到6-7胜利；cannon/sniper各67个原始检查点，文本/对象恢复字节相同。Herald5个用例各14场公开战斗，原始JSON在导入生产restore前导出，再验证开战和15个完整后继tick，共7个文件。inputs共9组新证据并通过--check；live-reveal四分支及--check保持44/382/383、381/152、4/0收据等精确要求。首次战斗仍164tick/106事件，战斗/事件hash分别fnv1a32-utf16:1db5b9e9与cf452d32。
 
 CURRENT入口与当前golden/raw读取器均指向v16。历史G2-3/G2-4b共86个文件、v15共23个文件逐字节相同，历史身份审计expect行字节相同。crown-history是运行中的恢复套件，其旧工具场景已适配，56项通过；没有把整个活动套件误作冻结历史目录。最终录制完成后再次核对所有录制sourceDigests与Herald sources，均匹配当前工作区。沙箱内完整录制成功，不需要RUN_OUTSIDE或手写指纹。
 
-## 逐文件测试结果
+## 开发阶段逐文件测试结果（历史）
 
 90份实际存在的测试文件逐个完整执行，最终1514项通过、0失败、0待执行。每份均使用--configLoader runner，保留原时限；新epic套件29项无单条时限。表中为各文件最后一次完整运行结果，机器结果见[verification.json](evidence/v16/verification.json)。
 
@@ -244,7 +246,7 @@ feat(simulation): add v16 epic PvE rewards and unify reforger
 | LOOT_REPLAY_DIGEST | `fnv1a32-utf16:cee1d7d7` | `fnv1a32-utf16:cee1d7d7` |
 | RULES_GAP_MANIFEST digest | `fnv1a32-utf16:81596be6` | `fnv1a32-utf16:81596be6` |
 
-离线比较命令为 `node scripts/compare-v16-250-digests.cjs`，直接编译 `b531bfa3` 的 Git 归档源与当前源，不用旧文档猜 digest。录制继续使用既有 v16 epoch 的历史边界 `46454b77348c86b70a4fec57869f95c22ecf9682`，与上述本轮比较基线区分。仅更新 v16 的 content baseline、M5 golden、recorded states、Herald、inputs 和 live-reveal；v15 及更早目录不动。
+离线比较命令为 `node scripts/compare-v16-250-digests.cjs`，直接编译 `b531bfa3` 的 Git 归档源与当前源，不用旧文档猜 digest。录制继续使用既有 v16 epoch 的历史边界 `1642beaabee7df800c15250bb07ec6cf2e6bbed0`，与上述本轮比较基线区分。仅更新 v16 的 content baseline、M5 golden、recorded states、Herald、inputs 和 live-reveal；v15 及更早目录不动。
 
 本环境为 Node 24.21.0。录制时 Node 的同步 Git 子进程会在进程正常退出0且输出完整时附带 `EPERM`；使用仅存于 gitignore 的 `artifacts/v16-recording/git-read-shim.cjs` 处理 `show/rev-parse/ls-tree/archive` 的这一种成功读取，仍拒绝非零退出、信号退出与其它错误。所有录制命令以 `V16_CACHE_DIR=/tmp/v16-250-cache node --require ./artifacts/v16-recording/git-read-shim.cjs ...` 执行；不联网、不修改 Git 历史、不替换指纹校验逻辑。
 

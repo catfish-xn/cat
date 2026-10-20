@@ -1,7 +1,73 @@
 {
-  "status": "domain-verified; overall blocked by explicitly prohibited UI files",
+  "status": "passed-requested-scope",
   "branch": "codex/epic-loot-reforger",
-  "baseCommit": "46454b77348c86b70a4fec57869f95c22ecf9682",
+  "head": "622b19c5be396e14904e02f6ff1a45f0740c22d0",
+  "baseCommit": "1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+  "recording": [
+    {
+      "name": "release",
+      "command": "node scripts/record-v16-release.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+      "exitCode": 0,
+      "durationMs": 111000,
+      "log": "artifacts/v16-rerecord-265/release.log"
+    },
+    {
+      "name": "herald-write",
+      "command": "node tests/fixtures/record-v16-herald.cjs --write",
+      "exitCode": 0,
+      "durationMs": 64870,
+      "log": "artifacts/v16-rerecord-265/herald-write.log"
+    },
+    {
+      "name": "inputs",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+      "exitCode": 0,
+      "durationMs": 11976,
+      "log": "artifacts/v16-rerecord-265/inputs.log"
+    },
+    {
+      "name": "live-reveal",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+      "exitCode": 0,
+      "durationMs": 32000,
+      "log": "artifacts/v16-rerecord-265/live-reveal.log"
+    },
+    {
+      "name": "inputs-check",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check",
+      "exitCode": 0,
+      "durationMs": 13313,
+      "log": "artifacts/v16-rerecord-265/inputs-check.log"
+    },
+    {
+      "name": "herald-verify",
+      "command": "node scripts/verify-m8-herald-fixtures.cjs",
+      "exitCode": 0,
+      "durationMs": 64335,
+      "log": "artifacts/v16-rerecord-265/herald-verify.log"
+    },
+    {
+      "name": "history",
+      "command": "node scripts/v16-fixture-audit.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+      "exitCode": 0,
+      "durationMs": 4736,
+      "log": "artifacts/v16-rerecord-265/history.log"
+    },
+    {
+      "name": "live-reveal-check",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check",
+      "exitCode": 0,
+      "durationMs": 34069,
+      "log": "artifacts/v16-rerecord-265/live-reveal-check.log"
+    },
+    {
+      "name": "digests",
+      "command": "node scripts/compare-v16-digests.cjs",
+      "exitCode": 0,
+      "durationMs": 10406,
+      "log": "artifacts/v16-rerecord-265/digests.log"
+    }
+  ],
   "digests": {
     "before": {
       "contentDigest": "fnv1a32-utf16:70dbb056",
@@ -9,899 +75,1054 @@
       "rulesManifestDigest": "fnv1a32-utf16:97c14bf3"
     },
     "after": {
-      "contentDigest": "fnv1a32-utf16:7181dce2",
-      "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
-      "rulesManifestDigest": "fnv1a32-utf16:81596be6"
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
     }
   },
-  "recording": [
-    {
-      "name": "release",
-      "command": "node scripts/record-v16-release.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
-      "exitCode": 0
-    },
-    {
-      "name": "herald-write",
-      "command": "node tests/fixtures/record-v16-herald.cjs --write",
-      "exitCode": 0
-    },
-    {
-      "name": "inputs",
-      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
-      "exitCode": 0
-    },
-    {
-      "name": "live-reveal",
-      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
-      "exitCode": 0
-    },
-    {
-      "name": "inputs-check",
-      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
-      "exitCode": 0
-    },
-    {
-      "name": "herald-verify",
-      "command": "node scripts/verify-m8-herald-fixtures.cjs",
-      "exitCode": 0
-    },
-    {
-      "name": "history",
-      "command": "node scripts/v16-fixture-audit.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
-      "exitCode": 0
-    },
-    {
-      "name": "live-reveal-check",
-      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
-      "exitCode": 0
-    },
-    {
-      "name": "digests",
-      "command": "node scripts/compare-v16-digests.cjs",
-      "exitCode": 0
-    }
-  ],
   "history": {
     "g23AndG24Files": 86,
     "v15Files": 23,
     "byteIdentical": true,
-    "historicalIdentityAuditAssertionLinesByteIdentical": true
+    "historicalIdentityAuditAssertionLinesByteIdentical": true,
+    "method": "read-only Git commit byte comparison",
+    "v15BaselineCommit": "1642beaabee7df800c15250bb07ec6cf2e6bbed0"
+  },
+  "digestChangeSincePreviousV16": {
+    "before": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "after": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "changed": false
   },
   "sourcesMatchCurrentWorkspace": true,
+  "sourceEvidence": [
+    {
+      "file": "docs/evidence/v16/release-audit.json",
+      "sourceCount": 351,
+      "sha256": "4faf7f40fc8c059f2a11aebc326f5563a43ad59b4d3fbbe876d9811b3d3f84eb"
+    },
+    {
+      "file": "docs/evidence/v16/input-fixture-audit.json",
+      "sourceCount": 351,
+      "sha256": "c1a43a96c4b27a10bd9f2df2e3a07c43aa6ef0cd0ce8d113db78386d124d3a6d"
+    },
+    {
+      "file": "docs/evidence/v16/live-reveal-audit.json",
+      "sourceCount": 351,
+      "sha256": "afd631d4e85660b8cd38a1b9a7f7129800c00485568918b3b3b4ec0b851eaabb"
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/manifest.json",
+      "sourceCount": 326,
+      "sha256": "edeb3eb09c72cfa18b05d4bd4c4b8bcf2ff68882856c4a8ce3bb1cafa32d3e72"
+    }
+  ],
   "forbiddenSourceDirectoriesUnmodified": true,
-  "testFiles": 90,
-  "passed": 1514,
+  "allSourceFilesUnmodified": 440,
+  "gitOperations": "read-only; no .git writes",
+  "networkAccess": false,
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit",
+    "exitCode": 0
+  },
+  "build": {
+    "command": "npm.cmd run build -- --configLoader runner",
+    "exitCode": 0,
+    "budget": {
+      "method": "sum gzip level 9 of all dist/assets/*.js including Phaser",
+      "baseline": {
+        "files": [
+          {
+            "file": "index-CsWIfx1z.js",
+            "bytes": 1497604,
+            "gzipBytes": 424763,
+            "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+          }
+        ],
+        "gzipBytes": 424763
+      },
+      "current": {
+        "files": [
+          {
+            "file": "index-XwzIj-Tk.js",
+            "bytes": 1474681,
+            "gzipBytes": 444281,
+            "sha256": "938c615c075fdc66fde175563b3c80cd2f24929e10c265b2df3c29c389856468"
+          },
+          {
+            "file": "phaser-ax-wMCa1.js",
+            "bytes": 614971,
+            "gzipBytes": 175652,
+            "sha256": "54af098131ba3056731ae3bf76c15d639ffa0f86d6118e93e626dda3449599e3"
+          }
+        ],
+        "gzipBytes": 619933
+      },
+      "ratio": 1.459479756946815,
+      "limit": 1.49,
+      "passed": true
+    }
+  },
+  "testSelection": {
+    "named": [
+      "tests/augment-tier-consistency.test.ts",
+      "tests/d14-ability-display.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/d14-anomalies.test.ts",
+      "tests/d14-sale-price.test.ts",
+      "tests/d14-wiring-match.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/g2-4a-crown-history.test.ts",
+      "tests/live-gold-exports.test.ts",
+      "tests/m5-growth.test.ts",
+      "tests/match-session.test.ts",
+      "tests/opening-random-1cost.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/server/augment-tier-consistency.test.ts",
+      "tests/server/g2-2-emissary-wins.test.ts"
+    ],
+    "related": [
+      "tests/c19-missed-pulse.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/m8-b7-audit-vectors.test.ts",
+      "tests/m8-b7-match-wiring.test.ts",
+      "tests/m8-b9-golden-guard.test.mjs",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/r3r4-legacy.test.ts",
+      "tests/t11-golden.test.ts",
+      "tests/t12-golden.test.ts",
+      "tests/t13-a-golden.test.ts",
+      "tests/ur-i3-combat-statuses.test.ts"
+    ],
+    "herald": [
+      "tests/m8-b7-catalog.test.ts",
+      "tests/m8-b7-mechanisms.test.ts",
+      "tests/m8-b7-known-limitations.test.ts",
+      "tests/m8-b6-round-catalog.test.ts",
+      "tests/m8-b3-damage-control-order.test.ts",
+      "tests/m8-u5-preview.test.ts",
+      "tests/m8-b8-live-reveal.test.ts"
+    ],
+    "additionalV16": [
+      "tests/d14-anomalies-source.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/m5-route.test.ts",
+      "tests/m8-b8-golden-guard.test.mjs",
+      "tests/m8-contracts.test.ts",
+      "tests/match-contract.test.ts",
+      "tests/opening-random-identity.test.ts"
+    ],
+    "allDirectV16": [
+      "tests/c19-missed-pulse.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/g2-4b-artifacts.test.ts",
+      "tests/m8-b10-encounter-outcomes.test.ts",
+      "tests/m8-b5-instances.test.ts",
+      "tests/m8-b8-live-growth.test.ts",
+      "tests/m8-b8-live-transfer.test.ts",
+      "tests/m8-b8-loot-freeze.test.ts",
+      "tests/m8-b8-loot-runtime.test.ts",
+      "tests/m8-b8-token-lifecycle.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m8-contracts.test.ts",
+      "tests/match-contract.test.ts",
+      "tests/match-session.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/r3r4-oracle.test.ts",
+      "tests/s13-p1-dual-wielding.test.ts",
+      "tests/task-mechanism-restore.test.ts",
+      "tests/ur-i3-combat-statuses.test.ts"
+    ]
+  },
+  "testFiles": 50,
+  "passed": 1079,
   "failed": 0,
   "pending": 0,
   "files": [
     {
+      "file": "tests/augment-tier-consistency.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/augment-tier-consistency.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-01.json",
+      "exitCode": 0,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 4030,
+      "report": "artifacts/v16-rerecord-265/test-01.json",
+      "log": "artifacts/v16-rerecord-265/test-01.log",
+      "success": true,
+      "reportSha256": "48b09038d6cc9e689430c2ac7cb4bdfc999e799f8206a87292c83bbe1c1b41b3",
+      "logSha256": "2d8d0e5a5ea9499b614fe777367269281d4db0290f265df6640b6654102fb7ae",
+      "testSha256": "9847ecff46d512f9dc24681ab2f0a009e36ca65da3a3417072dbb5f98de2876c"
+    },
+    {
       "file": "tests/c19-missed-pulse.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/c19-missed-pulse.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/c19-missed-pulse.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-02.json",
+      "exitCode": 0,
       "passed": 10,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.454,
-      "success": true
+      "durationMs": 3740,
+      "report": "artifacts/v16-rerecord-265/test-02.json",
+      "log": "artifacts/v16-rerecord-265/test-02.log",
+      "success": true,
+      "reportSha256": "e3f5f30f67b9c1b802c74c77ef37c0b56715aa93d2198e138f3a86ad91b7c802",
+      "logSha256": "b31b97ea9bda667c48b9ca419e9607778b3bb0de715b3950452149acd8115d70",
+      "testSha256": "dd2c06a9a9f87ef399f92fa4a4232403bbbcf7e687cbdc08a6802a805648eac3"
     },
     {
       "file": "tests/d11-wiring-bank.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/d11-wiring-bank.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d11-wiring-bank.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-03.json",
+      "exitCode": 0,
       "passed": 2,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.802,
-      "success": true
+      "durationMs": 4479,
+      "report": "artifacts/v16-rerecord-265/test-03.json",
+      "log": "artifacts/v16-rerecord-265/test-03.log",
+      "success": true,
+      "reportSha256": "6b298c56f23999f99f80b198ba2e3bbdbf3415200062e625f5734fbad51eae39",
+      "logSha256": "9379b0860de966fa9a6a67addd3a217079d2b42c01aab2a9bd4042d9957e66a4",
+      "testSha256": "9f2550229b199db8d64772091daeb382e6f2ac5eb9bfdc17d133ec2d3298d954"
+    },
+    {
+      "file": "tests/d14-ability-display.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d14-ability-display.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-04.json",
+      "exitCode": 0,
+      "passed": 15,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 1518,
+      "report": "artifacts/v16-rerecord-265/test-04.json",
+      "log": "artifacts/v16-rerecord-265/test-04.log",
+      "success": true,
+      "reportSha256": "0c399b5e840f58ba93d5120256499965190275a4a4a759fb95ceebaa6f17ff31",
+      "logSha256": "37225eeab4ff4e0b9117dd024dfcf688b77d51ae66888128712a364b236231f7",
+      "testSha256": "22aff847db75a0bb5767dfb3789bbb80ad1fb1e4f255436d7af04ddd1deb9fbf"
+    },
+    {
+      "file": "tests/d14-anomalies-source.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d14-anomalies-source.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-05.json",
+      "exitCode": 0,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 2869,
+      "report": "artifacts/v16-rerecord-265/test-05.json",
+      "log": "artifacts/v16-rerecord-265/test-05.log",
+      "success": true,
+      "reportSha256": "737d8e26bc76e258591ed6b5a88031b6d42a9b4e81947080ad39956f1e8b8a8b",
+      "logSha256": "6913bf09e36975f2cf544b3749dd103882d1f78606cd4047ea1c62303e169df5",
+      "testSha256": "58c13dbb370772ad3b8d0ce3b5e964126c7d22d16b7edd8e13fcadd1202c601e"
+    },
+    {
+      "file": "tests/d14-anomalies.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d14-anomalies.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-06.json",
+      "exitCode": 0,
+      "passed": 42,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 5191,
+      "report": "artifacts/v16-rerecord-265/test-06.json",
+      "log": "artifacts/v16-rerecord-265/test-06.log",
+      "success": true,
+      "reportSha256": "f36c5f2e935eea17e06866fb41cabf5cf4cd44a47ce99af7026f4dccb3d8b895",
+      "logSha256": "adfc82a81eef6702bc11edefff494e51f9e7060c7ce60bbc5b2eca2481730183",
+      "testSha256": "0baa7032793e85e752332387e6fb97527eabf84fe928f757b8f1a87853c5258a"
+    },
+    {
+      "file": "tests/d14-sale-price.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d14-sale-price.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-07.json",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 2876,
+      "report": "artifacts/v16-rerecord-265/test-07.json",
+      "log": "artifacts/v16-rerecord-265/test-07.log",
+      "success": true,
+      "reportSha256": "8146971602639d53eda6fb0c0165ae2b8f57ac89ba5b58593d95b47a30e5f618",
+      "logSha256": "559c0b8762a7d3ff6da2c04f5bb367a546b8daa773e1fe920c369fbcf5b8254e",
+      "testSha256": "4e12e2070d15f364a8d98b8130f8a9f911fdfd6a7db7fdfb17d8bcfdc4e5029d"
+    },
+    {
+      "file": "tests/d14-wiring-match.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d14-wiring-match.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-08.json",
+      "exitCode": 0,
+      "passed": 39,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 16547,
+      "report": "artifacts/v16-rerecord-265/test-08.json",
+      "log": "artifacts/v16-rerecord-265/test-08.log",
+      "success": true,
+      "reportSha256": "8778fb5fce91d13f62dfe54a3e30f2f7bd858e0a2b9231d9b810d67c42ce2a20",
+      "logSha256": "91d5b452911bf1f2b137c401df694859dff13b16792502d72fc5cfbf191226e3",
+      "testSha256": "d367408bc43da3ee45bcccd877eef9a0080ec206ea4834f4f72efc1a3d0783da"
     },
     {
       "file": "tests/epic-loot-reforger.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/epic-loot-reforger.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/epic-loot-reforger.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-09.json",
+      "exitCode": 0,
       "passed": 29,
       "failed": 0,
       "pending": 0,
-      "seconds": 8.329,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-content.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-content.test.ts --configLoader runner",
-      "passed": 10,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.463,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-hook-failures.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-hook-failures.test.ts --configLoader runner",
-      "passed": 8,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.054,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-identity.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-identity.test.ts --configLoader runner",
-      "passed": 14,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 9.433,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-integration.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-integration.test.ts --configLoader runner",
-      "passed": 18,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 2.15,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-lesser-shimmer-duplicator.test.ts --configLoader runner",
-      "passed": 37,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 16.267,
-      "success": true
-    },
-    {
-      "file": "tests/g2-3-netcode-hooks.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-netcode-hooks.test.ts --configLoader runner",
-      "passed": 14,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 9.674,
-      "success": true
-    },
-    {
-      "file": "tests/g2-4a-conqueror-items.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-conqueror-items.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.063,
-      "success": true
-    },
-    {
-      "file": "tests/g2-4a-crown-gold.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown-gold.test.ts --configLoader runner",
-      "passed": 9,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 7.452,
-      "success": true
+      "durationMs": 9727,
+      "report": "artifacts/v16-rerecord-265/test-09.json",
+      "log": "artifacts/v16-rerecord-265/test-09.log",
+      "success": true,
+      "reportSha256": "a731d68188731fb8ba8627c07a57c1e5ac537deee5c481e36226e701b07345d2",
+      "logSha256": "c71d27836d88167227a6e836e4ececb8ed5b3d2d15a0074b007b49345b7ef652",
+      "testSha256": "174bccc88ea2a67850d08e67f38bcd4cbc8368af6e38a8da5b03af59dcac2af0"
     },
     {
       "file": "tests/g2-4a-crown-history.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown-history.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown-history.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-10.json",
+      "exitCode": 0,
       "passed": 56,
       "failed": 0,
       "pending": 0,
-      "seconds": 35.979,
-      "success": true
+      "durationMs": 29266,
+      "report": "artifacts/v16-rerecord-265/test-10.json",
+      "log": "artifacts/v16-rerecord-265/test-10.log",
+      "success": true,
+      "reportSha256": "838efd9877a274f338e2196293c41243c874077174ddcb1884dde1db10f65d68",
+      "logSha256": "4386934cb504545f42960ecd97c4635249acdaf19599338d5c2e7d7ef5ba092e",
+      "testSha256": "3c906e12111aac6e2741797a4dee8ed3ea3c078fa91b2308477f355e06c9efb6"
     },
     {
-      "file": "tests/g2-4a-crown.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown.test.ts --configLoader runner",
-      "passed": 6,
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-artifacts.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-11.json",
+      "exitCode": 0,
+      "passed": 49,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.783,
-      "success": true
+      "durationMs": 4844,
+      "report": "artifacts/v16-rerecord-265/test-11.json",
+      "log": "artifacts/v16-rerecord-265/test-11.log",
+      "success": true,
+      "reportSha256": "34d9215b3559ab8b01704025fe3430db1335eff44c954b4f93d48576b15554c5",
+      "logSha256": "e51ef14b08d9184aae2d423e745fe09f5cdd07591df020905f2fa6e3def77114",
+      "testSha256": "c97d86a364fc6741802c7f69016f768dfcb3395c34ea88259a8359ace11643a9"
     },
     {
-      "file": "tests/g2-4b-artifact-forge.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-artifact-forge.test.ts --configLoader runner",
-      "passed": 7,
+      "file": "tests/live-gold-exports.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/live-gold-exports.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-12.json",
+      "exitCode": 0,
+      "passed": 22,
       "failed": 0,
       "pending": 0,
-      "seconds": 2.908,
-      "success": true
+      "durationMs": 6061,
+      "report": "artifacts/v16-rerecord-265/test-12.json",
+      "log": "artifacts/v16-rerecord-265/test-12.log",
+      "success": true,
+      "reportSha256": "1accf0c906b408d923453377c03442efe251f470e228a2b46f3f82b3f6a309f1",
+      "logSha256": "e26945753166e17f5b0263afadb7b8335737276a370be4d1bd74d1bbc9756def",
+      "testSha256": "bd46899cc7c0b8fad7ccd6ab0038eb9951fba303234d6ba90a798438fcd8e7a6"
     },
     {
-      "file": "tests/g2-4b-clone-forges.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-clone-forges.test.ts --configLoader runner",
-      "passed": 4,
+      "file": "tests/m5-content.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-content.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-13.json",
+      "exitCode": 0,
+      "passed": 9,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.008,
-      "success": true
+      "durationMs": 1543,
+      "report": "artifacts/v16-rerecord-265/test-13.json",
+      "log": "artifacts/v16-rerecord-265/test-13.log",
+      "success": true,
+      "reportSha256": "f6ad443ed8da805496115ebe7ad42514dfbed360ee2365ddea162bdfb5995d21",
+      "logSha256": "247499a7cd7f05633d130015ce4605b33c767de6311d0bfd10cee9e2e26be7e7",
+      "testSha256": "89ccd51bd36085f4d160709b2e7f1abdfc6f0e6f46dfee4d89b456c94695226b"
     },
     {
-      "file": "tests/g2-4b-reward-order.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-reward-order.test.ts --configLoader runner",
-      "passed": 1,
+      "file": "tests/m5-growth.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-growth.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-14.json",
+      "exitCode": 0,
+      "passed": 2,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.039,
-      "success": true
-    },
-    {
-      "file": "tests/g2-4b-support-forge.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-support-forge.test.ts --configLoader runner",
-      "passed": 8,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 4.167,
-      "success": true
-    },
-    {
-      "file": "tests/loot-orb-claim.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/loot-orb-claim.test.ts --configLoader runner",
-      "passed": 20,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 1.917,
-      "success": true
-    },
-    {
-      "file": "tests/m5-replay-cannon.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-cannon.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 157.287,
-      "success": true
-    },
-    {
-      "file": "tests/m5-replay-mage.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-mage.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 265.723,
-      "success": true
-    },
-    {
-      "file": "tests/m5-replay-sniper-caitlyn.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-sniper-caitlyn.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 352.858,
-      "success": true
-    },
-    {
-      "file": "tests/m5-replay.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 237.434,
-      "success": true
+      "durationMs": 6691,
+      "report": "artifacts/v16-rerecord-265/test-14.json",
+      "log": "artifacts/v16-rerecord-265/test-14.log",
+      "success": true,
+      "reportSha256": "964cc68ab3a85ee6ca82557dc33ba5eaf9b5060d69102f9b01df1ffa7d170988",
+      "logSha256": "f69e8a4a38eaac47bb247095614cca424ef70f11fa7d7ee2d5ada00d00e30a8c",
+      "testSha256": "4653f27db77006b5b2f916b2a0779eaad7a6037215354682e307e46718b38d3a"
     },
     {
       "file": "tests/m5-route.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m5-route.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-route.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-15.json",
+      "exitCode": 0,
       "passed": 8,
       "failed": 0,
       "pending": 0,
-      "seconds": 53.399,
-      "success": true
-    },
-    {
-      "file": "tests/m6-persistence.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m6-persistence.test.ts --configLoader runner",
-      "passed": 44,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 2.065,
-      "success": true
-    },
-    {
-      "file": "tests/m7-m6-save-compat.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m7-m6-save-compat.test.ts --configLoader runner",
-      "passed": 8,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 1.261,
-      "success": true
+      "durationMs": 69165,
+      "report": "artifacts/v16-rerecord-265/test-15.json",
+      "log": "artifacts/v16-rerecord-265/test-15.log",
+      "success": true,
+      "reportSha256": "26f0ac197a20725952b41a4d584587567bf66f045ec8ac8dfd28d4bfa1474ba2",
+      "logSha256": "b56e97fad4f556fd9b3032d9042bf93c155f55d9cd5c647d44666c68fdb2bd38",
+      "testSha256": "ec3c560362845daad00e09d0955e3d6854f447c843464f5f548dd0c718d428f7"
     },
     {
       "file": "tests/m8-b10-encounter-outcomes.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts tests/m8-b8-live-growth.test.ts tests/m8-b8-loot-runtime.test.ts tests/m8-b8-token-lifecycle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/recheck.json",
+      "exitCode": 0,
       "passed": 46,
       "failed": 0,
       "pending": 0,
-      "seconds": 6.173,
-      "success": true
+      "durationMs": 3909.446044921875,
+      "report": "artifacts/v16-rerecord-265/recheck.json",
+      "success": true,
+      "attempts": [
+        {
+          "file": "tests/m8-b10-encounter-outcomes.test.ts",
+          "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-16.json",
+          "exitCode": 1,
+          "passed": 45,
+          "failed": 1,
+          "pending": 0,
+          "durationMs": 27048,
+          "report": "artifacts/v16-rerecord-265/test-16.json",
+          "log": "artifacts/v16-rerecord-265/test-16.log",
+          "success": false
+        }
+      ],
+      "reportSha256": "eab4af901afc974bea5a2689f3362b5915b37d81e2b58ef983dd62f5d8904e1f",
+      "testSha256": "bfe3c63d4c3b49b010f2e78a1947dec70afe32d7a384353d508545a520939f46"
     },
     {
-      "file": "tests/m8-b10-item-save-replay.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-item-save-replay.test.ts --configLoader runner",
-      "passed": 45,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 24.022,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b10-temporary-replay.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-temporary-replay.test.ts --configLoader runner",
-      "passed": 3,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 1.078,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-audit-regressions.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-audit-regressions.test.ts --configLoader runner",
+      "file": "tests/m8-b3-damage-control-order.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b3-damage-control-order.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-17.json",
+      "exitCode": 0,
       "passed": 14,
       "failed": 0,
       "pending": 0,
-      "seconds": 17.751,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-belt.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-belt.test.ts --configLoader runner",
-      "passed": 2,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.041,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-bow.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-bow.test.ts --configLoader runner",
-      "passed": 7,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.093,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-cloak.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-cloak.test.ts --configLoader runner",
-      "passed": 3,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.166,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-gloves.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-gloves.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.022,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-integration.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-integration.test.ts --configLoader runner",
-      "passed": 16,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 4.751,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-r3b-lifecycle.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-r3b-lifecycle.test.ts --configLoader runner",
-      "passed": 4,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 3.88,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-rod.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-rod.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.169,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-sword.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-sword.test.ts --configLoader runner",
-      "passed": 8,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.06,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-tear.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-tear.test.ts --configLoader runner",
-      "passed": 9,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.165,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-trigger-ledger.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-trigger-ledger.test.ts --configLoader runner",
-      "passed": 2,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.006,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b4-vest.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-vest.test.ts --configLoader runner",
-      "passed": 4,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.071,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b5-equipment-history.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-equipment-history.test.ts --configLoader runner",
-      "passed": 9,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 9.155,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b5-grant-upgrade.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-grant-upgrade.test.ts --configLoader runner",
-      "passed": 14,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 13.721,
-      "success": true
+      "durationMs": 3733,
+      "report": "artifacts/v16-rerecord-265/test-17.json",
+      "log": "artifacts/v16-rerecord-265/test-17.log",
+      "success": true,
+      "reportSha256": "61a27a93dd5ec1b7a1660c049c8aadf025be849b0aa414de4b6bdef5e7031cbb",
+      "logSha256": "4dc8d6916e6115f80253083e246dd31be20a8579db2dc86a66d4bfbeb9058040",
+      "testSha256": "db03646a4113f6fc2ebad5ddf3d43946273566b5a776e4c7cce2bc5d2bb7a5e8"
     },
     {
       "file": "tests/m8-b5-instances.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-instances.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-instances.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-18.json",
+      "exitCode": 0,
       "passed": 18,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.692,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b5-queries.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-queries.test.ts --configLoader runner",
-      "passed": 5,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.306,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b5-temporary.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-temporary.test.ts --configLoader runner",
-      "passed": 30,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 11.909,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b6-match-wiring.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-match-wiring.test.ts --configLoader runner",
-      "passed": 18,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 6.218,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b6-opening-economy.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-opening-economy.test.ts --configLoader runner",
-      "passed": 27,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.021,
-      "success": true
+      "durationMs": 16358,
+      "report": "artifacts/v16-rerecord-265/test-18.json",
+      "log": "artifacts/v16-rerecord-265/test-18.log",
+      "success": true,
+      "reportSha256": "6e544d930c851b6127977a08292955a2d52bab6429cd818645cfa3bc78007d2b",
+      "logSha256": "0ad61347cbe41886cd5f8dc9dbc002f583112f61ff0d5c251e71321a5baeeb22",
+      "testSha256": "ff09ad01ce83c10a28569d8350b95b322acdd2fe81c74a21202dc1dc809c56a5"
     },
     {
       "file": "tests/m8-b6-round-catalog.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-round-catalog.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-round-catalog.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-19.json",
+      "exitCode": 0,
       "passed": 30,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.014,
-      "success": true
+      "durationMs": 972,
+      "report": "artifacts/v16-rerecord-265/test-19.json",
+      "log": "artifacts/v16-rerecord-265/test-19.log",
+      "success": true,
+      "reportSha256": "04bb78ef88124cebf4b3b824b9448e83941f031212b1a9c9858c23d33a1ccded",
+      "logSha256": "a0f53b2636443d849c6b831d1eaaf2eba911be702bc57b3011cac8cf2460fd30",
+      "testSha256": "888ff994fc8272e4eb23f62071d518a168c27cfa299c16da69c550867c0ff338"
     },
     {
-      "file": "tests/m8-b7-cleanup.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-cleanup.test.ts --configLoader runner",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-audit-vectors.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-20.json",
+      "exitCode": 0,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 41618,
+      "report": "artifacts/v16-rerecord-265/test-20.json",
+      "log": "artifacts/v16-rerecord-265/test-20.log",
+      "success": true,
+      "reportSha256": "78e439937a859cbe2c599ae6552cbcc48d8f8f3920e1d8122076b4d6a4c49901",
+      "logSha256": "22c92d73986d5cd068c383449ccf6def7dd5f09b056996eede592979450770c0",
+      "testSha256": "47ba73149290434d2135d505767c4cd387b039a070c6106f873f4495ce56c3ce"
+    },
+    {
+      "file": "tests/m8-b7-catalog.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-catalog.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-21.json",
+      "exitCode": 0,
       "passed": 5,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.288,
-      "success": true
+      "durationMs": 1613,
+      "report": "artifacts/v16-rerecord-265/test-21.json",
+      "log": "artifacts/v16-rerecord-265/test-21.log",
+      "success": true,
+      "reportSha256": "834363113ccbb4cb40367c028561e6b101f93e551301413f4b33881a19b47856",
+      "logSha256": "1da9728d65d88c40275a6c53533968581fc65abf1c382b50c87d81d5d4df3078",
+      "testSha256": "1edd1d8afb7a1b5d03b1d851705279d6763b8da563ebdc752832c04214f81b1c"
+    },
+    {
+      "file": "tests/m8-b7-known-limitations.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-known-limitations.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-22.json",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 2793,
+      "report": "artifacts/v16-rerecord-265/test-22.json",
+      "log": "artifacts/v16-rerecord-265/test-22.log",
+      "success": true,
+      "reportSha256": "c601fe15ed5b3f8d6931325a34801099d29b1bc2a3d1baa05516768691ba2cff",
+      "logSha256": "2dcbc8dc8f5793f7938c7a37264e544757a4ee41d1313917cf8715364f678e0f",
+      "testSha256": "d6d29ce971701a019f8597482b071d68d9f72378e487505065b3617b9ea87841"
     },
     {
       "file": "tests/m8-b7-match-wiring.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-match-wiring.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-match-wiring.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-23.json",
+      "exitCode": 0,
       "passed": 30,
       "failed": 0,
       "pending": 0,
-      "seconds": 16.755,
-      "success": true
+      "durationMs": 33090,
+      "report": "artifacts/v16-rerecord-265/test-23.json",
+      "log": "artifacts/v16-rerecord-265/test-23.log",
+      "success": true,
+      "reportSha256": "b612984715f4d2504712244bc447ab8b1a83003d96b698e709fb71c7b7a5d5de",
+      "logSha256": "2518082bacc7d34f529c83deb080918c9025f9f17df50e4175cbd444af462fc7",
+      "testSha256": "ac1af2bc0cd22020ba6474517cf7516dba0b0dcd89c76cae90712476dda8d3dd"
     },
     {
-      "file": "tests/m8-b8-acquisition.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-acquisition.test.ts --configLoader runner",
-      "passed": 12,
+      "file": "tests/m8-b7-mechanisms.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-mechanisms.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-24.json",
+      "exitCode": 0,
+      "passed": 21,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.037,
-      "success": true
+      "durationMs": 2851,
+      "report": "artifacts/v16-rerecord-265/test-24.json",
+      "log": "artifacts/v16-rerecord-265/test-24.log",
+      "success": true,
+      "reportSha256": "681318e6f4f92565f775b6a6e934301a3b31c66034acda7a5fd7012b44780bfe",
+      "logSha256": "99572b4e02485e21c6862218230cb429d6e86858165740d7a0154eb56abbff9e",
+      "testSha256": "5c77125599b435a0008830deb3f9b26b4cd412f6e08ba294d2bd65275be58b43"
     },
     {
-      "file": "tests/m8-b8-combat-input.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-combat-input.test.ts --configLoader runner",
-      "passed": 38,
+      "file": "tests/m8-b8-golden-guard.test.mjs",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-golden-guard.test.mjs --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-25.json",
+      "exitCode": 0,
+      "passed": 24,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.448,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-command-oracle.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-command-oracle.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.061,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-copy-semantics.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-copy-semantics.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.082,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-equipment-fixture.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-equipment-fixture.test.ts --configLoader runner",
-      "passed": 4,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 7.792,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-live-capacity.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-capacity.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 3.246,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-live-cross-round.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-cross-round.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.996,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-live-economy.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-economy.test.ts --configLoader runner",
-      "passed": 3,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 2.17,
-      "success": true
+      "durationMs": 2024,
+      "report": "artifacts/v16-rerecord-265/test-25.json",
+      "log": "artifacts/v16-rerecord-265/test-25.log",
+      "success": true,
+      "reportSha256": "7be4a9f496d647e23180d6612b88c9336fcc3942c1cd4a83053f5d779193449b",
+      "logSha256": "452e7e3555731d9c63b7c31c3950d9ae23bf82d7135b19442dfdca63252eec07",
+      "testSha256": "bf6b3b104331646b0ff65518b8f741d6dc57460aaab3168906554e456e527a83"
     },
     {
       "file": "tests/m8-b8-live-growth.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-growth.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts tests/m8-b8-live-growth.test.ts tests/m8-b8-loot-runtime.test.ts tests/m8-b8-token-lifecycle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/recheck.json",
+      "exitCode": 0,
       "passed": 26,
       "failed": 0,
       "pending": 0,
-      "seconds": 2.626,
-      "success": true
+      "durationMs": 1659.862060546875,
+      "report": "artifacts/v16-rerecord-265/recheck.json",
+      "success": true,
+      "attempts": [
+        {
+          "file": "tests/m8-b8-live-growth.test.ts",
+          "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-growth.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-26.json",
+          "exitCode": 1,
+          "passed": 0,
+          "failed": 0,
+          "pending": 0,
+          "durationMs": 8695,
+          "report": "artifacts/v16-rerecord-265/test-26.json",
+          "log": "artifacts/v16-rerecord-265/test-26.log",
+          "success": false
+        }
+      ],
+      "reportSha256": "eab4af901afc974bea5a2689f3362b5915b37d81e2b58ef983dd62f5d8904e1f",
+      "testSha256": "a1b5e09ae82d38a3a49a33bbcbcd80112bea2f49e727274d5eb1db281b85f77f"
     },
     {
       "file": "tests/m8-b8-live-reveal.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-reveal.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-reveal.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-27.json",
+      "exitCode": 0,
       "passed": 3,
       "failed": 0,
       "pending": 0,
-      "seconds": 2.991,
-      "success": true
+      "durationMs": 27035,
+      "report": "artifacts/v16-rerecord-265/test-27.json",
+      "log": "artifacts/v16-rerecord-265/test-27.log",
+      "success": true,
+      "reportSha256": "3ccf7cd24fb1a003949fab4542ee700e361a71730a09ef71605debede32d78f0",
+      "logSha256": "be8817bc87cf5d77eacfb27db0e06e87e6c01fd282de5aa68b646fb754e76e5f",
+      "testSha256": "78c3e9b9553d899e2de1203c3b79588d5de5b2f633970efb3248885c7743a991"
     },
     {
       "file": "tests/m8-b8-live-transfer.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-transfer.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-transfer.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-28.json",
+      "exitCode": 0,
       "passed": 19,
       "failed": 0,
       "pending": 0,
-      "seconds": 3.31,
-      "success": true
+      "durationMs": 12433,
+      "report": "artifacts/v16-rerecord-265/test-28.json",
+      "log": "artifacts/v16-rerecord-265/test-28.log",
+      "success": true,
+      "reportSha256": "6b5382bb24a471ee782826818d63854b09fad5002ef157fd6cc8c7e92c8bcc6e",
+      "logSha256": "b1bb4b0b636075f5ff1a8bf9fc56036c23a289de02cdb2c8572a3143001fcdaa",
+      "testSha256": "a52722be73e74c39843dfddaa30d183b3552af9d89c5702078008d130608a537"
     },
     {
       "file": "tests/m8-b8-loot-freeze.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-freeze.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-freeze.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-29.json",
+      "exitCode": 0,
       "passed": 67,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.217,
-      "success": true
+      "durationMs": 2082,
+      "report": "artifacts/v16-rerecord-265/test-29.json",
+      "log": "artifacts/v16-rerecord-265/test-29.log",
+      "success": true,
+      "reportSha256": "a1ffd422ae1ad02ba136dd86e59406f09005ba6b5159cfbfeba8d4fdfd2f5993",
+      "logSha256": "16c3bfd7cf2de02d6bdbabdf1dad0ebb0abd375e201c1faeef76589a1e6008d7",
+      "testSha256": "89d5eb1dbc4a9f1e54d752725c7be496090adfa2791b44c4f35e91fa28406607"
     },
     {
       "file": "tests/m8-b8-loot-runtime.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-runtime.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts tests/m8-b8-live-growth.test.ts tests/m8-b8-loot-runtime.test.ts tests/m8-b8-token-lifecycle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/recheck.json",
+      "exitCode": 0,
       "passed": 16,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.155,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-loot-view.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-view.test.ts --configLoader runner",
-      "passed": 7,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 1.804,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-oracle.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-oracle.test.ts --configLoader runner",
-      "passed": 24,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 24.783,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-resource-provenance.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-resource-provenance.test.ts --configLoader runner",
-      "passed": 64,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.079,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-restore-fold-reuse.test.ts --configLoader runner",
-      "passed": 5,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.269,
-      "success": true
-    },
-    {
-      "file": "tests/m8-b8-restore.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-restore.test.ts --configLoader runner",
-      "passed": 7,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 2.387,
-      "success": true
+      "durationMs": 89.042724609375,
+      "report": "artifacts/v16-rerecord-265/recheck.json",
+      "success": true,
+      "attempts": [
+        {
+          "file": "tests/m8-b8-loot-runtime.test.ts",
+          "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-runtime.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-30.json",
+          "exitCode": 1,
+          "passed": 15,
+          "failed": 1,
+          "pending": 0,
+          "durationMs": 3172,
+          "report": "artifacts/v16-rerecord-265/test-30.json",
+          "log": "artifacts/v16-rerecord-265/test-30.log",
+          "success": false
+        }
+      ],
+      "reportSha256": "eab4af901afc974bea5a2689f3362b5915b37d81e2b58ef983dd62f5d8904e1f",
+      "testSha256": "bfffbc82915464d4603bc295be0373a57661679967ee68807b366c5116918ec5"
     },
     {
       "file": "tests/m8-b8-token-lifecycle.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-token-lifecycle.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts tests/m8-b8-live-growth.test.ts tests/m8-b8-loot-runtime.test.ts tests/m8-b8-token-lifecycle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/recheck.json",
+      "exitCode": 0,
       "passed": 3,
       "failed": 0,
       "pending": 0,
-      "seconds": 1.091,
-      "success": true
+      "durationMs": 486.667724609375,
+      "report": "artifacts/v16-rerecord-265/recheck.json",
+      "success": true,
+      "attempts": [
+        {
+          "file": "tests/m8-b8-token-lifecycle.test.ts",
+          "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-token-lifecycle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-31.json",
+          "exitCode": 1,
+          "passed": 1,
+          "failed": 2,
+          "pending": 0,
+          "durationMs": 5152,
+          "report": "artifacts/v16-rerecord-265/test-31.json",
+          "log": "artifacts/v16-rerecord-265/test-31.log",
+          "success": false
+        }
+      ],
+      "reportSha256": "eab4af901afc974bea5a2689f3362b5915b37d81e2b58ef983dd62f5d8904e1f",
+      "testSha256": "abfc874a4101101de8d120e18b294f4925f87bccfbf05fb70018b72011d12a2b"
+    },
+    {
+      "file": "tests/m8-b9-golden-guard.test.mjs",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b9-golden-guard.test.mjs --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-32.json",
+      "exitCode": 0,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 1050,
+      "report": "artifacts/v16-rerecord-265/test-32.json",
+      "log": "artifacts/v16-rerecord-265/test-32.log",
+      "success": true,
+      "reportSha256": "332a138423b33b1c42007f49ed5a41e11680e811e8806c56a82d3ab881a06ebb",
+      "logSha256": "db5d4fe4f1a0a327829fb30ade4a93bc67a07b03e8306e47ce43c57c876744c7",
+      "testSha256": "6881d504f7a92ff59a92133714c7fc2032d4f60b0cc2b3be8afadf6ed9dcf670"
     },
     {
       "file": "tests/m8-content-equivalence.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-content-equivalence.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-content-equivalence.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-33.json",
+      "exitCode": 0,
       "passed": 138,
       "failed": 0,
       "pending": 0,
-      "seconds": 19.798,
-      "success": true
+      "durationMs": 22057,
+      "report": "artifacts/v16-rerecord-265/test-33.json",
+      "log": "artifacts/v16-rerecord-265/test-33.log",
+      "success": true,
+      "reportSha256": "4cce0b328302ec0b924dc252fd904be04335b882fd401a7efb83e43955c89495",
+      "logSha256": "95370b5f02b03c14c5fd15de0f2ffe165720b1df398183dadcab15211b253aa3",
+      "testSha256": "823f95f70817166bb6d15b2516437fb0a5dae2aaacfd7bf8c4f5565630aaf2a1"
     },
     {
       "file": "tests/m8-contracts.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/m8-contracts.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-contracts.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-34.json",
+      "exitCode": 0,
       "passed": 6,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.008,
-      "success": true
+      "durationMs": 916,
+      "report": "artifacts/v16-rerecord-265/test-34.json",
+      "log": "artifacts/v16-rerecord-265/test-34.log",
+      "success": true,
+      "reportSha256": "13c3b4e122d7d8d65786e1a712e0111fe971d19a9963ac2a66e1e5056b89d7b3",
+      "logSha256": "c57c81ba255f87910eef0b74ba71b4cc673d5cad8c253fa6d9478a6c6f224f78",
+      "testSha256": "88fc204238ed677b816c394252bbfd93f6775f2c9d04e921981b2a729f6dbdda"
+    },
+    {
+      "file": "tests/m8-u5-preview.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-u5-preview.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-35.json",
+      "exitCode": 0,
+      "passed": 60,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 25477,
+      "report": "artifacts/v16-rerecord-265/test-35.json",
+      "log": "artifacts/v16-rerecord-265/test-35.log",
+      "success": true,
+      "reportSha256": "fa2a0433cf1b3c464406fb591e23824a46e303016b9aeaef5a35f8b2f18a2fd4",
+      "logSha256": "2feb6bea4c7ce1bef51c0313c97d10dd5611d3448d7aeacf6c932bac0d839153",
+      "testSha256": "6d5273ddc4cb274c58acc1d124f428343f2bf82e2c2668d4da5b911b4f5c2b58"
     },
     {
       "file": "tests/match-contract.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/match-contract.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/match-contract.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-36.json",
+      "exitCode": 0,
       "passed": 12,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.134,
-      "success": true
+      "durationMs": 2905,
+      "report": "artifacts/v16-rerecord-265/test-36.json",
+      "log": "artifacts/v16-rerecord-265/test-36.log",
+      "success": true,
+      "reportSha256": "64cb9a064d2b4f489f2ae52fc2812d27e64487ee5fc1cc3b4594fcf158fb914d",
+      "logSha256": "1f54cf8e27fb2e31b2b2e787f7ff87f56395c8ca17e72054cc4f6883c647febf",
+      "testSha256": "cea9d25411c3f1255dea11669881da000471b3424cea82e41500bf389e2ae726"
+    },
+    {
+      "file": "tests/match-session.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/match-session.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-37.json",
+      "exitCode": 0,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 4531,
+      "report": "artifacts/v16-rerecord-265/test-37.json",
+      "log": "artifacts/v16-rerecord-265/test-37.log",
+      "success": true,
+      "reportSha256": "9a501755532efed8f625d625f559a9a2ecb29c5915fc735bbdee89e925fccb77",
+      "logSha256": "afb3743bb50a32d8e6803cf061a696384bbad730f9611ab01aa9282535a537cc",
+      "testSha256": "b80e8fb5f450023545d827e721489b08fcd5572875746d649fd18c0a72f9a9e9"
+    },
+    {
+      "file": "tests/opening-random-1cost.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/opening-random-1cost.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-38.json",
+      "exitCode": 0,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 3716,
+      "report": "artifacts/v16-rerecord-265/test-38.json",
+      "log": "artifacts/v16-rerecord-265/test-38.log",
+      "success": true,
+      "reportSha256": "c073fbab3ca41137136d4561b032d2bd70d2a3f876017edcc6307c29f8a8d683",
+      "logSha256": "2adfbea064eb594fea586fa2f500ff41ce06b025c82a1208ba8324ed69d2c36b",
+      "testSha256": "cc8277a1abd62001f6edf3bac5bd70448ccb38d64594d44d34bf9de1b41f6d7f"
     },
     {
       "file": "tests/opening-random-identity.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/opening-random-identity.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/opening-random-identity.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-39.json",
+      "exitCode": 0,
       "passed": 142,
       "failed": 0,
       "pending": 0,
-      "seconds": 26.628,
-      "success": true
-    },
-    {
-      "file": "tests/r3r4-consumable-targets.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-consumable-targets.test.ts --configLoader runner",
-      "passed": 5,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 1.914,
-      "success": true
-    },
-    {
-      "file": "tests/r3r4-consumables.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-consumables.test.ts --configLoader runner",
-      "passed": 15,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 18.527,
-      "success": true
+      "durationMs": 30083,
+      "report": "artifacts/v16-rerecord-265/test-39.json",
+      "log": "artifacts/v16-rerecord-265/test-39.log",
+      "success": true,
+      "reportSha256": "7db8a285e053dcfd9d9b57a7afb11372cb3cf371fe1b72e57412ecb998f6bb87",
+      "logSha256": "fb3b38ed3927149eeb69b54fab8b399e3120d6a01929da6d2fab18b857a56786",
+      "testSha256": "cfd503425cfb1c42616ad11b7865ae4bff00251d671be141f9ac033b31a8f76f"
     },
     {
       "file": "tests/r3r4-legacy.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-legacy.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-legacy.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-40.json",
+      "exitCode": 0,
       "passed": 2,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.031,
-      "success": true
-    },
-    {
-      "file": "tests/r3r4-loot-weights.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-loot-weights.test.ts --configLoader runner",
-      "passed": 2,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.009,
-      "success": true
-    },
-    {
-      "file": "tests/r3r4-loot.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-loot.test.ts --configLoader runner",
-      "passed": 6,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.674,
-      "success": true
+      "durationMs": 3365,
+      "report": "artifacts/v16-rerecord-265/test-40.json",
+      "log": "artifacts/v16-rerecord-265/test-40.log",
+      "success": true,
+      "reportSha256": "e447864e501470e6a0d8cc30d229b148c0e0671de1a2df35858c98a63df780e6",
+      "logSha256": "5e74f53e559d795ad5b71fb195ef7584dad1bae5a2068fa358bba12f81a9c877",
+      "testSha256": "e5b354e5be36004b39f78a47819a1ee605546229f8e49a9578688563a7c2296d"
     },
     {
       "file": "tests/r3r4-oracle.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-oracle.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-oracle.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-41.json",
+      "exitCode": 0,
       "passed": 7,
       "failed": 0,
       "pending": 0,
-      "seconds": 1.302,
-      "success": true
+      "durationMs": 3649,
+      "report": "artifacts/v16-rerecord-265/test-41.json",
+      "log": "artifacts/v16-rerecord-265/test-41.log",
+      "success": true,
+      "reportSha256": "8b0abc608370b1086ea03830c08fd51334b381abbbcedd62e1e6781451bb6d86",
+      "logSha256": "6ea2940d8ccf714b5c5a2a76ed12e72a330d25a1d4e809fbdba99bea12e1b414",
+      "testSha256": "55d64063cbe918ec0c8378726bc6cc9a2f3d3480170a5e3b0c068d17c72feb1c"
     },
     {
-      "file": "tests/r3r4-shared.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-shared.test.ts --configLoader runner",
-      "passed": 8,
+      "file": "tests/round-enemies.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/round-enemies.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-42.json",
+      "exitCode": 0,
+      "passed": 7,
       "failed": 0,
       "pending": 0,
-      "seconds": 2.771,
-      "success": true
+      "durationMs": 1350,
+      "report": "artifacts/v16-rerecord-265/test-42.json",
+      "log": "artifacts/v16-rerecord-265/test-42.log",
+      "success": true,
+      "reportSha256": "d0a68fd72c2d3198a7fca231b0e2d35d53aff3f58749533d56b4bb0faaf6b138",
+      "logSha256": "9723bae8c129417e82d84c121a1941428ee71ff68ba58bc2345a61db0df951ac",
+      "testSha256": "2e4d63d1603de2903477d70564a8eee50082cf796f68b4c03ec397cc13814855"
     },
     {
-      "file": "tests/restore-audit/cd-replay-facts.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/restore-audit/cd-replay-facts.test.ts --configLoader runner",
-      "passed": 34,
+      "file": "tests/s13-p1-dual-wielding.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/s13-p1-dual-wielding.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-43.json",
+      "exitCode": 0,
+      "passed": 2,
       "failed": 0,
       "pending": 0,
-      "seconds": 35.502,
-      "success": true
+      "durationMs": 12789,
+      "report": "artifacts/v16-rerecord-265/test-43.json",
+      "log": "artifacts/v16-rerecord-265/test-43.log",
+      "success": true,
+      "reportSha256": "12841d72c0d4002e8db7d7af26e96b8675a6284550a4e0cdd81ebf11d5b7c19c",
+      "logSha256": "548928a975df120a8c060dcd948f627d82848fe2bd2a2a53820b5a6acfdcf746",
+      "testSha256": "ed5f8f1121fec22d7ea921592af068eaf82faefdefc7e41b99dacf4319521248"
     },
     {
-      "file": "tests/server/c18b-consumable-preview.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/server/c18b-consumable-preview.test.ts --configLoader runner",
+      "file": "tests/server/augment-tier-consistency.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/server/augment-tier-consistency.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-44.json",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 4370,
+      "report": "artifacts/v16-rerecord-265/test-44.json",
+      "log": "artifacts/v16-rerecord-265/test-44.log",
+      "success": true,
+      "reportSha256": "f40811a27c87894f3d1437276180b2373d5d42a4cbc45302ef42c320db56e968",
+      "logSha256": "ec04e7eebd1bb3ddcd5b9f5bb91a28bb552a518c48ecd1916bbafd748c4e536a",
+      "testSha256": "e7746c43216b80dbda861fcec6a1e579f9cb3f76a2b96015f4042c4567e80333"
+    },
+    {
+      "file": "tests/server/g2-2-emissary-wins.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/server/g2-2-emissary-wins.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-45.json",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 6861,
+      "report": "artifacts/v16-rerecord-265/test-45.json",
+      "log": "artifacts/v16-rerecord-265/test-45.log",
+      "success": true,
+      "reportSha256": "2dbb9198ddbbf6f4a93433d6ee789c3627ee0c44f4aba76b7bc266a9a3ad62f6",
+      "logSha256": "99f55bfdbd86c452baea569ebbc95a8088769ab772a5ac6f9a4e057abca084a8",
+      "testSha256": "ef60e613593ed0c0ecb71b62acf581bc8266a2efc0b49762d75912b2c3303f57"
+    },
+    {
+      "file": "tests/t11-golden.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t11-golden.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-46.json",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "durationMs": 3022,
+      "report": "artifacts/v16-rerecord-265/test-46.json",
+      "log": "artifacts/v16-rerecord-265/test-46.log",
+      "success": true,
+      "reportSha256": "e261802cf52fe02ddc71bebb91af0fdf3a1662f0d2594ccdd593b3511f2b3217",
+      "logSha256": "9c50acbe1d61158342c328bb99a5c3dcb3c8e03e02628ca1fe2bf54b3f2e7ada",
+      "testSha256": "ede58b67064b529819746ec92b3752262831d391aac6e867e61ae0b007acd189"
+    },
+    {
+      "file": "tests/t12-golden.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t12-golden.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-47.json",
+      "exitCode": 0,
       "passed": 6,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.028,
-      "success": true
+      "durationMs": 3054,
+      "report": "artifacts/v16-rerecord-265/test-47.json",
+      "log": "artifacts/v16-rerecord-265/test-47.log",
+      "success": true,
+      "reportSha256": "797ee5452dc501482be4b3d588928f8bd643ca4a07424bbf089ee7b6c9f6dca6",
+      "logSha256": "1780553638952423f1910e7475a1b8f67d3461f8969a27d0692551468aeb0513",
+      "testSha256": "baec24ab0ce036f8f21ff36ee6da244060b0db4dba034fed3408792af1b95dd0"
     },
     {
-      "file": "tests/t12-combat-equip.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t12-combat-equip.test.ts --configLoader runner",
-      "passed": 48,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 11.711,
-      "success": true
-    },
-    {
-      "file": "tests/t3-round-settlement.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t3-round-settlement.test.ts --configLoader runner",
-      "passed": 10,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 3.077,
-      "success": true
-    },
-    {
-      "file": "tests/t3-timeout-loot.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t3-timeout-loot.test.ts --configLoader runner",
+      "file": "tests/t13-a-golden.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t13-a-golden.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-48.json",
+      "exitCode": 0,
       "passed": 6,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.187,
-      "success": true
-    },
-    {
-      "file": "tests/t5r-b7-integration.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-b7-integration.test.ts --configLoader runner",
-      "passed": 1,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 30.288,
-      "success": true
-    },
-    {
-      "file": "tests/t5r-loot-view.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-loot-view.test.ts --configLoader runner",
-      "passed": 24,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.517,
-      "success": true
-    },
-    {
-      "file": "tests/t5r-private-seat-view.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-private-seat-view.test.ts --configLoader runner",
-      "passed": 15,
-      "failed": 0,
-      "pending": 0,
-      "seconds": 0.569,
-      "success": true
+      "durationMs": 3038,
+      "report": "artifacts/v16-rerecord-265/test-48.json",
+      "log": "artifacts/v16-rerecord-265/test-48.log",
+      "success": true,
+      "reportSha256": "52fbb2f737a1d67bfed55987261f601279f9d0001476c3e3b8da8042ed91dc60",
+      "logSha256": "8c5899dc2b22003a92fb21f88398138e34528ac9c4c41b26263c627c80089f71",
+      "testSha256": "30415bb378f4c74d244e592bdc60fa3d07a2ba1c94a897b3a15fa9376c12cb53"
     },
     {
       "file": "tests/task-mechanism-restore.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/task-mechanism-restore.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/task-mechanism-restore.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-49.json",
+      "exitCode": 0,
       "passed": 20,
       "failed": 0,
       "pending": 0,
-      "seconds": 16.89,
-      "success": true
+      "durationMs": 15691,
+      "report": "artifacts/v16-rerecord-265/test-49.json",
+      "log": "artifacts/v16-rerecord-265/test-49.log",
+      "success": true,
+      "reportSha256": "dac587595be4adedab80eb30d28845197cbf0d5c7870eb9119d12dfe50477b57",
+      "logSha256": "c8e948e55f8675ed7b0663ddc738579c5ee64b8aeb3f6293257bff21c4ce4126",
+      "testSha256": "362c474be0cfac10f0214c292b60dd27f9d944071f075e39a30174c42fd970ea"
     },
     {
       "file": "tests/ur-i3-combat-statuses.test.ts",
-      "command": "node node_modules/vitest/vitest.mjs run tests/ur-i3-combat-statuses.test.ts --configLoader runner",
+      "command": "node node_modules/vitest/vitest.mjs run tests/ur-i3-combat-statuses.test.ts --project fast --configLoader runner --maxWorkers=1 --no-file-parallelism --reporter=json --outputFile=artifacts/v16-rerecord-265/test-50.json",
+      "exitCode": 0,
       "passed": 6,
       "failed": 0,
       "pending": 0,
-      "seconds": 0.157,
-      "success": true
+      "durationMs": 3413,
+      "report": "artifacts/v16-rerecord-265/test-50.json",
+      "log": "artifacts/v16-rerecord-265/test-50.log",
+      "success": true,
+      "reportSha256": "81d6ebe12cf44c9ebdabd37416ccc608762db40da7ac2fca14299597b2740ea5",
+      "logSha256": "bb62e190b99d3fc487cb3b738ad0ddbc484c52b63833f6b2cc90a20fd304fd59",
+      "testSha256": "71fe94bfe953f314a21025f84dcf34890aa8d7b5280b7fda762b3747a19f2bf6"
     }
   ],
-  "compiler": {
-    "command": "npx.cmd tsc --noEmit",
-    "exitCode": 2,
-    "diagnostics": [
-      "src/presentation/loot-view.ts(48,57): error TS2322: Type 'string | undefined' is not assignable to type 'string'.",
-      "  Type 'undefined' is not assignable to type 'string'.",
-      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'TFT_Consumable_ChampionDuplicator_III' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
-      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'TFT_Consumable_NeekosHelp' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
-      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'reforger' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
-      "src/presentation/orb-loot.ts(43,96): error TS2353: Object literal may only specify known properties, and ''component-reforger'' does not exist in type 'Readonly<Record<\"TFT_Consumable_ChampionDuplicator_III\" | \"TFT_Consumable_NeekosHelp\" | \"magnetic-remover\" | \"reforger\", string>>'.",
-      "src/presentation/orb-loot.ts(48,14): error TS2741: Property '\"bench-full\"' is missing in type '{ 'unknown-consumable': string; 'invalid-consumable-target': string; 'no-removable-items': string; 'temporary-item': string; 'wrong-phase': string; 'unknown-unit': string; 'unknown-item': string; }' but required in type 'Readonly<Record<ConsumableFailure, string>>'."
-    ],
-    "diagnosticCount": 6
-  },
-  "reviewOnlyUiCompilerOverlay": {
-    "scope": "Review-only compiler-host overlay of UI_ADAPTER.patch; actual source is unchanged",
-    "errors": 0,
-    "diagnostics": []
-  }
+  "newTimeoutRelaxations": [],
+  "regressionFixes": [
+    {
+      "file": "tests/m8-b10-encounter-outcomes.test.ts",
+      "cause": "Stale terminal reward vector after independent bonus stream",
+      "fix": "Exact ordered seed42 forge/Leona/1G/Ekko/4G vector",
+      "independentNumericalEvidence": {
+        "file": "tests/m8-b10-encounter-outcomes.test.ts",
+        "cause": "Pre-independent-bonus seed42 expectation retained in current terminal reward test",
+        "seed": 42,
+        "roundId": "6-7",
+        "expected": [
+          {
+            "kind": "forge",
+            "definitionId": "TFT_ArmoryKeyCompleted",
+            "quantity": 1
+          },
+          {
+            "kind": "unit",
+            "definitionId": "leona",
+            "quantity": 1
+          },
+          {
+            "kind": "gold",
+            "quantity": 1
+          },
+          {
+            "kind": "unit",
+            "definitionId": "ekko",
+            "quantity": 1
+          },
+          {
+            "kind": "gold",
+            "quantity": 4
+          }
+        ],
+        "independentOracles": [
+          {
+            "file": "tests/fixtures/epic-loot-oracle.cjs",
+            "sha256": "c61626c6800b9ff842103e7ad4522713a6401f0223936ee3e8331afc8cb315e0"
+          },
+          {
+            "file": "tests/fixtures/m5/oracle.g2.cjs",
+            "sha256": "4d0eabdc806e3a70690694cd7c9a79549f85d718ba2b1d394855544afb35692b"
+          }
+        ],
+        "bothOraclesAgree": true,
+        "realPublicRouteAgrees": true,
+        "assertionStrength": "Exact full ordered payload array; all resource, once-only and restore assertions retained",
+        "simulationChanged": false
+      }
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "cause": "Seed48 earned no prior growth under the current real public route",
+      "fix": "Seed74 earns 250 Bps on both original Tristana sources; retain 2 current-battle growth facts, reward merge and every corruption rejection",
+      "assertionsWeakened": false
+    },
+    {
+      "file": "tests/m8-b8-loot-runtime.test.ts",
+      "cause": "Seed0 no longer grants the Tristana required by the isolated two-upgrade vector",
+      "fix": "Independent literal-table oracles pin seed48 3-7 Tristana; all two-upgrade, growth, equipment, anomaly and lineage checks retained",
+      "assertionsWeakened": false
+    },
+    {
+      "file": "tests/m8-b8-token-lifecycle.test.ts",
+      "cause": "Seed427 grants Maddie rather than the required third Lux at 1-3",
+      "fix": "Independent shop/loot tables pin seed12 Lux purchases in slots1/4 and Lux reward at1-3; all actual consumption and display lifecycle checks retained",
+      "assertionsWeakened": false
+    }
+  ],
+  "limitations": [
+    "Requested regression scope only; not full-repository or browser/network acceptance",
+    "Size denominator uses retained local 15313a7 build; its commit provenance was not rebuilt in this round"
+  ],
+  "suggestedCommit": "fix(v16): re-record v15 closeout evidence and refresh reward vectors"
 }
