@@ -1,8 +1,9 @@
+import { prepareInput, copyInput } from '../fixtures/prepared-input';
 /**
  * Work order C6: the client plays the server's compact replay (contract §14.2) through RemoteSession, the same
  * session the browser uses. No DOM: a stub GameClient stands in for the transport.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { toCombatReplayFor } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleSeatOutcome, RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
@@ -34,17 +35,20 @@ function playThroughSession(replay: CombatReplay): { session: RemoteSession; vie
 
 let cache: { state: RoomState; pvp: TwoSidedBattleResult; pve: BattleSeatOutcome } | null = null;
 /** One room up to its first real PvP battle; its PvE battles of round 1 were kept along the way. */
-function battles() {
-  if (cache) return cache;
+function buildBattles() {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver());
   room.start();
   const pveState = runUntil(room, clock, current => current.phase === 'battle' && current.roundKind === 'pve', 400);
   const pve = pveState.battles.flatMap(battle => battle.kind === 'placeholder' ? battle.outcomes : []).find(outcome => outcome.combat && outcome.combat.initial.units.length > 1)!;
   const state = runUntil(room, clock, current => current.phase === 'battle' && current.battles.some(battle => battle.kind === 'two-sided' && battle.participants.length === 2), 600);
   const pvp = state.battles.find((candidate): candidate is TwoSidedBattleResult => candidate.kind === 'two-sided' && candidate.participants.length === 2)!;
-  cache = { state, pvp, pve };
-  return cache;
+  const input = { state, pvp, pve };
+  room.dispose();
+  return input;
 }
+
+beforeAll(() => { cache = prepareInput(buildBattles()); });
+const battles = () => copyInput(cache!);
 
 describe('C6 replay playback in RemoteSession', () => {
   it('applies every tick record in order and ends exactly on the terminal view (A and mirrored B)', () => {

@@ -7,6 +7,9 @@ import {stepCombat} from '../src/simulation/combat';
 import {resolveAbility} from '../src/simulation/combat-abilities';
 import {battle,unit} from './combat-helpers';
 import {packets} from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const definition={...UNIT_DEFINITIONS['neutral-stage-2'],unitKind:'neutral' as const,monsterFamily:'future',initialMana:0,maxMana:0,baseAttackSpeedBps:8000,baseCritChanceBps:2500,baseCritMultiplierBps:14000};
 const actor=()=>({...unit('a','player',2,2),...compileUnitInputs(resolveUnitStats(definition,1)),ability:resolveAbility('neutral-attack',1),attackDamage:85,attackDamageBase:85,attackRange:1,armor:0,magicResist:0,mana:0,maxMana:0,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],attackCone:{secondaryDamageBps:3500}});
 describe('IF-AS/IF-CRIT actual neutral input consumers (no new monster content)',()=>{

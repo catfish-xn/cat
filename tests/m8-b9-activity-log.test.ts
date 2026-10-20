@@ -7,6 +7,9 @@ import { run } from '../scripts/generate-m5-route.cjs';
 import { BattleHistory, PlaybackSession } from '../src/replay';
 import { combatEventText } from '../src/rendering/combat-feedback';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 type Activity = Extract<LedgerCombatEvent, { type: 'activityChanged' }>;
 const isVander = (e: LedgerCombatEvent): e is Activity => e.type === 'activityChanged' && e.activity.source.definitionId === 'vander-ability';
 import type { MatchState } from '../src/simulation/match-types';

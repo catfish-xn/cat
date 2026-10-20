@@ -10,6 +10,9 @@ import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { packets as packetViews } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 beforeAll(() => { itemMatch(['steraks-gage','bloodthirster']); });
 

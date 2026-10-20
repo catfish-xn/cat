@@ -6,6 +6,9 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { battle, unit } from './combat-helpers';
 import { accepted } from './match-helpers';
 import { publicNeutralPreparation, publicHeraldTarget, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /**
  * Independent B7 audit vectors (signed-off audit of 889a2a5). Expected values come from

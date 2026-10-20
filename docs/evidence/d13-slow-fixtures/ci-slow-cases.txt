@@ -1,0 +1,72 @@
+Source: https://github.com/catfish-xn/cat/actions/runs/39359104894/job/118420796734
+Head: 7329e9687612d1f3ff0fdee9d8fc83ebee0a8df0 (existing CI; not D13 baseline)
+Only this shard log was retrievable. Cancelled sibling jobs 118420796847, 118420796881, 118420796926 returned BlobNotFound.
+Filtered existing runner log: test/file durations >= 2000 ms. File totals do not imply an individual slow case.
+
+2026-10-20T02:53:44.5320150Z  ✓  fast  tests/restore-audit/cd-replay-facts.test.ts (34 tests) 49434ms
+2026-10-20T02:53:44.5399915Z    ✓ G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant 2974ms
+2026-10-20T02:53:44.5409415Z    ✓ G-C06 binds the real absorption value even when its status is forged coherently 13770ms
+2026-10-20T02:53:44.5495321Z    ✓ G-C07 authenticates a live periodic fractional account 3399ms
+2026-10-20T02:53:44.5669081Z    ✓ G-C08 binds real one-thousand-cuts history 14011ms
+2026-10-20T02:53:44.5698698Z    ✓ G-C08 binds real eagle-eye history 11040ms
+2026-10-20T02:53:50.8178788Z  ✓  fast  tests/g2-4a-crown-history.test.ts (56 tests) 57430ms
+2026-10-20T02:53:50.8849503Z      ✓ records combat consumable use with component-reforger at all three entries and resumes tick for tick (M10) 4755ms
+2026-10-20T02:53:50.8889415Z      ✓ records combat consumable use with completed-reforger at all three entries and resumes tick for tick (M10) 4668ms
+2026-10-20T02:54:03.7433703Z  ✓  fast  tests/m8-b8-live-growth.test.ts (26 tests) 4187ms
+2026-10-20T02:54:07.1969870Z  ✓  fast  tests/match-lifecycle.test.ts (12 tests) 2769ms
+2026-10-20T02:54:09.3850762Z  ✓  fast  tests/m8-b5-grant-upgrade.test.ts (14 tests) 24569ms
+2026-10-20T02:54:09.3919566Z      ✓ plans exactly one permanent blue-buff with no receipt/economy/RNG work 2572ms
+2026-10-20T02:54:09.3949503Z      ✓ plans exactly one permanent thiefs-gloves with no receipt/economy/RNG work 2636ms
+2026-10-20T02:54:35.6459724Z  ✓  fast  tests/server/g2-4b-artifact-forge-room.test.ts (5 tests) 27581ms
+2026-10-20T02:54:35.6525745Z      ✓ tier 10 opens 神器锻造器 with four distinct artifacts and the deadline grants the first offer once 6756ms
+2026-10-20T02:54:35.6528360Z      ✓ a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused 5374ms
+2026-10-20T02:54:35.6530974Z      ✓ tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer 5089ms
+2026-10-20T02:54:35.6533026Z      ✓ never shows the artifact offers to another seat, in its view or its pushes 4748ms
+2026-10-20T02:54:35.6536262Z      ✓ a resumed seat gets the same artifact popup and the unchanged deadline, and can still pick 5608ms
+2026-10-20T02:54:39.6275357Z  ✓  fast  tests/m5-route.test.ts (8 tests) 106378ms
+2026-10-20T02:54:39.6399562Z      ✓ normally buys five-cost Caitlyn and fields her for at least two real battles 36556ms
+2026-10-20T02:54:39.6409242Z      ✓ cannon: ordinary purchases/rewards to 6-7 with a complete build 17212ms
+2026-10-20T02:54:39.6433768Z      ✓ sniper: ordinary purchases/rewards to 6-7 with a complete build 27763ms
+2026-10-20T02:54:39.6459269Z      ✓ mage: ordinary purchases/rewards to 6-7 with a complete build 23186ms
+2026-10-20T02:54:50.9546304Z  ✓  fast  tests/m8-b10-encounter-outcomes.test.ts (46 tests) 8034ms
+2026-10-20T02:54:54.4586019Z  ✓  fast  tests/combat-first-pass-frames.test.ts (11 tests) 3455ms
+2026-10-20T02:54:59.6749759Z  ✓  fast  tests/server/replay-first-pass.test.ts (7 tests) 14606ms
+2026-10-20T02:54:59.6783352Z      ✓ logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle 3700ms
+2026-10-20T02:54:59.6785356Z      ✓ checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between 3928ms
+2026-10-20T02:55:01.4912189Z  ✓  fast  tests/tp-rewards-and-rounds.test.ts (9 tests) 6959ms
+2026-10-20T02:55:01.4920417Z      ✓ eight public openings, choices, shared natural shops, T2/T3 and next round conserve without infinite offers 6001ms
+2026-10-20T02:55:05.6896583Z  ✓  fast  tests/server/replay-client.test.ts (6 tests) 5372ms
+2026-10-20T02:55:05.6989328Z      ✓ applies every tick record in order and ends exactly on the terminal view (A and mirrored B) 5212ms
+2026-10-20T02:55:06.8880238Z  ✓  fast  tests/server/lifecycle.test.ts (6 tests) 31136ms
+2026-10-20T02:55:06.9199623Z      ✓ publishes the same rounds whether a frozen round is resolved in one go or in slices of a few ticks 10555ms
+2026-10-20T02:55:06.9201774Z      ✓ refuses commands while the round is frozen and resolves one slice per clock turn 5023ms
+2026-10-20T02:55:06.9271616Z      ✓ ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round 9564ms
+2026-10-20T02:55:06.9338653Z      ✓ stops resolving and publishes nothing once disposed in the middle of a frozen round 4528ms
+2026-10-20T02:55:19.6309907Z  ✓  fast  tests/m6-integration-mage.test.ts (2 tests) 145899ms
+2026-10-20T02:55:19.6379957Z      ✓ mage: every completed battle has exact original state/events and isolated playback 120815ms
+2026-10-20T02:55:19.6387308Z      ✓ mage: full catalog-capacity envelope acceptance (B9) 25078ms
+2026-10-20T02:55:21.3099906Z  ✓  fast  tests/m8-b8-live-capacity.test.ts (6 tests) 8914ms
+2026-10-20T02:55:21.3111241Z      ✓ two killed carriers: strict terminal restore cannot resurrect unearned loot 2473ms
+2026-10-20T02:55:25.5967035Z  ✓  fast  tests/m4-ledger-bound.test.ts (2 tests) 19812ms
+2026-10-20T02:55:25.6019337Z      ✓ retains complete event sequences, deep-copy isolation, and clears at Continue/New Match 19792ms
+2026-10-20T02:55:28.5029565Z  ✓  fast  tests/m5-growth.test.ts (2 tests) 5486ms
+2026-10-20T02:55:30.7412713Z  ✓  fast  tests/m8-b8-live-economy.test.ts (3 tests) 2616ms
+2026-10-20T02:55:32.6918022Z  ✓  fast  tests/restore-audit/g23-grant-evidence.test.ts (15 tests) 25644ms
+2026-10-20T02:55:35.3939960Z  ✓  fast  tests/g2-augments-multiplayer.test.ts (6 tests) 4479ms
+2026-10-20T02:55:35.3962529Z    ✓ bronze-for-life-i tracks current board bronze tiers in two-sided compilation and settlement facts 2281ms
+2026-10-20T02:55:35.3989863Z    ✓ bronze-for-life-ii tracks current board bronze tiers in two-sided compilation and settlement facts 2164ms
+2026-10-20T02:55:42.4041868Z  ✓  fast  tests/server/g2-2-emissary-wins.test.ts (2 tests) 6402ms
+2026-10-20T02:55:49.7829694Z  ✓  fast  tests/g2-4b-source-pins.test.ts (3 tests) 2219ms
+2026-10-20T02:55:49.7859308Z    ✓ pins all eleven exact Set13 identities, bilingual descriptions and map22 values 2214ms
+2026-10-20T02:55:54.4019677Z  ✓  fast  tests/g2-4b-replay.test.ts (10 tests) 4468ms
+2026-10-20T02:55:56.2523646Z  ✓  fast  tests/server/pairing-room.test.ts (3 tests) 23445ms
+2026-10-20T02:55:56.2577196Z      ✓ every frozen opponent was a shown candidate; only PvP rounds grow the history 7443ms
+2026-10-20T02:55:56.2583898Z      ✓ a disconnect, a takeover and a resume leave the candidates unchanged (they live in the room state) 5424ms
+2026-10-20T02:55:56.2585769Z      ✓ the same seed gives the same candidates and pairings 10577ms
+2026-10-20T02:55:59.1765153Z  ❯  fast  tests/m5-match-integration.test.ts (3 tests | 1 failed) 30626ms
+2026-10-20T02:55:59.1850348Z      × restores each real tick, then supply without creating combat or consuming battle RNG 30560ms
+2026-10-20T02:55:59.3630864Z  ✓  fast  tests/s13-anomalies-restore.test.ts (11 tests) 2964ms
+2026-10-20T02:56:07.9033836Z  ✓  fast  tests/m8-b10-item-save-replay.test.ts (45 tests) 45797ms
+2026-10-20T02:56:16.8005344Z  ✓  fast  tests/b8-resumable-battle.test.ts (15 tests) 17584ms
+2026-10-20T02:56:16.8089465Z Error: Test timed out in 30000ms.
+2026-10-20T02:56:16.8284151Z ##[error]Error: Test timed out in 30000ms.

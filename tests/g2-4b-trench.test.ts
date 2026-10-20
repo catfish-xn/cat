@@ -8,6 +8,9 @@ import {compileBattle,resolveTwoSidedBattle} from '../src/simulation/two-sided-b
 import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
 import {toCombatReplay,applyCombatReplayTick,toCombatViewState} from '../src/simulation/combat-replay-view';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const coat='TFT_Item_Artifact_SuspiciousTrenchCoat';
 function equipped(champion?:string){
  let base=createMatch(42);
