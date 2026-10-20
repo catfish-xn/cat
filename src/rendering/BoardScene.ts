@@ -585,8 +585,9 @@ export class BoardScene extends Phaser.Scene {
     return this.session.phase === 'combat' || (this.session instanceof RemoteSession && this.session.inBattle);
   }
   private syncOrbs() {
+    if (!this.orbDock) return;
     const spectating = document.body.dataset.onlineSpectating === 'true';
-    this.orbDock?.render(this.session.state, { inBattle: this.orbsInBattle(), locked: spectating || this.onlineEnded() });
+    this.orbDock.render(this.session.state, { inBattle: this.orbsInBattle(), locked: spectating || this.onlineEnded() });
   }
   /** v15: the rules grant the orb now or queue it until the battle ends; the dock announces the receipts when they arrive. */
   private claimOrb(orbId: string) {
