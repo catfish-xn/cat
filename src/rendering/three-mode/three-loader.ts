@@ -27,7 +27,10 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
   back.type = 'button';
   back.textContent = '切回 2D';
   back.dataset.debug = 'render3d-exit';
-  bar.append(label, back);
+  const preload = document.createElement('span');
+  preload.className = 'render3d-preload';
+  preload.dataset.debug = 'render3d-preload';
+  bar.append(label, preload, back);
   layer.append(bar);
   board.append(layer);
 
@@ -45,7 +48,8 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
 
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
-    .then(module => { module.useBoardFeed?.(boardFeed); return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
+    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => { if (!disposed) preload.textContent = text; });
+      return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }
       renderer = mounted;

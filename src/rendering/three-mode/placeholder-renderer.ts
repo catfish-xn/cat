@@ -20,6 +20,8 @@ import {
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
+import { AssetPreloader, describePreload, memoryStore, openIndexedDbStore, readPrecacheList } from './asset-preload';
+import { createAssetReader, type AssetReader } from './asset-reader';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
@@ -53,21 +55,47 @@ const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 // into this chunk and the 2D entry would then load the whole 3D chunk.
 let feed: BoardFeed | null = null;
 export function useBoardFeed(next: BoardFeed): void { feed = next; }
+// Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
+let assetProgress: ((text: string) => void) | null = null;
+export function useAssetProgress(next: (text: string) => void): void { assetProgress = next; }
 
-type Models = { cache: ModelCache; status: 'assets'; detail: string } | { cache: null; status: 'placeholder'; detail: string };
+type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
+  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
 
-async function openModels(assetBase: string | null): Promise<Models> {
-  if (!assetBase) return { cache: null, status: 'placeholder', detail: '未配置 3D 素材，显示占位棋子' };
+const fetchJson = async (url: string): Promise<unknown> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
   try {
-    const response = await fetch(`${assetBase}manifest.json`, { signal: controller.signal });
-    if (!response.ok) return { cache: null, status: 'placeholder', detail: `素材清单读取失败（HTTP ${response.status}），显示占位棋子` };
-    const cache = new ModelCache(await response.json(), assetBase);
-    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）` };
-  } catch {
-    return { cache: null, status: 'placeholder', detail: '素材地址无法访问或清单格式不符，显示占位棋子' };
+    const response = await fetch(url, { signal: controller.signal, cache: 'no-cache' });
+    if (!response.ok) throw new Error(`http-${response.status}`);
+    return await response.json();
   } finally { clearTimeout(timer); }
+};
+
+async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
+  const none = (detail: string): Models => ({ cache: null, status: 'placeholder', detail, preloader: null, reader: null });
+  if (!assetBase) return none('未配置 3D 素材，显示占位棋子');
+  let manifest: unknown;
+  try { manifest = await fetchJson(`${assetBase}manifest.json`); }
+  catch (error) {
+    const status = /^http-(\d+)$/.exec((error as Error)?.message ?? '')?.[1];
+    return none(status ? `素材清单读取失败（HTTP ${status}），显示占位棋子` : '素材地址无法访问或清单格式不符，显示占位棋子');
+  }
+  try {
+    // Everything under the root goes through the preloader; the cache keeps models it has already decoded.
+    let preloader: AssetPreloader | null = null;
+    const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
+    const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
+    const list = readPrecacheList(await fetchJson(`${assetBase}precache.json`).catch(() => null), cache.manifest);
+    const store = await openIndexedDbStore().catch(() => memoryStore());
+    preloader = new AssetPreloader(assetBase, list, store);
+    if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
+    void navigator.storage?.persist?.().catch(() => false);
+    void preloader.start();
+    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader };
+  } catch {
+    return none('素材地址无法访问或清单格式不符，显示占位棋子');
+  }
 }
 
 /** Preview staging for one effect (assets3d action-bindings.json `playback`); approximate, not gameplay timing. */
@@ -81,7 +109,7 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
   try {
     const resolve = createActionEffectResolver(models.cache.manifest);
     const playback: Record<string, EffectPlayback> = {};
-    const response = await fetch(`${assetBase}action-bindings.json`).catch(() => null);
+    const response = await fetch(`${assetBase}action-bindings.json`, { cache: 'no-cache' }).catch(() => null);
     const entries = response?.ok ? (await response.json() as { playback?: unknown }).playback : null;
     if (entries && typeof entries === 'object') for (const [id, raw] of Object.entries(entries as Record<string, Record<string, unknown>>)) {
       const anchor = raw.anchor, delay = Number(raw.delay), maxDuration = Number(raw.maxDuration);
@@ -119,7 +147,7 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer = new WebGLRenderer({ antialias: true });
-  const models = await openModels(options.assetBase);
+  const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined);
   const actionEffects = await openActionEffects(models, options.assetBase);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
@@ -185,21 +213,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
+  const pawnFor = (team: BoardPiece['team']): Object3D => {
+    const pawn = new Group();
+    pawn.name = 'render3d-pawn';
+    const body = new Mesh(pawnBody, teamMaterial[team]); body.position.y = 17;
+    const head = new Mesh(pawnHead, teamMaterial[team]); head.position.y = 42;
+    pawn.add(body, head);
+    return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
+  };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
-    if (!models.cache) {
-      const pawn = new Group();
-      const body = new Mesh(pawnBody, teamMaterial[view.team]); body.position.y = 17;
-      const head = new Mesh(pawnHead, teamMaterial[view.team]); head.position.y = 42;
-      pawn.add(body, head);
-      view.body = fit(pawn, PAWN_HEIGHT, PAWN_WIDTH); view.root.add(pawn);
-      return;
-    }
+    // The team pawn stands in until the model arrives (cache miss while the preload is still running).
+    view.body = pawnFor(view.team); view.root.add(view.body);
+    if (!models.cache) return;
     const definitionId = view.definitionId;
     void models.cache.load(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       view.lease = lease;
+      if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
       view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
       view.root.add(lease.scene);
@@ -207,7 +239,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
     }).catch(() => {
-      // A disposed cache rejects late loads; the piece stays without a body (and a dying one hides).
+      // A disposed cache rejects late loads; the piece keeps its pawn (and a dying one hides).
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
@@ -258,7 +290,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration }).then(fx => {
+    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration, readTexture: models.reader.readTexture }).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
@@ -505,7 +537,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       clearEffects();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
-      models.cache?.dispose();
+      models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
       renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
