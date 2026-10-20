@@ -711,6 +711,18 @@ body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; f
 .shop-dock .shop-card.unaffordable .shop-emblem, .shop-dock .shop-card.unaffordable .shop-name { opacity: .7; }
 .shop-dock .shop-card:not([data-cost]) { place-items: center; grid-template-rows: 1fr; background: #0f1a24; }
 .shop-dock .shop-card:not([data-cost]) .shop-name { grid-row: 1; padding: 0; background: none; text-align: center; color: var(--c-text-faint); font-weight: 400; }
+/* Narrow shop cards (1280 with the left column open): traits stay one per line (ellipsis, clipped to the portrait area) and
+   the name takes its own full-width line above the cost instead of running under it. */
+.shop-dock .shop-card { container-type: inline-size; }
+.shop-dock .shop-card .shop-trait { max-width: calc(100% - 6px); max-height: calc(100% - 6px); overflow: hidden; }
+.shop-dock .shop-card .shop-trait > span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 13px; }
+@container (max-width: 66px) {
+  .shop-dock .shop-card .shop-trait { font-size: 10px; }
+  .shop-dock .shop-card .shop-name { padding: 10px 2px 17px; font-size: 11px; letter-spacing: -.04em; text-overflow: clip; }
+}
+.shop-dock .shop-odds { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-dock .shop-panel { container-type: inline-size; }
+@container (max-width: 320px) { .shop-dock .shop-odds { font-size: 10px; letter-spacing: -.08em; word-spacing: -.2em; } }
 
 .online-seat { position: relative; }
 .seat-hp { font-size: 15px; font-variant-numeric: tabular-nums; }

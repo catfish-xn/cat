@@ -76,7 +76,17 @@ export interface GameServerOptions {
   readonly carousel?: CarouselRules;
   /** Process figures for /healthz (main.ts reads them from Node); null fields when omitted. */
   readonly processStats?: () => { readonly uptimeSec: number; readonly rssBytes: number };
+  /**
+   * Connection heartbeat on the injected clock: every `intervalMs` each open connection gets a WebSocket ping and a
+   * `heartbeat` message; one that has sent nothing (no pong, no message) for `timeoutMs` is terminated, which frees
+   * the connection but keeps its seat exactly like any other close (the token still resumes it). Off when omitted;
+   * main.ts turns it on.
+   */
+  readonly heartbeat?: HeartbeatOptions | null;
 }
+
+export interface HeartbeatOptions { readonly intervalMs: number; readonly timeoutMs: number }
+export const HEARTBEAT_DEFAULTS: HeartbeatOptions = { intervalMs: 10_000, timeoutMs: 25_000 };
 
 export interface BuildInfo {
   /** Full git commit the running bundle was built from, or "unknown". */
@@ -182,6 +192,8 @@ interface Connection {
   sentSeatRevision: number;
   sentCombatKey: string;
   closeHandle: ClockHandle | null;
+  /** Clock time of the last pong or message from the peer (heartbeat). */
+  lastSeen: number;
 }
 
 const fail = (commandId: number, reason: ReceiptFailure, detail: string | null = null): ReceiptMessage => ({ type: 'receipt', commandId, ok: false, reason, detail });
@@ -189,6 +201,10 @@ const done = (commandId: number, result: ReceiptResult): ReceiptMessage => ({ ty
 
 export function createGameServer(options: GameServerOptions): Promise<GameServer> {
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
+  const heartbeat = options.heartbeat ?? null;
+  if (heartbeat !== null && !(Number.isSafeInteger(heartbeat.intervalMs) && heartbeat.intervalMs > 0 && Number.isSafeInteger(heartbeat.timeoutMs) && heartbeat.timeoutMs > heartbeat.intervalMs)) {
+    return Promise.reject(new RangeError(`heartbeat expects positive integer intervalMs < timeoutMs, got ${JSON.stringify(heartbeat)}`));
+  }
   const log: Logger = options.logger ?? (options.log ? textLogger(options.log) : () => {});
   const clock = options.clock;
   const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
@@ -495,6 +511,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onMessage(conn: Connection, data: RawData, isBinary: boolean): void {
     if (!conn.open) return;
+    conn.lastSeen = clock.now();
     if (!withinRate(conn)) return sendError(conn, 'rate-limited', `more than ${limits.maxMessagesPerWindow} messages per ${limits.rateWindowMs} ms`);
     if (isBinary) return sendError(conn, 'invalid-json', 'binary frames are not accepted');
     const parsed = parseClientMessage(data.toString());
@@ -547,13 +564,39 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', closeHandle: null };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
+    socket.on('pong', () => { conn.lastSeen = clock.now(); });
     socket.on('close', () => queue.push(() => onClose(conn)));
     socket.on('error', error => log('warn', 'connection.error', { connection: conn.id, error: error.message }));
     queue.push(() => send(conn, { type: 'lobby', view: lobbyViewFor(conn) }));
     log('debug', 'connection.opened', { connection: conn.id });
+  }
+
+  /* ---------------- heartbeat ---------------- */
+
+  let heartbeatHandle: ClockHandle | null = null;
+  function scheduleHeartbeat(): void {
+    if (heartbeat === null || closing) return;
+    heartbeatHandle = clock.schedule(clock.now() + heartbeat.intervalMs, () => { heartbeatHandle = null; queue.push(beat); });
+  }
+  /** A peer gone silent (pulled cable, sleeping laptop) never sends a close; terminating it runs the usual onClose. */
+  function beat(): void {
+    if (closing) return;
+    const now = clock.now();
+    for (const conn of connections.values()) {
+      if (!conn.open) continue;
+      if (now - conn.lastSeen >= heartbeat!.timeoutMs) {
+        log('info', 'connection.timeout', { connection: conn.id, seatId: conn.session?.seatId, silentMs: now - conn.lastSeen });
+        conn.socket.terminate();
+        continue;
+      }
+      if (conn.socket.readyState !== conn.socket.OPEN) continue;
+      try { conn.socket.ping(); } catch { /* closing; the close event follows */ }
+      send(conn, { type: 'heartbeat', intervalMs: heartbeat!.intervalMs });
+    }
+    scheduleHeartbeat();
   }
 
   /* ---------------- health (G3) ---------------- */
@@ -606,6 +649,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const address = http.address();
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
       http.off('error', reject);
+      scheduleHeartbeat(); // only once listening: a failed listen leaves no timer behind
       http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
         get port() { return port; },
@@ -621,6 +665,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         health,
         close: () => new Promise<void>(resolveClose => {
           closing = true;
+          if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
           for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }
           unsubscribeRoom?.(); unsubscribeRoom = null;
           lobby.dispose();
