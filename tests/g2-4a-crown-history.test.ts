@@ -509,7 +509,8 @@ describe('M7/S7 combat equipment command replay', () => {
       expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
-  });
+    // 临时，经用户 10-20 批准，提速后改回：两种锻造器用例本地约 3.3 秒，CI 机器慢时超过默认 5 秒。
+  }, 15000);
   it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s command tick at all three entries (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     // Preserve recorder ownership of the unchanged prefix; the altered record

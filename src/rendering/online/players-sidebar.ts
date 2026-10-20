@@ -73,7 +73,9 @@ export class PlayersSidebar {
     this.tick();
   }
   private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
-    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${seat.seatId === this.viewing ? ' viewing' : ''}`);
+    // A human whose connection dropped (server `connected`, kept fresh by the #229 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
+    const offline = seat.kind === 'human' && !seat.connected;
+    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`);
     row.dataset.debug = `online:seat:${seat.seatId}`;
     if (pairing) row.dataset.pairing = pairing;
     if (this.onSelect) {
@@ -94,9 +96,9 @@ export class PlayersSidebar {
     head.append(avatar, element('span', seat.name, 'seat-name'), kind);
     if (pairing === 'opponent') head.append(element('span', '对手', 'seat-opponent'));
     else if (pairing === 'candidate') { const tag = element('span', '可能', 'seat-candidate'); tag.title = '本回合可能的对手，开战时确定'; head.append(tag); }
-    // Bots never hold a connection; a dropped human shows 断线, and 接管中 once a bot plays the seat.
+    // Bots never hold a connection; a dropped human shows 重连中, and 接管中 once a bot plays the seat.
     if (seat.controller === 'takeover') head.append(element('span', '接管中', 'seat-offline seat-takeover-tag'));
-    else if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));
+    else if (offline) { const tag = element('span', '重连中', 'seat-offline'); tag.title = '玩家断线，等待重新连接'; head.append(tag); }
     const bar = element('div', '', 'seat-bar'); const fill = element('div', '', 'seat-fill');
     const percent = (hp: number) => `${Math.max(0, Math.min(100, hp))}%`;
     fill.style.width = percent(seat.hp); bar.dataset.tier = seat.hp > 60 ? 'high' : seat.hp > 30 ? 'mid' : 'low';
