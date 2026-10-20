@@ -40,12 +40,6 @@ function grantGoldItems(room: Room, seatId: string): void {
     return { ...seat, seatRevision: seat.seatRevision + 1, match };
   }) };
 }
-/** The team's in-combat earnings the rules have not settled yet: item gold receipts and High Roller gold. */
-function earned(combat: CombatState, team: 'player' | 'enemy'): number {
-  const allies = new Set(combat.units.filter(unit => unit.team === team).map(unit => unit.id));
-  return (combat.itemGoldReceipts ?? []).filter(receipt => allies.has(receipt.ownerId) && receipt.gold).length
-    + combat.units.filter(unit => unit.team === team).reduce((sum, unit) => sum + (unit.g23?.highRoller ?? []).reduce((total, roll) => total + roll.gold, 0), 0);
-}
 const avariceUnit = (combat: CombatState, team: 'player' | 'enemy') =>
   combat.units.find(unit => unit.team === team && unit.mechanics?.some(mechanic => mechanic.mechanic === 'd11Anomaly' && mechanic.source.definitionId === 'avarice-incarnate'))!;
 const avariceBank = (combat: CombatState, team: 'player' | 'enemy') => avariceUnit(combat, team).currentItemBankGold;
@@ -105,7 +99,6 @@ describe('v17 avarice: in-combat earnings on its team', () => {
       }
       // The rules added the team's unsettled earnings (item gold + High Roller) to the sampled bank, once.
       const items = itemGold(terminal, team), roller = highRoller(terminal, team);
-      expect(earned(terminal, team)).toBe(items.length + roller);
       expect(avariceBank(terminal, team)).toBe(gold + items.length + roller);
       // The settlement paid each once.
       expectPaidOnce(room, roundName, roller);
@@ -126,5 +119,9 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     clock.advance(1);
     runUntil(room, clock, state => state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId);
     for (const entry of checked) { expectPaidOnce(room, entry.roundId, entry.highRoller); expectItemGoldPaidOnce(room, entry.roundId, entry.items); }
+    // A re-pay under a later round would carry the same receipt id: across all rounds every earnings receipt id is unique.
+    const ids = (seatOf(room.state, 's2').match.seatMechanics?.receipts ?? []).filter(receipt => receipt.source === 'high-roller' || receipt.source === 'g24-item-gold').map(receipt => receipt.receiptId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.length).toBeGreaterThanOrEqual(paid.items + checked.filter(entry => entry.highRoller).length);
   }, 180_000);
 });
