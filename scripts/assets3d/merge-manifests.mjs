@@ -33,7 +33,7 @@ export async function mergeManifests({ from, out } = {}) {
   let schemaVersion;
   async function plan(root, path) {
     assetPath(path);
-    if (['manifest.json', 'merge-report.json'].includes(path.toLowerCase())) throw new Error('reserved-merge-path');
+    if (['manifest.json', 'action-bindings.json', 'merge-report.json', 'precache.json'].includes(path.toLowerCase())) throw new Error('reserved-merge-path');
     // Refuse case-only aliases on all platforms, so a Linux merge is safe on Windows too.
     const lower = path.toLowerCase();
     if (folded.has(lower) && folded.get(lower) !== path) throw new Error(`merge-path-case-conflict:${path}`);
@@ -62,11 +62,18 @@ export async function mergeManifests({ from, out } = {}) {
   for (const input of from) {
     const batch = rootPath(input), realBatch = await safeInputPath(batch, batch);
     if (contains(realBatch, output) || contains(output, realBatch)) throw new Error('merge-output-overlaps-source');
-    const units = await safeInputPath(batch, join(batch, 'units'));
-    for (const dir of (await readdir(units)).sort()) {
-      assetPath(dir);
-      const root = await safeInputPath(units, join(units, dir));
-      if (!(await stat(root)).isDirectory()) throw new Error(`merge-unit-not-directory:${dir}`);
+    let roots;
+    try {
+      const units = await safeInputPath(batch, join(batch, 'units'));
+      roots = await Promise.all((await readdir(units)).sort().map(dir => {
+        assetPath(dir); return safeInputPath(units, join(units, dir));
+      }));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      roots = [realBatch]; // An already merged asset root is also a valid input.
+    }
+    for (const root of roots) {
+      if (!(await stat(root)).isDirectory()) throw new Error(`merge-unit-not-directory:${root}`);
       let manifest;
       try { manifest = JSON.parse(await readFile(await safeInputPath(root, join(root, 'manifest.json')), 'utf8')); }
       catch (error) {
@@ -96,6 +103,8 @@ export async function mergeManifests({ from, out } = {}) {
   const manifest = { schemaVersion: schemaVersion ?? 1, models, effects };
   assertManifest(manifest);
   const manifestBytes = json(manifest);
+  const precacheBytes = json({ schemaVersion: 1, files: [...plans].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    .map(([path, p]) => ({ path, bytes: p.bytes, sha256: p.sha256 })) });
   async function destination(path, sha256) {
     const dest = await safeOutputPath(join(output, path), { force: true });
     try {
@@ -106,6 +115,7 @@ export async function mergeManifests({ from, out } = {}) {
   const skipped = new Map();
   for (const [path, p] of plans) skipped.set(path, await destination(path, p.sha256));
   const manifestExists = await destination('manifest.json', hash(manifestBytes));
+  const precacheExists = await destination('precache.json', hash(precacheBytes));
   await safeOutputPath(join(output, 'merge-report.json'), { force: true });
   if (!report.missing.length && report.models > 0) {
     for (const [path, p] of plans) {
@@ -116,6 +126,7 @@ export async function mergeManifests({ from, out } = {}) {
       report.written++; report.writtenBytes += bytes.length;
     }
     if (!manifestExists) await writeOutputFileAtomic(join(output, 'manifest.json'), manifestBytes);
+    if (!precacheExists) await writeOutputFileAtomic(join(output, 'precache.json'), precacheBytes);
     report.ready = true;
   }
   // bytes/files count unique runtime payloads, excluding manifest and this report.
