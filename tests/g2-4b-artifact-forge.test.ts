@@ -15,6 +15,9 @@ import {digestContent} from '../src/simulation/content';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 
 import {accepted,forgeStates,restoreDomain} from './helpers/g24-forge-states';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const bundle=(tier:number)=>{const {Gold:_gold,...reward}=g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1]);return {id:`g23:conqueror:${tier}`,round:8,source:'conqueror' as const,tier,reward};};
 const artifactIds=[
  'TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnMuramana','TFT4_Item_OrnnZhonyasParadox',

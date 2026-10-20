@@ -5,6 +5,9 @@ import {createMatch,equipItem,startMatchCombat,stepMatch} from '../src/simulatio
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {advanceDeferredItemDamage} from '../src/simulation/g2-4b-item-kernel';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const context:DamageContext={source:{ownerId:'a',sourceKind:'attack',definitionId:'attack',instanceId:'a',effectIndex:0,parentItemInstanceId:null},
   targetId:'b',damageType:'physical',delivery:'basic-attack',actionSeq:0,rootActionSeq:0,parentPacketId:null,

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 describe('B8 public equipment fixture provenance', () => {
   it('wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword', () => {
@@ -60,8 +63,7 @@ describe('B8 public equipment fixture provenance', () => {
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-    // 临时，经用户 10-20 批准，提速后改回：本地约 3.3 秒，CI 机器慢时超过默认 5 秒。
-  }, 15000);
+  });
 
   it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => {
     const first = itemMatch('bloodthirster'), original = serializeMatch(first);
