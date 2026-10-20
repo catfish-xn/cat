@@ -839,6 +839,19 @@ export class BoardScene extends Phaser.Scene {
   private renderFeedback() {
     const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
     const scale = canvas.width / this.scale.gameSize.width;
+    if (boardFeedActive()) {
+      // ?render=3d: anchor floats to each model as the 3D layer projects it; the 2D canvas and its fx labels are covered.
+      const anchors = new Map<string, { x: number; y: number; radius: number }>();
+      for (const [id, token] of this.tokens) {
+        const box = token.visible ? boardFeedScreenBox(id) : undefined;
+        if (!box) continue;
+        // Radius is the model's half width (overlap test); y sits one radius below its top, so floats rise from the head.
+        const radius = (box.right - box.left) / 2;
+        anchors.set(id, { x: box.left + radius - host.left, y: box.top + radius - host.top, radius });
+      }
+      this.feedback?.render(performance.now(), anchors);
+      return;
+    }
     this.feedback?.render(performance.now(), new Map([...this.tokens].filter(([, token]) => token.visible).map(([id,token]) => [id,
       { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])),
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
