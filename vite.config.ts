@@ -16,12 +16,27 @@ const phaserFlags: Plugin = {
   transform: (code, id) => (PHASER_SRC.test(id) ? { code: replacePhaserFlags(code), map: null } : null),
 };
 
+// The S13 icon manifests keep `source`/`bytes`/`sha256` per row for the asset tests (vitest reads the source
+// file); nothing at runtime reads them, so production builds drop those three keys. A manifest whose rows no
+// longer match fails the build instead of silently shipping the checks again.
+const ASSET_MANIFEST = /[\\/]src[\\/]presentation[\\/]s13-(augment-)?asset-manifest\.ts$/;
+const ASSET_CHECK_KEY = /,\s*"(?:source|bytes|sha256)":\s*(?:"[^"\n]*"|\d+)/g;
+const stripAssetChecks: Plugin = {
+  name: 'strip-asset-checks', apply: 'build', enforce: 'pre',
+  transform(code, id) {
+    if (!ASSET_MANIFEST.test(id)) return null;
+    const stripped = code.replace(ASSET_CHECK_KEY, '');
+    if (stripped === code || /"sha256":/.test(stripped)) this.error(`strip-asset-checks: unexpected manifest layout in ${id}`);
+    return { code: stripped, map: null };
+  },
+};
+
 export default defineConfig(({ mode }) => ({
   // Pages has a fixed repository path; other builds remain portable to subpaths.
   // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
-  plugins: [phaserFlags],
+  plugins: [phaserFlags, stripAssetChecks],
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.
