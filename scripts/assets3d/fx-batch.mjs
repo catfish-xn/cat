@@ -12,6 +12,7 @@ export async function loadBindingTables() {
  }
  return tables;
 }
+import { textureAlphaLookup } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
 import { writeParticleEffects } from './build.mjs';
 import { convertParticleMesh } from './particle-mesh.mjs';
@@ -87,8 +88,9 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
     const textures = new Map(report.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), prefix + t.path]));
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, prefix + m.path]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+    const textureAlpha = await textureAlphaLookup(report.textures, p => input(root, p));
     const converted = convertParticles(source, p => textures.get(canonical(p)), parseParticleDocument,
-      { particleMode: 'approximate', approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
+      { particleMode: 'approximate', textureAlpha, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
     const used = new Set(converted.systems.flatMap(s => s.document?.emitters.flatMap(e => [e.texture, e.mesh].filter(Boolean)) ?? []));
     for (const path of used) {
       const mesh = prior.meshes.find(m => prefix + m.path === path);

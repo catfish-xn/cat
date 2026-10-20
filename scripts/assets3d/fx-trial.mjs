@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { writeParticleEffects } from './build.mjs';
+import { textureAlphaLookup, pngHasEffectiveAlpha } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
 import { contracts } from './runtime.mjs';
 import { compareParticleSources } from './particle-bin.mjs';
@@ -70,8 +71,10 @@ export async function recountParticles(write, parseParticleDocument, { particleM
       const textures = new Map(report.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), t.path]));
       const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, m.path]));
       const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+      const textureAlpha = mode === 'strict' ? undefined : await textureAlphaLookup(report.textures,
+        async p => readFile(await safeInputPath(root, join(root, p))));
       const converted = convertParticles(source, p => textures.get(canonical(p)), parseParticleDocument,
-        { meshPath: p => meshes.get(p), meshReasons, approximateLinger: true, particleMode: mode });
+        { textureAlpha, meshPath: p => meshes.get(p), meshReasons, approximateLinger: true, particleMode: mode });
       if (prior.emitters !== converted.emitters || prior.systemCount !== converted.systems.length) throw new Error('recount-inventory-mismatch');
       const counts = { systems: converted.systems.length, emitters: converted.emitters, ...converted.counts };
       if (counts.mapped + counts.approximated + counts.skipped + counts.rejected !== counts.emitters) throw new Error('recount-partition-mismatch');
@@ -165,8 +168,10 @@ export async function fxTrial({ units = 'jinx,vi', out = units === 'jinx,vi' ? '
     const textures = new Map(previous.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), `${prefix}${t.path}`]));
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, `${prefix}${m.path}`]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+    const textureAlpha = mode === 'strict' ? undefined : await textureAlphaLookup(previous.textures,
+      async p => readFile(await safeInputPath(root, join(root, p))));
     const converted = convertParticles(particleSource, p => textures.get(canonical(p)), parseParticleDocument,
-      { particleMode: mode, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
+      { particleMode: mode, textureAlpha, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
     // Every document is validated by convertParticles, again here before ANY
     // particle/resource write, and at the actual payload write boundary below.
     for (const s of converted.systems) if (s.document) parseParticleDocument(s.document);
@@ -191,19 +196,19 @@ export async function fxTrial({ units = 'jinx,vi', out = units === 'jinx,vi' ? '
     manifest.models[id] = { ...model, path: `${prefix}${model.path}` };
   }
   const global = await globalVfx({ source, force });
-  const globalTextures = new Map(), textureConversions = [];
+  const globalTextures = new Map(), globalAlphas = new Map(), textureConversions = [];
   for (const f of global.report.files.filter(f => /\.(tex|dds)$/i.test(f.path))) {
     const bytes = await readFile(await safeInputPath(resolve('assets3d-local/global-vfx/extracted'), resolve('assets3d-local/global-vfx/extracted', f.path)));
     try {
       const png = encodePng(decodeTexture(bytes)), path = `global/textures/${f.path.replace(/\.(tex|dds)$/i, '.png')}`;
-      await write(path, png); globalTextures.set(canonical(f.path), path);
+      await write(path, png); globalTextures.set(canonical(f.path), path); globalAlphas.set(canonical(f.path), pngHasEffectiveAlpha(png));
       textureConversions.push({ source: f.path, status: 'converted', path });
     } catch (error) {
       global.report.failures.push({ path: f.path, stage: 'texture-convert', reason: error.message });
       textureConversions.push({ source: f.path, status: 'rejected', reason: error.message });
     }
   }
-  const shared = convertParticles(global.systems, p => globalTextures.get(canonical(p)), parseParticleDocument, { particleMode: mode, approximateLinger: true });
+  const shared = convertParticles(global.systems, p => globalTextures.get(canonical(p)), parseParticleDocument, { particleMode: mode, textureAlpha: p => p ? globalAlphas.get(canonical(p)) : undefined, approximateLinger: true });
   const sharedOutput = await writeParticleEffects('global', shared, {}, {
     write: async (p, bytes) => { if (!p.endsWith('.report.json')) parseParticleDocument(JSON.parse(bytes)); await write(p, bytes); },
     remove: async p => { try { await unlink(await safeOutputPath(join(output, p), { force: true })); } catch (e) { if (e.code !== 'ENOENT') throw e; } },

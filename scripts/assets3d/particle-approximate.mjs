@@ -1,3 +1,5 @@
+import { Euler } from 'three';
+
 // Explicit preview conventions, not claims about the original engine. Strict
 // conversion never calls this module's adapter. All decisions carry field paths.
 export function particleMode(mode = 'strict') {
@@ -33,7 +35,7 @@ export const OMIT_PREVIEW_FIELDS = Object.freeze({
   '{cb13aff1}': 'ignore-unknown-scalar-preview-modifier',
 });
 
-export function approximateEmitter(input, system = {}) {
+export function approximateEmitter(input, system = {}, options = {}) {
   const source = structuredClone(input), approximations = [], additions = {};
   const note = (field, value, handling) => approximations.push({ field, value: structuredClone(value), handling });
   const omit = (field, handling) => { note(field, source[field], handling); delete source[field]; };
@@ -89,10 +91,17 @@ export function approximateEmitter(input, system = {}) {
     note('birthAcceleration', input.birthAcceleration, 'constant-birth-acceleration-added-to-gravity');
     source.worldAcceleration = defaultCurve(a.map((n, i) => n + g[i])); delete source.birthAcceleration;
   }
-  if (typeof source.blendMode === 'number') {
-    note('blendMode', source.blendMode, source.blendMode === 4 ? 'community-preview-4-additive' : [1, 3].includes(source.blendMode)
-      ? 'community-preview-1-or-3-alpha' : 'unknown-number-falls-back-to-alpha');
-    source.blendMode = source.blendMode === 4 ? 'additive' : 'normal';
+  // Numeric selectors are named preview conventions, not proven GPU equations.
+  const blend = source.blendMode;
+  const alpha = options.textureAlpha?.(source.texture);
+  if (!['normal', 'additive', 'multiply'].includes(blend) && (blend !== undefined || alpha === false)) {
+    const mapped = typeof blend === 'number' && [1, 2, 3, 4].includes(blend)
+      ? ({ 1: 'normal', 2: 'additive', 3: 'normal', 4: 'additive' })[blend] : undefined;
+    source.blendMode = mapped ?? (alpha === false ? 'additive' : 'normal');
+    note('blendMode', blend ?? null, mapped
+      ? 'league-preview-' + blend + '-' + source.blendMode
+      : 'league-preview-unknown-' + (alpha === false ? 'opaque-texture-additive' : 'alpha-or-unverified-normal'));
+    if (!mapped) note('texture.alpha', alpha ?? null, 'PNG-any-alpha-below-255-effective-alpha-unknown-is-not-opaque');
   }
   if (source.SpawnShape !== undefined) {
     const s = source.SpawnShape;
@@ -191,6 +200,18 @@ export function approximateEmitter(input, system = {}) {
     additions.kind = 'trail'; additions.trail = { width: [{ time: 0, value: width }], lifetime: 0.3, segments: 32, uvMode: 'stretch' };
     note('primitive', p, 'v2-trail-width-birthTilingSize-X-tail-0.3s-32-segments-stretch-no-source-smoothing');
     source.birthScale0 = defaultCurve([1, 1, 1]); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
+  }
+  // Fixed planes/meshes: preview League pitch(X), yaw(Y), roll(Z) as
+  // Ry * Rx * Rz (Three YXZ). Both spaces are Y-up; reflect X, hence negate
+  // Y/Z angles, without swapping axes. Serialize an equivalent XYZ Euler in
+  // degrees for the existing V2 contract. Camera roll and ray direction have
+  // separate conventions below. Never infer orientation from ground-layer flags.
+  const rotation = source.birthRotation0?.constantValue;
+  if (['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveMesh'].includes(type) && vector(rotation)) {
+    const radians = Math.PI / 180;
+    const xyz = new Euler(rotation[0] * radians, -rotation[1] * radians, -rotation[2] * radians, 'YXZ').reorder('XYZ');
+    additions.rotation0 = [xyz.x, xyz.y, xyz.z].map(n => n / radians);
+    note('birthRotation0', input.birthRotation0 ?? rotation, 'fixed-primitive-YXZ-X-reflection-to-v2-XYZ-degrees');
   }
   if (additions.kind === 'ray' && source.birthRotation0 !== undefined) {
     note('birthRotation0', input.birthRotation0 ?? source.birthRotation0, 'ray-or-beam-direction-overrides-birth-rotation');

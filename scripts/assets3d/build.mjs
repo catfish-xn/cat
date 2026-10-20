@@ -11,6 +11,7 @@ import { inspectSkn } from './inspect-source.mjs';
 import { makeModel, validateModel } from './model.mjs';
 import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
+import { pngHasEffectiveAlpha } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
 import { loadParticleBins, particleSourcesFromBins, compareParticleSources } from './particle-bin.mjs';
 import { convertParticleMesh, MESH_LIMITS } from './particle-mesh.mjs';
@@ -120,7 +121,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         }
     };
     const jsonRoot = resolve(root, '../../source-json'), referenceRoot = resolve(root, '../public-assets');
-    const textures = {}, textureByCanonical = new Map(), textureReports = [], particleSources = {}, particleReferences = {}, particleInputs = {};
+    const textures = {}, textureByCanonical = new Map(), textureReports = [], textureAlphas = new Map(), particleSources = {}, particleReferences = {}, particleInputs = {};
     for (const id of selected) {
         try {
             const bytes = await readFile(await safeInputPath(jsonRoot, join(jsonRoot, `${id}.json`)));
@@ -193,6 +194,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             await write(dest, png);
             textures[path] = png;
             textureByCanonical.set(canonical(path), dest);
+            textureAlphas.set(canonical(path), pngHasEffectiveAlpha(png));
             textureReports.push({ source: path, path: dest, width: decoded.width, height: decoded.height, format: decoded.format, status: 'converted', bytes: png.length });
         }
         catch (e) {
@@ -249,7 +251,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             } catch (error) { meshReasons.set(ref, error.message); meshReports.push({ source: ref, status: 'skipped', reason: error.message }); }
         }
         const converted = convertParticles(particleSources[id] ?? {}, p => textureByCanonical.get(canonical(p)), parseParticleDocument,
-            { meshPath: p => meshPaths.get(p), meshReasons, approximateLinger, particleMode: cliParticleMode ?? particleMode });
+            { textureAlpha: p => p ? textureAlphas.get(canonical(p)) : undefined, meshPath: p => meshPaths.get(p), meshReasons, approximateLinger, particleMode: cliParticleMode ?? particleMode });
         const usedMeshes = new Set(converted.systems.flatMap(s => s.document?.emitters.map(e => e.mesh).filter(Boolean) ?? []));
         for (const path of usedMeshes) await write(path, meshBuffers.get(path));
         for (const row of meshReports) if (row.path) row.written = usedMeshes.has(row.path);

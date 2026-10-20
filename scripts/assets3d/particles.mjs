@@ -184,7 +184,7 @@ function mapStrictEmitter(source, texturePath, options = {}) {
 export function mapEmitter(source, texturePath, options = {}) {
   if (particleMode(options.particleMode) === 'strict') return mapStrictEmitter(source, texturePath, options);
   try {
-    const adapted = approximateEmitter(source, options.system);
+    const adapted = approximateEmitter(source, options.system, options);
     if (adapted.status) return adapted;
     const result = mapStrictEmitter(adapted.source, texturePath, { ...options, approximateLinger: true });
     const approximations = [...adapted.approximations, ...(result.approximations ?? [])];
