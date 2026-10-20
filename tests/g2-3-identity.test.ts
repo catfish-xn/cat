@@ -49,7 +49,7 @@ import {startMatchCombat,stepMatch} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {publicPaidArmorySettlement} from './fixtures/g2-3-armory-public';
 it('restores a real paid armory purchase after settlement without deducting its preparation cost twice',async()=>{
- const state=await publicPaidArmorySettlement();
+ const state=await publicPaidArmorySettlement(5); // v15 catalog: real Rumble acquisition still reaches the asserted 5-5 settlement.
  expect(readG23Progress(state)!.junkerPurchases).toHaveLength(1);
  expect(readG23Progress(state)!.junkerPurchases[0].cost).toBe(5);
  expect(state.roundDefinitionId).toBe('5-5');

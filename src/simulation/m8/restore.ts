@@ -55,6 +55,10 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           const owner=units.find(u=>u.id===c.source.ownerId)!;
           const d=owner.mechanismDefinitions?.eventTriggers?.find(t=>t.id==='lotus-critical'&&t.source.effectIndex<=c.source.effectIndex&&c.source.effectIndex<t.source.effectIndex+t.effects.length);
           check(owner.team!==unit.team&&d&&owner.mechanics?.some(m=>m.mechanic==='s13P3'&&m.source.definitionId===c.source.definitionId)&&c.expiresAtTick!==null&&c.expiresAtTick>=c.appliedAtTick+60&&c.expiresAtTick<=tick+60&&c.appliedAtTick>0&&c.appliedAtTick<=tick&&owner.triggerLedger?.runtimes.some(r=>canonicalSource(r.source)===canonicalSource(d.source)&&r.triggerCount>=(c.expiresAtTick===c.appliedAtTick+60?1:2)&&r.startsAtTick<=c.appliedAtTick),'P3 lotus critical receipt');
+        } else if (c.source.sourceKind === 'augment' && c.source.definitionId === 'all-for-one-i') {
+          // The D11 source compiler binds this static damage amplifier at tick 0.
+          // isDeclaredStatus above and consumption below authenticate coefficients.
+          check(c.source.ownerId===unit.id&&c.appliedAtTick===0&&c.expiresAtTick===null,'D11 opening status source/timing');
         } else if (c.source.sourceKind === 'augment') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
           const m = owner.mechanics?.find(m => canonicalSource(asSource(m.source)) === canonicalSource(c.source));

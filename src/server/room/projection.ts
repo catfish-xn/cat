@@ -10,9 +10,9 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { listCarouselSlots, readItemSummons } from '../../server-entry';
+import { listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -22,7 +22,13 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
   return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
-    publicBoard: toPublicBoard(seat.match) };
+    publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match) };
+}
+
+/** v15: the rules' public orb summary (count and tiers only), copied field by field; ids, contents and the queue stay private. */
+export function toPublicOrbs(match: MatchState): PublicOrbSummary {
+  const summary = readPublicOrbSummary(match);
+  return { count: summary.count, tiers: [...summary.tiers] };
 }
 
 /**

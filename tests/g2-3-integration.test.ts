@@ -91,7 +91,7 @@ import {runSharedMatchCommand,nextSharedRound,refreshSharedShops} from '../src/s
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {deriveTraits} from '../src/simulation/trait-snapshot';
-it.each([false,true])('shared settleRound uses its transaction policy for escrowed source chest heroes (empty=%s)',empty=>{
+it.each([false,true])('shared settleRound queues a source chest orb and claim uses its pool policy (empty=%s)',empty=>{
  const bundle={id:'g23:conqueror:3',round:1,source:'conqueror' as const,tier:3,reward:g23ConquerorReward(G23_CONQUEROR_CHESTS[2])};
  const definitionId=g23RewardAtoms(bundle,5)[0].options[0];
  let {pool,states}=room(empty?{irelia:3}:undefined,1),state=states[0];
@@ -115,8 +115,12 @@ it.each([false,true])('shared settleRound uses its transaction policy for escrow
   g23Facts:{battleId:'g23-battle',round:state.round,roundKind:'pvp' as const,result:'win' as const,conquerorTier:traits.find(t=>t.traitId==='conqueror')?.tier??0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0 as const,highRollerGold:0}};
  const committed=accept(runSharedMatchCommand(pool,state,{type:'settleRound',receipt}));
  const grant=committed.state.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.definitionId===definitionId)!;
- expect(grant).toMatchObject({kind:'unit',resolution:empty?'gold':'held',gold:empty?4:0});
- expect(committed.state.gold).toBe(beforeGold+committed.state.roundResults.at(-1)!.income+(empty?4:0));
+ expect(grant).toMatchObject({kind:'unit',resolution:'orb',gold:0});
+ expect(committed.state.gold).toBe(beforeGold+committed.state.roundResults.at(-1)!.income);
+ if(grant.kind!=='unit')throw Error('unit');
+ const claimed=accept(runSharedMatchCommand(committed.pool,committed.state,{type:'claimOrb',round:committed.state.round,orbId:grant.orbId!}));
+ expect(claimed.state.m8.loot.receipts.at(-1)).toMatchObject({resolution:empty?'gold':'held',gold:empty?4:0});
+ expect(claimed.state.gold).toBe(committed.state.gold+(empty?4:0));conserved(claimed.pool,[claimed.state]);
  expect(committed.events.some(e=>e.type==='mechanicGranted'&&e.receipt.receiptId===grant.receiptId)).toBe(true);
  conserved(committed.pool,[committed.state]);
  expect(runSharedMatchCommand(committed.pool,committed.state,{type:'settleRound',receipt})).toMatchObject({ok:false,reason:'duplicate-settlement'});
@@ -149,18 +153,25 @@ it('a paid settlement-return choice is included in post-economy net mechanic gol
  const paid=ok(selectChoice(opened.state,'test-armory',0,'paid')).state;
  expect(paid.gold).toBe(first.gold+3);expect(restoreMatch(serializeMatch(paid))).toEqual(paid);
 });
-import {draftPool,rewardPolicy,reconcileHoldings} from '../src/simulation/shared-pool-ledger';
+import {draftPool,reconcileHoldings} from '../src/simulation/shared-pool-ledger';
 import type {SharedPoolEvent} from '../src/simulation/shared-pool-types';
 it.each(['maddie','g23-forge'])('shared reconciliation derives %s birth definition from receipts even if the third candidate merged away',definitionId=>{
- const {pool,states}=room({irelia:3,maddie:3},1);let state=states[0];const draft=draftPool(pool),events:SharedPoolEvent[]=[];
+ let {pool,states}=room({irelia:3,maddie:3},1);let state=states[0];
  for(let i=0;i<3;i++){
-  const granted=ok(grantMechanicUnit(state,{receiptId:'merge-'+i,source:'test',definitionId},rewardPolicy(draft,state,events)));
-  if(i===2){expect(mechanicGrantEvents(state,granted.state).filter(e=>e.type==='unitUpgraded')).toHaveLength(1);}
-  if(i===2&&granted.receipt.kind==='unit'){const unitId=granted.receipt.unitId;expect(granted.state.preparation.units.some(u=>u.id===unitId)).toBe(false);}
-  reconcileHoldings(draft,state,granted.state,events);state=granted.state;
+  const before=state,granted=ok(grantMechanicUnit(state,{receiptId:'merge-'+i,source:'test',definitionId}));
+  if(granted.receipt.kind==='unit'&&granted.receipt.resolution==='orb'){
+   expect(granted.state.preparation).toBe(state.preparation);
+   const claimed=accept(runSharedMatchCommand(pool,granted.state,{type:'claimOrb',round:state.round,orbId:granted.receipt.orbId!}));
+   if(i===2){expect(claimed.events.filter(e=>e.type==='unitUpgraded')).toHaveLength(1);const born=claimed.state.m8.loot.receipts.at(-1)!.grantedUnitIds[0];expect(claimed.state.preparation.units.some(u=>u.id===born)).toBe(false);}
+   pool=claimed.pool;state=claimed.state;
+  }else{
+   const draft=draftPool(pool),events:SharedPoolEvent[]=[];
+   if(i===2)expect(mechanicGrantEvents(before,granted.state).filter(e=>e.type==='unitUpgraded')).toHaveLength(1);
+   reconcileHoldings(draft,before,granted.state,events);pool=draft;state=granted.state;
+  }
  }
  expect(state.preparation.units.find(u=>u.definitionId===definitionId)?.starLevel).toBe(2);
- conserved(draft,[state]);
+ conserved(pool,[state]);
 });
 import {buyUnit} from '../src/simulation/match';
 it('buying Rumble to three stars refreshes a folded armory and invalidates its old generation',()=>{

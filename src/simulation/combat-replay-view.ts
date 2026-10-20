@@ -1,4 +1,6 @@
 import { isPresent, isSelectable } from './anomalies/availability';
+import { d11CombatDisplay } from './d11-display';
+import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
@@ -8,13 +10,35 @@ import { canonicalContent } from './content';
 import { createScopedContentFreezer, freezeTransientContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 import { alignReplayUnits, applyReplayMembership, replayOrderFollowsMembership } from './seat-mechanics/replay-units';
+// combat-status is pure (its other presentation imports are type-only). Reuse the
+// single-player snapshot reader so pending/suppressed/filter/legacy semantics cannot drift.
+import { readUnitStatusRows } from '../presentation/combat-status';
+import type { StatusKind } from './m8/contracts';
+
+export interface CombatViewStatus {
+  readonly kind: StatusKind | 'channel' | 'redirect';
+  readonly harmful: boolean;
+}
+function statusView(state: CombatState, unitId: string): { readonly statuses?: readonly CombatViewStatus[] } {
+  const statuses = new Map<string, CombatViewStatus>();
+  for (const row of readUnitStatusRows(state, unitId)) {
+    if (row.state === 'pending' || row.state === 'suppressed') continue;
+    statuses.set(JSON.stringify([row.kind, row.harmful]), { kind: row.kind, harmful: row.harmful });
+  }
+  // ASCII kind order, then beneficial (false) before harmful (true); no locale dependence.
+  // Always emit [], including when the last status ends, so unitUpdated clears old icons.
+  return { statuses: [...statuses.values()].sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0)
+    || Number(a.harmful) - Number(b.harmful)) };
+}
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
-  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
+  const choiceEffects=d11CombatDisplay(unit);
+  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
+    ...(choiceEffects.length?{choiceEffects}:{}),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
@@ -79,7 +103,8 @@ export interface CombatReplay {
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;
 }
-export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events'>;
+export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>
+  & Partial<Pick<import('./two-sided-types').BattleResult, 'mirrorOfSeatId'>>;
 /** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
 export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
   return events.flatMap(event => {
@@ -100,6 +125,8 @@ function equalViewField(a: unknown, b: unknown): boolean {
 }
 
 export interface CombatReplayRecorder {
+  readonly initial: CombatViewState;
+  readonly initialFrame: CombatReplayTick;
   record(previousState: CombatState, step: import('./combat').CombatStep): CombatReplayTick;
   finish(terminalState: CombatState): CombatReplay;
 }
@@ -115,6 +142,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
     events: toCombatViewEvents(initialEvents.filter(event => event.eventSeq < firstStepEventSeq)) })];
   let previous = initial, result: CombatReplay | null = null;
   return {
+    initial, initialFrame: ticks[0],
     record(previousState, next) {
       if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
         || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
@@ -159,6 +187,14 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const recorder = createCombatReplayRecorder(battle.initial, battle.events);
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
   let state = battle.initial;
+  const bankSamples = battle.bankSamples ?? battle.terminal.bankSamples;
+  validateD11BankSamples(bankSamples,battle.terminal.tick);
+  if (bankSamples?.some(sample => sample.team === 'enemy' && battle.mirrorOfSeatId != null || !battle.initial.units.some(unit => unit.team === sample.team
+    && unit.mechanics?.some(m => m.mechanic === 'd11Anomaly' && m.source.definitionId === 'avarice-incarnate'))))
+    throw new RangeError('invalid-replay-input');
+  if (battle.bankSamples && battle.terminal.bankSamples
+    && canonicalContent(battle.bankSamples) !== canonicalContent(battle.terminal.bankSamples)) throw new RangeError('replay-divergence');
+  let bankCursor=0;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
   // but leaves no whole-battle serialization work in the final scheduling slice.
@@ -181,6 +217,12 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     if (result) return result;
     let steps = 0;
     while (steps < maxTicks && state.status === 'running' && state.tick < battle.terminal.tick) {
+      while(bankSamples?.[bankCursor]?.tick===state.tick){
+        const sample=bankSamples[bankCursor++];
+        const sampled=sampleD11CombatGold(state,sample.team,sample.liveGold);
+        if(sampled===state)throw new RangeError('replay-divergence');
+        state=sampled;
+      }
       const next = stepCombat(state);
       const frame = recorder.record(state, next);
       state = next.state;
@@ -198,6 +240,13 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     }
     if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
     if (canonicalContent(toCombatViewState(state)) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+    if (bankSamples) {
+      // PvE carries the private transcript on terminal; it is metadata, not a rule input to stepCombat.
+      const { bankSamples: _actualSamples, ...actual } = state;
+      const { bankSamples: _expectedSamples, ...expected } = battle.terminal;
+      if (bankCursor !== bankSamples.length || canonicalContent(actual) !== canonicalContent(expected))
+        throw new RangeError('replay-divergence');
+    }
     if (comparisonFailed) throw comparisonError;
     if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');

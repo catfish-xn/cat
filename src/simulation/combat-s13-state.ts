@@ -1,4 +1,5 @@
 import { p2Bonus } from './s13-augments-p2-combat';
+import { d11HeadhunterAttackSpeedBps } from './d11-fill';
 import { shortestPath, startingRows } from './m8/targeting';
 import { isPresent, isSelectable, isAttackProxy } from './anomalies/availability';
 import { P4_SOURCE } from './anomalies/source';
@@ -117,6 +118,7 @@ export function interval(unit: S13Unit, tick: number): number {
   if (locks.length) return attackInterval(Math.min(...locks), 0);
   const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
   const bankSpeed=(gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0)
+    + (unit.d11Kills?d11HeadhunterAttackSpeedBps(mechanic(unit,'d11Anomaly','priorKills')+unit.d11Kills.length):0)
     + (unit.anomalyState?.firstCastTick !== undefined ? Math.round(P4_SOURCE.CertainDeath.values.BonusAS * 10000) : 0)
     + (unit.anomalyState?.revivedAtTick !== undefined ? Math.round(P4_SOURCE.EvenInDeath.values.BonusAttackSpeed * 10000) : 0);
   const signedSpeed = modifierValues('attackSpeed', statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });

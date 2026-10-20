@@ -1,22 +1,83 @@
 # M5 Match contract v5
 
-## 强化等级与刷新：v14 用户约定（2026-10-19）
+## v15 统一身份（2026-10-20，覆盖下文历史交接状态）
 
-本节覆盖历史“精选混合池”和强化不可刷新描述。来源为用户 2026-10-19 08:15 原话：“海克斯每次提供的必须是同一等级比如所有人都是银色，所有人都是金色或者彩色，必须等级一致，海克斯默认可以刷新一次。”不声称这是已核实的原版 14.24b 同轮或锁级规则。
+当前 rules/content 为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
 
-- 每个节点（2-1、3-2、4-2）确定一次 silver/gold/prismatic，同次三个候选同级，联机同轮八席同级。AUGMENT_TIERS 只有等级身份，没有概率/权重；三等级等权是项目约定、待用户确认，不还原历史等级组合分布。
-- deriveAugmentTier(seed, choiceId)：choiceId 按 UTF-16 code unit 计算 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32）；lcg32-v1 输入为 (seed xor 0x61756774 xor nodeHash) >>> 0，只取一个词，按 word % 3 对应 [silver,gold,prismatic]。单人用 Match.seed，联机用 SharedPoolState.seed（房间 options.seed），由 initializeSharedSeat 绑定到 augmentTierSeed；派生不读写席位 RNG。
-- 发放按等级过滤并排除已持有 ID，generateChoices 仍按 ID 排序、等权无放回抽三项，只消耗 choiceRngState 的三个词。商店、奖励、战斗等流不变。augmentOffers 保存各已打开节点 {choiceId,tier,rerollCount}，选择后保留。
-- 每次新提供额度为 augmentRerollLimit(此前已持有强化)，默认免费 1 次。rerollCount 表示已用次数，generation 从 0 开始，成功刷新均加 1；rerollsRemaining 为额度减已用次数。额度不跨节点积存，下一节点重置。
-- 刷新免费、整组三项重抽、锁级，同时排除当前三项和已持有 ID。仅排除当前一代；以后获得额外额度时，隔代可再出现。过滤后不足三项则 augment-pool-too-small，原子拒绝，不跨级、降级或保留旧项回退。现有各等级池即使排除两项已持有及三项当前候选仍足够。
-- 原始 map22 的 Maps/Shipping/Map22/Sets/TFTSet13.ScriptData.NumAugmentRerollsPerPlayer.mValue=1；en_us 的 TFT_Augment_BeggarsCanBeChoosers 为其余提供额外 ExtraRolls=3。该强化未注册，本次不新增内容。额度扩展接口为定义效果 mechanic:'augmentRerolls',values:{extraRolls:非负整数}；augmentRerollLimit 将此前已获取的效果逐项叠加，只增加其余节点额度，不补当前提供；新增定义仍需正常内容准入、版本与验证。
-- 未找到能证明 S13 逐槽（per-slot）刷新的原版证据。raw 其他赛季的 NumRerollsPerAugmentSlot 不能作为 S13 证明；本项目明确按整组刷新实现。
+用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 54、联机 53（仅排除 `avarice-incarnate`），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
 
-公开命令：rerollAugment(state: MatchState, choiceId: string, generation: number): MatchCommandResult，由 match.ts 与 server-entry 导出。失败顺序：wrong-phase（非强化 offer）、stale-choice（ID/代次不符）、augment-rerolls-exhausted（额度用尽）、augment-pool-too-small（不足三项）。失败保持原 state 引用，返回 reason，无 events、资源或 RNG 变化。成功发 choiceOpened，含最新完整提供和正常 eventSeq。deriveAugmentTier(seed:number,choiceId:string):AugmentTier 与 augmentRerollLimit(augments:readonly OwnedAugment[]):number 也由 server-entry 导出。
+新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
 
-私有席位视图 pendingChoice 增加 augmentTier?:'silver'|'gold'|'prismatic' 与 rerollsRemaining?:number，强化提供时存在；保留 offers/generation/rerollCount。视图不公布其他席候选、seed、未来节点等级或重推账本。
 
-读档：仅支持 v14 身份。augmentTierSeed 必须等于单人 seed。validateAugmentOfferHistory 从 seed 初始 choice 流重放各强化节点，核对节点顺序、等级、额度、所有代次抽取、当前候选和已选 ID；异常尚未抽取前还核对 choiceRngState。篡改等级、候选、计数、代次、剩余额度、节点记录或随机流均拒绝，不以保存的候选/RNG 检查点作重推依据。当前日程全部强化先于异常；联机完整 Match 存档仍不支持。schema7/save3/replay3/command3 不变；规则/内容升为 s13-g2-3-v14 / s13-14.24b-g2-3-v14，digest 从 manifest 自然重算，旧身份拒绝，不迁移。
+## D11 领域接线，等待统一 v15（2026-10-20）
+
+运行目录为 60 强化 / 54 异常；新增一费奉献 I（银）、三项赛 I（金）、灵魂连接（金）、贪财化身与猎头者。具体数值、开战 / 赠送 RNG 约定、恢复证据与版本清单见 [D11_WIRING_V15](D11_WIRING_V15.md)。D11 单支交付保留 v14；本次合并沿用法球分支既有 v15 身份，不再升级版本、改变 digest 或重录指纹。目录 digest 输入仍有显式临时 preD11 边界，后续统一身份与指纹验收必须移除，不能据此声称与旧 v14 存档等价或直接发布。
+
+灵魂连接以开战玩家生命的完整十点缺失组计算治疗，每 100 tick 生效。一费奉献 / 三项赛的赠送经唯一 mechanic 收据：单机沿用满席托管，联机先产生奖励法球，再按下节法球合同领取（战斗排队、战后分配共享库存或折金）；不重发、不重抽、不消耗四条 Match 流。贪财化身获取 +5 金一次，伤害按实时金币取样；战斗收益只通过既有结算入账。猎头者当战击杀即时加攻速，永久成长以 g23Facts.d11Headhunter 的完整 kill eventSeq 事实结算，排除召唤物、野怪、助攻与友军。
+
+单机 `serializeMatch(state,battles?)` / `restoreMatch(input,battles?)` 签名不变；历史含猎头者事实（即使零击杀）必须提供完整可信 battles 重放。当前异常战斗逐 tick 重算，礼物与 +5 金校验来源及唯一收据，不从保存的自报计数恢复。联机完整 Match 读档仍不支持。私有视图可选 d11Display 和公开战斗 replay 单位可选 choiceEffects 提供当前条目名称、说明与等级，无新图标路径，也不公开银行或未来候选。
+
+双边任务 `sampleBankGold(seatId:string,liveGold:number):boolean`，私有 bankSamples 记录生效 tick，结果校验 / 回放重演同一经济输入。实际改变返回 true；相同有效银行、未绑定席位与镜像 B 返回 false。服务器仅可传权威 Match.gold。原 D11 交接时服务器先完整计算再播放，**战中买卖样本接线仍需服务器验收**；不能用开战冻结数替代完整实现。新增读取席位、逐 tick 帧、PvE 样本收据和隐私边界见 [LIVE_GOLD_EXPORTS](LIVE_GOLD_EXPORTS.md)，服务器配套见 [UI_REQUESTS](UI_REQUESTS.md)。
+
+## 联机法球领取：v15（用户批准 2026-10-20 02:20）
+
+只在 state.multiplayer 存在时替换自动发奖/满席托管。`claimOrb(state:MatchState,orbId:string,expectedRound:number,unitLootPolicy?:UnitLootPolicy):MultiplayerCommandResult`；共享席位经 `runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId})`，客户端不提供 policy。允许 preparation/combat/settlement/choice，判断集中在 ORB_CLAIM_PHASES/planOrbClaim。用户 2026-10-20 02:26 已定：combat 或 PvP combatRosterLocked 时接受领取并排队，其他允许阶段即时领取。expectedRound 是当前操作轮，法球来源 roundId 可为历史轮。
+
+席位私有 `m8.loot.queuedOrbClaims?:readonly string[]` 按权威提交顺序保存 orbId（缺省为空），不存 payload 或回调；排队保持 direct=revealed，无领取事件/收据，不改备战席、金币、卡池库存、预留或任何 RNG。共享包装仅更新池/席位 revision 以提交新状态。重复排队沿用 already-claimed，原 state/pool 引用、无事件。私有 unclaimedOrbs 每颗增加 queued:boolean；公共仍仅 count/tiers，不暴露 queued 或队列。
+
+确定性结算位置：PvE `withCombat`、PvP `applyRoundSettlement` 在本轮收入/利息、XP、HP、成长、G23 结算钩子及延迟升星完成后，打开任何战后选择之前，执行 `settleQueuedOrbClaims`。先判淘汰：淘汰者清空队列并由 forfeitUnclaimedOrbs 作废所有已赚未领条目（forfeited/gold=0，无扣池）；存活者逐颗 FIFO、颗内 entryOrdinal 执行同一 planOrbClaim/grantDirectLoot，按此时容量/库存合成、入库、满席折金或缺货补偿，产生同样的唯一收据。每颗之后 drain 原机制奖励并同步临时装备；新解锁法球不自动排队。队列与收据/池在同一事务提交，任一异常整体回滚；不会把领取金额计入本轮 interestBasis/goldAfter。
+
+RNG：排队、出队、领取、折金、缺货与扣池本身各消耗 0 词，不重抽冻结 payload；仍保留原 G23/装备钩子规则。临时装备如需新 roll，按法球 FIFO、每颗后父装备 ID/roundId 代码点顺序，仅消费 equipment 流（两个 uniformIndex 抽取，含原拒绝采样），记录 equipmentRolled；战斗流和商店流不因领取改变。跨席竞争沿服务器原子结算提交顺序，无全局点击时间优先保证。JSON 快照/重连保留队列原序；validateMultiplayerOrbLedger 拒绝重复/未知/未赚/已领取队列项、非战斗生命周期和已结算/淘汰残留，恢复后只处理一次。完整签名与约定值见 [v15 交接](LOOT_ORB_CLAIM_V15.md)。
+
+失败：multiplayer-required / seat-eliminated / stale-round / wrong-phase / unknown-orb / already-claimed / shared-pool-required / invalid-loot；包装另保留原卡池校验失败。失败原 state/pool 引用、无事件、资源、RNG 变化。成功按 entryOrdinal 一次领取完整法球；英雄完整星级走 planUnitAcquisition，满席按 getUnitSellPrice 自动出售（2 费 1/2/3 星 +2/+5/+17、1 费 2 星 +3），卡池份额视为未取出。有货且入库才扣 1/3/9 份；不足完整份数暂按整条一次费用折金，优先于容量出售，不叠加。
+
+P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolution=orb，含 orbId/starLevel、unitId=null、gold=0；最终领取记 LootReceipt resolution=held/gold/capacity-sold/forfeited、gold、claimedRoundId，原 payload 保留星级。私有 LootView/PrivateSeatView 加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，领取回执位于 claimReceipts / orbClaimReceipts；公共只给 count/tiers。claimLoot 截止不丢弃法球，nextRound 不阻塞；淘汰/终局作废一次，断线保留。bot 准备入口函数 claimBotPreparationOrbs 按 orbId 代码点顺序领取。单机、冻结表、售价公式及 5-7/6-7 不变。完整恢复边界、服务器协议 4 接线与约定值见 [实现交接](LOOT_ORB_CLAIM_V15.md)。
+
+### 联机整局终局法球清理（#260 / #262）
+
+`forfeitTerminalOrbs(state: MatchState): MatchStep` 从 `simulation/match` 和 `server-entry` 公共导出，返回 `{state, events}`，无失败枚举。这是服务器确认**整局终局**后对每席调用的可信领域钩子，不是客户端命令；房间终局不等于席位淘汰，因此不要求 `phase=gameOver` 或 `multiplayer.status=eliminated`，赢家及其他 active 存活席位同样要调用。调用者负责终局判定及提交返回的 state/事件，不能在普通轮次截止调用。
+
+清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机为空操作；重复调用（包括 JSON 快照恢复后）无新事件或收据，队列也为空时返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
+
+## 强化等级与按卡刷新：待 v15 收口（用户确认 2026-10-20）
+
+本节覆盖旧整组刷新与“精选混合池”描述。用户明确“三个海克斯下面各一个刷新”及“刷掉的海克斯永远刷不回来了”。每个槽位在本次选择各免费一次是本轮任务约定；旧实现/合同实际为整组共一次，没有既有按卡计次依据。不声称是已核实的原版 14.24b 行为。本轮不升版本、不改 digest、不重录指纹；与法球及 #231 接线统一升 v15，清单见 [交付说明](AUGMENT_CARD_REROLL_V15.md)。
+
+- 日程保持 **2-1、3-2、4-2**；用户以 3-1/4-1 举例表达永久排除，不改选择轮次。每节点确定一次 silver/gold/prismatic，同次三张同级，联机同轮八席同级。不改强化数值、等级身份或等级权重。
+- `deriveAugmentTier(seed, choiceId)` 不变：choiceId 按 UTF-16 code unit 算 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32）；以 `(seed xor 0x61756774 xor nodeHash) >>> 0` 派生一个 lcg32-v1 字，`word % 3` 对应 `[silver,gold,prismatic]`。单人取 Match.seed，联机取 initializeSharedSeat 绑定的 SharedPoolState.seed。此私有派生不推进席位随机流。
+- 初始发牌按节点等级过滤，排除已持有与 `removedAugmentIds`；ID 默认 `.sort()` 升序，以既有 generateChoices 的部分 Fisher–Yates 抽三项，固定消费 choiceRngState 三字。第 i 字取 `j=i+word%(pool.length-i)`，交换 i/j，i=0,1,2。
+- 刷新按槽位 `optionIndex=0|1|2`，只替换目标卡，等级和其余两张的位置/ID 不变。每槽每节点一次；新卡所在槽位已经用过，不能再次刷新。`augmentRerollLimit(augments)` 保留导出，现返回**每槽上限 1**；原 ExtraRolls 定义未注册，旧未来扩展约定被本次每槽一次覆盖，不新增内容。
+- 刷新候选排除当前三张、已持有及永久移出 ID；先完整校验，再对候选按 ID 默认 `.sort()` 升序，推进 choiceRngState **一字**，用 `word % pool.length` 取唯一新卡。至少一项即可成功；零项原子拒绝，不跨级、不回退、不消耗槽位额度。所有命令按提交顺序执行，历史保留顺序；例如 2→0→1 不能排序成 0→1→2。商店、奖励、战斗等流不变。
+- 成功时把**旧卡**加入本局该玩家的 `removedAugmentIds`，以后任何节点发牌/刷新均排除；未选中但没有刷掉的卡不移出。不影响其他玩家，不跨新对局继承。
+
+### 命令、状态与失败
+
+```ts
+rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number): MatchCommandResult
+```
+
+match.ts 与既有 server-entry 继续导出。有效调用必须传下标；TS 参数暂时可省略仅为保持禁改的旧界面/服务器可编译，缺参绝不默认刷第 0 张，而是 `invalid-slot`。接线完成后可把类型收紧为必填。
+
+校验/失败优先顺序：`wrong-phase`（非 choice/augment/offer，PvP 阵容冻结或已淘汰）→ `stale-choice`（choiceId/generation 不符）→ `invalid-slot`（缺参、非安全整数或越界）→ `augment-rerolls-exhausted`（该槽已用）→ `augment-pool-too-small`（同级合法候选为零，沿用原 reason 字面值）。失败返回 `{ok:false,state,reason}`，state 保持原引用，没有 events，不改变资源、任何 RNG、移出集合或历史。成功返回完整新 state 与一个 `choiceOpened`，沿用正常 match eventSeq；不另造第二份结算事件。
+
+| 字段 | 含义 |
+| --- | --- |
+| `MatchState.removedAugmentIds: readonly string[]` | 成功刷掉的 ID，按发生顺序存储的唯一集合；新局为空 |
+| `augmentOffers[].rerolledIndices: readonly number[]` | 此节点成功刷新的槽位，按命令顺序；选择完成后仍保留 |
+| `PendingChoice.rerolledSlots?: readonly boolean[]` | 仅强化有 `[false,false,false]`，对应槽刷新后置 true；后续节点重置 |
+| `rerollCount / generation` | 此节点累计成功次数，均为 0..3；任一槽成功均 +1，全选择共用 generation |
+| `rerollsRemaining` | 3-rerollCount，表示尚未使用的槽位数，不保证候选足够 |
+| `toPrivateSeatView(...).pendingChoice.augmentOptions[]` | `{optionIndex,definitionId,rerollAvailable}`，按 offers 顺序；已用、阶段不符或候选耗尽为 false |
+
+私有投影还复制 `rerolledSlots`，保留 offers/augmentTier/choiceId/generation。`augmentOptions` 为展示 DTO，不是可写权威。界面通过每卡 rerollAvailable 接按钮，不用总剩余数推断某一卡可刷新；不公布移出账本、seed、未来等级或其他席候选。单机也可调用 toPrivateSeatView 读取同一权威展示字段。
+
+### 持久化与恢复
+
+`serializeMatch/restoreMatch` 保存并严格校验以上权威字段。validateAugmentOfferHistory 从 `seed xor 0x9e3779b9` 的 choice 流开始，逐节点重演初始三字及有序下标对应的单字刷新，从重演的旧卡重建移出集合；核对槽位唯一/范围、计数/代次/剩余数、当前候选、已选 ID、永久移出集合及顺序。异常尚未抽取前还核对 choiceRngState。不能信任保存的候选或 RNG 检查点；不重新授奖。
+
+单人仍校验 augmentTierSeed=seed。联机与单人共用候选/刷新规则；联机完整 Match 的用户导入/导出原本不支持（含 sharedPool 状态），本轮不新增该入口。服务器重连复用席位权威 state；若服务器持久化整局，必须原样保存并恢复 pool 与各 MatchState（含新增字段），不能仅存私有投影或重新 createMatch。测试覆盖共享 pool/state 的 JSON 往返及恢复后续命令，不声称新增服务器磁盘恢复验证。
+
+当前身份仍为 schema7/save3/replay3/command3、rules `s13-g2-3-v14` / content `s13-14.24b-g2-3-v14`，digest 和 manifest 策略对象暂留 v14 原值。这是未发布的 v15 工作区，旧 v14 存档缺少新字段会严格拒绝，不能把同版本兼容或旧录制已更新作为完成结论。统一发布前必须完成版本、manifest 和指纹收口。
 
 
 ## G2-3 当前实现与接入合同（2026-10-16）

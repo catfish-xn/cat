@@ -86,6 +86,8 @@ export const G23_ANOMALIES: readonly G23Name[] = [
 ];
 /** S13 anomalies added after G2-3 (zh_CN client names); kept apart so the G2-3 table stays at its 30 rows. */
 export const S13_EXTRA_ANOMALIES: readonly G23Name[] = [
+  {"apiName": "TFT13_GoopBuff_AvariceIncarnate", "en": "Avarice Incarnate", "zh": "贪财化身"},
+  {"apiName": "TFT13_GoopBuff_Headhunter", "en": "Headhunter", "zh": "猎头者"},
   {"apiName": "TFT13_GoopBuff_CenteroftheUniverse", "en": "Center of the Universe", "zh": "星原之准"},
   {"apiName": "TFT13_GoopBuff_CertainDeath", "en": "Diving In", "zh": "深入敌阵"},
   {"apiName": "TFT13_GoopBuff_DeftHands", "en": "Mini Mees", "zh": "小我多多"},

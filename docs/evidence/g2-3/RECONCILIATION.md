@@ -1,5 +1,9 @@
 # G2-3 实现对账与接口交接
 
+## v15 联机法球领取（2026-10-20）
+
+基线 a0d42c5；线上英雄赠礼改为法球，领取才占池，满席按完整星级售价出售，缺货按费用且不叠加。单机计算保持。`LOOT_RUNTIME_REVISION=multiplayer-orb-claim-v2`，rules/content v15，联机法球合同 multiplayer-orb-claim-v1，网络目标 4（服务器常量和消息接线由 Claude 完成）。新字段、恢复边界、重录状态、暂定值与 PR 描述见 [v15 交接](../../LOOT_ORB_CLAIM_V15.md)。本段覆盖下文旧版线上自动发英雄/满席重试口径，旧版单机记录保留。
+
 基线：`multiplayer@38747c595b7f4900133ca6e85c63b1bb48e83e2d`（含 OPENING-R1、SRC-MAP22、RESEARCH）；分支 `codex/g2-3-impl`。
 用户决定：2026-10-16，含 13:46 补充及随后折金口径。**已基于 #134（19aa9f1）接入纯领域通用接口；服务器事实转发仍需配套，非联机上线声明。**
 

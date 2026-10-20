@@ -503,9 +503,9 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
 });
 
 describe('carousel-pick on the wire', () => {
-  it('accepts carousel-pick (protocol 3) with exactly carouselId, revision and a non-negative slot', () => {
+  it('accepts carousel-pick (protocol 3 and later) with exactly carouselId, revision and a non-negative slot', () => {
     const envelope = (command: unknown) => JSON.stringify({ protocolVersion: NET_PROTOCOL_VERSION, commandId: 1, type: 'command', roomId: 'r', round: 1, seatRevision: 0, command });
-    expect(NET_PROTOCOL_VERSION).toBe(3);
+    expect(NET_PROTOCOL_VERSION).toBeGreaterThanOrEqual(3);
     const ok = { type: 'carousel-pick', carouselId: 'pool:carousel:2-4', revision: 3, slot: 2 };
     expect(parseClientMessage(envelope(ok))).toMatchObject({ ok: true, message: { command: ok } });
     expect(parseClientMessage(envelope({ ...ok, slot: -1 }))).toMatchObject({ ok: false, code: 'invalid-message' });
@@ -513,6 +513,6 @@ describe('carousel-pick on the wire', () => {
     expect(parseClientMessage(envelope({ type: 'carousel-pick', slot: 1 }))).toMatchObject({ ok: false, code: 'invalid-message' });
     // A protocol 2 client is told which version to speak instead of meeting an unknown command later.
     expect(parseClientMessage(JSON.stringify({ protocolVersion: 2, commandId: 1, type: 'command', roomId: 'r', round: 1, seatRevision: 0, command: ok })))
-      .toMatchObject({ ok: false, code: 'unsupported-protocol', detail: 'protocolVersion must be 3' });
+      .toMatchObject({ ok: false, code: 'unsupported-protocol', detail: expect.stringContaining(`protocolVersion must be ${NET_PROTOCOL_VERSION} (got 2)`) });
   });
 });

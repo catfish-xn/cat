@@ -4,6 +4,7 @@ import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server
 import { Room, ROOM_TIMING_DEFAULTS, type RoomOptions } from '../../src/server/room/room';
 import type { CombatState } from '../../src/simulation/combat-types';
 import type { BattleInput, BattleResult, RoomState, SeatSpec } from '../../src/server/room/types';
+import { readLootView } from '../../src/simulation/match';
 
 export const SEATS: readonly SeatSpec[] = Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, name: `玩家 ${index}`, kind: index < 4 ? 'human' : 'bot' }));
 export const TIMINGS = { preparationMs: 1_000, choiceMs: 500, settlementMs: 200, battleTailMs: 100, maxSettlementExtensions: 2 } as const;
@@ -34,6 +35,41 @@ export function makeRoom(resolver: BattleResolver = new PlaceholderBattleResolve
 /** Fires timers one by one until the predicate holds; fails loudly instead of looping forever. */
 export function runUntil(room: Room, clock: ManualClock, predicate: (state: RoomState) => boolean, maxTimers = 2_000): RoomState {
   for (let fired = 0; fired < maxTimers; fired++) {
+    if (predicate(room.state)) return room.state;
+    if (!clock.runNext()) break;
+  }
+  if (!predicate(room.state)) throw new Error(`room never reached the expected state (phase ${room.state.phase}, round ${room.state.round}, fault ${JSON.stringify(room.state.fault)})`);
+  return room.state;
+}
+
+/**
+ * v15: online rewards are orbs a seat claims itself (a player with `claimOrb`, a bot at its preparation entry through the
+ * rules' helper). For room tests whose precondition is "the rewards arrived": while the room and the seat prepare, every
+ * alive seat (or only `seatIds`) claims each unclaimed, unqueued orb through the room's own command, in orbId order.
+ * Every claim must be accepted. Returns how many orbs were claimed.
+ */
+export function claimAllOrbs(room: Room, seatIds?: readonly string[]): number {
+  if (room.state.phase !== 'preparation') return 0;
+  let claimed = 0;
+  for (const { seatId } of room.state.seats) {
+    if (seatIds && !seatIds.includes(seatId)) continue;
+    for (;;) {
+      const seat = room.state.seats.find(candidate => candidate.seatId === seatId)!;
+      if (!seat.alive || seat.match.phase !== 'preparation') break;
+      const orb = (readLootView(seat.match).unclaimedOrbs ?? []).filter(candidate => !candidate.queued).map(candidate => candidate.orbId).sort()[0];
+      if (orb === undefined) break;
+      const result = room.handle(seatId, { type: 'claimOrb', round: seat.match.round, orbId: orb });
+      expect(result, `${seatId} claims ${orb}`).toMatchObject({ ok: true });
+      claimed++;
+    }
+  }
+  return claimed;
+}
+
+/** runUntil, with every seat claiming its orbs (claimAllOrbs) whenever the room prepares, before the predicate is read. */
+export function runUntilClaiming(room: Room, clock: ManualClock, predicate: (state: RoomState) => boolean, maxTimers = 2_000, seatIds?: readonly string[]): RoomState {
+  for (let fired = 0; fired < maxTimers; fired++) {
+    claimAllOrbs(room, seatIds);
     if (predicate(room.state)) return room.state;
     if (!clock.runNext()) break;
   }

@@ -66,7 +66,8 @@ export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>
   'unknown-item': '该装备已不存在，请重新选择',
 };
 
-function payloadLabel(payload: RevealedDropView['payload']): { icon: string; text: string } {
+/** Icon markup and name of one loot payload (also used by the v15 orb dock's hover card). */
+export function payloadLabel(payload: RevealedDropView['payload']): { icon: string; text: string } {
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
@@ -81,8 +82,11 @@ function orbEntryRow(drop: RevealedDropView): HTMLElement {
   if ('reason' in drop && drop.reason) row.dataset.reason = drop.reason;
   if (drop.receiptId) row.dataset.receipt = drop.receiptId;
   row.insertAdjacentHTML('afterbegin', payload.icon);
-  row.append(node('span', payload.text, 'orb-entry-name'), node('span', status.label, 'loot-badge'));
-  const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note : status.note;
+  const awaiting = 'reason' in drop && drop.reason === 'awaiting-claim';
+  row.append(node('span', payload.text, 'orb-entry-name'), node('span', awaiting ? '待领取' : status.label, 'loot-badge'));
+  // v15 online: a revealed entry waits in its orb on the board's right edge until the player clicks it.
+  const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note
+    : awaiting ? '法球留在棋盘右侧，点击法球领取' : status.note;
   if (note) row.title = note;
   return row;
 }

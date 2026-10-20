@@ -45,7 +45,7 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
   }
 }
 // Seed 3151248's v14 fallback is High Voltage; its gifted Spark stays in inventory.
-// Seed 77 offers Manaflow I, which the back-row contribution=false board needs.
+// v15 seed 5 offers Manaflow I, which the back-row contribution=false board needs.
 const frontRowRod = () => acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 let luxFixture: { initial: MatchState; before: MatchState; after: MatchState; doubleKill: MatchEvent[] };
@@ -433,12 +433,13 @@ describe('dead-holder public combat fixture', () => {
 });
 
 describe.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
+  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
-    let state = contribution ? frontRowRod() : acquireEquipment(['rod'], { seed: 77 });
+    // v15 retains the same contribution cases with actual Manaflow offers.
+    let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
     for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
       state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
       const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
