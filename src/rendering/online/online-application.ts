@@ -202,10 +202,11 @@ export class OnlineApplication implements SceneApplication {
       const kept = new Set(after.preparation.units.map(unit => unit.id));
       if (before.preparation.units.some(unit => unit.team === 'player' && !kept.has(unit.id))) cue = 'sell';
     }
-    // A move between bench and board (or a swap) with no gold change: a soft placement thud.
+    // A move between bench and board (or a swap) with no gold change: a soft placement thud. Only units on both sides
+    // count, so a hero arriving from an orb or the carousel (nothing moved) stays silent.
     else if (after.gold === before.gold) {
-      const spot = (state: typeof after) => state.preparation.units.filter(unit => unit.team === 'player').map(unit => `${unit.id}:${JSON.stringify(unit.location)}`).sort().join('|');
-      if (spot(before) !== spot(after)) cue = 'place';
+      const where = new Map(before.preparation.units.filter(unit => unit.team === 'player').map(unit => [unit.id, JSON.stringify(unit.location)]));
+      if (after.preparation.units.some(unit => unit.team === 'player' && where.has(unit.id) && where.get(unit.id) !== JSON.stringify(unit.location))) cue = 'place';
     }
     if (upgraded) cue = 'starUp';
     if (cue) this.sound.play(cue);
