@@ -40,6 +40,8 @@
 
 ## 共享目录运行限制
 
+> 2026-10-20 调度方补记：已在本工作树把 `assets3d-local/` 换成真实目录（`trial`、`source-json`、`prepared`、`out` 为只读输入联接），沙箱外运行上述两条 build-all 与 merge-manifests：两批 27/27、33/33 成功，`all-anim/` 60 模型、107,984,972 字节、缺项 0，cast 55/60、hit 0/60。safe-path 未改。
+
 用户指定的两条 build-all 新目录命令及生成 all-anim 的合并命令均已尝试，退出 1：`unsafe-output-path`。原因是 `assets3d-local` 为联接，实际指向 `../assets3d/assets3d-local`，现有 safe-path 主动拒绝输出根逃出 LF clone。这是脚本边界，不仅是沙箱；没有放宽安全检查或改链接。
 
 为继续验证模型与贴图，在 `scripts/assets3d/.verify-local` 临时隔离副本中使用本轮脚本，直接只读共享源数据，输出到隔离副本自己的 assets3d-local；测试也在此副本逐文件执行，防止现有测试向共享联接写入。临时副本在记录证据后清理。隔离结果不代表目标共享 all-anim 已生成。
