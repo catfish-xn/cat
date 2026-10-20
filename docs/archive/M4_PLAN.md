@@ -1,6 +1,6 @@
 # M4 PLAN — 完整策略构筑层 + S13 风格垂直切片
 
-状态：按后续明确授权的 `/goal` 实施。原规划范围和门禁保留；规则以 [RULES](M4_RULES.md) 为唯一详细来源，验收以 [ACCEPTANCE](M4_ACCEPTANCE.md) 为清单，实际执行结果单独记录于 [M4_VALIDATION](docs/M4_VALIDATION.md)。
+状态：按后续明确授权的 `/goal` 实施。原规划范围和门禁保留；规则以 [RULES](M4_RULES.md) 为唯一详细来源，验收以 [ACCEPTANCE](M4_ACCEPTANCE.md) 为清单，实际执行结果单独记录于 [M4_VALIDATION](../M4_VALIDATION.md)。
 
 ## P1. 基线与实际仓库审查
 
