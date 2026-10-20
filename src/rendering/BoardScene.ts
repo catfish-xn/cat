@@ -916,7 +916,7 @@ export class BoardScene extends Phaser.Scene {
     if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); this.placeLoadoutTip3d(null, undefined); return; }
     const text = battleLoadoutText(loadout, definitionId => itemDisplayName(definitionId));
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
-    if (boardFeedActive()) this.placeLoadoutTip3d(text, this.tokenScreenBox(id!, token));
+    this.placeLoadoutTip3d(boardFeedActive() ? text : null, boardFeedActive() ? this.tokenScreenBox(id!, token) : undefined);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
