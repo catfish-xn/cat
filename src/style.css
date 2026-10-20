@@ -622,6 +622,7 @@ body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 /* ?render=3d: the 3D layer draws the carousel; the panel shrinks to a corner card with its countdown and release order. */
 .carousel-panel[data-ring-3d] { left: auto; right: 8px; transform: none; width: min(300px, calc(100% - 16px)); padding: 8px 10px; background: rgba(14, 24, 33, .86); }
 .carousel-panel[data-ring-3d] .carousel-head { flex-wrap: wrap; }
+.carousel-panel[data-ring-3d] .carousel-status { order: 3; flex-basis: 100%; }
 .carousel-panel[data-ring-3d] .carousel-body { grid-template-columns: 64px minmax(0, 1fr); }
 .carousel-panel[data-ring-3d] .carousel-ring { --size: 64px; width: 64px; height: 64px; background: none; animation: none; }
 .carousel-panel[data-ring-3d] .carousel-ring .carousel-slot { display: none; }
