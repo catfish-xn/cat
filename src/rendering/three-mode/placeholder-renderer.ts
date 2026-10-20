@@ -23,10 +23,11 @@ const MANIFEST_TIMEOUT_MS = 4000;
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
  * League models are scaled to their full bbox height (D7 build-report: jinx 234, vi 213 source units), so every
- * champion stands this tall. Width is capped only at about 1.3 hexes (√3 × 68 wide), so short wide models (Urgot,
- * Corki) stay off the neighbouring cells without shrinking slim ones with wide hair or props.
+ * champion stands this tall. Width is capped at 110 (just under a hex, √3 × 68 ≈ 118, and fits a bench slot), so
+ * short wide models (Urgot, Corki) stay in their own cell; tested locally on the 60 real models, slim ones (Jinx, Vi)
+ * are unchanged by the cap.
  */
-const MODEL_HEIGHT = 92, MODEL_WIDTH = Math.round(1.3 * Math.sqrt(3) * 68);
+const MODEL_HEIGHT = 92, MODEL_WIDTH = 110;
 /** Seconds a dying piece stays up when its model has no death clip (or is a pawn). */
 const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
