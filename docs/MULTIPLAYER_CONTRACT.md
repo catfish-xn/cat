@@ -7,6 +7,12 @@
 新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
 
 
+## 规则协议与网络协议独立版本
+
+- `src/simulation/m8/version.ts` 的 `MULTIPLAYER_NET_PROTOCOL_VERSION = 4` 表示规则侧多人命令/状态契约版本；该契约发生不兼容变化时递增。
+- `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION = 5` 表示客户端与服务器之间的网络消息信封契约版本，用于消息的 `protocolVersion` 校验；网络消息（含命令、回执及服务器消息）的结构或语义发生不兼容变化时递增。兼容的视图字段追加不必递增。
+- 两者独立演进，可以不同，不要求相等或保持固定差值；修改一侧契约不自动要求另一侧升版，应分别评估兼容性。例如 D11 的 `replay-tail` 改变了网络回放消息契约，但未改变规则侧契约，因此当前分别为 4 和 5。网络版本校验比较客户端消息与服务器的 `NET_PROTOCOL_VERSION`，不比较这两个常量。
+
 ## D11 接线与实时银行边界（2026-10-20）
 
 运行目录 60/54；新强化共用既有等级、候选和按卡刷新命令。一费奉献 / 三项赛赠送先经唯一 mechanic 收据产生奖励法球，不立即取卡或补金；显式领取时经过同事务 UnitLootPolicy，按法球合同处理战斗排队、战后库存、合星、满席折金和缺货补偿。双方 snapshot 编译新增内容，贪财化身开战携带 bankGold；猎头者基础 / 永久攻速及灵魂连接开战玩家生命均为本席权威输入。
