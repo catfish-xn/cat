@@ -53,6 +53,15 @@ declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
 }
 
+/** Page coordinates of a pointer's release; the window-level mouseup Phaser forwards carries them when it lands off the canvas. */
+function releaseClient(pointer: Phaser.Input.Pointer): { x: number; y: number } | null {
+  const event = pointer.event as MouseEvent | TouchEvent | undefined;
+  if (!event) return null;
+  const touch = 'changedTouches' in event ? event.changedTouches[0] : undefined;
+  if (touch) return { x: touch.clientX, y: touch.clientY };
+  return 'clientX' in event ? { x: event.clientX, y: event.clientY } : null;
+}
+
 export class BoardScene extends Phaser.Scene {
   private session: MatchSession = new MatchSession();
   private application: SceneApplication | null = null;
@@ -78,6 +87,7 @@ export class BoardScene extends Phaser.Scene {
   private effects = new Set<Phaser.GameObjects.GameObject>();
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
+  private stopSellZone: () => void = () => undefined;
   private selectedId: string | null = null;
   /** Enemy hovered in the encounter preview; presentation-only ring highlight. */
   private previewHighlight: ReadonlySet<string> = new Set();
@@ -335,6 +345,29 @@ export class BoardScene extends Phaser.Scene {
     return this.input.sortGameObjects(candidates, this.input.activePointer)[0]?.getData('unitId');
   }
 
+  /** The shop under a page point: the online dock, else the offline shop panel. Display only. */
+  private sellZoneAt(point: { x: number; y: number } | null): HTMLElement | null {
+    const hit = point ? document.elementFromPoint(point.x, point.y) : null;
+    return hit?.closest<HTMLElement>('.shop-dock') ?? hit?.closest<HTMLElement>('.shop-panel') ?? null;
+  }
+  /**
+   * While a unit is dragged, highlight the shop under the pointer with the sale price. Phaser only sees moves over the
+   * canvas and the shop sits outside it, so this listens on the window; clearDrag removes it.
+   */
+  private watchSellZone(unit: Unit) {
+    const hint = `松手出售 · +${getUnitSellPrice(unit)} 金币`;
+    let marked: HTMLElement | null = null;
+    const mark = (zone: HTMLElement | null) => {
+      if (zone === marked) return;
+      if (marked) delete marked.dataset.sellHint;
+      marked = zone;
+      if (zone) { zone.dataset.sellHint = hint; this.setStatus(hint); this.overlay.clear(); }
+    };
+    const move = (event: PointerEvent) => mark(this.sellZoneAt({ x: event.clientX, y: event.clientY }));
+    window.addEventListener('pointermove', move); document.body.dataset.sellDrag = '';
+    this.stopSellZone = () => { window.removeEventListener('pointermove', move); mark(null); delete document.body.dataset.sellDrag; };
+  }
+
   private sell(id: string) {
     if (this.summonOf(id)) { this.setStatus('虚空生物由兹若特传送门召唤 · 不能出售'); return; }
     const result = this.session.sell(id);
@@ -395,6 +428,7 @@ export class BoardScene extends Phaser.Scene {
       token.setData('gesture', gesture);
       this.draggingId = token.getData('unitId'); this.selectedId = this.draggingId;
       token.setDepth(10).setScale(1.08); this.syncSelection();
+      if (!this.summonOf(this.draggingId)) this.watchSellZone(unit);
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
@@ -425,6 +459,9 @@ export class BoardScene extends Phaser.Scene {
       if (!gesture || pointer.id !== gesture.pointerId) return;
       if (pointer.wasCanceled) { this.clearDrag(); return; }
       if (!this.inputRouter.release(gesture)) return;
+      // Released over the shop (TFT drag-down sale): the same sell command as E, the rules and the server decide it.
+      const unitId: string = token.getData('unitId');
+      if (!this.summonOf(unitId) && this.sellZoneAt(releaseClient(pointer))) { this.clearDrag(); this.sell(unitId); this.sync(); return; }
       // Read release coordinates directly, even if no final drag frame rendered.
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
@@ -831,6 +868,7 @@ export class BoardScene extends Phaser.Scene {
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
+    this.stopSellZone(); this.stopSellZone = () => undefined;
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
     const dragged = this.draggingId ? this.displayedUnit(this.draggingId) : undefined;
     if (dragged) {
