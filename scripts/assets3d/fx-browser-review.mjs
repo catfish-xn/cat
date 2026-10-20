@@ -7,7 +7,8 @@ import { argumentsFor } from './plan-fetch.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 
-const args = argumentsFor(process.argv.slice(2), ['--out', '--effect', '--screenshots', '--view-cells', '--time', '--sizes']);
+const fixedRays = process.argv.includes('--fixed-rays');
+const args = argumentsFor(process.argv.slice(2).filter(a => a !== '--fixed-rays'), ['--out', '--effect', '--screenshots', '--view-cells', '--time', '--sizes']);
 const fixedTime = args.time === undefined ? null : Number(args.time);
 if (fixedTime !== null && (!Number.isFinite(fixedTime) || fixedTime < 0 || fixedTime > 30)) throw new Error('invalid-review-time');
 const viewCells = Number(args['view-cells'] ?? 10);
@@ -18,7 +19,9 @@ const root = args.screenshots
 await safeInputPath(root, resolve(root, 'manifest.json'));
 const sizesPath = args.sizes ? withinRoot(resolve('assets3d-local'), resolve(args.sizes)) : resolve(root, 'size-report.json');
 const sizes = await readFile(await safeInputPath(args.sizes ? dirname(sizesPath) : root, sizesPath), 'utf8').then(JSON.parse);
+const fixedAudit = fixedRays ? await readFile(await safeInputPath(root, resolve(root, 'fixed-plane-rays-audit.json')), 'utf8').then(JSON.parse) : null;
 const evidence = [];
+const contactTiles = [];
 const screenshots = await safeOutputPath(args.screenshots ?? root, { directory: true });
 await mkdir(screenshots, { recursive: true });
 const server = await createServer({ configFile: false, resolve: { preserveSymlinks: true }, optimizeDeps: { noDiscovery: true, entries: [], include: [] }, cacheDir: resolve(screenshots, 'browser-cache'), server: { host: '127.0.0.1', port: 5197, fs: { allow: [resolve('.'), await realpath(root)] } } });
@@ -34,14 +37,15 @@ try {
  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
  await page.route('http://127.0.0.1:*/review', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
  await page.goto(server.resolvedUrls.local[0] + 'review', { waitUntil: 'domcontentloaded' });
- const effects = args.effect === 'all'
+ const effects = fixedRays && !args.effect ? [...new Set(fixedAudit.rows.filter(r => r.documentIndex !== null).map(r => r.effectId))] : args.effect === 'all'
   ? await page.evaluate(async base => Object.keys((await (await fetch(base + '/manifest.json')).json()).effects), '/' + resolve(root).split(/[\\/]/).slice(-2).join('/'))
   : (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',');
  for (const effect of effects) {
  await page.goto(server.resolvedUrls.local[0] + 'review', { waitUntil: 'domcontentloaded' });
  console.log('review-effect', effect);
- const samples = sizes.results.find(r => r.effectId === effect)?.emitters.map(e => ({ index: e.index, time: e.opacityVisibleAt ?? e.at })) ?? [];
- const result = await page.evaluate(async ({ base, effect, samples, viewCells, fixedTime }) => {
+ const samples = fixedRays ? fixedAudit.rows.filter(r => r.effectId === effect && r.documentIndex !== null).map(r => ({ index: r.documentIndex, time: r.previewTime ?? .001 }))
+  : sizes.results.find(r => r.effectId === effect)?.emitters.map(e => ({ index: e.index, time: e.opacityVisibleAt ?? e.at })) ?? [];
+ const result = await page.evaluate(async ({ base, effect, samples, viewCells, fixedTime, fixedRays }) => {
   const T = await import('/node_modules/three/build/three.module.js');
   const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
   const { ParticleEffectV2 } = await import('/src/rendering3d/particles-v2.ts');
@@ -64,8 +68,9 @@ try {
   const renderer = new T.WebGLRenderer({ preserveDrawingBuffer: true }); renderer.setSize(300, 220);
   const bounds = [];
   for (let i = 0; i < doc.emitters.length; i++) {
+   if (fixedRays && !samples.some(s => s.index === i)) continue;
    const time = fixedTime ?? Math.max(.001, samples.find(s => s.index === i)?.time ?? .3);
-   const box = document.createElement('div'); box.textContent = i + ' ' + doc.emitters[i].kind + ' t=' + time.toFixed(3); document.body.append(box);
+   const box = document.createElement('div'); box.dataset.emitterIndex = String(i); box.textContent = i + ' ' + doc.emitters[i].kind + ' t=' + time.toFixed(3); document.body.append(box);
    const scene = new T.Scene(); scene.background = new T.Color('#15202b');
    const camera = new T.PerspectiveCamera(45,300/220,1,10000); camera.position.set(0,500*viewCells/10,600*viewCells/10); camera.lookAt(0,0,0);
    const grid = new T.GridHelper(62.4*viewCells,Math.round(viewCells),0x667788,0x334455); scene.add(grid);
@@ -110,11 +115,28 @@ try {
   }
   renderer.dispose(); renderer.forceContextLoss();
   textures.forEach(t => t.dispose()); meshes.forEach(g => g.dispose());
-  return { id, emitters: doc.emitters.length, errors, viewCells, fixedTime, maxDuration, overviewTime, bounds };
- }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples, viewCells, fixedTime });
+  const reviewTiles = fixedRays ? [...document.querySelectorAll('[data-emitter-index]')].map(box => ({
+   index: Number(box.dataset.emitterIndex), src: box.querySelector('img').src,
+  })) : [];
+  return { id, emitters: doc.emitters.length, errors, viewCells, fixedTime, maxDuration, overviewTime, bounds, reviewTiles };
+ }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples, viewCells, fixedTime, fixedRays });
  await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'browser-review-' + result.id + '.png'), { force: true }), fullPage: true });
- console.log(JSON.stringify(result));
- evidence.push({ ...result, samples });
+ const { reviewTiles, ...report } = result;
+ contactTiles.push(...reviewTiles.map(tile => ({ ...tile, effect: result.id })));
+ console.log(JSON.stringify(report));
+ evidence.push({ ...report, samples });
+ }
+ for (let start = 0; start < contactTiles.length; start += 20) {
+  await page.evaluate(async tiles => {
+   document.body.replaceChildren(); document.body.style.cssText = 'margin:0;background:#15202b;color:white;display:grid;grid-template-columns:repeat(4,300px)';
+   for (const tile of tiles) {
+    const box = document.createElement('div'); box.style.cssText = 'font:11px monospace;overflow-wrap:anywhere';
+    const label = document.createElement('div'); label.style.height = '40px'; label.textContent = tile.effect + ' #' + tile.index; box.append(label);
+    const img = document.createElement('img'); img.src = tile.src; box.append(img); document.body.append(box);
+   }
+   await Promise.all([...document.images].map(img => img.decode()));
+  }, contactTiles.slice(start, start + 20));
+  await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'fixed-plane-contact-' + (start / 20 + 1) + '.png'), { force: true }), fullPage: true });
  }
  await writeOutputFile(resolve(screenshots, 'browser-review-report.json'), JSON.stringify(evidence, null, 2) + '\n', { force: true });
 } finally { await browser?.close(); await server.close(); }
