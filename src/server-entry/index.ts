@@ -16,7 +16,7 @@ export type {
 export type { Unit, UnitLocation } from '../simulation/unit-types';
 export type { CombatState, CombatResult, CombatEvent, LedgerCombatEvent } from '../simulation/combat-types';
 export type { GameState } from '../simulation/game';
-export type { TemporaryEquipment } from '../simulation/m8/contracts';
+export type { TemporaryEquipment, StatusKind } from '../simulation/m8/contracts';
 export type { CombatInputBasis, CombatStrategyInputs } from '../simulation/combat-input';
 export type {
   StrategySnapshot, StrategyUnitSnapshot, ItemInstance, OwnedAugment, AnomalyBinding,
@@ -46,7 +46,7 @@ export type { BotContext, BotDecision } from '../simulation/bot';
 export { toPrivateSeatView } from '../simulation/private-seat-view';
 export type { PrivateSeatView, ConsumableTargetView } from '../simulation/private-seat-view';
 export { createCombatReplayRecorder, toCombatViewState, toCombatViewEvents, startCombatReplay, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
-export type { CombatReplayRecorder, CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';
+export type { CombatReplayRecorder, CombatViewState, CombatViewUnit, CombatViewStatus, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';
 
 export { createOrbLayout, freezeOrbLayoutThroughRound } from '../simulation/orb-layout';
 export type { OrbLayoutLedger, OrbRoundLayout, OrbTier, LootInitialization, OrbLayoutResult, OrbLayoutFailure } from '../simulation/orb-layout';

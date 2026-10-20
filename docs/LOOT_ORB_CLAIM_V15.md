@@ -160,3 +160,54 @@ LOOT_REPLAY_DIGEST 的变化并非冻结表变化：loot-freeze.ts 的 digest �
 5. 待迁移选择明确后：以新的当前 epoch 输出完整 release / Herald / inputs / live-reveal，调整 CURRENT 及对应读取路径，保留历史目录字节；再跑 inputs --check 与 Herald verify。`record-g2-4b-release.cjs`、当前 Herald 重录、inputs 重录、live-reveal 及最终校验目前均**未完成**，不得只手改 digest 或 golden。
 
 调度方可复现环境限制的原命令为 `node scripts/verify-m8-herald-fixtures.cjs`；固定基线校验命令如第 3 条。完整迁移前不要对历史 Herald 目录使用 --write。若选择保留历史并新增 epoch，下一步应先提供一个新目录生成器（configFile:false、工作区 cacheDir），再将 CURRENT 指向它；完成真实重录后再通过上述校验。当前工作区不提供假通过的 CURRENT 或手修指纹。
+
+## v15 第四块：UR-I3-01 联机战斗状态种类
+
+基线：本地 `codex/loot-orb-claim` / `58dd20265a786c28dc0667f30524bacabdde620a`，开工时工作区干净。此块只改只读回放投影、server-entry 类型导出、测试及文档，全部留工作区；未联网、安装依赖、直接运行 exe、写 .git 或重录既有 fixture。
+
+### 字段与确定性
+
+`CombatViewUnit.statuses?: readonly CombatViewStatus[]`，成员只有 `kind: StatusKind|'channel'|'redirect'` 和 `harmful:boolean`；server-entry 导出这两个类型。`combat-replay-view.ts` 直接复用 `readUnitStatusRows` 的纯快照读取，跳过 pending/suppressed，不另算规则。因本轮禁改 presentation，保留该纯函数的跨目录导入；它没有 DOM/Phaser 运行时依赖，来源/中文描述等字段均不下发。
+
+按 `(kind,harmful)` 去重；kind 采用 ASCII 字符升序：`burn, channel, control-immunity, damage-prevention, damage-reduction, redirect, shred, stat-buff, stat-debuff, stun, sunder, untargetable, wound`，同 kind 下 false 先于 true，不依赖 locale 或来源遍历顺序。新快照总写数组，清空写 `[]`；tick 末原有差量比较自动产生 `unitUpdated.changes.statuses`。初始/关键/终态以及 `unitEntered.unit` 均走同一完整单位投影；`seat-mechanics/replay-units.ts` 与 reducer 已泛化传递单位，无需另加白名单。护盾仍用 `shield`，不加入种类数组。
+
+netProtocol 与 claimOrb 共用目标 **4**，未另升版本。服务器禁改目录当前常量仍为 3，待 Claude 统一接线；此块不宣称实际联机图标已完成浏览器验收。UI 请求原文已补入并标“已实现”，新字段的完整协议见 MULTIPLAYER_CONTRACT 的 UR-I3-01 节。
+
+### 规则不变的证据
+
+未改战斗引擎、事件账本、RNG、内容或版本声明。新增合成战斗的权威结果锚点在修改视图前采集，修改后逐项通过：
+
+| 对象 | 修改前后相同的值 |
+| --- | --- |
+| CONTENT_DIGEST | `fnv1a32-utf16:99b62a66` |
+| LOOT_REPLAY_DIGEST | `fnv1a32-utf16:61568ec0` |
+| 合成战斗终态 SHA-256（含 RNG） | `432c237bd3225a4b75ac5436bb370194689cab64f4be002007bbd703b65afdd9` |
+| 合成战斗完整账本 SHA-256 | `c5762f92e94df75176eab0b23de25dcd5636f0f80f9d5da1d41ffae794d4583d` |
+
+合成战斗在 tick45 draw，RNG state=42、draws=0；启用/关闭 recorder 的每 tick 权威状态和完整账本一致，重新执行回放与首遍录帧一致。B8 旧锚点另提供真实 PvP 证据：1/9 单位每侧的 battle SHA 均仍与原 fixture 完全相等，只有 replay SHA 变化；0 单位终局无单位字段可变，原指纹仍通过。
+
+### 需重录清单（本轮全部不重录）
+
+| 对象 | v15 统一重录时的处理 |
+| --- | --- |
+| B8 完整 compact replay 指纹 | `tests/fixtures/g2-3-b8-fingerprints.json` 是当前 B8 helper 的读取源；`g2-4b-b8-fingerprints.json` 是现有较新生成输出。1/9 单位的 replay 项受 statuses 影响，initial/keyframe/terminal 单位均多数组，状态变化再增加差量；battle 项不因本块改变。新建 v15 epoch、迁移当前读取路径，保留历史字节，不能覆盖旧文件或只手改 hash。 |
+| 联机录制帧/快照 golden（包括 C19、B8 的关键帧） | 凡保存或计算 CombatReplay / CombatViewState / unitEntered / unitUpdated 字节的当前录制，须从最终 v15 公共输入重新生成，含空数组及清空差量；不要剥离新字段让旧 golden 变绿。本仓库 C19 当前 fixture 是编译输入，并非已保存的关键帧。 |
+| C19 编译输入与权威终态/账本证据 | statuses 本身不改变 `g2-4b-c19-seed-9-minimal.json`、终态/账本/灼烧 pulse；它当前绑定旧 digest `ea6b11b6`，与本分支 `99b62a66` 不同，已有 v15 输入迁移仍需在新 epoch 重新编译，不能只替换版本串。 |
+| 生成源码指纹/审计 manifest | `docs/evidence/g2-4b/input-fixture-audit.json` 等保存 simulation/server-entry 源 SHA 的记录会因源码改动失配；统一录制时另记 v15 源码证据。直接复用函数使 `src/presentation/combat-status.ts` 成为帧生成依赖，新的源码 manifest 应一并记录它。Herald/单机权威原始 state 和规则数值 oracle 不因新增视图字段而重录；之前块留下的身份迁移仍按原计划处理。 |
+
+### 验证结果
+
+使用共用 node_modules，`npx.cmd tsc --noEmit` 通过。以下文件均单独执行 `npx.cmd vitest run <文件> --project fast --configLoader runner`，未跑全套，新测试没有单条时限：
+
+| 测试文件（tests/ 下） | 结果 |
+| --- | --- |
+| ur-i3-combat-statuses.test.ts | 6/6：逐 tick 对照单机、眩晕/灼烧/重伤/增减益/护盾、去重/压制/filtered/legacy/activity、JSON 关键帧加差量恢复、unitEntered、权威状态/账本/RNG/digest 不变 |
+| t5r-combat-replay.test.ts | 46/46 |
+| combat-first-pass-frames.test.ts | 11/11 |
+| g2-4b-replay.test.ts | 10/10 |
+| jayce-forge-replay-order.test.ts | 7/7 |
+| m8-b9-status-events.test.ts | 2/2 |
+| c19-missed-pulse.test.ts | 9 通过、1 失败：旧编译输入在恢复入口报 content-digest，尚未进入回放投影 |
+| b8-resumable-battle.test.ts | 13 通过、2 失败：1/9 单位的旧 replay 字节锚点不含 statuses；battle 锚点相等，其余分片/恢复/校验用例通过 |
+
+合计 104 通过、3 个待 v15 统一迁移的 fixture 失败；未修改或跳过旧断言，未修改既有 golden/录制数据。建议提交信息：`feat(replay): expose active unit status kinds in combat views`。

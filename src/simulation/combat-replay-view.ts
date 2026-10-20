@@ -8,13 +8,33 @@ import { canonicalContent } from './content';
 import { createScopedContentFreezer, freezeTransientContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 import { alignReplayUnits, applyReplayMembership, replayOrderFollowsMembership } from './seat-mechanics/replay-units';
+// combat-status is pure (its other presentation imports are type-only). Reuse the
+// single-player snapshot reader so pending/suppressed/filter/legacy semantics cannot drift.
+import { readUnitStatusRows } from '../presentation/combat-status';
+import type { StatusKind } from './m8/contracts';
+
+export interface CombatViewStatus {
+  readonly kind: StatusKind | 'channel' | 'redirect';
+  readonly harmful: boolean;
+}
+function statusView(state: CombatState, unitId: string): { readonly statuses?: readonly CombatViewStatus[] } {
+  const statuses = new Map<string, CombatViewStatus>();
+  for (const row of readUnitStatusRows(state, unitId)) {
+    if (row.state === 'pending' || row.state === 'suppressed') continue;
+    statuses.set(JSON.stringify([row.kind, row.harmful]), { kind: row.kind, harmful: row.harmful });
+  }
+  // ASCII kind order, then beneficial (false) before harmful (true); no locale dependence.
+  // Always emit [], including when the last status ends, so unitUpdated clears old icons.
+  return { statuses: [...statuses.values()].sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0)
+    || Number(a.harmful) - Number(b.harmful)) };
+}
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
-  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
+  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };

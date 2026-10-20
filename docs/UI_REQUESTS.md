@@ -1008,3 +1008,15 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 - 双排待接：满席时选择事务须创建真实单位所有权、占共享池；腾位后的领取/升星需要shared command事务。当前room的plain deploy与PvP锁定不经过该事务，原型未注册。
 - 贪财化身待接：联机冻结战斗必须接纳战中合法买卖/刷新/买XP的真实经济事件，恢复须重演同一事件输入。当前仅开战余额快照不能表示原版实时持有金币效果，原型未注册。
 - 进入未知、终极英雄待接：需跨轮暂离持有者及4星单位完整投影/共享池/恢复，当前不提供半实现选择。
+
+## UR-I3-01：联机战斗帧带上单位当前状态种类（已实现，v15 第四块，2026-10-20）
+
+需求原文（来自 PR #246 分支）：
+
+- 字段：`CombatViewUnit` 增加可选 `statuses?: readonly { kind: StatusKind | 'channel' | 'redirect'; harmful: boolean }[]`，按当前快照取"生效中"的状态（跳过未生效和被同类更强来源压制的贡献，与 `readUnitStatusRows` 的 state 判断一致），同种类同极性去重；变化时随 `unitUpdated` 下发。
+- 用途：联机帧现在只有护盾数值，联机界面只能画护盾图标；眩晕、灼烧、重伤等看不到。界面不能从 statusChanged 事件顺序自己推算。
+- 验收：联机一场含眩晕/灼烧的战斗，图标出现与消失的 tick 与单机同一场一致；关键帧/断线重连后正确；不改任何规则结果。
+
+实现：领域只读回放投影直接复用纯函数 `readUnitStatusRows`，仅保留 `effective` / `active` 行，复制 `kind/harmful`，按二者去重。顺序固定为 kind 的 ASCII 字符升序，同 kind 下 `harmful:false` 在前；无状态显式发 `[]`，最后一项消失也会产生 tick 末 `unitUpdated.changes.statuses:[]`。初始帧、关键帧、终态、`unitEntered.unit` 均带完整数组。护盾沿用 `shield` 数值，不加入 statuses。类型 `CombatViewStatus` / `StatusKind` 已经 server-entry 导出。
+
+本轮未修改 presentation/server/UI，直接复用避免在禁改文件外复制状态判定；该读取函数没有 DOM/Phaser 运行时依赖。netProtocol 与 claimOrb 共用目标 4，不另升版本。只读帧及关键帧恢复测试已通过；实际联机图标接线/浏览器验收留 Claude。旧帧指纹本轮不重录，清单和测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。

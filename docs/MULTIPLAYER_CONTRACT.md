@@ -1791,3 +1791,26 @@ First-pass output and re-executed replay have byte-identical canonicalContent;
 startCombatReplay retains re-execution and divergence checks for spot audits.
 This supplement allows capture in place of SR-B3-02's second frame-generation run;
 server integration and spot-check policy are implemented separately.
+
+## UR-I3-01 / v15：战斗单位当前状态种类（2026-10-20）
+
+`CombatViewUnit` 新增可选字段（server-entry 同时导出 `CombatViewStatus` 与 `StatusKind`）：
+
+```ts
+interface CombatViewStatus {
+  readonly kind: StatusKind | 'channel' | 'redirect';
+  readonly harmful: boolean;
+}
+// CombatViewUnit
+readonly statuses?: readonly CombatViewStatus[];
+```
+
+`toCombatViewState(state: CombatState): CombatViewState`、`createCombatReplayRecorder(initialState, initialEvents)` 与 `toCombatReplay(input)` 签名、输入校验及失败原因保持原状。新生成的单位视图总有 `statuses`（空时为 `[]`）；可选类型兼容既有视图对象，旧对象缺失时按空数组展示。数组只有状态种类和极性，不含来源、持续时间、执行计划或隐藏数据。
+
+投影直接调用单机纯只读函数 `readUnitStatusRows(state, unitId)`，排除 `state:'pending'|'suppressed'`，保留 `effective|active`；不比较数值、不再执行叠加规则。沿用该函数的 filtered contribution（没有伤害包上下文时不判压制）、active activity、targetId 过滤、legacy fallback 语义。现代快照由引擎清理到期贡献/活动，投影不从历史事件重建、不改权威状态。
+
+同 `(kind,harmful)` 去重，固定 ASCII kind 升序：`burn, channel, control-immunity, damage-prevention, damage-reduction, redirect, shred, stat-buff, stat-debuff, stun, sunder, untargetable, wound`；同 kind 下 `false` 在 `true` 前，不依赖 locale、贡献遍历顺序或来源 ID。护盾继续读 `shield`，不伪造 shield 状态种类。
+
+`initial.units`、`keyframe.units`、`terminal.units` 和 `unitEntered.unit` 提供完整数组。tick 末现有单位字段差量比较在数组变化时发送 `unitUpdated{unitId,changes:{statuses:[...]}}`，与其他 changes 可同包；最后一项消失必须发送 `statuses:[]`。客户端整体替换数组；`statusChanged` 仅供动画事实，不用于推算图标。`applyCombatReplayTick` 的既有合并逻辑已覆盖该字段，重连用关键帧加后续 unitUpdated 即可恢复；镜像只翻格子/阵营，statuses 不变。
+
+netProtocol 目标仍为 **4**，与本分支 claimOrb 共用一次升级，不增加到 5；不改 rules/content、save/replay 版本或 digest。本轮禁改 `src/server/`，其当前网络常量仍为 3，由 Claude 在 v15 统一接线至 4，不能据此称已联机上线。视图字节/回放指纹的变化和本轮测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
