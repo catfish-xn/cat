@@ -46,7 +46,7 @@ import { itemDisplayName } from '../presentation/g23-display';
 import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
-import { OrbDock, readUnclaimedOrbs } from './online/orb-dock';
+import { OrbDock, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -586,6 +586,7 @@ export class BoardScene extends Phaser.Scene {
     const token = (id: string) => this.draggingId === id && this.gesture3d && this.inputRouter.owns(this.gesture3d) ? this.tokens.get(id) : undefined;
     return {
       hover: id => { this.hover3d = id; },
+      claimOrb: id => this.orbDock?.click(id),
       select: id => {
         const unit = this.displayedUnit(id);
         if (!unit || unit.team !== 'player' || !this.tokens.has(id) || this.inputRouter.current) return;
@@ -1168,6 +1169,7 @@ export class BoardScene extends Phaser.Scene {
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const result = this.session.state.roundResults?.at(-1);
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
@@ -1175,7 +1177,10 @@ export class BoardScene extends Phaser.Scene {
         x: token.x, y: token.y, alive: !fallen.has(id),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
-      fighting: this.session.combatView !== null, dragging: this.draggingId };
+      fighting: this.session.combatView !== null, dragging: this.draggingId,
+      orbs: readUnclaimedOrbs(this.session.state).map(orb => ({ orbId: orb.orbId, tier: orb.tier, queued: orb.queued })),
+      orbsGranted: readOrbClaimReceipts(this.session.state).filter(receipt => receipt.resolution !== 'forfeited').length,
+      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {
