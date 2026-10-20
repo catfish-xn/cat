@@ -7,6 +7,9 @@ import {applyStatusContribution} from '../src/simulation/m8/status';
 import {effectIdentity} from '../src/simulation/m8/identity';
 import {EMPTY_MECHANISMS} from '../src/simulation/m8/runtime-types';
 import {packetView} from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const dummy=(id:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={}):CombatUnit=>({...unit(id,team,col,row,{hp:1000,maxHp:1000,armor:0,magicResist:0,attackDamage:0,attackRange:6,cooldownTicks:1000,moveCooldownTicks:1000}),ability:resolveAbility('neutral-attack',1),...patch});
 const def={kind:'path-charge' as const,source:{...source('finite-charge','h','h'),sourceKind:'ability' as const},effects:[{kind:'damage' as const,damageType:'magic' as const,delivery:'ability-direct' as const,critEligibility:'never' as const,amount:amount(0,{maxHpBps:1500,hpBasis:'target',cap:300,sample:'packet'})}]};
 describe('G10 actual opening hook and finite delayed execution',()=>{

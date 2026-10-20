@@ -3,6 +3,9 @@ import type { CombatActivity, M8CombatEvent, M8CombatExtension, StatusGroup, Per
 import type { CombatStatusesView } from '../src/simulation/m8/ui-contracts';
 import { titan, nashor } from './fixtures/m8-audit-definitions';
 import { key, source, selector, amount, modifier } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const restored = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const remainder = (targetId: string, numerator: number, effectIndex = 0): PeriodicRemainder => ({ targetId, numerator, denominator: 10000, effectIndex });
 export const redemption: PeriodicTask = {

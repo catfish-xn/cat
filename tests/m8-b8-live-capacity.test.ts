@@ -4,6 +4,9 @@ import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const prefix=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']);
 // One public hex move preserves the independent reveal-117 / final-137 boundary under v14.
 const prepared=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));

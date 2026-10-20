@@ -9,6 +9,9 @@ import type { Effect, PeriodicTask, StatusApplication } from '../src/simulation/
 import { amount, source, selector, modifier, trigger } from './fixtures/m8-contract-cases';
 import { battle, unit } from './combat-helpers';
 import { heals, packets } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 function dummy(id: string, team: 'player' | 'enemy', col: number, hp = 1000): CombatUnit {
   return unit(id, team, col, 3, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1), hp, maxHp: 1000, armor: 0, magicResist: 0,
     mana: 0, maxMana: 1, cooldownTicks: 1000, moveCooldownTicks: 1000, attackRange: 6, attackDamage: 0, statuses: [], shieldLayers: [], tasks: [], runtime: { ...EMPTY_RUNTIME } });
