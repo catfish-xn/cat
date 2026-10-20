@@ -1,0 +1,125 @@
+{
+  "jinx": {
+    "mesh": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx.TFT_Set13.skn",
+    "skeleton": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx.TFT_Set13.skl",
+    "texture": "ASSETS/Characters/TFT_Template/Skins/Base/TFT_Template_base_TX_CM.tex",
+    "material": "Characters/TFT13_Jinx/Skins/Skin0/Materials/TierUpgrade",
+    "hidden": "Torch",
+    "overrides": [
+      {
+        "submesh": "Torch",
+        "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/PetStyleTwoJinx_Carbs2_Torch_TX_CM.tex"
+      }
+    ],
+    "materials": [
+      {
+        "name": "Characters/TFT13_Jinx/Skins/Skin0/Materials/RebelStatus",
+        "samplers": [
+          {
+            "name": "Light_Mask",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx_Base_Mask_TX_CM.TFT_Set13.tex"
+          },
+          {
+            "name": "GradientNoise_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Noise_B.TFT_Set13.tex"
+          },
+          {
+            "name": "Overlay_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Noise_C.TFT_Set13.tex"
+          },
+          {
+            "name": "Outline_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Gradient.TFT_Set13.tex"
+          },
+          {
+            "name": "Sketch_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Hatches.TFT_Set13.tex"
+          },
+          {
+            "name": "Diffuse_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx_Skin0_TX_CM.TFT_Set13.tex"
+          }
+        ]
+      },
+      {
+        "name": "Characters/TFT13_Jinx/Skins/Skin0/Materials/TierUpgrade",
+        "samplers": [
+          {
+            "name": "Diffuse_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx_Skin0_TX_CM.TFT_Set13.tex"
+          },
+          {
+            "name": "Light_Mask",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Jinx_Base_Mask_TX_CM.TFT_Set13.tex"
+          }
+        ]
+      }
+    ],
+    "animations": {
+      "idle": "ASSETS/Characters/TFT13_Jinx/Skins/Base/Animations/TFT13_Jinx_Idle1.TFT_Set13.anm",
+      "move": "ASSETS/Characters/TFT13_Jinx/Skins/Base/Animations/TFT13_Jinx_minigun_run.TFT_Set13.anm",
+      "attack": "ASSETS/Characters/TFT13_Jinx/Skins/Base/Animations/TFT13_Jinx_minigun_attack1.TFT_Set13.anm",
+      "cast": "ASSETS/Characters/TFT13_Jinx/Skins/Base/Animations/TFT13_Jinx_Spell_DeathRocket.TFT_Set13.anm",
+      "death": "ASSETS/Characters/TFT13_Jinx/Skins/Base/Animations/Jinx_minigun_death.TFT_Set13.anm"
+    }
+  },
+  "vi": {
+    "mesh": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi.TFT_Set13.skn",
+    "skeleton": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi.TFT_Set13.skl",
+    "texture": "ASSETS/Characters/TFT_Template/Skins/Base/TFT_Template_base_TX_CM.tex",
+    "material": "Characters/TFT13_Vi/Skins/Skin0/Materials/TierUpgrade",
+    "hidden": "",
+    "overrides": [],
+    "materials": [
+      {
+        "name": "Characters/TFT13_Vi/Skins/Skin0/Materials/TierUpgrade",
+        "samplers": [
+          {
+            "name": "Diffuse_Texture",
+            "texture": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi_Base_TX_CM.TFT_Set13.tex"
+          },
+          {
+            "name": "Light_Mask",
+            "texture": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi_Base_Mask_TX_CM.TFT_Set13.tex"
+          }
+        ]
+      },
+      {
+        "name": "Characters/TFT13_Vi/Skins/Skin0/Materials/RebelStatus",
+        "samplers": [
+          {
+            "name": "Light_Mask",
+            "texture": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi_Base_Mask_TX_CM.TFT_Set13.tex"
+          },
+          {
+            "name": "GradientNoise_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Noise_B.TFT_Set13.tex"
+          },
+          {
+            "name": "Overlay_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Noise_C.TFT_Set13.tex"
+          },
+          {
+            "name": "Outline_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Gradient.TFT_Set13.tex"
+          },
+          {
+            "name": "Sketch_Texture",
+            "texture": "ASSETS/Characters/TFT13_Jinx/Skins/Base/TFT13_Hatches.TFT_Set13.tex"
+          },
+          {
+            "name": "Diffuse_Texture",
+            "texture": "ASSETS/Characters/TFT13_Vi/Skins/Base/TFT13_Vi_Skin0_TX_CM.TFT_Set13.tex"
+          }
+        ]
+      }
+    ],
+    "animations": {
+      "idle": "ASSETS/Characters/TFT13_Vi/Skins/Base/Animations/vi_Idle1.TFT_Set13.anm",
+      "move": "ASSETS/Characters/TFT13_Vi/Skins/Base/Animations/Vi_Run1.TFT_Set13.anm",
+      "attack": "ASSETS/Characters/TFT13_Vi/Skins/Base/Animations/Vi_Attack1.TFT_Set13.anm",
+      "cast": "ASSETS/Characters/TFT13_Vi/Skins/Base/Animations/Vi_Spell4_hit.TFT_Set13.anm",
+      "death": "ASSETS/Characters/TFT13_Vi/Skins/Base/Animations/Vi_Death.TFT_Set13.anm"
+    }
+  }
+}

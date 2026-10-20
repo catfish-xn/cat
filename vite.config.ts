@@ -30,6 +30,9 @@ const stripAssetChecks: Plugin = {
     return { code: stripped, map: null };
   },
 };
+// 3D 单独加载模式：three.js 和 3D 渲染代码只经 three-loader.ts 动态 import，统一落在 assets/3d/。
+// scripts/m7-budget.cjs 只统计 assets/ 顶层的 JS 作为 2D 体积，assets/3d/ 单列报告。
+const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
 
 export default defineConfig(({ mode }) => ({
   // Pages has a fixed repository path; other builds remain portable to subpaths.
@@ -45,5 +48,9 @@ export default defineConfig(({ mode }) => ({
     } }] },
   },
   // Dev only (`npm run dev:online`): `?mode=online&server=ws` connects to ws://<dev host>/ws, forwarded to the game server.
+  build: { rollupOptions: { output: {
+    manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : undefined),
+    chunkFileNames: chunk => (chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+  } } },
   server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true, rewrite: path => path.replace(/^\/ws/, '') } } },
 }));

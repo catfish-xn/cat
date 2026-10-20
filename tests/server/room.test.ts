@@ -193,7 +193,7 @@ describe('Room: choice window and stuck seats', () => {
     expect(room.state.phase).toBe('preparation');
     expect(clock.now()).toBeLessThan(deadline);
     expect(room.state.deadlineAt).toBe(clock.now() + 1_000);
-  });
+  }, 20_000); // Temporary (user-approved 2026-10-20): ~3.5s alone, over the 5s default on loaded CI runners.
   it('re-arms the settlement a bounded number of times for a seat the rules refuse to advance, then faults', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start(); clock.advance(1_000); clock.runNext();
