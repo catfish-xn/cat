@@ -1,0 +1,282 @@
+{
+  "baseline": "a0d42c592cbd48fb075175e5f61818dabfe1b320",
+  "sourceFile": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
+  "sourceSha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+  "sourceUrl": "https://raw.communitydragon.org/14.24/game/maps/shipping/map22.bin.json",
+  "anomalyCandidates": [
+    {
+      "id": "avarice-incarnate",
+      "pointer": "{af3697d1}",
+      "record": {
+        "name": "TFT13_GoopBuff_AvariceIncarnate",
+        "{900aff58}": "{19122478}",
+        "effectAmounts": [
+          {
+            "name": "PercentDamage",
+            "value": 0.009999999776482582,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "GoldIncrement",
+            "value": 2.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "GoldCap",
+            "value": 40.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "GoldCount",
+            "value": 5.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "FlatPercentDamage",
+            "value": 15.0,
+            "__type": "TftEffectAmount"
+          }
+        ],
+        "{4e874e78}": [
+          "{44055224}",
+          "{7013d630}",
+          "{897b5f7a}"
+        ],
+        "__type": "{a0c80919}"
+      },
+      "standardPoolAdmission": [
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13",
+          "poolPointer": "{e6ddca72}",
+          "entry": {
+            "{16c534fd}": "{af3697d1}",
+            "__type": "{e59d98ad}"
+          }
+        },
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13_Evolved",
+          "poolPointer": "{cc0b6cb2}",
+          "entry": {
+            "{16c534fd}": "{af3697d1}",
+            "__type": "{e59d98ad}"
+          }
+        }
+      ],
+      "status": "independent-kernel",
+      "reason": "Live bank sampling and acquisition gold available; damage pipeline/economy/restore hooks pending integration."
+    },
+    {
+      "id": "headhunter",
+      "pointer": "{950ff929}",
+      "record": {
+        "name": "TFT13_GoopBuff_Headhunter",
+        "{900aff58}": "{b556fb7c}",
+        "effectAmounts": [
+          {
+            "name": "NumKills",
+            "value": 1.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "StartingAS",
+            "value": 15.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "StackingAS",
+            "value": 1.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "{cdc2c7be}",
+            "value": 2.0,
+            "__type": "TftEffectAmount"
+          }
+        ],
+        "{4e874e78}": [
+          "{03c95748}",
+          "{7013d630}"
+        ],
+        "__type": "{a0c80919}"
+      },
+      "standardPoolAdmission": [
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13",
+          "poolPointer": "{e6ddca72}",
+          "entry": {
+            "{16c534fd}": "{950ff929}",
+            "__type": "{e59d98ad}"
+          }
+        },
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13_Evolved",
+          "poolPointer": "{cc0b6cb2}",
+          "entry": {
+            "{16c534fd}": "{950ff929}",
+            "__type": "{e59d98ad}"
+          }
+        }
+      ],
+      "status": "independent-kernel",
+      "reason": "Speed projection and canonical kill receipt journal available; live kill/settlement/restore hooks pending integration."
+    },
+    {
+      "id": "ultimate-hero",
+      "pointer": "{cf1ee294}",
+      "record": {
+        "name": "TFT13_GoopBuff_UltimateHero",
+        "{900aff58}": "{04ce615c}",
+        "effectAmounts": [
+          {
+            "name": "NumRounds",
+            "value": 3.0,
+            "__type": "TftEffectAmount"
+          }
+        ],
+        "{4e874e78}": [
+          "{44055224}",
+          "{7fa976fb}"
+        ],
+        "ExcludedAugments": [
+          "TFT13_Augment_AnotherAnomaly"
+        ],
+        "__type": "{a0c80919}"
+      },
+      "standardPoolAdmission": [
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13",
+          "poolPointer": "{e6ddca72}",
+          "entry": {
+            "{16c534fd}": "{cf1ee294}",
+            "__type": "{e59d98ad}"
+          }
+        },
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13_Evolved",
+          "poolPointer": "{cc0b6cb2}",
+          "entry": {
+            "{16c534fd}": "{cf1ee294}",
+            "__type": "{e59d98ad}"
+          }
+        }
+      ],
+      "status": "blocked",
+      "reason": "StarLevel is 1|2|3; unit-stats STAR_PERCENT rejects four. Four-star health/AD/ability and legal target/restore support require existing-file changes."
+    },
+    {
+      "id": "into-the-unknown",
+      "pointer": "{711fd99c}",
+      "record": {
+        "name": "TFT13_GoopBuff_IntoTheUnknown",
+        "{900aff58}": "{7f1fcc94}",
+        "effectAmounts": [
+          {
+            "name": "GainedAD",
+            "value": 0.5,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "GainedAP",
+            "value": 50.0,
+            "__type": "TftEffectAmount"
+          },
+          {
+            "name": "NumRounds",
+            "value": 3.0,
+            "__type": "TftEffectAmount"
+          }
+        ],
+        "{4e874e78}": [
+          "{44055224}",
+          "{897b5f7a}",
+          "{64e3eb60}",
+          "{aa95b730}",
+          "{7013d630}"
+        ],
+        "ExcludedAugments": [
+          "TFT13_Augment_AnotherAnomaly"
+        ],
+        "__type": "{a0c80919}"
+      },
+      "standardPoolAdmission": [
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13",
+          "poolPointer": "{e6ddca72}",
+          "entry": {
+            "{16c534fd}": "{711fd99c}",
+            "__type": "{e59d98ad}"
+          }
+        },
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13_Evolved",
+          "poolPointer": "{cc0b6cb2}",
+          "entry": {
+            "{16c534fd}": "{711fd99c}",
+            "__type": "{e59d98ad}"
+          }
+        }
+      ],
+      "status": "blocked",
+      "reason": "UnitLocation only board/bench; lifecycle must preserve shared pool/equipment/binding while absent and return to a legal slot after three rounds. No authoritative out-of-play slot/receipt or lifecycle hook exists."
+    },
+    {
+      "id": "calling-card",
+      "pointer": "{b577dcbe}",
+      "record": {
+        "name": "TFT13_GoopBuff_CallingCard",
+        "{900aff58}": "{6715f6c2}",
+        "{4e874e78}": [
+          "{03c95748}",
+          "utility",
+          "{c9d84ebc}"
+        ],
+        "ExcludedAugments": [
+          "TFT13_Augment_AnotherAnomaly",
+          "TFT6_Augment_Traitless1",
+          "TFT6_Augment_Traitless2",
+          "TFT6_Augment_Traitless3"
+        ],
+        "__type": "{a0c80919}"
+      },
+      "standardPoolAdmission": [
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13",
+          "poolPointer": "{e6ddca72}",
+          "entry": {
+            "{16c534fd}": "{b577dcbe}",
+            "{bc58e0e5}": 0.25,
+            "__type": "{e59d98ad}"
+          }
+        },
+        {
+          "setPointer": "Maps/Shipping/Map22/Sets/TFTSet13_Evolved",
+          "poolPointer": "{cc0b6cb2}",
+          "entry": {
+            "{16c534fd}": "{b577dcbe}",
+            "{bc58e0e5}": 0.25,
+            "__type": "{e59d98ad}"
+          }
+        }
+      ],
+      "status": "blocked",
+      "reason": "Runtime ITEM_DEFINITIONS has no S13 trait emblem item. Need admitted emblem definitions, native nonunique-trait eligibility mapping and acquisition/equipment/restore hooks. Never substitute an unrelated artifact named Crest."
+    }
+  ],
+  "excludedAliases": {
+    "MagicMind": "magic-expert",
+    "HardenedMind": "defense-expert",
+    "SharpenedMind": "attack-expert",
+    "AllForOne": "force-of-friendship",
+    "ShouldertheBurden": "protective-shielding"
+  },
+  "activation": "none",
+  "productionCounts": {
+    "augments": 57,
+    "anomalies": 52
+  },
+  "pendingPackCounts": {
+    "augments": 3,
+    "anomalyKernels": 2,
+    "anomaliesBlocked": 3
+  }
+}
