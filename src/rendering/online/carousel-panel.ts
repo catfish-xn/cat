@@ -76,6 +76,8 @@ export class CarouselPanel {
   private clockOffset = 0;
   /** Slot I clicked and whose answer is still out; cleared by the next view. */
   private pending: number | null = null;
+  /** Slot under the 3D pointer (its label replaces the status line). */
+  private hovered: number | null = null;
   /** Which side I look at while the carousel runs; a new carousel resets it to the ring. */
   private side: CarouselSide = 'carousel';
   /** Shown instead of the panel while I look at my board: countdown, my line, the way back. */
@@ -136,7 +138,7 @@ export class CarouselPanel {
   render(view: CarouselView | null, seats: readonly SeatPublic[], mySeatId: string, serverNow: number): void {
     if (!view) { this.hide(); return; }
     const fresh = this.view?.id !== view.id;
-    if (fresh) this.side = 'carousel';
+    if (fresh) { this.side = 'carousel'; this.hovered = null; }
     this.view = view; this.seats = seats; this.mySeatId = mySeatId; this.clockOffset = performance.now() - serverNow;
     this.pending = null;
     this.applySide(); this.root.dataset.carousel = view.id;
@@ -153,9 +155,31 @@ export class CarouselPanel {
     for (const chip of Array.from(this.ring.querySelectorAll('.carousel-slot.pending'))) chip.classList.remove('pending');
     this.tick();
   }
+  /** A slot click, from its chip or the 3D carousel: taken only while my batch is out, the slot stands and no pick is out. */
+  pickSlot(slot: number): boolean {
+    const current = this.view, chip = this.chip(slot);
+    if (!current?.eligible || !chip || chip.disabled || this.pending !== null) return false;
+    this.pending = slot; chip.classList.add('pending'); this.tick();
+    this.onPick(slot, current);
+    return true;
+  }
+  /** The slot under the 3D pointer: the status line names it with its items (the chip's own title), null clears it. */
+  hoverSlot(slot: number | null): void {
+    if (this.hovered === slot) return;
+    this.hovered = slot; this.tick();
+  }
+  /** Logical ms since the carousel opened, by the server clock of the last view; null without a carousel. */
+  elapsedNow(): number | null { return this.view ? performance.now() - this.clockOffset - this.view.startedAt : null; }
+  /** My click still waiting for the server's answer, if any. */
+  get pendingSlot(): number | null { return this.pending; }
+  /** True while the 3D layer draws the carousel: the panel keeps its head, countdown and release order but not the ring. */
+  set drawnIn3d(on: boolean) { this.root.toggleAttribute('data-ring-3d', on); }
+  private chip(slot: number): HTMLButtonElement | null {
+    return this.ring.querySelector<HTMLButtonElement>(`.carousel-slot[data-slot="${slot}"]`);
+  }
   hide(): void {
     if (this.view === null) return;
-    this.view = null; this.pending = null; this.side = 'carousel'; this.applySide();
+    this.view = null; this.pending = null; this.hovered = null; this.side = 'carousel'; this.applySide();
     this.ring.replaceChildren(); this.order.replaceChildren();
   }
 
@@ -165,7 +189,8 @@ export class CarouselPanel {
     const now = performance.now() - this.clockOffset;
     const seconds = `${Math.max(0, Math.ceil((view.startedAt + view.deadlineMs - now) / 1000))}`;
     if (this.timer.textContent !== seconds) this.timer.textContent = seconds;
-    const status = this.pending !== null && view.eligible ? '选取中…' : carouselStatusText(view, this.mySeatId, now);
+    const hovered = this.hovered === null ? null : this.chip(this.hovered)?.title ?? null;
+    const status = this.pending !== null && view.eligible ? '选取中…' : hovered ?? carouselStatusText(view, this.mySeatId, now);
     if (this.status.textContent !== status) this.status.textContent = status;
     if (this.side === 'board') {
       if (this.barTimer.textContent !== seconds) this.barTimer.textContent = seconds;
@@ -213,12 +238,7 @@ export class CarouselPanel {
     for (const itemId of slot.items) held.insertAdjacentHTML('beforeend', itemMarkHtml(itemId, 16));
     chip.append(held);
     if (taken) chip.append(element('span', `${mine ? '我' : holder?.name ?? '已选'}${auto ? ' · 自动' : ''}`, `carousel-taker${auto ? ' auto' : ''}`));
-    chip.addEventListener('click', () => {
-      const current = this.view;
-      if (!current?.eligible || chip.disabled || this.pending !== null) return;
-      this.pending = slot.slot; chip.classList.add('pending'); this.tick();
-      this.onPick(slot.slot, current);
-    });
+    chip.addEventListener('click', () => { this.pickSlot(slot.slot); });
     return chip;
   }
   private renderOrder(view: CarouselView): void {
