@@ -29,7 +29,7 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
-import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
@@ -342,7 +342,7 @@ export class StrategyPanel {
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
-    chip.dataset.augment = id; chip.title = `${augmentDisplayName(id)}\n${AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).join('；') ?? ''}`;
+    chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
     chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
     return chip;
   }
@@ -898,7 +898,7 @@ export class StrategyPanel {
         if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
         // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
-        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；')
+        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
           : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
         const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')

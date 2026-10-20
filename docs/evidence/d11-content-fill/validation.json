@@ -1,0 +1,15 @@
+{
+  "scope": "unchanged baseline verification; no new effects implemented",
+  "tests": {
+    "files": 12,
+    "passed": 237,
+    "failed": 0,
+    "durationSeconds": 7.41,
+    "log": "targeted-tests.txt"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "elapsedSeconds": 10.933,
+    "output": "\n> hex-autobattler@0.1.0 typecheck\n> tsc --noEmit\n\nnpm notice\nnpm notice New major version of npm available! 11.9.0 -> 12.2.0\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0\nnpm notice To update run: npm install -g npm@12.2.0\nnpm notice\n"
+  }
+}

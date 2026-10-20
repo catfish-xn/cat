@@ -1,0 +1,569 @@
+{
+  "baseline": "a0d42c592cbd48fb075175e5f61818dabfe1b320",
+  "rawSha256": {
+    "map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2"
+  },
+  "weightConclusion": "Insufficient evidence tying archived tables to S13 standard mode and opening encounters. Keep project equal tiers unchanged.",
+  "tables": {
+    "{7084e70c}": {
+      "record": {
+        "mName": "TFT3_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT3_AugmentConfiguration_Option1": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option2": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option3": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option4": {
+            "mValue": 0.18000000715255737,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option5": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option6": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option7": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option8": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option9": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option10": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option11": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option12": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option13": {
+            "mValue": 0.2199999988079071,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option14": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option15": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option16": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option17": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option18": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option19": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT3_AugmentConfiguration_Option20": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{03b5c964}": {
+      "record": {
+        "mName": "TFT6_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT6_AugmentConfiguration_Option1": {
+            "mValue": 0.25,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option2": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option3": {
+            "mValue": 0.15000000596046448,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option4": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option5": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option6": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option7": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option8": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option9": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option10": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option11": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option12": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option13": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option14": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option15": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT6_AugmentConfiguration_Option16": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{0cfccd1a}": {
+      "record": {
+        "mName": "TFT12_PVEMODE_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT12_PVEMODE_AugmentConfiguration_Option1": {
+            "mValue": 1.0,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{2a20c974}": {
+      "record": {
+        "mName": "TFT9_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT9_AugmentConfiguration_Option1": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option2": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option3": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option4": {
+            "mValue": 0.18000000715255737,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option5": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option6": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option7": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option8": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option9": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option10": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option11": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option12": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option13": {
+            "mValue": 0.2199999988079071,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option14": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option15": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option16": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option17": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option18": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option19": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT9_AugmentConfiguration_Option20": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{9831efa4}": {
+      "record": {
+        "mName": "TFT7_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT7_AugmentConfiguration_Option1": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option2": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option3": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option4": {
+            "mValue": 0.18000000715255737,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option5": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option6": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option7": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option8": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option9": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option10": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option11": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option12": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option13": {
+            "mValue": 0.20000000298023224,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option14": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option15": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option16": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option17": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option18": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option19": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT7_AugmentConfiguration_Option20": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{e248819c}": {
+      "record": {
+        "mName": "TFT5_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT5_AugmentConfiguration_Option1": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option2": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option3": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option4": {
+            "mValue": 0.18000000715255737,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option5": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option6": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option7": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option8": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option9": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option10": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option11": {
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option12": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option13": {
+            "mValue": 0.2199999988079071,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option14": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option15": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option16": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option17": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option18": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option19": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT5_AugmentConfiguration_Option20": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{da73f4b4}": {
+      "record": {
+        "mName": "TFT8_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "TFT8_AugmentConfiguration_Option1": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option2": {
+            "mValue": 0.07999999821186066,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option3": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option4": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option5": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option6": {
+            "mValue": 0.10000000149011612,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option7": {
+            "mValue": 0.07000000029802322,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option8": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option9": {
+            "mValue": 0.05999999865889549,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option10": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option11": {
+            "mValue": 0.019999999552965164,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option12": {
+            "mValue": 0.11999999731779099,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option13": {
+            "mValue": 0.029999999329447746,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option14": {
+            "mValue": 0.07000000029802322,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option15": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option16": {
+            "mValue": 0.05000000074505806,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option17": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option18": {
+            "mValue": 0.03999999910593033,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option19": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option20": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          },
+          "TFT8_AugmentConfiguration_Option21": {
+            "mValue": 0.009999999776482582,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    },
+    "{a0ff050a}": {
+      "record": {
+        "mName": "Tutorial_AugmentArmoryConfiguration_Table",
+        "mConstants": {
+          "Tutorial_AugmentConfig_Option1": {
+            "mValue": 1.0,
+            "__type": "GameModeConstantFloat"
+          }
+        },
+        "mRequiredConstantsGroup": "{b874104c}",
+        "__type": "ScriptDataObject"
+      },
+      "otherTopLevelRecordsReferencingPointerOrName": []
+    }
+  },
+  "runtime": {
+    "augments": 57,
+    "anomalies": 52,
+    "contentDigest": "fnv1a32-utf16:ea6b11b6",
+    "augmentsFrozen": true,
+    "anomaliesFrozen": true
+  },
+  "addedAugments": [],
+  "addedAnomalies": []
+}
