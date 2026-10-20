@@ -33,7 +33,7 @@ import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
 import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
-import { ANOMALY_DEFINITIONS } from './anomalies';
+import { ANOMALY_DEFINITIONS, ANOMALY_OFFER_POLICY } from './anomalies';
 export { TRAIT_DEFINITIONS, ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS };
 export { COMPONENT_IDS } from './items';
 
@@ -155,6 +155,7 @@ import { D11_FILL_SOURCE } from './d11-fill-source';
 import { D11_EXECUTION_POLICY } from './d11-fill';
 export const CONTENT_DIGEST = digestContent({
   d11:{source:D11_FILL_SOURCE,execution:D11_EXECUTION_POLICY},
+  anomalyOfferPolicy:ANOMALY_OFFER_POLICY,
   s13AugmentsP2: { source:S13_P2_SOURCE, itemGrants:P2_ITEM_GRANTS, acquisitionRng:'fnv1a32-seat-choice-lcg32', openingRng:'combat-after-existing-opening-consumers', sharing:'freeze-all-then-broadcast' },
   s13AnomaliesP4:{source:P4_SOURCE,orbit:ORBIT_PARAMETERS,summons:S13_ANOMALY_SUMMON_UNITS,wolfAttackSpeedBps:10000,miniTravelTicks:10},
   g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},

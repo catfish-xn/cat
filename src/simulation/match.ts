@@ -60,7 +60,7 @@ import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round
 import { planReward } from './rewards';
 import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
-import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
 import { deriveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
 export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
@@ -80,10 +80,13 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
+  return { ok: true, ...stampMatchEvents(state, events) };
+};
+function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
-  return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
-};
+  return { state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+}
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
   // Choice-phase trading can consume/sell the currently selected anomaly target.
   // Follow an upgrade survivor, or ask for a new target without offering a free reroll.
@@ -517,7 +520,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
-    : generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
+    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
@@ -551,7 +554,7 @@ export function rerollAnomaly(state: MatchState, choiceId: string, generation: n
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
   if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
-  const draw = generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS).filter(id => !choice.offers.includes(id)), state.choiceRngState);
+  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)), state.choiceRngState);
   return accept({ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
     pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } },
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);
@@ -607,6 +610,13 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
     const marked=accept(selected.state,[{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'first-offer'}]);
     return marked.ok ? {...marked,events:[...events,...selected.events,...marked.events]} : fail(state,marked.reason);
   } catch { return multiplayerFail(state,'invalid-choice'); }
+}
+
+/** Trusted match-finalization hook: the room may end while surviving seats are
+ * still in preparation/combat/settlement. Do not run acquisition/choice hooks. */
+export function forfeitTerminalOrbs(state: MatchState): MatchStep {
+  const result = forfeitUnclaimedOrbs(state);
+  return result.events.length ? stampMatchEvents(result.state, result.events) : result;
 }
 
 export function claimOrb(state: MatchState, orbId: string, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {

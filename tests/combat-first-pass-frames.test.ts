@@ -98,7 +98,6 @@ describe('first-pass combat frames', () => {
   it('disabled capture retains original task shape and result; tick-zero finish is supported', () => {
     const source = input(47, 'empty');
     const plain = startTwoSidedBattle(source), disabled = startTwoSidedBattle(source, { captureReplay: false });
-    // D11 already added sampleBankGold to the non-capturing task. Capture stays opt-in.
     expect(Object.keys(plain)).toEqual(['sampleBankGold', 'advance']);
     expect(Object.keys(disabled)).toEqual(['sampleBankGold', 'advance']);
     expect(canonicalContent(disabled.advance(1))).toBe(canonicalContent(plain.advance(1)));

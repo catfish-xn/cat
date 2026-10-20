@@ -79,6 +79,7 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
   }
 });
 
+// Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
 it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every complete combat state', () => {
   let preparation = publicEquipmentPreparation(['rod']);
   expect(preparation.seed).toBe(3151248); expect(preparation.roundDefinitionId).toBe('2-1');
@@ -129,7 +130,7 @@ it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every
   for (const expected of states.slice(1)) expect(playback.advance(50).combat).toEqual(expected);
   for (const tick of [59, 60, 61, states.at(-1)!.tick]) expect(playback.seek(tick).combat).toEqual(states[tick]);
   playback.dispose();
-});
+}, 20000);
 
 /** S1 isolates life/attribution boundaries after the real strategy/item/summon
  * compiler. Only starting stats and readiness are controlled; all attacks,
@@ -387,10 +388,11 @@ it("retains a dead holder's same-tick killing blow but grants zero kill or assis
 }, 30000);
 
 it.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
+  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = contribution ? frontRowRod() : acquireEquipment(['rod'], { seed: 77 });
+  // v15 retains the same contribution cases with actual Manaflow offers.
+  let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;

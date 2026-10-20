@@ -22,6 +22,7 @@ import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
 import {accept,room,fullBench,fight,batch,syntheticSharedRound} from './tp-helpers';
 import {CAPACITY_VECTORS,CLAIM_EXPECTATIONS,receiptTotals,independentConservation} from './oracles/multiplayer-orb-oracle';
+import {forfeitTerminalOrbs,forfeitUnclaimedOrbs} from '../src/server-entry/index';
 
 function gift(state:MatchState,id:string,starLevel:1|2|3=1,receiptId='test-gift') {
   const r=grantMechanicUnit(state,{receiptId,source:'test',definitionId:id,starLevel});
@@ -50,6 +51,15 @@ function expectQueueOnly(before:MatchState,after:MatchState) {
   const {queuedOrbClaims:_afterQueue,...afterLoot}=afterM8.loot;
   expect(afterRest).toEqual(beforeRest);expect({...afterM8,loot:afterLoot}).toEqual({...beforeM8,loot:beforeLoot});
 }
+function expectTerminalForfeitNoop(state:MatchState) {
+  const before=structuredClone(state),receipts=state.m8.loot.receipts,seq=state.nextMatchEventSeq;
+  const result=forfeitTerminalOrbs(state);
+  expect(result.events).toEqual([]);expect(result.state).toBe(state);
+  expect(result.state).toEqual(before);
+  expect(result.state.m8.loot.receipts).toBe(receipts);
+  expect(result.state.m8.loot.receipts).toHaveLength(before.m8.loot.receipts.length);
+  expect(result.state.nextMatchEventSeq).toBe(seq);
+}
 function pvpSeat() {
   const initial=room(undefined,1);let {pool,states}=batch(refreshSharedShops(initial.pool,initial.states,1)),state=states[0];
   for(let round=1;round<=3;round++) {
@@ -73,6 +83,104 @@ function pvpReceipt(state:MatchState,loss=false):RoundSettlementReceipt {
 }
 
 describe('multiplayer explicit orb claims',()=>{
+  it.each(['survivor', 'queued survivor', 'gameOver', 'eliminated'] as const)('terminal finalization forfeits only unclaimed earned entries with Match sequence numbers: %s', mode=>{
+    const initial=room(undefined,1),done=mode==='queued survivor'?pvpSeat():fight(initial.pool,initial.states[0]);
+    const gifted=gift(done.state,'singed',1,'terminal-first');
+    let paid=claim(done.pool,gifted,ids(gifted).at(-1)!);
+    let state=gift(paid.state,'singed',2,'terminal-unclaimed');
+    const orbs=readLootView(state).unclaimedOrbs!;
+    expect(orbs.some(o=>o.source==='pve')).toBe(true);
+    expect(orbs.some(o=>o.source==='mechanic')).toBe(true);
+    const plans=[...state.m8.loot.frozen.rounds.flatMap(r=>r.orbs),...state.m8.loot.rewardOrbs??[]];
+    const dropIds=plans.flatMap(o=>o.entries).filter(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')).map(e=>e.dropId);
+    const planned=state.m8.loot.direct.filter(d=>d.status==='planned');
+    expect(dropIds.length).toBeGreaterThan(0);
+    if(mode==='queued survivor'){
+      const locked=lockMatchCombatRoster(state);if(!locked.ok)throw Error(locked.reason);
+      state=locked.state;
+      for(const orb of orbs){paid=claim(paid.pool,state,orb.orbId);state=paid.state;}
+      expect(state.m8.loot.queuedOrbClaims).toEqual(orbs.map(o=>o.orbId));
+      expect(restoreSharedOrbSnapshot(paid.pool,state)).toEqual(state);
+    }
+    if(mode==='gameOver'){
+      if(state.combat&&state.combat.status!=='finished')throw Error('Terminal fixture requires a finished battle');
+      state={...state,phase:'gameOver',pendingChoice:null,combat:state.combat};
+    }
+    if(mode==='eliminated')state={...state,multiplayer:{...state.multiplayer!,status:'eliminated'}};
+    const before=structuredClone(state),poolBefore=structuredClone(paid.pool);
+    const result=forfeitTerminalOrbs(state),receipts=result.state.m8.loot.receipts.slice(state.m8.loot.receipts.length);
+    expect(state).toEqual(before);
+    expect(receipts.map(r=>r.dropId)).toEqual(dropIds);
+    expect(receipts.every(r=>r.resolution==='forfeited'&&r.gold===0&&r.claimedRoundId===state.roundDefinitionId&&r.grantedUnitIds.length===0&&r.grantedItemIds.length===0)).toBe(true);
+    expect(result.state.m8.loot.receipts.slice(0,state.m8.loot.receipts.length)).toEqual(state.m8.loot.receipts);
+    expect(result.state.m8.loot.direct.filter(d=>d.status==='planned')).toEqual(planned);
+    expect(result.state.m8.loot.direct.filter(d=>d.status==='revealed')).toEqual([]);
+    expect(result.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    expect(result.events).toHaveLength(dropIds.length*2);
+    for(const [i,event] of result.events.entries()){
+      expect(event).toMatchObject({domain:'match',eventSeq:state.nextMatchEventSeq+i});
+      expect(event.type).toBe(i%2===0?'lootForfeited':'lootGranted');
+    }
+    expect(result.events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId)).toEqual(dropIds);
+    expect(result.events.filter(e=>e.type==='lootGranted').map(e=>e.receipt)).toEqual(receipts);
+    expect(result.state.nextMatchEventSeq).toBe(state.nextMatchEventSeq+result.events.length);
+    const {m8:oldM8,nextMatchEventSeq:_oldSeq,...oldRest}=state;
+    const {m8:newM8,nextMatchEventSeq:_newSeq,...newRest}=result.state;
+    expect(newRest).toEqual(oldRest);expect({...newM8,loot:oldM8.loot}).toEqual(oldM8);
+    const {direct:_oldDirect,receipts:_oldReceipts,queuedOrbClaims:_oldQueue,...oldLootRest}=oldM8.loot;
+    const {direct:_newDirect,receipts:_newReceipts,queuedOrbClaims:_newQueue,...newLootRest}=newM8.loot;
+    expect(newLootRest).toEqual(oldLootRest);
+    const restored=restoreSharedOrbSnapshot(paid.pool,JSON.stringify(result.state));
+    expect(restored).toEqual(result.state);
+    for(const finalized of [result.state,restored]){
+      const retry=forfeitTerminalOrbs(finalized);
+      expect(retry.state).toBe(finalized);expect(retry.events).toEqual([]);
+    }
+    expect(paid.pool).toEqual(poolBefore);assertSharedPoolConservation(paid.pool,[result.state]);
+  });
+  it('terminal finalization is an exact no-op for offline seats and empty online seats',()=>{
+    for(const state of [createMatch(5),room(undefined,1).states[0]]){
+      const result=forfeitTerminalOrbs(state);
+      expect(result.state).toBe(state);expect(result.events).toEqual([]);
+    }
+  });
+  it.each(['planner-first','terminal-first'] as const)('legacy planner and terminal entry forfeit each entry only once: %s',order=>{
+    const initial=room(undefined,1),done=fight(initial.pool,initial.states[0]);
+    const state=gift(done.state,'singed',2,'cross-forfeit'),before=structuredClone(state);
+    const dropIds=state.m8.loot.direct.filter(d=>d.status==='revealed').map(d=>d.dropId);
+    expect(dropIds.length).toBeGreaterThan(1);
+    const first=order==='planner-first'?forfeitUnclaimedOrbs(state):forfeitTerminalOrbs(state);
+    const second=order==='planner-first'?forfeitTerminalOrbs(first.state):forfeitUnclaimedOrbs(first.state);
+    expect(state).toEqual(before);
+    const receipts=first.state.m8.loot.receipts.slice(state.m8.loot.receipts.length);
+    expect(receipts.map(r=>r.dropId).sort()).toEqual([...dropIds].sort());
+    expect(receipts.every(r=>r.resolution==='forfeited'&&r.gold===0&&r.grantedUnitIds.length===0&&r.grantedItemIds.length===0)).toBe(true);
+    expect(new Set(first.state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(first.state.m8.loot.receipts.length);
+    expect(new Set(first.state.m8.loot.receipts.map(r=>r.dropId)).size).toBe(first.state.m8.loot.receipts.length);
+    expect(first.events).toHaveLength(dropIds.length*2);
+    expect(first.events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId)).toEqual(receipts.map(r=>r.dropId));
+    expect(first.events.filter(e=>e.type==='lootGranted').map(e=>e.receipt)).toEqual(receipts);
+    for(const [i,event] of first.events.entries()){
+      expect(event.type).toBe(i%2===0?'lootForfeited':'lootGranted');
+      // The legacy planner leaves stamping to its caller; the terminal entry stamps immediately.
+      if(order==='planner-first')expect(event.eventSeq).toBeUndefined();
+      else expect(event).toMatchObject({domain:'match',eventSeq:state.nextMatchEventSeq+i});
+    }
+    const numberedCount=order==='terminal-first'?first.events.length:0;
+    expect(first.state.nextMatchEventSeq).toBe(state.nextMatchEventSeq+numberedCount);
+    expect(second.events).toEqual([]);expect(second.state).toBe(first.state);
+    expect(second.state.m8.loot.receipts).toBe(first.state.m8.loot.receipts);
+    expect(second.state.nextMatchEventSeq).toBe(first.state.nextMatchEventSeq);
+    expect(second.state.m8.loot.direct.filter(d=>d.status==='revealed')).toEqual([]);
+    expectTerminalForfeitNoop(second.state);
+    // A later batch starts exactly at the next free number, including after a raw planner call.
+    const later=gift(second.state,'singed',1,'cross-forfeit-later'),next=forfeitTerminalOrbs(later);
+    expect(next.events.length).toBeGreaterThan(0);
+    expect(next.events.map(e=>e.eventSeq)).toEqual(Array.from({length:next.events.length},(_,i)=>second.state.nextMatchEventSeq+i));
+    expect(next.state.nextMatchEventSeq).toBe(second.state.nextMatchEventSeq+next.events.length);
+    expect(new Set([...first.events,...second.events,...next.events].flatMap(e=>e.eventSeq===undefined?[]:[e.eventSeq])).size).toBe(numberedCount+next.events.length);
+    expectTerminalForfeitNoop(next.state);
+  });
   it('retains a revealed 2-7 orb into 3-1 and pays its entries once in entryOrdinal order',()=>{
     const initial=room(undefined,1),round=getCatalogRoundById('2-7');
     const layout=freezeOrbLayoutThroughRound(initial.pool.orbLayout,round.ordinal+1);if(!layout.ok)throw Error(layout.reason);
@@ -244,6 +352,10 @@ describe('multiplayer explicit orb claims',()=>{
     expect(done.state.preparation.units.some(u=>u.definitionId==='leona'&&u.starLevel===2)).toBe(!loss);
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));
     unchanged(done.pool,after,orbId,loss?'seat-eliminated':'already-claimed');
+    if(loss){
+      expect(done.state.multiplayer?.status).toBe('eliminated');
+      expectTerminalForfeitNoop(done.state);expectTerminalForfeitNoop(after);
+    }
     const retry=runSharedMatchCommand(done.pool,after,{type:'settleRound',receipt});
     expect(retry).toMatchObject({ok:false,reason:loss?'seat-eliminated':'duplicate-settlement'});expect(retry.state).toBe(after);expect(retry.pool).toBe(done.pool);
     expect(stepMatch(after).state).toBe(after);independentConservation(done.pool);assertSharedPoolConservation(done.pool,[after]);
@@ -261,6 +373,7 @@ describe('multiplayer explicit orb claims',()=>{
       expect.objectContaining({resolution:CLAIM_EXPECTATIONS.queued.forfeited.resolution,gold:0,grantedUnitIds:[]})]);
     expect(done.pool.available.leona).toBe(queued.pool.available.leona);
     expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldAfter);expect(stepMatch(done.state).state).toBe(done.state);
+    expectTerminalForfeitNoop(done.state);
     independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
   });
   it('bot preparation claims all orbs by code point order, using the same full-bench sale',()=>{

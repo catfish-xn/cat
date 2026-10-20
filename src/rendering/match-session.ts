@@ -96,7 +96,10 @@ export class MatchSession {
   choose(choiceId: string, generation: number, definitionId: string) { return this.paused ? this.blocked() : this.commit(selectChoice(this.matchState, choiceId, generation, definitionId)); }
   anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.paused ? this.blocked() : this.commit(selectAnomalyTarget(this.matchState, choiceId, generation, unitId)); }
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }
-  augmentReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAugment(this.matchState, choiceId, generation)); }
+  /** v15: one free reroll of one card (`optionIndex` 0..2); the rules check the slot, the generation and the pool. */
+  augmentReroll(choiceId: string, generation: number, optionIndex: number) { return this.paused ? this.blocked() : this.commit(rerollAugment(this.matchState, choiceId, generation, optionIndex)); }
+  /** v15: orbs wait on the board only online (state.multiplayer); single player grants loot itself, so there is none to claim. */
+  claimOrb(_orbId: string): MatchCommandResult { return this.blocked(); }
   /** G2-4b: move the preparation summon of one item instance (兹若特传送门); the rules check phase, ownership and the cell. */
   moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.paused ? this.blocked() : this.commit(moveItemSummon(this.matchState, itemInstanceId, cell)); }
   private summonCache: { readonly state: MatchState; readonly summons: readonly ItemSummonView[] } | null = null;
