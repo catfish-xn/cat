@@ -63,8 +63,10 @@ interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
-  /** Seconds the death action still has to play while BoardScene reports the unit dead; null while it lives. */
-  dyingFor: number | null;
+  /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
+  alive: boolean;
+  /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
+  dyingFor: number | 'loading' | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -167,7 +169,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.body = fit(lease.scene, MODEL_HEIGHT); view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
-    }).catch(() => { /* a disposed cache rejects late loads; the piece stays without a body */ });
+      if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
+    }).catch(() => {
+      // A disposed cache rejects late loads; the piece stays without a body (and a dying one hides).
+      if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
+    });
   };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
@@ -176,7 +182,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     root.add(ring);
     scene.add(root);
     const view: PieceView = { root, ring, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, dyingFor: null };
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
     attachBody(view);
     return view;
   };
@@ -212,12 +218,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
-      if (piece.alive) view.dyingFor = null;
-      else if (view.dyingFor === null) {
-        view.dyingFor = created ? 0 : deathSeconds(view);
-        view.mixer?.apply(view.state.consume({ type: 'death', unitId: piece.id }));
+      if (piece.alive) {
+        // Revived or a new combat: never stay locked in a death pose that had not finished.
+        if (!view.alive) resetAction(view, piece.id);
+        view.alive = true; view.dyingFor = null;
+      } else if (view.alive) {
+        view.alive = false;
+        const output = view.state.consume({ type: 'death', unitId: piece.id });
+        view.mixer?.apply(output);
+        view.dyingFor = created ? 0 : models.cache && !view.lease ? 'loading' : deathSeconds(view);
       }
-      const shown = piece.visible && (view.dyingFor === null || view.dyingFor > 0);
+      const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
       view.target.set(piece.x, 0, piece.y);
@@ -249,7 +260,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => anyTeam || view.team === 'player').map(([unitId, view]) => ({ unitId, object: view.root }));
+    const units = [...pieces].filter(([, view]) => view.alive && (anyTeam || view.team === 'player')).map(([unitId, view]) => ({ unitId, object: view.root }));
     const hit = pick(client, area, camera, grid, units);
     return hit?.kind === 'unit' ? hit.unitId : null;
   };
@@ -341,7 +352,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
         view.root.position.addScaledVector(step, follow);
       }
-      if (view.dyingFor !== null && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
+      if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
     }
