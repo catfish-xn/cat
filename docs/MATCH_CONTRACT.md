@@ -4,6 +4,8 @@
 
 当前 rules/content 为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
 
+用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 54、联机 53（仅排除 `avarice-incarnate`），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
+
 新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
 
 

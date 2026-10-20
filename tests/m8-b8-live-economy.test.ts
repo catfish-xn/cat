@@ -4,7 +4,9 @@ import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
-let preparation=api.createMatch(97653);
+// v15 seed selected by the independent loot/augment oracle, then verified via
+// public commands: same 65G/73HP/128 investment base and exact 2-7 loot vector.
+let preparation=api.createMatch(3374947733);
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));

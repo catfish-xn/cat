@@ -54,8 +54,10 @@ describe('B8 public equipment fixture provenance', () => {
       { type: 'itemCombined', consumedIds: ['item-1', 'item-4'], itemId: 'item-8', definitionId: 'bloodthirster' },
       { type: 'itemCombined', consumedIds: ['item-6', 'item-7'], itemId: 'item-9', definitionId: 'bloodthirster' },
     ]);
-    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','pumping-up-ii']);
-    // Neither new chosen augment grants HP: Irelia remains base 700, without the old investment +8.
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','investment-strategy-i']);
+    // v15's expanded catalog changes the second offer. This paid route earns
+    // zero interest after acquisition, so Investment grants no HP here.
+    expect(state.augmentProgress.investmentHp).toBe(0);
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 700]]);
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);

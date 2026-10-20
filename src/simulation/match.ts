@@ -60,7 +60,7 @@ import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round
 import { planReward } from './rewards';
 import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
-import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
 import { deriveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
 export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
@@ -514,7 +514,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
-    : generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
+    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
@@ -548,7 +548,7 @@ export function rerollAnomaly(state: MatchState, choiceId: string, generation: n
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
   if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
-  const draw = generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS).filter(id => !choice.offers.includes(id)), state.choiceRngState);
+  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)), state.choiceRngState);
   return accept({ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
     pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } },
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);

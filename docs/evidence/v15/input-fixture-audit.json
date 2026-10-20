@@ -10,8 +10,8 @@
     "scripts/record-g2-4b-release.cjs": "82598911a9d8432f7094374ac15d32a303f5d09d32ebc43df6c380020fde4f12",
     "scripts/record-v15-inputs.cjs": "1d42a9ca182b5fbe7824383f0a66e20016e6bb36837b327d6bd6c00891ff16f4",
     "scripts/record-v15-live-reveal.cjs": "f7140e3435ef7dcd671cc90c9515b35159d6401626d309e643ae5c797e54d3f1",
-    "scripts/record-v15-release.cjs": "afef6a2690b44f21eddce81e95099eee650c26d238c2b47a9f70971a9a946032",
-    "scripts/v15-fixture-audit.cjs": "c8d2f5b75289331e1bf979b7b3d7b9aa8982ea9a5d12cf341ef33df2c068b389",
+    "scripts/record-v15-release.cjs": "588f432da1302d1015f043239a6bbd7a96277c67eeb7be6488f08eafa7f3cde5",
+    "scripts/v15-fixture-audit.cjs": "4f2651f37d7a27020155bbcc03230cab62af5d4e08413f7ee10f4bf282beb4f5",
     "src/server-entry/index.ts": "bad1ee0d1cb39584a2246bf972b4cf73624d9bf33f109a4ed36f672b3d5a9b2c",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "7b0276340c441264c1776966c97bbe84f02c489ce971e6c9f09b177b1c52a864",
@@ -83,7 +83,7 @@
     "src/simulation/consumable-types.ts": "4918f4c996803c151cbba390693f2466239fe6b85074d3c429ec452f9ce859f6",
     "src/simulation/consumables.ts": "62fe0f3c511520294b81dbbbbbde5e368b29e05cf2aaed9cf5ad1ebbf7e8e773",
     "src/simulation/content/abilities.ts": "7a99ca66007549c22cf03563bc36722f7947d1e9cbf2e7bb422f0a051402b3ac",
-    "src/simulation/content/anomalies.ts": "30c80f2fab7e2fa24a9f40ffc924b3fc79c3b726af75d3b3421afb1a81a82b80",
+    "src/simulation/content/anomalies.ts": "40c81e2d713b8716f439d218a578a3a54ff9d6c20f9f9510b6bc4928f1503b03",
     "src/simulation/content/augment-policy.ts": "30a52a5d36e57fe9a5e4262a67c9c1da7fa1ee9d800a9cda0452a0d60f29f2d5",
     "src/simulation/content/augments.ts": "2f12318429bafb67f24748d64918c0d79c8015de558c9d28613c3268c050f51c",
     "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
@@ -117,7 +117,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/index.ts": "ca1eebf5ac94abdb26c9f292290fb5695899ec3b2b06e4987e8c68b93e857330",
+    "src/simulation/content/index.ts": "58ccce9d8583966780d856ebdc891f1add0ecf946f555d44422ceb65a2fdf240",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
     "src/simulation/content/items-bow.ts": "4da0832e81baf5191b87a4c53a99abd2050b53ecf493648f670863b04262ddec",
@@ -261,7 +261,7 @@
     "src/simulation/m8/version.ts": "e3158b65cf6c83da40c371fc1ac874fe898eeae05b05f794edda20da76cb7623",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "ee416917e3216d1980565a218d908c27c2a74998c6d3d35e6956c2d72456c888",
-    "src/simulation/match.ts": "4ab2c2e8c72a5b5829e3186caec744755bda4f2e2b26a2b48a7d8ce5d1db2b1c",
+    "src/simulation/match.ts": "f60eee5b5aee2e518b33074a6ca2e341bd4f2ea24ca37375eb9c56fdbb0484ea",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
@@ -330,13 +330,13 @@
     "tests/fixtures/v15-herald-support/generate.ts": "f0156d02f1fd9e94c21150031db7c31b7419254f9c7b91c58e5428c56c0a60dd",
     "tests/m8-b8-live-reveal.test.ts": "39a90edca9debf6493fe9a68e5dc12bce961fbbc5839a7aa570e6265850d069c"
   },
-  "contentDigest": "fnv1a32-utf16:2d6c67f0",
+  "contentDigest": "fnv1a32-utf16:70dbb056",
   "files": {
     "tests/fixtures/v15-c19-seed-9-minimal.json": {
       "previousBytes": 28248,
       "currentBytes": 28248,
       "previousSha256": "b5b07f1cd19468c0b126e25f7e1f63ead7499cef90803650e292ba8165e05c16",
-      "currentSha256": "be267cea3bacbd87c702ec668e0b8025ec8e8106880c45d082a7c513cf49178f",
+      "currentSha256": "265d1427743c87fc1a53e35006db95a1e48840538641b94b52bfbfc172af1a9a",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v15-b8-fingerprints.json": {
@@ -350,49 +350,49 @@
       "previousBytes": 124460,
       "currentBytes": 123074,
       "previousSha256": "dd203b4c275ffbf271da9fe3f8f44a1020c0883f5a56ac14e92d4c57263851e7",
-      "currentSha256": "233e3418fd0eb9b7babc4f8dfb2df03a1b3cfd198ca638c6606188d6af282b47",
+      "currentSha256": "4d0d7953b84e3296b7cd982e83c29b6e21e466da119f80172f95ecaff187b58d",
       "firstDifferentByte": 82
     },
     "tests/fixtures/v15-herald-raw/evenshroud.json": {
       "previousBytes": 124459,
       "currentBytes": 123073,
       "previousSha256": "7dbc9dabb047bd26ab31da0662c311851bd90c1d9e8c339e713f2d3be9f8ee6d",
-      "currentSha256": "b38e97d965a07c6d735a10cf21c3843392812336f5a435be88db817e6c71c255",
+      "currentSha256": "5c7873b12d0c6229091cdc38762ce2435af54f01c164300d4930adc11f986abd",
       "firstDifferentByte": 82
     },
     "tests/fixtures/v15-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 124463,
       "currentBytes": 123006,
       "previousSha256": "f774eb0ef4386309b69146236050bd3d12e067fa5cd3a809ea8fa3b5a7f5d1e9",
-      "currentSha256": "3e7db12a6ae359bea4c1c619c17d3d9a1e6610529eed513b30ab209783629968",
+      "currentSha256": "87ad7f4205f8332c2acb9775a758d265ff07652e65d80239987c61e6d6fe46f9",
       "firstDifferentByte": 82
     },
     "tests/fixtures/v15-herald-raw/quicksilver.json": {
       "previousBytes": 124469,
       "currentBytes": 123082,
       "previousSha256": "9785d770e6d6b8527cfcb8cf5b0a6b1b3178ead2dcf7352aa58299f7224f30b8",
-      "currentSha256": "21e754de47724089636e4a02a2747ed3235341976e7a0a0482a1803361e0ec26",
+      "currentSha256": "4c2de1332acb7ad47d450f0d793e3cb3dd6c0a64af846563c40b6efd51762508",
       "firstDifferentByte": 82
     },
     "tests/fixtures/v15-herald-raw/edge-of-night.json": {
       "previousBytes": 124485,
       "currentBytes": 123100,
       "previousSha256": "9f426caae52e57790103da50c3776fc0d0f15e36ac13da264beea963dcb9969d",
-      "currentSha256": "8e03bc9b1bb4d7ac01d41d8479e026beb0f2c07f5d74e5d226bc12c4b0a0cf2a",
+      "currentSha256": "f3775b0e39cb883e539c13dab435eec032f124e8601604a889ca9f4f12a35628",
       "firstDifferentByte": 82
     },
     "tests/fixtures/v15-herald-raw/manifest.json": {
-      "previousBytes": 35773,
+      "previousBytes": 35462,
       "currentBytes": 36070,
-      "previousSha256": "0be74393894bd03d2f6fda1e4591abe0d787f3d0b5bdd414dd4098f740022446",
-      "currentSha256": "bb12d03b396e26b09448d1d104a95af84c8e06b5d7ccf4752bf6bb0b474d60cf",
+      "previousSha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22",
+      "currentSha256": "df10efd9340532077528fe39d19aff16432354db90a2db91ab09af00f7e72fe6",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v15-herald-raw/trajectory.json": {
       "previousBytes": 311315,
       "currentBytes": 310807,
       "previousSha256": "8e08e230cc9d5580d84b62bd228781ffe737288411889c5e5a052c97a7aa99ea",
-      "currentSha256": "84438704cb6789102b26951a0a5633c1f0149f9da229f7fd1f9bf25f93dd7d2b",
+      "currentSha256": "0ab35dd45e6ee9945c143542082c5c859f0871cf34591175a8ef5b8ba801b417",
       "firstDifferentByte": 42
     }
   },

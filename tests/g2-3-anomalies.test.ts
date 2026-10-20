@@ -12,9 +12,10 @@ function start(id:string,definitionId='lux',starLevel:1|2|3=1){
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
 function validate(state:CombatState){withItemRestoreCache(()=>{for(const u of state.units)validateMechanisms(u,state.units,state.tick,'g23-anomaly',state.status==='finished',state.nextActionSeq!);});}
-// Non-P4 anomalies: 30 historical + P1 Dual Wielding + 3 P2 + 7 P3; the 11 P4 IDs use the TFT13_GoopBuff_ prefix.
-it('admits thirty historical, P1 Dual Wielding, three P2 and seven P3 anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
- expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(41);
+// Solo non-P4 catalog: 30 historical + P1 Dual Wielding + 3 P2 + 7 P3 + 2 D11.
+// The 11 P4 IDs use the TFT13_GoopBuff_ prefix; online admission is tested separately.
+it('admits thirty historical, P1 Dual Wielding, three P2, seven P3 and two D11 anomalies and excludes Cosmic Rhythm/PBE-only entries',()=>{
+ expect(Object.keys(ANOMALY_DEFINITIONS).filter(id=>!id.startsWith('TFT13_GoopBuff_'))).toHaveLength(43);
  for(const id of ['cosmic-rhythm','essence-of-navori','miniaturize','hivemind'])expect(ANOMALY_DEFINITIONS[id]).toBeUndefined();
  expect(ANOMALY_DEFINITIONS['defense-expert'].name).toBeTruthy();
 });

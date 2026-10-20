@@ -1,5 +1,5 @@
 {
-  "contentDigest": "fnv1a32-utf16:2d6c67f0",
+  "contentDigest": "fnv1a32-utf16:70dbb056",
   "lootReplayDigest": "fnv1a32-utf16:61568ec0",
   "rulesVersion": "s13-g2-3-v15",
   "contentVersion": "s13-14.24b-g2-3-v15",
@@ -7,7 +7,7 @@
   "previousContentDigest": "fnv1a32-utf16:ea6b11b6",
   "previousLootReplayDigest": "fnv1a32-utf16:9895bc42",
   "traceHashes": {
-    "state": "bbfca39f17b86fceb2936a7801823e2ef2a585098a6338e81c2d5da5d874bf11",
+    "state": "499a9a3606d9cc100b60535b80c24d11c9696e42136134f545d47d1b74fd9f79",
     "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
     "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
   },
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "S13 v15 cutover: multiplayer queued orb claims, per-card permanent-exclusion rerolls, D11 60/54 content, public statuses."
+  "reason": "S13 v15 cutover: multiplayer queued orb claims, per-card permanent-exclusion rerolls, D11 60/54 solo and 60/53 online (Avarice deferred pending live bank samples), public statuses."
 }

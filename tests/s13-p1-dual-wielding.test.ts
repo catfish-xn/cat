@@ -6,7 +6,8 @@ import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {CONTENT_DIGEST} from '../src/simulation/content';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match-types';
-const {dispatch}=createRequire(import.meta.url)('../scripts/generate-m5-route.cjs');
+const {dispatch,run}=createRequire(import.meta.url)('../scripts/generate-m5-route.cjs');
+import historicalIdentity from './g2-4b-content-baseline.json';
 import {accepted,resolveM5Choices} from './match-helpers';
 import {selectChoice,sellUnit} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
@@ -22,10 +23,22 @@ it('raw role pools are eight actual completed items and all sixty real heroes ha
  expect(expected.every(id=>DUAL_WIELDING_POOLS.APCASTER.includes(id))).toBe(true);
 });
 it('public anomaly selection grants two role items once, keeps equipment, restores after target sale and rejects altered grant',async()=>{
- const trace=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/s13-p1-dual-commands.json.gz',import.meta.url))).toString());
- expect(trace.seed).toBe(23);expect(trace.contentDigest).toBe(CONTENT_DIGEST);
+ const archived=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/s13-p1-dual-commands.json.gz',import.meta.url))).toString());
+ expect(archived.seed).toBe(23);expect(archived.contentDigest).toBe(historicalIdentity.contentDigest);
+ expect(archived.contentDigest).not.toBe(CONTENT_DIGEST);
+ // The archived command tape remains historical. Generate the current v15
+ // tape from genuine paid commands and the independent route ledger.
+ const trace:{seed:number;commands:unknown[]}={seed:23,commands:[]},stop=new Error('v15 dual offer');
+ let captured=false;
+ try{await run(api,{build:'cannon',seed:trace.seed,goldReserveByRound:{'4-5':80},anomalyDefinitionId:'dual-wielding',onStep(_before:MatchState,result:{state:MatchState},command:unknown){
+  trace.commands.push(command??{type:'step'});
+  const c=result.state.pendingChoice;
+  if(c?.kind==='anomaly'&&c.step==='offer'&&c.offers.includes('dual-wielding')){captured=true;throw stop;}
+ }});}catch(error){if(error!==stop)throw error;}
+ expect(captured).toBe(true);
  let s:MatchState=api.createMatch(trace.seed);
- for(const c of trace.commands){const result=c.type==='step'?api.stepMatch(s):dispatch(api,s,c);if(result.ok===false)throw Error(result.reason);s=result.state;}
+ for(const command of trace.commands){const c=command as {type:string};const result=c.type==='step'?api.stepMatch(s):dispatch(api,s,c);if(result.ok===false)throw Error(result.reason);s=result.state;}
+ expect(s.contentDigest).toBe(CONTENT_DIGEST);
  expect(s).toBeDefined();const target=s.preparation.units.find(u=>u.id===s.pendingChoice!.targetId)!;
  const before=s,c=s.pendingChoice!,expected=dualWieldingItems(s.seed,c.choiceId,target.definitionId);
  s=accepted(selectChoice(s,c.choiceId,c.generation,'dual-wielding'));

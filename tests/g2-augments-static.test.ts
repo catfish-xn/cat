@@ -35,6 +35,9 @@ function resolved(id: string, state = fixture(), target = 'lux') {
 const history = (round: number, hpAfter = 100): RoundResult => ({ round, hpAfter } as RoundResult);
 
 const expected: Record<string, Effect[]> = {
+  'all-for-one-i': [mech('d11Fill', { enabled: 1 })],
+  'trifecta-i': [mech('d11Fill', { enabled: 1 })],
+  'spirit-link': [mech('d11Fill', { enabled: 1 })],
   'blinding-speed':[mech('acquisitionBundle',{enabled:1})],
   'portable-forge':[mech('acquisitionBundle',{enabled:1})],
   'radiant-relics':[mech('acquisitionBundle',{enabled:1})],
@@ -74,7 +77,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the thirty existing, six P1 and fourteen P2 definitions plus the seven P3 augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
+  it('contains exactly the thirty existing, six P1, fourteen P2, seven P3 and three D11 augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 
