@@ -1,0 +1,139 @@
+{
+  "baseCommit": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "branch": "codex/s13-augments-p3",
+  "contentDigest": "fnv1a32-utf16:1add8f97",
+  "rulesVersion": "s13-g2-3-v11",
+  "contentVersion": "s13-14.24b-g2-3-v11",
+  "files": 21,
+  "tests": 331,
+  "failed": 0,
+  "skipped": 0,
+  "batchWindowMs": 47167,
+  "catalogWindowMs": 975,
+  "rows": [
+    {
+      "file": "tests/g2-3-anomalies.test.ts",
+      "count": 46,
+      "ms": 1691.26
+    },
+    {
+      "file": "tests/g2-3-content.test.ts",
+      "count": 10,
+      "ms": 1545.2
+    },
+    {
+      "file": "tests/g2-4b-artifact-mechanism-integration.test.ts",
+      "count": 2,
+      "ms": 420.57
+    },
+    {
+      "file": "tests/g2-4b-collector.test.ts",
+      "count": 1,
+      "ms": 8772.49
+    },
+    {
+      "file": "tests/g2-4b-defiance.test.ts",
+      "count": 3,
+      "ms": 539.65
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "count": 21,
+      "ms": 14831.88
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "count": 3,
+      "ms": 2525.58
+    },
+    {
+      "file": "tests/g2-4b-unstable-chest.test.ts",
+      "count": 39,
+      "ms": 40824
+    },
+    {
+      "file": "tests/g2-augments-choice.test.ts",
+      "count": 42,
+      "ms": 11040.65
+    },
+    {
+      "file": "tests/g2-augments-combat.test.ts",
+      "count": 16,
+      "ms": 8484.3
+    },
+    {
+      "file": "tests/g2-augments-identity.test.ts",
+      "count": 1,
+      "ms": 550.15
+    },
+    {
+      "file": "tests/g2-augments-multiplayer.test.ts",
+      "count": 4,
+      "ms": 67.95
+    },
+    {
+      "file": "tests/g2-augments-static.test.ts",
+      "count": 60,
+      "ms": 446.27
+    },
+    {
+      "file": "tests/m8-b3-damage-control-order.test.ts",
+      "count": 14,
+      "ms": 100.67
+    },
+    {
+      "file": "tests/m8-b4-trigger-ledger.test.ts",
+      "count": 2,
+      "ms": 8.53
+    },
+    {
+      "file": "tests/m8-g02.test.ts",
+      "count": 7,
+      "ms": 15.04
+    },
+    {
+      "file": "tests/m8-g03.test.ts",
+      "count": 4,
+      "ms": 3.59
+    },
+    {
+      "file": "tests/m8-g04.test.ts",
+      "count": 5,
+      "ms": 7.86
+    },
+    {
+      "file": "tests/s13-augments-p3.test.ts",
+      "count": 30,
+      "ms": 1494.4
+    },
+    {
+      "file": "tests/s13-p3-acquisition.test.ts",
+      "count": 12,
+      "ms": 6463.92
+    },
+    {
+      "file": "tests/m5-content.test.ts",
+      "count": 9,
+      "ms": 51.79
+    }
+  ],
+  "checks": {
+    "typecheck": "passed",
+    "heraldDefault": "passed",
+    "inputsBaseline": "passed",
+    "inputsCheck": "passed",
+    "coreAutocrlf": false,
+    "trackedCRLF": 0,
+    "protectedPathsUnchanged": true,
+    "versionFileUnchanged": true,
+    "historicalG23AndAugmentsUnchanged": true
+  },
+  "herald": {
+    "cases": 5,
+    "battlesPerCase": 14,
+    "rawBeforeRestore": true,
+    "generationMs": 96227.5467,
+    "verificationMs": 79174.5682,
+    "sourceSha256": "b1b9e99d6787f31b94b20ceb2bb5b9a9676dbf5aa1f0af63b8131688848c586c"
+  }
+}

@@ -16,6 +16,20 @@ const phaserFlags: Plugin = {
   transform: (code, id) => (PHASER_SRC.test(id) ? { code: replacePhaserFlags(code), map: null } : null),
 };
 
+// The S13 icon manifests keep `source`/`bytes`/`sha256` per row for the asset tests (vitest reads the source
+// file); nothing at runtime reads them, so production builds drop those three keys. A manifest whose rows no
+// longer match fails the build instead of silently shipping the checks again.
+const ASSET_MANIFEST = /[\\/]src[\\/]presentation[\\/]s13-(augment-)?asset-manifest\.ts$/;
+const ASSET_CHECK_KEY = /,\s*"(?:source|bytes|sha256)":\s*(?:"[^"\n]*"|\d+)/g;
+const stripAssetChecks: Plugin = {
+  name: 'strip-asset-checks', apply: 'build', enforce: 'pre',
+  transform(code, id) {
+    if (!ASSET_MANIFEST.test(id)) return null;
+    const stripped = code.replace(ASSET_CHECK_KEY, '');
+    if (stripped === code || /"sha256":/.test(stripped)) this.error(`strip-asset-checks: unexpected manifest layout in ${id}`);
+    return { code: stripped, map: null };
+  },
+};
 // 3D 单独加载模式：three.js 和 3D 渲染代码只经 three-loader.ts 动态 import，统一落在 assets/3d/。
 // scripts/m7-budget.cjs 只统计 assets/ 顶层的 JS 作为 2D 体积，assets/3d/ 单列报告。
 const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
@@ -25,7 +39,10 @@ export default defineConfig(({ mode }) => ({
   // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
-  plugins: [phaserFlags],
+  plugins: [phaserFlags, stripAssetChecks],
+  build: { rollupOptions: { output: { manualChunks(id) {
+    if (/[\\/]node_modules[\\/]phaser[\\/]/.test(id)) return 'phaser';
+  } } } },
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.
@@ -37,6 +54,8 @@ export default defineConfig(({ mode }) => ({
   build: { rollupOptions: { output: {
     manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : undefined),
     chunkFileNames: chunk => (chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
+    assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },
   server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true, rewrite: path => path.replace(/^\/ws/, '') } } },
 }));

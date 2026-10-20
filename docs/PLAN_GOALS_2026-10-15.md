@@ -4,9 +4,9 @@
 
 ## 现状盘点（决定目标优先级的事实）
 
-盘点日期 2026-10-19，基线 `multiplayer` @ `bc49cac`（v12）。数字按代码运行时导出实际数出（用 esbuild 打包 `src/simulation/content/index.ts` 等导出后计数），不取自交接文档。**每次收工都要按同样口径重数并更新本表。** 2026-10-15 的旧值（英雄 19、羁绊 5、强化 6、异变 3）已作废。
+盘点日期 2026-10-19 收工，基线 `multiplayer` @ `c69e22b`（v14：rules `s13-g2-3-v14`、content `s13-14.24b-g2-3-v14`）。上一次盘点基线为 `bc49cac`（v12）。数字按代码运行时导出实际数出（用 esbuild 打包 `src/simulation/content/index.ts` 等导出后计数），不取自交接文档。**每次收工都要按同样口径重数并更新本表。** 2026-10-15 的旧值（英雄 19、羁绊 5、强化 6、异变 3）已作废。
 
-| 维度 | 现状（multiplayer v12） | 14.24b 全量 | 差距 | 计数来源 |
+| 维度 | 现状（multiplayer v14） | 14.24b 全量 | 差距 | 计数来源 |
 | --- | --- | --- | --- | --- |
 | 英雄 | 60（1 费 14 / 2 费 13 / 3 费 13 / 4 费 12 / 5 费 8），商店卡池同为 60 | 60 | 已齐 | `M5_UNIT_DEFINITIONS`（`src/simulation/units.ts`）；`SHOP_CATALOG_BY_COST`（`src/simulation/match-rules.ts`）；全量取 `raw/en_us.json.gz` 中 `TFTSet13` 可上场英雄 |
 | 召唤/中立单位 | 中立 5、虚空生物 1 | — | — | `NEUTRAL_UNIT_DEFINITIONS`（`units.ts`）；`G24_VOIDSPAWN_UNITS`（`content/g2-4b-voidspawn.ts`） |
@@ -18,13 +18,15 @@
 | 其他特殊装 | 1（战术家之冠 `TFT_Item_ForceOfNature`） | — | — | `ITEM_DEFINITIONS` 中不属于上述各类的 `completed` |
 | 消耗品/锻造器 | 3 个消耗品（磁力移除器、组件重铸器、成装重铸器）；锻造器 3 个池（成装/辅助/神器，四选一）；复制器 2 种（次级英雄、次级微光） | — | 大英雄/大微光复制器不做（用户已定） | `CONSUMABLE_DEFINITIONS`（`content/consumables.ts`）；`G24_FORGE_POOLS`（`content/g2-4-forges.ts`）；`content/g2-3-policy.ts` 复制器表 |
 | 征服者档位 | 15/15 档全部接入，无延后档 | 15 | 已齐 | `G23_CONQUEROR_CHESTS`（`content/g2-3-policy.ts`，`length:15`，`G23_DEFERRED_CONQUEROR_ITEMS` 为空） |
-| 强化 | 30（银 14 / 金 13 / 彩 3） | 310 个标准池候选（银 68 / 金 148 / 彩 94）；本阶段目标 60 | 目标差 30；全量差 280 | `AUGMENT_DEFINITIONS`（`content/augments.ts`），等级取 `AUGMENT_TIERS`（`content/augment-policy.ts`）；全量见 `planning/s13-14.24-multiplayer-audit.html`（2026-10-18 审计） |
-| 异常 | 30 | 57（`TFTSet13_Evolved` 池 61 项中非零权重 57） | 27 | `ANOMALY_DEFINITIONS`（`content/anomalies.ts`）；全量同上审计 |
+| 强化 | 57（银 14 / 金 27 / 彩 16）；同一轮所有玩家同一等级，每次 1 次免费整组刷新（#214） | 310 个标准池候选（银 68 / 金 148 / 彩 94）；本阶段目标 60 | 目标差 3；全量差 253 | `AUGMENT_DEFINITIONS`（`content/augments.ts`），等级取 `AUGMENT_TIERS`（`content/augment-policy.ts`）；全量见 `planning/s13-14.24-multiplayer-audit.html`（2026-10-18 审计） |
+| 异常 | 52 | 57（`TFTSet13_Evolved` 池 61 项中非零权重 57） | 5 | `ANOMALY_DEFINITIONS`（`content/anomalies.ts`）；全量同上审计 |
 | 流程 | 开场、1-1 与 2-4/3-4/4-4/5-4/6-4 选秀、PvE、PvP、配对预告、强化选择、补给、加时、淘汰、排名 | 同左 | 流程已对齐 | `src/simulation/carousel-policy.ts`、`carousel.ts`（含 `'1-1'`）；`src/server/room/pairing.ts`（G1-P6 配对预告） |
 | 运维 | 单局服务器；`/healthz`；`deploy/deploy.sh` + `deploy/cat-game.service`（systemd） | — | 上线清单见 `planning/release-v12-checklist.md` | `src/server/net/server.ts`、`deploy/` |
-| 测试 | 317 个 `*.test.ts`；`fast` 与 `timing`（串行，7 个文件）两个 vitest project | — | 计时类断言不挡合并，改每夜报告 | `find tests -name "*.test.ts"`；`vitest.config.ts` |
+| 测试 | 345 个 `*.test.ts`；`fast` 与 `timing`（串行，7 个文件）两个 vitest project | — | 计时类断言不挡合并，改每夜报告 | `find tests -name "*.test.ts"`；`vitest.config.ts` |
 
-**集成分支，待 v13 收口（不计入上表）：** `integration/s13-augments` @ `05c6792` 已合 P2（#188）、P3（#189）、P4（#192），P1（#191）仍开着未合。运行时导出为强化 51（银 14 / 金 26 / 彩 11，即 +21）、异常 51（+21）；英雄、羁绊、装备数与 multiplayer 相同。计数口径同上，在该分支上导出 `AUGMENT_DEFINITIONS`、`ANOMALY_DEFINITIONS`。
+**v13 收口已完成：** `integration/s13-augments` 的 P1–P4 与 #214 已经 #208 合入 multiplayer（`c69e22b`），上表已含。合入后 JS 体积 1.460 倍、首交互 1.127 倍（上限 1.5 / 1.2）。
+
+**集成分支 `3d` 已进、multiplayer 未进（不计入上表）：** `3d` @ `3971d09`（#212、#213、#215、#217–#224），分叉点 `9c3c7a9`，不含 #208 等今日 multiplayer 合入。与 multiplayer 的差异只在界面与工具：`src/rendering3d/`（3D 渲染、加载骨架、点选拖动、物品拾取、粒子 v2）、`src/rendering/` 接线、`scripts/assets3d/`（60 英雄下载/解包/bin 解析/构建管线，60/60 GLB 0 错误）、新增 24 个测试文件（3d 上共 342 个，未含 multiplayer 今日新增）、`vite.config.ts`。`src/simulation/`、`src/server/` 无差异，因此英雄、羁绊、装备、强化、异常数与分叉点 multiplayer 相同。3D 素材只在本地 `assets3d-local/`，不进仓库。粒子映射 0、动作覆盖 cast 37/60、hit 0/60、attack 56/60。
 
 原始数据：`src/simulation/content/source/s13-14.24b/raw/en_us.json.gz`（CDragon 14.24b 全量，12 MB，SHA 已锁），`scripts/import-m8-source.py` 已能按 hash 校验抽取；图标走 `scripts/fetch-s13-assets.cjs`（communitydragon）。扩内容不缺数据，缺的是实现与测试。
 

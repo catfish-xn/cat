@@ -5,7 +5,7 @@ import {validateDeployment,getPlayerDeploymentCount} from './game';
 import {foldResourceProvenance,type ResourceProvenanceContext} from './resource-provenance';
 import {getCatalogRoundById} from './round-selectors';
 import {deriveTraits} from './trait-snapshot';
-import {readG23Progress} from './g2-3-state';
+import {readG23Progress,epicCrownsAtResourcePrefix} from './g2-3-state';
 import {replayG23Economy} from './g2-3-match-progress';
 import {g23JunkerMenu,G23_JUNKER_PAID} from './g2-3-junker';
 import {crownTeamSizeBonus} from './deployment-cap';
@@ -57,7 +57,7 @@ export function validateG23GrantEvidence(state:MatchState,context:ResourceProven
   check(new Set(e.units.map(u=>canonicalContent(u.location))).size===e.units.length
    &&e.units.every(u=>Object.keys(u).length===5&&u.team==='player'&&!validateDeployment(preparation,u.id,u.location)),'deployment snapshot');
   const progress=replayG23Economy(state.seed,economy);
-  check(getPlayerDeploymentCount(preparation)<=e.level+crownTeamSizeBonus({...progress,rewardClaims:p.rewardClaims.filter(c=>receipts.findIndex(r=>r.receiptId===c.id)<e.mechanicPrefixLength)}),'deployment capacity');
+  check(getPlayerDeploymentCount(preparation)<=e.level+crownTeamSizeBonus({...progress,epicCrowns:epicCrownsAtResourcePrefix(state,prefix),rewardClaims:p.rewardClaims.filter(c=>receipts.findIndex(r=>r.receiptId===c.id)<e.mechanicPrefixLength)}),'deployment capacity');
   if(receipt.receiptId.startsWith('g23:academy:')){
    const tier=Number(receipt.receiptId.split(':').at(-1));
    check(receipt.kind==='item'&&receipt.source==='academy'&&[3,4,5].includes(tier)

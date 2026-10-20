@@ -3,7 +3,8 @@ import {equipItem,startMatchCombat,stepMatch,useConsumable,serializeMatch,restor
 import {accepted,transferPreparation} from './fixtures/t13-loot-public';
 it('T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item',async()=>{
   let state=await transferPreparation();
-  const survivor='unit-9',donor='unit-13',tg=state.items.find(i=>i.definitionId==='thiefs-gloves')!,vest=state.items.find(i=>i.definitionId==='vest')!;
+  // Same authenticated seed-18619 route pinned by m8-b8-live-transfer.
+  const survivor='unit-24',donor='unit-20',tg=state.items.find(i=>i.definitionId==='thiefs-gloves')!,vest=state.items.find(i=>i.definitionId==='vest')!;
   state=accepted(useConsumable(state,state.consumables.find(c=>c.definitionId==='magnetic-remover')!.consumableId,{kind:'unit',unitId:donor}));
   state=accepted(equipItem(state,vest.id,donor,0));
   state=accepted(startMatchCombat(state));

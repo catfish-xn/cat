@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { dispatchTriggers, EMPTY_FACTS, EMPTY_TRIGGER_LEDGER, validateTriggerLedger, type TriggerSignal } from '../src/simulation/m8/triggers';
 import { cast, context, source, trigger } from './fixtures/m8-contract-cases';
 import type { CounterDefinition, TriggerDefinition } from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const units=[{id:'p',team:'player' as const,cell:{col:3,row:4},hp:100,maxHp:100,alive:true},{id:'a',team:'enemy' as const,cell:{col:3,row:3},hp:100,maxHp:100,alive:true},{id:'b',team:'enemy' as const,cell:{col:3,row:2},hp:100,maxHp:100,alive:true}];
 const signal=(n:number):TriggerSignal=>({context:{event:'attack-completed',eventSeq:n,tick:n,actionSeq:n,actorId:'p',targetId:'a',cast:null},facts:EMPTY_FACTS,aggregation:'event'});
 const counter=(cap:number|null=null):CounterDefinition=>({id:'attacks',scope:'source-instance',reset:'combat-start',cap,events:[{event:'attack-completed',listener:{subject:'actor',relationToHolder:'self',withinHexes:null},qualifies:'completed-event'}]});

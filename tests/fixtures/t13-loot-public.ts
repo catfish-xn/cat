@@ -42,11 +42,11 @@ export function battle(prepared: MatchState) {
   return {prepared,started,revealed,beforeFinal,ended,events,revealPrefix,startEvents:start.events};
 }
 const prefixes=new Map<string,MatchState>();
-export async function publicPrefix(roundId:string,seed=42,build='cannon'):Promise<MatchState> {
-  const key=JSON.stringify([roundId,seed,build]);
+export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[]):Promise<MatchState> {
+  const key=JSON.stringify([roundId,seed,build,augmentPriorities]);
   if(!prefixes.has(key)) {
     const captured=new Error('captured');let prefix:MatchState|undefined;
-    try {await run(api,{build,seed,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+    try {await run(api,{build,seed,augmentPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
       if(before.roundDefinitionId===roundId && (command?.type==='start'||before.phase==='choice')) {prefix=before;throw captured;}
     }});}catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error(`Missing public prefix ${key}`);prefixes.set(key,prefix);
@@ -71,11 +71,18 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
 export async function transferPreparation() {
-  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
+  // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
+  let s=await configuredPrefix('4-7',{seed:18619,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
-    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
+    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
+    goldReserveByRound:{'4-5':40}});
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
   const pair=players(s).filter(u=>u.definitionId==='ezreal'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
+  const gloves=s.items.find(i=>i.definitionId==='thiefs-gloves')!;
+  if(!gloves)throw Error('Missing public glove recipe');
+  if(gloves.location.kind==='unit'&&gloves.location.unitId!==donor.id){const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover')!;s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:gloves.location.unitId}));}
+  if(s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===donor.id&&i.id!==gloves.id)){const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover')!;s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:donor.id}));}
+  if(s.items.find(i=>i.id===gloves.id)!.location.kind==='inventory')s=accepted(api.equipItem(s,gloves.id,donor.id,0));
   if(donor.location.kind==='board'&&survivor.location.kind==='board'){
     const a=donor.location,b=survivor.location;
     if(a.cell.row<b.cell.row||a.cell.row===b.cell.row&&a.cell.col<b.cell.col){

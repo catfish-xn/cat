@@ -165,9 +165,9 @@ async function main() {
 
       // 3d. Item hover (needs an item in my inventory; loot arrives from 1-2 on).
       if (!done.has('item') && s.state.items.some(item => item.location.kind === 'inventory')) {
-        const itemDef = await page.evaluate(() => document.querySelector('#strategy-root [data-item-def]')?.dataset.itemDef ?? null);
+        const itemDef = await page.evaluate(() => document.querySelector('.item-dock [data-item-def]')?.dataset.itemDef ?? null);
         if (itemDef) {
-          const text = await hoverText(page, 'item-popover', () => page.hover(`#strategy-root [data-item-def="${itemDef}"]`));
+          const text = await hoverText(page, 'item-popover', () => page.hover(`.item-dock [data-item-def="${itemDef}"]`));
           check(Boolean(text) && /配方/.test(text), `item hover on ${itemDef} shows its effect and recipe (${text?.split('\n').slice(0, 2).join(' / ')})`);
           done.add('item');
         }

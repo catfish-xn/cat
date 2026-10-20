@@ -10,6 +10,9 @@ import { startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { readItemCatalog } from '../src/simulation/item-catalog';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const contributions = (unit: CombatUnit, item: string) => unit.mechanismState!.statuses
   .flatMap(g => g.contributions).filter(c => c.source.definitionId === item);
@@ -65,7 +68,7 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
     // Random belt/vest + 2-4 belt make Warmog; 3-4 bow makes Titan;
     // the actual 2-7 rod and 3-7 sword make Gunblade. No obsolete 4-7 choice.
     let s = await configuredPrefix('5-1', {seed:42,build:'sniper',
-      supplyChoices:['belt','bow','belt'],reservedComponents:['belt','bow','vest','sword','rod'],
+      supplyChoices:['belt','bow','rod'],reservedComponents:['belt','bow','vest','sword','rod'],
       fieldCopies:['irelia'],equipmentTargets:{
         'titans-resolve':{definitionId:'irelia'},warmog:{definitionId:'irelia'},gunblade:{definitionId:'irelia'},
       }});

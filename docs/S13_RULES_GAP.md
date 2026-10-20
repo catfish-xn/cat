@@ -351,7 +351,7 @@ T13-A 发布顺序更新（2026-10-14 用户指示）：单位全槽自动合成
 
 ## 9. P3/P4/P5：14.24b 数值资料与一次发布提案（2026-10-14，未实施）
 
-范围来自 `SESSION_HANDOVER.md` §0.0.6 的 P3、P4、P5。本节是新增资料与提案，不批准玩法、不修改代码、测试或 digest。下文“现行”统一指远端 `multiplayer@20c5f053a416ca51bc7b10ac26698fa67d1b35ea`，不是上文早期 R1–R4 设计时点；T13 已实施 R3/R4，格式为 schema7/save3/replay3/command3，NET_PROTOCOL=2。交接 §0.0.5 记录 CONTENT=`fnv1a32-utf16:bd9c3a8e`、LOOT_REPLAY=`fnv1a32-utf16:5cd0487c`；本单只读核对生成配置，未运行引擎重新计算这两个值。
+范围来自会话交接文件 `SESSION_HANDOVER.md`（2026-10-20 已移出仓库）§0.0.6 的 P3、P4、P5。本节是新增资料与提案，不批准玩法、不修改代码、测试或 digest。下文“现行”统一指远端 `multiplayer@20c5f053a416ca51bc7b10ac26698fa67d1b35ea`，不是上文早期 R1–R4 设计时点；T13 已实施 R3/R4，格式为 schema7/save3/replay3/command3，NET_PROTOCOL=2。交接 §0.0.5 记录 CONTENT=`fnv1a32-utf16:bd9c3a8e`、LOOT_REPLAY=`fnv1a32-utf16:5cd0487c`；本单只读核对生成配置，未运行引擎重新计算这两个值。
 
 ### 9.1 来源可信度与适用边界
 
@@ -593,3 +593,7 @@ P7 方案 B（2026-10-15）：P7-1 覆盖后仅五次 x-4，全部按 HP 每批�
 30项见 `evidence/g2-augments/RECONCILIATION.md`。选择概率未找到一手历史证据，
 标记U并沿用等权3字无放回，不据tier编造权重。非来源明确的舍入、中心格、盾时长等
 有限项目约定写入 `MATCH_CONTRACT.md` 的W4条目；不改变日程、经济、XP、选秀。
+
+## v16 覆盖说明（2026-10-20）
+
+上文 §4 是历史有限拆分方案。本版用户已批准取消两种单件重铸器，统一为官方身份 TFT_Consumable_ItemReroller（内部reforger），目标单位全部永久装备；新增英雄复制器，次级复制器改用官方显示名。5-7/6-7冻结表、1–4阶段追加复制器及约定值以 [EPIC_LOOT_V16](EPIC_LOOT_V16.md) 为准，预算以M8B_LOOT §11.3/11.4为准；历史来源文件与历史指纹不改写。

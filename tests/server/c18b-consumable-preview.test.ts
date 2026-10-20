@@ -12,6 +12,8 @@ import { previewUseConsumable } from '../../src/simulation/consumables';
 import { toPrivateSeatView } from '../../src/server-entry';
 import type { ConsumableTarget } from '../../src/simulation/consumable-types';
 import type { MatchState } from '../../src/simulation/match-types';
+import { equipItem } from '../../src/simulation/match';
+import { accepted } from '../fixtures/r3r4-public';
 import { publicConsumables } from '../fixtures/r3r4-public';
 
 const candidates = (state: MatchState): ConsumableTarget[] => [
@@ -20,7 +22,8 @@ const candidates = (state: MatchState): ConsumableTarget[] => [
 ];
 
 describe('C18-B consumable target answers', () => {
-  const state = publicConsumables(26);
+  const base=publicConsumables(26),holder=base.preparation.units.find(u=>u.team==='player')!;
+  const state=accepted(equipItem(base,base.items.find(i=>i.location.kind==='inventory')!.id,holder.id,0));
   it('the fixture holds tools of every kind (precondition)', () => {
     expect(state.consumables.length).toBeGreaterThan(0);
   });
@@ -50,12 +53,12 @@ describe('C18-B consumable target answers', () => {
   it('words an allowed answer from affectedItemIds and a refusal from the §18.8 table; next-battle only outside preparation', () => {
     const remover = { consumableId: 't', definitionId: 'magnetic-remover' } as const, name = (id: string) => ({ a: '暴风大剑', b: '反曲之弓' } as Record<string, string>)[id] ?? id;
     const ok = { ok: true, effect: 'remove-all', affectedItemIds: ['a', 'b'], destination: 'inventory', affectsCurrentBattle: false } as const;
-    expect(consumableDropText(remover, '艾瑞莉娅', ok, name, 'preparation')).toBe('拆卸器 → 艾瑞莉娅：将拆下 暴风大剑、反曲之弓，放回物品备战席');
-    expect(consumableDropText(remover, '艾瑞莉娅', ok, name, 'combat')).toBe('拆卸器 → 艾瑞莉娅：将拆下 暴风大剑、反曲之弓，放回物品备战席 · 下场生效');
-    expect(consumableDropText({ consumableId: 't', definitionId: 'component-reforger' }, '暴风大剑', { ...ok, effect: 'reforge-component', affectedItemIds: ['a'] }, name, 'settlement'))
-      .toBe('组件重铸器 → 暴风大剑：将重铸 暴风大剑（结果随机），产物进入物品备战席 · 下场生效');
+    expect(consumableDropText(remover, '艾瑞莉娅', ok, name, 'preparation')).toBe('装备拆卸器 → 艾瑞莉娅：将拆下 暴风大剑、反曲之弓，放回物品备战席');
+    expect(consumableDropText(remover, '艾瑞莉娅', ok, name, 'combat')).toBe('装备拆卸器 → 艾瑞莉娅：将拆下 暴风大剑、反曲之弓，放回物品备战席 · 下场生效');
+    expect(consumableDropText({ consumableId: 't', definitionId: 'reforger' }, '暴风大剑', { ...ok, effect: 'reforge-all', affectedItemIds: ['a'] }, name, 'settlement'))
+      .toBe('装备重铸器 → 暴风大剑：将重铸 暴风大剑（结果随机），产物进入物品备战席 · 下场生效');
     for (const reason of Object.keys(CONSUMABLE_FAILURE_TEXT) as (keyof typeof CONSUMABLE_FAILURE_TEXT)[])
-      expect(consumableDropText(remover, '艾瑞莉娅', { ok: false, reason }, name, 'combat')).toBe(`拆卸器 → 艾瑞莉娅：${CONSUMABLE_FAILURE_TEXT[reason]}`);
+      expect(consumableDropText(remover, '艾瑞莉娅', { ok: false, reason }, name, 'combat')).toBe(`装备拆卸器 → 艾瑞莉娅：${CONSUMABLE_FAILURE_TEXT[reason]}`);
   });
   it('record lines for reforge and removal; consumableUsed adds none', () => {
     const names = { item: (id: string) => id === 'i1' ? '暴风大剑' : id, unit: () => '艾瑞莉娅' };

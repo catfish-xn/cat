@@ -17,6 +17,9 @@ import {healView,packets} from './helpers/replay2-views';
 import {hexDistance} from '../src/simulation/board';
 import {getCatalogRoundByOrdinal} from '../src/simulation/round-selectors';
 import {getMultiplayerRoundById} from '../src/simulation/multiplayer-round';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const IMPLEMENTED=['TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnZhonyasParadox','TFT9_Item_OrnnDeathfireGrasp','TFT_Item_Artifact_Mittens','TFT_Item_Artifact_TalismanOfAscension',
  'TFT_Item_Artifact_RapidFirecannon','TFT_Item_Artifact_SeekersArmguard','TFT_Item_Artifact_SilvermereDawn',
@@ -42,7 +45,7 @@ it('source records cover the 29-artifact pool across declarative and new-mechani
  expect(Object.keys(G24_ARTIFACT_SOURCE)).toEqual([...G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6]);
  expect(Object.keys(G24_ARTIFACT_ITEMS).sort()).toEqual([...IMPLEMENTED].sort());
  expect([...G24_ARTIFACT_PENDING]).toEqual([...NEW_MECHANISM].sort());
- expect(G23_POLICY.revision).toBe('g2-4b-augment-anomaly-fixes-v12');
+ expect(G23_POLICY.revision).toBe('g2-4b-epic-loot-reforger-v16');
  for(const [id,item] of Object.entries(G24_ARTIFACT_ITEMS)){
   expect(ITEM_DEFINITIONS[id]).toBe(item);
   expect(item).toMatchObject({apiName:id,kind:'completed',slotCost:1,unique:G24_ARTIFACT_SOURCE[id as keyof typeof G24_ARTIFACT_SOURCE].unique,conventionIds:['G24-ARTIFACT-SUBSET-01']});

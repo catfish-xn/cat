@@ -1,6 +1,45 @@
 # 界面数据需求（Claude → Codex）
 
+## LOOT-ORB-CLAIM-v15（Codex → Claude，待服务器/界面接线）
+
+- 规则已批准 2026-10-20 02:20，02:26 补定战斗可点、排队、战后结算；第二轮基线 b1c841e6，合同 `multiplayer-orb-claim-v2`。消息新增 `{type:'claimOrb',round:number,orbId:string}`，round 为操作时当前轮，orbId 可来自历史轮；仅用真实席位 state 转发 runSharedMatchCommand，不重算奖励或售价。
+- private 新字段 unclaimedOrbs：`{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`；保留跨轮法球，点一次领取整颗。queued=true 表示已受理，尚未到账；领取结果 `orbClaimReceipts`（LootView 为 claimReceipts）含原 payload、resolution、gold、claimedRoundId、grantedUnitIds；capacity-sold 显示“自动出售 +NG”，gold 为缺货补偿。排队 ACK 不伪造入库回执。
+- 公共投影只能读 readPublicOrbSummary 的 `{count,tiers}`，不能转发 orbId/entries/收据。单机/旧预览省略新字段，现有视觉文件无需为类型兼容改动。
+- preparation/settlement/choice 可即时领；combat 或冻结 PvP 阵容接受并排队，battle/awaiting-settlement 必须转发。重复排队沿用 already-claimed，失败枚举不新增；另有 unknown-orb / seat-eliminated / stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 和池校验；失败不改 state/pool/RNG。接受排队只写席位私有 m8.loot.queuedOrbClaims（string[] FIFO），不改备战席/金币/卡池库存/预留/RNG，无领取事件/收据；包装仅更新 revision。
+- 战后在本轮经济/HP/成长、G23 钩子、延迟升星完成之后、战后选择之前按 FIFO 结算（PvE withCombat / PvP applyRoundSettlement）。以此时容量和库存执行同一领取逻辑，每颗后 drain 原机制奖励并同步装备；淘汰先清队列并 forfeited，不补金、不扣池。领取本身 0 RNG；原装备钩子按 FIFO/父装备 ID 顺序消费 equipment 流并记 roll，详见 MATCH_CONTRACT。完整最新席位快照必须持久化队列；重连只投影 queued，不再次排队或自动发奖，不用战前副本覆盖最新状态。
+- 服务器 `src/server/net/messages.ts` 的 NET_PROTOCOL_VERSION 必须 3→4，目标值由 simulation/m8/version.ts 的 MULTIPLAYER_NET_PROTOCOL_VERSION 导出；本任务禁改服务器目录，当前该服务器常量仍为 3。
+- bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；整局终局对赢家及其他存活席位调用 `forfeitTerminalOrbs(state: MatchState): MatchStep`（server-entry 公共导出），提交返回 state/events；领域已按 Match 规则编号，服务器不得重复编号。无失败枚举、重复调用无新事件或收据；调用者负责确认整局结束，不要求席位已淘汰。淘汰清理已由领域接上。详见 MATCH_CONTRACT 的 #260 / #262 终局入口。
+- 验收：战斗点击接受且 queued=true，当时资源不变；重复点击失败无变化；战后才入库/按最终容量折金，先淘汰则 forfeited；排队前后重连/恢复不丢不重发；公共不泄露内容或 queued；截止/跨轮不消失，bot 准备入口领完。约定值：完整星级缺货整条按费用补金一次，奖励法球 gray；跨席竞争沿原结算提交顺序。完整签名、恢复边界和 PR 草稿：[v15 交接](LOOT_ORB_CLAIM_V15.md)。
+
+## D11-SERVER-LIVE-BANK（Codex → Claude，v15 发布阻塞）
+
+- 领域已交付：`startTwoSidedBattle` 返回任务的 `sampleBankGold(seatId:string,liveGold:number):void`。仅服务器权威 Match.gold；样本在下一 tick 前生效，不扣费、不发资源、不推进 RNG。非法席位 / 数值 / 超过 100000 条有效样本为 invalid-bank-sample；终战后 wrong-phase；相同采样无操作。
+- 现存缺口：`src/server/room/two-sided-resolver.ts` 当前从冻结快照先算完整结果，播放期间交易不回到计算。因此贪财化身不能声称已完整联机生效；需要把真实规则 tick 与交易排序关联，再在金币变化后、下一 tick 前传入权威样本。不能事后改动画或再写一套增伤公式。
+- 字段：私有 `BattleResult.bankSamples?: {tick,team,liveGold}[]`，需原样保留给 proposeSettlement 及 toCombatReplay / startCombatReplay 输入；公开 replay 输出不含银行。已有 g23Facts 整体转发同时承载 d11Headhunter 击杀事实，不要自行计数。
+- 验收：同一 PvP 内真实买卖使后续伤害双向变化；与物品 / Sevika 战斗金币相加一次；切片任务、完整账本、重放一致；镜像不发成长 / 收益，不向他席公开银行。当前仅领域任务与回放测试通过，服务器尚未接线；本轮没有修改 src/server/。
+
+## D11-DISPLAY（Codex → Claude，v15）
+
+- 名称 / ID / 等级：`all-for-one-i` 一费奉献 I（silver）、`trifecta-i` 三项赛 I（gold）、`spirit-link` 灵魂连接（gold）；`avarice-incarnate` 贪财化身、`headhunter` 猎头者。目录已有准确 name / description，数值以 d11-fill-source 为准。
+- 私有字段：`toPrivateSeatView().d11Display? = {definitions:[{definitionId,name,description,tier?}], headhunterKills?}`。仅已拥有 / 当前提供的 D11 定义；headhunterKills 为已结算永久击杀数，战中变化由战斗事件 / 权威攻速呈现。不得读 hidden.progress 给界面自行聚合。
+- 公开字段：战斗 replay 每单位可选 `choiceEffects:[{definitionId,name,description,tier?}]`；只显示已生效效果，不含其他席候选、金币、RNG 或收据。已有 readCombatStats / statChanged / heal / packetDamage / kill 继续提供表现数据；静态 PublicBoard 不增加隐藏信息。
+- 缺口：现有 augmentPlayerDescription 只允许六个旧 ID，需适配读取新增权威 description，不能把占位 mechanic d11Fill 当效果文案。灵魂连接说明必须写清开战生命与完整十点组；猎头者说明不得把召唤物 / 助攻算入。
+- 图标：现有 `s13-augment-asset-manifest.ts` 无三个新 ID 的映射，本轮无可复用 icon key，未编造路径；沿用当前无图标文字回退，表现层可按自身素材规则补映射，禁止凭等级猜文件名。
+- 验收：单机 / 联机选择与已拥有列表显示完整中文名称、说明和正确等级；公开战斗可读同一说明；不用修改规则数值、不额外发资源。没有声称已做浏览器视觉验收。完整交接：[D11_WIRING_V15](D11_WIRING_V15.md)。
+
 按 AGENTS 约定记录界面缺少的数据、命令或接线。每条写明关联任务、优先级、交付阶段、缺少的字段与含义、界面当前替代路径、交付后需要复核的内容和验收条件。界面不自行计算规则；后端交付前，界面只读已有权威字段，并在无法确定含义时使用中性文案。
+
+## AUGMENT-CARD-REROLL（Codex → Claude，v15，2026-10-20）
+
+- 状态：领域、共享命令与私有投影已交付；服务器和界面待 Claude 接线，本轮禁改这些目录。旧“刷新强化 · 同一等级（剩余 1 次）”整组入口不再适用。
+- 用户已确认每张卡下面单独刷新、只换该卡且锁级；每槽每次选择各免费一次。被刷掉的 ID 对本局该玩家永久移出，后续任何强化节点都排除，不影响其他玩家。轮次保持 2-1/3-2/4-2。
+- 数据：`toPrivateSeatView(state).pendingChoice.augmentOptions[] = {optionIndex,definitionId,rerollAvailable}`，与 offers 同序，optionIndex 为 0..2；每卡按钮只读取 rerollAvailable。`rerolledSlots` 表示各槽是否用过；`rerollsRemaining` 改为尚未使用的槽位总数 0..3，不能用于判断某一张是否可刷。池耗尽时未用槽位按钮同样不可用。单机也可用此投影，不在界面另算候选。
+- 单机命令：`rerollAugment(state,choiceId,generation,optionIndex)`；联机消息：`{type:'rerollAugment',choiceId,generation,optionIndex}`，服务器白名单/类型加必填整数下标，按 [联机合同](MULTIPLAYER_CONTRACT.md) 经 runSharedMatchCommand 事务。旧缺参调用明确 invalid-slot，不能默认刷第 0 张。
+- 所有卡共用最新 choiceId/generation。任一卡成功都会 generation+1；收到返回/投影后更新全部按钮的命令代次，不连续发送缓存的旧代次。刷新失败保留当前画面并展示回执 reason，不能乐观换卡或消耗按钮。
+- 失败：wrong-phase、stale-choice、invalid-slot、augment-rerolls-exhausted（仅该槽）、augment-pool-too-small（同级候选零项）。服务器原身份、revision、轮次失败继续沿用。成功仅目标槽卡改变，其他两张原位保留。
+- 持久化：服务器需随权威席位 state 保存 removedAugmentIds、augmentOffers[].rerolledIndices、pendingChoice.rerolledSlots；重连直接恢复投影，不 createMatch 或重置刷新状态。移出账本不对客户端下发。现有联机完整 Match 用户读档仍不支持，本轮没有新增服务器磁盘恢复能力。
+- 验收：三槽各刷一次且各按钮独立禁用；新卡不与其余卡/已拥有/永久移出重复；刷新、断线重连、下一节点后均正确；旧代次失败无扣费/RNG；联机保存 pool+state 的 revision 一起提交。basic bot/超时仍首选，不增加刷新行为。
+- 发布：与法球、#231 接线统一 v15；本轮版本、digest 和录制指纹不动，见 [收口清单](AUGMENT_CARD_REROLL_V15.md)。
 
 ## G23-SERVER-FACTS（Codex → Claude，G2-3配套P1）
 
@@ -349,7 +388,7 @@
 | --- | --- | --- | --- | --- |
 | `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
 | `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
-| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5） | 该席场上单位与所持装备定义（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读 | 只含上场的本席单位；不含备战席、商店、金币、经验、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
+| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5）；`bench[{definitionId,starLevel,slot,items[]}]`、`looseItems[]`、`augments[]`、单位上的 `anomaly?`（2026-10-20，合同 §27） | 该席场上与备战席单位、所持与未装备的装备定义、单位异常、已有强化（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读（只算棋盘） | 不含连胜/连败、商店、金币、经验、待选强化、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
 | `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
@@ -835,7 +874,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 候选：排除最近 `avoidRecentRounds` 轮对手；为空则窗口减 1，直到 0（全部存活席）。若各席候选互不相容、凑不出完整配对，全体同时减 1 再试（2 → 1 → 0），保证开战抽到的对手一定在准备期展示的候选里。不消耗 RNG。
 - 时机：回合进入时只算候选（`RoomState.opponentCandidates`）；配对与全部 `battleSeeds` 挪到准备截止冻结时抽取，抽取顺序仍是"洗牌 → 奇数镜像来源 → 每场种子"。空历史时与原先无约束洗牌逐位相同。配对历史 `RoomState.pairingHistory` 在房间状态里，断线、接管、重连后候选不变。
 - 投影：`PlayerView.opponentCandidates?: string[]`（选择/准备期、PvP 轮，按座位序，只含存活、不含自己；其它时候为空）；`opponentSeatId` 在冻结前为 null。`NET_PROTOCOL_VERSION` 保持 2（只增视图字段，依据写在 `messages.ts`）。
-- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。
+- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。2026-10-20 起另显示对方强化、异常、备战席和未装备装备，不显示连胜/连败（合同 §27）。
 
 ### SR-G1-01 请 Codex 用 §10 规则替换占位数值（P2，只改参数）
 
@@ -977,3 +1016,55 @@ combat stats. Claude needs to wire presentation and server-entry/command dispatc
 without computing stage values, creating assets or changing economy. Acceptance:
 move during preparation, freeze for battle, restore the position, mirror seat B
 once, reject movement while roster locked. Codex changed no UI/server files.
+
+## S13-P1：收入显示与未完成接线（2026-10-18）
+
+- 已有 `previewRoundEconomy` 已按遥遥领先/对冲基金/投资策略II返回真实利息预估；`src/rendering/strategy-panel.ts` 直接使用旧 `getInterestGold` 的展示仍需Claude切到此查询，避免无利息显示5G或100G只显示5G。领域结算已正确，界面未改。
+- 双刀流是一次获得2件库存成装，沿用物品投影。无自动穿戴或覆盖旧装备。其余未实现异常不得展示为可选。
+- 双排待接：满席时选择事务须创建真实单位所有权、占共享池；腾位后的领取/升星需要shared command事务。当前room的plain deploy与PvP锁定不经过该事务，原型未注册。
+- 贪财化身待接：联机冻结战斗必须接纳战中合法买卖/刷新/买XP的真实经济事件，恢复须重演同一事件输入。当前仅开战余额快照不能表示原版实时持有金币效果，原型未注册。
+- 进入未知、终极英雄待接：需跨轮暂离持有者及4星单位完整投影/共享池/恢复，当前不提供半实现选择。
+
+## UR-I3-01：联机战斗帧带上单位当前状态种类（已实现，v15 第四块，2026-10-20）
+
+需求原文（来自 PR #246 分支）：
+
+- 字段：`CombatViewUnit` 增加可选 `statuses?: readonly { kind: StatusKind | 'channel' | 'redirect'; harmful: boolean }[]`，按当前快照取"生效中"的状态（跳过未生效和被同类更强来源压制的贡献，与 `readUnitStatusRows` 的 state 判断一致），同种类同极性去重；变化时随 `unitUpdated` 下发。
+- 用途：联机帧现在只有护盾数值，联机界面只能画护盾图标；眩晕、灼烧、重伤等看不到。界面不能从 statusChanged 事件顺序自己推算。
+- 验收：联机一场含眩晕/灼烧的战斗，图标出现与消失的 tick 与单机同一场一致；关键帧/断线重连后正确；不改任何规则结果。
+
+实现：领域只读回放投影直接复用纯函数 `readUnitStatusRows`，仅保留 `effective` / `active` 行，复制 `kind/harmful`，按二者去重。顺序固定为 kind 的 ASCII 字符升序，同 kind 下 `harmful:false` 在前；无状态显式发 `[]`，最后一项消失也会产生 tick 末 `unitUpdated.changes.statuses:[]`。初始帧、关键帧、终态、`unitEntered.unit` 均带完整数组。护盾沿用 `shield` 数值，不加入 statuses。类型 `CombatViewStatus` / `StatusKind` 已经 server-entry 导出。
+
+本轮未修改 presentation/server/UI，直接复用避免在禁改文件外复制状态判定；该读取函数没有 DOM/Phaser 运行时依赖。netProtocol 与 claimOrb 共用目标 4，不另升版本。只读帧及关键帧恢复测试已通过；实际联机图标接线/浏览器验收留 Claude。旧帧指纹本轮不重录，清单和测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
+
+## V16-UI-01：史诗奖励与统一工具适配（领域完成，界面待Claude）
+
+本任务明确禁止Codex修改presentation/rendering。当前编译阻塞位于 src/presentation/loot-view.ts:48 和 orb-loot.ts:43/48：旧工具名/图标枚举缺少reforger、两种复制器，失败映射缺少bench-full（共6条tsc诊断）。另外两个payloadLabel必须处理新增forge分支，复制器成功预览必须显示复制目标，不能走“重铸—”文案。现有consumableTargetHint已读取targetKind，领域四种工具均为unit；界面不得自算合法性。
+
+字段与来源：CONSUMABLE_DEFINITIONS[id].name / description / targetKind；ConsumablePreview.effect='remove-all'|'reforge-all'|'duplicate-unit'，affectedItemIds表示永久装备；failure='bench-full'；LootPayload.kind='forge'与definitionId，名称由EPIC_REWARD_NAMES提供（成装锻造器、神器装备锻造器）；冠冕显示金铲铲冠冕。RevealedOrbView.tier/entryDropIds保持领域冻结值，不重算颜色/概率。
+
+用途：准确展示新工具、满席拒绝与锻造器领取内容。继续调用useConsumable/claimOrb/selectChoice；不改变排版、动画或规则。
+
+验收：tsc无旧枚举错误；两种复制器/重铸器/拆卸器名称与14.24 zh_cn一致；forge不进入英雄渲染回退；复制预览、bench-full拒绝可读；单位整装重铸目标正确；联机领取后四选一及重连收据展示正确。未获越界修改授权前，Codex只提交领域和此需求，保留明确编译阻塞。
+
+## V16-UI-250：终极英雄与进入未知
+
+对手公共棋盘目前保留物理 3 星；有效 4 星已在战斗录像中提供。原版侦察是否公开四星 **尚未核实**，不能将当前回退描述成原版隐藏规则。#265 离线核对的 14.24 map22 元数据含升级描述和 NumRounds=3，但两个执行引用未收录，也没有客户端星级显示/网络复制字段；技能 rank 4 表不能证明对手可见性。证据见 [侦察可见性审计](evidence/v16/scouting-visibility-audit.json)，可用 `node scripts/audit-d14-scouting.cjs` 复核。当前禁止联网且不改服务器，因此不凭推断新增公共标记；后续取得本地原版客户端执行/同步证据或可核验录像后再决定。此项保留证据缺口。
+
+领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
+
+- `PrivateSeatView.d14Display?`：`anomalyId, choiceId, unitId, phase(waiting/promoted/absent/returned/retired), dueOrdinal, remainingSettlements, effectiveStarLevel, physicalStarLevel`。进入未知 absent 时另有仅本席可见的 `heldUnit, heldItems`；它们已从 `preparation.units/items` 移出，不提供出售/装备/复制控件。满席到期显示等待空位，不能当成已获得增益。
+- 终极英雄私有单位行在 promoted 时有 `starLevel:3, effectiveStarLevel:4, sellGold, poolCopies:9`；`d14Display` 也提供同一 sellGold/poolCopies。sellGold 直接查询该英雄三星售价（1费9、2费17），出售说明写 **“与该英雄三星同价（专用永久晋升，物理9份）”**，不可写死9金或按通用四星27份推导售价/退池数；目标准入仍仅一费。
+- 公共 `CombatViewUnit.effectiveStarLevel?`：晋升单位为4，其余省略并读取已有 starLevel；`choiceEffects` 包含两个异常的名称/说明。物理 starLevel 仍1–3，UI 不能把它写回4。
+- 私有 `d11Display.definitions` 现在也提供两个 D14 异常的名称/说明；待选择的报价也可读取。`remainingSettlements` 是权威数据，不按动画、计时器或 Continue 点击次数另算。
+- 验收：3星1费目标能看到终极英雄、其它目标不提供；选择后3次真实结算晋升显示四星且卖9金；进入未知携装备离场，倒数归零满席仍等待，腾位归来显示永久+50%AD/+50AP；读档/重连不重复发放。其它席的候选和托管装备不进入公共投影。
+
+只定义数据和行为，不规定视觉布局；服务器/表现层接入由其负责人完成。本轮实际 `tsc --noEmit` 通过，无额外编译阻塞。前一节 V16-UI-01 的编译诊断是史诗奖励交接时记录。
+
+全套检查另发现 `g23AnomalyApiName` 缺少两个 D14 名称映射；基线还缺 D11 的贪财化身/猎头者映射。最小待审补丁为 `artifacts/v16-recording/UI_ADAPTER_250.patch`，只补四个已由本地来源证实的 apiName，不改布局、素材或规则；未写入表现层源码。该补丁不包含四星、售价、离场倒数等控件接线，仍须完成上面的验收。准备阶段四星基础/技能应读取领域导出的 `d14UnitBase(unit, true)`，上场后的含装备/羁绊数值读取 `buildStrategySnapshot(state)`；战斗中读取现有 `CombatViewUnit` 数值，不能在界面自行续推星级倍率。
+
+### #265 / #270：有效四星技能说明（已提供）
+
+`src/simulation/ability-display.ts` 导出纯查询 `ultimateHeroAbilityDisplayValues(definitionId: string, stats?: AbilityDisplayStats): Readonly<Record<string, number>>`。仅供已认证 `effectiveStarLevel===4` 的终极英雄使用；返回已替换派生值与表达式的只读 token 映射，直接交给现有模板。默认 AD 取专用四星基础值、AP=100；传入快照 AD/AP 时沿用普通技能说明的整数边界（0–1000000），无效英雄/数值抛 `RangeError`。函数不授予晋升，不改变物理星级或玩法。
+
+来源复用 `d14UnitBase` 的实际 rank 4 表及 14.24b 辛吉德 DR=60% 覆盖，不能外推三星。`src/presentation/ability-text.ts` 仅做显示映射：`abilityText(id,4,stats)` 调用此查询，普通 1–3 星沿用原函数。Lux 默认伤害1260/护盾300，150AP时1890/450；辛吉德减伤60%。14个一费英雄模板无未替换 token，原有1–3星显示回归通过。

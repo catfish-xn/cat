@@ -1,3 +1,4 @@
+import { freezeContent } from '../src/simulation/content/freeze';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
@@ -10,6 +11,9 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { accepted, freeze, readyMatch, reachRound } from './match-helpers';
 import { publicInventory, publicRecursivePurchase } from './fixtures/b8-public-acquisition';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
@@ -26,6 +30,12 @@ function forgedChain(items: readonly ItemInstance[]): MatchState {
 }
 
 describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
+  // Build only legal input fixtures here; each case owns a detached copy.
+  // Plans, duplicate grants and all restore validation remain in the case.
+  const legalInventories = new Map<string, ReturnType<typeof publicInventory>>();
+  for (const definitionId of ['sword', 'gloves', 'blue-buff', 'thiefs-gloves']) {
+    beforeAll(() => { legalInventories.set(definitionId, freezeContent(publicInventory([definitionId]))); });
+  }
   it.each(['sword', 'gloves', 'blue-buff', 'thiefs-gloves'])('plans exactly one permanent %s with no receipt/economy/RNG work', definitionId => {
     const state = freeze(readyMatch()), before = JSON.stringify(state);
     const plan = planPermanentItemGrant(state, { definitionId, receiptId: 'reward-1' }, []);
@@ -40,7 +50,9 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
     expect(plan.state.scheduleReceipts).toBe(state.scheduleReceipts);
     expect(() => restoreMatch(serializeMatch(plan.state))).toThrow('Invalid B8 Match: current resource fold');
     // The same definition is restorable only after a real choice (and recipe for a completed item).
-    const legal = publicInventory([definitionId]);
+    const legal = structuredClone(legalInventories.get(definitionId)!);
+    freezeContent(legal.state.m8); freezeContent(legal.state.resourceProvenance);
+    if (legal.state.combatInputBasis) freezeContent(legal.state.combatInputBasis);
     expect(legal.state.items.find(item => item.id === legal.itemIds[0])?.definitionId).toBe(definitionId);
     expect(restoreMatch(serializeMatch(legal.state))).toEqual(legal.state);
     // Caller commits its receipt with the inventory plan, then supplies that ledger on retry.
@@ -112,10 +124,10 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
 describe('B5 real purchase recursive upgrades and equipment returns', () => {
   // Match #98's public-fixture setup: warm the exact paid acquisition routes,
   // while every upgrade/restore assertion and its original timeout stays in the case.
-  for (const definitions of [
-    ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'],
-    ['sword', 'thiefs-gloves'], ['sword', 'rod', 'vest', 'cloak'],
-  ]) beforeAll(() => { publicInventory(definitions, true); });
+  for (const [definitions, seed] of [
+    [['blue-buff', 'blue-buff'], 11], [['thiefs-gloves', 'sword']],
+    [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak']],
+  ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;
@@ -155,12 +167,13 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(() => restoreMatch(serializeMatch(forgedNext))).toThrow('Invalid resource provenance: unit serial');
   });
   it.each([
-    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1]],
-    ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1]],
-    ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1]],
-    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1]],
-  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned) => {
-    const inventory = publicInventory(definitions, true), chain = publicRecursivePurchase(inventory.state);
+    // Seed 11 funds all nine purchases at 4-5; seed 1 now reaches the anomaly first.
+    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 11],
+    ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1], undefined],
+    ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1], undefined],
+    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], undefined],
+  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned, seed) => {
+    const inventory = publicInventory(definitions, true, seed), chain = publicRecursivePurchase(inventory.state);
     let equipped = chain.state;
     for (const [index, id] of inventory.itemIds.entries()) equipped = accepted(equipItem(equipped, id, [chain.survivorId, chain.secondId, chain.incomingId, chain.purchaseIds[7]][holders[index]], slots[index]));
     const state = freeze(equipped), result = buyUnit(state, chain.slot, state.shop.generation), next = accepted(result);

@@ -39,12 +39,15 @@ export interface EncounterPreview {
 }
 export type RevealedDropView = DropIdentity & { readonly orbId:string; readonly entryOrdinal:number; readonly payload: LootPayload } & (
   | { readonly status: 'granted'; readonly receiptId: string; readonly allowedActions: readonly [] }
-  | { readonly status: 'revealed' | 'pending-capacity'; readonly receiptId: null; readonly allowedActions: readonly []; readonly reason: 'auto-grant-in-domain' | 'bench-full' }
+  | { readonly status: 'revealed' | 'pending-capacity'; readonly receiptId: null; readonly allowedActions: readonly []; readonly reason: 'auto-grant-in-domain' | 'bench-full' | 'awaiting-claim' }
   | { readonly status:'forfeited';readonly receiptId:null;readonly allowedActions:readonly [];readonly reason:'timeout-forfeited'|'eliminated-forfeited' }
   | { readonly status: 'retained-terminal'; readonly receiptId: null; readonly allowedActions: readonly []; readonly reason: 'terminal-bench-full' }
 );
 export interface RevealedOrbView { readonly orbId:string; readonly tier:import('../orb-layout').OrbTier; readonly status:'revealed'|'partially-claimed'|'claimed'|'forfeited';readonly entryDropIds:readonly string[] }
 export interface LootView {
+  /** Always present online; omitted by unchanged offline/preview adapters. */
+  readonly unclaimedOrbs?: readonly UnclaimedOrbView[];
+  readonly claimReceipts?: readonly import('./contracts').LootReceipt[];
   readonly revealedOrbs:readonly RevealedOrbView[];
   readonly roundId: string;
   readonly revealedDrops: readonly RevealedDropView[];
@@ -55,6 +58,14 @@ export interface LootView {
   /** Approved addendum 2026-10-10: identity of the loot pick that is the current PendingChoice, else null.
    * Identity only; candidates stay in PendingChoice.offers and the fallback is never exposed. */
   readonly pendingChoice: (DropIdentity & { readonly choiceId: string; readonly generation: number }) | null;
+}
+export interface UnclaimedOrbView {
+  readonly queued:boolean;
+  readonly orbId:string;
+  readonly roundId:string;
+  readonly tier:import('../orb-layout').OrbTier;
+  readonly entries:readonly LootPayload[];
+  readonly source:'pve'|'mechanic';
 }
 export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }

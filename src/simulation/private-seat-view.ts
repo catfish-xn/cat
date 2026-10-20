@@ -1,4 +1,7 @@
+import { getUnitSellPrice } from './unit-stats';
+import { D14_POLICY } from './content/d14-anomalies';
 import type { MatchState } from './match-types';
+import { d11PrivateDisplay } from './d11-display';
 import type { RevealedDropView } from './m8/ui-contracts';
 import { readLootView, payloadView } from './loot-view';
 import { previewUseConsumable } from './consumables';
@@ -8,6 +11,7 @@ import { boardView, cellView, pick } from './view-fields';
 import { getUnitForm } from './seat-mechanics/forms';
 import { seatMechanicsView } from './seat-mechanics/state';
 import type { MechanicChoicePayload } from './seat-mechanics/types';
+import { augmentOptionViews } from './augment-offers';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
@@ -15,6 +19,25 @@ function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
     location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
       : { kind: 'board' as const, cell: cellView(unit.location.cell) }, ...(form ? { form } : {}) };
+}
+
+function itemView(item: MatchState['items'][number]) {
+  return { ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
+    ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) };
+}
+
+function heldUnitView(unit: MatchState['preparation']['units'][number]) {
+  // Held units keep the original Unit field set; form is a live preparation hint.
+  const {form:_form,...view}=preparationUnitView(unit);
+  return view;
+}
+
+function d14PrivateDisplay(state:MatchState){
+  const d=state.d14;if(!d)return undefined;
+  return {anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+D14_POLICY.numRounds,
+    remainingSettlements:Math.max(0,d.atOrdinal+D14_POLICY.numRounds-state.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel),
+    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:getUnitSellPrice({definitionId:d.originalUnit.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{}),
+    ...(d.held?{heldUnit:heldUnitView(d.held.unit),heldItems:d.held.items.map(itemView)}:{})};
 }
 
 /** Current-round display summary, deliberately separate from the private m8.loot authority. */
@@ -31,7 +54,7 @@ function revealedLootView(state: MatchState) {
       switch (drop.status) {
         case 'forfeited': return {...identity,status:drop.status,receiptId:null,allowedActions:[],reason:drop.reason};
         case 'granted': return { ...identity, status: drop.status, receiptId: drop.receiptId, allowedActions: [] };
-        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' };
+        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: drop.reason };
         case 'pending-capacity': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'bench-full' };
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
@@ -54,6 +77,7 @@ export function toPrivateSeatView(state: MatchState) {
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
   const seatMechanics = seatMechanicsView(state);
+  const d11Display = d11PrivateDisplay(state);
   // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
   const candidates: ConsumableTarget[] = [
     ...units.map(unit => ({ kind: 'unit' as const, unitId: unit.id })),
@@ -69,6 +93,10 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
+      orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
+    ...(d11Display?{d11Display}:{}),
+    ...(state.d14?{d14Display:d14PrivateDisplay(state)}:{}),
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),
@@ -81,9 +109,8 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
-      units: [...units, ...enemies].map(preparationUnitView) },
-    items: items.map(item => ({ ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
-      ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) })),
+      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:getUnitSellPrice({definitionId:u.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{})})) },
+    items: items.map(itemView),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId
       && item.expiresAfterRoundId === state.roundDefinitionId && ids.has(item.holderId)
       && items.some(parent => parent.id === item.parentItemInstanceId && parent.location.kind === 'unit'
@@ -95,8 +122,11 @@ export function toPrivateSeatView(state: MatchState) {
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),
     augmentProgress: pick(state.augmentProgress, ['pumpingRounds', 'investmentHp']),
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
-      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount']),
+      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount', 'augmentTier', 'rerollsRemaining']),
       offers: [...state.pendingChoice.offers],
+      ...(state.pendingChoice.kind === 'augment' ? {
+        rerolledSlots: [...state.pendingChoice.rerolledSlots!], augmentOptions: augmentOptionViews(state),
+      } : {}),
       ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,

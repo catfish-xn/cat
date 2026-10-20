@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 describe('B8 public equipment fixture provenance', () => {
   it('wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword', () => {
@@ -40,6 +43,7 @@ describe('B8 public equipment fixture provenance', () => {
     expect(restoreMatch(state)).toEqual(state);
   });
 
+  // Temporarily allow the real multi-stage acquisition under CI contention (user-approved 2026-10-20).
   it('obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5', () => {
     const state = itemMatch(['bloodthirster', 'bloodthirster']);
     expect(state.roundDefinitionId).toBe('3-5');
@@ -54,13 +58,15 @@ describe('B8 public equipment fixture provenance', () => {
       { type: 'itemCombined', consumedIds: ['item-1', 'item-4'], itemId: 'item-8', definitionId: 'bloodthirster' },
       { type: 'itemCombined', consumedIds: ['item-6', 'item-7'], itemId: 'item-9', definitionId: 'bloodthirster' },
     ]);
-    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','pumping-up-ii']);
-    // Neither new chosen augment grants HP: Irelia remains base 700, without the old investment +8.
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','investment-strategy-i']);
+    // v15's expanded catalog changes the second offer. This paid route earns
+    // zero interest after acquisition, so Investment grants no HP here.
+    expect(state.augmentProgress.investmentHp).toBe(0);
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 700]]);
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-  });
+  }, 30000);
 
   it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => {
     const first = itemMatch('bloodthirster'), original = serializeMatch(first);

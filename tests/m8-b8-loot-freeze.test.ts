@@ -1,3 +1,4 @@
+import { EPIC_SOURCES } from '../src/simulation/content/orbs';
 import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import archivedHeroes from '../src/simulation/content/source/s13-14.24.json';
@@ -12,6 +13,9 @@ import { advanceFrozenLootLedger, drawLootIndex, freezeLootThroughRound, LOOT_FR
 import { compareLootChoices, compareLootFreezeSlots, lootChoiceId, lootDropId, lootReceiptId, lootOrbId, lootEntryId } from '../src/simulation/loot-identity';
 import type { FrozenLootLedger, LootChoiceDescriptor, LootChoiceEligibility, LootChoiceResolution } from '../src/simulation/loot-types';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /**
  * Checkpoint ① only: immutable preparation data, pure choice ordering/projection and
@@ -35,15 +39,13 @@ const HEROES = {
   4: [['TFT13_Corki', 'corki'], ['TFT13_Garen', 'garen'], ['TFT13_Zoe', 'zoe']],
 } as const;
 const slot = (sourceSlotId:string,slotOrdinal:number,tier:string,templateId:string)=>({sourceSlotId,slotOrdinal,tier,templateId});
-const EXPECTED_SLOTS = {
+const EXPECTED_SLOTS:Readonly<Record<string,readonly ReturnType<typeof slot>[]>> = {
  '1-2':[slot('m01',0,'gray','opening-unit')],
  '1-3':[slot('m01',0,'gray','opening-unit'),slot('r01',0,'blue','component')],
  '1-4':[slot('m01',0,'gray','remover'),slot('r01',0,'blue','component'),slot('r02',0,'blue','opening-bonus')],
  '2-7':[slot('k01',0,'blue','equipment'),slot('k01',1,'gray','gray-1')],
  '3-7':[slot('w00',0,'blue','equipment'),slot('w00',1,'gray','gray-2')],
  '4-7':[slot('r00',0,'blue','equipment'),slot('r00',1,'gray','gray-3')],
- '5-7':[slot('d01',0,'blue','equipment'),slot('d01',1,'gray','gray-4')],
- '6-7':[slot('h01',0,'gray','terminal')],
 };
 // Retained pure legacy helper contracts use an explicit synthetic descriptor.
 // Current frozen PvE plans must never generate these descriptors.
@@ -60,11 +62,11 @@ const round = (ledger: FrozenLootLedger, id: string) => ledger.rounds.find(r => 
 
 describe('B8 checkpoint ① approved, bounded loot content', () => {
   it('pins all eight source/slot tables and explicitly excludes every no-loot monster', () => {
-    expect(LOOT_POLICY_VERSION).toBe('s13-orbs-project-v1');
+    expect(LOOT_POLICY_VERSION).toBe('s13-orbs-project-v16');
     expect(LOOT_HERO_POOL_VERSION).toBe('m8b-heroes-1to4-v1');
     expect(LOOT_SLOTS).toEqual(EXPECTED_SLOTS);
     expect(ROUND_CATALOG.filter(r => r.kind === 'pve').map(r => [r.roundId, r.encounterId, r.ordinal])).toEqual(ENCOUNTERS);
-    expect(NEUTRAL_ENCOUNTERS.map(e => [e.roundId, e.slots.filter(s => !LOOT_SLOTS[e.roundId].some(d => d.sourceSlotId === s.slotId)).map(s => s.slotId)])).toEqual([
+    expect(NEUTRAL_ENCOUNTERS.map(e => [e.roundId, e.slots.filter(s => !(LOOT_SLOTS[e.roundId]??[{sourceSlotId:EPIC_SOURCES[e.roundId as keyof typeof EPIC_SOURCES]}]).some(d => d.sourceSlotId === s.slotId)).map(s => s.slotId)])).toEqual([
       ['1-2', ['m02']], ['1-3', ['m02']], ['1-4', ['m02']], ['2-7', ['k02','k03']],
       ['3-7', ['w01','w02', 'w03', 'w04']], ['4-7', ['r01','r02', 'r03', 'r04', 'r05']], ['5-7', []], ['6-7', []],
     ]);
@@ -106,7 +108,7 @@ describe('T13 independent full-route RNG vectors', () => {
     const actual=freezeLootThroughRound(seed,38),expected=lootPlan(seed,38);
     expect(actual.rng).toEqual(expected.rng);expect(actual.rounds).toEqual(expected.rounds);
     expect(actual.rounds.flatMap(r=>r.choices)).toEqual([]);
-    expect(freezeLootThroughRound(seed,31).rng).toEqual(actual.rng);
+    expect(freezeLootThroughRound(seed,31).rng).toEqual(lootPlan(seed,31).rng);
   });
   it('preserves seed zero and XOR zero, counting the random opening heroes',()=>{
     for(const seed of [0,3735928559])for(const ordinal of [0,1,2,3]){
@@ -172,7 +174,7 @@ describe('B8 checkpoint ① identities, isolated descriptors and pure ordering',
     for (const [roundId, encounterId] of ENCOUNTERS) {
       const r = round(ledger, roundId);
       expect(r.encounterPlan).toMatchObject({ roundId, encounterId, policyVersion: 'm8b-pve-project-v2' });
-      for (const expected of EXPECTED_SLOTS[roundId]) {
+      for (const expected of EXPECTED_SLOTS[roundId]??lootPlan(0,38).rounds.find(r=>r.encounterPlan.roundId===roundId)!.orbs.map(o=>({sourceSlotId:EPIC_SOURCES[roundId as keyof typeof EPIC_SOURCES],slotOrdinal:o.slotOrdinal}))) {
         const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,expected.sourceSlotId]);
         const orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,expected.slotOrdinal]);
         expect(lootOrbId(roundId,encounterId,sourceUnitId,expected.slotOrdinal)).toBe(orbId);
@@ -186,7 +188,7 @@ describe('B8 checkpoint ① identities, isolated descriptors and pure ordering',
       }
       for (const drop of r.encounterPlan.drops) {
         expect(drop).toMatchObject({ status: 'planned', receiptId: null });
-        expect(['gold', 'unit', 'item','consumable']).toContain(drop.payload.kind);
+        expect(['gold', 'unit', 'item','consumable','forge']).toContain(drop.payload.kind);
         expect(drop).not.toHaveProperty('terminalFallbackDefinitionId');
       }
       for (const choice of r.choices) {
@@ -266,8 +268,8 @@ describe('B8 checkpoint ① strict restore and immutable query boundaries', () =
       }
     };
     for (const value of [ledger, LOOT_SLOTS, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_FREEZE_ALGORITHM]) checkFrozen(value);
-    expect(LOOT_FREEZE_VERSION).toBe('s13-orb-freeze-v1');
-    expect(ledger).toMatchObject({ version: 's13-orb-freeze-v1', seed: 0, replayDigest: LOOT_REPLAY_DIGEST, throughRoundOrdinal: 38 });
+    expect(LOOT_FREEZE_VERSION).toBe('s13-orb-freeze-v16');
+    expect(ledger).toMatchObject({ version: 's13-orb-freeze-v16', seed: 0, replayDigest: LOOT_REPLAY_DIGEST, throughRoundOrdinal: 38 });
     expect(LOOT_REPLAY_DIGEST).toMatch(/^fnv1a32-utf16:[0-9a-f]{8}$/);
     const serialized = jsonCopy(ledger), restored = restoreFrozenLootLedger(serialized, { seed: 0, throughRoundOrdinal: 38 });
     expect(restored).toEqual(ledger);

@@ -14,6 +14,9 @@ import { G24_SUPPORT_ITEM_SOURCE } from '../src/simulation/content/g2-4-support-
 import { G23_SPECIAL_ITEM_POOLS } from '../src/simulation/content/g2-3-special-item-source';
 import { inSupportArea, isSupportAuraInstance } from '../src/simulation/g2-4-support';
 import type { CombatState, CombatEvent } from '../src/simulation/combat-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const DEFERRED = ['TFT_Item_Shroud', 'TFT_Item_Zephyr', 'TFT5_Item_ZzRotPortalRadiant'];
 type Place = readonly [id: string, definitionId: string, col: number, row: number];

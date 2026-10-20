@@ -1,8 +1,11 @@
+import { readAugmentIncome } from './augment-income';
+import type { OwnedAugment } from './strategy-types';
 import { ECONOMY_RULES, MATCH_RULES, STAGE_PLAYER_DAMAGE, selectPlayerBaseDamage } from './match-rules';
 import { grantXp } from './progression';
 
 export interface EconomyStreak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export interface RoundEconomyInput {
+  readonly augments?: readonly OwnedAugment[];
   readonly stage: number;
   readonly roundId?: string;
   readonly roundKind: 'pvp' | 'pve' | 'supply';
@@ -60,7 +63,7 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const win = isPvp && won ? ECONOMY_RULES.victoryGold : 0;
   const interestBasis = gold + win;
   nonnegativeInteger(interestBasis, 'interest basis');
-  const interest = Math.min(ECONOMY_RULES.interestCap, Math.floor(interestBasis / ECONOMY_RULES.interestDivisor));
+  const interest = Math.min(readAugmentIncome(input.augments).interestCap, Math.floor(interestBasis / ECONOMY_RULES.interestDivisor));
   let streakGold = 0;
   if (isPvp) for (const threshold of ECONOMY_RULES.streakThresholds) {
     if (streakAfter.count >= threshold.count) streakGold = threshold.gold;

@@ -17,7 +17,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
   fs.mkdirSync(output, { recursive: true });
   const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), checks: [], errors: [], passed: false };
   const { createServer } = await import('vite');
-  const server = await createServer({ root: path.resolve(__dirname, '..'), server: { host: '127.0.0.1', port: 0 } });
+  const server = await createServer({ root: path.resolve(__dirname, '..'), ...(process.env.VITE_CONFIG_LOADER ? { configLoader: process.env.VITE_CONFIG_LOADER } : {}), ...(process.env.U6_CACHE_DIR ? { cacheDir: path.resolve(process.env.U6_CACHE_DIR) } : {}), server: { host: '127.0.0.1', port: 0 } });
   let browser;
   try {
     await server.listen();
@@ -219,7 +219,19 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     assert(await finishCombat('4-7 terminal'), '4-7 orb drops are revealed during combat');
     await checkPanel('4-7 game over', (view, dom, current) => {
       assert.equal(current.phase, 'gameOver'); assert.equal(view.reason, 'game-over'); assert.equal(dom.block, 'game-over');
-      assert.deepEqual(view.revealedDrops.map(drop => drop.status), ['granted', 'granted', 'retained-terminal', 'granted'], 'both carriers killed: every drop earned');
+      assert.deepEqual(view.revealedDrops.map(drop => drop.status), ['granted', 'granted', 'retained-terminal', 'granted', 'granted'], 'both carriers killed: original drops plus the independent duplicator bonus earned');
+      // Scheme A, seed 38 / gray 4-7 slot 1: independent roll 99 appends
+      // exactly one lesser duplicator at entry 2, after Ezreal and remover.
+      const bonus = view.revealedDrops.at(-1);
+      assert.deepEqual(bonus.payload, { kind: 'consumable', definitionId: 'TFT_Consumable_ChampionDuplicator_III', quantity: 1 });
+      assert.equal(bonus.entryOrdinal, 2);
+      const receipts = current.m8.loot.receipts.filter(receipt => receipt.dropId === bonus.dropId);
+      assert.equal(receipts.length, 1, 'bonus has exactly one loot receipt');
+      assert.equal(bonus.receiptId, receipts[0].receiptId);
+      assert.equal(receipts[0].grantedConsumableIds.length, 1);
+      assert.deepEqual(current.consumables.filter(tool => tool.consumableId === receipts[0].grantedConsumableIds[0]),
+        [{ consumableId: receipts[0].grantedConsumableIds[0], definitionId: 'TFT_Consumable_ChampionDuplicator_III' }], 'bonus creates exactly one tool');
+      assert.deepEqual(api.stepMatch(current), { state: current, events: [] }, 'terminal step cannot grant bonus again');
       assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'ezreal'), 'retained hero shown without receipt');
       assert(view.revealedDrops.filter(drop => drop.status === 'granted').every(drop => drop.receiptId), 'earned drops shown only via their receipts');
     });

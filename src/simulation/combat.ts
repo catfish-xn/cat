@@ -1,3 +1,5 @@
+import { d14UnitBase } from './d14-anomalies/projection';
+import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
 import {createG23Forge} from './combat-g2-3-summons';
 import {projectItemSummons,initializeMirrorHealth} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
@@ -36,7 +38,7 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
-  preparationState=projectItemSummons(projectG23Summons(preparationState),strategy);
+  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits),strategy);
   let units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -48,12 +50,13 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
     return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
-      ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
+      ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel, ...(resolved?.effectiveStarLevel?{effectiveStarLevel:resolved.effectiveStarLevel}:{}),
       ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
       ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       ...(resolved?.openingItemBankGold===undefined?{}:{openingItemBankGold:resolved.openingItemBankGold,currentItemBankGold:resolved.openingItemBankGold}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24Mogul')?{itemMogulHits:[]}:{}),
+      ...(resolved?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')?{d11Kills:[]}:{}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
@@ -63,7 +66,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
+        maxHpBasis: { base: resolved?.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
@@ -102,8 +105,9 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   return stampCombatStep(state,events);
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState).state; }
-export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42): CombatStep {
-  const spawned=snapshotCombat(preparation,strategy,combatId,rngState);
+export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42, context?:TraitProjectionContext): CombatStep {
+  const projected=projectEffectiveMembership(preparation,context);
+  const spawned=snapshotCombat(projected.preparation,strategy,combatId,rngState);
   const start=applyCombatStart(spawned.state);
   const started={state:start.state,events:[...spawned.events,...start.events]};
   for (const unit of started.state.units) if (unit.mechanismDefinitions)

@@ -18,8 +18,8 @@ export function publicInventory(definitions: readonly string[], late = false, se
     return [...(definition.recipe ?? [id])];
   });
   if (late) while (components.length < 4) components.push('sword');
-  // Recursive nine-card purchase controls need the later seeded economy;
-  // the faster seed-38 glove route intentionally stops with less liquid gold.
+  // Restore the v15 funded routes: scheme A preserves original drops and shop draws.
+  // The earlier replacement seeds can exhaust HP/income before nine paid copies.
   const routeSeed = seed ?? (late ? ((components.filter(id => id === 'gloves').length >= 2 || components.every(id => id === 'tear')) ? 38 : 9)
     : components.length === 4 && components.every(id => id === 'tear') ? 9 : undefined);
   let state = publicEquipmentPreparation(components, routeSeed === undefined ? {} : { seed: routeSeed });

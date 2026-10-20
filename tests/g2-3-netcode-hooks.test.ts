@@ -10,10 +10,8 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { stepCombat } from '../src/simulation/combat';
 import { applyCombatReplayTick, toCombatViewEvents, toCombatViewState, type CombatViewEvent } from '../src/simulation/combat-replay-view';
 import { toDisplayMatch } from '../src/rendering/online/seat-view-adapter';
-import { draftPool, reconcileHoldings, rewardPolicy } from '../src/simulation/shared-pool-ledger';
-import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
+import { assertSharedPoolConservation, runSharedMatchCommand } from '../src/simulation/shared-pool';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
-import type { SharedPoolEvent } from '../src/simulation/shared-pool-types';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import { CHOICE_SKIP_OPTION, alignReplayUnits, grantMechanicGold, grantMechanicItem, grantMechanicUnit, openMechanicChoice,
   readSeatMechanic, removeCombatUnit, resolveUnitForm, spawnCombatUnit, writeHiddenMechanic, writeSeatMechanic,
@@ -139,19 +137,23 @@ describe('G2-3 mechanic choices', () => {
 describe('G2-3 unit grants through the shared pool', () => {
   it('a mechanic hero consumes one pool copy; an empty pool pays its cost in gold', () => {
     const { pool, states } = room({ irelia: 3, maddie: 1 }, 1);
-    const state = states[0], draft = draftPool(pool), events: SharedPoolEvent[] = [];
-    const granted = ok(grantMechanicUnit(state, { receiptId: 'chest-1', source: 'conqueror-chest', definitionId: 'maddie' }, rewardPolicy(draft, state, events)));
-    expect(granted.receipt).toMatchObject({ kind: 'unit', resolution: 'held' });
-    reconcileHoldings(draft, state, granted.state, events);
-    expect(draft.available.maddie).toBe(0);
-    const unitId = granted.receipt.kind === 'unit' ? granted.receipt.unitId : null;
-    expect(draft.holdings.some(h => h.unitId === unitId && h.definitionId === 'maddie')).toBe(true);
-    assertSharedPoolConservation(draft, [granted.state]);
-    const again = ok(grantMechanicUnit(granted.state, { receiptId: 'chest-2', source: 'conqueror-chest', definitionId: 'maddie' }, rewardPolicy(draft, granted.state, events)));
-    expect(again.receipt).toMatchObject({ kind: 'unit', resolution: 'gold', gold: UNIT_DEFINITIONS.maddie.cost });
-    expect(again.state.gold).toBe(granted.state.gold + UNIT_DEFINITIONS.maddie.cost);
-    reconcileHoldings(draft, granted.state, again.state, events);
-    assertSharedPoolConservation(draft, [again.state]);
+    const state = states[0];
+    const granted = ok(grantMechanicUnit(state, { receiptId: 'chest-1', source: 'conqueror-chest', definitionId: 'maddie' }));
+    expect(granted.receipt).toMatchObject({ kind: 'unit', resolution: 'orb', gold:0 });
+    expect(pool.available.maddie).toBe(1);expect(granted.state.preparation).toBe(state.preparation);
+    if(granted.receipt.kind!=='unit')throw Error('unit');
+    const first=ok(runSharedMatchCommand(pool,granted.state,{type:'claimOrb',round:1,orbId:granted.receipt.orbId!}));
+    expect(first.pool.available.maddie).toBe(0);
+    const unitId=first.state.m8.loot.receipts.at(-1)!.grantedUnitIds[0];
+    expect(first.pool.holdings.some(h => h.unitId === unitId && h.definitionId === 'maddie')).toBe(true);
+    assertSharedPoolConservation(first.pool, [first.state]);
+    const again = ok(grantMechanicUnit(first.state, { receiptId: 'chest-2', source: 'conqueror-chest', definitionId: 'maddie' }));
+    expect(again.receipt).toMatchObject({ kind: 'unit', resolution: 'orb', gold:0 });
+    if(again.receipt.kind!=='unit')throw Error('unit');
+    const second=ok(runSharedMatchCommand(first.pool,again.state,{type:'claimOrb',round:1,orbId:again.receipt.orbId!}));
+    expect(second.state.m8.loot.receipts.at(-1)).toMatchObject({resolution:'gold',gold:UNIT_DEFINITIONS.maddie.cost});
+    expect(second.state.gold).toBe(first.state.gold + UNIT_DEFINITIONS.maddie.cost);
+    assertSharedPoolConservation(second.pool,[second.state]);
   });
   it('offline item grants land in inventory with mechanic provenance', () => {
     const granted = ok(grantMechanicItem(solo(), { receiptId: 'academy-3', source: 'academy', definitionId: 'warmog' }));

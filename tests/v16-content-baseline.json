@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:de829c8a",
+  "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+  "rulesVersion": "s13-g2-3-v16",
+  "contentVersion": "s13-14.24b-g2-3-v16",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:70dbb056",
+  "previousLootReplayDigest": "fnv1a32-utf16:61568ec0",
+  "traceHashes": {
+    "state": "693c50c91ea86cb947e89a811256985cffb042b3c55f2e6080a8e1ddb21c63da",
+    "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+    "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "S13 v16: permanent Ultimate Hero certificates and Into the Unknown departures/returns, approved 5-7/6-7 epic rewards, independent additive duplicator bonuses, full champion duplicator, unit-target same-category permanent-equipment reforge; old saves rejected without migration."
+}

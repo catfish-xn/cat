@@ -1,6 +1,6 @@
 import { G23_MEMBERSHIP } from './g2-3-units';
 import type { Effect,TraitDefinition,TraitTier } from '../strategy-types';
-import { G23_TRAIT_SOURCE } from './g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './g2-3-trait-runtime';
 import { freezeContent } from './freeze';
 const raw:Readonly<Record<string,{readonly name:string;readonly enabled:boolean;readonly tiers:readonly {readonly threshold:number;readonly values:Readonly<Record<string,number|null|undefined>>}[]}>>=G23_TRAIT_SOURCE;
 const flat=(stat:'maxHp'|'armor'|'magicResist'|'abilityPower',amount:number):Effect=>({kind:'statFlat',stat,amount});

@@ -1,3 +1,4 @@
+import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
 import { validateG23Progress } from './g2-3-match-progress';
@@ -80,6 +81,16 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
       record(s.anomalyBinding); const binding = s.anomalyBinding; id(binding.choiceId); integer(binding.boundRound, 1);
       requireSnapshot(binding.boundRound <= round.ordinal && units.has(binding.unitId) && Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId));
     }
+    if(s.anomalyBinding&&['ultimate-hero','into-the-unknown'].includes(s.anomalyBinding.definitionId))requireSnapshot(s.d14Combat);
+    if(s.d14Combat){
+      const c=s.d14Combat,u=units.get(c.unitId),b=s.anomalyBinding;
+      requireSnapshot(!!u&&b?.unitId===c.unitId&&b.definitionId===c.anomalyId);
+      requireSnapshot(eligibleD14Target(u,c.anomalyId));
+      requireSnapshot(c.anomalyId==='ultimate-hero'?['waiting','promoted'].includes(c.phase):c.anomalyId==='into-the-unknown'&&c.phase==='returned');
+      requireSnapshot(c.anomalyId!=='ultimate-hero'||c.phase===(round.ordinal>=b!.boundRound+3?'promoted':'waiting'));
+      requireSnapshot(c.phase!=='returned'||round.ordinal>=b!.boundRound+3);
+      requireSnapshot(Object.keys(c).length===3);
+    }
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
@@ -89,9 +100,10 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
     requireSnapshot(s.augmentProgress.pumpingRounds <= round.ordinal
       && (augmentIds.has('pumping-up-i') || s.augmentProgress.pumpingRounds === 0)
-      && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
+      && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
       ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
       ...(s.priorPvpWins===undefined?{}:{priorPvpWins:s.priorPvpWins}),
@@ -128,9 +140,11 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const ids = new Set(units.map(unit => unit.id));
   const wins = priorPvpWins(state.roundResults, state.round);
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
+  const d14Combat=d14Certificate(state);
   return restorePlayerBattleSnapshot({
+    ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
-    ...(state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),

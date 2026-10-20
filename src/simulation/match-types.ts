@@ -4,7 +4,7 @@ import type { DeploymentFailure, GameState } from './game';
 import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
-export type MatchEvent = LedgerCombatEvent | ((import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+export type MatchEvent = LedgerCombatEvent | (({readonly type:'d14Promoted'|'d14Returned';readonly unitId:string;readonly choiceId:string} | import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
@@ -16,6 +16,8 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  /** Private PvE replay inputs, never included in seat/public projections. */
+  readonly bankSamples?: readonly import('./combat-types').CombatBankSample[];
   readonly mechanicReceiptPrefixLength?:number;
   readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
   readonly combatEventCount: number;
@@ -56,8 +58,13 @@ export interface MatchBase {
   readonly commandProtocolVersion: import('./m8/contracts').M8Version['commandProtocolVersion']; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];
+  readonly augmentTierSeed: number;
+  readonly augmentOffers: readonly import('./augment-offers').AugmentOfferRecord[];
+  /** Ordered unique IDs permanently excluded for this player in this match. */
+  readonly removedAugmentIds: readonly string[];
   readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
+  readonly d14?: import('./d14-runtime').D14Progress;
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;
   readonly scheduleReceipts: readonly ScheduleReceipt[]; readonly choiceRngState: number; readonly rewardRngState: number; readonly nextMatchEventSeq: number;
   readonly seed: number; readonly rngState: number; readonly round: number; readonly gold: number;
@@ -74,7 +81,7 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target'
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small'
   | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure
   | import('./seat-mechanics/types').SeatMechanicFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }

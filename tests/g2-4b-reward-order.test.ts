@@ -2,6 +2,9 @@ import {expect,it} from 'vitest';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import type {G23RewardBundle} from '../src/simulation/g2-3-economy';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 it('source descriptor order survives canonical/reversed keys on cache misses and hits across every reward',()=>{
  const bundles:G23RewardBundle[]=[

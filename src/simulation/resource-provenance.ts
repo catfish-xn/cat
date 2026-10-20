@@ -1,3 +1,4 @@
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
@@ -33,6 +34,8 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'d14-selected';readonly choiceId:string;readonly unitId:string;readonly heldItems:readonly import('./strategy-types').ItemInstance[]}
+  | {readonly kind:'d14-returned';readonly choiceId:string;readonly unitId:string;readonly settledOrdinal:number}
   | {readonly kind:'g23-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
   | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
@@ -164,7 +167,7 @@ export function mergeGrowthLedger(
     .map(([unitId, attackDamageBps]) => ({ unitId, attackDamageBps })).sort(compareGrowth);
 }
 
-interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string }
+interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string; readonly starLevel?:StarLevel }
 /** Births a mechanic receipt authorizes: a held unit, an item, or the item a forge/black-market choice granted. */
 function mechanicBirths(receipts: readonly import('./seat-mechanics/types').MechanicReceipt[]): (BirthReceipt & { readonly key: string })[] {
   return receipts.flatMap((receipt): (BirthReceipt & { readonly key: string })[] => {
@@ -180,7 +183,23 @@ function mechanicBirths(receipts: readonly import('./seat-mechanics/types').Mech
     return [{ key, kind: 'item' as const, id: itemId, definitionId, roundId: receipt.roundId }];
   });
 }
-export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>): Map<string, BirthReceipt> {
+type ReceiptContext = Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>;
+let receiptScope: { context: ReceiptContext; births: Map<string, BirthReceipt> }[] | undefined;
+/** Only Match's private parsed graph is stable during a synchronous restore.
+ * Object inputs, nested object restores and serialization keep every old read.
+ * This reuses one within-call receipt projection, never a restored Match or a
+ * result from another input/call. Returned maps and records stay detached. */
+export function withResourceReceiptReuse<T>(parsedJsonInput: boolean, run: () => T): T {
+  const previous = receiptScope;
+  receiptScope = parsedJsonInput ? [] : undefined;
+  try { return run(); } finally { receiptScope = previous; }
+}
+const copyBirths = (births: Map<string, BirthReceipt>) => new Map([...births].map(([key, value]) => [key, { ...value }]));
+export function validateResourceReceipts(context: ReceiptContext): Map<string, BirthReceipt> {
+  const known = receiptScope?.find(entry => entry.context.scheduleReceipts === context.scheduleReceipts
+    && entry.context.lootReceipts === context.lootReceipts && entry.context.mechanicReceipts === context.mechanicReceipts
+    && entry.context.carouselReceipts === context.carouselReceipts && entry.context.throughRoundOrdinal === context.throughRoundOrdinal);
+  if (known) return copyBirths(known.births);
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
@@ -207,27 +226,55 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
         && typeof receipt.definitionId === 'string' && ITEM_DEFINITIONS[receipt.definitionId]?.kind === 'component', 'schedule component');
       nonempty(receipt.itemIds[0]);
       add(`schedule:${receipt.eventId}`, { kind: 'item', id: receipt.itemIds[0], definitionId: receipt.definitionId, roundId: round.roundId });
+    } else if (receipt.kind === 'augment' && receipt.definitionId && P3_AUGMENT_ITEMS[receipt.definitionId]) {
+      requireValue(receipt.itemIds.length === 1 && receipt.unitId === null && receipt.gold === 0, 'augment item receipt');
+      nonempty(receipt.itemIds[0]);
+      add(`schedule:${receipt.eventId}`, { kind: 'item', id: receipt.itemIds[0], definitionId: P3_AUGMENT_ITEMS[receipt.definitionId], roundId: round.roundId });
     } else requireValue(receipt.itemIds.length === 0 && receipt.kind !== 'reward', 'unsupported schedule birth');
   }
   for (const receipt of context.lootReceipts) {
     plainJson(receipt);
-    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds',...(receipt.payload?.kind==='consumable'?['grantedConsumableIds']:[])]);
+    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds',
+      ...(receipt.resolution ? ['resolution','gold','claimedRoundId'] : []),
+      ...(receipt.payload?.kind==='consumable' && receipt.resolution!=='forfeited'?['grantedConsumableIds']:[])]);
     nonempty(receipt.dropId);
     const tuple: unknown = JSON.parse(receipt.dropId);
     requireValue(Array.isArray(tuple) && tuple.length === 2, 'loot drop identity');
     const orb:unknown=JSON.parse(tuple[0]);
     requireValue(Array.isArray(orb)&&orb.length===5&&orb[0]==='orb','loot orb identity');
-    const [,roundId, encounterId, sourceUnitId, slotOrdinal] = orb;
+    const [,sourceRoundId, encounterId, sourceUnitId, slotOrdinal] = orb;
+    const roundId=receipt.claimedRoundId??sourceRoundId;
     integer(tuple[1]);
     nonempty(roundId); nonempty(encounterId); nonempty(sourceUnitId); integer(slotOrdinal);
-    const round = getCatalogRoundById(roundId);
-    requireValue(round.ordinal <= context.throughRoundOrdinal && round.encounterId === encounterId
-      && receipt.dropId === lootEntryId(lootOrbId(roundId, encounterId, sourceUnitId, slotOrdinal),tuple[1])
+    const round = getMultiplayerRoundById(roundId), sourceRound=getMultiplayerRoundById(sourceRoundId);
+    const mechanic=encounterId==='mechanic' && context.mechanicReceipts?.some(r=>r.kind==='unit'&&r.resolution==='orb'&&r.receiptId===sourceUnitId&&r.orbId===tuple[0]);
+    requireValue(round.ordinal <= context.throughRoundOrdinal && round.ordinal>=sourceRound.ordinal
+      && (mechanic || sourceRound.encounterId === encounterId)
+      && receipt.dropId === lootEntryId(lootOrbId(sourceRoundId, encounterId, sourceUnitId, slotOrdinal),tuple[1])
       && receipt.receiptId === lootReceiptId(receipt.dropId), 'loot receipt identity');
     requireValue(!receiptIds.has(`loot:${receipt.receiptId}`), 'duplicate loot receipt');
     receiptIds.add(`loot:${receipt.receiptId}`);
     requireValue(Array.isArray(receipt.grantedItemIds) && Array.isArray(receipt.grantedUnitIds), 'loot granted IDs');
     record(receipt.payload);
+    if(receipt.resolution) {
+      integer(receipt.gold); nonempty(receipt.claimedRoundId);
+      requireValue(['held','gold','capacity-sold','forfeited'].includes(receipt.resolution),'orb resolution');
+      if(receipt.resolution==='forfeited'||receipt.resolution==='gold'||receipt.resolution==='capacity-sold') {
+        requireValue(!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length&&!receipt.grantedConsumableIds?.length,'resolved orb has no birth');
+        if(receipt.resolution==='forfeited') requireValue(receipt.gold===0,'forfeited gold');
+        else {
+          requireValue(receipt.payload.kind==='unit'&&SHOP_CATALOG.includes(receipt.payload.definitionId),'orb gold definition');
+          const unit={id:'orb',team:'player' as const,location:{kind:'bench' as const,slot:0},definitionId:receipt.payload.definitionId,starLevel:receipt.payload.starLevel??1};
+          requireValue([1,2,3].includes(unit.starLevel)&&receipt.gold===(receipt.resolution==='gold'?UNIT_DEFINITIONS[unit.definitionId].cost:getUnitSellPrice(unit)),'orb gold price');
+        }
+        continue;
+      }
+      requireValue(receipt.gold===(receipt.payload.kind==='gold'?receipt.payload.quantity:0),'held orb gold');
+    }
+    if(receipt.payload.kind==='forge') {
+      keys(receipt.payload,['kind','definitionId','quantity']);
+      requireValue(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyOrnn'].includes(receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'forge grant');continue;
+    }
     if(receipt.payload.kind==='consumable') {
       requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');
       continue;
@@ -237,7 +284,7 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
       requireValue(!receipt.grantedItemIds.length && !receipt.grantedUnitIds.length, 'gold birth');
       continue;
     }
-    keys(receipt.payload, ['kind', 'definitionId', 'quantity']);
+    keys(receipt.payload, ['kind', 'definitionId', 'quantity',...(receipt.payload.kind==='unit'&&receipt.payload.starLevel?['starLevel']:[])]);
     const { kind, definitionId, quantity } = receipt.payload; nonempty(definitionId);
     requireValue((kind === 'unit' || kind === 'item') && quantity === 1, 'loot resource quantity');
     requireValue(kind === 'unit' ? SHOP_CATALOG.includes(definitionId)
@@ -245,12 +292,15 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     const granted = kind === 'unit' ? receipt.grantedUnitIds : receipt.grantedItemIds;
     requireValue(granted.length === 1 && (kind === 'unit' ? receipt.grantedItemIds : receipt.grantedUnitIds).length === 0, 'loot resource identity');
     nonempty(granted[0]);
-    add(`loot:${receipt.receiptId}`, { kind, id: granted[0], definitionId, roundId });
+    if(kind==='unit') requireValue([1,2,3].includes(receipt.payload.starLevel??1),'unit birth star');
+    add(`loot:${receipt.receiptId}`, { kind, id: granted[0], definitionId, roundId,
+      ...(receipt.payload.kind==='unit'?{starLevel:receipt.payload.starLevel??1}:{}) });
   }
   for (const birth of mechanicBirths(context.mechanicReceipts ?? [])) {
     requireValue(getCatalogRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
     add(birth.key, birth);
   }
+  receiptScope?.push({ context: { ...context }, births: copyBirths(births) });
   return births;
 }
 
@@ -312,6 +362,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     requireValue(commitIndex >= 0, 'mechanic reward settlement');
     return [claim.id, {claimRound:claim.round, commitIndex}] as const;
   }));
+  const absent=new Set<string>();
   const units = new Map<string, ProvenanceUnit>(), items = new Map<string, ProvenanceItem>();
   let growth: readonly PersistentGrowth[] = [], nextUnitSerial = 1, nextItemSerial = 1, lastOrdinal = 1;
   let acquisition: { readonly sequence: number; readonly unitId: string; readonly definitionId: string; readonly roundId: string; survivorId: string; star: number } | null = null;
@@ -327,7 +378,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
   const finishAcquisition = () => {
     if (!acquisition) return;
-    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !deferredCarouselIds.has(unit.id) && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
+    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !absent.has(unit.id) && !deferredCarouselIds.has(unit.id) && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
     acquisition = null;
   };
   const takeBirth = (key: string, kind: BirthReceipt['kind'], id: string, roundId: string): string => {
@@ -341,10 +392,13 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     const round = getCatalogRoundById(entry.roundId);
     requireValue(round.ordinal >= lastOrdinal && round.ordinal <= context.throughRoundOrdinal, 'round order/boundary');
     lastOrdinal = round.ordinal;
-    if (starts.has(index)) unitPrefixes.set(index, new Map(units));
+    if (starts.has(index)) unitPrefixes.set(index, new Map([...units].filter(([id])=>!absent.has(id))));
     if (entry.kind !== 'unit-upgraded') finishAcquisition();
     const common = ['kind', 'sequence', 'roundId'];
+    const lootSourceId=(entry.kind==='unit-acquired'||entry.kind==='item-acquired')&&entry.source?.kind==='loot'?entry.source.receiptId:null;
+    const explicitOrbReceipt=lootSourceId?context.lootReceipts.find(r=>r.receiptId===lootSourceId&&r.claimedRoundId===entry.roundId):undefined;
     if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'loot'
+      && !explicitOrbReceipt
       && !firstLootBirth.has(entry.roundId)) firstLootBirth.set(entry.roundId, index);
     if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'mechanic') {
       const boundary = rewardBoundaries.get(entry.source.receiptId);
@@ -356,9 +410,25 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           && commit.combatStartProvenancePrefixLength < index, 'mechanic reward combat prefix');
       }
     }
-    if (entry.kind === 'unit-acquired') {
+    if(entry.kind==='d14-selected'){
+      keys(entry,[...common,'choiceId','unitId','heldItems']);
+      const receipt=context.scheduleReceipts.find(r=>r.eventId===entry.choiceId&&r.kind==='anomaly');
+      const u=units.get(entry.unitId);requireValue(receipt&&receipt.unitId===entry.unitId&&receipt.round===round.ordinal&&u,'D14 selection');
+      requireValue(receipt.definitionId==='ultimate-hero'?u.starLevel===3&&UNIT_DEFINITIONS[u.definitionId].cost===1:receipt.definitionId==='into-the-unknown','D14 target');
+      requireValue(!entries.slice(0,index).some(e=>e.kind==='d14-selected'),'D14 duplicate selection');
+      requireValue(Array.isArray(entry.heldItems)&&new Set(entry.heldItems.map(i=>i.id)).size===entry.heldItems.length,'D14 equipment');
+      for(const value of entry.heldItems){keys(value,['id','definitionId','location']);keys(value.location,['kind','unitId','slot']);const i=value as unknown as import('./strategy-types').ItemInstance;requireValue(items.get(i.id)?.definitionId===i.definitionId&&i.location.kind==='unit'&&i.location.unitId===entry.unitId&&[0,1,2].includes(i.location.slot),'D14 equipment ownership');}
+      requireValue(receipt.definitionId==='into-the-unknown'||entry.heldItems.length===0,'D14 unexpected equipment');
+      if(receipt.definitionId==='into-the-unknown')absent.add(entry.unitId);
+    }else if(entry.kind==='d14-returned'){
+      keys(entry,[...common,'choiceId','unitId','settledOrdinal']);
+      const receipt=context.scheduleReceipts.find(r=>r.eventId===entry.choiceId&&r.kind==='anomaly'&&r.definitionId==='into-the-unknown');
+      requireValue(receipt&&receipt.unitId===entry.unitId&&absent.has(entry.unitId)&&Number.isSafeInteger(entry.settledOrdinal)&&entry.settledOrdinal>=receipt.round-1+3&&entry.settledOrdinal<=round.ordinal,'D14 return');
+      absent.delete(entry.unitId);
+    }else if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
-      requireValue(round.kind !== 'supply'||entry.source.kind==='carousel', 'unit birth in supply');
+      requireValue(round.kind !== 'supply'||entry.source.kind==='carousel'||entry.source.kind==='loot'
+        &&explicitOrbReceipt?.resolution==='held', 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {
@@ -396,9 +466,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
-      units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel: 1 }); nextUnitSerial++;
+      const starLevel=entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:1;
+      units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel }); nextUnitSerial++;
       if(entry.source.kind==='carousel')deferredCarouselIds.add(entry.unitId);
-      acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: 1 };
+      acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: starLevel };
     } else if (entry.kind === 'unit-upgraded') {
       keys(entry, [...common, 'acquisitionSequence', 'event']); integer(entry.acquisitionSequence);
       validateUpgrade(entry.event);
@@ -408,7 +479,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         && acquisition.star === event.fromStar && [event.survivorId, ...event.consumedIds].includes(acquisition.survivorId), 'upgrade transaction');
       for (const id of [event.survivorId, ...event.consumedIds]) {
         const unit = units.get(id);
-        requireValue(unit && unit.definitionId === event.definitionId && unit.starLevel === event.fromStar, 'upgrade ownership');
+        requireValue(unit && !absent.has(id) && unit.definitionId === event.definitionId && unit.starLevel === event.fromStar, 'upgrade ownership');
       }
       event.consumedIds.forEach(id => units.delete(id));
       units.set(event.survivorId, { id: event.survivorId, definitionId: event.definitionId, starLevel: event.toStar });
@@ -419,16 +490,16 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const eligible = (id:string) => { const r=context.carouselReceipts?.find(r=>r.id===id);requireValue(r && getCatalogRoundById(r.carouselId.split(':').at(-1)!).ordinal<round.ordinal,'carousel preparation boundary');return r!; };
       for(const id of entry.receiptIds){const r=eligible(id);requireValue(!preparationReceipts.has(id),'duplicate carousel preparation');preparationReceipts.add(id);if(r.unitId)deferredCarouselIds.delete(r.unitId);}
       for(const id of entry.claimedUnitIds){const r=context.carouselReceipts?.find(r=>r.unitId===id);requireValue(r&&units.has(id)&&!claimedCarouselIds.has(id),'carousel claim ownership');eligible(r!.id);claimedCarouselIds.add(id);deferredCarouselIds.delete(id);}
-      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'carousel upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
+      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&!absent.has(id)&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'carousel upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
     } else if(entry.kind==='carousel-unit-claimed') {
       keys(entry,[...common,'unitId','receiptId','upgrades']);
       const receipt=context.carouselReceipts?.find(r=>r.id===entry.receiptId);
       requireValue(receipt?.unitId===entry.unitId&&units.has(entry.unitId)&&Array.isArray(entry.upgrades),'pending carousel ownership');
-      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'pending upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
+      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&!absent.has(id)&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'pending upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);
       const unit = units.get(entry.unitId);
-      requireValue(unit && round.kind !== 'supply' && (entry.context === 'preparation' || entry.context === 'settlement-capacity'), 'sale ownership/context');
+      requireValue(unit && !absent.has(unit.id) && round.kind !== 'supply' && (entry.context === 'preparation' || entry.context === 'settlement-capacity'), 'sale ownership/context');
       requireValue(entry.context !== 'preparation' || !commits.has(entry.roundId), 'preparation sale after settlement');
       requireValue(entry.context !== 'settlement-capacity' || commits.has(entry.roundId), 'sale before settlement');
       requireValue(entry.goldGranted === getUnitSellPrice({ ...unit, team: 'player', location: { kind: 'bench', slot: 0 } }), 'sale price');
@@ -448,7 +519,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     } else if (entry.kind === 'item-equipped') {
       keys(entry, [...common, 'itemId', 'unitId', 'slot', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); integer(entry.slot);
       if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
-      requireValue(items.has(entry.itemId) && units.has(entry.unitId) && entry.slot < 3, 'equipment ownership/slot');
+      requireValue(items.has(entry.itemId) && !absent.has(entry.unitId) && units.has(entry.unitId) && entry.slot < 3, 'equipment ownership/slot');
     } else if (entry.kind === 'item-combined') {
       keys(entry, [...common, 'event', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
       if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
@@ -468,8 +539,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry,[...common,'record',...(Object.hasOwn(entry,'tick') ? ['tick'] : [])]);
       if (Object.hasOwn(entry,'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'consumable tick'); }
       const r=entry.record;
-      keys(r,['consumableId','definitionId','target','effect','affectedItems','output','rngBefore','rngAfter']);
-      requireValue(Array.isArray(r.affectedItems)&&r.affectedItems.length>0,'consumable affected items');
+      keys(r,['consumableId','definitionId','target','effect','affectedItems','output','outputs','copiedUnit','rngBefore','rngAfter']);
+      requireValue(Array.isArray(r.affectedItems)&&(r.effect==='duplicate-unit'||r.affectedItems.length>0),'consumable affected items');
       for(const rawItem of r.affectedItems) {
         keys(rawItem, ['id','definitionId','location']);
         const item = rawItem as unknown as import('./strategy-types').ItemInstance;
@@ -483,11 +554,19 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(r.target, r.target.kind === 'unit' ? ['kind','unitId'] : ['kind','itemId']);
       keys(r.rngBefore, ['state','draws']); keys(r.rngAfter, ['state','draws']);
       if (r.output) keys(r.output, ['id','definitionId']);
-      if(r.effect==='remove-all')requireValue(r.target.kind==='unit'&&units.has(r.target.unitId)&&r.output===null,'remover target');
-      else {
-        requireValue(r.target.kind==='item'&&r.affectedItems.length===1&&r.affectedItems[0].id===r.target.itemId
-          &&r.output?.id===`item-${nextItemSerial}`&&!!ITEM_DEFINITIONS[r.output.definitionId],'reforge serial');
-        items.delete(r.target.itemId);items.set(r.output.id,{...r.output});nextItemSerial++;
+      requireValue(r.target.kind==='unit'&&!absent.has(r.target.unitId)&&units.has(r.target.unitId),'consumable target');
+      if(r.effect==='duplicate-unit'){
+        requireValue(r.copiedUnit&&r.target.kind==='unit'&&r.copiedUnit.id===r.target.unitId&&units.get(r.target.unitId)?.definitionId===r.copiedUnit.definitionId&&r.affectedItems.length===0&&r.outputs.length===0,'duplicator target ownership');
+        const receipt=context.mechanicReceipts?.find(x=>x.receiptId===JSON.stringify(['consumable-copy',r.consumableId]));
+        requireValue(receipt?.kind==='unit'&&receipt.definitionId===r.copiedUnit?.definitionId,'duplicator receipt');
+      }else{
+        requireValue(Array.isArray(r.outputs)&&r.outputs.length===r.affectedItems.length,'consumable output count');
+        for(const [n,output] of r.outputs.entries()){
+          keys(output,['id','definitionId']);nonempty(output.id);nonempty(output.definitionId);const original=r.affectedItems[n];
+          requireValue(!!ITEM_DEFINITIONS[output.definitionId],'consumable output definition');
+          if(output.id!==original.id){requireValue(output.id===`item-${nextItemSerial}`,'reforge serial');nextItemSerial++;}
+          items.delete(original.id);items.set(output.id,{id:output.id,definitionId:output.definitionId});
+        }
       }
     } else if (entry.kind === 'combat-growth-committed') {
       keys(entry, [...common, 'combatId', 'settlementId', 'combatStartProvenancePrefixLength', 'sourceDeltas']);

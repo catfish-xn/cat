@@ -168,8 +168,9 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     const pending = new Promise<ModelLease>(done => { resolve = done; });
     vi.spyOn(core.ModelCache.prototype, 'load').mockReturnValue(pending);
     await mount(); await publish([piece({ alive: false })]);
-    // The only piece root has just its ring while the model is pending.
-    const unit = scene.children.find(object => object instanceof three.Group && object.children.length === 1) as Group;
+    // The only piece root holds its ring and the team pawn while the model is pending.
+    const roots = scene.children.filter(object => object instanceof three.Group && !!object.getObjectByName('render3d-pawn'));
+    expect(roots).toHaveLength(1); const unit = roots[0] as Group;
     expect(unit).toBeDefined(); expect(unit.visible).toBe(false);
     resolve(lease); await pending; advance(1);
     expect(root(lease)).toBe(unit); expect(unit.visible).toBe(false);
@@ -181,7 +182,8 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     const pending = new Promise<ModelLease>(done => { resolve = done; });
     vi.spyOn(core.ModelCache.prototype, 'load').mockReturnValue(pending);
     await mount(); await publish([piece()]); await publish([piece({ alive: false })]);
-    const unit = scene.children.find(object => object instanceof three.Group && object.children.length === 1) as Group;
+    const roots = scene.children.filter(object => object instanceof three.Group && !!object.getObjectByName('render3d-pawn'));
+    expect(roots).toHaveLength(1); const unit = roots[0] as Group;
     advance(5000); expect(unit.visible).toBe(true); expect(apply).not.toHaveBeenCalled();
     resolve(lease); await pending; advance(1);
     expect(root(lease)).toBe(unit); expect(latestState()).toBe('death');

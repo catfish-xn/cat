@@ -17,13 +17,15 @@ export interface S13Packet { beforeDamage?: PacketStatusEffect[]; afterDamageCon
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  anomalySeed?: number;
+  anomalyOpening?: readonly { id: string; health: number; attackDamage: number }[];
   resolutionFacts?: import('./m8/triggers').ResolutionFacts;
   nextTriggerEventSeq?: number;
   virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
   manaRequests?: import('./m8/contracts').ManaRequest[];
-  /** G2-4b: current armor (true) or magic resist (false), as damage resolution reads it. */
-  defenses?: (unit: S13Unit, armor: boolean) => number;
+  /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
+  defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }

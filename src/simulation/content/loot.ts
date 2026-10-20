@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 
 /** Approved project content, M8B_LOOT §§2–5. Never an official historical drop rate. */
-export const LOOT_POLICY_VERSION = 's13-orbs-project-v1';
+export const LOOT_POLICY_VERSION = 's13-orbs-project-v16';
 export const LOOT_HERO_POOL_VERSION = 'm8b-heroes-1to4-v1';
 export type LootHeroCost = 1 | 2 | 3 | 4;
 export const LOOT_HERO_POOLS = freezeContent({
@@ -21,8 +21,16 @@ export const LOOT_CATEGORIES = freezeContent({
 
 /** Changing executable draw order/identity/rejection semantics requires this revision to change. */
 export const LOOT_FREEZE_ALGORITHM = freezeContent({
-  revision:'s13-orb-freeze-v1', rng:'lcg32-v1', multiplier:1664525, increment:1013904223,
+  revision:'s13-orb-freeze-v16', rng:'lcg32-v1', multiplier:1664525, increment:1013904223,
   seedXor:0xdeadbeef, sampling:'uint32-rejection-modulo', order:'sourceUnitId-codepoint/slotOrdinal-numeric',
   choiceOrder:'dropId-codepoint', choices:'supply-only/no-pve-fallback',
 });
-export const LOOT_RUNTIME_REVISION = 'm8-b8-live-loot-basis-provenance-v1';
+export const LOOT_RUNTIME_REVISION = 'epic-loot-reforger-v16';
+/** User approved 14.24 reward tables. Rows with zero weight are deliberately absent. */
+export const EPIC_LOOT = freezeContent({
+  variants:[{id:'standard',weight:899},{id:'artifact',weight:100},{id:'crown',weight:1}],
+  copper:[{id:'three-cost',weight:49},{id:'two-cost-gold',weight:46},{id:'reforger',weight:3},{id:'remover',weight:1},{id:'lesser',weight:1}],
+  silver:[{id:'four-cost-gold',weight:49},{id:'three-cost-pair',weight:47},{id:'reforger',weight:3},{id:'duplicator',weight:1}],
+  heroPool:'all-live-shop-heroes-sorted-id', heroStar:1, heroPair:'independent-with-replacement',
+  order:'variant/copper/silver/box-heroes;forge-independent-g24-atom-stream',
+});

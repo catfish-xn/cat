@@ -1,5 +1,55 @@
 # Set13 八人联机合同草案
 
+## v15 统一身份（2026-10-20，覆盖下文历史交接状态）
+
+当前 rules/content 为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+
+新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
+
+
+## 规则协议与网络协议独立版本
+
+- `src/simulation/m8/version.ts` 的 `MULTIPLAYER_NET_PROTOCOL_VERSION = 4` 表示规则侧多人命令/状态契约版本；该契约发生不兼容变化时递增。
+- `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION = 5` 表示客户端与服务器之间的网络消息信封契约版本，用于消息的 `protocolVersion` 校验；网络消息（含命令、回执及服务器消息）的结构或语义发生不兼容变化时递增。兼容的视图字段追加不必递增。
+- 两者独立演进，可以不同，不要求相等或保持固定差值；修改一侧契约不自动要求另一侧升版，应分别评估兼容性。例如 D11 的 `replay-tail` 改变了网络回放消息契约，但未改变规则侧契约，因此当前分别为 4 和 5。网络版本校验比较客户端消息与服务器的 `NET_PROTOCOL_VERSION`，不比较这两个常量。
+
+## D11 接线与实时银行边界（2026-10-20）
+
+运行目录 60/54；新强化共用既有等级、候选和按卡刷新命令。一费奉献 / 三项赛赠送先经唯一 mechanic 收据产生奖励法球，不立即取卡或补金；显式领取时经过同事务 UnitLootPolicy，按法球合同处理战斗排队、战后库存、合星、满席折金和缺货补偿。双方 snapshot 编译新增内容，贪财化身开战携带 bankGold；猎头者基础 / 永久攻速及灵魂连接开战玩家生命均为本席权威输入。
+
+`G23BattleFacts.d11Headhunter?: {combatId:string,holderId:string,kills:readonly {eventSeq:number,victimId:string}[]}` 经已有 proposal.g23Facts 原样转入 settlement.g23Facts。服务器不统计击杀、不另算永久成长；镜像无 facts / 进度，重复拒绝。猎头者已部署时缺失事实、holderId 不是该席当前绑定的战斗命名空间 ID，或 eventSeq 超出账本，均按 invalid-receipt 保持原状态拒绝。
+
+现有 `startTwoSidedBattle` 返回任务新增 `sampleBankGold(seatId:string,liveGold:number):void`；非法席位 / 数值 / 样本上限为 `invalid-bank-sample`，完成后为 `wrong-phase`。样本在下一 tick 前应用，私有 `BattleResult.bankSamples?: readonly {tick:number,team:'player'|'enemy',liveGold:number}[]` 必须随完整结果传给 `proposeSettlement` 与 `toCombatReplay` / `startCombatReplay`，公开 replay 不发这些样本。原有采样缺省路径和旧结果字段不变，不加客户端“报金币”命令。
+
+**服务器配套未完成**：目前先算战斗、后播放的流程不能反映播放期间买卖。需要 Claude 调整规则推进 / 命令排序并在金币变动后向未完成任务传权威银行；仅冻结开战 gold 不满足贪财化身合同。联机 PvE stepMatch 已接实时 Match.gold。公开 replay 单位同时保留 statuses 与可选 choiceEffects，后者提供当前 D11 名称、说明、等级；私有视图同时保留法球字段与可选 d11Display，后者提供已拥有 / 当前候选定义和猎头者已结算击杀数；不扩大静态 PublicBoard 的原白名单。详见 [D11_WIRING_V15](D11_WIRING_V15.md) 与 [UI_REQUESTS](UI_REQUESTS.md)。合并沿用法球分支既有 v15 身份，版本、digest、旧指纹不再改动；后续统一身份与指纹验收完成后才能正式发布。
+
+## 强化同轮同级与按卡刷新：待 v15 收口（2026-10-20）
+
+等级派生不变，详见 [Match 合同“强化等级与按卡刷新”](MATCH_CONTRACT.md)。initializeSharedSeat 将 pool.seed 绑定到 augmentTierSeed；每节点八席同级，候选与刷新仍用各席独立 choiceRngState。单机/联机共用每槽免费一次与永久移出规则；移出集合只属于本局本席，不从其他席候选中移除，不改变英雄共享库存。
+
+领域已增加 `SharedMatchCommand` 分支及 `runSharedMatchCommand` 转发：
+
+```ts
+{ type: 'rerollAugment', choiceId: string, generation: number, optionIndex: number }
+// 例：第 2 张卡
+runSharedMatchCommand(pool, state, {
+  type: 'rerollAugment', choiceId: 'round:2-1:augment', generation: 0, optionIndex: 1
+})
+```
+
+公共签名 `rerollAugment(state,choiceId,generation,optionIndex?:number):MatchCommandResult`，有效命令必须有 0..2 安全整数下标；可选类型仅为禁改旧接线的编译过渡，缺参返回 invalid-slot。失败按顺序为 wrong-phase、stale-choice、invalid-slot、augment-rerolls-exhausted、augment-pool-too-small（零候选）。共享包装另沿用 invalid-pool/invalid-seat-state/stale-seat/seat-eliminated 等原事务错误，先验证 pool/seat；失败保留原 pool/state 引用、无事件或 RNG 消耗。
+
+成功由共享事务原子提交 pool+state：可用库存、预留和 holdings 不变，但 pool.revision、该席 revision 按既有事务各 +1，不能把“库存不变”误解成“pool 对象/revision 不变”。成功发一个 choiceOpened，完整候选/槽位状态与正常 eventSeq；每卡刷新恰一字，初次三卡发牌仍三字。
+
+**Claude 待接线，本轮未改 src/server：** SeatCommand/ClientCommand/WireCommand 与 net/messages 的字段白名单增加必填 optionIndex（0..2 安全整数）；原网络 envelope 的身份、round、seatRevision、去重及回执字段保持。ROOM_COMMAND_GATE 沿用 preparation/choice，领域仍要求真实 augment offer；applySeatCommand 改走上面的 runSharedMatchCommand，原样转交下标并原子接收 pool+state。旧三字段消息不得默认槽位，也不得重发为整组刷新；现在无下标的旧调用会失败。前后端在 v15 同批接线发布，NET3 等版本号本轮不动。
+
+私有投影 `pendingChoice.augmentOptions: readonly {optionIndex:number,definitionId:string,rerollAvailable:boolean}[]` 与 `rerolledSlots` 已由 toPrivateSeatView 提供，toSeatPrivateView/网络应原样透传；保留 offers、augmentTier、generation、rerollCount、rerollsRemaining（尚未用过的槽位总数）。只按每卡 rerollAvailable 接按钮，候选耗尽也置 false。不公开 removedAugmentIds/augmentOffers/seed/其他席候选。
+
+basic bot 与超时代选仍选第一个合法项，不主动刷新强化，无需增加刷新策略；bot preflight 已读取可选下标，缺参不会被判为合法。若未来扩展策略，应复用同一 SharedMatchCommand，不能另算候选或计次。
+
+权威 MatchState 的 removedAugmentIds、augmentOffers[].rerolledIndices、pendingChoice.rerolledSlots 必须随席位持久化/恢复，断线重连不能清空。既有 serializeMatch/restoreMatch 不接纳联机完整 Match；本轮共享测试验证 JSON 往返后续刷，未新增服务器磁盘恢复入口。版本与待重录清单见 [v15 交付说明](AUGMENT_CARD_REROLL_V15.md)。
+
+
 ## G2-3 当前实现与接入合同（2026-10-16）
 
 本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。
@@ -140,6 +190,20 @@ Riot 的 [14.15 官方更新说明](https://teamfighttactics.leagueoflegends.com
 重连恢复原席位，旧连接代次失效。商店和资产不因断网消失；临时机器人接管也不重新 createMatch。服务器进程重启的无缝续局是后续增强，首版必须明确中断原局并让旧凭证得到清楚错误。
 
 PlayerView 以白名单生成。具体哪些公开数据可观战另列表；全池精确可用量、未来奖励和 RNG 不默认公开。客户端不能通过本地导入旧存档替换在线状态。
+
+### 6.1 连接心跳消息（PR #229）
+
+服务器向每条打开的 WebSocket 连接发送文本 JSON `{"type":"heartbeat","intervalMs":10000}`；`intervalMs` 为本服务器配置的心跳间隔（毫秒）。该消息不带 `protocolVersion`、`commandId` 或席位数据，不是命令，也没有应用层回执。服务器同时发送 WebSocket 协议层 ping，浏览器自动回复 pong；客户端无需另发 JSON 心跳或 pong 命令。
+
+`src/server/main.ts` 默认启用每 10 秒一次的心跳，静默阈值为间隔的 2.5 倍，默认 25 秒。任意收到的客户端消息或协议层 pong 都更新该连接的最后活动时间；每次心跳轮询先检查静默是否达到阈值，达到则 `terminate()`，否则向仍为 OPEN 的连接发送 ping 和 heartbeat。**25 秒是判定阈值，不是独立定时器保证的断开时刻**：检查只在心跳轮询时发生，例如从时刻 0 起无回音、轮询在 10/20/30 秒发生时，会在 30 秒断开；事件循环延迟还可能推迟检查。
+
+客户端只在当前 socket 收到首条有效 heartbeat 后启用静默检测（`intervalMs` 必须为有限正数）。此后收到任何 WebSocket 应用消息都会重置检测定时器；连续 `3 × intervalMs` 没有消息，默认 30 秒，客户端以关闭码 `4000`、原因 `heartbeat timeout` 关闭该 socket，并立即进入原有重连调度，不等待旧 socket 的 close 事件。新 socket 必须重新收到首条 heartbeat 才启用检测。
+
+环境变量 `CAT_HEARTBEAT_SEC` 配置整秒间隔：未设置或空字符串用默认 10；`0` 关闭服务器的 ping、heartbeat 消息及静默检查；负数、非整数、非有限数或非数字值在启动时抛出 `RangeError`（沿用非负安全整数解析）。直接调用 `createGameServer` 时，`heartbeat` 省略或为 `null` 也关闭；启用时传入 `{ intervalMs, timeoutMs }`，工厂直接使用这两个值，不另作数值校验。
+
+心跳超时沿用原断线路径：**对局内**仅将原席位标为 disconnected，保留席位、资产和凭证；**尚在匹配队列**则退出队列并撤销凭证，不保座。客户端对局内重连仍带原 token 发送 `resume`，按既有 1/2/4/8/10 秒退避调度（最后一档重复），成功后接收原席位快照。若旧 socket 尚未关闭，服务器先提升 `connectionEpoch`、解除旧连接的席位绑定并通知 `session-superseded`，再绑定新连接；旧连接迟到的 close 不会把新连接的席位标为离线。对局故障释放或新局开始后已撤销的凭证，仍按原逻辑返回 `invalid-token`。
+
+本次 `NET_PROTOCOL_VERSION` 仍为 3：以基线 `a0d42c5` 为准，旧浏览器客户端的接收 switch 对未知消息类型直接忽略，不报错、不主动断开；协议层 ping 仍由浏览器自动响应，所以旧客户端可连新服务器。新客户端连旧服务器（或关闭心跳的新服务器）时，因从未收到 heartbeat，不启用静默检测，也不新增任何客户端命令，所以保留旧连接行为。这是对该基线的兼容结论，不承诺绕过既有版本检查接受其他旧协议版本。
 
 ## 7 机器人合同
 
@@ -722,11 +786,11 @@ B5 初始化流程：先 createSharedPool；对八份未发布的 `createMatch(s
 
 ### 12.4 获取来源、奖励与淘汰（SR-B1-05）
 
-来源键分别为 opening(seatId)、shop(seatId,generation,slot)、loot(seatId,receiptId)，使用 JSON 元组编码避免拼接碰撞。持有账本按**实际** resourceProvenance 的 unit-acquired/unit-upgraded/unit-sold 事实折叠；升星合并被消费单位的来源数组，不从当前 UI 数量倒推。二星三份、三星九份；出售只归还该持有记录中的来源份数并沿用既有售价。让位出售时先在私有事务归还被卖单位，再尝试自动领取待领棋子；之后任何校验失败整个事务回滚。
+来源键分别为 opening(seatId)、shop(seatId,generation,slot)、loot(seatId,receiptId)，使用 JSON 元组编码避免拼接碰撞。完整星级奖励为每份追加 copyOrdinal 来源键。持有账本按**实际** resourceProvenance 的 unit-acquired/unit-upgraded/unit-sold 事实折叠；二星三份、三星九份。出售只归还实际持有来源，沿用既有售价；出售不会自动领取联机法球。任何校验失败整个事务回滚。
 
-开场占池时点见 §12.2。野怪计划冻结/战斗揭示不占池；完成战斗、既有规则实际尝试发放已赚棋子时预留一份。未杀死来源而未赚到的奖励不预留、不补偿。有货但备战区满仍先预留，pending-capacity/retained-terminal 保留该份；以后领取转持有、不重复扣池。超时仍不可容纳则放弃归还；淘汰释放同样写一次 forfeited 收据。终局保留的奖励仍占池，直到该真实席位释放；断线不释放。
+开场占池时点见 §12.2。**v15（用户批准 2026-10-20 02:20）**：野怪计划冻结、战斗揭示和机制奖励法球均不占池。法球留在棋盘，跨轮待领，点法球才按 entryOrdinal 一次领取全部内容。英雄在领取时按完整星级取 1/3/9 份；先用 planUnitAcquisition 合成腾格，能入库才扣池。有货但无容量时按未修改的 getUnitSellPrice 自动出售，池份额视为未取出，resolution=capacity-sold 并记 gold。未杀死载体照旧 forfeited，无补偿；淘汰/终局将已赚未领条目记一次 forfeited 收据，断线不作废。
 
-**用户确认的缺货规则**：无可用份数时转为该英雄一星购买价的等额金币，写同 dropId/receiptId 的 Match 奖励收据与池 gold 收据；不占池，不改冻好的原奖励计划，也不替换成其他英雄。补偿进入原奖励事务、在原结算利息计算之前到账。满备战区遇缺货同样按此补金币。重复领取/step/选择不会再预留或补偿。`readLootView` 对共享池已发奖励显示实际收据 payload（金币），不会把原计划棋子误显示为已获得；单人分支保持原显示。
+**缺货规则**：领取时库存不足所需完整份数，则整条按费用补一次金币，resolution=gold；此处完整星级不足的处理为暂定扩展，不部分取货、不按份数倍增。缺货优先于容量出售，两者不叠加。补偿在领取命令到账，不回改既有利息。收据 payload 保留原英雄/starLevel，resolution/gold/grantedUnitIds 明确区别入库、缺货与自动出售；私有 claimReceipts 可显示“自动出售 +NG”。单人路径不变。
 
 所有可能发棋子奖励的 Match 路径必须使用以下统一包装，不得直接调用旧入口跳过池：
 
@@ -735,10 +799,19 @@ type SharedMatchCommand =
   | {type:'startCombat'} | {type:'step'}
   | {type:'choose'; choiceId:string; generation:number; definitionId:string}
   | {type:'timeoutChoice'; round:number; choiceId:string|null; generation:number|null}
-  | {type:'claimLoot'; round:number};
+  | {type:'claimLoot'; round:number}
+  | {type:'claimOrb'; round:number; orbId:string};
 ```
 
-对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 继续按项目规则默认选第一项，claimLoot 领取可容纳已赚奖励、放弃容量不足部分，均不重复发奖。移动/装备/买经验/异常目标等不转移棋子来源的旧公开命令仍可调用，须保留 sharedPool 绑定；T10 起共享 PvP 结算改走 §15.3 的 settleRound 包装以提交延迟升星来源；买/卖/刷/锁、奖励及推进必须用 TP 包装。PvP 继续走 T2→T3；startCombat/step 包装用于原非 PvP 战斗，不提供第二套 PvP 结算。整轮 PvE 必须在同一未发布提案内串接最新 pool 和各席 state：前一席发奖占用的池是后一席的输入，不得从同一旧池独立计算多份奖励后合并。任一席失败丢弃整个全轮提案，全部成功再发布（沿用 §11.3）。
+对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot/claimOrb，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 保留原选择默认值，claimLoot 仅处理原有组件自选等选择，不领取、不丢弃法球；nextRound 不因未领法球阻塞。`claimOrb(state,orbId,expectedRound)` 允许 preparation/combat/settlement/choice，集中于 ORB_CLAIM_PHASES；combat 或 PvP combatRosterLocked 接受并排队，其余允许阶段即时领取（用户 10-20 02:26 已定）。expectedRound 为当前操作轮；失败 already-claimed（含重复排队）/ unknown-orb / seat-eliminated，另保留 stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 及原池校验枚举；失败原 state/pool、无事件、无 RNG 或池变化。其他 TP 包装与 PvP/T2/T3 路径保持。服务器应将 `{type:'claimOrb',round,orbId}` 原样转发包装，网络协议目标 4（服务器禁改目录由 Claude 接线）。
+
+私有投影增加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，提供所有已揭示、已赚且未领的跨轮法球；`claimReceipts` / private `orbClaimReceipts` 含 resolution、gold、claimedRoundId。公共只给 `{count,tiers}`，不暴露 queued。P2/征服者/黑市英雄先写 resolution=orb 的机制收据，再走同一领取命令；完整星级占一格并沿用升星。bot 准备入口调用 claimBotPreparationOrbs，按 orbId 代码点顺序领完；终局调用下述 forfeitTerminalOrbs。合同版本 `multiplayer-orb-claim-v2`，网络目标仍为 4，完整签名、恢复边界、约定值及服务器交接见 [v15 实现说明](LOOT_ORB_CLAIM_V15.md)。
+
+**#260 → #262 终局入口**：`forfeitTerminalOrbs(state: MatchState): MatchStep`，从 `src/server-entry/index.ts` 导出，返回 `{state, events}`，无失败枚举。服务器确定整局结束后逐席调用并提交返回状态和事件，含赢家及其他仍 active 的存活席位；不要求席位已转 gameOver/eliminated，也不自行更改 phase/status。此可信钩子不接入客户端白名单、普通轮次截止或共享池命令包装。清空领取队列，按原计划顺序对已赚未领条目各写一张 forfeited/gold=0/claimedRoundId=当前轮的唯一收据，逐条发 lootForfeited 再 lootGranted；事件带 domain=match、从该席 nextMatchEventSeq 连续编号并推进状态计数，服务器不得再编号。已领及未赚 planned 条目保留；无扣池、发钱、入库、RNG 消耗或其他获取/选择钩子。单机为空操作；重复调用或快照恢复后再调用不产生新事件/收据，空队列时保留原 state 引用。旧 forfeitUnclaimedOrbs 仅作未编号计划器保留；完整语义见 [Match 合同](MATCH_CONTRACT.md#联机整局终局法球清理260--262)。
+
+排队持久字段为席位私有 `m8.loot.queuedOrbClaims?:readonly string[]`（缺省空，按提交顺序），队列中的 direct 仍为 revealed。接受排队无领取事件或收据，不改军队/金币/库存/预留/RNG；包装仍更新 pool/seat revision。PvE withCombat 与 PvP applyRoundSettlement 在收入/利息、XP/HP/成长、G23 钩子、延迟升星之后，战后选择之前统一处理：淘汰先作废全部已赚未领并清空队列；存活按 FIFO、颗内 entryOrdinal 调用同一领取逻辑，以结算时备战席和卡池决定入库/折金/缺货。每颗后 drain 机制奖励、同步临时装备，新法球不自动排队。收据和清空队列与本轮结算原子提交；失败整体回滚，重连/恢复/重复结算不重发。
+
+领取本身消耗 0 RNG，不重抽 payload；若原临时装备钩子需新 roll，仅按 FIFO、每颗后父装备 ID/roundId 代码点顺序消费 equipment 流的两个 uniformIndex（含拒绝采样）并记 roll，战斗/商店 RNG 不因领取改变。跨席卡池竞争沿服务器现有结算原子提交顺序；不保证全局点击先后。服务器必须从 latest seat 结算，不能用战前 resolver 副本覆盖队列；battle/awaiting-settlement 也转发 claimOrb，ACK 仅表示 queued，战后投影收据才表示到账。恢复保留队列原序，validateMultiplayerOrbLedger 校验唯一性、已赚/揭示、未领取、战斗生命周期及未结算。详见 [Match 排队合同](MATCH_CONTRACT.md)。
 
 `releaseSeatOnElimination` 只接受 multiplayer.status=eliminated 且 HP=0，在 **本轮排名已计算后、下一轮自然店生成前** 调用。归还所有店卡、持有来源和待领预留，清空店格，将 pending 标记为 forfeited 并产生一次 Match/pool 事件，不发出售金币。released=true 后第二次返回 duplicate-release，其他池命令返回 seat-eliminated。终态 preparation 军队保留为只读展示档案，已无真实所有权；不可再卖/获取/返还，镜像不能以此档案创建新实体。
 
@@ -1745,6 +1818,20 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 **机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。
 
+## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
+
+用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
+
+**投影**：`SeatPublic.publicBoard`（`PublicBoard`）在原 `units` 之外由 `toPublicBoard` 逐字段新增三个字段，均为可选类型、房间总是填写：
+- `bench: PublicBenchUnit[]`：本席 `preparation.units` 中 `team:'player'`、位于备战席的单位，`{definitionId, starLevel, slot, items[]}`，按 slot 升序；`items` 为该单位所持装备定义 id，按装备槽序。
+- `looseItems: string[]`：`location.kind === 'inventory'`（未装备）的装备定义 id，按 `MatchState.items` 原顺序。
+- `augments: string[]`：已拥有强化的定义 id，按 `MatchState.augments` 顺序（获得顺序）。
+- `anomaly?: string`（加在 `units[]` 与 `bench[]` 的单位上）：`anomalyBinding.unitId` 指向该单位时为其异常定义 id，否则省略该键。不带 `choiceId`、`boundRound`、单位 id。
+
+不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
+
+**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
+
 ### First-pass replay capture supplement
 
 `startTwoSidedBattle(input, { captureReplay: true })` returns BattleReplayTask with
@@ -1757,3 +1844,36 @@ First-pass output and re-executed replay have byte-identical canonicalContent;
 startCombatReplay retains re-execution and divergence checks for spot audits.
 This supplement allows capture in place of SR-B3-02's second frame-generation run;
 server integration and spot-check policy are implemented separately.
+
+## UR-I3-01 / v15：战斗单位当前状态种类（2026-10-20）
+
+`CombatViewUnit` 新增可选字段（server-entry 同时导出 `CombatViewStatus` 与 `StatusKind`）：
+
+```ts
+interface CombatViewStatus {
+  readonly kind: StatusKind | 'channel' | 'redirect';
+  readonly harmful: boolean;
+}
+// CombatViewUnit
+readonly statuses?: readonly CombatViewStatus[];
+```
+
+`toCombatViewState(state: CombatState): CombatViewState`、`createCombatReplayRecorder(initialState, initialEvents)` 与 `toCombatReplay(input)` 签名、输入校验及失败原因保持原状。新生成的单位视图总有 `statuses`（空时为 `[]`）；可选类型兼容既有视图对象，旧对象缺失时按空数组展示。数组只有状态种类和极性，不含来源、持续时间、执行计划或隐藏数据。
+
+投影直接调用单机纯只读函数 `readUnitStatusRows(state, unitId)`，排除 `state:'pending'|'suppressed'`，保留 `effective|active`；不比较数值、不再执行叠加规则。沿用该函数的 filtered contribution（没有伤害包上下文时不判压制）、active activity、targetId 过滤、legacy fallback 语义。现代快照由引擎清理到期贡献/活动，投影不从历史事件重建、不改权威状态。
+
+同 `(kind,harmful)` 去重，固定 ASCII kind 升序：`burn, channel, control-immunity, damage-prevention, damage-reduction, redirect, shred, stat-buff, stat-debuff, stun, sunder, untargetable, wound`；同 kind 下 `false` 在 `true` 前，不依赖 locale、贡献遍历顺序或来源 ID。护盾继续读 `shield`，不伪造 shield 状态种类。
+
+`initial.units`、`keyframe.units`、`terminal.units` 和 `unitEntered.unit` 提供完整数组。tick 末现有单位字段差量比较在数组变化时发送 `unitUpdated{unitId,changes:{statuses:[...]}}`，与其他 changes 可同包；最后一项消失必须发送 `statuses:[]`。客户端整体替换数组；`statusChanged` 仅供动画事实，不用于推算图标。`applyCombatReplayTick` 的既有合并逻辑已覆盖该字段，重连用关键帧加后续 unitUpdated 即可恢复；镜像只翻格子/阵营，statuses 不变。
+
+netProtocol 目标仍为 **4**，与本分支 claimOrb 共用一次升级，不增加到 5；不改 rules/content、save/replay 版本或 digest。本轮禁改 `src/server/`，其当前网络常量仍为 3，由 Claude 在 v15 统一接线至 4，不能据此称已联机上线。视图字节/回放指纹的变化和本轮测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
+
+## v16：史诗奖励与统一消耗品（2026-10-20）
+
+本节覆盖 §18 中旧 component-reforger/completed-reforger 身份、装备单件目标和5-7/6-7旧宝珠表。公共签名与失败全集见 [MATCH_CONTRACT v16](MATCH_CONTRACT.md#v16史诗奖励复制器统一重铸器2026-10-20)，完整冻结/RNG合同见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)。本轮不修改 src/server/；服务器继续调用已有共享池命令，不自行选择英雄、抽重铸、生成装备或算折金。
+
+runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult 签名不变；useConsumable分支仍为 {type:'useConsumable',consumableId:string,target:ConsumableTarget}。四种工具均目标己方单位；成功effect=remove-all/reforge-all/duplicate-unit；新增失败bench-full。失败返回原池原状态且无事件，预览不改变任何游标。客户端显示名取CONSUMABLE_DEFINITIONS，不能按旧三个枚举硬编码。
+
+共享房间布局仅冻结载体与早期颜色，5-7/6-7为epic-reward占位；每席显式loot种子扩展为3或4颗冻结法球，顺序为成装锻造器/可选神器锻造器/铜箱/银箱，冠冕变体为冠冕/银箱/银箱。只有载体死亡才揭示，隐藏计划不投影。铜箱gray、银箱blue，锻造器/冠冕gold；一组一颗，箱内多条entry保持冻结顺序。两席共享早期颜色不共享箱内内容或随机游标。
+
+联机沿用claimOrb，不在揭示或结算时直接发英雄。铜/银箱对应费用的已上线英雄池独立抽1星，银箱双英雄独立可重复，不直接产2星。缺货折费用金币，满席折getUnitSellPrice；金币/工具/锻造器领取收据与英雄收据同一事务。锻造器领取后进入既有四选一forge，selectChoice成功才有装备出生；重连和重试复用唯一收据。复制器使用时先检查真实备战席空位，成功后创建机制英雄法球，领取时才扣共享池。旧版本存档和快照被v16严格拒绝，不迁移；schema7/save3/replay3/command4、netProtocol目标4不再递增。

@@ -3,7 +3,8 @@ import type { Team,HexCell } from './board';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect } from './strategy-types';
-import { UNIT_DEFINITIONS } from './units';
+import {deriveEffectiveTrait,projectEffectiveMembership} from './traits/effective-membership';
+import type { TraitSnapshot } from './strategy-types';
 /** 约定值: project uniform sampling without replacement, independent LCG stream. */
 export function g23Laboratories(seed:number,team:Team,tier:number):readonly HexCell[]{
  if(tier<3)return [];
@@ -12,10 +13,12 @@ export function g23Laboratories(seed:number,team:Team,tier:number):readonly HexC
  for(let i=0;i<(tier>=5?3:2);i++){const draw=nextRandom(rng);rng=draw.state;result.push(...cells.splice(Math.floor(draw.word*cells.length/2**32),1));}
  return result;
 }
-export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit):Effect[]{
- if(unit.location.kind!=='board'||!UNIT_DEFINITIONS[unit.definitionId].traits.includes('experiment'))return [];
- const army=state.preparation.units.filter(u=>u.team===unit.team&&u.location.kind==='board'&&UNIT_DEFINITIONS[u.definitionId].traits.includes('experiment'));
- const count=new Set(army.map(u=>u.definitionId)).size,tier=count>=7?7:count>=5?5:count>=3?3:0;
+export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit,traits?:readonly TraitSnapshot[]):Effect[]{
+ const experiment=traits?traits.find(t=>t.team===unit.team&&t.traitId==='experiment'):deriveEffectiveTrait(projectEffectiveMembership(state.preparation),unit.team,'experiment');
+ const member=(u:Unit)=>experiment?.memberUnitIds?experiment.memberUnitIds.includes(u.id):experiment?.memberDefinitionIds.includes(u.definitionId);
+ if(unit.location.kind!=='board'||!member(unit))return [];
+ const army=state.preparation.units.filter(u=>u.team===unit.team&&u.location.kind==='board'&&member(u));
+ const tier=experiment?.tier??0;
  const labs=unit.team==='player'&&state.visibleExperimentCells?state.visibleExperimentCells:g23Laboratories(state.g23?.seed??0,unit.team,tier),onLab=(u:Unit)=>{const location=u.location;return location.kind==='board'&&labs.some(c=>c.col===location.cell.col&&c.row===location.cell.row);};
  if(!onLab(unit))return [];
  const donors=army.filter(onLab),factor=tier>=7?2:1;

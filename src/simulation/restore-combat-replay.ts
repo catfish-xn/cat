@@ -5,6 +5,7 @@ import { canonicalContent, digestContent } from './content';
 import { M8_VERSION } from './m8/version';
 
 export interface CombatReplayFacts {
+  readonly openingState: CombatState['openingState'];
   readonly tick: number;
   readonly rngState: CombatState['rngState'];
   readonly rngDraws: CombatState['rngDraws'];
@@ -33,10 +34,11 @@ export interface CombatReplayFacts {
 }
 export interface RestoreCombatReplay {
   opening(): CombatState;
+  p2Opening(): readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[];
   atSaveTick(): CombatReplayFacts;
 }
 function facts(state: CombatState): CombatReplayFacts {
-  return structuredClone({ tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
+  return structuredClone({ openingState: state.openingState, tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
     nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
     damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
     id: unit.id, definitionId: unit.definitionId,
@@ -66,22 +68,35 @@ interface Evidence {
 const evidence = new Map<string, Evidence>();
 const MAX_BATTLES = 8;
 const MAX_IDENTITY_LENGTH = 1024 * 1024;
+// Pure encodings of already authenticated JSON inputs, never candidate runtime
+// or admission results. Exact bytes bind every basis/strategy/version field.
+const identities = new Map<string, { identity: string; key: string }>();
 
 /** Restore-only: normal combat stepping and save capture never populate this cache.
  * The full authenticated basis, resolved strategy and every format/rules version
  * identify a trajectory. Returned states are detached, including on exact hits.
  * Validators must still compare the current candidate on every invocation. */
-export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: StrategySnapshot, tick: number): RestoreCombatReplay {
+export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: StrategySnapshot, tick: number, parsedJsonInput = false): RestoreCombatReplay {
   let initial: CombatState | undefined, openingCopy: CombatState | undefined, result: CombatReplayFacts | undefined;
+  let p2Copy: readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[] | undefined;
   let cached: Evidence | undefined, key: string | undefined, identity: string | undefined;
   const lookup = () => {
     if (identity !== undefined) return;
     const inputs = { version: M8_VERSION, basis, strategy };
+    // Only the restore boundary's own parsed graph can take the native JSON
+    // encoding path. Object inputs retain their original getter/read behavior.
+    const encoded = parsedJsonInput ? JSON.stringify({ version: canonicalContent(M8_VERSION), basis, strategy }) : undefined;
+    const known = encoded === undefined ? undefined : identities.get(encoded);
     // Inputs are already admitted finite JSON. Canonical keys make a live state
     // and its serialized text share evidence; frozen inputs reuse cached text.
-    identity = canonicalContent(inputs);
+    identity = known?.identity ?? canonicalContent(inputs);
     if (identity.length > MAX_IDENTITY_LENGTH) return;
-    key = digestContent(identity);
+    key = known?.key ?? digestContent(identity);
+    if (encoded !== undefined && encoded.length <= MAX_IDENTITY_LENGTH) {
+      if (known) identities.delete(encoded);
+      else if (identities.size >= MAX_BATTLES) identities.delete(identities.keys().next().value!);
+      identities.set(encoded, { identity, key });
+    }
     const hit = evidence.get(key);
     if (hit?.identity === identity) {
       cached = hit;
@@ -95,6 +110,9 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
   };
   return {
     opening: () => openingCopy ??= structuredClone(privateOpening()),
+    // P2 reads only these facts. Copying the complete opening also copied all
+    // declarations, histories and runtime containers on every restored tick.
+    p2Opening: () => p2Copy ??= structuredClone(privateOpening().units.map(({ id, s13P2Opening }) => ({ id, s13P2Opening }))),
     atSaveTick() {
       if (result) return result;
       lookup();

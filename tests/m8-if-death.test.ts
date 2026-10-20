@@ -1,6 +1,9 @@
 import { describe,expect,it } from 'vitest';
 import { freezeCompanions, registerDeaths, advanceReactions, validateCompanionState, type CompanionDefinition } from '../src/simulation/m8/companions';
 import { source, amount, modifier } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const members=[{id:'a',team:'enemy' as const,unitKind:'neutral' as const,encounterId:'enc',monsterFamily:'family'}, {id:'b',team:'enemy' as const,unitKind:'neutral' as const,encounterId:'enc',monsterFamily:'family'},{id:'c',team:'enemy' as const,unitKind:'neutral' as const,encounterId:'enc',monsterFamily:'family'}];
 const def:CompanionDefinition={source:{...source('reaction','a','a'),sourceKind:'ability'},effects:[{kind:'heal',amount:amount(0,{missingHpBps:10000})}]};
 const deaths=[{combatId:'battle',tick:10,deadUnitId:'c',team:'enemy' as const,encounterId:'enc',monsterFamily:'family',eventId:'death-c'},{combatId:'battle',tick:10,deadUnitId:'b',team:'enemy' as const,encounterId:'enc',monsterFamily:'family',eventId:'death-b'}];

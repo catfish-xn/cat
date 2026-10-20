@@ -16,7 +16,7 @@ vi.mock('../../src/simulation/g2-3-match-progress', async importOriginal => {
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
 import { seatPushEvents, toPlayerView } from '../../src/server/room/projection';
 import type { RoomState, SeatState } from '../../src/server/room/types';
-import { makeRoom, runUntil } from './helpers';
+import { makeRoom, runUntilClaiming } from './helpers';
 
 const seat = (state: RoomState, seatId: string): SeatState => state.seats.find(candidate => candidate.seatId === seatId)!;
 afterEach(() => { fault.seatId = ''; });
@@ -25,7 +25,8 @@ describe('mechanicFailed push (contract §25)', () => {
   it('pushes the failure with the own seat state only, and never in another seat\'s view', () => {
     const { room, clock } = makeRoom(new PlaceholderBattleResolver());
     room.start();
-    runUntil(room, clock, state => state.round === 2 && state.phase === 'preparation');
+    // v15: the PvE rewards arrive as orbs each seat claims in preparation.
+    runUntilClaiming(room, clock, state => state.round === 2 && state.phase === 'preparation');
     // s0 keeps a bench unit, so the preparation deadline runs a rules deployment for it.
     expect(seat(room.state, 's0').match.preparation.units.some(unit => unit.team === 'player' && unit.location.kind === 'bench')).toBe(true);
     fault.seatId = 's0';

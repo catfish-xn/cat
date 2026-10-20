@@ -16,14 +16,16 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
-import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
+import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
+import { replayTail } from '../room/live-bank';
+import type { CombatReplay } from '../../server-entry';
 import type { Clock, ClockHandle } from '../room/clock';
 import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
-import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
+import { consumableReceiptEvents, mirrorReplayTick, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type RoomPhase, type RoomState } from '../room/types';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleResult, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
   NET_PROTOCOL_VERSION, commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
@@ -60,6 +62,8 @@ export interface GameServerOptions {
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
+  /** First-pass replay spot check cadence in rounds that captured a battle; SPOT_CHECK_EVERY_ROUNDS by default. */
+  readonly spotCheckEveryRounds?: number;
   /** Wall budget of one resolution slice in ms (RoomOptions.sliceMs); default DEFAULT_SLICE_MS, `null` slices by ticks only. */
   readonly sliceMs?: number | null;
   /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
@@ -74,7 +78,17 @@ export interface GameServerOptions {
   readonly carousel?: CarouselRules;
   /** Process figures for /healthz (main.ts reads them from Node); null fields when omitted. */
   readonly processStats?: () => { readonly uptimeSec: number; readonly rssBytes: number };
+  /**
+   * Connection heartbeat on the injected clock: every `intervalMs` each open connection gets a WebSocket ping and a
+   * `heartbeat` message; one that has sent nothing (no pong, no message) for `timeoutMs` is terminated, which frees
+   * the connection but keeps its seat exactly like any other close (the token still resumes it). Off when omitted;
+   * main.ts turns it on.
+   */
+  readonly heartbeat?: HeartbeatOptions | null;
 }
+
+export interface HeartbeatOptions { readonly intervalMs: number; readonly timeoutMs: number }
+export const HEARTBEAT_DEFAULTS: HeartbeatOptions = { intervalMs: 10_000, timeoutMs: 25_000 };
 
 export interface BuildInfo {
   /** Full git commit the running bundle was built from, or "unknown". */
@@ -129,6 +143,8 @@ export interface ServerRetained {
 }
 /** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
 export const DEFAULT_SLICE_TICKS = 100;
+/** First-pass replay spot check: one captured battle every this many rounds that captured one (user choice 2026-10-19). */
+export const SPOT_CHECK_EVERY_ROUNDS = 4;
 /**
  * Default wall budget of one slice: late-round ticks cost several milliseconds each, so 100 of them could hold the
  * single writer for hundreds of milliseconds and every command queued behind them waited as long.
@@ -138,7 +154,9 @@ export const DEFAULT_SLICE_MS = 20;
 /**
  * Resolver wrapper (B8, §19): once a battle's job finished, the following slices build the replays its attended seats
  * will be pushed, as resumable replay tasks advanced by the same tick budget, so the re-execution behind a replay never
- * runs inside the push of the whole round nor in one long slice. The result is unchanged.
+ * runs inside the push of the whole round nor in one long slice. The result is unchanged. A replay the rules already
+ * recorded during the first pass is in the cache, so the warm-up skips it; only uncaptured battles (an injected
+ * resolver, a seat that connected after its battle started) are still re-run here.
  */
 function withReplayWarmup(inner: BattleResolver, seats: () => Iterable<string>): BattleResolver {
   return {
@@ -175,7 +193,11 @@ interface Connection {
   sentRoomRevision: number;
   sentSeatRevision: number;
   sentCombatKey: string;
+  /** The battle result and replay behind the last `replay` (or `replay-tail`) this connection was sent. */
+  sentCombat: { readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   closeHandle: ClockHandle | null;
+  /** Clock time of the last pong or message from the peer (heartbeat). */
+  lastSeen: number;
 }
 
 const fail = (commandId: number, reason: ReceiptFailure, detail: string | null = null): ReceiptMessage => ({ type: 'receipt', commandId, ok: false, reason, detail });
@@ -183,6 +205,10 @@ const done = (commandId: number, result: ReceiptResult): ReceiptMessage => ({ ty
 
 export function createGameServer(options: GameServerOptions): Promise<GameServer> {
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
+  const heartbeat = options.heartbeat ?? null;
+  if (heartbeat !== null && !(Number.isSafeInteger(heartbeat.intervalMs) && heartbeat.intervalMs > 0 && Number.isSafeInteger(heartbeat.timeoutMs) && heartbeat.timeoutMs > heartbeat.intervalMs)) {
+    return Promise.reject(new RangeError(`heartbeat expects positive integer intervalMs < timeoutMs, got ${JSON.stringify(heartbeat)}`));
+  }
   const log: Logger = options.logger ?? (options.log ? textLogger(options.log) : () => {});
   const clock = options.clock;
   const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
@@ -200,9 +226,18 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     schedule: (at, fn) => clock.schedule(at, () => queue.push(fn)),
     cancel: handle => clock.cancel(handle),
   };
-  const resolver = options.resolver ?? new TwoSidedBattleResolver();
+  // First-pass capture (MULTIPLAYER_CONTRACT): a battle with a human or connected seat records its replay frames while it
+  // is computed, so no push re-runs it. Bot-only battles are never pushed and record nothing. An injected resolver
+  // (tests, fault injection) captures nothing; its replays are still built by the warm-up below, as before.
+  const captureReplay: ReplayCapture = seatIds => {
+    const attended = attendedSeats();
+    return seatIds.some(seatId => attended.has(seatId) || room?.state.seats.some(seat => seat.seatId === seatId && seat.kind === 'human'));
+  };
+  const resolver = options.resolver ?? new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
+  const sliceTicks = options.sliceTicks ?? DEFAULT_SLICE_TICKS;
+  const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
-    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS,
+    clock: roomClock, sliceTicks,
     ...(options.sliceMs === null ? {} : { sliceMs: options.sliceMs ?? DEFAULT_SLICE_MS }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
@@ -256,14 +291,44 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
     if (battle) {
       const key = `${state.round}:${battle.battleId}`;
-      if (conn.sentCombatKey !== key) {
+      const sent = conn.sentCombatKey === key ? conn.sentCombat : null;
+      // D11 live bank: a live run replaced the battle already sent; only the records that changed follow.
+      if (conn.sentCombatKey !== key || (sent && sent.battle !== battle)) {
         conn.sentCombatKey = key;
         // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
         let replay: ReturnType<typeof toCombatReplayFor> = null;
         try { replay = toCombatReplayFor(state, seat.seatId); }
         catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: seat.seatId, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
-        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
+        if (replay && sent) {
+          conn.sentCombat = { battle, replay: replay.replay };
+          const tail = replayTail(sent.replay, replay.replay);
+          if (tail) send(conn, { type: 'replay-tail', roomId: state.roomId, round: state.round, battleId: replay.battleId, ...tail });
+        } else if (replay) {
+          conn.sentCombat = { battle, replay: replay.replay };
+          send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
+        }
       }
+    }
+  }
+  /**
+   * D11 live bank: a battle's live run produced frames that differ from the replay its seats were pushed. Each seat that
+   * holds that replay gets the changed records (side B mirrored, as its replay was); only public view frames leave.
+   */
+  function pushLive(opened: Room, battleId: string): void {
+    const state = opened.state, frames = opened.liveFrames(battleId);
+    const battle = state.battles.find(candidate => candidate.battleId === battleId);
+    if (!frames || !battle || battle.kind !== 'two-sided') return;
+    const key = `${state.round}:${battleId}`;
+    for (const conn of connections.values()) {
+      const seatId = conn.session?.roomId === state.roomId ? conn.session.seatId : null;
+      const sent = conn.sentCombatKey === key ? conn.sentCombat : null;
+      if (!seatId || !sent || !battle.participants.includes(seatId)) continue;
+      const rows = sent.replay.initial.board.rows;
+      const ticks = battle.battle.b.seatId === seatId ? frames.ticks.map(frame => mirrorReplayTick(frame, rows)) : frames.ticks;
+      const revised: CombatReplay = { ...sent.replay, ticks: [...sent.replay.ticks.slice(0, frames.fromTick), ...ticks] };
+      const tail = replayTail(sent.replay, revised);
+      conn.sentCombat = { battle: sent.battle, replay: revised };
+      if (tail) send(conn, { type: 'replay-tail', roomId: state.roomId, round: state.round, battleId, ...tail });
     }
   }
   function pushAll(state: RoomState): void { for (const conn of connections.values()) pushRoom(conn, state); }
@@ -287,17 +352,57 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
     };
-    unsubscribeRoom = opened.subscribe(state => { logPhase(state); queue.push(() => pushAll(state)); });
+    const unsubscribeState = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
+    const unsubscribeLive = opened.subscribeLive(battleId => queue.push(() => pushLive(opened, battleId)));
+    const unsubscribeNotices = opened.subscribeNotices(notice => {
+      log('warn', 'orb.claim-refused', { roomId, seatId: notice.seatId, round: notice.round, orbId: notice.orbId, reason: notice.reason });
+      // Queued like a publication, so it leaves after the battle-entry state the refusal was decided on.
+      queue.push(() => {
+        for (const conn of connections.values()) if (conn.session?.seatId === notice.seatId && conn.session.roomId === roomId)
+          send(conn, { type: 'notice', roomId, round: notice.round, notice: { kind: 'orb-claim-refused', orbId: notice.orbId, reason: notice.reason } });
+      });
+    });
+    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); };
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
-      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = '';
+      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
       if (!conn.open) opened.setConnected(session.seatId, false);
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
     queue.push(() => { pushAll(opened.state); broadcastLobby(); });
     log('info', 'room.started', { roomId, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
     logPhase(opened.state);
+  }
+
+  /**
+   * Background spot check of first-pass replays (user decisions 2026-10-19): once a round's battles are published, every
+   * SPOT_CHECK_EVERY_ROUNDS-th round that captured a battle has one of them re-run by the rules (`startCombatReplay`) in
+   * write-queue slices and compared with the frames the seats were pushed. A mismatch never touches the round or its settlement: it is logged with the room, round, battle,
+   * seed, seats and first differing frame, and every later round of that room is then checked in full.
+   */
+  let audit = { room: null as Room | null, round: -1, all: false, eligible: 0 };
+  function scheduleSpotCheck(owner: Room, state: RoomState): void {
+    if (audit.room !== owner) audit = { room: owner, round: -1, all: false, eligible: 0 };
+    if (state.phase !== 'battle' || audit.round === state.round) return;
+    audit.round = state.round;
+    const check = startReplaySpotCheck(state.battles, state.round, audit.all, state.battleSeeds);
+    if (!check) return;
+    // Rounds that captured a battle count; the 1st, 5th, 9th … of them are checked (all of them after a mismatch).
+    if (audit.eligible++ % spotCheckEvery !== 0 && !audit.all) return;
+    const slice = () => {
+      // A replaced room or a closing server drops the check; an ended room still finishes its last round's check.
+      if (room !== owner || closing) return;
+      const results = check.advance(sliceTicks);
+      if (!results) { roomClock.schedule(clock.now(), slice); return; }
+      for (const result of results) {
+        if (result.firstDifference === null) { log('debug', 'replay.spot-check', { roomId: state.roomId, round: state.round, battleId: result.battleId }); continue; }
+        audit.all = true;
+        log('error', 'replay.spot-check-failed', { roomId: state.roomId, round: state.round, roundName: state.roundName, battleId: result.battleId,
+          battleSeed: result.battleSeed, seats: result.seatIds.join(','), firstDifference: result.firstDifference });
+      }
+    };
+    roomClock.schedule(clock.now(), slice);
   }
 
   /**
@@ -450,6 +555,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onMessage(conn: Connection, data: RawData, isBinary: boolean): void {
     if (!conn.open) return;
+    conn.lastSeen = clock.now();
     if (!withinRate(conn)) return sendError(conn, 'rate-limited', `more than ${limits.maxMessagesPerWindow} messages per ${limits.rateWindowMs} ms`);
     if (isBinary) return sendError(conn, 'invalid-json', 'binary frames are not accepted');
     const parsed = parseClientMessage(data.toString());
@@ -466,7 +572,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     conn.session = session;
     conn.epoch = session.connectionEpoch;
     session.connection = conn;
-    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = '';
+    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
   }
 
   /** The connection loses its seat but may stay open: `superseded` tells it why and closes it after a grace period. */
@@ -502,13 +608,39 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', closeHandle: null };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', sentCombat: null, closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
+    socket.on('pong', () => { conn.lastSeen = clock.now(); });
     socket.on('close', () => queue.push(() => onClose(conn)));
     socket.on('error', error => log('warn', 'connection.error', { connection: conn.id, error: error.message }));
     queue.push(() => send(conn, { type: 'lobby', view: lobbyViewFor(conn) }));
     log('debug', 'connection.opened', { connection: conn.id });
+  }
+
+  /* ---------------- heartbeat ---------------- */
+
+  let heartbeatHandle: ClockHandle | null = null;
+  function scheduleHeartbeat(): void {
+    if (heartbeat === null || closing) return;
+    heartbeatHandle = clock.schedule(clock.now() + heartbeat.intervalMs, () => { heartbeatHandle = null; queue.push(beat); });
+  }
+  /** A peer gone silent (pulled cable, sleeping laptop) never sends a close; terminating it runs the usual onClose. */
+  function beat(): void {
+    if (closing) return;
+    const now = clock.now();
+    for (const conn of connections.values()) {
+      if (!conn.open) continue;
+      if (now - conn.lastSeen >= heartbeat!.timeoutMs) {
+        log('info', 'connection.timeout', { connection: conn.id, seatId: conn.session?.seatId, silentMs: now - conn.lastSeen });
+        conn.socket.terminate();
+        continue;
+      }
+      if (conn.socket.readyState !== conn.socket.OPEN) continue;
+      try { conn.socket.ping(); } catch { /* closing; the close event follows */ }
+      send(conn, { type: 'heartbeat', intervalMs: heartbeat!.intervalMs });
+    }
+    scheduleHeartbeat();
   }
 
   /* ---------------- health (G3) ---------------- */
@@ -556,11 +688,14 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const wss = new WebSocketServer({ server: http, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.on('connection', onConnection);
     wss.on('error', error => log('error', 'server.error', { error: error.message }));
-    http.once('error', reject);
+    // A failed listen (port taken) resolves nothing the caller could close: release what was built here.
+    const failed = (error: Error) => { closing = true; lobby.dispose(); wss.close(); reject(error); };
+    http.once('error', failed);
     http.listen(options.port, options.host, () => {
       const address = http.address();
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
-      http.off('error', reject);
+      http.off('error', failed);
+      scheduleHeartbeat(); // only once listening: a failed listen leaves no timer behind
       http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
         get port() { return port; },
@@ -576,7 +711,12 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         health,
         close: () => new Promise<void>(resolveClose => {
           closing = true;
-          for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }
+          if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
+          for (const conn of connections.values()) {
+            // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
+            if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
+            conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing');
+          }
           unsubscribeRoom?.(); unsubscribeRoom = null;
           lobby.dispose();
           wss.close(() => { http.close(() => resolveClose()); http.closeIdleConnections(); });

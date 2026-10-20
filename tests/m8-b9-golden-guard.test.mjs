@@ -5,6 +5,9 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const require = createRequire(import.meta.url);
 const updater = require('../scripts/update-m8-b9-golden.cjs');
 const root = resolve(import.meta.dirname, '..');

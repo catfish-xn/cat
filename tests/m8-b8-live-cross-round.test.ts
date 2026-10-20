@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function accepted(result: api.MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Cross-round loot fixture: ${result.reason}`);
@@ -61,7 +64,11 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['gloves', 'inventory'], ['rod', 'inventory']]);
     expect(opening.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'item').map(receipt => [JSON.parse(JSON.parse(receipt.dropId)[0])[1], 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))
       .toEqual([['1-3', 'rod'], ['1-4', 'gloves'], ['1-4', 'bow']]);
-    expect(opening.consumables.map(tool => tool.definitionId)).toEqual(Array(3).fill('magnetic-remover'));
+    // Scheme A: independent BigInt oracle gives roll 98 on the 1-4 blue
+    // component orb. Original rewards/recipe remain v15's; only this tool appends.
+    expect(opening.consumables.map(tool => tool.definitionId)).toEqual([
+      'magnetic-remover','magnetic-remover','magnetic-remover','TFT_Consumable_ChampionDuplicator_III',
+    ]);
     expect(api.readLootView(opening)).toEqual({ roundId: '2-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
   });

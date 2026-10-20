@@ -1,3 +1,4 @@
+import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
 import { G23_SUMMON_ABILITIES } from './content/g2-3-summons';
 import { G23_ABILITIES } from './content/g2-3-abilities';
@@ -7,12 +8,14 @@ import { S13_ABILITY_DATA } from './content/abilities';
 import { ABILITY_DISPLAY_SOURCE } from './ability-display-source';
 import { getUnitStats } from './unit-stats';
 import type { StarLevel } from './unit-types';
+import { d14UnitBase } from './d14-anomalies/projection';
 
 export interface AbilityDisplayStats {
   readonly abilityPower?: number;
   readonly attackDamage?: number;
 }
 function sourceFor(id: string): {readonly name:string;readonly variables:Readonly<Record<string,readonly number[]>>} {
+  if(Object.hasOwn(S13_ANOMALY_SUMMON_ABILITIES,id+'-ability'))return S13_ANOMALY_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_SUMMON_ABILITIES,id+'-ability'))return G23_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_ABILITIES,id+'-ability'))return G23_ABILITIES[id+'-ability'];
@@ -27,11 +30,27 @@ export function abilityDisplayName(definitionId: string): string { return source
  */
 export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
   stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
-  const source = sourceFor(definitionId), base = definitionId.endsWith('-ranged')&&Object.hasOwn(G23_UNITS,definitionId)?resolveUnitStats(G23_UNITS[definitionId],starLevel):getUnitStats(definitionId, starLevel);
+  return displayValues(definitionId, starLevel, stats);
+}
+/** Ultimate Hero's effective rank 4 only. Caller reads the authenticated promoted
+ * marker; this query neither grants promotion nor changes physical ownership.
+ * Rejects non-one-cost heroes. Uses raw rank 4 plus the 14.24b Singed override.
+ */
+export function ultimateHeroAbilityDisplayValues(definitionId: string,
+  stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
+  return displayValues(definitionId, 3, stats, true);
+}
+function displayValues(definitionId: string, starLevel: StarLevel,
+  stats: AbilityDisplayStats, promoted = false): Readonly<Record<string, number>> {
+  const source = sourceFor(definitionId);
+  const projection = promoted ? d14UnitBase({ definitionId, starLevel }, true) : undefined;
+  const base = projection?.base ?? (definitionId.endsWith('-ranged')&&Object.hasOwn(G23_UNITS,definitionId)?resolveUnitStats(G23_UNITS[definitionId],starLevel):getUnitStats(definitionId, starLevel));
   const ad = stats.attackDamage ?? base.attack, ap = stats.abilityPower ?? 100;
   if (![ad, ap].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 1_000_000))
     throw new RangeError('Display AD/AP must be integers in [0, 1000000]');
-  const values: Record<string, number> = Object.fromEntries(Object.entries(source.variables).map(([k, v]) => [k, v[starLevel - 1]]));
+  const values: Record<string, number> = projection?.ability.kind === 's13'
+    ? Object.fromEntries(Object.entries(projection.ability.variables).map(([key, value]) => [key, value / 10000]))
+    : Object.fromEntries(Object.entries(source.variables).map(([k, v]) => [k, v[starLevel - 1]]));
   const v = (key: string): number => {
     if (!Object.hasOwn(values, key)) throw new RangeError(`Missing display source variable: ${definitionId}/${key}`);
     return values[key];

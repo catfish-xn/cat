@@ -1,4 +1,4 @@
-import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
@@ -32,7 +32,7 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
   board:readonly Unit[],equipment:readonly G22Equipment[],_converted:ReadonlyMap<string,string>,catalog:Readonly<Record<string,ItemDefinition>>):Effect[] {
   const result:Effect[]=[];
   if(trait.traitId==='chem-baron'&&unit.team==='player')result.push({kind:'statFlat',stat:'maxHp',amount:(state.g23?.chem.skips??0)*(G23_TRAIT_SOURCE['chem-baron'].tiers.find(t=>t.threshold===trait.tier)?.values.HealthPerSkip??0)});
-  const member=trait.memberDefinitionIds.includes(unit.definitionId);
+  const member=trait.memberUnitIds?trait.memberUnitIds.includes(unit.id):trait.memberDefinitionIds.includes(unit.definitionId);
   for(const e of [...tier.effects,...(member?tier.memberEffects??[]:[])]) {
     if(e.kind!=='mechanic'){
       if(trait.traitId==='conqueror'&&unit.team==='player'){
@@ -48,12 +48,12 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
     }
     if(e.mechanic==='emissary'){
       if(trait.memberDefinitionIds.includes('nami'))result.push({kind:'mechanic',mechanic:'extraAttackMana',values:{amount:e.values.mana}});
-      if(trait.memberDefinitionIds.includes('tristana'))result.push({kind:'attackSpeedBps',bps:e.values.starSpeedBps*unit.starLevel});
+      if(trait.memberDefinitionIds.includes('tristana'))result.push({kind:'attackSpeedBps',bps:e.values.starSpeedBps*(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted'?4:unit.starLevel)});
       if(trait.memberDefinitionIds.includes('ambessa')){
         const wins=unit.team!=='player'?0:state.priorPvpWins??priorPvpWins(state.roundResults??[],state.round),amount=wins*e.values.armorPerWin;
         result.push({kind:'statFlat',stat:'armor',amount},{kind:'statFlat',stat:'magicResist',amount});
       }
-      for(const garen of board.filter(u=>u.team===unit.team&&u.definitionId==='garen'&&trait.memberDefinitionIds.includes('garen'))){
+      for(const garen of board.filter(u=>u.team===unit.team&&u.definitionId==='garen'&&trait.memberDefinitionIds.includes('garen')&&(!trait.memberUnitIds||trait.memberUnitIds.includes(u.id)))){
         if(garen.location.kind==='board'&&unit.location.kind==='board'&&unit.location.cell.row===garen.location.cell.row&&Math.abs(unit.location.cell.col-garen.location.cell.col)<=1)
           result.push({kind:'statFlat',stat:'maxHp',amount:Math.floor((getUnitStats('garen',garen.starLevel).health+(trait.tier===4?200:0))*e.values.healthBps/10000)});
       }continue;

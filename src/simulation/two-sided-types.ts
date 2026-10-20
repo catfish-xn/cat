@@ -9,6 +9,7 @@ export const PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1';
 export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 /** Server-private frozen assets. No economy, shop, random stream or resolved combat numbers. */
 export interface PlayerBattleSnapshot {
+  readonly d14Combat?:import('./d14-runtime').D14CombatCertificate;
   /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
   readonly bankGold?:number;
   readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
@@ -65,6 +66,7 @@ export interface BattleSideResult {
   readonly growth: readonly PersistentGrowth[];
 }
 export interface BattleResult {
+  readonly bankSamples?:readonly import('./combat-types').CombatBankSample[];
   readonly version: typeof TWO_SIDED_BATTLE_VERSION;
   readonly battleId: string;
   readonly roundId: string;
@@ -95,6 +97,7 @@ export interface SideProposal {
   readonly events: readonly LedgerCombatEvent[];
 }
 export type BattleFailure = 'snapshot-version' | 'content-digest' | 'invalid-snapshot' | 'wrong-phase'
+  | 'invalid-bank-sample'
   | 'seat-collision' | 'round-mismatch' | 'round-kind' | 'invalid-seed' | 'invalid-battle-id'
   | 'invalid-mirror' | 'battle-input' | 'invalid-budget' | 'step-limit-exceeded' | 'invalid-result';
 export class BattleValidationError extends RangeError {

@@ -12,6 +12,9 @@ import { planCatalogRoundEconomy } from '../src/simulation/opening-economy';
 import { accepted } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 import { unit } from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const rounds = ['1-2', '1-3', '1-4', '2-7', '3-7', '4-7', '5-7', '6-7'];
 const plan = (s: api.MatchState) => s.m8.loot.frozen.rounds.find(p => p.encounterPlan.roundId === s.roundDefinitionId)!;
@@ -60,9 +63,11 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      // D4: the terminal Herald package grants its one-time remover as well as 5G.
-      expect(receipts.map(r => r.payload)).toEqual([{ kind: 'gold', quantity: 5 },
-        { kind: 'consumable', definitionId: 'magnetic-remover', quantity: 1 }]);
+      // Seed42 after the independent additive bonus stream: both literal-table
+      // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
+      expect(receipts.map(r => r.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},
+        {kind:'unit',definitionId:'leona',quantity:1},{kind:'gold',quantity:1},
+        {kind:'unit',definitionId:'ekko',quantity:1},{kind:'gold',quantity:4}]);
     }
   });
 });

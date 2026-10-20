@@ -1,3 +1,4 @@
+import type {TraitSnapshot} from './strategy-types';
 import {isCombatRosterLocked,canOperateMatch} from './operation-policy';
 import type {CombatStrategyInputs} from './combat-input';
 import type {MatchState,MatchCommandResult} from './match-types';
@@ -33,8 +34,8 @@ export function voidspawnStage(round:number){
 /** Preparation projection only: no inventory mint, shop identity or population.
  * Persisted cells belong to item instances, so moving/selling the holder does
  * not reset a still-equipped portal's chosen position on the next round. */
-export function projectVoidspawns(state:CombatStrategyInputs){
- const preparation=projectG23Summons(state.preparation),units=[...preparation.units],origins:ItemSummonOrigin[]=[];
+export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly TraitSnapshot[]){
+ const preparation=projectG23Summons(state.preparation,traits),units=[...preparation.units],origins:ItemSummonOrigin[]=[];
  const equipment=g22Equipment(state).filter(i=>i.definitionId===VOIDSPAWN_ITEM).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
  if(!equipment.length)return {preparation,origins};
  const stats=voidspawnStage(state.round);

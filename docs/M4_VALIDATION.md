@@ -1,6 +1,6 @@
 # M4 validation record
 
-Base: `133a41b4ef4257bee1b4bd458103393177fdf93e` (merged M3). Scope, rules and gates are [PLAN](../M4_PLAN.md), [RULES](../M4_RULES.md) and [ACCEPTANCE](../M4_ACCEPTANCE.md). This is an original authored S13-style engine slice, not Riot content.
+Base: `133a41b4ef4257bee1b4bd458103393177fdf93e` (merged M3). Scope, rules and gates are [PLAN](archive/M4_PLAN.md), [RULES](archive/M4_RULES.md) and [ACCEPTANCE](archive/M4_ACCEPTANCE.md). This is an original authored S13-style engine slice, not Riot content.
 
 ## Reproduction and evidence
 
@@ -56,7 +56,7 @@ A hand-calculated four-source battle in `m4-content-combat` finishes in 62 ticks
 
 Core reviewer and independent UI reviewer passed with no unresolved P0/P1/P2. Their findings produced 15 dedicated restore/command/order regression tests and 59 restore cases. Fixed issues included malformed deployment targets, invalid restore counters/history/snapshots, enemy identity collisions, zero-amount shield expiry ordering and mixed-pointer equipment takeover. The last UI issue was independently reproduced and rechecked in real Chromium after the fix.
 
-Phaser continues to own the board; the new strategy panel uses native DOM/CSS for readable scrolling content and real 44px touch controls, without another UI framework or authoritative store. See [PLAN P7](../M4_PLAN.md#p7-ui-拆分范围). Absolute round remains the authority; the three-round stage label is derived. The authored content digest is `fnv1a32-utf16:a4b8a029` under schema4 / m4-v1 / m4-slice-v1.
+Phaser continues to own the board; the new strategy panel uses native DOM/CSS for readable scrolling content and real 44px touch controls, without another UI framework or authoritative store. See [PLAN P7](archive/M4_PLAN.md#p7-ui-拆分范围). Absolute round remains the authority; the three-round stage label is derived. The authored content digest is `fnv1a32-utf16:a4b8a029` under schema4 / m4-v1 / m4-slice-v1.
 
 The capacity fixture has 9 three-star player units, 6 capped-growth enemies, 27 equipped items, two augments and one anomaly. It finishes in 324 ticks with 955 events (236,857 UTF-8 bytes); state plus ledger is 367,041 bytes. Tests preserve all tick-zero events, verify every sequence, prove deep-copy isolation and clear the ledger at Continue/New Match.
 

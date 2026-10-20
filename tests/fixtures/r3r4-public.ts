@@ -1,4 +1,4 @@
-import { createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound } from '../../src/simulation/match';
+import { combineItems, createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound } from '../../src/simulation/match';
 import type { MatchState, MatchCommandResult } from '../../src/simulation/match-types';
 export function accepted(result:MatchCommandResult):MatchState { if(!result.ok) throw Error(result.reason); return result.state; }
 export function finish(state:MatchState):MatchState {
@@ -31,5 +31,7 @@ export function publicConsumables(seed=26):MatchState {
     if(state.round===10)break;
     if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
   }
+  const gloves=state.items.filter(i=>i.definitionId==='gloves'&&i.location.kind==='inventory');
+  if(gloves.length>=2)state=accepted(combineItems(state,gloves[0].id,gloves[1].id));
   cached.set(seed,state);return structuredClone(state);
 }

@@ -1,0 +1,3385 @@
+{
+  "task": "#250 production wiring in the existing v16 epoch",
+  "comparisonCommit": "b531bfa3",
+  "worktreeHead": "debfad8a74ed2360c4b6d718cceba8efacfb47c3",
+  "epochBaseline": "46454b77348c86b70a4fec57869f95c22ecf9682",
+  "nodeVersion": "v24.21.0",
+  "digests": {
+    "before": {
+      "contentDigest": "fnv1a32-utf16:7181dce2",
+      "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
+      "rulesManifestDigest": "fnv1a32-utf16:81596be6"
+    },
+    "after": {
+      "contentDigest": "fnv1a32-utf16:f8a31ce9",
+      "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
+      "rulesManifestDigest": "fnv1a32-utf16:81596be6"
+    }
+  },
+  "counts": {
+    "soloAnomalies": {
+      "before": 54,
+      "after": 56
+    },
+    "onlineAnomalies": {
+      "before": 53,
+      "after": 55
+    },
+    "augments": 60
+  },
+  "conventions": {
+    "ultimateBaseHpAdBps": 58320,
+    "ultimatePhysicalStarLevel": 3,
+    "ultimateEffectiveStarLevel": 4,
+    "ultimatePoolCopies": 9,
+    "ultimateSellGold": 9,
+    "notClaimedAsRecoveredOriginalValues": [
+      "ultimateBaseHpAdBps",
+      "ultimateSellGold"
+    ],
+    "numRounds": 3,
+    "gainedADBps": 5000,
+    "gainedAP": 50
+  },
+  "recordingEnvironment": {
+    "prefix": "V16_CACHE_DIR=/tmp/v16-250-cache node --require ./artifacts/v16-recording/git-read-shim.cjs",
+    "shim": "Only successful read-only git subprocesses with status=0, signal=null and the sandbox EPERM result; no production code or historical validation bypass."
+  },
+  "recordings": [
+    {
+      "stage": "release",
+      "command": "node scripts/record-v16-release.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0,
+      "logSha256": "c4076b82e1f82ae8c35f67f97501941c43fc0763e95d27c75a64c8d2303d148b",
+      "result": "{\"contentDigest\":\"fnv1a32-utf16:f8a31ce9\",\"lootReplayDigest\":\"fnv1a32-utf16:cee1d7d7\",\"rulesVersion\":\"s13-g2-3-v16\",\"contentVersion\":\"s13-14.24b-g2-3-v16\",\"schemaVersion\":7,\"previousContentDigest\":\"fnv1a32-utf16:70dbb056\",\"previousLootReplayDigest\":\"fnv1a32-utf16:61568ec0\",\"traceHashes\":{\"state\":\"13d30d8b287c770f9dfbc69a5523cc5fdecf18423fa6667e12c92a412bfa45da\",\"events\":\"0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e\",\"rng\":\"0974f38e0fc49ba95e7a52d58135172b219beb078efbb5d550e9211c13e3f283\"},\"firstBattle\":{\"seed\":42,\"ticks\":164,\"events\":106,\"result\":\"playerWin\",\"stateHash\":\"fnv1a32-utf16:1db5b9e9\",\"eventHash\":\"fnv1a32-utf16:cf452d32\"},\"reason\":\"S13 v16: permanent Ultimate Hero certificates and Into the Unknown departures/returns, approved 5-7/6-7 epic rewards, independent additive duplicator bonuses, full champion duplicator, unit-target same-category permanent-equipment reforge; old saves rejected without migration.\"}"
+    },
+    {
+      "stage": "herald-write",
+      "command": "node tests/fixtures/record-v16-herald.cjs --write",
+      "exitCode": 0,
+      "logSha256": "42102a8a1e7e55360b87ebd4b2ed04f901c9ba68541a49fcbdb68fbff4c75754",
+      "result": "{\"phase\":\"complete\",\"mode\":\"write\",\"files\":7,\"cases\":[{\"name\":\"ionic-spark\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"evenshroud\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"ionic-spark--evenshroud\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"quicksilver\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"edge-of-night\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true}],\"sourceSha256\":\"35f347d91bec6279e58757003b68bab43ca801f6ed96262d1e309d9b426ad901\",\"allRawExportedBeforeRestoreImport\":true,\"elapsedMs\":275847.917608}"
+    },
+    {
+      "stage": "inputs",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0,
+      "logSha256": "4fa8e256b676e8aaef2ec91d187af06be587b6e7532956a26914cc399ca11568",
+      "result": "{\"contentDigest\":\"fnv1a32-utf16:f8a31ce9\",\"cases\":9}"
+    },
+    {
+      "stage": "live-reveal",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0,
+      "logSha256": "41d5e445e2add975b952b7ed7506e2dd3eba760c59526dafecd6ec663e28c96c",
+      "result": "{\"contentDigest\":\"fnv1a32-utf16:f8a31ce9\",\"branches\":[\"full\",\"simultaneous\",\"loris\",\"zyra\"],\"sameTick44\":true,\"partialReceipts\":[4,0]}"
+    },
+    {
+      "stage": "inputs-check",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
+      "exitCode": 0,
+      "logSha256": "4fa8e256b676e8aaef2ec91d187af06be587b6e7532956a26914cc399ca11568",
+      "result": "{\"contentDigest\":\"fnv1a32-utf16:f8a31ce9\",\"cases\":9}"
+    },
+    {
+      "stage": "herald-verify",
+      "command": "node scripts/verify-m8-herald-fixtures.cjs",
+      "exitCode": 0,
+      "logSha256": "2b318df906792d75490b58918d0c4ba97ad68dfc3a49476d735c5d2f37e83f82",
+      "result": "{\"phase\":\"complete\",\"mode\":\"verify\",\"files\":7,\"cases\":[{\"name\":\"ionic-spark\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"evenshroud\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"ionic-spark--evenshroud\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"quicksilver\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true},{\"name\":\"edge-of-night\",\"rawStateEqualsRestored\":true,\"startAndFifteenTicksRoundTrip\":true}],\"sourceSha256\":\"35f347d91bec6279e58757003b68bab43ca801f6ed96262d1e309d9b426ad901\",\"allRawExportedBeforeRestoreImport\":true,\"elapsedMs\":390996.943399}"
+    },
+    {
+      "stage": "history",
+      "command": "node scripts/v16-fixture-audit.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0,
+      "logSha256": "e1b272736d16348fa0081e22052e1c2d5eb0dde05ea610dfe291284916f1d0bd",
+      "result": "{\"epoch\":\"v16\",\"historicalV15Files\":23,\"byteIdentical\":true,\"historicalAuditAssertionsByteIdentical\":true}"
+    },
+    {
+      "stage": "live-reveal-check",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
+      "exitCode": 0,
+      "logSha256": "41d5e445e2add975b952b7ed7506e2dd3eba760c59526dafecd6ec663e28c96c",
+      "result": "{\"contentDigest\":\"fnv1a32-utf16:f8a31ce9\",\"branches\":[\"full\",\"simultaneous\",\"loris\",\"zyra\"],\"sameTick44\":true,\"partialReceipts\":[4,0]}"
+    },
+    {
+      "stage": "digests",
+      "command": "node scripts/compare-v16-250-digests.cjs",
+      "exitCode": 0,
+      "logSha256": "7ea044694d955d64ade825e03ea887b7bc494af3dc6352b8b7987a901d4acb00",
+      "result": "}"
+    }
+  ],
+  "historicalAudit": {
+    "g23AndG24Files": 86,
+    "v15Files": 23,
+    "byteIdentical": true,
+    "historicalAssertionBytesIdentical": true
+  },
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit",
+    "exitCode": 0,
+    "diagnostics": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "tests": {
+    "scope": "All discovered Vitest .test/.spec TS/JS/MJS files outside tests/server; no browser harness; unchanged time limits; latest full-file result for the final test source supersedes earlier batch result. A reverted M5 growth diagnostic rewrite is excluded; its original full batch result is retained.",
+    "discoveredFiles": 322,
+    "executedFiles": 322,
+    "passed": 4385,
+    "failed": 35,
+    "pending": 49,
+    "total": 4469,
+    "failedFiles": 22,
+    "missing": [],
+    "failures": [
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "test": "beforeAll / suite",
+        "reason": "bench-full",
+        "unexecuted": 25,
+        "baselineSameFailure": true
+      },
+      {
+        "file": "tests/chest-bracer-integration-trial.test.ts",
+        "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard pins the natural grant, pulse, repeated stacks and receiver death in one fight",
+        "reason": "AssertionError: expected undefined to match object [ { definitionId: 'archangel', …(1) } ]",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected undefined to match object [ { definitionId: 'archangel', …(1) } ]",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/chest-bracer-integration-trial.test.ts",
+        "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard rejects an in-place grant edit after successful restore validation",
+        "reason": "TypeError: Cannot read properties of undefined (reading '0')",
+        "baselineSameFailure": true,
+        "baselineReason": "TypeError: Cannot read properties of undefined (reading '0')",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/chest-bracer-integration-trial.test.ts",
+        "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard rejects an in-place grant edit after successful serialize validation",
+        "reason": "TypeError: Cannot read properties of undefined (reading '0')",
+        "baselineSameFailure": true,
+        "baselineReason": "TypeError: Cannot read properties of undefined (reading '0')",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/d11-wiring-match.test.ts",
+        "test": "avarice-incarnate acquires a real 4-6 offer, fights, settles once and restores with independent historical evidence",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/d11-wiring-match.test.ts",
+        "test": "headhunter acquires a real 4-6 offer, fights, settles once and restores with independent historical evidence",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+        "reason": "Error: spawnSync python3 EPERM",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: spawnSync python3 EPERM",
+        "timing": false,
+        "environment": true
+      },
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+        "reason": "Error: spawnSync python3 EPERM",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: spawnSync python3 EPERM",
+        "timing": false,
+        "environment": true
+      },
+      {
+        "file": "tests/explorer-bracer-restore.test.ts",
+        "test": "beforeAll / suite",
+        "reason": "bench-full",
+        "unexecuted": 24,
+        "baselineSameFailure": true
+      },
+      {
+        "file": "tests/g2-4a-crown-history.test.ts",
+        "test": "M7/S7 combat equipment command replay records combat consumable use with component at all three entries and resumes tick for tick (M10)",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4a-crown-history.test.ts",
+        "test": "M7/S7 combat equipment command replay records combat consumable use with completed at all three entries and resumes tick for tick (M10)",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "restores the award-round duplicator copying the hero just granted by the same tier4 chest",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "restores the award-round duplicator in escrow when no eligible hero is owned",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "rejects a duplicator receipt and matching hero forged to an unowned option at tier4",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "replays automatic unit upgrades atomically and rejects an edited upgrade transaction",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "rejects edited automatic birth serials, receipt/ledger order, rounds and definitions",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected artifact in settlement",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "test": "rejects an edited forge ID prefix and ordinary completed candidates while source remains conqueror",
+        "reason": "Error: Fixture command refused",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: Fixture command refused",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-resists-restore.test.ts",
+        "test": "restores the holder-death grant after live defenses and periodic history",
+        "reason": "AssertionError: expected undefined to be defined",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected undefined to be defined",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-resists-restore.test.ts",
+        "test": "restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits",
+        "reason": "AssertionError: expected [ { chest: { …(6) }, …(3) } ] to match object [ { definitionId: 'gargoyle', …(1) } ]",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected [ { chest: { …(6) }, …(3) } ] to match object [ { definitionId: 'gargoyle', …(1) } ]",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-trench-gold.test.ts",
+        "test": "real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts",
+        "reason": "AssertionError: expected [] to have a length of 1 but got +0",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected [] to have a length of 1 but got +0",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "test": "G2-4b chest restore rejects forged grants a Match save whose unit claims an item it never received is rejected",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/m5-growth.test.ts",
+        "test": "permanent Tristana growth is a conserved Match resource commits actual battle growth once and never regrants it on restore, duplicate step or Continue",
+        "reason": "Error: Public equipment fixture does not select anomalies",
+        "baselineSameFailure": false,
+        "timing": false,
+        "environment": false,
+        "baselineDiagnostic": {
+          "baseline": "b531bfa3",
+          "contentDigest": "fnv1a32-utf16:7181dce2",
+          "acquiredAt": "4-5",
+          "rounds": [
+            {
+              "roundId": "4-6",
+              "phase": "choice",
+              "choice": "anomaly"
+            }
+          ],
+          "outcome": "Public equipment fixture does not select anomalies"
+        }
+      },
+      {
+        "file": "tests/m5-replay-cannon.test.ts",
+        "test": "M5 cannon restores every command and tick; rejected insertion preserves every field",
+        "reason": "Error: Test timed out in 180000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "test": "M5 mage restores every command and tick; rejected insertion preserves every field",
+        "reason": "Error: Test timed out in 360000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/m5-replay.test.ts",
+        "test": "M5 sniper restores every command and tick; rejected insertion preserves every field",
+        "reason": "Error: Test timed out in 600000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/m8-b8-input-evidence.test.mjs",
+        "test": "beforeAll / suite",
+        "reason": "Cannot read properties of undefined (reading 'grantedItemIds')",
+        "unexecuted": 0,
+        "baselineSameFailure": true
+      },
+      {
+        "file": "tests/match-session.test.ts",
+        "test": "match session commands and fixed clock Continue preserves player stars/positions while resetting combat Mana, shield and partial clock",
+        "reason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/match-session.test.ts",
+        "test": "match session commands and fixed clock preserves the purchased player roster and unique results for five rounds",
+        "reason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/opening-random-1cost.test.ts",
+        "test": "uses the same selection in solo and shared modes and preserves baseline random 1-2/1-3 reward plans",
+        "reason": "AssertionError: expected [ [ 'darius' ], [ 'darius' ] ] to deeply equal [ [ 'darius' ], [ 'irelia' ] ]",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected [ [ 'darius' ], [ 'darius' ] ] to deeply equal [ [ 'darius' ], [ 'irelia' ] ]",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/presentation/g2-3-display.test.ts",
+        "test": "content id bridge never captures an existing hero, trait or item id",
+        "reason": "AssertionError: expected undefined to be defined",
+        "baselineSameFailure": true,
+        "baselineReason": "AssertionError: expected undefined to be defined",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/restore-audit/bounds-preflight.test.ts",
+        "test": "bounds sampled kill triggerCount by trusted roster/lives before the fact replay",
+        "reason": "Error: bench-full",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: bench-full",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/restore-audit/bounds-preflight.test.ts",
+        "test": "preserves a real long fight with growing trigger counts and resumes every tick",
+        "reason": "Error: bench-full",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: bench-full",
+        "timing": false,
+        "environment": false
+      },
+      {
+        "file": "tests/s13-p1-dual-wielding.test.ts",
+        "test": "public anomaly selection grants two role items once, keeps equipment, restores after target sale and rejects altered grant",
+        "reason": "Error: Test timed out in 20000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "test": "T12 supply choice permits fresh component transactions and single-save continuation",
+        "reason": "Error: Test timed out in 5000ms.",
+        "baselineSameFailure": false,
+        "timing": true,
+        "environment": false
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "test": "T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item",
+        "reason": "Error: T13 public fixture: unknown-unit",
+        "baselineSameFailure": true,
+        "baselineReason": "Error: T13 public fixture: unknown-unit",
+        "timing": false,
+        "environment": false
+      }
+    ],
+    "files": [
+      {
+        "file": "tests/augment-card-reroll.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/augment-tier-consistency.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/b8-resumable-battle-timing.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/b8-resumable-battle-timing.json"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/b8-resumable-battle.json"
+      },
+      {
+        "file": "tests/board.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "passed": 0,
+        "failed": 0,
+        "pending": 25,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/c19-missed-pulse.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/c19-missed-pulse.json"
+      },
+      {
+        "file": "tests/chest-bracer-integration-trial.test.ts",
+        "passed": 8,
+        "failed": 3,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/ci-route-evidence.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-abilities.test.ts",
+        "passed": 27,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-contract.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-damage.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-first-pass-frames.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/combat-first-pass-frames.json"
+      },
+      {
+        "file": "tests/combat-mana.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-simulation.test.ts",
+        "passed": 17,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/combat-start.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/crown-restore-cache.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/d11-fill-mechanics.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/d11-fill-source.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/d11-fill-source.json"
+      },
+      {
+        "file": "tests/d11-wiring-bank.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/d11-wiring-bank.json"
+      },
+      {
+        "file": "tests/d11-wiring-match.test.ts",
+        "passed": 3,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-tests/d11-wiring-match-final.json"
+      },
+      {
+        "file": "tests/d11-wiring-online.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/d14-anomalies-source.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/d14-anomalies-source.json"
+      },
+      {
+        "file": "tests/d14-anomalies.test.ts",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/d14-anomalies.json"
+      },
+      {
+        "file": "tests/d14-wiring-match.test.ts",
+        "passed": 23,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/d14-wiring-match.json"
+      },
+      {
+        "file": "tests/deployment.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/epic-loot-reforger.test.ts",
+        "passed": 29,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/epic-loot-reforger.json"
+      },
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "passed": 0,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/explorer-bracer-restore.test.ts",
+        "passed": 0,
+        "failed": 0,
+        "pending": 24,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/g2-1-content.test.ts",
+        "passed": 33,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-0.json"
+      },
+      {
+        "file": "tests/g2-1-skills.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-2-ability-display.test.ts",
+        "passed": 73,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-2-identity.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-2-online-emissary.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-2-skills.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-2-traits.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-anomalies.test.ts",
+        "passed": 55,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/g2-3-anomalies.json"
+      },
+      {
+        "file": "tests/g2-3-content.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-followup.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-hook-failures.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/g2-3-hook-failures.json"
+      },
+      {
+        "file": "tests/g2-3-identity.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-integration.test.ts",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "passed": 37,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-netcode-hooks.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-skills.test.ts",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-source-pins.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-3-traits.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4a-conqueror-items.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4a-crown-gold.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4a-crown-history.test.ts",
+        "passed": 54,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-tests/crown-history-final.json"
+      },
+      {
+        "file": "tests/g2-4a-crown.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-artifact-forge.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-artifact-mechanism-integration.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-artifacts.test.ts",
+        "passed": 49,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/g2-4b-artifacts.json"
+      },
+      {
+        "file": "tests/g2-4b-clone-forges.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-collector.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-cutlass.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-defiance.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-fishbones.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-gambler.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-1.json"
+      },
+      {
+        "file": "tests/g2-4b-gold-settlement.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-item-gold.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-item-kernel.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-mirror-forge-restore.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-mirror.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-mogul.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "passed": 2,
+        "failed": 9,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-replay.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-resists-restore.test.ts",
+        "passed": 19,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-restore-authority.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-reward-order.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-shroud.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-source-pins.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-support-forge.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/g2-4b-support-forge.json"
+      },
+      {
+        "file": "tests/g2-4b-support-items.test.ts",
+        "passed": 17,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-trench-gold.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-trench-restore.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-trench.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "passed": 38,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-tests/unstable-chest-final.json"
+      },
+      {
+        "file": "tests/g2-4b-voidspawn.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-4b-zephyr.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-augments-choice.test.ts",
+        "passed": 72,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-augments-combat.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-augments-identity.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-augments-multiplayer.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g2-augments-static.test.ts",
+        "passed": 93,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g4-reference-cache.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g4-replay-snapshot.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g5-combat-summary.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/g5-economy-preview.test.ts",
+        "passed": 66,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-2.json"
+      },
+      {
+        "file": "tests/h1-heap-comparison.test.js",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/h1-heap-warning.test.js",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/input-router.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/inventory.test.ts",
+        "passed": 45,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/jayce-forge-replay-order.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/loot-orb-claim.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m4-effect-combat.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m4-effects.test.ts",
+        "passed": 21,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m4-ledger-bound.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m4-review-regressions.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m4-strategy-snapshot.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-acceptance.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-audit-boundaries.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/m5-audit-boundaries.json"
+      },
+      {
+        "file": "tests/m5-combat.test.ts",
+        "passed": 48,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-command-phases.test.ts",
+        "passed": 13,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-content.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-economy-p3-selector.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-economy.test.ts",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-growth.test.ts",
+        "passed": 1,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-match-integration.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-neutral-timing.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-regressions.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-replay-cannon.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-replay.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-runtime-import.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-serialization.test.ts",
+        "passed": 33,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m5-strategy-numbers.test.ts",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m6-fixture-transport.test.mjs",
+        "passed": 17,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m6-integration-mage.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-3.json"
+      },
+      {
+        "file": "tests/m6-integration-sniper.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m6-integration.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m6-persistence.test.ts",
+        "passed": 44,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m6-replay.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m6-stats-oracle.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m7-fx-plan.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m7-hero-identity.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m7-layout.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m7-m6-save-compat.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m7-preferences.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-ability-contracts.test.ts",
+        "passed": 21,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-audit-contracts.test.ts",
+        "passed": 13,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b10-encounter-outcomes.test.ts",
+        "passed": 46,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b10-item-save-replay.test.ts",
+        "passed": 45,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-damage-control-order.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-integration.test.ts",
+        "passed": 25,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-periodic-integration.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-restore.test.ts",
+        "passed": 13,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-second-integration.test.ts",
+        "passed": 13,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b3-third-audit.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-audit-regressions.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-belt.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-bow.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-catalog.test.ts",
+        "passed": 84,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-cloak.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-gloves.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-4.json"
+      },
+      {
+        "file": "tests/m8-b4-rod.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b4-sword.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b4-tear.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b4-trigger-ledger.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b4-vest.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b5-equipment-history.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b5-instances.test.ts",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b5-queries.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b5-temporary.test.ts",
+        "passed": 30,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b6-gate-preparation.test.js",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m8-b6-match-wiring.test.ts",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b6-opening-economy.test.ts",
+        "passed": 27,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b6-round-catalog.test.ts",
+        "passed": 30,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-audit-vectors.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-catalog.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-cleanup.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-known-limitations.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-match-wiring.test.ts",
+        "passed": 30,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-mechanisms.test.ts",
+        "passed": 21,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b7-serialization-reuse.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-acquisition.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-combat-input.test.ts",
+        "passed": 38,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-command-oracle.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-copy-semantics.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-golden-guard.test.mjs",
+        "passed": 24,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m8-b8-input-evidence.test.mjs",
+        "passed": 0,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m8-b8-live-capacity.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-live-cross-round.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-live-economy.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-live-growth.test.ts",
+        "passed": 26,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-live-reveal.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-5.json"
+      },
+      {
+        "file": "tests/m8-b8-live-transfer.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-loot-freeze.test.ts",
+        "passed": 67,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-loot-runtime.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-loot-view.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-oracle.test.ts",
+        "passed": 24,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-resource-provenance.test.ts",
+        "passed": 64,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-restore.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b8-token-lifecycle.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b9-activity-log.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b9-compatibility.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-b9-golden-guard.test.mjs",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m8-b9-golden-tamper.test.mjs",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/extra.json"
+      },
+      {
+        "file": "tests/m8-b9-status-events.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-content-equivalence.test.ts",
+        "passed": 138,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-contracts.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-effect-policy-contracts.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g01.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g02.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g03.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g04.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g05.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g06.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g07.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g08.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g09-integration.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g09.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g10-integration.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g10.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g11.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g12-integration.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-g12.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-6.json"
+      },
+      {
+        "file": "tests/m8-if-death.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-if-inputs.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-if-open.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-node3-copy-boundary.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-planning.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-rereview-contracts.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-target-order-contracts.test.ts",
+        "passed": 28,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-u5-preview-mocked-snapshot.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/m8-u5-preview.test.ts",
+        "passed": 60,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/match-contract.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/match-economy.test.ts",
+        "passed": 83,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/match-lifecycle.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/match-session.test.ts",
+        "passed": 14,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/mp-overtime-choices.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/mp-overtime-production.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/mp-sim-perf.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/opening-random-1cost.test.ts",
+        "passed": 3,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "passed": 142,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/p7-1-carousel-rules.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/p7-1-identity.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/p7-carousel.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/p7-identity.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/p7-restore-compilation.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/presentation/choice-fallback.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/presentation/g2-3-display.test.ts",
+        "passed": 15,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/presentation/g2-4a-crown-display.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/presentation/unit-revived-display.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/progression.test.ts",
+        "passed": 26,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/r3r4-consumable-targets.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/r3r4-consumables.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-7.json"
+      },
+      {
+        "file": "tests/r3r4-legacy.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/r3r4-loot-weights.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/r3r4-loot.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/r3r4-oracle.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/r3r4-shared.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/restore-audit/bounds-preflight.test.ts",
+        "passed": 14,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/restore-audit/cd-replay-facts.test.ts",
+        "passed": 34,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/cd-replay-facts-final-serial.json"
+      },
+      {
+        "file": "tests/restore-audit/combat-accumulators.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/restore-audit/g23-reward-allocation.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/rng.test.ts",
+        "passed": 19,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/round-enemies.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-b.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-c.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-d.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-redirect.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-replay.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-restore-review.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-restore.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-review.test.ts",
+        "passed": 17,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-settlement.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-anomalies-source.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-augments-p2-choice.test.ts",
+        "passed": 23,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-augments-p2-combat.test.ts",
+        "passed": 34,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-augments-p2-multiplayer.test.ts",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-augments-p3.test.ts",
+        "passed": 30,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-mech-ownership.test.ts",
+        "passed": 23,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-p1-acquisition.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-p1-avarice.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-p1-bound-identity.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-8.json"
+      },
+      {
+        "file": "tests/s13-p1-dual-wielding.test.ts",
+        "passed": 1,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-tests/dual-wielding-final.json"
+      },
+      {
+        "file": "tests/s13-p1-income.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/s13-p1-multiplayer-income.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/s13-p3-acquisition.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/s13-p3-acquisition-final-serial.json"
+      },
+      {
+        "file": "tests/s13-trait-augment-membership.test.ts",
+        "passed": 11,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/s13-trait-projection.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/shared-pool-cache.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/shop.test.ts",
+        "passed": 22,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/simulation.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t10-auto-deploy.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t10-combat-ops.test.ts",
+        "passed": 37,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t10-deferred-upgrades.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t11-golden.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t11-opening-xp.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t11-round-flow.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "passed": 47,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-tests/t12-combat-equip-final.json"
+      },
+      {
+        "file": "tests/t12-golden.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t12-recovery-boundary.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t13-a-golden.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t13-auto-combine.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t13-golden.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t13-identity.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t2-two-sided-battle.test.ts",
+        "passed": 21,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t3-round-settlement.test.ts",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t3-timeout-loot.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t5r-b7-integration.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t5r-combat-replay.test.ts",
+        "passed": 46,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t5r-loot-view.test.ts",
+        "passed": 24,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t5r-overtime.test.ts",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-9.json"
+      },
+      {
+        "file": "tests/t5r-private-seat-view.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/t5r-view-events.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/t7-bot-policy.test.ts",
+        "passed": 24,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/t7-integration.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/t9-loadtest.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/task-mechanism-restore.test.ts",
+        "passed": 20,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/tp-rewards-and-rounds.test.ts",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/tp-shared-pool.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/u6-panel-snapshot.test.ts",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/unit-stats.test.ts",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/unit-swap.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/upgrades.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/ur-i3-combat-statuses.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-250-tests/batch-10.json"
+      },
+      {
+        "file": "tests/v15-anomaly-availability.test.ts",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "source": "artifacts/v16-tests/v15-anomaly-availability.json"
+      }
+    ]
+  },
+  "baselineReproduction": {
+    "commit": "b531bfa3",
+    "method": "Offline git archive to /tmp/v16-250-baseline, same existing node_modules and unchanged test time limits; individual files rerun without source edits.",
+    "files": [
+      {
+        "file": "bracer-multikill-stacks.test.ts",
+        "passed": 0,
+        "failed": 0,
+        "pending": 25,
+        "suiteStatus": "failed",
+        "message": "bench-full",
+        "failures": []
+      },
+      {
+        "file": "chest-bracer-integration-trial.test.ts",
+        "passed": 6,
+        "failed": 5,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard pins the natural grant, pulse, repeated stacks and receiver death in one fight",
+            "reason": "AssertionError: expected undefined to match object [ { definitionId: 'archangel', …(1) } ]"
+          },
+          {
+            "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard rejects an in-place grant edit after successful restore validation",
+            "reason": "TypeError: Cannot read properties of undefined (reading '0')"
+          },
+          {
+            "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard rejects an in-place grant edit after successful serialize validation",
+            "reason": "TypeError: Cannot read properties of undefined (reading '0')"
+          },
+          {
+            "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard before grant @162: JSON/object restore preserves the entire state and uninterrupted continuation",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "test": "chest-granted Archangel with an originally equipped Seeker’s Armguard grant tick @163: JSON/object restore preserves the entire state and uninterrupted continuation",
+            "reason": "Error: Test timed out in 5000ms."
+          }
+        ]
+      },
+      {
+        "file": "explorer-bracer-restore-pressure.test.ts",
+        "passed": 0,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+            "reason": "Error: spawnSync python3 EPERM"
+          },
+          {
+            "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+            "reason": "Error: spawnSync python3 EPERM"
+          }
+        ]
+      },
+      {
+        "file": "explorer-bracer-restore.test.ts",
+        "passed": 0,
+        "failed": 0,
+        "pending": 24,
+        "suiteStatus": "failed",
+        "message": "bench-full",
+        "failures": []
+      },
+      {
+        "file": "match-session.test.ts",
+        "passed": 14,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "match session commands and fixed clock Continue preserves player stars/positions while resetting combat Mana, shield and partial clock",
+            "reason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]"
+          },
+          {
+            "test": "match session commands and fixed clock preserves the purchased player roster and unique results for five rounds",
+            "reason": "AssertionError: expected [ { id: 'unit-1', …(4) }, …(2) ] to deeply equal [ { id: 'unit-1', …(4) }, …(2) ]"
+          }
+        ]
+      },
+      {
+        "file": "opening-random-1cost.test.ts",
+        "passed": 3,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "uses the same selection in solo and shared modes and preserves baseline random 1-2/1-3 reward plans",
+            "reason": "AssertionError: expected [ [ 'darius' ], [ 'darius' ] ] to deeply equal [ [ 'darius' ], [ 'irelia' ] ]"
+          }
+        ]
+      },
+      {
+        "file": "restore-audit/bounds-preflight.test.ts",
+        "passed": 14,
+        "failed": 2,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "bounds sampled kill triggerCount by trusted roster/lives before the fact replay",
+            "reason": "Error: bench-full"
+          },
+          {
+            "test": "preserves a real long fight with growing trigger counts and resumes every tick",
+            "reason": "Error: bench-full"
+          }
+        ]
+      },
+      {
+        "file": "restore-audit/cd-replay-facts.test.ts",
+        "passed": 34,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "message": "",
+        "failures": []
+      },
+      {
+        "file": "presentation/g2-3-display.test.ts",
+        "passed": 15,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "content id bridge never captures an existing hero, trait or item id",
+            "reason": "AssertionError: expected undefined to be defined"
+          }
+        ]
+      },
+      {
+        "file": "g2-3-hook-failures.test.ts",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "message": "",
+        "failures": []
+      },
+      {
+        "file": "g2-4b-pr161-restore.test.ts",
+        "passed": 1,
+        "failed": 10,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "restores a publicly granted hero duplicator after a completed battle with full history and identical next-battle ticks",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "test": "restores the award-round duplicator copying the hero just granted by the same tier4 chest",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "restores the award-round duplicator in escrow when no eligible hero is owned",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "rejects a duplicator receipt and matching hero forged to an unowned option at tier4",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "replays automatic unit upgrades atomically and rejects an edited upgrade transaction",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "rejects edited automatic birth serials, receipt/ledger order, rounds and definitions",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected artifact in settlement",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice",
+            "reason": "Error: Fixture command refused"
+          },
+          {
+            "test": "rejects an edited forge ID prefix and ordinary completed candidates while source remains conqueror",
+            "reason": "Error: Fixture command refused"
+          }
+        ]
+      },
+      {
+        "file": "g2-4b-resists-restore.test.ts",
+        "passed": 18,
+        "failed": 3,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "restores live targeting-dependent resists, refreshes, absorption, expiry and combat end",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "test": "restores the holder-death grant after live defenses and periodic history",
+            "reason": "AssertionError: expected undefined to be defined"
+          },
+          {
+            "test": "restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits",
+            "reason": "AssertionError: expected [ { chest: { …(6) }, …(3) } ] to match object [ { definitionId: 'gargoyle', …(1) } ]"
+          }
+        ]
+      },
+      {
+        "file": "g2-4b-trench-gold.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts",
+            "reason": "AssertionError: expected [] to have a length of 1 but got +0"
+          }
+        ]
+      },
+      {
+        "file": "s13-p3-acquisition.test.ts",
+        "passed": 12,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "passed",
+        "message": "",
+        "failures": []
+      },
+      {
+        "file": "t12-offline-transfer.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "",
+        "failures": [
+          {
+            "test": "T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item",
+            "reason": "Error: T13 public fixture: unknown-unit"
+          }
+        ]
+      },
+      {
+        "file": "m5-growth.test.ts",
+        "passed": 0,
+        "failed": 0,
+        "pending": 2,
+        "suiteStatus": "failed",
+        "message": "Hook timed out in 10000ms.\nIf this is a long-running hook, pass a timeout value as the last argument or configure it globally with \"hookTimeout\".",
+        "failures": []
+      },
+      {
+        "file": "m8-b8-input-evidence.test.mjs",
+        "passed": 0,
+        "failed": 0,
+        "pending": 0,
+        "suiteStatus": "failed",
+        "message": "Cannot read properties of undefined (reading 'grantedItemIds')",
+        "failures": []
+      }
+    ],
+    "growthFixtureDiagnostic": {
+      "baseline": "b531bfa3",
+      "contentDigest": "fnv1a32-utf16:7181dce2",
+      "acquiredAt": "4-5",
+      "rounds": [
+        {
+          "roundId": "4-6",
+          "phase": "choice",
+          "choice": "anomaly"
+        }
+      ],
+      "outcome": "Public equipment fixture does not select anomalies"
+    }
+  },
+  "restrictions": {
+    "network": false,
+    "commit": false,
+    "push": false,
+    "serverOrUiChanges": false,
+    "assetsCommitted": false,
+    "browserVerification": false
+  },
+  "recommendedCommitMessage": "feat(simulation): integrate ultimate hero and into the unknown in v16",
+  "sourceGuard": {
+    "matched": true,
+    "counts": {
+      "release-audit": 350,
+      "input-fixture-audit": 350,
+      "live-reveal-audit": 350,
+      "herald": 325
+    }
+  },
+  "uiAdapter": {
+    "path": "artifacts/v16-recording/UI_ADAPTER_250.patch",
+    "appliedToWorktree": false,
+    "patch": "--- a/src/presentation/g23-display.ts\n+++ b/src/presentation/g23-display.ts\n@@ -95,6 +95,10 @@\n   return (TRAIT_BY_ID.get(id) ?? TRAIT_BY_ID.get(lower(id)))?.apiName;\n }\n export function g23AnomalyApiName(id: string): string | undefined {\n+  if (id === 'avarice-incarnate') return 'TFT13_GoopBuff_AvariceIncarnate';\n+  if (id === 'headhunter') return 'TFT13_GoopBuff_Headhunter';\n+  if (id === 'ultimate-hero') return 'TFT13_GoopBuff_UltimateHero';\n+  if (id === 'into-the-unknown') return 'TFT13_GoopBuff_IntoTheUnknown';\n   const row = ANOMALY_BY_ID.get(id) ?? ANOMALY_BY_ID.get(lower(id));\n   if (row) return row.apiName;\n   const name = Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined;\n",
+    "baselineMissingApiNames": [
+      "avarice-incarnate",
+      "headhunter"
+    ],
+    "addedMissingApiNames": [
+      "ultimate-hero",
+      "into-the-unknown"
+    ],
+    "reviewOnlyTest": {
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "excludedFromWorktreeTotals": true
+    }
+  }
+}

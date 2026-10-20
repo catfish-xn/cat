@@ -5,6 +5,9 @@ import { planS13Cast, executeTask, type AbilityContext } from '../src/simulation
 import { byDistance, lowestAlly, path, EMPTY_RUNTIME, type S13Unit } from '../src/simulation/combat-s13-state';
 import { unit } from './combat-helpers';
 import { abilityPlans, type Champion } from './fixtures/m8-ability-plans';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const oldUnit = (id: string, team: 'player' | 'enemy', col: number, row: number, hp = 100): S13Unit => ({ ...unit(id, team, col, row, { hp, maxHp: 1000 }), runtime: { ...EMPTY_RUNTIME }, statuses: [], shieldLayers: [], tasks: [] });
 function fixture(name: Champion) {
