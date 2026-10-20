@@ -21,6 +21,9 @@ import {validateBattleCollection} from '../src/replay/history';
 import {exportFile,validateFile} from '../src/persistence/format';
 import {M8_VERSION} from '../src/simulation/m8/version';
 import type {SaveEnvelope} from '../src/m6/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /** Advance supply/choice rounds through Match commands, stopping before a real battle. */
 function nextDuplicatorPreparation(input:MatchState):MatchState{

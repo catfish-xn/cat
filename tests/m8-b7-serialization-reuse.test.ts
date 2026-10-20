@@ -3,6 +3,9 @@ import { canonicalContent } from '../src/simulation/content';
 import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted } from './match-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const running = () => accepted(startMatchCombat(createMatch(42)));
 const failure = (run: () => unknown) => {

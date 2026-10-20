@@ -2,6 +2,9 @@ import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { resolveAbility } from '../src/simulation/combat-abilities';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('B4 rod recipes: hand arithmetic and combat',()=>{
  it('deathcap:AP150 makes260×1.5=390 skill;390×1.15→448 damage',()=>{const r=run(wearing('deathcap',{mana:1000}));expect(r.p.abilityPower).toBe(150);expect(packets(r.events)[0].hpDamage).toBe(448);});
  it('archangel:AP120+30 at100=150, first pulse never at0',()=>{const p=wearing('archangel',{cooldownTicks:1000});const early=run(p,99);expect(readCombatStats(early.p,early.state).abilityPower).toBe(120);const r=run(p,100);expect(readCombatStats(r.p,r.state).abilityPower).toBe(150);expect(r.events.filter(e=>e.type==='statChanged'&&e.source.definitionId==='archangel')).toHaveLength(1);});

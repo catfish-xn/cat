@@ -3,6 +3,9 @@ import { nextRandom } from '../src/simulation/rng';
 import { createItemRandomStreams, drawItemRandom, validateItemRandomStreams, chooseFishbonesTarget,
   deferItemDamage, advanceDeferredItemDamage, validateDeferredItemDamage, manaReavedMaximum,
   type ItemRandomPurpose } from '../src/simulation/g2-4b-item-kernel';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 it('uses distinct explicit streams, preserves inputs and resumes from plain JSON', () => {
   const initial = createItemRandomStreams(42), frozen = JSON.stringify(initial);

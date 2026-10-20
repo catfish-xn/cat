@@ -16,6 +16,9 @@ import { accepted, resolveM5Choices } from './match-helpers';
 import { validateMatchStructure } from '../src/simulation/serialization-structure';
 import { validateMatchHistory } from '../src/simulation/battle-record-validation';
 import { recordedCrownBattle } from './crown-history-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const envelope = (match: MatchState, battles: readonly BattleRecord[]): SaveEnvelope => ({
   kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion,
@@ -506,8 +509,7 @@ describe('M7/S7 combat equipment command replay', () => {
       expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
-    // 临时，经用户 10-20 批准，提速后改回：两种锻造器用例本地约 3.3 秒，CI 机器慢时超过默认 5 秒。
-  }, 15000);
+  });
   it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s command tick at all three entries (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     // Preserve recorder ownership of the unchanged prefix; the altered record

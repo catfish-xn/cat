@@ -5,6 +5,9 @@ import { NEUTRAL_ENCOUNTERS } from '../src/simulation/content/neutral-encounters
 import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Independent transcription of the approved table, not computed from compiler output.
 const stats = [

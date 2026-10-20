@@ -7,6 +7,9 @@ import {unit} from './combat-helpers';
 import {createMatch,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function holder(id:string,col:number,row:number):S13Unit {
   return {...unit(id,'player',col,row),startingCell:{col,row},runtime:{...EMPTY_RUNTIME},

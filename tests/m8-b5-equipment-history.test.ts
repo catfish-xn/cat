@@ -11,6 +11,9 @@ import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { accepted, emptyBoard } from './match-helpers';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices as choices } from './fixtures/b8-public-equipment';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function start(equipped = true, history?: BattleHistory): MatchState {
   let state = publicEquipmentPreparation(['gloves', 'gloves'], { history });
