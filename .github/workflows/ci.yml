@@ -24,16 +24,21 @@ env:
   # Wall-clock budgets (timing tests, M6 frozen performance gates, M7 first interactive) are
   # recorded but do not fail pull requests; .github/workflows/wallclock.yml enforces them nightly
   # and after every merge into multiplayer (docs/WORKFLOW_RULES_2026-10-19.md §4). Thresholds unchanged.
-  # Pull requests record wall-clock budgets (wallclock.yml enforces them nightly and after each
-  # multiplayer merge); pull requests into release/* and every push or dispatch enforce them.
-  CI_WALLCLOCK_GATES: ${{ (github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) && 'report' || 'enforce' }}
+  # Pull requests and pushes to multiplayer record wall-clock budgets: wallclock.yml enforces the
+  # same gates with the same thresholds after every multiplayer merge (vitest timing project and
+  # explorer-bracer-restore-pressure -> vitest-timing; verify-m6-performance -> m6-performance;
+  # m7-budget first-interactive -> m7-budget) and nightly. Pull requests into release/*, pushes to
+  # main and release/*, and manual dispatches enforce them here.
+  CI_WALLCLOCK_GATES: ${{ ((github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) || (github.event_name == 'push' && github.ref == 'refs/heads/multiplayer')) && 'report' || 'enforce' }}
   WALLCLOCK_REPORT_DIR: artifacts/wallclock
 permissions:
   contents: read
-# A new push to the same PR cancels that PR's unfinished run. Pushes to main, multiplayer and
-# release/* and manual dispatches get a group per run, so they never cancel each other.
+# A new push to the same PR cancels that PR's unfinished run. Pushes to multiplayer share one
+# group that never cancels a running full run; GitHub keeps only the newest waiting one, which
+# already contains the merges of any it replaces. Pushes to main and release/* and manual
+# dispatches get a group per run, so they never cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.ref, github.run_id) }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'push' && github.ref == 'refs/heads/multiplayer') && 'push-multiplayer' || format('{0}-{1}', github.ref, github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   warmup-experiment:
