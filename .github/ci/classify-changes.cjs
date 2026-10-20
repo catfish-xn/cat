@@ -21,7 +21,9 @@ const DOC_EXTENSIONS = /\.(md|markdown|txt)$/i;
 // Prose inside these folders is read by tests or recorders (provenance notes, evidence).
 const NOT_DOC_PREFIXES = ['src/', 'tests/', 'scripts/', 'public/', '.github/', 'deploy/', 'docs/evidence/'];
 // A docs file named by any of these is an input to some check, so changing it runs full.
-const REFERENCE_PATHS = ['src', 'tests', 'scripts', '.github', 'package.json', 'vite.config.ts', 'vitest.config.ts', 'tsconfig.json'];
+// This classifier is excluded: its self-test names docs files that are not inputs to anything.
+const REFERENCE_PATHS = ['src', 'tests', 'scripts', '.github', 'package.json', 'vite.config.ts', 'vitest.config.ts', 'tsconfig.json',
+  ':(exclude).github/ci/classify-changes.cjs'];
 
 function isUiPath(path) { return UI_FILES.has(path) || UI_PREFIXES.some(prefix => path.startsWith(prefix)); }
 function isDocPath(path) { return DOC_EXTENSIONS.test(path) && !NOT_DOC_PREFIXES.some(prefix => path.startsWith(prefix)); }
