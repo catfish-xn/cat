@@ -313,7 +313,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     if(!verifiedDynamic)validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
-    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick);
+    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick, typeof input === 'string');
     if(!verifiedDynamic)validateP2Opening(combat,replay);
     if(!verifiedDynamic)validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     if(!verifiedDynamic)validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
