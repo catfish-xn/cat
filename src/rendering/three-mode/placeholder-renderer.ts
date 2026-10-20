@@ -486,6 +486,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
 
+  // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
+  if (new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
