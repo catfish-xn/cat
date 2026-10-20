@@ -14,6 +14,9 @@ import type { SessionChange } from '../src/m6/contracts';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`B10 item save/replay fixture: ${result.reason}`);

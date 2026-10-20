@@ -136,7 +136,10 @@ export function approximateEmitter(input, system = {}) {
   const p = source.primitive, type = p?.__type;
   if (p && Object.hasOwn(p, 'AlignYawToCamera')) { note('primitive.AlignYawToCamera', p.AlignYawToCamera, 'keep-static-mesh-birth-orientation'); delete p.AlignYawToCamera; }
   if (type === 'VfxPrimitiveArbitraryQuad') {
-    note('primitive', p, 'arbitrary-quad-as-camera-facing-quad'); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
+    // V2 already supports a fixed XY plane with birth Euler orientation.
+    // Billboarding this plane turns authored ground decals into upright walls.
+    additions.kind = 'arbitraryQuad';
+    note('primitive', p, 'arbitrary-quad-local-XY-preserve-birth-Euler'); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
   } else if (type === 'VfxPrimitiveRay') {
     const velocity = source.birthVelocity?.constantValue;
     additions.kind = 'ray'; additions.direction = vector(velocity) && Math.hypot(...velocity) > 0 ? [-velocity[0], velocity[1], velocity[2]] : [0, 1, 0];

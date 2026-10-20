@@ -14,23 +14,28 @@
  */
 import {
   BattleValidationError, compileBattle, proposeSettlement, snapshotForBattle, startTwoSidedBattle,
-  type BattleIdentity, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
+  type BattleIdentity, type BattleReplayTask, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
+  type BattleInput as RulesBattleInput,
 } from '../../server-entry';
-import { BattleResolveError, PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
+import { BattleResolveError, PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from './battle-resolver';
+import { primeCombatReplay } from './projection';
 import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
-  /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
-  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver()) {}
+  /**
+   * @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default.
+   * @param options.captureReplay PvP battles whose participants it accepts record their replay during the first pass.
+   */
+  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver(), private readonly options: { readonly captureReplay?: ReplayCapture } = {}) {}
   /** PvP proposals award nothing and leave the pool alone; PvE/supply may award units, so the pool goes to the inner resolver. */
   resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
-    return resolveTwoSidedPvp(input);
+    return resolveTwoSidedPvp(input, this.options.captureReplay ?? null);
   }
   /** Sliced form (B8, §19): the rules' battle task advances by the slice budget; the proposals follow in the slice that finishes it. */
   startBattle(input: BattleInput, pool: SharedPoolState): BattleJob {
     if (input.roundKind !== 'pvp') return startBattleJob(this.nonPvp, input, pool);
-    return twoSidedJob(input);
+    return twoSidedJob(input, this.options.captureReplay ?? null);
   }
 }
 
@@ -44,8 +49,8 @@ function asResolveError(subject: string, error: unknown): unknown {
 }
 
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
-export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult {
-  const job = twoSidedJob(envelope);
+export function resolveTwoSidedPvp(envelope: BattleInput, capture: ReplayCapture | null = null): TwoSidedBattleResult {
+  const job = twoSidedJob(envelope, capture);
   for (;;) { const result = job.advance(envelope.maxSteps); if (result) return result; }
 }
 
@@ -55,11 +60,11 @@ export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult 
  * `maxSteps` stays the battle's whole budget: a battle still running after it fails `step-limit-exceeded`, as the
  * synchronous entry did. A refusal at any point throws; nothing partial is returned.
  */
-function twoSidedJob(envelope: BattleInput): { advance(maxTicks: number): TwoSidedBattleResult | null } {
-  let task: BattleTask | null = null, used = 0;
+function twoSidedJob(envelope: BattleInput, capture: ReplayCapture | null): { advance(maxTicks: number): TwoSidedBattleResult | null } {
+  let task: BattleTask | BattleReplayTask | null = null, used = 0;
   return {
     advance(maxTicks: number): TwoSidedBattleResult | null {
-      task ??= startTask(envelope);
+      task ??= startTask(envelope, capture?.(envelope.seats.map(seat => seat.seatId)) ?? false);
       // The room passes Infinity when it does not slice; the rules take a positive safe integer within the budget.
       const budget = Math.min(maxTicks, envelope.maxSteps - used);
       const battle = guarded(envelope.battleId, () => task!.advance(budget));
@@ -68,16 +73,39 @@ function twoSidedJob(envelope: BattleInput): { advance(maxTicks: number): TwoSid
         if (used >= envelope.maxSteps) throw new BattleResolveError(envelope.battleId, 'battle-validation:step-limit-exceeded');
         return null;
       }
-      const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-      return {
-        kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-        participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
-      };
+      return twoSidedResult(envelope, battle, task);
     },
   };
 }
 
-function startTask(envelope: BattleInput): BattleTask {
+/** The room's result of a finished rules battle: the proposals, and the replay frames the task recorded (if it did) primed for the push. */
+export function twoSidedResult(envelope: BattleInput, battle: TwoSidedBattleResult['battle'], task: BattleTask | BattleReplayTask): TwoSidedBattleResult {
+  const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
+  const result: TwoSidedBattleResult = {
+    kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
+  };
+  // The frames the rules recorded on this very run; side B's view is still mirrored from them at push time.
+  const replay = 'replay' in task ? task.replay() : null;
+  if (replay) primeCombatReplay(result, replay);
+  return result;
+}
+
+/** A rules refusal from a live task's call (sample or advance) as the resolver fault the room reports. */
+export function guardedBattle<T>(battleId: string, run: () => T): T { return guarded(battleId, run); }
+
+function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
+  const frozen = compileEnvelope(envelope);
+  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen, { captureReplay }));
+}
+
+/** D11 live bank: the same compiled battle as a frame-by-frame replay task, with the rules' input (for its live-gold readers). */
+export function startLiveTask(envelope: BattleInput): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
+  const input = compileEnvelope(envelope);
+  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true })) };
+}
+
+function compileEnvelope(envelope: BattleInput): RulesBattleInput {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -93,6 +121,5 @@ function startTask(envelope: BattleInput): BattleTask {
   const a: PlayerBattleSnapshot = guarded(first.seatId, () => snapshotForBattle(first.state, first.seatId));
   const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
-  const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
-  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen));
+  return guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
 }

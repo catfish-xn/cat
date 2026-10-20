@@ -1,0 +1,14 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/s13-p1-income.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  18:28:06
+   Duration  2.66s (transform 67%, tests 20%, import 12%)
+

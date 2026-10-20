@@ -58,6 +58,9 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   }
   expect(state.preparation.units.find(unit=>unit.id===unitId)).toMatchObject({definitionId:'tristana',starLevel:3});
   expect(restoreMatch(JSON.stringify(state))).toEqual(state);
+  // v15's new offers alter the paid route's combat modifiers. Back-row placement
+  // preserves a real lethal bounce without changing any stats or growth assertions.
+  state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:0,row:7}}));
   const initial=state;
   let live=accepted(api.startMatchCombat(state)),growthEvents=0;
   while(live.phase==='combat'){

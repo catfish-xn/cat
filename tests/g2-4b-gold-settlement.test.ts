@@ -6,6 +6,9 @@ import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
 import {readG23Progress,validateG23MechanicLinks} from '../src/simulation/g2-3-state';
 import {validateG23Progress} from '../src/simulation/g2-3-match-progress';
 import {validateG23BattleFacts,type G23BattleFacts} from '../src/simulation/g2-3-economy';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function facts():G23BattleFacts{
  const ledger=recordItemGold({streams:createItemRandomStreams(42),receipts:[]},{battleId:'round-1',ownerId:'holder',itemInstanceId:'mogul',kind:'moguls-full',tick:100,ordinal:0});

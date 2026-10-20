@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { CombatUnit } from '../src/simulation/combat';
 import { packets, shieldEvents } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const holder = (s: MatchState) => s.combat!.units.find(u => u.id === 'unit-1')!;
 const receipts = (s: MatchState) => holder(s).mechanismState!.runtimes.filter(r => r.source.definitionId === 'bloodthirster');
@@ -41,6 +44,9 @@ function rejectMutation(s: MatchState, mutate: (u: CombatUnit) => void, message:
 }
 
 describe('B4 R3b: compiled consumption partition survives the complete shield lifecycle', () => {
+  // Prepare the shared single-instance snapshot before its first lifecycle case.
+  beforeAll(() => { itemMatch('bloodthirster'); });
+
   it('untriggered legal object/JSON saves retain first use; missing/duplicate unconsumed identities are rejected', () => {
     const s = itemMatch('bloodthirster'), json = serializeMatch(s);
     expect(receipts(s)).toEqual([]);
@@ -80,17 +86,24 @@ describe('B4 R3b: compiled consumption partition survives the complete shield li
     expect(hit).toBe(true);
   });
 
-  it('two equipment instances consume independently; one receipt cannot replace the other after both shields end', () => {
-    const initial = itemMatch(['bloodthirster', 'bloodthirster']);
-    expect(holder(initial).mechanismState!.unconsumedSurvivalKeys).toHaveLength(2);
-    const fired = triggerFirst(restoreMatch(serializeMatch(initial)));
-    expect(holder(fired).shield).toBe(2 * Math.floor(holder(initial).maxHp / 4)); expect(holder(fired).shieldLayers).toHaveLength(2);
-    expect(new Set(receipts(fired).map(r => r.source.instanceId)).size).toBe(2);
-    expect(new Set(receipts(fired).map(r => r.key)).size).toBe(2);
-    expect(holder(fired).mechanismState!.unconsumedSurvivalKeys).toEqual([]);
-    const ended = expireNaturally(fired);
-    expect(receipts(ended)).toHaveLength(2);
-    rejectMutation(ended, u => { (u.mechanismState as any).runtimes.pop(); }, /incomplete survival consumption/);
-    rejectMutation(ended, u => { (u.mechanismState as any).runtimes[1] = structuredClone(u.mechanismState!.runtimes[0]); }, /item survival runtime/);
+  describe('two-instance fixture', () => {
+    // Public acquisition traverses full battles unrelated to the lifecycle.
+    // Warm only this case's compiled fixture; itemMatch returns a detached copy.
+    // Keep this setup after the single-instance cases to preserve their order.
+    beforeAll(() => { itemMatch(['bloodthirster', 'bloodthirster']); });
+
+    it('two equipment instances consume independently; one receipt cannot replace the other after both shields end', () => {
+      const initial = itemMatch(['bloodthirster', 'bloodthirster']);
+      expect(holder(initial).mechanismState!.unconsumedSurvivalKeys).toHaveLength(2);
+      const fired = triggerFirst(restoreMatch(serializeMatch(initial)));
+      expect(holder(fired).shield).toBe(2 * Math.floor(holder(initial).maxHp / 4)); expect(holder(fired).shieldLayers).toHaveLength(2);
+      expect(new Set(receipts(fired).map(r => r.source.instanceId)).size).toBe(2);
+      expect(new Set(receipts(fired).map(r => r.key)).size).toBe(2);
+      expect(holder(fired).mechanismState!.unconsumedSurvivalKeys).toEqual([]);
+      const ended = expireNaturally(fired);
+      expect(receipts(ended)).toHaveLength(2);
+      rejectMutation(ended, u => { (u.mechanismState as any).runtimes.pop(); }, /incomplete survival consumption/);
+      rejectMutation(ended, u => { (u.mechanismState as any).runtimes[1] = structuredClone(u.mechanismState!.runtimes[0]); }, /item survival runtime/);
+    });
   });
 });

@@ -1,3 +1,6 @@
+import { p3Program, p3ItemProgram } from './s13-p3-programs';
+import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
+import { D11_FILL_TIERS, type D11AugmentId } from './content/d11-fill';
 import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
 import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
@@ -10,6 +13,7 @@ import { modifier,stat,trigger } from './content/item-programs';
 import { g23FormStats } from './g2-3-forms';
 import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-programs';
 import { compileAugmentEffect } from './augment-effects';
+import { p2ItemDefinition, p2SupportDeclaration, p2AugmentProgram } from './s13-augments-p2-strategy';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram, type ItemProgram } from './m8/item-program';
 import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
@@ -21,7 +25,7 @@ import { getUnitStats } from './unit-stats';
 import { readRoundEnemyProjection } from './round-enemies';
 import { hexDistance } from './board';
 import { resolveAbility } from './combat-abilities';
-import { deriveTraits } from './trait-snapshot';
+import { deriveEffectiveTraits, projectEffectiveMembership, type TraitProjectionContext } from './traits/effective-membership';
 import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
@@ -56,11 +60,16 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 /** The only strategy compilation boundary. Combat receives JSON numbers and provenance,
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
-export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
+export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
   state=readCombatStrategyInputs(state);
-  const voidspawn=projectVoidspawns(state);
+  if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
+  const projection=projectEffectiveMembership(state.preparation,context,catalog.traits);
+  state={...state,preparation:projection.preparation};
+  const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
+  const voidspawn=projectVoidspawns(state,openingTraits);
   state={...state,preparation:voidspawn.preparation};
-  const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
+  const projected={...projection,preparation:state.preparation};
+  const traits = [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
@@ -73,7 +82,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
   if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
   const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
-    held, strategyStage(state.round));
+    held, strategyStage(state.round),(holder,item,declaration)=>holder.team==='player'?p2SupportDeclaration(declaration,item.definition.id,state):declaration);
 
   const shrouds=equipment.flatMap(item=>{
     const definition=catalog.items[item.definitionId];
@@ -81,6 +90,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
     return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
   });
+  const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
+    compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
   const units = boardUnits.map(unit => {
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
@@ -97,7 +108,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:stageProgram(definition.combatProgram,state.round)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:p3ItemProgram(definition.id,stageProgram(definition.combatProgram,state.round),unit.team==='player'?state.augments.map(a=>a.definitionId):[],strategyStage(state.round))});
     };
     // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
     const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
@@ -112,20 +123,28 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.team === 'player') {
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
-        const definition = lookup(catalog.items, conversions.get(item.id) ?? item.definitionId);
+        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
-        const definition = lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId);
+        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId),state);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
+        const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
+        if(grant){
+          sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,grant.effects));
+          if(Object.keys(grant.program).length)itemPrograms.push({source:{ownerId:unit.id,sourceKind:'augment',definitionId:augment.definitionId,instanceId:augment.choiceId,effectIndex:65536,parentItemInstanceId:null},program:grant.program});
+          continue;
+        }
+        const program=p2AugmentProgram(augment.definitionId);
+        if(program)itemPrograms.push({source:{ownerId:unit.id,sourceKind:'augment',definitionId:augment.definitionId,instanceId:augment.choiceId,effectIndex:65536,parentItemInstanceId:null},program});
         sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
           if (effect.kind !== 'mechanic') return [effect];
-          if (effect.mechanic === 'investment') return [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }];
+          if (effect.mechanic === 'investment') return state.augments.find(a=>catalog.augments[a.definitionId]?.effects.some(e=>e.kind==='mechanic'&&e.mechanic==='investment'))?.choiceId === augment.choiceId ? [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }] : [];
           if (effect.values.backRowOnly && unit.location.kind === 'board' && unit.location.cell.row !== state.preparation.board.deploymentZones.player.lastRow) return [];
           if (effect.mechanic === 'bulkyBuddies') {
             const adjacent = boardUnits.filter(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
@@ -137,7 +156,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       const binding = state.anomalyBinding;
       if (binding?.unitId === unit.id) {
         const definition = lookup(catalog.anomalies, binding.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, definition.effects));
+        const effects:readonly Effect[]=binding.definitionId==='avarice-incarnate'||binding.definitionId==='headhunter'
+          ?[{kind:'mechanic',mechanic:'d11Anomaly',values:{enabled:1,priorKills:binding.definitionId==='headhunter'?d11PriorKills(state.g23,binding.boundRound):0}}]:definition.effects;
+        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, effects));
       }
     } else {
       for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
@@ -151,9 +172,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       if (grant.program) { validateItemProgram(grant.program); itemPrograms.push({ source: { ownerId: unit.id, sourceKind: 'item', definitionId: grant.definitionId, instanceId: grant.instanceId, effectIndex: (grant.effects.length + 1) * 1024, parentItemInstanceId: null }, program: structuredClone(grant.program) }); }
     }
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
-    sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit)));
+    sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit,traits)));
     if(unit.definitionId==='g23-sion'){
-      const rose=g23SionTeam(state.preparation,unit.team),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
+      const rose=g23SionTeam(state.preparation,unit.team,traits),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
       const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
       sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
@@ -173,7 +194,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
     }
     for(const m of resolved.mechanics ?? []) {
-      const program=m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
+      const program=m.mechanic==='s13P3'?p3Program(m.source.definitionId,strategyStage(state.round)):m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
       if(m.mechanic==='g23Anomaly'){
         const conversion=g23ConversionProgramValues(m.source.definitionId,resolved.stats.armor,resolved.stats.magicResist);
         if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});
@@ -188,9 +209,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       return { ...mechanic, targetId: buddy!.id };
     });
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
-    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler');
-    if(gambler&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative Gambler bank');
-    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler?{openingItemBankGold:Math.min(gambler.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
+    if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
+    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

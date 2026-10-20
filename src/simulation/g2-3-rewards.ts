@@ -8,7 +8,7 @@ import {M5_UNIT_DEFINITIONS} from './units';
 import {SHOP_CATALOG_BY_COST} from './match-rules';
 import {nextRandom} from './rng';
 import type {G23RewardBundle} from './g2-3-economy';
-export interface G23RewardAtom {readonly id:string;readonly kind:'unit'|'item'|'tool'|'gold'|'duplicator';readonly options:readonly string[];readonly quantity:number;readonly gold:number;readonly duplicatorDefinitionId?:keyof typeof G23_POLICY.duplicators}
+export interface G23RewardAtom {readonly id:string;readonly kind:'unit'|'item'|'tool'|'gold'|'duplicator';readonly options:readonly string[];readonly quantity:number;readonly gold:number;readonly starLevel?:1|2|3;readonly duplicatorDefinitionId?:keyof typeof G23_POLICY.duplicators}
 export interface G23RewardClaim {readonly id:string;readonly bundleId:string;readonly atomId:string;readonly copy:number;readonly round:number;readonly kind:G23RewardAtom['kind'];readonly definitionId:string;readonly instanceId:string|null;readonly gold:number}
 const apiUnits:Readonly<Record<string,string>>={TFT13_Lieutenant:'sevika',TFT13_Chainsaw:'renni',TFT13_Gremlin:'smeech',TFT13_RenataGlasc:'renata',TFT13_Singed:'singed',TFT13_Silco:'silco'};
 const components=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='component').map(i=>i.id).sort();
@@ -37,9 +37,9 @@ function frozenReward(bundle:G23RewardBundle):Readonly<Record<string,unknown>>{
  if(!admitted)throw new RangeError('Invalid G23 frozen reward descriptor');
  return admitted;
 }
-export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23RewardAtom[]{
+export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=false):readonly G23RewardAtom[]{
  const reward=frozenReward(bundle);
- const key=canonicalContent([seed,bundle]),cached=atomCache.get(key);if(cached)return cached;
+ const key=canonicalContent([seed,bundle,multiplayer]),cached=atomCache.get(key);if(cached)return cached;
  const out:G23RewardAtom[]=[],add=(kind:G23RewardAtom['kind'],pool:readonly string[],quantity=1,gold=0,choices=1,duplicatorDefinitionId?:G23RewardAtom['duplicatorDefinitionId'])=>{
  const id=`${bundle.id}:atom:${out.length}`;out.push({id,kind,options:kind==='gold'?[]:sample(pool,`${seed}:${id}`,choices),quantity,gold,...(duplicatorDefinitionId?{duplicatorDefinitionId}:{})});
  };
@@ -73,6 +73,10 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number):readonly G23R
   if(['ThreeCostUnit','FourCostUnit','FiveCostUnit'].includes(key)){for(let n=0;n<(value as number);n++)add('unit',SHOP_CATALOG_BY_COST[key==='ThreeCostUnit'?3:key==='FourCostUnit'?4:5]);continue;}
   if(key.startsWith('Champions')){const copies=key.includes('3Star')?9:key.includes('2Star')?3:1;for(const api of list()){if(!apiUnits[api])throw new RangeError('Unmapped G23 champion '+api);add('unit',[apiUnits[api]],copies);}continue;}
   throw new RangeError('Unimplemented G23 reward descriptor '+key);
+ }
+ if(multiplayer) for(let i=0;i<out.length;i++) {
+  const atom=out[i];
+  if(atom.kind==='unit' && (atom.quantity===3||atom.quantity===9)) out[i]={...atom,quantity:1,starLevel:atom.quantity===3?2:3};
  }
  if(atomCache.size>=128)atomCache.delete(atomCache.keys().next().value!);
  const result=freezeContent(out);atomCache.set(key,result);return result;

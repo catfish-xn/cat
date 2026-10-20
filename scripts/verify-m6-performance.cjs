@@ -35,7 +35,9 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
   for(const build of ['cannon','sniper','mage','sniper-caitlyn','full-load']){
    const runId=`performance-${build}`,history=new replay.BattleHistory(runId);let currentMax=null,currentBytes=0;
    const runner=build==='full-load'?require('./verify-m6-full-load-helper.cjs'):require('./generate-m5-route.cjs');
-   const route=await runner.run(api,{build,seed:42,onStep(before,result,command){
+   // v14 seed42 offers Going Long at 4-2: its XP restores nine units without Radiant Relics' extra item.
+   const routeOptions=build==='full-load'?{augmentPriorities:['going-long']}:{};
+   const route=await runner.run(api,{build,seed:42,...routeOptions,onStep(before,result,command){
     history.observe({before,after:result.state,events:result.events.filter(e=>e.domain==='combat'),reason:command?'command':'tick'});
     // Select the last legal running tick of each battle (largest event prefix for that battle).
     // Full prefixes are compared only near battle end below, avoiding O(tick^2) route generation.

@@ -1,3 +1,4 @@
+import { isTraitSnapshotMember } from './traits/effective-membership';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, OwnedAugment, TraitSnapshot } from './strategy-types';
@@ -6,6 +7,7 @@ import { hexDistance } from './board';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { AUGMENT_BRONZE_THRESHOLDS } from './content/augment-policy';
+import { p2AugmentEffects } from './s13-augments-p2-strategy';
 const flat = (stat: 'maxHp'|'armor'|'magicResist'|'abilityPower', amount:number):Effect => ({kind:'statFlat',stat,amount});
 const speed = (bps:number):Effect => ({kind:'attackSpeedBps',bps});
 const mechanic = (name:string,values:Record<string,number>):Effect => ({kind:'mechanic',mechanic:name,values});
@@ -15,6 +17,8 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);
+    case 's13P3': return [mechanic('s13P3',{...v,stage:getMultiplayerRoundByOrdinal(state.round).stage})];
     case 'pumpingUp': {
       // I retains its established receipt-validated counter; II/III count completed
       // combat nodes from acquisition, including online overtime, never supply nodes.
@@ -34,7 +38,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'findCenter': return unit.location.kind==='board'&&unit.location.cell.col===Math.floor(state.preparation.board.columns/2)&&unit.location.cell.row===zone.firstRow+Math.floor((zone.lastRow-zone.firstRow)/2)?[{kind:'statPercentBps',stat:'maxHp',bps:v.healthBps},mechanic('damageAmp',{bps:v.damageAmpBps})]:[];
     case 'littleBuddies': {const cost=UNIT_DEFINITIONS[unit.definitionId].cost,count=allies.filter(u=>UNIT_DEFINITIONS[u.definitionId].cost<=2).length;return cost===4||cost===5?[flat('maxHp',count*v.health),speed(count*v.attackSpeedBps)]:[];}
     case 'bronzeForLife': {const count=traits.filter(t=>t.team===unit.team&&(AUGMENT_BRONZE_THRESHOLDS[t.traitId]??[]).includes(t.tier)).length;return [mechanic('damageAmp',{bps:count*v.damageAmpBps}),...(v.durabilityBps?[mechanic('watcher',{reductionBps:count*v.durabilityBps,healthyReductionBps:count*v.durabilityBps,thresholdBps:0})]:[])];}
-    case 'builtDifferent': {if(traits.some(t=>t.team===unit.team&&t.tier>0&&t.memberDefinitionIds.includes(unit.definitionId)))return [];const stage=Math.max(2,Math.min(5,getMultiplayerRoundByOrdinal(state.round).stage));return [flat('maxHp',v[`health${stage}`]),speed(v[`speed${stage}`])];}
+    case 'builtDifferent': {if(traits.some(t=>t.tier>0&&isTraitSnapshotMember(t,unit)))return [];const stage=Math.max(2,Math.min(5,getMultiplayerRoundByOrdinal(state.round).stage));return [flat('maxHp',v[`health${stage}`]),speed(v[`speed${stage}`])];}
     default:return [effect];
   }
 }

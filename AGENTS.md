@@ -15,6 +15,12 @@
 - 不修改 `src/simulation/`、`tests/`、`scripts/`，可以运行测试。需要新数据或新命令时，写入 `docs/UI_REQUESTS.md`（字段、含义、用途、验收条件），由 Codex 实现。
 - 界面只调用 Match 公共命令、读取状态，不自行扣费、结算或另算规则；`match-session.ts` 是薄适配器，不能变成第二套规则引擎。
 
+**3D 支线（2026-10-19 用户确认）**
+- 集成分支 `3d`（从 multiplayer 切出）；3D 各任务各开分支、PR 进 `3d`。A 段能玩、体积确认后再整体合 multiplayer，时机另定。上线线优先，3D 只用空闲槽。
+- Codex：`src/rendering3d/`（glb 模型加载器、动作状态机、粒子 JSON 参数解释器、射线拾取等独立模块，带单元测试）和 `scripts/assets3d/`（素材提取与转换管线）。不碰 `src/rendering/`、`src/simulation/`。Claude 评审。
+- Claude：原 `src/rendering/` 及其与 3D 模块的接线、整体观感。
+- 素材（模型、贴图、骨骼、动作、特效）有版权，**绝不提交到仓库**：只放本地 gitignore 目录，代码只读可配置的素材地址；CI 和云端只用 CommunityDragon 可拉的占位素材或纯测试数据。提交前用 `git status` 确认没有素材文件。
+
 # 八人联机分工（2026-10-12 用户确认，方案 A）
 
 联机方案以 `docs/MULTIPLAYER_RENOVATION_V2.md` 为主，`MULTIPLAYER_N0_BASELINE.md` 和 `MULTIPLAYER_CONTRACT.md` 为配套。任务包编号 T0–T9、TP 沿用这些文档。本节只调整联机阶段的分工，不改变上面的单人部分权限。
@@ -59,7 +65,9 @@
 
 # 项目概况
 
-浏览器本地运行的单人六角棋盘自动战棋（HEX 自动战棋），复刻 TFT S13（14.24b）的有限内容切片。无后端服务、数据库或联网，"后端"指纯 TypeScript 领域规则。
+六角棋盘自动战棋（HEX 自动战棋），复刻 TFT S13，规则、数值和图标版本锁定 **14.24b**。以**八人联机**为主：`src/server/` 是单局 WebSocket 服务器（匹配队列、机器人补位、服务器权威结算、断线重连），规则仍只在 `src/simulation/`（纯 TypeScript），服务器只编排调用；原单人模式保留。只面向桌面 Chromium，没有数据库和账号系统。
+
+3D 是单独加载的显示模式（`?render=3d`，集成分支 `3d`），只换表现层、不改规则；模型等素材只放本地 gitignore 目录，公开站点不带 3D 素材。日常开发在 `multiplayer`，上线走 `release/vN` → `main`。
 
 技术栈：TypeScript + Vite + Phaser 3，测试用 Vitest 和 Playwright。Node 22.12+。没有 ESLint/Prettier，也没有 `lint`、`start` 脚本。
 

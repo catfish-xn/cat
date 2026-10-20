@@ -57,11 +57,12 @@ function mergeTriples(input: Candidate[], definitionId: string, benchOnly = fals
 }
 
 /** Plan first, commit in Match only after success; the pending card occupies no slot. */
-export function planPurchase(preparation: GameState, definitionId: string, candidateId: string, benchOnly = false): PurchasePlanResult {
+export function planPurchase(preparation: GameState, definitionId: string, candidateId: string, benchOnly = false, starLevel: StarLevel = 1): PurchasePlanResult {
+  if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid acquisition star level');
   if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId) || UNIT_DEFINITIONS[definitionId].unitKind === 'neutral') throw new RangeError(`Unknown unit definition: ${definitionId}`);
   validateRoster(preparation);
   if (preparation.units.some(unit => unit.id === candidateId)) throw new Error(`Duplicate unit ID: ${candidateId}`);
-  let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel: 1, location: null }];
+  let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel, location: null }];
   let events: UnitUpgradedEvent[] = [];
   ({ units, events } = mergeTriples(units, definitionId, benchOnly));
   const pending = units.find(unit => unit.location === null);

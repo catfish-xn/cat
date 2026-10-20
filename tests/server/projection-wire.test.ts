@@ -1,9 +1,10 @@
+import { prepareInput, copyInput } from '../fixtures/prepared-input';
 /**
  * Work order B7: every state that leaves the room is the rules' private seat view (§14.1), every battle
  * also leaves as a compact replay (§14.2) mirrored for side B, and overtime (§11.5) runs a match to a
  * unique ranking in a bounded number of rounds.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { applyCombatReplayTick, stepCombat, type CombatReplay, type CombatReplayInput, type CombatState, type CombatViewState } from '../../src/server-entry';
 import type { ServerMessage } from '../../src/server/net/messages';
 import { toCombatReplayFor, mirrorCombatReplay, toSeatPrivateView } from '../../src/server/room/projection';
@@ -128,54 +129,63 @@ describe('B7 private seat view on every state path', () => {
 });
 
 describe('B7 compact replay', () => {
-  it('mirrors side B (cells, movement, cast cells, unitUpdated, teams, result) and plays to the terminal view', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
-    const { state, battle } = firstPvpBattle(room, clock);
-    const [seatA, seatB] = [battle.battle.a.seatId, battle.battle.b.seatId];
-    const a = toCombatReplayFor(state, seatA)!, b = toCombatReplayFor(state, seatB)!;
-    expect(a.battleId).toBe(battle.battleId); expect(b.battleId).toBe(battle.battleId);
-    // Built once per battle: every later request returns the same immutable replay.
-    expect(toCombatReplayFor(state, seatA)!.replay).toBe(a.replay);
-    expect(toCombatReplayFor(state, seatB)!.replay).toBe(b.replay);
-    const rows = a.replay.initial.board.rows;
-    expect(b.replay.initial.units.length).toBe(a.replay.initial.units.length);
-    expect(a.replay.initial.units.length).toBeGreaterThan(0);
-    a.replay.initial.units.forEach((unit, index) => {
-      const mirrored = b.replay.initial.units[index]!;
-      expect(mirrored.id).toBe(unit.id);
-      expect(mirrored.cell).toEqual(flip(unit.cell, rows));
-      expect(mirrored.team).toBe(unit.team === 'player' ? 'enemy' : 'player');
-      if (unit.startingCell) expect(mirrored.startingCell).toEqual(flip(unit.startingCell, rows));
-      expect(mirrored.hp).toBe(unit.hp);
+  describe('first PvP input', () => {
+    let pvpInput: ReturnType<typeof firstPvpBattle> | undefined;
+    beforeAll(() => {
+      const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+      room.start();
+      pvpInput = prepareInput(firstPvpBattle(room, clock));
+      room.dispose();
     });
-    expect(b.replay.initial.board.deploymentZones).toEqual({ player: a.replay.initial.board.deploymentZones.enemy, enemy: a.replay.initial.board.deploymentZones.player });
-    const swap = (result: string | null) => result === 'playerWin' ? 'enemyWin' : result === 'enemyWin' ? 'playerWin' : result;
-    expect(b.replay.terminal.result).toBe(swap(a.replay.terminal.result));
-    expect(b.replay.ticks.length).toBe(a.replay.ticks.length);
-    let movements = 0;
-    a.replay.ticks.forEach((frame, index) => {
-      const other = b.replay.ticks[index]!;
-      expect(other.tick).toBe(frame.tick);
-      frame.events.forEach((event, at) => {
-        const mirrored = other.events[at]!;
-        expect(mirrored.type).toBe(event.type);
-        if (event.type === 'movement' && mirrored.type === 'movement') { movements++; expect(mirrored.from).toEqual(flip(event.from, rows)); expect(mirrored.to).toEqual(flip(event.to, rows)); }
-        if (event.type === 'cast' && mirrored.type === 'cast') expect(mirrored.completionCell).toEqual(flip(event.completionCell, rows));
-        if (event.type === 'combatFinished' && mirrored.type === 'combatFinished') expect(mirrored.result).toBe(swap(event.result));
-        if (event.type === 'unitUpdated' && mirrored.type === 'unitUpdated' && event.changes.cell) expect(mirrored.changes.cell).toEqual(flip(event.changes.cell, rows));
-        if ('eventSeq' in event && 'eventSeq' in mirrored) expect(mirrored.eventSeq).toBe(event.eventSeq);
+    afterAll(() => { pvpInput = undefined; });
+
+    it('mirrors side B (cells, movement, cast cells, unitUpdated, teams, result) and plays to the terminal view', () => {
+      const { state, battle } = copyInput(pvpInput!);
+      const [seatA, seatB] = [battle.battle.a.seatId, battle.battle.b.seatId];
+      const a = toCombatReplayFor(state, seatA)!, b = toCombatReplayFor(state, seatB)!;
+      expect(a.battleId).toBe(battle.battleId); expect(b.battleId).toBe(battle.battleId);
+      // Built once per battle: every later request returns the same immutable replay.
+      expect(toCombatReplayFor(state, seatA)!.replay).toBe(a.replay);
+      expect(toCombatReplayFor(state, seatB)!.replay).toBe(b.replay);
+      const rows = a.replay.initial.board.rows;
+      expect(b.replay.initial.units.length).toBe(a.replay.initial.units.length);
+      expect(a.replay.initial.units.length).toBeGreaterThan(0);
+      a.replay.initial.units.forEach((unit, index) => {
+        const mirrored = b.replay.initial.units[index]!;
+        expect(mirrored.id).toBe(unit.id);
+        expect(mirrored.cell).toEqual(flip(unit.cell, rows));
+        expect(mirrored.team).toBe(unit.team === 'player' ? 'enemy' : 'player');
+        if (unit.startingCell) expect(mirrored.startingCell).toEqual(flip(unit.startingCell, rows));
+        expect(mirrored.hp).toBe(unit.hp);
       });
-    });
-    // Both orientations reduce to their own terminal view, and B is exactly the mirror of A.
-    expect(JSON.stringify(play(a.replay))).toBe(JSON.stringify(a.replay.terminal));
-    expect(JSON.stringify(play(b.replay))).toBe(JSON.stringify(b.replay.terminal));
-    expect(b.replay).toEqual(mirrorCombatReplay(a.replay));
-    // Size: the replay is a small fraction of the per-tick frames it replaced (B7 item 5: < 5%; C6 acceptance: ≥ 90% less).
-    const replayBytes = bytes(a.replay), framesBytes = legacyFrameBytes(battle.battle);
-    console.log(`[c6-wire] first PvP battle: replay ${replayBytes} B, legacy frames ${framesBytes} B (${(replayBytes / framesBytes * 100).toFixed(2)}%)`);
-    expect(replayBytes / framesBytes).toBeLessThan(0.05);
-  }, 60_000);
+      expect(b.replay.initial.board.deploymentZones).toEqual({ player: a.replay.initial.board.deploymentZones.enemy, enemy: a.replay.initial.board.deploymentZones.player });
+      const swap = (result: string | null) => result === 'playerWin' ? 'enemyWin' : result === 'enemyWin' ? 'playerWin' : result;
+      expect(b.replay.terminal.result).toBe(swap(a.replay.terminal.result));
+      expect(b.replay.ticks.length).toBe(a.replay.ticks.length);
+      let movements = 0;
+      a.replay.ticks.forEach((frame, index) => {
+        const other = b.replay.ticks[index]!;
+        expect(other.tick).toBe(frame.tick);
+        frame.events.forEach((event, at) => {
+          const mirrored = other.events[at]!;
+          expect(mirrored.type).toBe(event.type);
+          if (event.type === 'movement' && mirrored.type === 'movement') { movements++; expect(mirrored.from).toEqual(flip(event.from, rows)); expect(mirrored.to).toEqual(flip(event.to, rows)); }
+          if (event.type === 'cast' && mirrored.type === 'cast') expect(mirrored.completionCell).toEqual(flip(event.completionCell, rows));
+          if (event.type === 'combatFinished' && mirrored.type === 'combatFinished') expect(mirrored.result).toBe(swap(event.result));
+          if (event.type === 'unitUpdated' && mirrored.type === 'unitUpdated' && event.changes.cell) expect(mirrored.changes.cell).toEqual(flip(event.changes.cell, rows));
+          if ('eventSeq' in event && 'eventSeq' in mirrored) expect(mirrored.eventSeq).toBe(event.eventSeq);
+        });
+      });
+      // Both orientations reduce to their own terminal view, and B is exactly the mirror of A.
+      expect(JSON.stringify(play(a.replay))).toBe(JSON.stringify(a.replay.terminal));
+      expect(JSON.stringify(play(b.replay))).toBe(JSON.stringify(b.replay.terminal));
+      expect(b.replay).toEqual(mirrorCombatReplay(a.replay));
+      // Size: the replay is a small fraction of the per-tick frames it replaced (B7 item 5: < 5%; C6 acceptance: ≥ 90% less).
+      const replayBytes = bytes(a.replay), framesBytes = legacyFrameBytes(battle.battle);
+      console.log(`[c6-wire] first PvP battle: replay ${replayBytes} B, legacy frames ${framesBytes} B (${(replayBytes / framesBytes * 100).toFixed(2)}%)`);
+      expect(replayBytes / framesBytes).toBeLessThan(0.05);
+    }, 60_000);
+  });
 
   it('mirrors every coordinate-bearing replay field, including ones a short battle may not produce', () => {
     const unit = { id: 'u1', definitionId: 'irelia', team: 'player' as const, starLevel: 1, hp: 10, maxHp: 10, mana: 0, maxMana: 50, shield: 0, alive: true, targetId: null,
@@ -242,8 +252,8 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Seed 3 (random openings and baseline random rewards): idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-7.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
+    // Seed 5 under v14: idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 5 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();

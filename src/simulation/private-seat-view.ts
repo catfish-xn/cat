@@ -1,4 +1,5 @@
 import type { MatchState } from './match-types';
+import { d11PrivateDisplay } from './d11-display';
 import type { RevealedDropView } from './m8/ui-contracts';
 import { readLootView, payloadView } from './loot-view';
 import { previewUseConsumable } from './consumables';
@@ -8,6 +9,7 @@ import { boardView, cellView, pick } from './view-fields';
 import { getUnitForm } from './seat-mechanics/forms';
 import { seatMechanicsView } from './seat-mechanics/state';
 import type { MechanicChoicePayload } from './seat-mechanics/types';
+import { augmentOptionViews } from './augment-offers';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
@@ -31,7 +33,7 @@ function revealedLootView(state: MatchState) {
       switch (drop.status) {
         case 'forfeited': return {...identity,status:drop.status,receiptId:null,allowedActions:[],reason:drop.reason};
         case 'granted': return { ...identity, status: drop.status, receiptId: drop.receiptId, allowedActions: [] };
-        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' };
+        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: drop.reason };
         case 'pending-capacity': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'bench-full' };
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
@@ -54,6 +56,7 @@ export function toPrivateSeatView(state: MatchState) {
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
   const seatMechanics = seatMechanicsView(state);
+  const d11Display = d11PrivateDisplay(state);
   // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
   const candidates: ConsumableTarget[] = [
     ...units.map(unit => ({ kind: 'unit' as const, unitId: unit.id })),
@@ -69,6 +72,9 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
+      orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
+    ...(d11Display?{d11Display}:{}),
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),
@@ -95,8 +101,11 @@ export function toPrivateSeatView(state: MatchState) {
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),
     augmentProgress: pick(state.augmentProgress, ['pumpingRounds', 'investmentHp']),
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
-      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount']),
+      ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount', 'augmentTier', 'rerollsRemaining']),
       offers: [...state.pendingChoice.offers],
+      ...(state.pendingChoice.kind === 'augment' ? {
+        rerolledSlots: [...state.pendingChoice.rerolledSlots!], augmentOptions: augmentOptionViews(state),
+      } : {}),
       ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,

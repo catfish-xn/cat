@@ -9,6 +9,9 @@ import { battle, freeze, unit } from './combat-helpers';
 import { amount, source, trigger } from './fixtures/m8-contract-cases';
 import captured from './fixtures/m8-b3/damage-control-opening.json';
 import { activityEvents, packetView, statusEvents } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Captured by calling the real B7 compiler at the recorded commit, outside this
 // branch. B3 owns this frozen regression input; no B7 implementation is imported.

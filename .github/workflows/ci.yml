@@ -1,7 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    # Merges into the integration and release branches run the full suite, so anything a
+    # pull request's narrower tier skipped is still checked right after it lands.
+    branches: [main, multiplayer, 'release/**']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -22,14 +24,21 @@ env:
   # Wall-clock budgets (timing tests, M6 frozen performance gates, M7 first interactive) are
   # recorded but do not fail pull requests; .github/workflows/wallclock.yml enforces them nightly
   # and after every merge into multiplayer (docs/WORKFLOW_RULES_2026-10-19.md §4). Thresholds unchanged.
-  CI_WALLCLOCK_GATES: ${{ github.event_name == 'pull_request' && 'report' || 'enforce' }}
+  # Pull requests and pushes to multiplayer record wall-clock budgets: wallclock.yml enforces the
+  # same gates with the same thresholds after every multiplayer merge (vitest timing project and
+  # explorer-bracer-restore-pressure -> vitest-timing; verify-m6-performance -> m6-performance;
+  # m7-budget first-interactive -> m7-budget) and nightly. Pull requests into release/*, pushes to
+  # main and release/*, and manual dispatches enforce them here.
+  CI_WALLCLOCK_GATES: ${{ ((github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) || (github.event_name == 'push' && github.ref == 'refs/heads/multiplayer')) && 'report' || 'enforce' }}
   WALLCLOCK_REPORT_DIR: artifacts/wallclock
 permissions:
   contents: read
-# A new push to the same PR cancels that PR's unfinished run. Pushes to main and manual
+# A new push to the same PR cancels that PR's unfinished run. Pushes to multiplayer share one
+# group that never cancels a running full run; GitHub keeps only the newest waiting one, which
+# already contains the merges of any it replaces. Pushes to main and release/* and manual
 # dispatches get a group per run, so they never cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.ref, github.run_id) }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'push' && github.ref == 'refs/heads/multiplayer') && 'push-multiplayer' || format('{0}-{1}', github.ref, github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   warmup-experiment:
@@ -38,18 +47,95 @@ jobs:
   heap-diagnostics:
     if: ${{ inputs.heap_diagnostics && !inputs.warmup_experiment }}
     uses: ./.github/workflows/m7-heap-diagnostic.yml
+  # Picks the tier from the files a pull request changes (.github/ci/classify-changes.cjs):
+  # docs -> this job's text check only; ui -> type check, build, budgets, fast unit tests,
+  # related timing tests and the interface browser checks; full -> everything. Pushes and
+  # manual dispatches are always full. Unclassifiable files, a file list that cannot be read
+  # or does not match the PR's changed-file count all fall back to full.
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tier: ${{ steps.classify.outputs.tier }}
+      related: ${{ steps.classify.outputs.related }}
+      tb_parts: ${{ steps.classify.outputs.tb_parts }}
+      input_parts: ${{ steps.classify.outputs.input_parts }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - name: Classifier self-test
+        run: node .github/ci/classify-changes.cjs --self-test
+      - name: Classify changed files
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          EXPECTED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          set -euo pipefail
+          result='{"tier":"full","reasons":["not a pull request"],"related":[],"docs":[]}'
+          if [ "$EVENT" = pull_request ]; then
+            if gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files?per_page=100" \
+                 --jq '.[] | [.status, .filename, (.previous_filename // "")] | @tsv' > "$RUNNER_TEMP/changes.tsv"; then
+              count=$(grep -c . "$RUNNER_TEMP/changes.tsv" || true)
+              # The files API lists at most 3000 files; a short or mismatched list runs full.
+              if [ "$count" = "$EXPECTED" ] && [ "$count" -lt 3000 ]; then
+                result=$(node .github/ci/classify-changes.cjs "$RUNNER_TEMP/changes.tsv")
+              else
+                result="{\"tier\":\"full\",\"reasons\":[\"listed $count files, PR reports $EXPECTED\"],\"related\":[],\"docs\":[]}"
+              fi
+              cut -f1,2,3 "$RUNNER_TEMP/changes.tsv"
+            else
+              result='{"tier":"full","reasons":["could not list changed files"],"related":[],"docs":[]}'
+            fi
+          fi
+          echo "$result" | jq .
+          tier=$(echo "$result" | jq -r .tier)
+          case "$tier" in docs|ui|full) ;; *) echo "unknown tier $tier"; exit 1 ;; esac
+          if [ "$tier" = docs ]; then
+            # Lightweight docs check: every changed prose file is valid UTF-8 without merge markers.
+            echo "$result" | jq -r '.docs[]' | while IFS= read -r file; do
+              iconv -f UTF-8 -t UTF-8 "$file" > /dev/null || { echo "::error file=$file::not valid UTF-8"; exit 1; }
+              if grep -nE '^(<<<<<<<|>>>>>>>) ' "$file"; then echo "::error file=$file::merge conflict marker"; exit 1; fi
+            done
+          fi
+          if [ "$tier" = ui ]; then
+            tb='["tests-1","tests-2","tests-3","tests-4"]'
+            input='[{"mode":"dev","part":"input"},{"mode":"dev","part":"archives"},{"mode":"preview","part":"input"}]'
+          else
+            # Full lists also for docs: those jobs are skipped by tier, and a matrix needs values.
+            tb='["tests-1","tests-2","tests-3","tests-4","headless"]'
+            input='[{"mode":"dev","part":"input"},{"mode":"dev","part":"touch"},{"mode":"dev","part":"archives"},{"mode":"dev","part":"m6-performance"},{"mode":"preview","part":"input"},{"mode":"preview","part":"touch"}]'
+          fi
+          {
+            echo "tier=$tier"
+            echo "related=$(echo "$result" | jq -c .related)"
+            echo "tb_parts=$tb"
+            echo "input_parts=$input"
+          } >> "$GITHUB_OUTPUT"
+          echo "### CI tier: $tier" >> "$GITHUB_STEP_SUMMARY"
+          echo "$result" | jq -r '.reasons[:20][] | "- " + .' >> "$GITHUB_STEP_SUMMARY"
   # Each part runs on its own machine so the wall-clock gates (timing tests,
   # repeated-route performance) never share CPU with other workloads. All parts
   # keep the logical M5_JOB_KEY, so compare-evidence still sees one
   # test-and-build job per sample with every required step.
+  # Timing runs after shard 1 and repeated-route performance after headless on the same machine,
+  # one step after another, so neither shares CPU with another workload.
   test-and-build:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier != 'docs' }}
     name: test-and-build-${{ matrix.part }}-sample${{ matrix.sample }}
     strategy:
       fail-fast: false
       matrix:
         # The fast Vitest project is split into four shards (vitest --shard) on separate machines.
-        part: [tests-1, tests-2, tests-3, tests-4, timing, headless, performance]
+        part: ${{ fromJSON(needs.changes.outputs.tb_parts) }}
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
       M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
@@ -71,15 +157,22 @@ jobs:
           PART: ${{ matrix.part }}
         run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/4"
       - name: Timing tests (one worker, serial files)
-        if: ${{ matrix.part == 'timing' }}
+        if: ${{ !cancelled() && matrix.part == 'tests-1' && needs.changes.outputs.tier == 'full' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing
-      - if: ${{ matrix.part == 'headless' || matrix.part == 'performance' }}
+      - name: Timing tests that import a changed interface file (ui tier)
+        if: ${{ !cancelled() && matrix.part == 'tests-1' && needs.changes.outputs.tier == 'ui' && needs.changes.outputs.related != '[]' }}
+        env:
+          RELATED: ${{ needs.changes.outputs.related }}
+        run: |
+          mapfile -t files < <(echo "$RELATED" | jq -r '.[]')
+          node scripts/ci-m5-step.cjs timing npx vitest related --run --project timing --no-file-parallelism --passWithNoTests "${files[@]}"
+      - if: ${{ matrix.part == 'headless' }}
         run: node scripts/ci-m5-step.cjs build npm run build
       - name: Headless route evidence
         if: ${{ matrix.part == 'headless' }}
         run: node scripts/ci-m5-step.cjs headless npm run test:headless
       - name: Repeated route performance
-        if: ${{ matrix.part == 'performance' }}
+        if: ${{ !cancelled() && matrix.part == 'headless' }}
         run: M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance
       - uses: actions/upload-artifact@v4
         if: always()
@@ -87,7 +180,8 @@ jobs:
           name: m5-test-and-build-${{ matrix.part }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-match:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier == 'full' }}
     name: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
@@ -127,26 +221,22 @@ jobs:
   # Split by workload so the longest input chain no longer sets the run's wall
   # clock. Every part keeps the logical M5_JOB_KEY input-<mode>-sample<n>, so
   # compare-evidence still finds every required step under one input job.
-  # m6-performance (frozen F4 gates) and native input each get their own machine.
+  # m6-performance (frozen F4 gates) gets its own machine; the short layout smoke runs after
+  # native input on the input machine. The ui tier runs input (with layout) and archives only.
   chromium-input:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
-    name: input-${{ matrix.mode }}-${{ matrix.part }}-sample${{ matrix.sample }}
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier != 'docs' }}
+    name: input-${{ matrix.entry.mode }}-${{ matrix.entry.part }}-sample${{ matrix.sample }}
     env:
-      M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
-      M5_JOB_PART: ${{ matrix.part }}
+      M5_JOB_KEY: input-${{ matrix.entry.mode }}-sample${{ matrix.sample }}
+      M5_JOB_PART: ${{ matrix.entry.part }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45 # Unchanged per-part ceiling; the whole dev chain measured ~36 min on 2026-10-16.
     strategy:
       fail-fast: false
       matrix:
-        mode: [dev, preview]
-        part: [input, touch, layout, archives, m6-performance]
+        entry: ${{ fromJSON(needs.changes.outputs.input_parts) }}
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
-        exclude:
-          - mode: preview
-            part: archives
-          - mode: preview
-            part: m6-performance
     steps:
       - uses: actions/checkout@v4
         with:
@@ -159,31 +249,31 @@ jobs:
       - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Native input
-        if: ${{ matrix.part == 'input' }}
+        if: ${{ matrix.entry.part == 'input' }}
         env:
-          MODE: ${{ matrix.mode }}
+          MODE: ${{ matrix.entry.mode }}
         run: |
           args=()
           if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs input node scripts/verify-m5-input.cjs "${args[@]}"
       - name: Normal-time touch route
-        if: ${{ matrix.part == 'touch' }}
+        if: ${{ matrix.entry.part == 'touch' }}
         env:
-          MODE: ${{ matrix.mode }}
+          MODE: ${{ matrix.entry.mode }}
         run: |
           args=()
           if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs touch-route node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --touch
       - name: M6 layout product smoke
-        if: ${{ matrix.part == 'layout' }}
+        if: ${{ !cancelled() && matrix.entry.part == 'input' }}
         env:
-          MODE: ${{ matrix.mode }}
+          MODE: ${{ matrix.entry.mode }}
         run: |
           args=()
           if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs m6-layout node scripts/m6-layout-product-smoke.cjs "${args[@]}"
       - name: M6/M8 storage, archives and application failures (dev)
-        if: ${{ matrix.part == 'archives' }}
+        if: ${{ matrix.entry.part == 'archives' }}
         run: |
           node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
           node scripts/ci-m5-step.cjs m8-b9-legacy node scripts/verify-m8-b9-legacy.cjs
@@ -193,20 +283,21 @@ jobs:
           node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
           node scripts/ci-m5-step.cjs m6-application-failures node tests/m6-application-failures.cjs
       - name: M6 performance gates (dev)
-        if: ${{ matrix.part == 'm6-performance' }}
+        if: ${{ matrix.entry.part == 'm6-performance' }}
         run: node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m5-input-${{ matrix.mode }}-${{ matrix.part }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          name: m5-input-${{ matrix.entry.mode }}-${{ matrix.entry.part }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
-  m8-u3-dynamic:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
-    name: m8-u3-dynamic
+  # U3 and U6 are short single-browser gates; they share one machine and keep their own
+  # job keys, timing folders and artifacts (compare-evidence reads the U6 artifact by name).
+  m8-ui-dynamic:
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier != 'docs' }}
+    name: m8-ui-dynamic
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    env:
-      M5_JOB_KEY: m8-u3-dynamic
+    timeout-minutes: 30 # U3 (10) + U6 (20) ceilings.
     steps:
       - uses: actions/checkout@v4
         with:
@@ -216,9 +307,22 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
+        env:
+          M5_JOB_KEY: m8-u3-dynamic
       - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+        env:
+          M5_JOB_KEY: m8-u3-dynamic
       - name: Desktop equipment previews and native board drops (UR-U3-08)
+        timeout-minutes: 10
+        env:
+          M5_JOB_KEY: m8-u3-dynamic
         run: node scripts/ci-m5-step.cjs m8-u3-dynamic node scripts/verify-m8-u3-dynamic.cjs
+      - name: Live loot panel, loot pick, capacity wait and terminal record (U6)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        env:
+          M5_JOB_KEY: m8-u6-loot
+        run: node scripts/ci-m5-step.cjs m8-u6-loot node scripts/verify-m8-u6-loot.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -226,25 +330,6 @@ jobs:
           path: |
             artifacts/m8-u3-dynamic/
             artifacts/m5-ci-timing-m8-u3-dynamic/
-  m8-u6-loot:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
-    name: m8-u6-loot
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      M5_JOB_KEY: m8-u6-loot
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.M5_COMMIT_SHA }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
-      - name: Live loot panel, loot pick, capacity wait and terminal record (U6)
-        run: node scripts/ci-m5-step.cjs m8-u6-loot node scripts/verify-m8-u6-loot.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -253,7 +338,8 @@ jobs:
             artifacts/m8-u6-loot/
             artifacts/m5-ci-timing-m8-u6-loot/
   m6-retention:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier == 'full' }}
     name: m6-retention
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -275,7 +361,8 @@ jobs:
           name: m6-retention-${{ env.M5_COMMIT_SHA }}
           path: artifacts/m6-retention/
   m7-presentation:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    needs: changes
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier != 'docs' }}
     name: m7-presentation-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: m7-presentation-sample${{ matrix.sample }}
@@ -321,9 +408,9 @@ jobs:
           name: m7-presentation-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   compare-evidence:
-    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment && needs.changes.outputs.tier == 'full' }}
     name: compare-evidence-sample${{ matrix.sample }}
-    needs: [test-and-build, chromium-match, chromium-input, m6-retention, m8-u6-loot]
+    needs: [changes, test-and-build, chromium-match, chromium-input, m6-retention, m8-ui-dynamic]
     runs-on: ubuntu-24.04
     timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
     strategy:
@@ -362,19 +449,55 @@ jobs:
             artifacts/m6-validation.json
             artifacts/M6_VALIDATION.md
             artifacts/M6_REVIEW.md
-  # The one check branch protection requires. It is green only when every gate job above
-  # finished green, so splitting or renaming those jobs never touches the protection rule.
-  # Wall-clock budgets live in wallclock.yml and are not part of this gate.
+  # The one check branch protection requires. It is green only when the classifier succeeded
+  # and every job its tier selects finished green; a job may be skipped only when its tier
+  # leaves it out (docs: all gate jobs; ui: complete routes, retention and compare-evidence).
+  # Splitting or renaming the gate jobs never touches the protection rule. Wall-clock budgets
+  # live in wallclock.yml and are not part of this gate.
+  # !cancelled() lets a run superseded by a newer push end at once instead of queueing this job
+  # for a runner while the PR's new run waits behind it. A skipped required check counts as
+  # passing, so never cancel the run of a PR's latest commit by hand; to stop it, push a new commit.
   ci-required:
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     name: ci-required
-    needs: [test-and-build, chromium-match, chromium-input, m8-u3-dynamic, m8-u6-loot, m6-retention, m7-presentation, compare-evidence]
+    needs: [changes, test-and-build, chromium-match, chromium-input, m8-ui-dynamic, m6-retention, m7-presentation, compare-evidence]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - name: Every required job succeeded
+      - name: Every job the tier selects succeeded
         env:
           NEEDS: ${{ toJSON(needs) }}
+          TIER: ${{ needs.changes.outputs.tier }}
         run: |
+          echo "tier: ${TIER:-none}"
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null
+          case "$TIER" in
+            docs) optional='["test-and-build","chromium-match","chromium-input","m8-ui-dynamic","m6-retention","m7-presentation","compare-evidence"]' ;;
+            ui) optional='["chromium-match","m6-retention","compare-evidence"]' ;;
+            full) optional='[]' ;;
+            *) echo "changes job gave no tier"; exit 1 ;;
+          esac
+          echo "$NEEDS" | jq -e --argjson optional "$optional" \
+            'to_entries | all(.value.result == "success" or (.value.result == "skipped" and (.key as $k | $optional | any(.[]; . == $k))))' > /dev/null
+  # A red full run after a merge into multiplayer or release/* comments on the merged pull
+  # request, so the failure is seen even though nothing is waiting on this run.
+  post-merge-alert:
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/main' && needs.ci-required.result != 'success' }}
+    needs: ci-required
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Comment on the merged pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="Full CI after this merge into \`${GITHUB_REF_NAME}\` is red (${GITHUB_SHA::7}): ${RUN_URL}"
+          prs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[].number')
+          if [ -z "$prs" ]; then echo "::error::$body (no pull request found for this commit)"; exit 1; fi
+          for pr in $prs; do gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body "$body"; done
+          echo "::error::$body"
+          exit 1

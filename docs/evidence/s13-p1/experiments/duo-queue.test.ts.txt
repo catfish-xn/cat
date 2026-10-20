@@ -1,0 +1,19 @@
+import {expect,it} from 'vitest';
+import {accepted,reachRound} from './match-helpers';
+import {selectChoice} from '../src/simulation/match';
+import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import {duoQueuePlan,drainAugmentUnits} from '../src/simulation/augment-acquisition';
+import {UNIT_DEFINITIONS} from '../src/simulation/units';
+it('Duo Queue public choice grants exactly two five-cost units and two equal components once',()=>{
+ let state=reachRound('2-1',false,0);
+ for(let seed=1;seed<200&&!state.pendingChoice!.offers.includes('duo-queue');seed++)state=reachRound('2-1',false,seed);
+ const c=state.pendingChoice!,before=state.nextUnitSerial;expect(c.offers).toContain('duo-queue');
+ const selected=accepted(selectChoice(state,c.choiceId,c.generation,'duo-queue')),a=selected.augments.at(-1)!,plan=duoQueuePlan(state.seed,a);
+ expect(selected.nextUnitSerial-before).toBe(2);expect(plan.units.map(id=>UNIT_DEFINITIONS[id].cost)).toEqual([5,5]);
+ const rs=selected.seatMechanics!.receipts.filter(r=>r.source==='s13-augment-acquisition');expect(rs).toHaveLength(4);
+ expect(rs.filter(r=>r.kind==='item').map(r=>'definitionId'in r?r.definitionId:null)).toEqual([plan.component,plan.component]);
+ expect(rs.filter(r=>r.kind==='unit').map(r=>'definitionId'in r?r.definitionId:null)).toEqual(plan.units);
+ expect(restoreMatch(serializeMatch(selected))).toEqual(selected);
+ expect(drainAugmentUnits(selected).state).toBe(selected);
+ const bad=structuredClone(selected);Object.assign(bad.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.source==='s13-augment-acquisition')!,{definitionId:'lux'});expect(()=>restoreMatch(bad)).toThrow();
+});

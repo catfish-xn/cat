@@ -10,6 +10,9 @@ import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {compileBattle,resolveTwoSidedBattle,proposeSettlement} from '../src/simulation/two-sided-battle';
 import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const coat='TFT_Item_Artifact_SuspiciousTrenchCoat';
 function equipped(base=createMatch(42)){

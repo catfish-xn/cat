@@ -1,0 +1,107 @@
+import {UNIT_DEFINITIONS} from './units';
+import {COMPONENT_IDS} from './content/items';
+import type {UnitLootPolicy} from './loot-runtime';
+import {openG23Choice} from './g2-3-runtime';
+import { G24_FORGE_POOLS } from './content/g2-4-forges';
+import type { MatchState, MatchEvent } from './match-types';
+import { grantMechanicItem, grantMechanicUnit, appendMechanicReceipt, openMechanicChoice } from './seat-mechanics';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { nextRandom } from './rng';
+import { canonicalContent } from './content';
+import type { OwnedAugment } from './strategy-types';
+
+const SOURCE = 's13-augment-acquisition';
+const prefix = (a: OwnedAugment) => `s13-augment:${a.choiceId}:${a.definitionId}`;
+export function augmentAcquisition(a: OwnedAugment,seed=0): {items: readonly string[]; remover:boolean; forge:'artifact'|'radiant'|null; offers:number} {
+  switch(a.definitionId) {
+    case 'duo-queue': {const p=duoQueuePlan(seed,a);return {items:[p.component,p.component],remover:false,forge:null,offers:0};}
+    case 'blinding-speed': return {items:['red-buff','rageblade','bow'],remover:true,forge:null,offers:0};
+    case 'portable-forge': return {items:[],remover:false,forge:'artifact',offers:4};
+    case 'radiant-relics': return {items:[],remover:true,forge:'radiant',offers:5};
+    default: return {items:[],remover:false,forge:null,offers:0};
+  }
+}
+/** Seeded acquisition identity is independent of live choice/shop RNG. Two hero draws may repeat;
+ * one component draw is copied twice, as the 14.24 text explicitly requires identical components. */
+export function duoQueuePlan(seed:number,a:OwnedAugment):{units:readonly string[];component:string}{
+ const pool=Object.values(UNIT_DEFINITIONS).filter(u=>u.cost===5&&!u.summon).map(u=>u.id).sort();
+ let rng=(seed^0x44554f51)>>>0;for(const c of prefix(a))rng=Math.imul(rng^c.charCodeAt(0),16777619)>>>0;
+ const draw=(n:number)=>{const limit=Math.floor(2**32/n)*n;let word:number;do{const r=nextRandom(rng);rng=r.state;word=r.word;}while(word>=limit);return word%n;};
+ return {units:[pool[draw(pool.length)],pool[draw(pool.length)]],component:COMPONENT_IDS[draw(COMPONENT_IDS.length)]};
+}
+/** Receipt absence is the escrow: no second self-reported reward/counter is persisted. */
+export function drainAugmentUnits(initial:MatchState,policy?:UnitLootPolicy):{state:MatchState;events:MatchEvent[]}{
+ let state=initial;const events:MatchEvent[]=[];
+ for(const a of state.augments)if(a.definitionId==='duo-queue')for(const [i,definitionId] of duoQueuePlan(state.seed,a).units.entries()){
+  const receiptId=`${prefix(a)}:unit:${i}`;if(state.seatMechanics?.receipts.some(r=>r.receiptId===receiptId))continue;
+  const granted=grantMechanicUnit(state,{receiptId,source:SOURCE,definitionId},policy);
+  if(!granted.ok){if(granted.reason==='bench-full')return {state,events};throw new RangeError('Invalid augment unit grant');}
+  state=granted.state;events.push(...granted.events);
+ }
+ return {state,events};
+}
+/** Independent explicit, reproducible choice stream. Does not consume the 3-word augment offer stream. */
+export function augmentForgeOffers(seed:number,a:OwnedAugment): readonly string[] {
+  const p=augmentAcquisition(a);if(!p.forge)return [];
+  const pool=p.forge==='artifact'?[...G24_FORGE_POOLS.TFT_ArmoryKeyOrnn]:Object.values(ITEM_DEFINITIONS).filter(d=>d.kind==='radiant').map(d=>d.id).sort();
+  if(pool.length<p.offers)throw new RangeError('Augment forge pool too small');
+  let rng=(seed^0x513f0421)>>>0;
+  for(const c of prefix(a))rng=Math.imul(rng^c.charCodeAt(0),16777619)>>>0;
+  for(let i=0;i<p.offers;i++){const draw=nextRandom(rng);rng=draw.state;const j=i+draw.word%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool.slice(0,p.offers);
+}
+/** Acquisition transaction shared by all supported item augments; fixed receipt identity makes repeat inert. */
+export function grantAugmentAcquisition(initial:MatchState,a:OwnedAugment,policy?:UnitLootPolicy):{state:MatchState;events:MatchEvent[]} {
+  let state=initial;const events:MatchEvent[]=[],p=augmentAcquisition(a,state.seed);
+  for(const [i,definitionId] of p.items.entries()){
+    const receiptId=`${prefix(a)}:item:${i}`;
+    if(state.seatMechanics?.receipts.some(r=>r.receiptId===receiptId))continue;
+    const granted=grantMechanicItem(state,{receiptId,source:SOURCE,definitionId});
+    if(!granted.ok)throw new RangeError('Invalid augment item grant');
+    state=granted.state;events.push(...granted.events);
+  }
+  const receiptId=`${prefix(a)}:remover`;
+  if(p.remover&&!state.seatMechanics?.receipts.some(r=>r.receiptId===receiptId)){
+    const consumableId=`consumable-${state.nextConsumableSerial}`;
+    const receipt={receiptId,source:SOURCE,kind:'consumable' as const,round:state.round,roundId:state.roundDefinitionId,definitionId:'magnetic-remover',consumableId};
+    state=appendMechanicReceipt({...state,nextConsumableSerial:state.nextConsumableSerial+1,consumables:[...state.consumables,{consumableId,definitionId:'magnetic-remover'}]},receipt);
+    events.push({type:'mechanicGranted',receipt});
+  }
+  const units=drainAugmentUnits(state,policy);return {state:units.state,events:[...events,...units.events]};
+}
+export function openAugmentForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]} {
+  if(state.phase!=='preparation'||state.pendingChoice)return {state,events:[]};
+  const a=state.augments.find(a=>augmentAcquisition(a).forge&&!state.seatMechanics?.receipts.some(r=>r.receiptId===`${prefix(a)}:forge`));
+  if(!a)return {state,events:[]};
+  const offers=augmentForgeOffers(state.seed,a);
+  const result=openMechanicChoice(state,{choiceId:`${prefix(a)}:forge`,offers,payload:{kind:'forge',source:SOURCE,timeoutOption:offers[0]},returnPhase:'preparation'});
+  if(!result.ok)throw new RangeError('Invalid augment forge opening');
+  return result;
+}
+/** Verify every acquisition against selected content and seed, not a self-reported grant source. */
+export function validateAugmentAcquisition(state:MatchState):void {
+  const fail=()=>{throw new RangeError('Invalid augment acquisition');};
+  const expected=new Set<string>(),receipts=state.seatMechanics?.receipts??[];
+  for(const a of state.augments){
+    const p=augmentAcquisition(a,state.seed),check=(id:string,kind:string,definitionId:string)=>{
+      expected.add(id);const r=receipts.find(r=>r.receiptId===id);
+      if(!r||r.source!==SOURCE||r.kind!==kind||!('definitionId'in r)||r.definitionId!==definitionId||r.round!==a.acquiredRound)fail();
+    };
+    if(a.definitionId==='duo-queue')for(const [i,definitionId] of duoQueuePlan(state.seed,a).units.entries()){
+      const id=`${prefix(a)}:unit:${i}`;expected.add(id);const r=receipts.find(r=>r.receiptId===id);
+      if(r&&(r.kind!=='unit'||r.source!==SOURCE||r.definitionId!==definitionId||r.round<a.acquiredRound||r.round>state.round||r.resolution==='gold'&&r.gold!==5))fail();
+    }
+    p.items.forEach((id,i)=>check(`${prefix(a)}:item:${i}`,'item',id));
+    if(p.remover)check(`${prefix(a)}:remover`,'consumable','magnetic-remover');
+    if(p.forge){const id=`${prefix(a)}:forge`,offers=augmentForgeOffers(state.seed,a),r=receipts.find(r=>r.receiptId===id);expected.add(id);
+      if(r){if(r.kind!=='choice'||r.source!==SOURCE||r.choiceKind!=='forge'||r.skipped||r.price!==0||r.round!==a.acquiredRound||!offers.includes(r.optionId)||r.itemId===null||r.timedOut&&r.optionId!==offers[0])fail();}
+      else {
+        const waiting={...state,phase:'preparation',pendingChoice:null,combat:null} as MatchState;
+        const prior=openG23Choice(waiting).state.pendingChoice;
+        const expectedChoice=prior??openAugmentForge(waiting).state.pendingChoice;
+        if(canonicalContent(state.pendingChoice)!==canonicalContent(expectedChoice))fail();
+      }
+    }
+  }
+  for(const r of receipts)if((r.source===SOURCE||r.receiptId.startsWith('s13-augment:'))&&!expected.has(r.receiptId))fail();
+}

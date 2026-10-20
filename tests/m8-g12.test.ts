@@ -2,6 +2,9 @@ import {describe,it,expect} from 'vitest';
 import {initializeStreams,uniformIndex,generateRoundRolls,projectTemporaryEquipment,reconcileTemporaryEquipment,validateEquipmentState,compileTemporaryModifiers,reconcileTemporaryModifiers,validateTemporaryEquipment,selectTemporaryPair,compileTemporaryEffects,reconcileTemporaryEffects,createEquipmentPool,compileTemporaryPrograms,reconcileTemporaryPrograms} from '../src/simulation/m8/equipment';
 import {resolveStat} from '../src/simulation/m8/stats';
 import {modifier} from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const pool={version:'tg-01-v1' as const,completed:Array.from({length:35},(_,n)=>({apiName:`C${String(n).padStart(2,'0')}`,definitionId:`c${n}`})),components:Array.from({length:8},(_,n)=>({apiName:`P${n}`,definitionId:`p${n}`}))};
 describe('G12 TG-01 independent accepted-word and lifecycle vectors',()=>{
  it('seed0 stream XOR seeds consume0; rejects upper11 words for35 before modulo',()=>{

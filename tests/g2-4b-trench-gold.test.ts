@@ -7,6 +7,9 @@ import {expect,it} from 'vitest';
 import {reachRound,accepted} from './match-helpers';
 import {deployMatchUnit,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
  let state=reachRound('2-1',true,seed);
@@ -20,7 +23,7 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // Seed 1 is a real public-command route: the original Irelia and copies all
+ // v15 seed 1 is a real public-command route: the original Irelia and copies all
  // attack, with positive Gambler payouts on both sides of the split and an
  // actual successful Collector execution by a copy. No combat state is edited.
  const {state,ownerId}=prepare(1);

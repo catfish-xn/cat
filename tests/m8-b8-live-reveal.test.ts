@@ -2,23 +2,16 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { revealMatchLoot } from '../src/simulation/loot-runtime';
-import { run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
 import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8-public';
+import { simultaneousPrefix, barePartialPrefix, PARTIAL_REVEAL_SEEDS } from './fixtures/b8-live-reveal-routes';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
-// This is a command-only domain prefix, stopped at the required encounter.
-// No retained JSON, golden state, injected deaths, or invented resource facts.
-let preparation: api.MatchState | undefined;
-const reached = new Error('Reached actual 4-7 preparation');
-try {
-  await run(api, { build: 'mage', seed: 42, onStep(before, _result, command) {
-    if (command?.type === 'start' && before.roundDefinitionId === '4-7') {
-      preparation = before; throw reached;
-    }
-  } });
-} catch (error) { if (error !== reached) throw error; }
-if (!preparation) throw Error('Public mage route did not reach 4-7');
-const prefix = preparation;
+const prefix=await simultaneousPrefix();
+const zyraPrefix=await barePartialPrefix('zyra',PARTIAL_REVEAL_SEEDS.zyra,['blistering-strikes','pumping-up-ii','bronze-for-life-ii']);
+const lorisPrefix=await barePartialPrefix('loris',PARTIAL_REVEAL_SEEDS.loris,['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii']);
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
@@ -39,9 +32,9 @@ const clone = (state: api.MatchState): api.MatchState => {
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals four orb entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
-    while (state.phase === 'combat' && state.combat.tick < 50) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 43) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(50);
+    expect(state.combat!.tick).toBe(43);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
@@ -55,12 +48,12 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      // G23 lawful Lux/Nami position swap: both sources die in the same tick-51 action batch.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 51, eventSeq: 447 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 51, eventSeq: 448 },
+      // G23 lawful Lux/Nami position swap: both sources die in the same tick-44 action batch.
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 44, eventSeq: 382 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 44, eventSeq: 383 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([447, 447, 447, 447]); // All four frozen drops belong to r00.
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([382, 382, 382, 382]); // All four frozen drops belong to r00.
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -71,7 +64,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 448; // Substitute r01's real death identity for r00's drop evidence.
+    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 383; // Substitute r01's real death identity for r00's drop evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: source death conflict');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {
@@ -91,7 +84,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ['loris', 'r00', 381, 'settlement', 4],
     ['zyra', 'r01', 152, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
-    let state = clone(partialB8Preparation(prefix, survivor));
+    let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : lorisPrefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
       definitionId: survivor, starLevel: 2, team: 'player',

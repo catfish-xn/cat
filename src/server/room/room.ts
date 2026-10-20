@@ -9,18 +9,21 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
+import { toCombatReplayFor } from './projection';
+import type { CombatReplayTick } from '../../server-entry';
+import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import type { CarouselPickCommand } from '../protocol';
@@ -109,13 +112,15 @@ interface Resolution {
 
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
 const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
-const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll'];
+const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
+/** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
+const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
-  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]),
+  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -147,6 +152,10 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
+    // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
+    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex });
+    // v15: forwarded as is; the rules claim at once or queue it during the battle (settled with the round), and refuse the rest.
+    case 'claimOrb': return runSharedMatchCommand(pool, state, { type: 'claimOrb', round: command.round, orbId: command.orbId });
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
     // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
     case 'useConsumable': return useSeatConsumable(pool, state, command);
@@ -213,8 +222,33 @@ export class Room {
   /** Deadline deployments staged during `frozen`, published with the locks at battle entry. */
   private deployed: ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }> = new Map();
   private lockedSeats: ReadonlyMap<string, MatchState> = new Map();
+  /**
+   * v15: orb claims accepted while the round is `frozen` (the client already shows the battle; user rule: an orb may be
+   * clicked any time during it). The seats are still in preparation there, where the rules would claim at once and change
+   * the frozen inputs, so the room holds the claims in arrival order and hands each to the rules right after battle entry,
+   * where they are queued like any claim during the battle (or claimed at once if the round settled immediately).
+   */
+  private frozenClaims: { readonly seatId: string; readonly command: Extract<SeatCommand, { type: 'claimOrb' }> }[] = [];
   private disposed = false;
   private extensions = 0;
+  /** Clock time the current battle phase began (tick 0 of every battle's playback); null outside it. */
+  private battleStartedAt: number | null = null;
+  /** Live runs of this round's two-sided battles a live-bank seat changed its gold in, by battle id. */
+  private readonly livePvp = new Map<string, LivePvpTrack>();
+  /** Two-sided battles of this round checked once and found to have no seat reading its live gold. */
+  private readonly liveIgnored = new Set<string>();
+  /** PvE seats whose combat the rules said, at its start, does not read live gold: never stepped live this round. */
+  private readonly pveIgnored = new Set<string>();
+  /** Battles whose live run finished and was handled (adopted or dropped). */
+  private readonly liveDone = new Set<string>();
+  private readonly liveListeners = new Set<(battleId: string) => void>();
+  /** PvE seats whose live combat was stepped during the battle phase, by seat id. */
+  private readonly livePve = new Map<string, LivePveTrack>();
+  private liveTimer: ClockHandle | null = null;
+  /** The battle deadline passed while a live run was still going: the settlement waits for it. */
+  private awaitingLive = false;
+  /** A live run replaced one of this round's published battles: the round settles those, not the staged ones. */
+  private liveReplaced = false;
   private readonly listeners = new Set<(state: RoomState) => void>();
   private readonly pvpMode: PvpMode;
   private readonly checkConservation: boolean;
@@ -260,6 +294,15 @@ export class Room {
   }
 
   get state(): RoomState { return this.current; }
+  /**
+   * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
+   * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
+   */
+  subscribeLive(listener: (battleId: string) => void): () => void { this.liveListeners.add(listener); return () => { this.liveListeners.delete(listener); }; }
+  /** Side A's live frames of a battle from the first tick that differs from its frozen replay; null when there are none. */
+  liveFrames(battleId: string): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
+    return this.livePvp.get(battleId)?.liveFrames ?? null;
+  }
   get clock(): Clock { return this.options.clock; }
   subscribe(listener: (state: RoomState) => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   /**
@@ -270,10 +313,11 @@ export class Room {
     this.disposed = true;
     this.clearTimer();
     this.listeners.clear();
+    this.liveListeners.clear();
     this.releaseRound();
   }
   get retained(): RoomRetained {
-    return { timers: this.timer === null ? 0 : 1, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
+    return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1), listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
       resolving: this.resolution !== null };
   }
 
@@ -317,23 +361,76 @@ export class Room {
     return this.apply(seat, command);
   }
 
+  /**
+   * v15 (MULTIPLAYER_CONTRACT, bot preparation entry): a bot-controlled seat claims every unclaimed orb through the rules'
+   * `claimBotPreparationOrbs` (orbId order, rewards a claim unlocks included, no bot RNG), as one seat transaction before
+   * its policy steps. Same control check as handleBot; only in the room's preparation with the seat itself preparing.
+   * Nothing to claim, or a refusal, publishes nothing (a refusal returns the rules' reason, the seat stays as it was).
+   */
+  claimBotOrbs(seatId: string, controlEpoch: number): RoomCommandResult {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
+    if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
+    if (this.disposed || this.current.phase !== 'preparation' || seat.match.phase !== 'preparation') return { ok: false, reason: 'wrong-phase', state: seat.match };
+    const claimed = claimBotPreparationOrbs(this.current.pool, seat.match);
+    if (!claimed.ok) return { ok: false, reason: claimed.reason, state: seat.match };
+    if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+    const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
+    const seatRevision = seat.seatRevision + 1;
+    this.commitSeat(seatId, result.state, result.pool);
+    return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
+  }
+
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
     const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
-    if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
+    if (!allowed) return phase === 'frozen' && command.type === 'claimOrb' && !this.disposed ? this.holdFrozenClaim(seat, command) : { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
-    const applied = applySeatCommand(this.current.pool, seat.match, command);
+    // D11 live bank: a PvE seat fighting its live battle first catches up to the live tick, so the operation's gold
+    // reaches the rules at that tick (published together with the operation, nothing if it is refused).
+    let live: LiveCatchUp | null = null;
+    try { live = phase === 'battle' ? this.pveCatchUp(seat) : null; }
+    catch (error) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
+    const applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
-    if (!applied.ok) return { ok: false, reason: applied.reason, state: applied.state };
+    if (!applied.ok) return { ok: false, reason: applied.reason, state: seat.match };
+    if (live) this.livePve.get(seatId)!.commit(live.steps);
+    const operated = live?.events.length ? { ...applied, events: [...live.events, ...applied.events] } : applied;
     // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held
     // carousel units in, in the same publication.
-    const result = this.withPendingResolved(applied);
+    const result = this.withPendingResolved(operated);
     const seatRevision = seat.seatRevision + 1;
     this.commitSeat(seatId, result.state, result.pool);
+    if (phase === 'battle' && result.state.gold !== seat.match.gold) this.sampleLiveBank(seatId, result.state.gold);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
+  }
+
+  /**
+   * v15: a claim during `frozen` is held (see `frozenClaims`) and publishes nothing yet; the seat's private view shows it as
+   * queued from battle entry on. Refused here only for what the seat's own loot view already answers: another round
+   * (`stale-round`), an orb it does not hold unclaimed (`unknown-orb`) and one already queued or held (`already-claimed`).
+   * Every other check is the rules' own when the claim is handed over; a refusal then leaves the seat as it was.
+   */
+  private holdFrozenClaim(seat: SeatState, command: Extract<SeatCommand, { type: 'claimOrb' }>): RoomCommandResult {
+    if (command.round !== seat.match.round) return { ok: false, reason: 'stale-round', state: seat.match };
+    const orb = (readLootView(seat.match).unclaimedOrbs ?? []).find(candidate => candidate.orbId === command.orbId);
+    if (!orb) return { ok: false, reason: 'unknown-orb', state: seat.match };
+    if (orb.queued || this.frozenClaims.some(held => held.seatId === seat.seatId && held.command.orbId === command.orbId)) return { ok: false, reason: 'already-claimed', state: seat.match };
+    this.frozenClaims.push({ seatId: seat.seatId, command });
+    return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+  }
+  /** Hands the claims held during `frozen` to the rules through the normal gate, in arrival order (battle or settlement phase). */
+  private flushFrozenClaims(): void {
+    const held = this.frozenClaims;
+    this.frozenClaims = [];
+    for (const { seatId, command } of held) {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+      if (seat && seat.controller !== 'takeover') this.apply(seat, command);
+    }
   }
 
   /**
@@ -890,9 +987,154 @@ export class Room {
     // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
     const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
     const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
-    if (longest === 0) return this.commitPending();
+    if (longest === 0) { this.commitPending(); return this.flushFrozenClaims(); }
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
+    this.battleStartedAt = this.options.clock.now();
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
+    this.flushFrozenClaims();
+  }
+
+  /* ---------------- D11 live bank during the battle phase ---------------- */
+
+  private get tickMs(): number { return this.aliveSeats()[0]?.match.tickMs ?? 50; }
+  /** The tick a live run may reach now: the battle clock's tick plus the lead. */
+  private liveTarget(): number {
+    const started = this.battleStartedAt ?? this.options.clock.now();
+    return Math.floor((this.options.clock.now() - started) / this.tickMs) + LIVE_BANK_LEAD_TICKS;
+  }
+
+  /**
+   * The seat's PvE live combat stepped to the live tick (not yet published), or null when the seat does not fight a
+   * live battle now. Its first catch-up starts the seat's track from the frozen run's opening ledger.
+   */
+  private pveCatchUp(seat: SeatState): LiveCatchUp | null {
+    if (seat.match.phase !== 'combat' || this.pveIgnored.has(seat.seatId)) return null;
+    let track = this.livePve.get(seat.seatId);
+    if (!track) {
+      // Judged once, at the combat's start: a holder that dies later still has its samples recorded by the rules.
+      if (!readMatchLiveGoldReaders(seat.match)) { this.pveIgnored.add(seat.seatId); return null; }
+      const frozen = this.frozenOutcome(seat.seatId);
+      if (!frozen?.combat) return null;
+      track = new LivePveTrack(seat.seatId, seat.match, frozen.combat.events);
+      this.livePve.set(seat.seatId, track);
+    }
+    return track.catchUp(this.current.pool, seat.match, this.liveTarget());
+  }
+  /** This seat's outcome in the round's published (frozen) placeholder results. */
+  private frozenOutcome(seatId: string): BattleSeatOutcome | null {
+    for (const battle of this.current.battles) {
+      if (battle.kind !== 'placeholder') continue;
+      const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
+      if (outcome) return outcome;
+    }
+    return null;
+  }
+
+  /** A live-bank seat's gold changed during the battle: its two-sided battle samples it at the live tick. */
+  private sampleLiveBank(seatId: string, gold: number): void {
+    if (this.pvpMode !== 'two-sided') return;
+    const battle = this.current.battles.find(candidate => candidate.kind === 'two-sided' && candidate.participants.includes(seatId));
+    if (!battle || battle.kind !== 'two-sided' || this.liveIgnored.has(battle.battleId)) return;
+    const target = this.liveTarget();
+    let track = this.livePvp.get(battle.battleId);
+    if (!track) {
+      const envelope = this.frozenInputs.find(input => input.battleId === battle.battleId);
+      // A battle the playback already finished cannot change any more.
+      if (!envelope || target > battle.battle.terminal.tick) return;
+      try {
+        track = new LivePvpTrack(envelope, battle, toCombatReplayFor(this.current, battle.battle.a.seatId)!.replay);
+      } catch (error) { return this.failLive(battle.battleId, error); }
+      // The rules' readers: no seat of this battle reads its gold (no avarice-incarnate on its board, a mirror's copy).
+      if (!battle.participants.some(participant => track!.reads(participant))) { this.liveIgnored.add(battle.battleId); return; }
+      this.livePvp.set(battle.battleId, track);
+    }
+    track.sample(seatId, gold, target);
+    this.scheduleLive();
+  }
+
+  private scheduleLive(): void {
+    if (this.liveTimer !== null || ![...this.livePvp.values()].some(track => !track.result)) return;
+    const clock = this.options.clock;
+    // Half the lead: a live run never falls behind the playback it feeds.
+    this.liveTimer = clock.schedule(clock.now() + Math.max(1, Math.floor(LIVE_BANK_LEAD_TICKS / 2)) * this.tickMs, () => { this.liveTimer = null; this.liveSlice(); });
+  }
+
+  /** One live slice: every unfinished live run steps to the live tick; a finished one replaces its frozen battle. */
+  private liveSlice(): void {
+    if (this.disposed || this.current.phase !== 'battle') return;
+    const target = this.liveTarget(), budget = Number.isFinite(this.options.sliceTicks ?? Infinity) ? this.options.sliceTicks! : 1200;
+    for (const track of this.livePvp.values()) {
+      if (this.liveDone.has(track.battleId)) continue;
+      try {
+        if (track.advance(target, budget)) for (const listener of this.liveListeners) listener(track.battleId);
+        if (track.result) { this.liveDone.add(track.battleId); this.adoptLive(track); }
+      }
+      catch (error) { return this.failLive(track.battleId, error); }
+    }
+    if (this.current.phase !== 'battle') return;
+    this.scheduleLive();
+    if (this.awaitingLive && [...this.livePvp.values()].every(track => track.result)) this.armBattleEnd();
+  }
+
+  /** Publishes a finished live run's result in place of the frozen one, and keeps the battle phase long enough to show it. */
+  private adoptLive(track: LivePvpTrack): void {
+    const adopted = track.adopted;
+    if (!adopted) return;
+    this.replace({ ...this.current, battles: this.current.battles.map(battle => battle.battleId === adopted.battleId ? adopted : battle) });
+    this.liveReplaced = true;
+    if (!this.awaitingLive) this.armBattleEnd();
+  }
+
+  /** (Re-)arms the battle deadline at the end of the longest published battle's playback, never before now. */
+  private armBattleEnd(): void {
+    this.awaitingLive = false;
+    const ticks = Math.max(0, ...this.current.battles.flatMap(result => result.kind === 'placeholder'
+      ? result.outcomes.map(outcome => outcome.combat ? outcome.combat.terminal.tick + 1 : 0) : [result.battle.terminal.tick + 1]));
+    const end = Math.max(this.options.clock.now(), (this.battleStartedAt ?? 0) + ticks * this.tickMs + this.options.battleTailMs);
+    if (this.timer !== null && this.current.deadlineAt === end) return;
+    this.clearTimer();
+    this.replace({ ...this.current, deadlineAt: end });
+    this.timer = this.options.clock.schedule(end, () => this.onDeadline());
+  }
+
+  /**
+   * Battle deadline with live runs: a run still going keeps the phase open (it is fed by the battle clock, so a seat
+   * can still change its gold); PvE live combats are finished now (nothing can operate on them in between) and
+   * replace their frozen outcome when they differ. Returns true while the settlement must wait.
+   */
+  private settleLive(): boolean {
+    if ([...this.livePvp.values()].some(track => !track.result)) {
+      this.awaitingLive = true;
+      this.replace({ ...this.current, deadlineAt: (this.battleStartedAt ?? 0) + 1201 * this.tickMs + this.options.battleTailMs });
+      this.scheduleLive();
+      return true;
+    }
+    for (const [seatId, track] of this.livePve) {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId)!;
+      const frozen = this.frozenOutcome(seatId);
+      if (!seat.alive || !frozen || seat.match.roundResults.at(-1)?.round !== this.current.round && seat.match.phase !== 'combat') continue;
+      let settled = seat.match;
+      if (settled.phase === 'combat') {
+        const finished = track.catchUp(this.current.pool, settled, Number.MAX_SAFE_INTEGER);
+        track.commit(finished.steps);
+        this.commitSeat(seatId, finished.state, finished.pool);
+        settled = finished.state;
+      }
+      const outcome = track.outcome(settled, settled.combat!, frozen);
+      if (!outcome) continue;
+      this.replace({ ...this.current, battles: this.current.battles.map(battle => battle.kind === 'placeholder' && battle.outcomes.some(candidate => candidate.seatId === seatId) ? withOutcome(battle, outcome) : battle) });
+      this.liveReplaced = true;
+    }
+    return false;
+  }
+
+  private failLive(battleId: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.fail(error instanceof BattleResolveError ? { kind: 'resolver-error', battleId, message, reason: error.reason } : { kind: 'resolver-error', battleId, message });
+  }
+  private clearLive(): void {
+    if (this.liveTimer !== null) { this.options.clock.cancel(this.liveTimer); this.liveTimer = null; }
+    this.livePvp.clear(); this.livePve.clear(); this.liveIgnored.clear(); this.pveIgnored.clear(); this.liveDone.clear(); this.battleStartedAt = null; this.awaitingLive = false; this.liveReplaced = false;
   }
 
   private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {
@@ -929,13 +1171,18 @@ export class Room {
 
   /** Battle deadline: publish the staged round, then decide what follows (§11.3 item 5). */
   private commitPending(): void {
+    try { if (this.settleLive()) return; }
+    catch (error) { return this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
     const settlement = this.pendingSettlement;
+    // D11 live bank: a live run replaced published battles, so the round settles those, never the staged ones.
+    const replaced = this.liveReplaced;
     this.pendingSettlement = null;
+    this.clearLive();
     if (settlement && !this.current.settlements.includes(settlement.settlementId)) {
-      let commit = this.commitSettlement(settlement);
+      let commit: CommitResult = replaced ? { ok: false, reason: 'stale-seat', state: this.current } : this.commitSettlement(settlement);
       // Operations during the battle changed live seats: settle again on the latest states (§15.2), never on the staged ones.
       if (!commit.ok && commit.reason === 'stale-seat') {
-        const plan = this.planSettlement(settlement.results);
+        const plan = this.planSettlement(replaced ? this.current.battles : settlement.results);
         if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
         commit = this.commitSettlement(plan.settlement);
       }
@@ -1006,7 +1253,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */

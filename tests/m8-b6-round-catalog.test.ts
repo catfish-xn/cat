@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from '../src/simulation/content/round-catalog';
 import { getCatalogRoundById, getCatalogRoundByOrdinal, getNextCatalogRound } from '../src/simulation/round-selectors';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Handwritten from OPENING §4, ENCOUNTERS §2 and the B6 handoff, before running implementation.
 // provisional: B6-Q1/Q2/Q3/Q4 await the user's approval; these are project conventions.

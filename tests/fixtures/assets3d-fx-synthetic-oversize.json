@@ -1,0 +1,174 @@
+[
+  {
+    "unit": "synthetic_unit",
+    "source": {
+      "emitterName": "synthetic_glow_a",
+      "primitive": {
+        "__type": "VfxPrimitiveArbitraryQuad"
+      },
+      "isSingleParticle": 1,
+      "particleLifetime": {
+        "constantValue": 1
+      },
+      "birthScale0": {
+        "constantValue": [
+          1000,
+          600,
+          0
+        ]
+      },
+      "birthRotation0": {
+        "constantValue": [
+          90,
+          0,
+          0
+        ]
+      },
+      "texture": "synthetic/glow.png",
+      "isUniformScale": 1
+    }
+  },
+  {
+    "unit": "synthetic_unit",
+    "source": {
+      "emitterName": "synthetic_glow_b",
+      "primitive": {
+        "__type": "VfxPrimitiveArbitraryQuad"
+      },
+      "isSingleParticle": 1,
+      "particleLifetime": {
+        "constantValue": 1
+      },
+      "birthScale0": {
+        "constantValue": [
+          1000,
+          600,
+          600
+        ],
+        "dynamics": {
+          "times": [
+            0
+          ],
+          "values": [
+            [
+              800,
+              400,
+              400
+            ]
+          ]
+        }
+      },
+      "birthRotation0": {
+        "constantValue": [
+          -90,
+          0,
+          0
+        ]
+      },
+      "texture": "synthetic/glow.png",
+      "isUniformScale": 1,
+      "scale0": {
+        "dynamics": {
+          "times": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              0.5,
+              1,
+              1
+            ]
+          ]
+        }
+      }
+    }
+  },
+  {
+    "unit": "synthetic_unit",
+    "source": {
+      "emitterName": "synthetic_glow_c",
+      "primitive": {
+        "__type": "VfxPrimitiveArbitraryQuad"
+      },
+      "isSingleParticle": 1,
+      "particleLifetime": {
+        "constantValue": 1
+      },
+      "birthScale0": {
+        "constantValue": [
+          900,
+          600,
+          200
+        ]
+      },
+      "birthRotation0": {
+        "constantValue": [
+          0,
+          0,
+          90
+        ]
+      },
+      "texture": "synthetic/glow.png"
+    }
+  },
+  {
+    "unit": "synthetic_unit",
+    "source": {
+      "emitterName": "synthetic_ray",
+      "primitive": {
+        "__type": "VfxPrimitiveRay"
+      },
+      "isSingleParticle": 1,
+      "particleLifetime": {
+        "constantValue": 1
+      },
+      "birthScale0": {
+        "constantValue": [
+          200,
+          600,
+          0
+        ],
+        "dynamics": {
+          "times": [
+            0
+          ],
+          "values": [
+            [
+              200,
+              600,
+              0
+            ]
+          ],
+          "probabilityTables": [
+            {
+              "keyTimes": [
+                0,
+                1
+              ],
+              "keyValues": [
+                -2,
+                2
+              ]
+            },
+            {},
+            {}
+          ]
+        }
+      },
+      "scale0": {
+        "constantValue": [
+          2,
+          2,
+          2
+        ]
+      },
+      "texture": "synthetic/ray.png"
+    }
+  }
+]

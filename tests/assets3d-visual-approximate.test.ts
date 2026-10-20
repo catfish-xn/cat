@@ -33,16 +33,19 @@ describe('explicit visual preview adapter', () => {
     expect(() => particleMode('typo')).toThrow('invalid-particle-mode');
     expect(() => convert({}, {}, { particleMode: 'typo' })).toThrow('invalid-particle-mode');
   });
-  it('maps ArbitraryQuad to an actually camera-facing quad, retaining only birth Z roll', () => {
+  it('preserves ArbitraryQuad birth Euler orientation independently of the camera', () => {
     const { e, row, doc } = mapped({ primitive: { __type: 'VfxPrimitiveArbitraryQuad' }, birthRotation0: c([90, 45, 0]) });
-    expect(e.kind).toBe('quad'); expect(e.rotation0).toEqual([0, -0, -0]);
+    expect(e.kind).toBe('arbitraryQuad'); expect(e.rotation0).toEqual([90, -45, -0]);
     expect(row).toMatchObject({ status: 'approximated', mapped: false, approximations: [
-      expect.objectContaining({ handling: 'arbitrary-quad-as-camera-facing-quad' }),
-      expect.objectContaining({ handling: 'camera-facing-quads-keep-only-Z-roll' }),
+      expect.objectContaining({ handling: 'arbitrary-quad-local-XY-preserve-birth-Euler' }),
     ] });
     const camera = new PerspectiveCamera(); camera.rotation.set(.2, .4, .1);
     const fx = new ParticleEffect(doc, { scale: 1 }); fx.update(0, camera);
-    expect(fx.object.children[0].quaternion.angleTo(camera.quaternion)).toBeLessThan(1e-6); fx.dispose();
+    const normal = new Vector3(0, 0, 1).applyQuaternion(fx.object.children[0].quaternion);
+    expect(normal.y).toBeCloseTo(-Math.SQRT1_2);
+    const rotation = fx.object.children[0].quaternion.clone();
+    camera.rotation.set(.8, -.2, 1); fx.update(.1, camera);
+    expect(fx.object.children[0].quaternion.angleTo(rotation)).toBeLessThan(1e-6); fx.dispose();
   });
   it('orients ray geometry along velocity and uses local Y for stationary rays', () => {
     const { e, doc, row } = mapped({ primitive: { __type: 'VfxPrimitiveRay' }, birthVelocity: c([3, 0, 0]), birthScale0: c([2, 8, 1]), birthRotation0: c([90, 90, 90]) });
