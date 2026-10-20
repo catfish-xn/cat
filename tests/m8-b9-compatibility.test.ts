@@ -12,6 +12,8 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import type { MatchState } from '../src/simulation/match-types';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const combat = (events: readonly { domain?: string }[]) => events.filter(e => e.domain === 'combat') as LedgerCombatEvent[];
 function finishedEnvelope(): SaveEnvelope {

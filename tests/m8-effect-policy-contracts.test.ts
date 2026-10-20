@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { abilityPlans, type Champion } from './fixtures/m8-ability-plans';
 import { shiv, titan, nashor } from './fixtures/m8-audit-definitions';
 import type { Effect } from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Walk finite fixture data only; this does not execute an effect or infer a policy.
 function policies(value: unknown): string[] {
