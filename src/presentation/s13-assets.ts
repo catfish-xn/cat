@@ -7,18 +7,21 @@ import type Phaser from 'phaser';
 import { S13_ASSETS, type S13Asset } from './s13-asset-manifest';
 import { heroEmblemSvg } from './hero-identity';
 import { g23ChampionAssets, g23IconUrl } from './g23-display';
+import { neutralPortrait, neutralPortraitAssets, neutralPortraitPath } from './s13-neutral-assets';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const index = new Map<string, S13Asset>(S13_ASSETS.map(asset => [`${asset.kind}:${asset.id}`, asset]));
 
 export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   const asset = index.get(`${kind}:${id}`);
-  // G2-3 icons live in their own manifest keyed by apiName (s13-g23-manifest.ts).
-  return asset ? `${BASE}${asset.path}` : g23IconUrl(kind, id);
+  if (asset) return `${BASE}${asset.path}`;
+  const neutral = kind === 'champion' ? neutralPortrait(id) : undefined;
+  // G2-3 icons live in their own manifest keyed by apiName (s13-g23-manifest.ts); monsters in s13-neutral-assets.ts.
+  return neutral ? `${BASE}${neutralPortraitPath(neutral)}` : g23IconUrl(kind, id);
 }
-/** Every bundled champion portrait by content id: the generated manifest plus G2-3 heroes/summons present in content. */
+/** Every bundled portrait by content id: the generated manifest, G2-3 heroes/summons present in content, and neutral monsters. */
 const championAssets = (): readonly { readonly id: string; readonly path: string }[] => [
-  ...S13_ASSETS.filter(asset => asset.kind === 'champion'), ...g23ChampionAssets(),
+  ...S13_ASSETS.filter(asset => asset.kind === 'champion'), ...g23ChampionAssets(), ...neutralPortraitAssets(),
 ];
 export const championTextureKey = (id: string) => `s13-champion-${id}`;
 export const championPortraitKey = (id: string) => `s13-champion-round-${id}`;
