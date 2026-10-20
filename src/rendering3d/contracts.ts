@@ -37,7 +37,11 @@ export type ParticleEmission = { mode: 'burst'; count: number }
   | ({ mode: 'continuous'; rate: number; burst?: number } &
     ({ duration: number; loop?: false } | { loop: true }));
 export interface ParticleLimits { maxParticles: number; maxDuration: number }
-export interface ParticleEmitterV2Base extends Omit<ParticleEmitter, 'kind' | 'count' | 'lifetime'> {
+export interface ParticleEmitterV2Base extends Omit<ParticleEmitter, 'kind' | 'count' | 'lifetime' | 'shape'> {
+  shape?: ParticleEmitter['shape'] | { kind: 'cylinder'; radius: number; height: number };
+  /** Column-major affine matrix in runtime coordinates. Applied to local
+   * positions/directions after shape sampling, before host/world transforms. */
+  localTransform?: readonly number[];
   emission: ParticleEmission;
   /** infinite lives until the document's hard maxDuration, only with loop:true. */
   lifetime: number | 'infinite';

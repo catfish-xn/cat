@@ -63,7 +63,7 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
     }
     return { effects, systems, actionEffects };
 }
-export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false } = {}) {
+export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
     if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)))
         throw new Error('output-overlaps-source');
@@ -249,7 +249,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             } catch (error) { meshReasons.set(ref, error.message); meshReports.push({ source: ref, status: 'skipped', reason: error.message }); }
         }
         const converted = convertParticles(particleSources[id] ?? {}, p => textureByCanonical.get(canonical(p)), parseParticleDocument,
-            { meshPath: p => meshPaths.get(p), meshReasons, approximateLinger });
+            { meshPath: p => meshPaths.get(p), meshReasons, approximateLinger, particleMode: cliParticleMode ?? particleMode });
         const usedMeshes = new Set(converted.systems.flatMap(s => s.document?.emitters.map(e => e.mesh).filter(Boolean) ?? []));
         for (const path of usedMeshes) await write(path, meshBuffers.get(path));
         for (const row of meshReports) if (row.path) row.written = usedMeshes.has(row.path);
@@ -297,7 +297,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     return report;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--source', '--out']));
+    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--source', '--out', '--particle-mode']));
     console.log(JSON.stringify({ ready: report.ready, textures: { converted: report.textureSummary.converted, skipped: report.textureSummary.skipped, missingReferences: report.textureSummary.missingReferences.length }, totals: report.totals, fetchPlan: report.fetchPlan.totals }));
     if (!report.ready)
         process.exitCode = 1;

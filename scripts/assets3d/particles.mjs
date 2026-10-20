@@ -1,4 +1,5 @@
 import { inventoryParticles } from './particle-inventory.mjs';
+import { approximateEmitter, particleMode } from './particle-approximate.mjs';
 
 export const PARTICLE_LIMITS = Object.freeze({ maxParticles: 10000, maxDuration: 30 });
 const allowed = new Set(['__type', 'emitterName', 'importance', 'primitive', 'isSingleParticle', 'particleLifetime',
@@ -108,7 +109,7 @@ function primitive(source, options) {
   }
   throw new Error(`unsupported-primitive:${type}`);
 }
-export function mapEmitter(source, texturePath, options = {}) {
+function mapStrictEmitter(source, texturePath, options = {}) {
   try {
     const p = primitive(source, options);
     if (p.status) return p;
@@ -180,9 +181,24 @@ export function mapEmitter(source, texturePath, options = {}) {
       : { status: 'mapped', reason: 'exact-v2-subset', emitter: out };
   } catch (error) { return { status: 'rejected', reason: error.message }; }
 }
+export function mapEmitter(source, texturePath, options = {}) {
+  if (particleMode(options.particleMode) === 'strict') return mapStrictEmitter(source, texturePath, options);
+  try {
+    const adapted = approximateEmitter(source, options.system);
+    if (adapted.status) return adapted;
+    const result = mapStrictEmitter(adapted.source, texturePath, { ...options, approximateLinger: true });
+    const approximations = [...adapted.approximations, ...(result.approximations ?? [])];
+    if (!result.emitter) return { ...result, approximations };
+    const emitter = { ...result.emitter, ...adapted.additions };
+    if (adapted.initialBurst) emitter.emission = { ...emitter.emission, burst: 1 };
+    return { ...result, emitter,
+      ...(approximations.length ? { status: 'approximated', reason: 'visual-preview-conventions', approximations } : {}) };
+  } catch (error) { return { status: 'rejected', reason: error.message }; }
+}
 export function convertParticles(source, texturePath, validate, options = {}) {
+  const mode = particleMode(options.particleMode);
   const inventory = inventoryParticles(source), counts = { mapped: 0, skipped: 0, rejected: 0 }, systems = [], byReason = {};
-  if (options.approximateLinger === true) counts.approximated = 0;
+  if (options.approximateLinger === true || mode === 'approximate') counts.approximated = 0;
   const reasonsByStatus = { approximated: {}, skipped: {}, rejected: {} };
   const limits = { ...PARTICLE_LIMITS, ...options.limits };
   let budgetError;
@@ -194,8 +210,8 @@ export function convertParticles(source, texturePath, validate, options = {}) {
     const systemKeys = ['__type', 'complexEmitterDefinitionData', 'simpleEmitterDefinitionData', 'particleName', 'particlePath'];
     const systemGaps = Object.keys(originalSystem).filter(k => !systemKeys.includes(k));
     for (const e of system.emitters) {
-      let result = mapEmitter(e.source, texturePath, options);
-      if (result.emitter && systemGaps.length) result = { status: 'rejected', reason: `unmapped-system-field:${systemGaps[0]}` };
+      let result = mapEmitter(e.source, texturePath, { ...options, system: originalSystem });
+      if (result.emitter && systemGaps.length && mode === 'strict') result = { status: 'rejected', reason: `unmapped-system-field:${systemGaps[0]}` };
       let candidateDuration = maxDuration;
       if (result.emitter) try {
         if (budgetError) throw new Error(budgetError);

@@ -1,5 +1,5 @@
 import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Euler, Float32BufferAttribute, Group,
-  Mesh, MultiplyBlending, NormalBlending, PlaneGeometry, Quaternion, ShaderMaterial, Vector3,
+  Matrix4, Mesh, MultiplyBlending, NormalBlending, PlaneGeometry, Quaternion, ShaderMaterial, Vector3,
   type Camera } from 'three';
 import type { BirthValue, ParticleDocumentV2, ParticleEmitterV2 } from './contracts';
 import { fragmentShader, sampleCurve, vertexShader } from './particle-common';
@@ -114,6 +114,10 @@ export class ParticleEffectV2 {
       const z = this.draw() * 2 - 1, phi = this.draw() * Math.PI * 2, r = Math.cbrt(this.draw()) * e.shape.radius;
       origin.add(new Vector3(Math.sqrt(1 - z * z) * Math.cos(phi), Math.sqrt(1 - z * z) * Math.sin(phi), z).multiplyScalar(r));
     }
+    if (e.shape?.kind === 'cylinder') {
+      const phi = this.draw() * Math.PI * 2, r = Math.sqrt(this.draw()) * e.shape.radius;
+      origin.add(new Vector3(Math.cos(phi) * r, (this.draw() - 0.5) * e.shape.height, Math.sin(phi) * r));
+    }
     const size = this.birthValue(e.size0, 1), degrees = this.birthValue(e.rotation0, 0, true).multiplyScalar(Math.PI / 180);
     const rotation = new Quaternion().setFromEuler(new Euler(degrees.x, degrees.y, degrees.z, 'XYZ'));
     const texture = e.texture ? this.options.texture?.(e.texture) : undefined;
@@ -155,8 +159,9 @@ export class ParticleEffectV2 {
     const e = p.source.emitter, drag = e.drag ?? 0;
     const vf = drag === 0 ? age : -Math.expm1(-drag * age) / drag;
     const gf = drag === 0 ? age * age / 2 : (age - vf) / drag;
-    return p.origin.clone().addScaledVector(new Vector3(...(e.velocity ?? [0, 0, 0])), vf)
+    const position = p.origin.clone().addScaledVector(new Vector3(...(e.velocity ?? [0, 0, 0])), vf)
       .addScaledVector(new Vector3(...(e.gravity ?? [0, 0, 0])), gf);
+    return e.localTransform ? position.applyMatrix4(new Matrix4().fromArray(e.localTransform)) : position;
   }
   private trail(p: Live, time: number, size: number, camera?: Camera): void {
     const e = p.source.emitter;
@@ -241,6 +246,16 @@ export class ParticleEffectV2 {
             p.mesh.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(...e.direction.map(n => n / length) as [number, number, number]));
           }
           p.mesh.quaternion.multiply(p.rotation);
+          if (e.localTransform) {
+            // Preserve affine orientation, scale and shear without decomposing
+            // the matrix. Translation was already applied to position above.
+            const linear = new Matrix4().fromArray(e.localTransform).setPosition(0, 0, 0);
+            p.mesh.updateMatrix();
+            const position = p.mesh.position.clone();
+            p.mesh.matrix.setPosition(0, 0, 0).premultiply(linear).setPosition(position);
+            p.mesh.matrixAutoUpdate = false;
+            p.mesh.matrixWorldNeedsUpdate = true;
+          }
         }
         const u = p.mesh.material.uniforms;
         u.opacity.value = sampleCurve(e.opacity, t, 1); u.dissolve.value = sampleCurve(e.dissolve, t, 0);
