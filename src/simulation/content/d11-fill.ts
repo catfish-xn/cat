@@ -3,7 +3,18 @@ import { freezeContent } from './freeze';
 import { D11_FILL_SOURCE } from './d11-fill-source';
 
 /** Registered by the production catalogs; execution lives in d11-fill and strategy-snapshot. */
-export const D11_FILL_ACTIVATION = 'wired-pending-v15-epoch' as const;
+export const D11_FILL_ACTIVATION = 'wired-v15' as const;
+/** Executable conventions are digested with the retained source coefficients. */
+export const D11_EXECUTION_POLICY = freezeContent({
+  revision:'d11-wired-v15', openingStream:'g23-seed-xor-0x6431316f-xor-round-fnv-choiceId',
+  openingSampling:'unit-id-codepoint-partial-fisher-yates-modulo',
+  giftStream:'match-seed-xor-fnv-json-d11-fill-seat-choice-definition-lcg32-scaled-index',
+  gifts:'two-source-bound-receipts-solo-deferred-online-reward-orb',
+  spiritLink:'combat-start-player-hp-full-ten-missing-hp-groups',
+  avarice:'live-bank-before-next-tick-plus-pending-combat-income-private-sample-replay',
+  headhunter:'holder-enemy-champion-kill-eventSeq-exclude-assists-neutrals-summons-mirrors',
+  growth:'unique-combat-holder-eventSeq-victim-receipt-trusted-battle-history',
+} as const);
 export type D11ChoiceId = keyof typeof D11_FILL_SOURCE;
 export type D11AugmentId = 'all-for-one-i' | 'trifecta-i' | 'spirit-link';
 export type D11PendingDefinition = Omit<ChoiceDefinition, 'effects'> & { readonly execution: 'requires-d11-compiler' };

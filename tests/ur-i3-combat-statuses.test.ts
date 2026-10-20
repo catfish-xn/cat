@@ -15,6 +15,7 @@ import { applyStatusContribution } from '../src/simulation/m8/status';
 import type { CombatActivity, StatusApplication, StatusGroup } from '../src/simulation/m8/contracts';
 import { battle, freeze, unit } from './combat-helpers';
 import { modifier, source } from './fixtures/m8-contract-cases';
+import currentIdentity from './v15-content-baseline.json';
 
 const sha = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function synthetic(): CombatState {
@@ -72,15 +73,16 @@ function expectedRows(state: CombatState, unitId: string): CombatViewStatus[] {
 }
 
 describe('UR-I3-01 current combat status kinds', () => {
-  it('preserves the pre-view-change battle, ledger, RNG and content identities', () => {
+  it('preserves the pre-view-change battle, ledger and RNG and binds the current epoch identity', () => {
     const initial = freeze(synthetic()), before = JSON.stringify(initial);
     const control = run(initial), observed = run(initial, true);
     // Captured on HEAD 58dd202 before changing combat-replay-view.ts; these are
     // authoritative state/ledger hashes, not view goldens to re-record for v15.
+    // Release identity separately follows the freshly recorded current epoch.
     expect(sha(control.terminal)).toBe('432c237bd3225a4b75ac5436bb370194689cab64f4be002007bbd703b65afdd9');
     expect(sha(control.ledger)).toBe('c5762f92e94df75176eab0b23de25dcd5636f0f80f9d5da1d41ffae794d4583d');
-    expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:99b62a66');
-    expect(LOOT_REPLAY_DIGEST).toBe('fnv1a32-utf16:61568ec0');
+    expect(CONTENT_DIGEST).toBe(currentIdentity.contentDigest);
+    expect(LOOT_REPLAY_DIGEST).toBe(currentIdentity.lootReplayDigest);
     expect(observed.all).toEqual(control.all); expect(observed.ledger).toEqual(control.ledger);
     expect(observed.terminal).toMatchObject({ tick: 45, result: 'draw', rngState: 42, rngDraws: 0 });
     expect(toCombatReplay({ initial, terminal: control.terminal, events: control.ledger })).toEqual(observed.replay);

@@ -491,7 +491,7 @@ export interface M8Version {
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;
-  readonly commandProtocolVersion: 3;
+  readonly commandProtocolVersion: 4;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

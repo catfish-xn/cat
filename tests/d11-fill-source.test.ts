@@ -48,7 +48,7 @@ it('de-duplicates by API identity across aliases, including previously implement
   for(const name of ['TFT13_GoopBuff_HardenedMind','TFT13_GoopBuff_MagicMind','TFT13_GoopBuff_SharpenedMind','TFT13_GoopBuff_AllForOne'])expect(existing.has(name)).toBe(true);
 });
 it('registers the D11 pack at 60/54 and retains all 14.24b overrides and the current digest identity',()=>{
-  expect(D11_FILL_ACTIVATION).toBe('wired-pending-v15-epoch');
+  expect(D11_FILL_ACTIVATION).toBe('wired-v15');
   expect(Object.keys(D11_FILL_DEFINITIONS)).toHaveLength(5);
   expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(60);expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(54);
   expect(createMatch().contentDigest).toBe(CONTENT_DIGEST);

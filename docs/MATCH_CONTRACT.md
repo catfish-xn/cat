@@ -1,5 +1,12 @@
 # M5 Match contract v5
 
+## v15 统一身份（2026-10-20，覆盖下文历史交接状态）
+
+当前 rules/content 为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+
+新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
+
+
 ## D11 领域接线，等待统一 v15（2026-10-20）
 
 运行目录为 60 强化 / 54 异常；新增一费奉献 I（银）、三项赛 I（金）、灵魂连接（金）、贪财化身与猎头者。具体数值、开战 / 赠送 RNG 约定、恢复证据与版本清单见 [D11_WIRING_V15](D11_WIRING_V15.md)。D11 单支交付保留 v14；本次合并沿用法球分支既有 v15 身份，不再升级版本、改变 digest 或重录指纹。目录 digest 输入仍有显式临时 preD11 边界，后续统一身份与指纹验收必须移除，不能据此声称与旧 v14 存档等价或直接发布。

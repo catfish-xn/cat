@@ -151,11 +151,10 @@ import { G24_SUPPORT_ITEM_SOURCE } from './g2-4-support-item-source';
 import { G24_CHEST_POOL } from './g2-4-chest-pool';
 import { S13_P2_SOURCE } from './s13-augments-p2-source';
 import { P2_ITEM_GRANTS } from './s13-augments-p2';
-// Temporary integration boundary requested for the joint v15 cutover. Remove
-// this filter, digest D11 source/execution policy, then record the v15 epoch.
-const preD11 = <T>(entries:Readonly<Record<string,T>>) => Object.fromEntries(Object.entries(entries)
-  .filter(([id])=>!['all-for-one-i','trifecta-i','spirit-link','avarice-incarnate','headhunter'].includes(id)));
+import { D11_FILL_SOURCE } from './d11-fill-source';
+import { D11_EXECUTION_POLICY } from './d11-fill';
 export const CONTENT_DIGEST = digestContent({
+  d11:{source:D11_FILL_SOURCE,execution:D11_EXECUTION_POLICY},
   s13AugmentsP2: { source:S13_P2_SOURCE, itemGrants:P2_ITEM_GRANTS, acquisitionRng:'fnv1a32-seat-choice-lcg32', openingRng:'combat-after-existing-opening-consumers', sharing:'freeze-all-then-broadcast' },
   s13AnomaliesP4:{source:P4_SOURCE,orbit:ORBIT_PARAMETERS,summons:S13_ANOMALY_SUMMON_UNITS,wolfAttackSpeedBps:10000,miniTravelTicks:10},
   g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
@@ -175,7 +174,7 @@ export const CONTENT_DIGEST = digestContent({
   temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
   dualWieldingPools:DUAL_WIELDING_POOLS,dualWieldingRoles:DUAL_WIELDING_ROLES,
-  augmentPolicy:AUGMENT_OFFER_POLICY, augmentTiers:preD11(AUGMENT_TIERS), augmentBronzeThresholds:AUGMENT_BRONZE_THRESHOLDS, augments: preD11(AUGMENT_DEFINITIONS), anomalies: preD11(ANOMALY_DEFINITIONS), schedule: ROUND_SCHEDULE,
+  augmentPolicy:AUGMENT_OFFER_POLICY, augmentTiers:AUGMENT_TIERS, augmentBronzeThresholds:AUGMENT_BRONZE_THRESHOLDS, augments:AUGMENT_DEFINITIONS, anomalies:ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,
   opponents: ROUND_ENEMY_PROJECTIONS,

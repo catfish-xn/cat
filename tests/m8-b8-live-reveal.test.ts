@@ -4,11 +4,11 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { revealMatchLoot } from '../src/simulation/loot-runtime';
 import { accepted } from './match-helpers';
 import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8-public';
-import { simultaneousPrefix, barePartialPrefix } from './fixtures/b8-live-reveal-routes';
+import { simultaneousPrefix, barePartialPrefix, PARTIAL_REVEAL_SEEDS } from './fixtures/b8-live-reveal-routes';
 
 const prefix=await simultaneousPrefix();
-const zyraPrefix=await barePartialPrefix('zyra',8606,['blistering-strikes','pumping-up-ii','bronze-for-life-ii']);
-const lorisPrefix=await barePartialPrefix('loris',59439,['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii']);
+const zyraPrefix=await barePartialPrefix('zyra',PARTIAL_REVEAL_SEEDS.zyra,['blistering-strikes','pumping-up-ii','bronze-for-life-ii']);
+const lorisPrefix=await barePartialPrefix('loris',PARTIAL_REVEAL_SEEDS.loris,['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii']);
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
