@@ -5,5 +5,5 @@
  * Default: regenerate and verify checked-in bytes/metadata; --write: replace the
  * generated files explicitly. Arguments pass through unchanged.
  * When a new epoch records a new Herald directory, point CURRENT at its generator. */
-const CURRENT = '../tests/fixtures/record-v15-herald.cjs'; // s13-g2-3-v15 -> tests/fixtures/v15-herald-raw
+const CURRENT = '../tests/fixtures/record-v16-herald.cjs'; // s13-g2-3-v16 -> tests/fixtures/v16-herald-raw
 require(CURRENT);

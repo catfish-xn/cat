@@ -5,6 +5,7 @@ import { canonicalContent, digestContent } from './content';
 import { M8_VERSION } from './m8/version';
 
 export interface CombatReplayFacts {
+  readonly openingState: CombatState['openingState'];
   readonly tick: number;
   readonly rngState: CombatState['rngState'];
   readonly rngDraws: CombatState['rngDraws'];
@@ -37,7 +38,7 @@ export interface RestoreCombatReplay {
   atSaveTick(): CombatReplayFacts;
 }
 function facts(state: CombatState): CombatReplayFacts {
-  return structuredClone({ tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
+  return structuredClone({ openingState: state.openingState, tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
     nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
     damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
     id: unit.id, definitionId: unit.definitionId,

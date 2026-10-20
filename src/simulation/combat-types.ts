@@ -76,6 +76,7 @@ export interface CombatUnit {
   readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number;
   readonly abilityPower?: number; readonly baseAttackSpeedBps?: number; readonly attackSpeedBonusBps?: number; readonly shieldLayers?: readonly ShieldLayer[]; readonly statuses?: readonly CombatStatus[]; readonly tasks?: readonly CombatTask[]; readonly mechanics?: CombatMechanics; readonly runtime?: CombatRuntime;
   readonly sources?: readonly SourcedEffect[]; readonly triggers?: readonly ResolvedTrigger[]; readonly effectRuntime?: readonly EffectRuntime[];
+  readonly effectiveStarLevel?:1|2|3|4;
   readonly id: string; readonly definitionId: string; readonly team: Team; readonly starLevel: StarLevel;
   readonly cell: HexCell; readonly hp: number; readonly maxHp: number;
   readonly attackDamage: number; readonly attackRange: number; readonly attackIntervalTicks: number;

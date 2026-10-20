@@ -7,9 +7,9 @@ import { contracts } from './runtime.mjs';
 
 const json = value => Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-/** Sorted runtime payload index; callers supply only payload paths, excluding metadata. */
-export function createPrecache(entries) {
-  return { schemaVersion: 1, files: [...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+/** Shared deterministic runtime-payload index (metadata is excluded by callers). */
+export function createPrecache(plans) {
+  return { schemaVersion: 1, files: [...plans].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     .map(([path, p]) => ({ path, bytes: p.bytes, sha256: p.sha256 })) };
 }
 function assetPath(path) {

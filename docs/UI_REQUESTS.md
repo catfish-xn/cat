@@ -1036,3 +1036,35 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 实现：领域只读回放投影直接复用纯函数 `readUnitStatusRows`，仅保留 `effective` / `active` 行，复制 `kind/harmful`，按二者去重。顺序固定为 kind 的 ASCII 字符升序，同 kind 下 `harmful:false` 在前；无状态显式发 `[]`，最后一项消失也会产生 tick 末 `unitUpdated.changes.statuses:[]`。初始帧、关键帧、终态、`unitEntered.unit` 均带完整数组。护盾沿用 `shield` 数值，不加入 statuses。类型 `CombatViewStatus` / `StatusKind` 已经 server-entry 导出。
 
 本轮未修改 presentation/server/UI，直接复用避免在禁改文件外复制状态判定；该读取函数没有 DOM/Phaser 运行时依赖。netProtocol 与 claimOrb 共用目标 4，不另升版本。只读帧及关键帧恢复测试已通过；实际联机图标接线/浏览器验收留 Claude。旧帧指纹本轮不重录，清单和测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
+
+## V16-UI-01：史诗奖励与统一工具适配（领域完成，界面待Claude）
+
+本任务明确禁止Codex修改presentation/rendering。当前编译阻塞位于 src/presentation/loot-view.ts:48 和 orb-loot.ts:43/48：旧工具名/图标枚举缺少reforger、两种复制器，失败映射缺少bench-full（共6条tsc诊断）。另外两个payloadLabel必须处理新增forge分支，复制器成功预览必须显示复制目标，不能走“重铸—”文案。现有consumableTargetHint已读取targetKind，领域四种工具均为unit；界面不得自算合法性。
+
+字段与来源：CONSUMABLE_DEFINITIONS[id].name / description / targetKind；ConsumablePreview.effect='remove-all'|'reforge-all'|'duplicate-unit'，affectedItemIds表示永久装备；failure='bench-full'；LootPayload.kind='forge'与definitionId，名称由EPIC_REWARD_NAMES提供（成装锻造器、神器装备锻造器）；冠冕显示金铲铲冠冕。RevealedOrbView.tier/entryDropIds保持领域冻结值，不重算颜色/概率。
+
+用途：准确展示新工具、满席拒绝与锻造器领取内容。继续调用useConsumable/claimOrb/selectChoice；不改变排版、动画或规则。
+
+验收：tsc无旧枚举错误；两种复制器/重铸器/拆卸器名称与14.24 zh_cn一致；forge不进入英雄渲染回退；复制预览、bench-full拒绝可读；单位整装重铸目标正确；联机领取后四选一及重连收据展示正确。未获越界修改授权前，Codex只提交领域和此需求，保留明确编译阻塞。
+
+## V16-UI-250：终极英雄与进入未知
+
+对手公共棋盘目前保留物理 3 星；有效 4 星已在战斗录像中提供。原版侦察是否公开四星 **尚未核实**，不能将当前回退描述成原版隐藏规则。#265 离线核对的 14.24 map22 元数据含升级描述和 NumRounds=3，但两个执行引用未收录，也没有客户端星级显示/网络复制字段；技能 rank 4 表不能证明对手可见性。证据见 [侦察可见性审计](evidence/v16/scouting-visibility-audit.json)，可用 `node scripts/audit-d14-scouting.cjs` 复核。当前禁止联网且不改服务器，因此不凭推断新增公共标记；后续取得本地原版客户端执行/同步证据或可核验录像后再决定。此项保留证据缺口。
+
+领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
+
+- `PrivateSeatView.d14Display?`：`anomalyId, choiceId, unitId, phase(waiting/promoted/absent/returned/retired), dueOrdinal, remainingSettlements, effectiveStarLevel, physicalStarLevel`。进入未知 absent 时另有仅本席可见的 `heldUnit, heldItems`；它们已从 `preparation.units/items` 移出，不提供出售/装备/复制控件。满席到期显示等待空位，不能当成已获得增益。
+- 终极英雄私有单位行在 promoted 时有 `starLevel:3, effectiveStarLevel:4, sellGold, poolCopies:9`；`d14Display` 也提供同一 sellGold/poolCopies。sellGold 直接查询该英雄三星售价（1费9、2费17），出售说明写 **“与该英雄三星同价（专用永久晋升，物理9份）”**，不可写死9金或按通用四星27份推导售价/退池数；目标准入仍仅一费。
+- 公共 `CombatViewUnit.effectiveStarLevel?`：晋升单位为4，其余省略并读取已有 starLevel；`choiceEffects` 包含两个异常的名称/说明。物理 starLevel 仍1–3，UI 不能把它写回4。
+- 私有 `d11Display.definitions` 现在也提供两个 D14 异常的名称/说明；待选择的报价也可读取。`remainingSettlements` 是权威数据，不按动画、计时器或 Continue 点击次数另算。
+- 验收：3星1费目标能看到终极英雄、其它目标不提供；选择后3次真实结算晋升显示四星且卖9金；进入未知携装备离场，倒数归零满席仍等待，腾位归来显示永久+50%AD/+50AP；读档/重连不重复发放。其它席的候选和托管装备不进入公共投影。
+
+只定义数据和行为，不规定视觉布局；服务器/表现层接入由其负责人完成。本轮实际 `tsc --noEmit` 通过，无额外编译阻塞。前一节 V16-UI-01 的编译诊断是史诗奖励交接时记录。
+
+全套检查另发现 `g23AnomalyApiName` 缺少两个 D14 名称映射；基线还缺 D11 的贪财化身/猎头者映射。最小待审补丁为 `artifacts/v16-recording/UI_ADAPTER_250.patch`，只补四个已由本地来源证实的 apiName，不改布局、素材或规则；未写入表现层源码。该补丁不包含四星、售价、离场倒数等控件接线，仍须完成上面的验收。准备阶段四星基础/技能应读取领域导出的 `d14UnitBase(unit, true)`，上场后的含装备/羁绊数值读取 `buildStrategySnapshot(state)`；战斗中读取现有 `CombatViewUnit` 数值，不能在界面自行续推星级倍率。
+
+### #265 / #270：有效四星技能说明（已提供）
+
+`src/simulation/ability-display.ts` 导出纯查询 `ultimateHeroAbilityDisplayValues(definitionId: string, stats?: AbilityDisplayStats): Readonly<Record<string, number>>`。仅供已认证 `effectiveStarLevel===4` 的终极英雄使用；返回已替换派生值与表达式的只读 token 映射，直接交给现有模板。默认 AD 取专用四星基础值、AP=100；传入快照 AD/AP 时沿用普通技能说明的整数边界（0–1000000），无效英雄/数值抛 `RangeError`。函数不授予晋升，不改变物理星级或玩法。
+
+来源复用 `d14UnitBase` 的实际 rank 4 表及 14.24b 辛吉德 DR=60% 覆盖，不能外推三星。`src/presentation/ability-text.ts` 仅做显示映射：`abilityText(id,4,stats)` 调用此查询，普通 1–3 星沿用原函数。Lux 默认伤害1260/护盾300，150AP时1890/450；辛吉德减伤60%。14个一费英雄模板无未替换 token，原有1–3星显示回归通过。

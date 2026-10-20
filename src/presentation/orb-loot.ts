@@ -5,6 +5,7 @@
  * is decided here; names and descriptions come from CONSUMABLE_DEFINITIONS.
  */
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+import { EPIC_REWARD_NAMES } from '../simulation/epic-forges';
 import type { ConsumableDefinitionId, ConsumableFailure, ConsumableInstance, ConsumablePreview } from '../simulation/consumable-types';
 import type { LootView, RevealedDropView, RevealedOrbView } from '../simulation/m8/ui-contracts';
 import type { OrbTier } from '../simulation/orb-layout';
@@ -45,8 +46,9 @@ const FORFEIT_TEXT: Readonly<Record<'timeout-forfeited' | 'eliminated-forfeited'
  */
 const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: string; readonly apiName: string }>> = {
   'magnetic-remover': { glyph: '拆', apiName: 'TFT_Consumable_ItemRemover' },
-  'component-reforger': { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
-  'completed-reforger': { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
+  reforger: { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
+  TFT_Consumable_ChampionDuplicator_III: { glyph: '复', apiName: 'TFT_Consumable_ChampionDuplicator_III' },
+  TFT_Consumable_NeekosHelp: { glyph: '复', apiName: 'TFT_Consumable_NeekosHelp' },
 };
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
 export function toolMark(id: string): string {
@@ -64,6 +66,7 @@ export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>
   'wrong-phase': '当前阶段不能使用消耗品',
   'unknown-unit': '该单位已不存在，请重新选择',
   'unknown-item': '该装备已不存在，请重新选择',
+  'bench-full': '备战席已满，腾出空位后再使用',
 };
 
 /** Icon markup and name of one loot payload (also used by the v15 orb dock's hover card). */
@@ -71,6 +74,7 @@ export function payloadLabel(payload: RevealedDropView['payload']): { icon: stri
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
+  if (payload.kind === 'forge') return { icon: '', text: EPIC_REWARD_NAMES[payload.definitionId as keyof typeof EPIC_REWARD_NAMES] ?? itemDisplayName(payload.definitionId) };
   if (payload.kind === 'item') return { icon: itemMarkHtml(payload.definitionId, 22), text: `${itemDisplayName(payload.definitionId)}${count}` };
   return { icon: heroEmblemSvg(payload.definitionId, 22), text: `${displayUnitName(payload.definitionId)}${count}` };
 }
@@ -179,7 +183,7 @@ export function consumableDropText(tool: ConsumableInstance, targetLabel: string
   const name = consumableName(tool.definitionId);
   if (!preview.ok) return `${name} → ${targetLabel}：${CONSUMABLE_FAILURE_TEXT[preview.reason] ?? '当前无法使用该消耗品'}`;
   const items = preview.affectedItemIds.map(itemName).join('、') || '—';
-  const what = preview.effect === 'remove-all' ? `将拆下 ${items}，放回物品备战席` : `将重铸 ${items}（结果随机），产物进入物品备战席`;
+  const what = preview.effect === 'duplicate-unit' ? `将复制 ${targetLabel}，获得一张1星英雄` : preview.effect === 'remove-all' ? `将拆下 ${items}，放回物品备战席` : `将重铸 ${items}（结果随机），产物进入物品备战席`;
   return `${name} → ${targetLabel}：${what}${takesEffectNextBattle(phase) ? ` · ${NEXT_BATTLE_TEXT}` : ''}`;
 }
 

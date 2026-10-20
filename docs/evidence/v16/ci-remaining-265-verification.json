@@ -1,0 +1,1104 @@
+{
+  "startingHead": "729e6fabf696d01f428996f67438ab2ba2271416",
+  "baseline": "1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+  "networkUsed": false,
+  "gitWrites": false,
+  "sourceTreeUnchanged": true,
+  "prohibitedDirectoriesUnchanged": true,
+  "recorderSourceDigestsUnchanged": true,
+  "heraldSourcesUnchanged": true,
+  "recording": {
+    "rerun": false,
+    "reason": "Only tests outside recorder source set changed; no simulation change."
+  },
+  "initialEight": {
+    "commandReport": "artifacts/v16-ci-265-initial.json",
+    "sha256": "0aaeb1637d88119343fe7447a30d3e9d47e90105494e435724c227a147edcfdd",
+    "files": 8,
+    "total": 84,
+    "passed": 72,
+    "failed": 12,
+    "pending": 0,
+    "success": false,
+    "durationMs": 25314.108642578125,
+    "failures": [
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "test": "Renata public acquisition fixture saves Renata's tick-60 double kill, restores object/JSON, and replays every complete combat state",
+        "durationMs": 15.996000000000095,
+        "messages": [
+          "AssertionError: expected 721851 to be 3151248 // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/bracer-multikill-stacks.test.ts:120:30\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "test": "B10 temporary equipment replay rebuild records the temporary children in the battle context and rebuilds the identical terminal",
+        "durationMs": 2.103399999999965,
+        "messages": [
+          "AssertionError: expected [ { …(3) }, { …(3) } ] to deeply equal [ { …(3) }, { …(3) } ]\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b10-temporary-replay.test.ts:42:8\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "test": "B10 temporary equipment replay rebuild rejects a record whose context forges, drops or moves a temporary child",
+        "durationMs": 218.07719999999972,
+        "messages": [
+          "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1737:25)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b10-temporary-replay.test.ts:84:50"
+        ]
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "test": "B3 audit independent lifecycle and identity expectations R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates",
+        "durationMs": 3395.6088000000004,
+        "messages": [
+          "AssertionError: expected false to be true // Object.is equality\n    at accepted (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/match-helpers.ts:9:21)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b3-audit.test.ts:42:75\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26"
+        ]
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "test": "B4 composed consumers and restore rejection Lux HoJ samples360×130%=468; crossing below50% keeps charged468 for the next attack; a genuine charge survives Match save",
+        "durationMs": 58.136100000001534,
+        "messages": [
+          "AssertionError: expected +0 to be 468 // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b4-integration.test.ts:82:203\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "test": "B5 real purchase recursive upgrades and equipment returns chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling",
+        "durationMs": 3461.9988999999987,
+        "messages": [
+          "Error: Public equipment fixture does not select anomalies\n    at resolvePublicEquipmentChoices (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-equipment.ts:66:42)\n    at publicRecursivePurchase (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-acquisition.ts:76:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b5-grant-upgrade.test.ts:133:19\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35"
+        ]
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "test": "B5 real purchase recursive upgrades and equipment returns returns full ordinary conflicts and preserves permanent IDs across the complete command",
+        "durationMs": 52.07560000000012,
+        "messages": [
+          "Error: Public acquisition fixture: wrong-phase\n    at accepted (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-acquisition.ts:8:25)\n    at publicRecursivePurchase (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-acquisition.ts:55:94)\n    at publicRecursivePurchase (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-acquisition.ts:77:12)\n    at publicRecursivePurchase (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/b8-public-acquisition.ts:77:12)"
+        ]
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "test": "B8 public equipment fixture provenance wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword",
+        "durationMs": 37.36070000000109,
+        "messages": [
+          "AssertionError: expected [ [ 'unit-1', 'irelia', 1 ], …(1) ] to deeply equal [ [ 'unit-1', 'irelia', 1 ], …(2) ]\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b8-equipment-fixture.test.ts:16:158\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "test": "B8 public equipment fixture provenance equips the actual dropped Lux while preserving the original Irelia on the bench",
+        "durationMs": 3.2598999999991065,
+        "messages": [
+          "AssertionError: expected '2-5' to be '2-1' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b8-equipment-fixture.test.ts:39:37\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "test": "B8 public equipment fixture provenance obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5",
+        "durationMs": 1588.9911999999986,
+        "messages": [
+          "AssertionError: expected '4-5' to be '3-5' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/m8-b8-equipment-fixture.test.ts:49:37\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/r3r4-consumables.test.ts",
+        "test": "a real dropped Thief parent retains its roll after removal/re-equip; reforging removes live children while frozen combat restores",
+        "durationMs": 1115.7124000000003,
+        "messages": [
+          "AssertionError: expected undefined to be defined\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/r3r4-consumables.test.ts:92:17\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20"
+        ]
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "test": "T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item",
+        "durationMs": 5647.1086,
+        "messages": [
+          "Error: T13 public fixture: no-removable-items\n    at accepted (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/fixtures/t13-loot-public.ts:6:25)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/t12-offline-transfer.test.ts:7:9\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+        ]
+      }
+    ],
+    "perFile": [
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "passed": 24,
+        "failed": 1,
+        "status": "failed"
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "passed": 1,
+        "failed": 2,
+        "status": "failed"
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "passed": 5,
+        "failed": 1,
+        "status": "failed"
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "passed": 15,
+        "failed": 1,
+        "status": "failed"
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "passed": 12,
+        "failed": 2,
+        "status": "failed"
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "passed": 1,
+        "failed": 3,
+        "status": "failed"
+      },
+      {
+        "file": "tests/r3r4-consumables.test.ts",
+        "passed": 14,
+        "failed": 1,
+        "status": "failed"
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "passed": 0,
+        "failed": 1,
+        "status": "failed"
+      }
+    ]
+  },
+  "restoredEight": {
+    "commandReport": "artifacts/v16-ci-265-restored.json",
+    "sha256": "4bd156095e4423950d014b180b1d4b8f211bae405064fa14c9005f790ab13d3d",
+    "files": 8,
+    "total": 84,
+    "passed": 84,
+    "failed": 0,
+    "pending": 0,
+    "success": true,
+    "durationMs": 41031.72216796875,
+    "failures": [],
+    "perFile": [
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "passed": 25,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/r3r4-consumables.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "status": "passed"
+      }
+    ]
+  },
+  "fullFast": {
+    "commandReport": "artifacts/v16-ci-265-full-fast.json",
+    "sha256": "f6733126fa9c2ced801330cd2ba39b8217eb9c088bd107c529706f83b15576c9",
+    "files": 371,
+    "total": 4850,
+    "passed": 4840,
+    "failed": 10,
+    "pending": 0,
+    "success": false,
+    "durationMs": 897364.513671875,
+    "failures": [
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+        "durationMs": 112.0010000000475,
+        "messages": [
+          "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25"
+        ]
+      },
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+        "durationMs": 7.656100000021979,
+        "messages": [
+          "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25"
+        ]
+      },
+      {
+        "file": "tests/m5-match-integration.test.ts",
+        "test": "M5 Match atomic integration restores each real tick, then supply without creating combat or consuming battle RNG",
+        "durationMs": 30104.849799999967,
+        "messages": [
+          "Error: Test timed out in 30000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)"
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "test": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+        "durationMs": 805.0641999999061,
+        "messages": [
+          "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26"
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "test": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+        "durationMs": 789.3972000000067,
+        "messages": [
+          "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26"
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "test": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+        "durationMs": 770.6361000000034,
+        "messages": [
+          "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26"
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "test": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+        "durationMs": 782.8824999999488,
+        "messages": [
+          "AssertionError: node:events:496\r\n      throw er; // Unhandled 'error' event\r\n      ^\r\n\r\nError: spawn C:\\Program Files\\nodejs\\node.exe ENOENT\r"
+        ]
+      },
+      {
+        "file": "tests/server/replay-first-pass.test.ts",
+        "test": "game server: spot check logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle",
+        "durationMs": 5292.501199999941,
+        "messages": [
+          "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)"
+        ]
+      },
+      {
+        "file": "tests/server/replay-first-pass.test.ts",
+        "test": "game server: spot check checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between",
+        "durationMs": 7069.565399999963,
+        "messages": [
+          "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)"
+        ]
+      },
+      {
+        "file": "tests/server/room.test.ts",
+        "test": "Room: choice window and stuck seats opens a choice window at a round with a pending choice and moves on as soon as every seat chose",
+        "durationMs": 6594.252800000017,
+        "messages": [
+          "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)"
+        ]
+      }
+    ],
+    "exitCode": 1,
+    "requestedEight": [
+      {
+        "file": "tests/bracer-multikill-stacks.test.ts",
+        "passed": 25,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b10-temporary-replay.test.ts",
+        "passed": 3,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b3-audit.test.ts",
+        "passed": 6,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b4-integration.test.ts",
+        "passed": 16,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b5-grant-upgrade.test.ts",
+        "passed": 14,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/m8-b8-equipment-fixture.test.ts",
+        "passed": 4,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/r3r4-consumables.test.ts",
+        "passed": 15,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "file": "tests/t12-offline-transfer.test.ts",
+        "passed": 1,
+        "failed": 0,
+        "status": "passed"
+      }
+    ]
+  },
+  "residualFailureClassification": {
+    "pressureBundlingPermission": 2,
+    "domainTimeoutUnderContention": 1,
+    "serverNestedProcessSpawn": 4,
+    "serverTimeouts": 3,
+    "pressureReproduction": "node scripts/profile-explorer-bracer-restore.cjs huge-count: Access is denied; explicit working directory/tsconfigRaw do not fix the directory read failure.",
+    "m5IsolatedRetest": {
+      "commandReport": "artifacts/v16-ci-265-m5-measure.json",
+      "sha256": "d8824c63e82944aa9f7c0bb1f3a4752059ee681c36c57078e455e9784337d229",
+      "files": 1,
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "success": true,
+      "durationMs": 15096.830078125,
+      "failures": [],
+      "perFile": [
+        {
+          "file": "tests/m5-match-integration.test.ts",
+          "passed": 3,
+          "failed": 0,
+          "status": "passed"
+        }
+      ]
+    },
+    "m5IsolatedCaseDurationMs": 12737.8301,
+    "m5ExistingBudgetMs": 30000,
+    "budgetDecision": "Existing timeout is 2.35 times isolated measurement; unchanged. No new timeout allowances.",
+    "serverFilesNotModified": true
+  },
+  "legacyStreams": {
+    "baselineArchiveSha256": "d5972cb0e44781efd438a4938cb700417024e9d049f550656d7cb26ec28df4ea",
+    "baselineSourceFilesVerifiedAgainstFreshGitArchive": 311,
+    "comparisonCases": 4106,
+    "uniqueSeeds": 4105,
+    "duplicatedSeed": 162,
+    "originalLootThrough4_7AndRngUnchanged": true,
+    "shopComparisons": 16424,
+    "twoIndependentFullV16OraclesAgree": true,
+    "consumables": {
+      "72": {
+        "items": [
+          "cloak",
+          "rod",
+          "gloves",
+          "TFT5_Item_TrapClawRadiant",
+          "sword",
+          "bow",
+          "sword"
+        ],
+        "consumables": [
+          "magnetic-remover",
+          "magnetic-remover",
+          "magnetic-remover",
+          "TFT_Consumable_NeekosHelp",
+          "magnetic-remover",
+          "magnetic-remover"
+        ]
+      },
+      "162": {
+        "items": [
+          "belt",
+          "vest",
+          "sword",
+          "thiefs-gloves"
+        ],
+        "consumables": [
+          "magnetic-remover",
+          "magnetic-remover",
+          "magnetic-remover",
+          "reforger",
+          "reforger",
+          "magnetic-remover"
+        ]
+      }
+    },
+    "vectors": {
+      "9": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "irelia",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "tear",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "belt",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 3
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "vest",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "cloak",
+              "quantity": 1
+            },
+            {
+              "kind": "unit",
+              "definitionId": "lux",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "38": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "zyra",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "gloves",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "bow",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 3
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "sword",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "tear",
+              "quantity": 1
+            },
+            {
+              "kind": "unit",
+              "definitionId": "lux",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "162": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "belt",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "vest",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 3
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "thiefs-gloves",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 8
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "reforger",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "reforger",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "18619": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "zyra",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "bow",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "sword",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "tear",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "belt",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "vest",
+              "quantity": 1
+            },
+            {
+              "kind": "unit",
+              "definitionId": "zyra",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "76672": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "darius",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "zyra",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "cloak",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "rod",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "gloves",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "bow",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "sword",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "reforger",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "721851": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "maddie",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "maddie",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "bow",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "TFT_Consumable_ChampionDuplicator_III",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "sword",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "tear",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "belt",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "vest",
+              "quantity": 1
+            },
+            {
+              "kind": "unit",
+              "definitionId": "lux",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "reforger",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "3151248": [
+        {
+          "roundId": "1-2",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "maddie",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-3",
+          "payloads": [
+            {
+              "kind": "unit",
+              "definitionId": "lux",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "cloak",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "1-4",
+          "payloads": [
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "rod",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "gloves",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "roundId": "2-7",
+          "payloads": [
+            {
+              "kind": "item",
+              "definitionId": "bow",
+              "quantity": 1
+            },
+            {
+              "kind": "item",
+              "definitionId": "sword",
+              "quantity": 1
+            },
+            {
+              "kind": "gold",
+              "quantity": 1
+            },
+            {
+              "kind": "consumable",
+              "definitionId": "magnetic-remover",
+              "quantity": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "identities": {
+    "v15": {
+      "contentDigest": "fnv1a32-utf16:70dbb056",
+      "lootReplayDigest": "fnv1a32-utf16:61568ec0",
+      "rulesManifestDigest": "fnv1a32-utf16:97c14bf3"
+    },
+    "startingV16": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "finalV16": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    }
+  },
+  "build": {
+    "command": "npm.cmd run build -- --configLoader runner",
+    "exitCode": 0,
+    "includesTypecheck": true
+  },
+  "budget": {
+    "method": "all dist/assets/*.js separately gzip level9 including Phaser",
+    "baselineBytes": 424763,
+    "baselineProvenance": "existing documented local 15313a7 build; not rebuilt this turn",
+    "currentBytes": 619825,
+    "ratio": 1.4592254975127306,
+    "ceiling": 1.49,
+    "files": [
+      {
+        "file": "index-DMrJUfGK.js",
+        "gzip": 444173,
+        "sha256": "ee984dc2429ab02f3281edc2f6da0d5fad1e6042b1fefb1e25a2ab743f7c73a2"
+      },
+      {
+        "file": "phaser-ax-wMCa1.js",
+        "gzip": 175652,
+        "sha256": "54af098131ba3056731ae3bf76c15d639ffa0f86d6118e93e626dda3449599e3"
+      }
+    ]
+  },
+  "newTimeoutChanges": [],
+  "changedFiles": [
+    "docs/V16_PREMERGE_265.md",
+    "tests/fixtures/b8-public-acquisition.ts",
+    "tests/fixtures/m8-b4-match.ts",
+    "tests/m8-b10-temporary-replay.test.ts",
+    "tests/m8-b8-equipment-fixture.test.ts",
+    "tests/r3r4-consumables.test.ts",
+    "tests/t12-offline-transfer.test.ts"
+  ],
+  "suggestedCommit": "test(v16): restore legacy acquisition fixtures and transfer replay identities"
+}

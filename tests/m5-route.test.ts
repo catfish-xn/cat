@@ -1,3 +1,4 @@
+import { readComponentEquivalent } from '../src/simulation/loot-view';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
@@ -11,7 +12,12 @@ import { run } from '../scripts/generate-m5-route.cjs';
 const routes=new Map<string, Awaited<ReturnType<typeof run>>>();
 describe('M5 ordinary three-build routes and independent resource ledger',()=>{
  it('normally buys five-cost Caitlyn and fields her for at least two real battles',async()=>{
-  const route=await run(api,{build:'sniper-caitlyn',seed:42});routes.set('sniper-caitlyn',route);assertGolden(route);
+  const goldenRoute=await run(api,{build:'sniper-caitlyn',seed:42});routes.set('sniper-caitlyn',goldenRoute);assertGolden(goldenRoute);
+  expect(goldenRoute.summary.outcome).toBe('victory');expect(goldenRoute.summary.round).toBe(FINAL_ROUND);
+  // #265 restores the v15 loot cursor. Seed42 no longer fields Caitlyn;
+  // retain its entire golden and use a second ordinary paid route for the
+  // unchanged two-battle spell/damage assertions (seed44: four battles, six casts).
+  const route=await run(api,{build:'sniper-caitlyn',seed:44});
   expect(route.summary.outcome).toBe('victory');expect(route.summary.round).toBe(FINAL_ROUND);
   expect(route.summary.caitlynBattles).toBeGreaterThanOrEqual(2);expect(route.summary.caitlynCasts).toBeGreaterThanOrEqual(2);
   expect(route.final.preparation.units.some(u=>u.team==='player'&&u.definitionId==='caitlyn')).toBe(true);
@@ -58,7 +64,10 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
    expect(loot.every(r=>r.grantedItemIds.length===1&&r.payload.quantity===1)).toBe(true);
    const value=loot.reduce((n,r)=>n+(r.payload.kind==='item'&&ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1),0);
-   expect([15,16]).toContain(supply+value);
+   const forges=route.final.seatMechanics!.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null));
+   // Independent #265 reward oracle: seed42 has two standard epic variants,
+   // eight original components + five supply components + two completed forges.
+   expect(forges).toHaveLength(2);expect(supply+value+forges.length*2).toBe(17);expect(readComponentEquivalent(route.final)).toBe(17);
   }
  });
 });

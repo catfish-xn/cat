@@ -2,7 +2,7 @@ import type { ItemProgram } from './m8/item-program';
 import type { Effect as ProgramEffect,StatModifier } from './m8/contracts';
 import { amount,modifier,stat,trigger,selector,enemies,periodic,shield,status,survival,vamp,hp,filter,burn } from './content/item-programs';
 import { G23_ANOMALY_SOURCE } from './content/g2-3-anomaly-source';
-import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 const stack=(m:StatModifier):ProgramEffect=>({...stat(m),stackPolicy:{kind:'add-stacks',cap:10000}});
 const proc=(damageType:'physical'|'magic'|'true',patch:Parameters<typeof amount>[0]):ProgramEffect=>({kind:'damage',damageType,delivery:'equipment-proc',critEligibility:'never',amount:amount(patch)});
 const maxHp=(bps:number):ProgramEffect=>({kind:'change-max-hp',bonusBps:bps,currentHp:'add-max-delta',countsAsHeal:false});

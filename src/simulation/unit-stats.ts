@@ -25,7 +25,7 @@ export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLeve
   };
 }
 
-export function getUnitSellPrice(unit: Unit): number {
+export function getUnitSellPrice<T extends Pick<Unit,'definitionId'|'starLevel'>>(unit: T): number {
   if (!Object.hasOwn(UNIT_DEFINITIONS, unit.definitionId)) throw new RangeError(`Unknown unit definition: ${unit.definitionId}`);
   if (!Object.hasOwn(STAR_PERCENT, unit.starLevel)) throw new RangeError(`Invalid star level: ${unit.starLevel}`);
   if (UNIT_DEFINITIONS[unit.definitionId].unitKind === 'neutral') return 0; // Display-only: sell command rejects enemy identity.

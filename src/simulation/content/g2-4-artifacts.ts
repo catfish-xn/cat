@@ -2,7 +2,7 @@
  * G2-4b extensions). Every number reads G24_ARTIFACT_SOURCE; the eight new-mechanism artifacts land later. */
 import type {Effect,ItemDefinition} from '../strategy-types';
 import type {ItemProgram} from '../m8/item-program';
-import {G24_ARTIFACT_SOURCE} from './g2-4-artifact-source';
+import {G24_ARTIFACT_SOURCE} from './g2-4-artifact-runtime';
 import {always,amount,damage,enemies,filter,mana,modifier,periodic,selector,stat,status,survival,trigger} from './item-programs';
 import {freezeContent} from './freeze';
 type ArtifactId=keyof typeof G24_ARTIFACT_SOURCE;

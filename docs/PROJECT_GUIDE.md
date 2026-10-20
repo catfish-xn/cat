@@ -123,7 +123,8 @@ main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`
 
 - `abilities.ts`：19 英雄历史技能变量和说明；`traits.ts`：5 个启用职业；`items.ts`：7 组件/9 成装；`augments.ts`：6 强化；`anomalies.ts`：3 异常。
 - `source/s13-14.24.json`：固定版本客户端数据的项目归档切片；`source-manifest.ts`：原始来源、hash、补丁覆盖与明确简化的记录。运行和 CI 不在线拉取最新赛季数据。
-- `freeze.ts`：递归冻结内容定义；`index.ts`：内容规范化与 `CONTENT_DIGEST`，覆盖内容、日程、经济和有限战斗语义等。
+- `freeze.ts`：递归冻结内容定义；`index.ts`：内容规范化与 `CONTENT_DIGEST` 公共导出，覆盖内容、日程、经济和有限战斗语义等。`identity-constants.ts` 保存完整内容根与掉落重放根的生成常量；根表达式分别在 `scripts/content-digest.ts`、`scripts/loot-replay-digest.ts`，用 `node scripts/update-content-identities.cjs --check` 校验、`--write` 重算。CI fast 的 `content-identity-constants.test.ts` 从完整表重算并对比常量，失败会提示重算命令。
+- G2-3 special-item/trait 与 G2-4 artifact/support-item 四张归档表：`*-runtime.ts` 只存实际运行列，所有运行入口共用；`*-source.ts` 保存说明来源列并与运行列重组完整表，仅供离线 digest/来源测试。说明列仍在完整 digest 覆盖范围内，不进入浏览器或服务器运行依赖；不依赖生产构建转换。
 - `legacy-items.ts`、`legacy-traits.ts`、`legacy-augments.ts`、`legacy-anomalies.ts`：保留历史内容与测试兼容，不是当前可获取内容。新增内容不能绕过 `validateContent` 和目录隔离。
 
 ### 4.4 显示与交互：只读理解边界

@@ -134,7 +134,8 @@ function prepareConsumedCombatUnit() {
   const scene = makeScene(createMatch(12));
   finish(scene);
   command(scene, scene.session.continue(1));
-  // The real seed-12 shop has Lux in slots 1 and 4. The 1-2 win pays the full 2G.
+  // Independent shop/loot tables pin seed12: Lux in slots 1 and 4, then a 1-3
+  // Lux reward. The 1-2 win pays the full 2G; both copies are actual purchases.
   for (const slot of [1, 4]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
   command(scene, scene.session.deploy('unit-1', { kind: 'bench', slot: 3 }));
   command(scene, scene.session.deploy('unit-3', { kind: 'board', cell: { col: 2, row: 4 } }));

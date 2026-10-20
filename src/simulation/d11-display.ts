@@ -1,3 +1,4 @@
+import { D14_ANOMALIES } from './content/d14-anomalies';
 import { D11_FILL_DEFINITIONS, D11_FILL_TIERS } from './content/d11-fill';
 import type { D11ChoiceId } from './content/d11-fill';
 import type { CombatUnit } from './combat-types';
@@ -7,6 +8,7 @@ import { readG23Progress } from './g2-3-state';
 
 /** Public content labels only; no bank, RNG, future offer or private receipt. */
 export function d11ChoiceDisplay(definitionId:string) {
+  if(Object.hasOwn(D14_ANOMALIES,definitionId)){const d=D14_ANOMALIES[definitionId];return {definitionId,name:d.name,description:d.description};}
   if(!Object.hasOwn(D11_FILL_DEFINITIONS,definitionId))return null;
   const id=definitionId as D11ChoiceId,definition=D11_FILL_DEFINITIONS[id];
   return {definitionId:id,name:definition.name,description:definition.description,

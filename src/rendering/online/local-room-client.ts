@@ -157,7 +157,12 @@ export class LocalRoomClient implements GameClient {
     this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null; this.emittedReplay = null;
     const unsubscribeState = room.subscribe(() => this.queueFlush());
     const unsubscribeLive = room.subscribeLive(battleId => this.pushLive(room, battleId));
-    this.unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); };
+    // After the coalesced flush, so the battle-entry state the refusal was decided on is shown first.
+    const unsubscribeNotices = room.subscribeNotices(notice => {
+      if (notice.seatId !== this.mySeatId) return;
+      queueMicrotask(() => { if (!this.disposed && this.room === room) this.listeners?.notice?.({ kind: 'orb-claim-refused', orbId: notice.orbId, reason: notice.reason }); });
+    });
+    this.unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); };
   }
   private detach(): void {
     this.unsubscribeRoom?.(); this.unsubscribeRoom = null;

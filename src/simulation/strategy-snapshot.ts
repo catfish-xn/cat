@@ -1,3 +1,4 @@
+import { d14UnitBase } from './d14-anomalies/projection';
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
 import { D11_FILL_TIERS, type D11AugmentId } from './content/d11-fill';
@@ -174,7 +175,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
     sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit,traits)));
     if(unit.definitionId==='g23-sion'){
-      const rose=g23SionTeam(state.preparation,unit.team,traits),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
+      const rose=g23SionTeam(state.preparation,unit.team,traits,state.d14Combat?.phase==='promoted'?state.d14Combat.unitId:undefined),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
       const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
       sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
@@ -183,11 +184,14 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
     const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;
     const bonus=anomaly==='freestyling'?Math.round(traits.filter(t=>t.team===unit.team&&t.tier>0&&lookup(catalog.traits,t.traitId).tiers[0].threshold>1).length*450)
-      :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+(x.starLevel===3?800:x.starLevel*100),0)
+      :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+((state.d14Combat?.unitId===x.id&&state.d14Combat.phase==='promoted')?400:x.starLevel===3?800:x.starLevel*100),0)
       :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
     if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
-    let resolved = resolveEffects(base, resolveAbility(base.abilityId, unit.starLevel), sources);
+    const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
+    if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
+    const certified=promoted?d14UnitBase(unit,true):null;
+    let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {
       const maxMana = Math.floor(resolved.stats.maxMana * (10000 - family.values.manaReductionBps) / 10000);
@@ -211,7 +215,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

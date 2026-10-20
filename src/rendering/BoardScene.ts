@@ -271,6 +271,10 @@ export class BoardScene extends Phaser.Scene {
         if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.orbDock?.release(orbId); }
         this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
       },
+      orbClaimRefused: (orbId, reason) => {
+        this.orbDock?.release(orbId);
+        this.setStatus(`法球未能排队 · ${ORB_FAILURE_TEXT[reason] ?? '已放回，可再次点击领取'}`);
+      },
     }, mounts) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;

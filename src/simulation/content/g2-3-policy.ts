@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import { G23_LOOT_SOURCE } from './g2-3-loot-source';
 import { G24_FORGE_POLICY } from './g2-4-forges';
-import { G23_SPECIAL_ITEM_SOURCE } from './g2-3-special-item-source';
+import { G23_SPECIAL_ITEM_SOURCE } from './g2-3-special-item-runtime';
 
 type LootObject = { readonly pointer: string; readonly values: Readonly<Record<string, unknown>> };
 const objects: Readonly<Record<string, LootObject>> = G23_LOOT_SOURCE;
@@ -35,9 +35,10 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
   return {tier:i+1,table,options:Object.entries(objects[table].values).map(([id,weight]) => ({id,weightBps:Math.round((weight as number)*10000),reward:objects[id].values}))};
 }));
 export const G23_POLICY = freezeContent({
-  revision:'g2-4b-multiplayer-orb-claim-v15', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
+  revision:'g2-4b-epic-loot-reforger-v16', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
   // User2026-10-17: retain source identity; only the black-market duplicator requires Chem-Baron.
   duplicators:{
+    TFT_Consumable_NeekosHelp:{name:'英雄复制器',maxCost:null,traitId:null},
     TFT_Consumable_ChampionDuplicator_III:{name:'次级英雄复制器',maxCost:3,traitId:null},
     TFT13_Crime_Consumable_LesserShimmerDuplicator:{name:'次级微光复制器',maxCost:3,traitId:'chem-baron'},
   },

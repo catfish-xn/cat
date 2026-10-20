@@ -8,24 +8,25 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 import { settlement } from './fixtures/m5/oracle.g2.cjs';
 import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { freezeLootThroughRound } from '../src/simulation/loot-freeze';
 
 // Seed 7216: the random opening is Irelia (whose 1-2 fight casts and shields, as seed 6240 did before random openings) and
-// the baseline random 1-2/1-3 rewards are Maddie then Lux, which the opening-hero transcription below spells out.
+// v16's derived bonus stream leaves the v15 1-2/1-3 rewards Maddie then Lux intact.
 function preparation(): MatchState {
   return deployMatchUnit(readyMatch(7216), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
 }
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 // Independent M8B_LOOT §2 opening transcription: no receipt or unit fields copied from the result.
-function openingHeroReceipt(roundId: '1-2' | '1-3') {
+function openingHeroReceipt(roundId: '1-2' | '1-3', definitionId = roundId === '1-2' ? 'maddie' : 'lux') {
   const encounterId = roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1';
   const sourceUnitId = JSON.stringify(['pve', roundId, encounterId, 'm01']);
   const dropId = JSON.stringify([JSON.stringify(['orb', roundId, encounterId, sourceUnitId, 0]), 0]);
   return { receiptId: JSON.stringify([dropId, 'grant']), dropId,
-    payload: { kind: 'unit', definitionId: roundId === '1-2' ? 'maddie' : 'lux', quantity: 1 },
+    payload: { kind: 'unit', definitionId, quantity: 1 },
     grantedItemIds: [], grantedUnitIds: [roundId === '1-2' ? 'unit-2' : 'unit-3'] };
 }
-function expectOpeningHeroSource(session: MatchSession, roundId: '1-2' | '1-3') {
-  const receipt = openingHeroReceipt(roundId), sourceUnitId = JSON.stringify(['pve', roundId, roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1', 'm01']);
+function expectOpeningHeroSource(session: MatchSession, roundId: '1-2' | '1-3', definitionId?: string) {
+  const receipt = openingHeroReceipt(roundId, definitionId), sourceUnitId = JSON.stringify(['pve', roundId, roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1', 'm01']);
   expect(session.state.m8.loot.receipts.filter(r => r.dropId === receipt.dropId)).toEqual([receipt]);
   const deaths = session.combatEvents.filter(event => event.type === 'death' && event.unitId === sourceUnitId);
   expect(deaths).toHaveLength(1);
@@ -50,6 +51,23 @@ function resolveSessionChoices(session: MatchSession): void {
     expect(result.ok).toBe(true);
   }
 }
+
+it.each([7216, 6240])('seed %i opening expectations follow the independent v16 reward cursor', seed => {
+  // Legacy payload stream: hero / hero / component. Bonuses use a derived stream.
+  // Rejection/modulo and literal pool order are transcribed without production RNG.
+  let cursor = BigInt(seed) ^ 0xdeadbeefn;
+  const draw = (size: number) => {
+    const modulus = BigInt(size), limit = 4294967296n / modulus * modulus;
+    do { cursor = (cursor * 1664525n + 1013904223n) % 4294967296n; } while (cursor >= limit);
+    return Number(cursor % modulus);
+  };
+  const draws = [draw(5), draw(5), draw(8)];
+  expect(draws).toEqual([3, 2, 4]);
+  const heroes = ['darius', 'irelia', 'lux', 'maddie', 'zyra'];
+  const ledger = freezeLootThroughRound(seed, getCatalogRoundById('1-3').ordinal);
+  expect(ledger.rounds.flatMap(round => round.encounterPlan.drops).filter(drop => drop.payload.kind === 'unit')
+    .map(drop => 'definitionId' in drop.payload ? drop.payload.definitionId : null)).toEqual([heroes[draws[0]], heroes[draws[1]]]);
+});
 
 describe('match session commands and fixed clock', () => {
   it('locks all preparation commands including F throughout combat and settlement', () => {
@@ -178,21 +196,21 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    const session = new MatchSession(reachRound('1-3',true,6240));
+    const session = new MatchSession(reachRound('1-3',true,6160));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);
     session.deploy(owned[0].id, { kind: 'board', cell: { col: 2, row: 7 } });
     const preparationBefore = session.state, original = structuredClone(preparationBefore), roster = structuredClone(players(session.state));
-    // This route conceded 1-2 and bought unit-2; 1-3 still grants Lux/unit-3 into the freed bench slot 0.
-    const expectedRoster = [...roster, { id: 'unit-3', definitionId: 'lux', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } }];
+    // Seed 6160 really draws Irelia from the unchanged v15 stream (6240 draws Lux).
+    const expectedRoster = [...roster, { id: 'unit-3', definitionId: 'irelia', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } }];
     for (let round = 2; round <= 6; round++) {
       if(session.phase === 'preparation') { expect(session.start().ok).toBe(true); session.advance(60_025); }
       expect(session.state.roundResults.at(-1)?.goldAfter).toBe(session.state.gold);
       expect(session.state.roundResults).toHaveLength(round);
       expect(players(session.state)).toEqual(expectedRoster);
-      expect(session.state.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-3')]);
-      if (round === 2) expectOpeningHeroSource(session, '1-3');
+      expect(session.state.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-3', 'irelia')]);
+      if (round === 2) expectOpeningHeroSource(session, '1-3', 'irelia');
       if (session.phase === 'choice') {
         const pending = session.state, before = structuredClone(pending);
         rejected(session, session.continue(round), 'wrong-phase', pending);expect(pending).toEqual(before);

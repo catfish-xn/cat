@@ -134,7 +134,9 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       expect(aura!.location.kind).toBe('unit');
       if (aura!.location.kind !== 'unit') throw new Error('Expected publicly equipped Ionic Spark');
       if(aura!.location.unitId!=='unit-1')s = accepted(api.sellUnit(s, aura!.location.unitId));
-      if(aura!.location.unitId!=='unit-1'){expect(s.items.find(item => item.id === aura!.id)?.location).toEqual({kind:'inventory'});
+      if(aura!.location.unitId!=='unit-1'){
+        if(s.items.some(i=>i.location.kind==='unit'&&i.location.unitId==='unit-1')){const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover')!;s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:'unit-1'}));}
+        expect(s.items.find(item => item.id === aura!.id)?.location).toEqual({kind:'inventory'});
       s = accepted(api.equipItem(s, aura!.id, 'unit-1', 1));}
       roundTrip(s);
     }

@@ -95,7 +95,7 @@ it('reforging or removing the crown keeps the granted team slot (user rule)',()=
  const removed=accepted(useConsumable(equipped,remover!.consumableId,{kind:'unit',unitId:holder.id}));
  expect(crowns(removed)[0].location).toEqual({kind:'inventory'});expect(getDeploymentCap(removed)).toBe(4);
  expect(remover).toBeTruthy();
- const reforger=equipped.consumables.find(c=>c.definitionId==='completed-reforger');
+ const reforger=equipped.consumables.find(c=>c.definitionId==='reforger');
  expect(useConsumable(equipped,reforger!.consumableId,{kind:'item',itemId:crowns(equipped)[0].id})).toMatchObject({ok:false,reason:'invalid-consumable-target'});
  expect(getDeploymentCap(equipped)).toBe(4);
 });

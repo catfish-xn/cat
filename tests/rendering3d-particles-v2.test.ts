@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdditiveBlending, BoxGeometry, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Vector3 } from 'three';
+import { AdditiveBlending, BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Vector3 } from 'three';
 import { loadParticleEffect, parseParticleDocument, ParticleEffect, type ParticleDocumentV2,
   type ParticleEmitterV2 } from '../src/rendering3d';
 
@@ -320,17 +320,70 @@ describe('v2 lazy resource loading', () => {
       expect(effect.skipped.mesh).toBe(1); expect(effect.skipped.screenDistortion).toBe(1); expect(readTexture).not.toHaveBeenCalled(); effect.dispose();
     } finally { fetchMock.mockRestore(); }
   });
-  it.each(['mesh', 'texture', 'constructor'])('cleans already loaded resources when %s fails', async failure => {
+  it.each(['missing position', 'empty position', 'invalid result', 'rejection', 'throw', 'no reader'])
+  ('skips an unavailable mesh (%s) before textures and shared particle allocation', async failure => {
+    const geometry = new BufferGeometry();
+    if (failure === 'empty position') geometry.setAttribute('position', new Float32BufferAttribute([], 3));
+    const gd = vi.spyOn(geometry, 'dispose');
+    const readMesh = vi.fn((): Promise<BufferGeometry> => {
+      if (failure === 'throw') throw new Error('synthetic-mesh-failed');
+      if (failure === 'rejection') return Promise.reject(new Error('synthetic-mesh-failed'));
+      return Promise.resolve(failure === 'invalid result' ? new Group() as unknown as BufferGeometry : geometry);
+    });
+    const texture = new Texture(), td = vi.spyOn(texture, 'dispose');
+    const readTexture = vi.fn(async (url: string) => {
+      if (url.endsWith('/unused.png')) throw new Error('synthetic-texture-failed');
+      return texture;
+    });
+    const effect = await loadParticleEffect(manifest, 'effect', {
+      root: '/synthetic/', maxParticles: 1,
+      readJson: async () => doc(quad({ kind: 'mesh', mesh: 'unavailable.glb', texture: 'unused.png' }),
+        quad({ texture: 'visible.png', position: [7, 0, 0] })),
+      readTexture, ...(failure === 'no reader' ? {} : { readMesh }),
+    });
+    try {
+      expect(effect.skipped.mesh).toBe(1);
+      expect(effect.skippedReasons).toContainEqual({ emitterIndex: 0, kind: 'mesh', reason: 'mesh-resource-unavailable' });
+      expect(effect.particleCount).toBe(1); expect(effect.droppedParticles).toBe(0);
+      expect(mesh(effect).visible).toBe(true); expect(mesh(effect).position.x).toBe(7);
+      expect(mesh(effect).geometry.getAttribute('position').count).toBeGreaterThan(0);
+      expect(mesh(effect).material.uniforms.map.value).toBe(texture);
+      expect(mesh(effect).material.uniforms.opacity.value).toBe(1);
+      expect(readTexture).toHaveBeenCalledExactlyOnceWith('/synthetic/visible.png');
+      effect.update(0.5); expect(effect.particleCount).toBe(1); expect(mesh(effect).visible).toBe(true);
+    } finally { effect.dispose(); effect.dispose(); }
+    expect(td).toHaveBeenCalledTimes(1);
+    expect(gd).toHaveBeenCalledTimes(['missing position', 'empty position'].includes(failure) ? 1 : 0);
+    if (!['missing position', 'empty position'].includes(failure)) geometry.dispose();
+  });
+  it('deduplicates failed mesh reads but counts every skipped emitter and preserves valid meshes', async () => {
+    const geometry = new BoxGeometry(), gd = vi.spyOn(geometry, 'dispose');
+    const readMesh = vi.fn(async (url: string) => {
+      if (url.endsWith('/unavailable.glb')) throw new Error('synthetic-mesh-failed');
+      return geometry;
+    });
+    const effect = await loadParticleEffect(manifest, 'effect', { maxParticles: 1, readMesh,
+      readJson: async () => doc(quad({ kind: 'mesh', mesh: 'unavailable.glb' }),
+        quad({ kind: 'mesh', mesh: 'unavailable.glb' }), quad({ kind: 'mesh', mesh: 'valid.glb' })),
+    });
+    try {
+      expect(readMesh).toHaveBeenCalledTimes(2); expect(effect.skipped.mesh).toBe(2);
+      expect(effect.particleCount).toBe(1); expect(effect.droppedParticles).toBe(0);
+      expect(mesh(effect).geometry).toBe(geometry);
+    } finally { effect.dispose(); }
+    expect(gd).toHaveBeenCalledTimes(1);
+  });
+  it.each(['texture', 'constructor'])('cleans already loaded resources when %s fails', async failure => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(doc(
       quad({ kind: 'mesh', mesh: 'a.glb', texture: 'a.png', size0: { min: 1, max: 2 } }), quad({ kind: 'mesh', mesh: 'b.glb', texture: 'b.png' }))));
     const geometry = new BoxGeometry(), texture = new Texture(), gd = vi.spyOn(geometry, 'dispose'), td = vi.spyOn(texture, 'dispose');
     const readMesh = vi.fn().mockResolvedValueOnce(geometry);
-    if (failure === 'mesh') readMesh.mockRejectedValueOnce(new Error('failed')); else readMesh.mockResolvedValueOnce(geometry);
+    readMesh.mockResolvedValueOnce(geometry);
     const readTexture = vi.fn().mockResolvedValueOnce(texture);
     if (failure === 'texture') readTexture.mockRejectedValueOnce(new Error('failed')); else readTexture.mockResolvedValueOnce(texture);
     try {
       await expect(loadParticleEffect(manifest, 'effect', { readMesh, readTexture, ...(failure === 'constructor' ? { random: () => NaN } : {}) })).rejects.toThrow();
-      expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(failure === 'mesh' ? 0 : 1);
+      expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(1);
     } finally { fetchMock.mockRestore(); }
   });
   it('rejects the whole v2 document before loading valid earlier resources', async () => {

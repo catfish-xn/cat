@@ -1,0 +1,41 @@
+{
+  "source": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
+  "sha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+  "pointer": "{cf1ee294}",
+  "name": "TFT13_GoopBuff_UltimateHero",
+  "fields": [
+    "name",
+    "{900aff58}",
+    "effectAmounts",
+    "{4e874e78}",
+    "ExcludedAugments",
+    "__type"
+  ],
+  "tooltip": {
+    "name": "TFT13_GoopBuff_UltimateHero_Tooltip",
+    "TitleTra": "TFT13_GoopBuff_UltimateHero_Title",
+    "SubtitleTra": "TFT13_GoopBuff_Categories_Utility",
+    "DescriptionTra": "TFT13_GoopBuff_UltimateHero_Description",
+    "__type": "TftTooltipData"
+  },
+  "effectAmounts": [
+    {
+      "name": "NumRounds",
+      "value": 3,
+      "__type": "TftEffectAmount"
+    }
+  ],
+  "executionReferences": [
+    {
+      "pointer": "{44055224}",
+      "resolvedInArchive": false
+    },
+    {
+      "pointer": "{7fa976fb}",
+      "resolvedInArchive": false
+    }
+  ],
+  "originalOpponentVisibility": "unknown",
+  "reason": "The retained metadata archive lacks the referenced execution records and client/network star-display replication data. Rank-4 ability values and upgrade description do not establish scouting visibility.",
+  "currentProjection": "Keep publicBoard.starLevel physical 3; no inferred effectiveStarLevel. This is a conservative project fallback, not a claim that the original client hides rank 4."
+}

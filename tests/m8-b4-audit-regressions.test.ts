@@ -68,7 +68,7 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
     // Random belt/vest + 2-4 belt make Warmog; 3-4 bow makes Titan;
     // the actual 2-7 rod and 3-7 sword make Gunblade. No obsolete 4-7 choice.
     let s = await configuredPrefix('5-1', {seed:42,build:'sniper',
-      supplyChoices:['belt','bow','belt'],reservedComponents:['belt','bow','vest','sword','rod'],
+      supplyChoices:['belt','bow','rod'],reservedComponents:['belt','bow','vest','sword','rod'],
       fieldCopies:['irelia'],equipmentTargets:{
         'titans-resolve':{definitionId:'irelia'},warmog:{definitionId:'irelia'},gunblade:{definitionId:'irelia'},
       }});

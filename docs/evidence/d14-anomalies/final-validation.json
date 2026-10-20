@@ -1,0 +1,39 @@
+{
+  "baseline": "a0d42c592cbd48fb075175e5f61818dabfe1b320",
+  "scope": "D14 independent API plus D3 and anomaly regressions; no production restoreMatch test",
+  "commands": [
+    {
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "tests/d14-anomalies.test.ts",
+        "tests/d14-anomalies-source.test.ts",
+        "tests/s13-mech-ownership.test.ts",
+        "tests/g2-3-anomalies.test.ts"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 3.711
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 12.286
+    }
+  ],
+  "tests": {
+    "files": 4,
+    "passed": 120,
+    "failed": 0,
+    "newD14": 46,
+    "existingRegressions": 74,
+    "vitestSeconds": 3.2
+  },
+  "observedTargetAfterValidation": "79bdfdc2ca34c6de86081baa3054eb085757343a",
+  "targetAdvance": "PR229 heartbeat only; no simulation/ownership/content changes; work branch retains original fetched baseline to avoid unrelated UI/server changes or history rewriting",
+  "productionRestoreMatch": "not integrated or tested"
+}

@@ -354,7 +354,15 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     };
     const unsubscribeState = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
     const unsubscribeLive = opened.subscribeLive(battleId => queue.push(() => pushLive(opened, battleId)));
-    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); };
+    const unsubscribeNotices = opened.subscribeNotices(notice => {
+      log('warn', 'orb.claim-refused', { roomId, seatId: notice.seatId, round: notice.round, orbId: notice.orbId, reason: notice.reason });
+      // Queued like a publication, so it leaves after the battle-entry state the refusal was decided on.
+      queue.push(() => {
+        for (const conn of connections.values()) if (conn.session?.seatId === notice.seatId && conn.session.roomId === roomId)
+          send(conn, { type: 'notice', roomId, round: notice.round, notice: { kind: 'orb-claim-refused', orbId: notice.orbId, reason: notice.reason } });
+      });
+    });
+    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); };
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;

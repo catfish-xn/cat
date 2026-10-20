@@ -4,6 +4,6 @@ it('keeps the wired solo Avarice and defers online offers until the server sampl
  expect(Object.hasOwn(ANOMALY_DEFINITIONS,'avarice-incarnate')).toBe(true);
  expect(anomalyCandidates(false)).toContain('avarice-incarnate');
  expect(anomalyCandidates(true)).not.toContain('avarice-incarnate');
- expect(anomalyCandidates(false)).toHaveLength(54);
- expect(anomalyCandidates(true)).toHaveLength(53);
+ expect(anomalyCandidates(false)).toHaveLength(56);
+ expect(anomalyCandidates(true)).toHaveLength(55);
 });

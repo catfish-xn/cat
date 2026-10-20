@@ -1,0 +1,36 @@
+{
+  "beforeRefreshSha256": "e6c0921fbaf4468f5c6d1f1d65f2958fa712363e9d270f524aad4617ce24619e",
+  "b13373c6Sha256": "789593e8da839524def95d7d94f0bf04fb333c4a724a5149e006dbfbb5638001",
+  "currentSha256": "4a25dc59a1dd061a872b376a627dc4a68e8b7a95bd0857b53a4d76ef91b5962a",
+  "b13373c6ChangedFields": [
+    "sourceSha256",
+    "sources"
+  ],
+  "b13373c6ChangedSources": [
+    "src/simulation/d14-anomalies/projection.ts",
+    "src/simulation/d14-runtime.ts",
+    "src/simulation/private-seat-view.ts"
+  ],
+  "currentChangedSources": [
+    "src/simulation/ability-display.ts"
+  ],
+  "rawCasesAndTrajectoryByteIdentical": true,
+  "checkpoints": {
+    "cannon": {
+      "decompressedBytesEqual": true,
+      "oldGzipSha256": "5dccb6977218723e2ba757bea438af8c8f063cdfe72f23e40a68c181699ee568",
+      "currentGzipSha256": "37cddb99853a6618fd6a489bbfb8ea726451e63f775aaf942369c28459692576",
+      "changedGzipByteOffsets": [
+        9
+      ]
+    },
+    "sniper": {
+      "decompressedBytesEqual": true,
+      "oldGzipSha256": "05dd473939b0116bd559e7db36d34bce1b3d6c81ed876481ed1d5759380f7403",
+      "currentGzipSha256": "12bf3dfa91af04725213ec57953274314c980e12f419e3f7711227ab18cd55cd",
+      "changedGzipByteOffsets": [
+        9
+      ]
+    }
+  }
+}

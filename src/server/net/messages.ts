@@ -108,6 +108,8 @@ export type ReceiptMessage =
 /** Connection-level errors; `commandId` is set when the offending message had a usable one. */
 export type ErrorCode = 'invalid-json' | 'invalid-message' | 'unsupported-protocol' | 'message-too-large' | 'rate-limited' | 'session-superseded' | 'server-closing';
 
+export type SeatNotice = { readonly kind: 'orb-claim-refused'; readonly orbId: string; readonly reason: ReceiptFailure };
+
 export type ServerMessage =
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
@@ -135,6 +137,12 @@ export type ServerMessage =
    * view with `terminal`, and keeps playing from where it is. Only ever for the battle of the last `replay` it was sent.
    */
   | { readonly type: 'replay-tail'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] }
+  /**
+   * v15: something about my seat that no state push says. Only `orb-claim-refused`: an orb claim made while the round was
+   * frozen got an ok receipt (it was held), then the rules refused it at battle entry; the orb is still unclaimed. Clients
+   * that do not know the type ignore it (no version bump, like `heartbeat`).
+   */
+  | { readonly type: 'notice'; readonly roomId: string; readonly round: number; readonly notice: SeatNotice }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null }
   /**

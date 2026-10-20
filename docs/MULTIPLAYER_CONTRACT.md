@@ -1867,3 +1867,13 @@ readonly statuses?: readonly CombatViewStatus[];
 `initial.units`、`keyframe.units`、`terminal.units` 和 `unitEntered.unit` 提供完整数组。tick 末现有单位字段差量比较在数组变化时发送 `unitUpdated{unitId,changes:{statuses:[...]}}`，与其他 changes 可同包；最后一项消失必须发送 `statuses:[]`。客户端整体替换数组；`statusChanged` 仅供动画事实，不用于推算图标。`applyCombatReplayTick` 的既有合并逻辑已覆盖该字段，重连用关键帧加后续 unitUpdated 即可恢复；镜像只翻格子/阵营，statuses 不变。
 
 netProtocol 目标仍为 **4**，与本分支 claimOrb 共用一次升级，不增加到 5；不改 rules/content、save/replay 版本或 digest。本轮禁改 `src/server/`，其当前网络常量仍为 3，由 Claude 在 v15 统一接线至 4，不能据此称已联机上线。视图字节/回放指纹的变化和本轮测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
+
+## v16：史诗奖励与统一消耗品（2026-10-20）
+
+本节覆盖 §18 中旧 component-reforger/completed-reforger 身份、装备单件目标和5-7/6-7旧宝珠表。公共签名与失败全集见 [MATCH_CONTRACT v16](MATCH_CONTRACT.md#v16史诗奖励复制器统一重铸器2026-10-20)，完整冻结/RNG合同见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)。本轮不修改 src/server/；服务器继续调用已有共享池命令，不自行选择英雄、抽重铸、生成装备或算折金。
+
+runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult 签名不变；useConsumable分支仍为 {type:'useConsumable',consumableId:string,target:ConsumableTarget}。四种工具均目标己方单位；成功effect=remove-all/reforge-all/duplicate-unit；新增失败bench-full。失败返回原池原状态且无事件，预览不改变任何游标。客户端显示名取CONSUMABLE_DEFINITIONS，不能按旧三个枚举硬编码。
+
+共享房间布局仅冻结载体与早期颜色，5-7/6-7为epic-reward占位；每席显式loot种子扩展为3或4颗冻结法球，顺序为成装锻造器/可选神器锻造器/铜箱/银箱，冠冕变体为冠冕/银箱/银箱。只有载体死亡才揭示，隐藏计划不投影。铜箱gray、银箱blue，锻造器/冠冕gold；一组一颗，箱内多条entry保持冻结顺序。两席共享早期颜色不共享箱内内容或随机游标。
+
+联机沿用claimOrb，不在揭示或结算时直接发英雄。铜/银箱对应费用的已上线英雄池独立抽1星，银箱双英雄独立可重复，不直接产2星。缺货折费用金币，满席折getUnitSellPrice；金币/工具/锻造器领取收据与英雄收据同一事务。锻造器领取后进入既有四选一forge，selectChoice成功才有装备出生；重连和重试复用唯一收据。复制器使用时先检查真实备战席空位，成功后创建机制英雄法球，领取时才扣共享池。旧版本存档和快照被v16严格拒绝，不迁移；schema7/save3/replay3/command4、netProtocol目标4不再递增。
