@@ -39,6 +39,17 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
+import { augmentOptionViews } from '../simulation/augment-offers';
+
+/**
+ * v15 per-card reroll buttons: online the seat view carries the rules' `augmentOptions` as given; offline they are the same
+ * rules function on the local MatchState. A view without them shows no buttons rather than guessing.
+ */
+function augmentRerollOptions(state: MatchState): readonly { readonly optionIndex: number; readonly rerollAvailable: boolean }[] {
+  const projected = (state.pendingChoice as { readonly augmentOptions?: readonly { readonly optionIndex: number; readonly rerollAvailable: boolean }[] } | null)?.augmentOptions;
+  if (projected) return projected;
+  return Array.isArray(state.removedAugmentIds) ? augmentOptionViews(state) : [];
+}
 import { genericOffer, isKnownChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
@@ -85,8 +96,8 @@ interface PanelActions {
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
-  /** Augment offers: free whole-set reroll that keeps the tier (rules rerollAugment); optional so panels without it hide the button. */
-  readonly rerollAugment?: (choice: string, generation: number) => void;
+  /** Augment offers: free per-card reroll that keeps the tier (rules rerollAugment, v15); optional so panels without it hide the buttons. */
+  readonly rerollAugment?: (choice: string, generation: number, optionIndex: number) => void;
   /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
   readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
@@ -896,10 +907,13 @@ export class StrategyPanel {
         card.append(row);
       }
       const rerollAugment = this.actions.rerollAugment;
-      // Rules expose the remaining free rerolls on the offer; the button only forwards, the rules check count and generation again.
-      if (choice.kind === 'augment' && rerollAugment && choice.rerollsRemaining !== undefined) {
-        card.append(this.button('augment-reroll', `刷新强化 · 同一等级（剩余 ${choice.rerollsRemaining} 次）`,
-          () => rerollAugment(choice.choiceId, choice.generation), choice.rerollsRemaining < 1));
+      // v15: one free reroll per card, same tier; each button reads the rules' own `rerollAvailable` and only forwards its index.
+      if (choice.kind === 'augment' && rerollAugment) {
+        const options = augmentRerollOptions(state);
+        const row = element('div', '', 'choice-extras');
+        options.forEach(option => row.append(this.button(`augment-reroll:${option.optionIndex}`, `刷新第 ${option.optionIndex + 1} 张 · 同一等级`,
+          () => rerollAugment(choice.choiceId, choice.generation, option.optionIndex), !option.rerollAvailable)));
+        if (options.length) card.append(row);
       }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }

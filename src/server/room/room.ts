@@ -9,14 +9,14 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAugment, rerollAnomaly, selectAnomalyTarget,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
@@ -112,10 +112,12 @@ const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', '
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
+/** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
+const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
-  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]),
+  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -147,7 +149,10 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
-    case 'rerollAugment': return plain(rerollAugment(state, command.choiceId, command.generation));
+    // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
+    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex });
+    // v15: forwarded as is; the rules claim at once or queue it during the battle (settled with the round), and refuse the rest.
+    case 'claimOrb': return runSharedMatchCommand(pool, state, { type: 'claimOrb', round: command.round, orbId: command.orbId });
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
     // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
     case 'useConsumable': return useSeatConsumable(pool, state, command);
@@ -316,6 +321,27 @@ export class Room {
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
     if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
     return this.apply(seat, command);
+  }
+
+  /**
+   * v15 (MULTIPLAYER_CONTRACT, bot preparation entry): a bot-controlled seat claims every unclaimed orb through the rules'
+   * `claimBotPreparationOrbs` (orbId order, rewards a claim unlocks included, no bot RNG), as one seat transaction before
+   * its policy steps. Same control check as handleBot; only in the room's preparation with the seat itself preparing.
+   * Nothing to claim, or a refusal, publishes nothing (a refusal returns the rules' reason, the seat stays as it was).
+   */
+  claimBotOrbs(seatId: string, controlEpoch: number): RoomCommandResult {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
+    if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
+    if (this.disposed || this.current.phase !== 'preparation' || seat.match.phase !== 'preparation') return { ok: false, reason: 'wrong-phase', state: seat.match };
+    const claimed = claimBotPreparationOrbs(this.current.pool, seat.match);
+    if (!claimed.ok) return { ok: false, reason: claimed.reason, state: seat.match };
+    if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+    const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
+    const seatRevision = seat.seatRevision + 1;
+    this.commitSeat(seatId, result.state, result.pool);
+    return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
 
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {

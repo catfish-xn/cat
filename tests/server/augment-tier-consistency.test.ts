@@ -26,15 +26,21 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
     for (const seat of room.state.seats) {
       const c = seat.match.pendingChoice!;
       expect(c.offers.every(id => AUGMENT_TIERS[id] === tier)).toBe(true);
-      expect(c.rerollsRemaining).toBe(1);
-      const command = validateClientCommand({type:'rerollAugment',choiceId:c.choiceId,generation:0});
+      // v15: each of the three cards has its own free reroll; only the card named by optionIndex changes.
+      expect(c.rerollsRemaining).toBe(3);
+      expect(toSeatPrivateView(seat.match).pendingChoice?.augmentOptions?.map(o => o.rerollAvailable)).toEqual([true, true, true]);
+      const command = validateClientCommand({type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:1});
       const rerolled = room.handle(seat.seatId,command);
       expect(rerolled.ok).toBe(true); if (!rerolled.ok) throw new Error(rerolled.reason);
       const next = rerolled.state.pendingChoice!;
-      expect(next.offers.every(id => !c.offers.includes(id) && AUGMENT_TIERS[id] === tier)).toBe(true);
-      expect(toSeatPrivateView(rerolled.state).pendingChoice).toMatchObject({augmentTier:tier,rerollsRemaining:0,generation:1});
+      expect([next.offers[0], next.offers[2]]).toEqual([c.offers[0], c.offers[2]]);
+      expect(c.offers.includes(next.offers[1]!)).toBe(false);
+      expect(AUGMENT_TIERS[next.offers[1]!]).toBe(tier);
+      const view = toSeatPrivateView(rerolled.state).pendingChoice;
+      expect(view).toMatchObject({augmentTier:tier,rerollsRemaining:2,generation:1});
+      expect(view?.augmentOptions?.map(o => o.rerollAvailable)).toEqual([true, false, true]);
       const before = room.state;
-      expect(room.handle(seat.seatId,{type:'rerollAugment',choiceId:c.choiceId,generation:1}))
+      expect(room.handle(seat.seatId,{type:'rerollAugment',choiceId:c.choiceId,generation:1,optionIndex:1}))
         .toMatchObject({ok:false,reason:'augment-rerolls-exhausted'});
       expect(room.state).toBe(before);
     }
@@ -42,10 +48,12 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
   room.dispose();
 });
 
-it('reroll wire validation refuses unknown fields, negative and non-integer generations', () => {
-  const command = {type:'rerollAugment',choiceId:'round:2-1:augment',generation:0};
+it('reroll wire validation refuses unknown fields, a missing card index, negative and non-integer generations', () => {
+  const command = {type:'rerollAugment',choiceId:'round:2-1:augment',generation:0,optionIndex:2};
   expect(validateClientCommand(command)).toEqual(command);
-  for (const value of [{...command,tier:'gold'},{...command,generation:-1},{...command,generation:0.5},{...command,choiceId:''}])
+  const {optionIndex: _index, ...whole} = command;
+  for (const value of [whole,{...command,tier:'gold'},{...command,generation:-1},{...command,generation:0.5},{...command,choiceId:''},
+    {...command,optionIndex:-1},{...command,optionIndex:0.5},{...command,optionIndex:'1'}])
     expect(() => validateClientCommand(value)).toThrow();
   const {room} = makeRoom(); const before = room.state;
   expect(room.handle('s0',command as Parameters<typeof room.handle>[1])).toMatchObject({ok:false,reason:'wrong-phase'});
