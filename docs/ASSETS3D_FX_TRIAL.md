@@ -42,7 +42,7 @@ node scripts/assets3d/fx-trial.mjs --particle-mode strict --out assets3d-local/f
 | isUniformScale=1 | birthScale0 的 X 分量用于 XYZ 等比尺寸。v2 标量 scale0 曲线统一取 abs(X)，逐项标记。 |
 | 系统 4×4 transform | 行主序、行向量、最后一行平移；X 反射共轭后存为 v2 localTransform。形状/位置/速度/加速度先在局部求值，再作用仿射矩阵；面片/mesh 的朝向、缩放和 shear 由线性部分作用。非仿射/非有限矩阵拒绝。 |
 | CameraTrail / ArbitraryTrail | 现有 v2 trail，宽取 mTrail.mBirthTilingSize.X（缺省 1）；birthScale 归 1；尾寿命 0.3 秒、32 段、stretch UV；不复刻模式、平滑和采样限制。需宿主/弹道移动才产生长度。 |
-| constantValue + dynamics | **尺寸例外**：birthScale0 / scale0 的 dynamics 是该字段的值曲线，覆盖回退 constantValue，不再乘常量；birthScale0 取首 key，scale0 保留整条曲线。其他字段仍沿用逐分量常量 × 曲线的既有预览约定。 |
+| constantValue + dynamics | 所有字段统一：有 dynamics 曲线就用曲线（概率表因子只乘一次），覆盖回退 constantValue，不再乘常量；没有曲线才用 constantValue。出生类字段取首 key，color / scale0 保留整条曲线。约定名 `dynamics-replace-fallback-constant`。 |
 | probabilityTables | 每通道 keyValues 的算术均值当确定性乘数；空表=1；不声称保留随机分布。 |
 | IntegratedValue | 取其 Value 数据，省略源积分层；世界加速度仍由 v2 解析积分；birthAcceleration 常量加到 gravity。 |
 | 曲线时间越界 | clamp 到 [0,1]，同时间最后 key 胜出；其他无效曲线继续由 v2 拒绝。 |
@@ -321,7 +321,7 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 - 根因在 approximate adapter：`birthScale0.constantValue=[45,45,50]` 与 `dynamics.values=[[45,45,50]]` 被相乘为 `[2025,2025,2500]`；Vi 的 350 与约 350 变成约 122500。`scale0` 也可能重复存终值（例如 3 与从 3 到 2.4 的曲线），旧逻辑又乘一次 3。
 - 近似尺寸约定：有 dynamics 时用其 values，无 dynamics 时用 constantValue；概率表均值仅乘曲线一次。出生尺寸取首 key；`scale0` 是相对出生尺寸的无量纲生命周期倍率，v2 写为 `size`。最终局部 `mesh.scale = size0 × sampleCurve(size, age/lifetime)`。不按曲线终值归一化，不作百分数除以 100，不加经验限幅。
 - `isUniformScale=1` 继续把出生 X 扩到 XYZ；v2 的标量 size 曲线仍取 abs(X)，各向异性曲线的视觉近似限制不变。系统 transform 的线性部分只在 mesh.matrix 中应用一次；宿主缩放在父对象上另行应用，不折进 size0。Jinx muzzle 的 transform 三轴长度约为 1，其余三个系统没有 transform，均不是本次数量级膨胀来源。
-- 只修改近似转换器；严格模式、v1/v2 schema 和解释器均未修改。颜色、速度、寿命等非尺寸字段继续使用既有约定，不扩大本次范围。
+- 只修改近似转换器；严格模式、v1/v2 schema 和解释器均未修改。复审后（#274）颜色、速度、寿命、发射率等非尺寸字段也改为同一规则：有曲线用曲线，没有曲线才用常量。
 
 同一源 sidecar，以 HEAD 转换器与修后转换器分别转换、运行真实解释器；`scale=1`，`update(0.1)`，下表选择出生于 t=0 的具名粒子，比较局部 `mesh.scale.x`（不含父级/棋盘缩放）。mesh 类型用单位面片提供资源，几何不参与 mesh.scale 计算；实际 GLB 资源另经 verify-fx-trial 验证。
 
