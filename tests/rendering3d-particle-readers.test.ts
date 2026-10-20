@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Texture } from 'three';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, SkinnedMesh, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadParticleEffect, readParticleMesh } from '../src/rendering3d';
 
@@ -66,5 +66,26 @@ describe('particle cached readers', () => {
     const dispose = vi.spyOn(source.geometry, 'dispose');
     await expect(readParticleMesh('/synthetic/sample.glb', async () => source)).rejects.toThrow('particle-mesh-requires-single-static-mesh');
     expect(dispose).toHaveBeenCalledTimes(1);
+  });
+  it.each(['multiple meshes', 'skinned mesh', 'no mesh'])('isolates adapter rejection for %s from the remaining effect', async kind => {
+    const source = model();
+    if (kind === 'multiple meshes') source.scene.add(new Mesh(source.geometry, source.material));
+    if (kind === 'skinned mesh') {
+      source.scene.clear(); source.scene.add(new SkinnedMesh(source.geometry, source.material));
+    }
+    if (kind === 'no mesh') {
+      source.scene.clear(); source.geometry.dispose(); source.material.dispose();
+    }
+    const readTexture = vi.fn(async () => { throw new Error('synthetic-unused-texture'); });
+    const effect = await loadParticleEffect(manifest, 'sample', { maxParticles: 1,
+      readJson: async () => ({ ...document, emitters: [...document.emitters,
+        { kind: 'quad', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
+      readMesh: url => readParticleMesh(url, async () => source), readTexture,
+    });
+    try {
+      expect(effect.skipped.mesh).toBe(1); expect(effect.particleCount).toBe(1);
+      expect(effect.object.children[0].visible).toBe(true); expect(effect.droppedParticles).toBe(0);
+      expect(readTexture).not.toHaveBeenCalled();
+    } finally { effect.dispose(); }
   });
 });
