@@ -119,7 +119,7 @@ try {
    index: Number(box.dataset.emitterIndex), src: box.querySelector('img').src,
   })) : [];
   return { id, emitters: doc.emitters.length, errors, viewCells, fixedTime, maxDuration, overviewTime, bounds, reviewTiles };
- }, { base: '/' + resolve(root).split(/[\/]/).at(-2) + '/' + resolve(root).split(/[\/]/).at(-1), effect, samples, viewCells, fixedTime, fixedRays });
+ }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples, viewCells, fixedTime, fixedRays });
  await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'browser-review-' + result.id + '.png'), { force: true }), fullPage: true });
  const { reviewTiles, ...report } = result;
  contactTiles.push(...reviewTiles.map(tile => ({ ...tile, effect: result.id })));
