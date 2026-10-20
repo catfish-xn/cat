@@ -26,7 +26,16 @@ export interface BoardFrame {
   readonly fighting: boolean;
   /** The unit BoardScene is dragging (either input), or null; the 3D layer drops its own drag once this clears. */
   readonly dragging: string | null;
+  /** v15 (online): my unclaimed orbs as the private view lists them (oldest first); empty offline. Where they sit is the layer's own layout. */
+  readonly orbs?: readonly BoardOrb[];
+  /** How many of my orb claim receipts granted something (not forfeited); an orb that leaves `orbs` as this grows was opened. */
+  readonly orbsGranted?: number;
+  /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
+  readonly hit?: BoardHit | null;
 }
+export interface BoardOrb { readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean }
+/** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
+export interface BoardHit { readonly key: string; readonly damage: number }
 export interface BoardDropHint {
   /** Where the dragged unit would land, as BoardScene's own hit test reads the point; undefined over nothing. */
   readonly target?: { readonly kind: 'board'; readonly x: number; readonly y: number } | { readonly kind: 'bench'; readonly x: number; readonly y: number };
@@ -45,6 +54,8 @@ export interface BoardControls {
   dragMove(point: { x: number; y: number }): BoardDropHint;
   dragEnd(point: { x: number; y: number } | null, client: { x: number; y: number }): void;
   dragCancel(): void;
+  /** v15: the same as clicking that orb on the 2D orb dock (the dock decides whether it can be claimed now). */
+  claimOrb?(orbId: string): void;
 }
 export interface BoardFeedListener {
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;

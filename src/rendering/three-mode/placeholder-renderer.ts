@@ -22,6 +22,7 @@ import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
+import { LEGEND_MODEL, createTabletop } from './tabletop';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
@@ -204,6 +205,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, emissive: TEAM_COLOR.enemy, emissiveIntensity: 0.4 })),
   };
 
+  // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
+    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
+    loadEffect: models.cache && options.assetBase && models.cache.manifest.effects ? (id, maxDuration) => {
+      if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
+      return loadParticleEffect(models.cache!.manifest, id, { root: options.assetBase!, scale: 1, maxDuration, readTexture: models.reader!.readTexture,
+        readJson: models.reader!.readJson, readMesh: url => readParticleMesh(url, models.reader!.readModel) });
+    } : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -238,6 +247,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       boardGroup.add(mesh);
     }
     boardBox.setFromObject(boardGroup);
+    for (const point of tabletop.layout(frame)) boardBox.expandByPoint(point);
     frameCamera();
   };
 
@@ -421,6 +431,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
+    tabletop.frame(frame);
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
@@ -495,6 +506,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0 || press) return;
+    // My orb: the orb dock's own click (it decides whether the rules can be asked now).
+    const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
+    if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
     const id = unitAt(event);
     if (!id) return;
     press = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
@@ -507,7 +521,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (press) return;
       const id = unitAt(event);
       controls?.hover(id);
-      canvas.style.cursor = id ? 'grab' : '';
+      canvas.style.cursor = id ? 'grab' : tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport()) ? 'pointer' : '';
       return;
     }
     // A mouse that moves with no button held lost its release (synthetic input, a missed pointerup): end the press as a
@@ -573,6 +587,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
     }
     updateEffects(seconds);
+    tabletop.update(seconds);
     if (width > 0) renderer.render(scene, camera);
   };
   resize(host.clientWidth, host.clientHeight);
@@ -580,7 +595,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -590,7 +605,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects();
+      clearEffects(); tabletop.dispose();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
