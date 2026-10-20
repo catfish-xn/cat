@@ -67,7 +67,8 @@ export class BattleOutcome {
         { transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${dy * 0.5 + lift}px)) scale(1)`, opacity: 1, offset: 0.5 },
         { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.7)`, opacity: 1 },
       ], { duration: BOLT_MS, delay, easing: 'cubic-bezier(.4, 0, .7, 1)', fill: 'both' });
-      flight.onfinish = land; flight.oncancel = () => bolt.remove();
+      // A cancelled flight still ends the hit, or `onDone` (the placement card, the next hit) would never run.
+      flight.onfinish = land; flight.oncancel = () => { bolt.remove(); this.bolts = this.bolts.filter(node => node !== bolt); if (last) onDone?.(); };
     }
   }
   /** Total time of a hit with `count` bolts, so a follow-up (the placement card) can wait for the last impact. */

@@ -68,7 +68,7 @@ export class PlayersSidebar {
     this.tick();
   }
   private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
-    // A human whose connection dropped (B6 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
+    // A human whose connection dropped (server `connected`, kept fresh by the #229 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
     const offline = seat.kind === 'human' && !seat.connected;
     const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`);
     row.dataset.debug = `online:seat:${seat.seatId}`;
