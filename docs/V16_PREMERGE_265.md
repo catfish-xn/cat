@@ -1,4 +1,61 @@
-# #265 v16 CI 红项修复（2026-10-20，起点 c0ef8ddd）
+# #265 v16 剩余八个 CI 规则文件（2026-10-20，起点 729e6fab）
+
+本轮起点：`codex/epic-loot-reforger@729e6fabf696d01f428996f67438ab2ba2271416`，工作区干净。只读 Git、全程离线、不安装依赖、不写 `.git`，不修改 `src/server/`、`src/rendering/`、`tests/server/`。本轮仅修复测试及公共测试夹具；以下是当前结果，后文均为历史记录。
+
+## 八个文件的复现、分类与修复
+
+首次按原时限运行八个完整文件：**84 项，72 通过、12 失败**；均为功能断言/夹具命令失败，未出现纯计时失败。修复后同样八个文件 **84/84 通过**，未增加时限、删除测试或降低断言。
+
+| 文件 | 首次失败数 | 结论、根因与改动 |
+| --- | ---: | --- |
+| `m8-b4-integration` | 1 | 测试夹具实现错误。`m8-b4-match` 被换成共享追加流时代的 seed721851，`unit-3` 不再是开局掉落的 Lux，HoJ 充能得到 0。恢复指定 v15 基线的 seed3151248 和原强化优先级；保留 360×130%=468、低血量采样、真实充能保存及逐 tick 恢复断言。 |
+| `r3r4-consumables` | 1 | 测试夹具实现错误。seed72 的原奖励没有窃贼手套；恢复基线 seed162，其真实 2-7 掉落手套及重铸器。两份独立 oracle 与公开命令确认来源；保留拆卸/重戴不重抽、重铸清子件、冻结战斗和逐 tick 恢复。 |
+| `t12-offline-transfer` | 1 | 测试引用过期。共享 `transferPreparation` 已使用 seed18619，仍把旧 `unit-13` 当供体，拆卸返回 `no-removable-items`。按同路线已有 `m8-b8-live-transfer` 的精确来源断言，固定供体 `unit-20`、存活者 `unit-24`；继续验证真实奖励升星、冻结供体护甲溢出返还及伪造保存拒绝。 |
+| `m8-b8-equipment-fixture` | 3 | 测试夹具及期望曾迎合共享流偏移而改错。完整恢复指定 v15 文件字节（含原时限），并恢复其依赖的 seed3151248、双饮血剑 seed76672。原 cloak/rod/gloves、bow/sword、Maddie 二星、HoJ 2-5、双饮血剑 3-5、原物品 ID/来源/合成事件全部精确通过；没有把新原奖励写成预期。 |
+| `m8-b3-audit` | 1 | 同一公共夹具错误导致开局单位 ID 缺失，部署被拒；通过修复 `m8-b4-match` 恢复。测试文件无需修改，保留 763 最大生命、tick39→40 实际治疗19、完整事件与归档恢复检查。 |
+| `m8-b5-grant-upgrade` | 2 | 公共采购夹具实现错误。此前用 seed16/3 替换基线 seed38/9，丢失原有资金与供给时点，九张付费卡采购前已进入异常窗口或终局。恢复基线选种与组件顺序，保留显式种子；测试文件无需修改，仍验证九次付费采购、递归三星、TG 子件不重抽、唯一/独占/满槽冲突返还及伪造来源拒绝。 |
+| `bracer-multikill-stacks` | 1 | 公共夹具被改种；断言要求 seed3151248，实际为721851。恢复夹具后无需修改本文件，原 Renata tick60 双杀、每目标两层、+40 护甲/魔抗/AP、全状态/事件重放均通过。 |
+| `m8-b10-temporary-replay` | 2 | 测试引用过期。实际 seed18619 的手套父件为 `item-10`、供体 `unit-20`、存活者 `unit-24`；旧常量把真实供体误写成“移动后”目标，负例变成恒等修改而未抛错。修正精确 ID 与路线注释，保留两个子件、1×/2×/4×、seek、伪造/丢失/移动四类拒绝断言。 |
+
+本批没有需要接受的新原掉落或商店期望，也没有发现生产实现漏用独立流。奖励按唯一收据发放的实现不变；现有重复命令、恢复和拒绝断言继续执行。
+
+## 原流、身份与体积证据
+
+重新只读归档指定基线 `1642beaabee7df800c15250bb07ec6cf2e6bbed0`，SHA256 为 `d5972cb0e44781efd438a4938cb700417024e9d049f550656d7cb26ec28df4ea`；实际校验探针所用的全部311份基线源码逐字节等于该归档。4,106组比较覆盖4,105个不同种子（0–4095及6160/6240/7216/18619/3151248/76672/721851/3374947733/0xffffffff；162重复检查一次）至4-7：仅去除追加复制器、归一已批准的旧重铸器名称后，原 payload、身份、顺序与 loot RNG 均等于基线；等级1/4/7/9共16,424次商店比较均等于基线及独立 BigInt oracle。生产完整八轮奖励同时符合两份互不调用的独立 oracle。
+
+`src/simulation` 没有修改，所有变更文件均不在录制器 sourceDigests 集合；既有 release/input/live-reveal 指纹仍匹配当前源码。本轮不触发九步重录，不改现有 v16 fixture/golden/raw 字节。`node scripts/compare-v16-digests.cjs` 重新加载基线与当前源码复算如下（均带 `fnv1a32-utf16:` 前缀）：
+
+| digest | v15 基线 | 本轮前 v16 | 本轮后 v16 |
+| --- | --- | --- | --- |
+| CONTENT_DIGEST | 70dbb056 | de829c8a | de829c8a |
+| LOOT_REPLAY_DIGEST | 61568ec0 | 62c76cb9 | 62c76cb9 |
+| RULES_GAP_MANIFEST | 97c14bf3 | 31950a0f | 31950a0f |
+
+`npm.cmd run build -- --configLoader runner`（含 tsc）退出0。全部 `dist/assets/*.js` 分别 gzip level9 求和，含 Phaser：**619,825 B / 424,763 B = 1.4592254975 ≤ 1.49**；分母沿用此前记录的本地15313a7构建，未重建历史产物。分子与本轮起点已有记录字节相同，未修改预算或阈值。
+
+## 全量验证
+
+已完整执行 `node node_modules/vitest/vitest.mjs run --project fast --maxWorkers 4 --configLoader runner --reporter=json --outputFile=artifacts/v16-ci-265-full-fast.json`，与 `npm test` 选择同一个 fast 全量项目：**371文件、4,850项，4,840通过、10失败、0待执行，退出1，耗时897.365秒**。指定八个文件在全量运行中仍为 **84/84通过**。没有选择 timing 项目，不把此结果称为所有项目或远端 CI 全绿。
+
+全部失败如下；本轮未修改这些测试、压力脚本或服务器文件，也未调高任何时限：
+
+| 文件 | 失败数 | 实际结果与分类 |
+| --- | ---: | --- |
+| `tests/explorer-bracer-restore-pressure.test.ts` | 2 | `huge-count`（5,000,000触发/100,000,000 AP）与 `dedup-titan`（26^12历史）均在调用 esbuild 打包压力子进程时失败：`Cannot read directory "../../..": Access is denied`，无法解析工作区内 stress 入口。尚未执行压力断言，不是 AP/规则断言失败。独立执行 `node scripts/profile-explorer-bracer-restore.cjs huge-count` 原样复现；显式工作目录/相对入口及显式 tsconfigRaw 仍受同一目录权限限制，结束该尝试。保留原内存/时间及规则验收口径；需能读取该目录的本机环境复验。 |
+| `tests/m5-match-integration.test.ts` | 1 | `restores each real tick, then supply without creating combat or consuming battle RNG` 在4 worker全量中超过原30秒，记录30,104.85ms。完整文件单 worker复测 **3/3通过**，该用例12,737.83ms；原30秒已约为单独实测2.35倍，因此未无依据增加时限。纯并发计时残留，未减去任何 tick/恢复检查。 |
+| `tests/server/e2e-replay-errors.test.ts` | 4 | after-readiness、split-divergence、before-readiness、unrelated-output 四个子进程用例失败。输出显示嵌套进程 `spawn C:\Program Files\nodejs\node.exe ENOENT`；前三项因未得到 `Server replay error:` 而失败。按用户要求仅报告，不改测试或 harness，不将其归因为规则回放分歧。 |
+| `tests/server/replay-first-pass.test.ts` | 2 | `logs a mismatch ... checks every later battle`（5,292.50ms）及 `checks every Nth round ... nothing in between`（7,069.57ms）均超过原5秒。仅报告计时失败，未更改服务器测试。 |
+| `tests/server/room.test.ts` | 1 | `opens a choice window ... every seat chose` 记录6,594.25ms，超过原5秒。仅报告计时失败，未更改服务器测试。 |
+
+因此本轮已修复原八个规则文件，**完整 fast 尚未全绿**：剩余2项压力打包环境阻塞、1项领域并发计时、4项服务器子进程环境失败及3项服务器计时。没有新的规则断言失败；压力子进程尚未执行其规则断言，不能据此声称压力验收通过。没有修改纯计时预算，故无新增“临时 + 用户批准”注释；后续若改预算仍须依据实测并按该约定标注。
+
+生成原始日志/JSON保存在 `artifacts/v16-ci-265-*`，不提交生成目录；本轮可提交的机器摘要及全部失败名称/消息见 [ci-remaining-265-verification.json](evidence/v16/ci-remaining-265-verification.json)。
+
+建议提交信息：`test(v16): restore legacy acquisition fixtures and transfer replay identities`。本轮未暂存、提交、推送或执行其他 Git 写操作；没有需要用户拍板的玩法变更。
+
+---
+
+# #265 v16 CI 红项修复（2026-10-20，起点 c0ef8ddd，历史）
 
 本轮起点：`codex/epic-loot-reforger@c0ef8ddd99be41623a5bf10266fc1cd28e93069c`，工作区干净。只读 Git、全程离线、不安装依赖、不写 `.git`；未修改任何 `src/` 文件（含禁止的服务器和渲染目录）。以下为本轮记录；原文保留为历史。
 
