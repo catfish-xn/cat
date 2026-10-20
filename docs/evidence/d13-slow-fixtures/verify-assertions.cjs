@@ -2,8 +2,9 @@ const fs = require('node:fs');
 const cp = require('node:child_process');
 const ts = require('typescript');
 const baseline = 'a0d42c592cbd48fb075175e5f61818dabfe1b320';
-const files = cp.execFileSync('git', ['diff', '--name-only', baseline, '--', 'tests'], { encoding: 'utf8' })
+const changed = cp.execFileSync('git', ['diff', '--name-only', baseline, '--', 'tests'], { encoding: 'utf8' })
   .trim().split('\n').filter(file => file.endsWith('.test.ts'));
+const files = [...new Set([...changed, ...process.argv.slice(2)])].sort();
 const printer = ts.createPrinter({ removeComments: true });
 function inspect(source) {
   const file = ts.createSourceFile('test.ts', source, ts.ScriptTarget.Latest, true);

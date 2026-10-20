@@ -1,5 +1,7 @@
 # D13: prepare slow-test inputs before each suite
 
+**Superseding CI correction:** Published head `07af2bfbde736685ba88c23d55623c4aa4f93dee` failed two 10-second preparation hooks in run39372329138/job118462740972: M4 and CD replay facts. The job reported85 passed files/1056 passed tests;36 tests in the two failed suites were not executed. They are not passes. Local hook repair withdraws M4 capacity and CD anomaly-route migrations, preserves the other changes, and has no new CI result while pushes/reruns are paused. See [the repair report](hook-timeout-repair/REPORT.md) and preserved original failure log. All older timings/fingerprints below describe their historical revisions, not the repaired source.
+
 Published scope at07af: **10 changed test files /154 cases**, with both shuffled orders154/154 and typecheck passing. The entire prior29-file CI candidate list is audited below. Eight files extend the valid phase1 B5/Bracer work; actual restore/validation/clock-budget operations remain inside the cases. Full per-case data and exact tested source fingerprints are in `results.json`.
 
 The original phase1 evidence below is preserved for head6940. Its CI was cancelled at04:52 UTC, with the required aggregator failing on cancelled dependencies; this is not reported as a green run. The expanded revision needs its own actual-head CI. External239/253 coordination and exclusions are recorded near the end.

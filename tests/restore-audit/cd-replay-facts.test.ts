@@ -1,4 +1,3 @@
-import { prepareInput, copyInput } from '../fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert';
 import { beforeAll, expect, it, vi } from 'vitest';
 import * as engine from '../../src/simulation/combat';
@@ -15,13 +14,8 @@ import { accepted, battle, emptyBoard, reachRound } from '../match-helpers';
 import { itemMatch } from '../fixtures/m8-b4-match';
 import { configuredPrefix } from '../fixtures/t13-loot-public';
 
-const anomalyInputs = new Map<string, MatchState>();
-for (const id of ['bloodthirster', 'sunfire-cape']) beforeAll(() => { itemMatch(id); });
-for (const [anomalyDefinitionId, seed] of [['power-absorption', 4], ['one-thousand-cuts', 2], ['eagle-eye', 1]] as const) {
-  beforeAll(async () => {
-    const prep = await configuredPrefix('4-7', { build: 'cannon', seed, anomalyDefinitionId });
-    anomalyInputs.set(anomalyDefinitionId, prepareInput(prep));
-  });
+for (const id of ['bloodthirster', 'sunfire-cape']) {
+  beforeAll(() => { itemMatch(id); });
 }
 
 function positive(legal: MatchState) {
@@ -102,7 +96,7 @@ it('G-C05 binds a genuinely damaged ordinary shield even when both projections c
 });
 
 it('G-C06 binds the real absorption value even when its status is forged coherently', async () => {
-  let prep = copyInput(anomalyInputs.get('power-absorption')!);
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 4, anomalyDefinitionId: 'power-absorption' });
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
   // Public bench sales leave room to move the seeded roster off the board.
@@ -230,7 +224,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  const prep = copyInput(anomalyInputs.get(anomalyDefinitionId)!);
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId });
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;

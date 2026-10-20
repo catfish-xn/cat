@@ -1,5 +1,4 @@
-import { prepareInput, copyInput } from './fixtures/prepared-input';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
 import * as api from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
@@ -14,20 +13,9 @@ import {run} from '../scripts/generate-m5-route.cjs';
  * The real route snapshot is round-tripped first. The inflated observer-only load
  * is explicitly rejected by full Match restore because its resources are unearned.
  * Ordinary acquisition and resource conservation live in m5-route.test.ts. */
-let capacityPreparation: api.MatchState;
-beforeAll(async () => {
- const stop = new Error('captured M4 capacity preparation');
- let reached: api.MatchState | undefined;
- try {
-  await run(api, { build: 'cannon', seed: 42, onStep(before, _result, command) {
-   if (command?.type === 'start' && before.round === 33) { reached = before; throw stop; }
-  } });
- } catch (error) { if (error !== stop) throw error; }
- if (!reached) throw Error('Normal route did not reach ordinal 33');
- capacityPreparation = prepareInput(reached);
-});
 async function maximumLoadout():Promise<api.MatchState>{
- let reached:api.MatchState|undefined=copyInput(capacityPreparation);
+ let reached:api.MatchState|undefined;
+ await run(api,{build:'cannon',seed:42,onStep(before,_result,command){if(command?.type==='start'&&before.round===33)reached=before;}});
  if(!reached)throw Error('Normal route did not reach ordinal 33');
  const base:api.MatchState=restoreMatch(JSON.stringify(reached));
  expect(base).toEqual(reached);
