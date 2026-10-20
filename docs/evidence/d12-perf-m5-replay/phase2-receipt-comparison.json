@@ -1,0 +1,1 @@
+{"passed":true,"cases":84,"checked":[{"round":12,"phase":"combat","tick":100,"prefix":34,"entries":34},{"round":25,"phase":"combat","tick":100,"prefix":79,"entries":79},{"round":25,"phase":"settlement","tick":426,"prefix":79,"entries":80},{"round":33,"phase":"combat","tick":100,"prefix":94,"entries":94}],"goldenPassed":true}

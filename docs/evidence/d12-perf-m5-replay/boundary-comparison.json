@@ -1,0 +1,1 @@
+{"passed":true,"cases":81,"snapshots":[{"phase":"combat","tick":0,"prefix":1,"ledger":1},{"phase":"combat","tick":10,"prefix":1,"ledger":1},{"phase":"settlement","tick":164,"prefix":1,"ledger":3}]}
