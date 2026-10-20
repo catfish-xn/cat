@@ -23,6 +23,8 @@ import { combatEventText, originLabel, viewEventLine } from './combat-feedback';
 import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
+import { planPurchase } from '../simulation/upgrades';
+import { isCombatRosterLocked } from '../simulation/operation-policy';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
@@ -101,6 +103,28 @@ interface PanelActions {
 
 /** Fired on the panel root (bubbling) for every explicit status message. */
 export const PANEL_STATUS_EVENT = 'hex-panel-status';
+/**
+ * Shop slots whose purchase would star up one of my heroes, with the resulting star (TFT shop glow). Each hero's copies
+ * in the shop are bought in slot order through the rules' own `planPurchase`; once a purchase merges, every copy of
+ * that hero lights up (any of them completes the set). Gold is ignored as in TFT; a roster the planner rejects shows no glow.
+ */
+export function shopUpgradeStars(state: MatchState): Map<number, number> {
+  const result = new Map<number, number>(), benchOnly = isCombatRosterLocked(state), slotsOf = new Map<string, number[]>();
+  state.shop.slots.forEach((offer, slot) => { if (offer.status === 'available') slotsOf.set(offer.definitionId, [...slotsOf.get(offer.definitionId) ?? [], slot]); });
+  for (const [definitionId, slots] of slotsOf) {
+    try {
+      let preparation = state.preparation;
+      for (let index = 0; index < slots.length; index++) {
+        const plan = planPurchase(preparation, definitionId, `shop-preview-${index}`, benchOnly);
+        if (!plan.ok) break;
+        const star = Math.max(0, ...plan.events.map(event => event.toStar));
+        if (star) { for (const slot of slots) result.set(slot, star); break; }
+        preparation = plan.preparation;
+      }
+    } catch { /* unknown definition or invalid roster: no glow */ }
+  }
+  return result;
+}
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
   for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
@@ -1067,6 +1091,7 @@ export class StrategyPanel {
   private renderShop(state: MatchState, ready: boolean): void {
     const section = element('section', '', 'shop-panel');
     const shop = element('div', '', 'touch-shop');
+    const upgrades = shopUpgradeStars(state);
     state.shop.slots.forEach((offer, slot) => {
       const definition = offer.status === 'available' ? UNIT_DEFINITIONS[offer.definitionId] : null;
       const affordable = definition ? state.gold >= definition.cost : false;
@@ -1078,7 +1103,12 @@ export class StrategyPanel {
         button.dataset.unitDef = definition.id; button.dataset.unitStar = '1';
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
         button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
-        button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
+        const upgrade = upgrades.get(slot);
+        if (upgrade) {
+          button.classList.add('upgrade'); button.dataset.upgradeStar = String(upgrade);
+          const badge = element('span', '★'.repeat(upgrade), 'shop-upgrade'); badge.dataset.debug = `shop:upgrade-${slot}`; button.append(badge);
+        }
+        button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}${upgrade ? `，可升 ${upgrade} 星` : ''}`);
       } else {
         // A shared-pool empty slot (online, §12.3) is out of stock, not a purchase; neither shows a hero.
         const empty = isEmptyShopSlot(offer);
