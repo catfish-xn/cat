@@ -933,7 +933,7 @@ export class StrategyPanel {
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
       if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
@@ -1126,7 +1126,7 @@ export class StrategyPanel {
     if (!id) return '无';
     const state = this.actions.state();
     const unit = this.actions.combat().view?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
-    return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
+    return unit ? `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}` : '历史单位';
   }
   /** Offline: the local ledger with full provenance text. Online: §14.2 wire events (reset() runs per battle). */
   observeEvents(events: readonly SceneCombatEvent[]): void {
