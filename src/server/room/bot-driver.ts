@@ -67,6 +67,8 @@ interface SeatBrain {
   closed: boolean;
   /** Phase entry in which the policy answered `done`; a later entry of the same round (a post-battle choice) asks again. */
   doneEntry: number;
+  /** v15: phase entry in which this seat already claimed its orbs (once per preparation entry, before the policy). */
+  orbEntry: number;
   /** Pending step: a clock handle, or 'queued' once it fired and waits in the caller's queue. */
   step: ClockHandle | 'queued' | null;
   /** Control generation the pending step was scheduled under. */
@@ -133,7 +135,7 @@ export class BotDriver {
   private brainFor(seat: SeatState): SeatBrain {
     let brain = this.brains.get(seat.seatId);
     if (!brain) {
-      brain = { rng: deriveBotRng(this.roomSeed, seat.index), roundKey: '', stepsTaken: 0, lastFailure: null, closed: false, doneEntry: -1, step: null, stepEpoch: -1, stepEntry: -1, entrySteps: 0, takeover: null };
+      brain = { rng: deriveBotRng(this.roomSeed, seat.index), roundKey: '', stepsTaken: 0, lastFailure: null, closed: false, doneEntry: -1, orbEntry: -1, step: null, stepEpoch: -1, stepEntry: -1, entrySteps: 0, takeover: null };
       this.brains.set(seat.seatId, brain);
     }
     return brain;
@@ -197,12 +199,21 @@ export class BotDriver {
 
   /** One policy call and at most one rules command, inside one queue task (§13.3 items 2–4). */
   private step(seatId: string, epoch: number, entry: number): void {
-    const state = this.room.state;
-    const seat = state.seats.find(candidate => candidate.seatId === seatId);
+    let state = this.room.state;
+    let seat = state.seats.find(candidate => candidate.seatId === seatId);
     if (!seat) return;
     const brain = this.brainFor(seat);
     // Re-check under the queue: still this seat's operable phase, still the control generation the step was armed under.
     if (entry !== this.entry || seat.controlEpoch !== epoch || !running(state) || !botControlled(seat) || !operable(state, seat) || brain.closed) return;
+    // v15: the first step of a preparation entry claims every orb through the rules' helper, outside the policy budget;
+    // the policy then decides on the seat as the claim left it. A refusal leaves the seat as it was and the step goes on.
+    if (brain.orbEntry !== this.entry && state.phase === 'preparation' && seat.match.phase === 'preparation') {
+      brain.orbEntry = this.entry;
+      this.room.claimBotOrbs(seatId, epoch);
+      state = this.room.state;
+      seat = state.seats.find(candidate => candidate.seatId === seatId)!;
+      if (!running(state) || !operable(state, seat)) return;
+    }
     const context: BotContext = {
       difficulty: 'basic', stepsTaken: brain.stepsTaken, maxSteps: this.options.maxSteps,
       self: { seatId: seat.seatId, hp: seat.hp, round: seat.match.round },

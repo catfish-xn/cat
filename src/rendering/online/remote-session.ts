@@ -16,7 +16,7 @@ import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
-import type { ConsumableTarget, GameClient, ItemSummonView, ReplayUnitId, UiCommand, WireCommand } from './protocol';
+import type { ConsumableTarget, GameClient, ItemSummonView, ReplayUnitId, WireCommand } from './protocol';
 import type { HexCell } from '../../simulation/board';
 import type { DisplayMatch } from './seat-view-adapter';
 
@@ -25,7 +25,7 @@ export type IntentNotice = { readonly kind: 'pending'; readonly commandId: numbe
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
-const BATTLE_COMMANDS: ReadonlySet<UiCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable',
+const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable',
   // v15: an orb clicked during my battle is queued by the rules and settled after it (user 2026-10-20 02:26).
   'claimOrb']);
 /** G5: my finished battle of a round, kept after the settlement took it off the board (post-battle ranking). */
@@ -150,15 +150,14 @@ export class RemoteSession extends MatchSession {
     if (!this.playingBack) this.accumulator = 0;
     return events;
   }
-  private intent(command: UiCommand): MatchCommandResult {
+  private intent(command: WireCommand): MatchCommandResult {
     this.notice = null;
     if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
     if (this.spectating) { this.notice = { kind: 'offline', text: '已淘汰 · 观战中，不能操作' }; return this.blocked(); }
     // Contract §15.2: a running battle accepts operations only (choices wait for their window); the server and the rules
     // decide everything else, including the board-target refusals of §15.1.
     if (this.paused || (this.inBattle && !BATTLE_COMMANDS.has(command.type))) return this.blocked();
-    // claimOrb / per-card rerollAugment are v15 contract commands the server's WireCommand union does not list yet.
-    const result = this.client.send(command as WireCommand);
+    const result = this.client.send(command);
     // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).
     if (result.ok === 'pending') { this.notice = { kind: 'pending', commandId: result.commandId }; return this.blocked(); }
     if (!result.ok) return result;

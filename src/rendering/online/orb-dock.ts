@@ -8,6 +8,7 @@
 import type { MatchState } from '../../simulation/match-types';
 import type { LootPayload, LootReceipt } from '../../simulation/m8/contracts';
 import type { UnclaimedOrbView } from '../../simulation/m8/ui-contracts';
+import type { PublicOrbSummary } from './protocol';
 import { displayUnitName } from '../display-names';
 import { itemDisplayName } from '../../presentation/g23-display';
 import { consumableName, ORB_TIER_TEXT, payloadLabel } from '../../presentation/orb-loot';
@@ -49,7 +50,7 @@ export function orbReceiptText(receipt: LootReceipt): string | null {
 }
 
 /** Another seat's orbs as everyone may see them (SeatPublic.orbs): only how many and which tiers, never the contents. */
-export type PublicOrbs = { readonly count: number; readonly tiers: readonly UnclaimedOrbView['tier'][] };
+export type PublicOrbs = PublicOrbSummary;
 export function readPublicOrbs(seat: object): PublicOrbs | null {
   const orbs = (seat as { readonly orbs?: PublicOrbs }).orbs;
   return orbs && Number.isInteger(orbs.count) && Array.isArray(orbs.tiers) ? orbs : null;
@@ -105,9 +106,9 @@ export class OrbDock {
   constructor(private readonly dock: HTMLElement, private readonly actions: OrbDockActions) {
     dock.classList.add('orb-dock'); dock.setAttribute('aria-label', '未领取的法球');
   }
-  /** Forget what was announced (new match, back to the lobby). */
   /** The claim was refused: show the orb as claimable again. */
   release(orbId: string): void { if (this.held.delete(orbId) && this.last) this.render(this.last.state, this.last.context); }
+  /** Forget what was announced (new match, back to the lobby). */
   reset(): void { this.seen = null; this.opening.clear(); this.held.clear(); this.key = ''; this.last = null; this.clearResult(); this.dock.replaceChildren(); }
   dispose(): void { this.reset(); this.dock.remove(); }
 
