@@ -7,7 +7,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
 import { THEME, costColor } from '../presentation/theme';
-import { statusBadges } from '../presentation/combat-status';
+import { canvasPen, drawStatusIcons, statusIcons, STATUS_ICON_Y } from '../presentation/status-icons';
 import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
@@ -114,15 +114,8 @@ export class ReplayView {
         if (unit.shield > 0) { ctx.fillStyle = C.shield; ctx.fillRect(left + 52 * hp, p.y - 44, Math.max(2, Math.min(52 - 52 * hp, 52 * shield)), 6); }
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
-        // Same status strip as the live piece, read from this snapshot's own mechanism store.
-        const badges = statusBadges(state, unit.id);
-        ctx.font = 'bold 10px system-ui, sans-serif';
-        for (const [text, align, fg, bg] of [[badges.harmful, -1, '#ffb0a0', '#3a1218e6'], [badges.beneficial, 1, '#9ff0e4', '#0f2e2ae6']] as const) {
-          if (!text) continue;
-          const w = ctx.measureText(text).width + 4, x = align < 0 ? p.x - 1 - w : p.x + 1;
-          ctx.fillStyle = bg; ctx.fillRect(x, p.y + 4, w, 12); ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.fillText(text, x + 2, p.y + 10);
-        }
-        ctx.textAlign = 'center';
+        // Same status icons as the live piece, read from this snapshot's own mechanism store.
+        drawStatusIcons(canvasPen(ctx), statusIcons(state, unit), p.x, p.y + STATUS_ICON_Y);
       }
     }
     ctx.globalAlpha = 1;
@@ -135,12 +128,10 @@ export class ReplayView {
     const taken: LabelRect[] = [];
     for (const effect of this.effects) {
       const { spec } = effect;
-      if (spec.kind !== 'cast' && spec.kind !== 'label') continue;
+      if (spec.kind !== 'label') continue;
       if (effect.rect === undefined) {
-        const text = spec.kind === 'cast' ? spec.label : spec.text;
-        ctx.font = spec.kind === 'cast' ? 'bold 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
-        const w = ctx.measureText(text).width + (spec.kind === 'cast' ? 8 : 6), h = spec.kind === 'cast' ? 17 : 16;
-        effect.rect = placeLabel(layout.center(spec.at), w, h, spec.kind === 'cast' ? -58 : spec.dy, taken, { width: 480, height: 520 });
+        ctx.font = '12px system-ui, sans-serif';
+        effect.rect = placeLabel(layout.center(spec.at), ctx.measureText(spec.text).width + 6, 16, spec.dy, taken, { width: 480, height: 520 });
       }
       if (effect.rect) taken.push(effect.rect);
     }
@@ -162,10 +153,6 @@ export class ReplayView {
         const from = layout.center(spec.at);
         ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(from.x, from.y, 34, 0, Math.PI * 2); ctx.stroke();
         for (const cell of spec.targets) { const to = layout.center(cell); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.beginPath(); ctx.arc(to.x, to.y, 30, 0, Math.PI * 2); ctx.stroke(); }
-        if (rect) {
-          ctx.font = 'bold 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillStyle = hex(spec.color); ctx.fillRect(rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h); ctx.fillStyle = '#ffffff'; ctx.fillText(spec.label, rect.x, rect.y + 1);
-        }
       } else if (spec.kind === 'ring') {
         const p = layout.center(spec.at); ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x, p.y, spec.radius, 0, Math.PI * 2); ctx.stroke();
       } else if (spec.kind === 'death') {
