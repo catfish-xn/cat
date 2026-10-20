@@ -24,7 +24,7 @@ import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../st
 import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
 import type { SessionChange } from '../m6/contracts';
-import { UnitView, type RingState } from '../presentation/unit-view';
+import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { unitHoverCard } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
@@ -35,6 +35,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
+import { playMerge } from '../presentation/merge-fx';
 import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
@@ -126,6 +127,8 @@ export class BoardScene extends Phaser.Scene {
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
+  /** Where tokens removed by the last reconcile were drawn: merges fly the consumed copies from there (I6). */
+  private readonly departed = new Map<string, Point>();
 
   constructor() { super('Board'); }
   create() {
@@ -657,18 +660,22 @@ export class BoardScene extends Phaser.Scene {
     // offline the settlement line still says how to continue.
     else if (this.session.phase === 'settlement' && !this.online) this.setStatus(this.settledText());
   }
-  /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
+  /** I6: each upgrade among `events` plays its merge (copies fly in, then a ring); returns the upgrades. */
   private showUpgrades(events: readonly MatchEvent[]) {
     const upgrades = events.filter(event => event.type === 'unitUpgraded');
+    const host = { scene: this, reduced: reducedMotion(), fade: (effect: Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) => this.fadeEffect(effect, duration) };
+    const shop = { x: this.scale.gameSize.width / 2, y: this.scale.gameSize.height + PIECE_RADIUS };
+    let delay = 0;
     for (const event of upgrades) {
       const token = this.tokens.get(event.survivorId);
       // A cascade can consume an intermediate survivor in the same transaction.
       // Its immutable event still identifies where to show that upgrade.
-      const point = token ?? this.position(event.location);
-      const label = this.add.text(point.x, point.y - 52, `${event.toStar}★ 升星`, {
-        fontSize: '18px', color: '#ffe39b', fontStyle: 'bold', backgroundColor: '#243341',
-      }).setOrigin(0.5).setDepth(20);
-      this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
+      const to = token ?? this.departed.get(event.survivorId) ?? this.position(event.location);
+      // A copy that was never drawn (the card just bought) comes up from the shop.
+      const from = event.consumedIds.map(id => this.departed.get(id) ?? this.tokens.get(id) ?? shop);
+      // A cascade's second merge waits for the first ring.
+      delay = playMerge(host, { definitionId: event.definitionId, toStar: event.toStar, from, to: { x: to.x, y: to.y }, survivor: token }, delay);
+      this.renderedUpgradeCount++;
     }
     return upgrades;
   }
@@ -688,6 +695,7 @@ export class BoardScene extends Phaser.Scene {
     const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
+    this.departed.clear();
     // Rewards can consume an old unit while its finished combat is still displayed.
     // Keep that combat view until Continue clears it, including restored settlements.
     for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
@@ -697,6 +705,7 @@ export class BoardScene extends Phaser.Scene {
     }
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
+      this.departed.set(id, { x: token.x, y: token.y });
       this.views.get(id)?.destroy(); if (token.active) token.destroy();
       this.tokens.delete(id); this.views.delete(id); this.renderedCells.delete(id);
       this.namedObjects.delete(`unit:${id}`);
