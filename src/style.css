@@ -969,3 +969,28 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 .online-seat.eliminated .seat-hp { font-size: 12px; color: #9aaeb9; }
 .online-seat .seat-level { font-size: 11px; color: #7e95a4; }
 .online-seat .seat-damage { margin: 0; font-size: 12px; line-height: 1; }
+/* 2D 面板美化 · 左栏收起（online）：收起后左侧只剩云顶式羁绊列——六边形档位底色的图标、人数、名字、断点，
+   不再套面板底；收起/展开按钮做成贴边小标签，展开时左栏淡入。 */
+body[data-online] .trait-row .trait-icon, body[data-online] .trait-row .trait-letter { width: 26px; height: 26px; padding: 4px; margin: 0; border-radius: 0; box-sizing: border-box;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: #24313a; }
+body[data-online] .trait-row { grid-template-columns: 26px 1.4em minmax(0, 1fr) auto; }
+body[data-online] .trait-row[data-style] .trait-icon, body[data-online] .trait-row[data-style] .trait-letter { background: var(--trait-tier); filter: none; }
+body[data-online] .trait-row[data-style="bronze"] .trait-icon { background: linear-gradient(160deg, #d29a6c, #7a4a2c); }
+body[data-online] .trait-row[data-style="silver"] .trait-icon { background: linear-gradient(160deg, #e3edf3, #7d8f9c); }
+body[data-online] .trait-row[data-style="gold"] .trait-icon { background: linear-gradient(160deg, #ffe48a, #b8862a); }
+body[data-online] .trait-row[data-style="prismatic"] .trait-icon { background: linear-gradient(160deg, #9be7ff, #c79bff 45%, #ff9cc8); }
+body[data-online] .trait-row[data-style="unique"] .trait-icon { background: linear-gradient(160deg, #ffb27a, #b8521f); }
+body[data-online] .trait-row[data-style] .trait-icon { filter: drop-shadow(0 0 0 #000); }
+
+.left-panel-toggle { transition: color .15s ease, border-color .15s ease; }
+body[data-online] .left-panel-toggle { border: 1px solid #1d2f3d; border-radius: 6px; background: linear-gradient(180deg, #14212c, #0d1822); color: #c8aa6e; letter-spacing: .04em; }
+body[data-online] .left-panel-toggle:hover { color: #f0e6d2; border-color: #785a28; }
+body[data-online][data-online-left="collapsed"] .left-panel-toggle { width: auto; min-height: 26px; padding: 2px 10px; }
+body[data-online][data-online-left="collapsed"] .trait-column { padding: 4px 0; background: transparent; }
+body[data-online][data-online-left="collapsed"] .trait-column-title { padding-left: 4px; font-size: 12px; letter-spacing: .1em; }
+body[data-online][data-online-left="collapsed"] .trait-row { padding: 3px 6px 3px 2px; border-radius: 16px 6px 6px 16px; background: #0b151fb3; }
+body[data-online][data-online-left="collapsed"] .trait-row[data-style] { background: linear-gradient(90deg, color-mix(in srgb, var(--trait-tier) 30%, #0b151f), #0b151fb3 80%); box-shadow: none; }
+body[data-online][data-online-left="collapsed"] .trait-row.inactive { background: #0b151f80; }
+body[data-online]:not([data-online-left="collapsed"]) #strategy-root { animation: left-panel-in .18s ease-out; }
+@keyframes left-panel-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body[data-online]:not([data-online-left="collapsed"]) #strategy-root { animation: none; } }
