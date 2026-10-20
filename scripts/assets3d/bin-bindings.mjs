@@ -60,6 +60,7 @@ export function animationClips(documents) {
       for (const [key, clip] of field(graph, 'mClipDataMap')?.entries ?? []) {
         const path = field(field(clip, 'mAnimationResourceData'), 'mAnimationFilePath') ?? field(clip, 'mAnimationFilePath');
         clips.push({ hash: typeof key === 'string' ? fnv1a(key) : key.hash,
+          ...(typeof key === 'string' ? { name: key } : {}),
           type: clip?.type ?? 0, atomic: binIs(clip, 'AtomicClipData'), flags: field(clip, 'mFlags') ?? 0,
           path: typeof path === 'string' ? path : null });
       }
@@ -73,17 +74,25 @@ const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm
 export function selectAnimations(clips, rules, explicit = {}) {
   const atomic = clips.filter(c => c.atomic && c.path), mapped = {}, files = {}, decisions = {};
   for (const [action, rule] of Object.entries(rules)) {
+    const matches = (name, token) => new RegExp(`(?:^|_)${token}(?:_|$)`, 'i').test(name);
+    // Exclusions apply to aliases as well: an alias named Hit can still point at Spell1_Hit.
+    const eligible = atomic.filter(c => !(rule.excludeTokens ?? []).some(t => matches(sourceName(c.path), t)));
     let candidates = [], method = 'graph-alias';
-    if (explicit[action]) { candidates = atomic.filter(c => sourceName(c.path) === explicit[action]); method = 'step2-explicit'; }
+    if (explicit[action]) { candidates = eligible.filter(c => sourceName(c.path) === explicit[action].toLowerCase()); method = 'unit-explicit'; }
     else {
-      for (const alias of rule.aliases) { candidates = atomic.filter(c => c.hash === fnv1a(alias)); if (candidates.length) break; }
+      for (const alias of rule.aliases) { candidates = eligible.filter(c => c.hash === fnv1a(alias)); if (candidates.length) break; }
       if (!candidates.length) { method = 'filename-token';
-        for (const token of rule.tokens) { const re = new RegExp(`(?:^|_)${token}(?:_|$)`, 'i');
-          candidates = atomic.filter(c => re.test(sourceName(c.path)) && !(rule.excludeTokens ?? []).some(t => new RegExp(`(?:^|_)${t}[0-9]*(?:_|$)`, 'i').test(sourceName(c.path)))); if (candidates.length) break; }
+        for (const token of rule.tokens) {
+          candidates = eligible.filter(c => matches(sourceName(c.path), token)); if (candidates.length) break; }
       }
     }
     const paths = [...new Map(candidates.map(c => [canonicalAsset(c.path), c.path])).values()];
-    if (paths.length !== 1) { decisions[action] = { reason: paths.length ? 'ambiguous-action' : 'missing-atomic-action', candidates: paths }; continue; }
+    if (paths.length !== 1) {
+      const evidence = clips.some(c => (!c.atomic || eligible.includes(c)) && rule.aliases.some(a => c.hash === fnv1a(a))) || (rule.evidenceTokens ? atomic : eligible).some(c =>
+        (rule.evidenceTokens ?? rule.tokens).some(t => matches(sourceName(c.path), t)));
+      decisions[action] = { reason: paths.length ? 'ambiguous-action' : 'missing-atomic-action', candidates: paths,
+        sourceStatus: explicit[action] || evidence ? 'undetermined' : 'no-source-action' }; continue;
+    }
     const path = paths[0], name = sourceName(path);
     if (files[name] && canonicalAsset(files[name]) !== canonicalAsset(path)) throw new Error('animation-name-collision');
     mapped[action] = name; files[name] = path;

@@ -196,7 +196,9 @@
     "mesh": "tft13_draven.tft_set13.skn",
     "skeleton": "tft13_draven.tft_set13.skl",
     "textures": {},
-    "animations": {},
+    "animations": {
+      "cast": "spell1_spin_left_right"
+    },
     "effectPatterns": {},
     "animationFiles": {
       "attack1": "animations/attack1.tft_set13.anm",
@@ -212,6 +214,9 @@
       "spell1_spin_left_right": "animations/spell1_spin_left_right.tft_set13.anm",
       "taunt": "animations/taunt.tft_set13.anm",
       "tft13_draven_idle1_rarmout": "animations/tft13_draven_idle1_rarmout.tft_set13.anm"
+    },
+    "animationNotes": {
+      "cast": "mClipDataMap has Spell1_Spin_Left_Right (spin activation) and Spell1_Arm_Catches (catch/recovery); choose the spin segment, not catches. Name-based single-segment selection, not sequence reconstruction."
     }
   },
   "drmundo": {
@@ -1311,27 +1316,80 @@
         "Spell4_Hit"
       ],
       "tokens": [
+        "spell1$",
+        "spell1a$",
+        "spell4_hit$",
+        "spell$",
+        "spell1_in$",
+        "spell_in$",
+        "spell2_in$",
+        "spell3_in$",
+        "spell4_in$",
+        "spell[1-4]?_start$",
+        "spell[1-4]?_intro$",
+        "spell1_activate$",
+        "spell_activate$",
+        "spell2_activate$",
+        "spell3_activate$",
+        "spell4_activate$",
+        "spell[1-4]?_first$",
+        "spell[1-4]?_(?:[a-z]+_)?activate$",
+        "spell[1-4]$",
+        "spell_[1-4]$",
+        "spellup$",
+        "spell_brace$",
+        "cast(?:_[a-z0-9]+)?$",
+        "ability(?:[1-4]|_[a-z0-9]+)?$",
+        "channel(?:_start)?$",
+        "ult(?:imate)?(?:_start)?$",
         "spell1",
         "spell4_hit",
         "spell",
         "cast"
+      ],
+      "excludeTokens": [
+        "out",
+        "toidle",
+        "idle",
+        "run",
+        "loop",
+        "end",
+        "finish"
+      ],
+      "evidenceTokens": [
+        "spell[a-z0-9]*",
+        "cast[a-z0-9]*",
+        "ability[a-z0-9]*",
+        "channel",
+        "ult(?:imate)?"
       ]
     },
     "hit": {
       "aliases": [
         "Hit",
         "Hit1",
-        "Hurt"
+        "Hurt",
+        "Hurt1",
+        "Flinch",
+        "Flinch1",
+        "Knockup"
       ],
       "tokens": [
         "hit1",
-        "hurt",
+        "hurt[0-9]*",
+        "flinch[0-9]*",
+        "knockup[0-9]*",
         "hit"
       ],
       "excludeTokens": [
-        "spell",
-        "attack",
-        "cast"
+        "spell[a-z0-9]*",
+        "attack[0-9]*",
+        "cast[a-z0-9]*",
+        "ability[a-z0-9]*",
+        "ult(?:imate)?",
+        "channel",
+        "death[0-9]*",
+        "die"
       ]
     },
     "death": {
