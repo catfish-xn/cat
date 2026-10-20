@@ -44,9 +44,6 @@ export function approximateEmitter(input, system = {}, options = {}) {
   for (const field of ['childParticleSetDefinition', 'fieldCollectionDefinition', 'fieldCollection']) {
     if (Object.hasOwn(source, field)) return { status: 'skipped', reason: `unexpressible-emitter:${field}` };
   }
-  // A rotated emission frame affects BOTH position and velocity. Collapsing it
-  // to a mean point/velocity stacks a continuous stream into a saturated slab.
-  // V2 has no emission-frame distribution; omit rather than invent its motion.
   const shape = source.SpawnShape;
   if (options.textureAlpha?.(source.texture) === false
       && (source.textureMult || source.alphaErosionDefinition)) {
@@ -56,6 +53,9 @@ export function approximateEmitter(input, system = {}, options = {}) {
     : Array.isArray(value) ? value.some(nonzero)
     : value && typeof value === 'object' ? Object.entries(value).some(([key, v]) =>
       ['constantValue', 'values', 'keyValues', 'dynamics', 'probabilityTables'].includes(key) && nonzero(v)) : false;
+  // A rotated emission frame affects BOTH position and velocity. Collapsing it
+  // to a mean point/velocity stacks a continuous stream into a saturated slab.
+  // V2 has no emission-frame distribution; omit rather than invent its motion.
   if (!source.isSingleParticle && shape?.emitRotationAxes?.some(nonzero)
       && shape.emitRotationAngles?.some(nonzero) && nonzero(source.birthVelocity)) {
     return { status: 'skipped', reason: 'unexpressible-emitter:rotated-directional-emission' };

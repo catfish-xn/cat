@@ -1,13 +1,20 @@
-﻿// Offline, isolated-emitter review. Generated evidence stays in the local batch.
+﻿// Offline, isolated-emitter review. Read-only linked inputs may use a separate evidence directory.
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
+import { mkdir, realpath } from 'node:fs/promises';
 import { argumentsFor } from './plan-fetch.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
+import { safeInputPath, safeOutputPath, withinRoot } from './safe-path.mjs';
 
-const args = argumentsFor(process.argv.slice(2), ['--out', '--effect']);
-const root = await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
- const server = await createServer({ configFile: false, cacheDir: 'assets3d-local/browser-cache', server: { host: '127.0.0.1', port: 5197 } });
+const args = argumentsFor(process.argv.slice(2), ['--out', '--effect', '--screenshots']);
+const root = args.screenshots
+ ? withinRoot(resolve('assets3d-local'), resolve(args.out ?? 'assets3d-local/fx-batch3'))
+ : await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
+await safeInputPath(root, resolve(root, 'manifest.json'));
+const screenshots = await safeOutputPath(args.screenshots ?? root, { directory: true });
+await mkdir(screenshots, { recursive: true });
+const server = await createServer({ configFile: false, resolve: { preserveSymlinks: true }, optimizeDeps: { noDiscovery: true, include: [] }, cacheDir: resolve(screenshots, 'browser-cache'), server: { host: '127.0.0.1', port: 5197, fs: { allow: [resolve('.'), await realpath(root)] } } });
 let browser;
 try {
  await server.listen();
@@ -20,7 +27,10 @@ try {
  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
  await page.route('http://127.0.0.1:*/review', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
  await page.goto(server.resolvedUrls.local[0] + 'review');
- for (const effect of (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',')) {
+ const effects = args.effect === 'all'
+  ? await page.evaluate(async base => Object.keys((await (await fetch(base + '/manifest.json')).json()).effects), '/' + resolve(root).split(/[\\/]/).slice(-2).join('/'))
+  : (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',');
+ for (const effect of effects) {
  await page.goto(server.resolvedUrls.local[0] + 'review');
  const result = await page.evaluate(async ({ base, effect }) => {
   const T = await import('/node_modules/three/build/three.module.js');
@@ -55,7 +65,7 @@ try {
   textures.forEach(t => t.dispose()); meshes.forEach(g => g.dispose());
   return { id, emitters: doc.emitters.length, errors };
  }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect });
- await page.screenshot({ path: resolve(root, 'browser-review-' + result.id + '.png'), fullPage: true });
+ await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'browser-review-' + result.id + '.png'), { force: true }), fullPage: true });
  console.log(JSON.stringify(result));
  }
 } finally { await browser?.close(); await server.close(); }
