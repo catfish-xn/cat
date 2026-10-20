@@ -75,6 +75,8 @@ export class OnlineApplication implements SceneApplication {
   private spectating = false;
   private ranking: RankingOverlay;
   private view: PlayerView | null = null;
+  /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
+  get roomInCombat(): boolean { return this.view?.phase.kind === 'combat'; }
   private unlisten: () => void;
   private unsubscribe: () => void;
   private disposed = false;
