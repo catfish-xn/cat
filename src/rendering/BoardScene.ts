@@ -355,6 +355,7 @@ export class BoardScene extends Phaser.Scene {
    * canvas and the shop sits outside it, so this listens on the window; clearDrag removes it.
    */
   private watchSellZone(unit: Unit) {
+    this.stopSellZone();
     const hint = `松手出售 · +${getUnitSellPrice(unit)} 金币`;
     let marked: HTMLElement | null = null;
     const mark = (zone: HTMLElement | null) => {
