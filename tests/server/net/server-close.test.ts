@@ -1,9 +1,11 @@
 /**
  * Server shutdown and failed start leave nothing behind on the injected clock: a superseded connection's pending close
- * is cancelled by close(), and a listen that fails releases the lobby it built.
+ * is cancelled by close(), and a listen that fails releases the lobby and WebSocketServer it built.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { WebSocketServer } from 'ws';
 import { ManualClock } from '../../../src/server/room/clock';
+import { Lobby } from '../../../src/server/room/lobby';
 import { createGameServer } from '../../../src/server/net/server';
 import { expectOk, startServer } from './helpers';
 
@@ -20,11 +22,19 @@ describe('server close and failed start', () => {
     expect(harness.clock.pending).toBe(0);
   });
 
-  it('rejects a start on a taken port and leaves no timer on the clock', async () => {
+  it('rejects a start on a taken port after releasing its lobby and WebSocketServer', async () => {
     const holder = await startServer();
     const clock = new ManualClock();
-    await expect(createGameServer({ port: holder.server.port, host: '127.0.0.1', clock, seed: 1, queueTimeoutMs: 1_000 })).rejects.toThrow();
-    expect(clock.pending).toBe(0);
-    await holder.close();
+    // A fresh lobby has no timer yet, so the clock alone cannot tell; the release itself is what the caller cannot do.
+    const disposed = vi.spyOn(Lobby.prototype, 'dispose'), closed = vi.spyOn(WebSocketServer.prototype, 'close');
+    try {
+      await expect(createGameServer({ port: holder.server.port, host: '127.0.0.1', clock, seed: 1, queueTimeoutMs: 1_000 })).rejects.toThrow();
+      expect(disposed).toHaveBeenCalledTimes(1);
+      expect(closed).toHaveBeenCalledTimes(1);
+      expect(clock.pending).toBe(0);
+    } finally {
+      disposed.mockRestore(); closed.mockRestore();
+      await holder.close();
+    }
   });
 });
