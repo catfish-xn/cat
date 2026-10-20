@@ -1,5 +1,7 @@
 # 项目说明与维护指南
 
+> **状态提示（2026-10-20）**：本指南的产品描述和分支状态停在 2026-10-07 的单人 M7 阶段，之后项目已转为以八人联机为主（`src/server/`、`multiplayer` 分支、`release/vN` 上线流程）。现状请先看根目录 [README](../README.md) 和 [文档导航](README.md)；本文的文件职责表与验收命令仍可参考，但以当前源码和 CI 工作流为准。
+
 ## 1. 本说明的范围与阅读顺序
 
 - 仓库：`catfish-xn/cat`；项目名：HEX 自动战棋；npm 包名：`hex-autobattler`（`private: true`）。
