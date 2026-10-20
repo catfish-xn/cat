@@ -1,3 +1,4 @@
+import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
 import { readRoundInfo } from '../simulation/round-selectors';
@@ -27,7 +28,7 @@ import { getDeploymentCap } from '../simulation/match';
 import { planPurchase } from '../simulation/upgrades';
 import { isCombatRosterLocked } from '../simulation/operation-policy';
 import { getPlayerDeploymentCount } from '../simulation/game';
-import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, heroTraitTagsWithIds, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
@@ -36,7 +37,7 @@ import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHt
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
-import { TraitColumn } from './trait-column';
+import { TraitColumn, traitIconHtml } from './trait-column';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
@@ -130,12 +131,18 @@ export function shopUpgradeStars(state: MatchState): Map<number, number> {
 }
 function traitLine(definitionId: string): HTMLElement {
   const line = element('span', '', 'shop-trait');
-  for (const label of heroTraitTags(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
+  for (const label of heroTraitTagsWithIds(definitionId)) {
+    const tag = element('span', label.name, label.open ? 'trait-open' : 'trait-closed');
+    if (label.id) tag.insertAdjacentHTML('afterbegin', traitIconHtml(label.id, 14));
+    line.append(tag);
+  }
   return line;
 }
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
+/** The star string in its star color (four platinum-teal stars for an effective 4★). */
+const starMark = (star: number) => element('span', starText(star), `star-mark star-${Math.min(4, Math.max(1, Math.trunc(star)))}`);
 export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => itemDisplayName(id);
@@ -189,6 +196,8 @@ export class StrategyPanel {
   private choiceToken = '';
   /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
   private choiceReopen: HTMLButtonElement | null = null;
+  /** v16 进入未知: a chip on the board while the hero is away (the panel line can be folded or scrolled out of view). */
+  private awayChip: HTMLElement | null = null;
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
@@ -352,7 +361,7 @@ export class StrategyPanel {
     }
   }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void {
     if (this.statusText) this.statusText.textContent = message;
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
@@ -469,6 +478,7 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation);
+    this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
     // Interest comes from the rules' own preview (augments such as 遥遥领先/对冲基金 change it); online, the server's copy of it.
@@ -597,7 +607,10 @@ export class StrategyPanel {
     owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
-    const anomalyLine = element('p', binding ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位');
+    // v16 终极英雄 / 进入未知: the rules' D14 line (an Into the Unknown hero is off the board, so the binding has no unit here).
+    const d14Line = d14AnomalyLine(state), bound = binding && state.preparation.units.find(unit => unit.id === binding.unitId);
+    const anomalyLine = element('p', d14Line ? `异常： ${d14Line}` : binding && bound ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(bound.definitionId)}` : '异常： 4-6 选择单位');
+    if (d14Line) { anomalyLine.className = 'anomaly-d14'; anomalyLine.dataset.debug = 'anomaly:d14'; }
     if (binding) anomalyLine.title = anomalyPlayerDescription(binding.definitionId);
     // v15 D11-DISPLAY: 猎头者's settled permanent kills, as the rules count them (never added up from battle events here).
     const kills = readD11Display(state)?.headhunterKills;
@@ -736,7 +749,8 @@ export class StrategyPanel {
     const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row'); row.dataset.unitId = unit.id;
-      const heading = element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`);
+      const heading = element('strong', `${displayUnitName(unit.definitionId)} `);
+      heading.append(starMark(displayStarLevel(state, unit)), state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : '');
       // C18: during a shown battle, items worn now but not in that battle's snapshot are marked "下场生效".
       const loadout = battleLoadout(state.items, frozen, unit.id), loadoutText = loadout?.changed ? battleLoadoutText(loadout, itemDefinitionName) : '';
       if (loadoutText) { heading.title = loadoutText; row.classList.add('has-pending'); }
@@ -840,8 +854,8 @@ export class StrategyPanel {
     const section = element('section'); section.append(element('h3', '先选单位，再点部署位置'));
     const roster = element('div', '', 'unit-roster');
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
-      const button = this.button(`mobile:unit:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)} · ${unit.location.kind === 'bench' ? '备战席' : `(${unit.location.cell.col},${unit.location.cell.row})`}${state.anomalyBinding?.unitId === unit.id ? ' ◈' : ''}`, () => { this.actions.selectUnit(unit.id); this.render(); });
-      button.setAttribute('aria-pressed', String(this.actions.selectedUnit() === unit.id)); button.dataset.unitDef = unit.definitionId; button.dataset.unitStar = String(unit.starLevel);
+      const button = this.button(`mobile:unit:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))} · ${unit.location.kind === 'bench' ? '备战席' : `(${unit.location.cell.col},${unit.location.cell.row})`}${state.anomalyBinding?.unitId === unit.id ? ' ◈' : ''}`, () => { this.actions.selectUnit(unit.id); this.render(); });
+      button.setAttribute('aria-pressed', String(this.actions.selectedUnit() === unit.id)); button.dataset.unitDef = unit.definitionId; button.dataset.unitStar = String(displayStarLevel(state, unit));
       roster.append(button);
     }
     section.append(roster);
@@ -919,7 +933,7 @@ export class StrategyPanel {
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
       if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
@@ -965,6 +979,16 @@ export class StrategyPanel {
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  /** The rules' D14 line while an Into the Unknown hero is away, on the board under the countdown; removed otherwise. */
+  private syncAwayChip(state: MatchState): void {
+    const away = readD14Display(state)?.phase === 'absent' ? d14AnomalyLine(state) : null;
+    if (!away) { this.awayChip?.remove(); this.awayChip = null; return; }
+    if (!this.awayChip) {
+      this.awayChip = element('p', '', 'd14-away-chip'); this.awayChip.dataset.debug = 'anomaly:d14-away'; this.awayChip.setAttribute('role', 'status');
+      (document.getElementById('board-frame') ?? this.root).append(this.awayChip);
+    }
+    this.awayChip.textContent = away;
   }
   /** Hides the popup without answering it; the pending choice and its deadline are unchanged. */
   private collapseChoice(title: string): void {
@@ -1033,8 +1057,11 @@ export class StrategyPanel {
     if (!combat) {
       const selected = state.preparation.units.find(unit => unit.id === this.actions.selectedUnit());
       if (selected) {
-        const definition = UNIT_DEFINITIONS[selected.definitionId], stats = getUnitStats(selected.definitionId, selected.starLevel);
-        node.append(element('h3', `${displayUnitName(selected.definitionId)} ${'★'.repeat(selected.starLevel)}`), element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
+        const definition = UNIT_DEFINITIONS[selected.definitionId], star = displayStarLevel(state, selected);
+        const stats = (star === 4 ? fourStarBaseStats(selected.definitionId) : null) ?? getUnitStats(selected.definitionId, selected.starLevel);
+        const title = element('h3', `${displayUnitName(selected.definitionId)} `); title.append(starMark(star));
+        node.append(title, element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
+        for (const note of d14UnitNotes(state, selected.id)) { const line = element('p', note, 'unit-d14-note'); line.dataset.debug = 'unit:d14-note'; node.append(line); }
         node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : `${id}（本版本未开放）`).join(' / ')}`));
         this.appendEquipmentDetail(node, state, selected.id);
       }
@@ -1099,7 +1126,7 @@ export class StrategyPanel {
     if (!id) return '无';
     const state = this.actions.state();
     const unit = this.actions.combat().view?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
-    return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
+    return unit ? `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}` : '历史单位';
   }
   /** Offline: the local ledger with full provenance text. Online: §14.2 wire events (reset() runs per battle). */
   observeEvents(events: readonly SceneCombatEvent[]): void {

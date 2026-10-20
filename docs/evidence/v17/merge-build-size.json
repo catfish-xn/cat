@@ -1,0 +1,44 @@
+{
+  "baselineFiles": [
+    {
+      "file": "artifacts/premerge-265/baseline/dist/assets/index-CsWIfx1z.js",
+      "bytes": 1497604,
+      "gzip9": 424763,
+      "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+    }
+  ],
+  "currentFiles": [
+    {
+      "file": "dist/assets/index-BNmvDULo.js",
+      "bytes": 1502618,
+      "gzip9": 453890,
+      "sha256": "c29f2b430fe39e7b413bf831cc2d0a6b403af7be6e96f27e47c3bb0222a5c62a"
+    },
+    {
+      "file": "dist/assets/phaser-ax-wMCa1.js",
+      "bytes": 614971,
+      "gzip9": 175652,
+      "sha256": "54af098131ba3056731ae3bf76c15d639ffa0f86d6118e93e626dda3449599e3"
+    }
+  ],
+  "independent3dFiles": [
+    {
+      "file": "dist/assets/3d/basis_transcoder-o4Hde_L7.js",
+      "bytes": 57529,
+      "gzip9": 15143,
+      "sha256": "8478b5b6d6b74e7d3082b89f6417321d8d1dc0307f2b30d4484bb11b441696a1"
+    },
+    {
+      "file": "dist/assets/3d/render3d-BaoOh9Qm.js",
+      "bytes": 769384,
+      "gzip9": 213065,
+      "sha256": "0da8ab5d3a294667734b7cd48b5ca7c2d102c9af865b69cb12c9b30485b55cbd"
+    }
+  ],
+  "baseline": 424763,
+  "current": 629542,
+  "ratio": 1.4821017838182704,
+  "limit": 1.49,
+  "passed": true,
+  "recursiveJsGzip9": 857750
+}

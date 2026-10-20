@@ -57,6 +57,9 @@ async function main() {
       const s = await waitRead(page, s => s.m6.phase?.kind === 'preparation' && s.m6.phase.round > lastRound, 'next preparation', 120_000);
       const round = s.m6.phase.round, roundId = s.state.roundDefinitionId, kind = s.state.m8.round.kind;
       lastRound = round;
+      // v15: orbs stay on the board until clicked; claim them first so their heroes and items count from here on.
+      const claimed = await claimOrbs(page);
+      if (claimed) console.log(`${roundId}: claimed ${claimed} orb(s)`);
       if (roundId === '2-1') break;
       // Buy what gold allows, then deploy bench units up to the level through the 部署 tab.
       let state = s.state;
@@ -125,8 +128,10 @@ async function main() {
     let s = await read(page);
     const inventory = s.state.items.filter(i => i.location.kind === 'inventory');
     console.log(`2-1 inventory: ${inventory.map(i => `${i.id}:${i.definitionId}`).join(', ')}`);
-    if (inventory.length >= 2) {
-      for (const item of inventory.slice(0, 2)) {
+    // Two components (orbs may also bring completed items, which do not combine).
+    const parts = inventory.filter(item => COMPONENTS.has(item.definitionId));
+    if (parts.length >= 2) {
+      for (const item of parts.slice(0, 2)) {
         const box = await page.locator(`[data-debug="item:${item.id}"]`).boundingBox();
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.up();
         await page.waitForTimeout(150);
@@ -141,7 +146,7 @@ async function main() {
       s = await read(page);
       report.combine = { label, disabled, selection, receipts: receipts.slice(before), inventoryBefore: inventory.map(i => i.definitionId), inventoryAfter: s.state.items.filter(i => i.location.kind === 'inventory').map(i => i.definitionId), status: await text(page, '.panel-status') };
       await page.screenshot({ path: `${OUT}/2-1-6-combine-after.png` });
-    } else report.combine = { skipped: `inventory ${inventory.length}` };
+    } else report.combine = { skipped: `inventory ${inventory.map(item => item.definitionId)}: fewer than two components` };
     console.log(JSON.stringify(report.combine));
 
     /* ---------------- G1-P6: 2-1 shows possible opponents; the battle names one of them ---------------- */
@@ -176,9 +181,26 @@ async function main() {
     check(heroes.every(([entry, hero]) => entry.bench.includes(hero)), `every granted loot hero is among my units: ${heroes.map(([entry, hero]) => `${entry.roundId} ${hero}`).join(', ') || 'none granted'}`);
     // Item 3: two components in inventory combine on the real server.
     check(report.combine.receipts?.some(entry => entry.receipt !== undefined && entry.ok && entry.kind === 'applied') && report.combine.inventoryAfter.length === report.combine.inventoryBefore.length - 1,
-      `combine accepted by the server: ${JSON.stringify(report.combine.receipts)}, ${report.combine.inventoryBefore} → ${report.combine.inventoryAfter}`);
+      `combine accepted by the server: ${report.combine.skipped ?? JSON.stringify(report.combine.receipts)}, ${report.combine.inventoryBefore} → ${report.combine.inventoryAfter}`);
     check(report.swap, `swap checks ran online (round ${report.swap})`);
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
   } finally { await browser.close(); }
 }
+/** Clicks the orb dock's button for one orb (orb ids hold quotes, so it is matched by dataset, not a selector). */
+const clickOrb = (page, orbId) => page.evaluate(id => {
+  const node = [...document.querySelectorAll('[data-debug^="orb-claim:"]')].find(button => button.dataset.debug === `orb-claim:${id}`);
+  if (node && !node.disabled) { node.click(); return true; }
+  return false;
+}, orbId);
+
+/** The eight components (src/simulation/component-pool.ts). */
+const COMPONENTS = new Set(['sword', 'vest', 'belt', 'rod', 'cloak', 'bow', 'gloves', 'tear']);
+
+/** Claims every orb the server lists as mine through the orb dock's own buttons; returns how many there were. */
+async function claimOrbs(page) {
+  const orbs = (await read(page)).state.unclaimedOrbs ?? [];
+  for (const orb of orbs) { await clickOrb(page, orb.orbId); await page.waitForTimeout(250); }
+  return orbs.length;
+}
+
 main().then(() => { stopAll(); process.exit(0); }, error => { console.error(error); stopAll(); process.exit(1); });

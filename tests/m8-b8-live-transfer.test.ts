@@ -8,28 +8,29 @@ import { accepted, battle, transferPreparation, players, plan } from './fixtures
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-const SURVIVOR='unit-30',DONOR='unit-22',REWARD='unit-37',TG='item-12';
+const SURVIVOR='unit-21',DONOR='unit-11',REWARD='unit-27',TG='item-10';
 const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
-const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-8',SURVIVOR,0)));
+const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-13',SURVIVOR,0)));
 const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'conflicting TG returns',live:conflict,returned:true}];
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 describe('B8 live randomized reward upgrade with equipment, anomaly and G12 transfer',()=>{
- it('pins the real two paid Ezreals, glove recipe, anomaly target and reward identity',()=>{
-  expect(players(prepared).filter(u=>u.definitionId==='ezreal').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
+ it('pins the real two paid Tristanas, glove recipe, anomaly target and reward identity',()=>{
+  expect(players(prepared).filter(u=>u.definitionId==='tristana').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[SURVIVOR,DONOR].includes(e.unitId)).every(e=>e.kind==='unit-acquired'&&e.source.kind==='shop')).toBe(true);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[DONOR,SURVIVOR].includes(e.unitId))).toEqual([
-   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:16,slotIndex:4,definitionId:'ezreal'},sequence:50,roundId:'3-3'},
-   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:30,slotIndex:0,definitionId:'ezreal'},sequence:66,roundId:'3-5'},
+   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:16,slotIndex:2,definitionId:'tristana'},sequence:35,roundId:'3-3'},
+   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:39,slotIndex:2,definitionId:'tristana'},sequence:53,roundId:'3-7'},
   ]);
-  // v16 public-route accounting: 26 births + 20 growth + 10 item births + 6 upgrades + 4 combines + 5 sales + 5 placements = 76.
-  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([33,20,14,7,4,10,1]);
+  // v17 seed-4 public accounting: 26 births + 20 growth + 14 items + 6 upgrades + 4 combines + 5 sales + 1 equip = 76.
+  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([26,20,14,6,4,5,1]);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
+  // The paid v17 route explicitly acquires slime-time for the donor.
   expect(prepared.anomalyBinding).toEqual({definitionId:'slime-time',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(1);
-  expect(prepared.resourceProvenance.entries).toHaveLength(89);
-  expect(prepared.nextUnitSerial).toBe(34);
-  expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(303,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+  expect(prepared.resourceProvenance.entries).toHaveLength(76);
+  expect(prepared.nextUnitSerial).toBe(27);
+  expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(4,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
  });
  it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live,returned})=>{
   const {ended,prepared:p}=live,basis=ended.combatInputBasis!;
@@ -58,7 +59,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   let a=live.revealed,b=roundTrip(a);const events=[...live.revealPrefix];
   while(a.phase==='combat'){const x=api.stepMatch(a),y=api.stepMatch(b);expect(y).toEqual(x);events.push(...x.events);a=x.state;b=y.state;}
   expect(events).toEqual(live.events);expect(a).toEqual(live.ended);expect(a.phase).toBe('settlement');
-  expect(a.m8.loot.receipts).toHaveLength(prepared.m8.loot.receipts.length+8);
+  expect(a.m8.loot.receipts).toHaveLength(prepared.m8.loot.receipts.length+7);
   expect(api.nextRound(roundTrip(a),24)).toEqual(api.nextRound(a,24));
   const next=roundTrip(accepted(api.nextRound(a,24)));expect(next.roundDefinitionId).toBe('5-1');
   expect(next.m8.loot.receipts).toEqual(a.m8.loot.receipts);expect(next.resourceProvenance).toEqual(a.resourceProvenance);

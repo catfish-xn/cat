@@ -5,7 +5,7 @@ export {
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
-  readItemSummons, moveItemSummon,
+  readItemSummons, moveItemSummon, d14PublicUnitMark,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';

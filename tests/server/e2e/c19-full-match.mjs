@@ -21,12 +21,15 @@
  *   orbs     every PvE round, once its battle played out: one orb card per `revealedLoot.revealedOrbs` entry with the
  *            server's tier and status (both humans, all rounds); the tiers seen are reported, and the page's own presenter
  *            renders all four tiers (gray/blue/gold/prismatic) with their tier marks.
+ *   claims   (v15) at the start of each preparation a human clicks every orb of its own in the orb dock; each claimOrb
+ *            is applied and the orb leaves the pushed list.
  *   .4       with the shared carousel (the production default, C19_CAROUSEL=1): at every x-4 carousel a living human picks
  *            by hand on the ring once released; the server applies the carousel-pick, the view marks my slot, and the
  *            unit (on the bench, the board or the holding slot) and its item arrive in my state; no component choice opens
  *            at an x-4 round. With C19_CAROUSEL=0 (the pre-P7 x-4 supply): every supply pick: the dialog is the supply
  *            dialog with exactly the offered components; the picked one lands in my inventory.
- *   tools    a magnetic remover and a reforger (component or completed) each used once by whichever human holds one:
+ *   tools    a magnetic remover and a reforger (v16: reforges everything a unit wears) each used once by whichever human
+ *            holds one, and a champion duplicator when one drops (its hero comes as an orb to claim):
  *            one useConsumable to a target the server's consumableTargets allows, receipt consumable-used, and the
  *            inventory cards and the tool shelf show the pushed state.
  *   income   every settlement: the income receipt summary shows the round record's interest and XP.
@@ -121,7 +124,7 @@ async function loadTables() {
   return import(`${outfile}?${Date.now()}`);
 }
 
-const report = { ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], carousel: [], x4Choices: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
+const report = { claims: [], ops: null, autoCombine: null, pending: null, pendingNext: null, orbs: [], tiersSeen: [], tierPresenter: null, supply: [], carousel: [], x4Choices: [], tools: {}, income: [], reload: null, overtime: [], ranking: {}, rounds: {} };
 /** Global once-only tasks; a human claims one synchronously before awaiting anything. */
 const claimed = new Set();
 const claim = task => { if (claimed.has(task)) return false; claimed.add(task); return true; };
@@ -154,6 +157,8 @@ async function main() {
     const seen = new Set(report.orbs.map(entry => entry.tiers).flat());
     report.tiersSeen = TIERS.filter(tier => seen.has(tier));
     check(report.orbs.length > 0 && report.orbs.every(entry => entry.ok), `orb cards equal revealedOrbs in all ${report.orbs.length} PvE settlements (${report.orbs.filter(entry => !entry.ok).map(entry => `${entry.human} ${entry.roundId}`).join(', ') || 'none differ'}); tiers seen live: ${report.tiersSeen.join('/') || 'none'}`);
+    const claimFailures = report.claims.filter(entry => entry.receipt !== 'applied' || !entry.pushed);
+    check(report.claims.length > 0 && claimFailures.length === 0, `orbs claimed through the dock: ${report.claims.length} claim(s), all applied and pushed (${JSON.stringify(claimFailures)})`);
     // All four tiers through the page's own presenter (one live match cannot be made to drop every tier).
     report.tierPresenter = await jia.page.evaluate(async tiers => {
       const { orbLootSection } = await import('/src/presentation/orb-loot.ts');
@@ -357,12 +362,12 @@ async function play(human, tables, kindOf, role) {
       return false;
     }
 
-    /* tools: a remover on a unit wearing items, a reforger on an allowed item (any phase the server allows) */
+    /* tools: a remover or a reforger on a unit wearing items, a duplicator on any allowed unit (any phase the server allows) */
     const tools = s.state.consumables ?? [];
     // A target the server allows; never the unit or item a pending C18-A check still follows.
-    const usable = (task, state, target) => target.allowed && (task === 'reforger' || wornBy(state, target.target.unitId).length > 0)
+    const usable = (task, state, target) => target.allowed && task !== 'other' && (task === 'duplicator' || wornBy(state, target.target.unitId).length > 0)
       && !(pending && (target.target.unitId === pending.unitId || target.target.itemId === pending.itemId));
-    const toolTask = tools.map(tool => ({ tool, task: tool.definitionId === 'magnetic-remover' ? 'remover' : 'reforger' })).find(entry => !claimed.has(entry.task)
+    const toolTask = tools.map(tool => ({ tool, task: TOOL_TASKS[tool.definitionId] ?? 'other' })).find(entry => !claimed.has(entry.task)
       && (s.state.consumableTargets ?? []).find(row => row.consumableId === entry.tool.consumableId)?.targets.some(target => usable(entry.task, s.state, target)));
     if (toolTask && !s.replay?.playingBack && ['preparation', 'settlement'].includes(s.state.phase) && await secondsLeft(page) >= 4) {
       await items();
@@ -375,6 +380,9 @@ async function play(human, tables, kindOf, role) {
       if (target && from && claim(toolTask.task)) {
         const sourceKey = `consumable:${tool.consumableId}`;
         const targetKey = target.target.kind === 'unit' ? `equipment:${target.target.unitId}:0` : itemBoundsKey(now.state, target.target.itemId);
+        // Docked, the unit slots fold into 单位装备 (#264); a player unfolds it before dragging a tool onto a slot or a worn item.
+        await page.evaluate(() => { const fold = document.querySelector('details.equip-details'); if (fold && !fold.open) fold.querySelector('summary')?.click(); });
+        await page.waitForTimeout(120);
         await showDragEndpoints(page, sourceKey, targetKey);
         const positioned = await read(page);
         const from = positioned.strategy.bounds[sourceKey], to = positioned.strategy.bounds[targetKey];
@@ -397,7 +405,10 @@ async function play(human, tables, kindOf, role) {
         check(same(shownInventory(shown), inventoryOf(state)) && same(shownTools(shown), toolsOf(state)), `${name} ${tool.definitionId}: inventory cards and tool shelf equal the projection (${shownInventory(shown).join(', ')} | ${shownTools(shown).join(', ') || 'no tools'})`);
         if (toolTask.task === 'remover') check(affected.every(id => state.items.some(item => item.id === id && item.location.kind === 'inventory')) && affected.every(id => shown.inventory.some(item => item.id === id)),
           `${name} remover: the unit's items ${affected.join(', ')} are back in the inventory, projected and shown`);
-        else check(!state.items.some(item => item.id === target.target.itemId) && !shown.inventory.some(item => item.id === target.target.itemId), `${name} reforger: ${target.target.itemId} is gone from the projection and the cards`);
+        // v16 reforge-all: every worn item comes off, each reforged (or, with no other candidate, returned) into the inventory.
+        else if (toolTask.task === 'reforger') check(wornBy(state, target.target.unitId).length === 0 && inventoryOf(state).length === inventoryOf(now.state).length + affected.length,
+          `${name} reforger: ${target.target.unitId} wears nothing and its ${affected.length} item(s) came back reforged into the inventory (${inventoryOf(now.state).length} → ${inventoryOf(state).length})`);
+        else check((state.unclaimedOrbs ?? []).length > (now.state.unclaimedOrbs ?? []).length, `${name} duplicator: a hero orb to claim appeared (${(now.state.unclaimedOrbs ?? []).length} → ${(state.unclaimedOrbs ?? []).length})`);
         return false;
       }
     }
@@ -474,6 +485,7 @@ async function play(human, tables, kindOf, role) {
       const ready = name === '甲' ? waited > 3_500 : turns.get(s.state.round) === 'done' || !jia?.alive || waited > 10_000;
       if (!ready) { await page.waitForTimeout(80); return false; }
       lastPrep = s.state.round;
+      await claimOrbs(human, pushed);
       await autoCombineCheck(human, kindOf, pushed, items);
       // Until the in-battle ops ran, 甲 keeps its gold for them and makes room on the bench (see the header).
       if (role.ops && !report.ops && s.state.round >= OPS_FROM_ROUND) await keepForOps(human, act, items);
@@ -483,6 +495,30 @@ async function play(human, tables, kindOf, role) {
     }
     await page.waitForTimeout(80);
     return false;
+  }
+}
+
+/** Which tool check a consumable feeds (v16: one unified reforger, two champion duplicators). */
+const TOOL_TASKS = { 'magnetic-remover': 'remover', reforger: 'reforger', TFT_Consumable_NeekosHelp: 'duplicator', TFT_Consumable_ChampionDuplicator_III: 'duplicator' };
+
+/** Clicks the orb dock's button for one orb (orb ids hold quotes, so it is matched by dataset, not a selector). */
+const clickOrb = (page, orbId) => page.evaluate(id => {
+  const node = [...document.querySelectorAll('[data-debug^="orb-claim:"]')].find(button => button.dataset.debug === `orb-claim:${id}`);
+  if (node && !node.disabled) { node.click(); return true; }
+  return false;
+}, orbId);
+
+/**
+ * v15: orbs stay on the board until clicked. At the start of each preparation a human claims every orb the server lists
+ * as its own through the orb dock's button; each claim must be applied and the orb leave the pushed list.
+ */
+async function claimOrbs(human, pushed) {
+  const s = await read(human.page);
+  for (const orb of s.state.unclaimedOrbs ?? []) {
+    const before = human.wire.mark();
+    const receipt = await clickOrb(human.page, orb.orbId) ? await human.wire.receiptSince(before, 'claimOrb') : 'no button';
+    const after = receipt === 'applied' ? await pushed(x => !(x.state.unclaimedOrbs ?? []).some(entry => entry.orbId === orb.orbId)) : null;
+    report.claims.push({ human: human.name, roundId: s.state.roundDefinitionId, tier: orb.tier, receipt, pushed: after !== null });
   }
 }
 

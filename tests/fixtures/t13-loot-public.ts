@@ -70,19 +70,18 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   }});}catch(e){if(e!==captured)throw e;}
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
-export async function transferPreparation() {
-  // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
-  let s=await configuredPrefix('4-7',{seed:303,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
-    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
-    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
-    goldReserveByRound:{'4-5':40}});
+export async function transferPreparation({equipGloves=true}={}) {
+  // Keep seed 4 and two paid copies. Its independent v17 box oracle yields
+  // Tristana at 4-7 (no Ezreal/remover), so target that real reward for transfer.
+  // Equip the original glove recipe here; the offline variant freezes a vest
+  // on the donor and equips the gloves during combat without inventing a remover.
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
+    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'tristana',copy:0}},
+    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
+    goldReserveByRound:{'4-5':19,'4-7':0}});
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
-  const pair=players(s).filter(u=>u.definitionId==='ezreal'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
-  const gloves=s.items.find(i=>i.definitionId==='thiefs-gloves')!;
-  if(!gloves)throw Error('Missing public glove recipe');
-  if(gloves.location.kind==='unit'&&gloves.location.unitId!==donor.id){const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover')!;s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:gloves.location.unitId}));}
-  if(s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===donor.id&&i.id!==gloves.id)){const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover')!;s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:donor.id}));}
-  if(s.items.find(i=>i.id===gloves.id)!.location.kind==='inventory')s=accepted(api.equipItem(s,gloves.id,donor.id,0));
+  const pair=players(s).filter(u=>u.definitionId==='tristana'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
+  if(equipGloves)s=accepted(api.equipItem(s,s.items.find(i=>i.definitionId==='thiefs-gloves')!.id,donor.id,0));
   if(donor.location.kind==='board'&&survivor.location.kind==='board'){
     const a=donor.location,b=survivor.location;
     if(a.cell.row<b.cell.row||a.cell.row===b.cell.row&&a.cell.col<b.cell.col){

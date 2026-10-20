@@ -1,0 +1,481 @@
+{
+  "branch": "codex/v17-orb-combo",
+  "head": "e6233c953637065cdb78292e40e54cea5744cb19",
+  "mergeHead": "9b0b29fe1ad1db2c259270fb551e19ee8d65a013",
+  "baseCommit": "d677a291405ac263b617844d8ae43a604139b7fb",
+  "command": "node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers 4 --reporter=default --reporter=json --outputFile=artifacts/v17-merge/fast.json",
+  "fastExitCode": 1,
+  "sourceReport": "artifacts/v17-merge/fast.json",
+  "sourceLog": "artifacts/v17-merge/fast.log",
+  "durationSeconds": 714.1953500976563,
+  "files": {
+    "files": 430,
+    "passedFiles": 423,
+    "failedFiles": 7,
+    "passed": 5664,
+    "failed": 23,
+    "pending": 1
+  },
+  "tests": {
+    "total": 5688,
+    "passed": 5664,
+    "failed": 23,
+    "pending": 1,
+    "todo": 0
+  },
+  "server": {
+    "files": 48,
+    "passedFiles": 44,
+    "failedFiles": 4,
+    "passed": 288,
+    "failed": 9,
+    "pending": 0
+  },
+  "nonServer": {
+    "files": 382,
+    "passedFiles": 379,
+    "failedFiles": 3,
+    "passed": 5376,
+    "failed": 14,
+    "pending": 1
+  },
+  "failures": [
+    {
+      "file": "tests/assets3d-build-root.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "allows force for an empty directory and marked output from a previous build",
+          "status": "failed",
+          "errors": [
+            "Error: EPERM: operation not permitted, realpath 'C:\\Users\\Administrator'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/merge-root-output.mjs:23:15)\n    at buildAssetRoot (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/build-asset-root.mjs:39:18)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:56:3\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "refuses force for unrelated nonempty output with report undefined without changing files",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:69:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "refuses force for unrelated nonempty output with report {} without changing files",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:69:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "refuses force for unrelated nonempty output with report {invalid without changing files",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:69:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "refuses force for unrelated nonempty output with report {\"generator\":\"another-tool\"} without changing files",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:69:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "refuses existing nonempty output without force and preserves its contents",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'output-exists-use-force' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:78:55\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "merges an already merged root plus a new root in system temp; later keys win together",
+          "status": "failed",
+          "errors": [
+            "Error: EPERM: operation not permitted, realpath 'C:\\Users\\Administrator'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/merge-root-output.mjs:23:15)\n    at buildAssetRoot (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/build-asset-root.mjs:39:18)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:84:3\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "clears old playback, whole-unit actions and variants when the later root omits them",
+          "status": "failed",
+          "errors": [
+            "Error: EPERM: operation not permitted, realpath 'C:\\Users\\Administrator'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/merge-root-output.mjs:23:15)\n    at buildAssetRoot (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/build-asset-root.mjs:39:18)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:127:3\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "rejects path content conflicts and case aliases before publishing",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'merge-path-conflict' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:142:55\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "rejects inconsistent bindings and case-only IDs",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'conflicting-action-bindings' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:153:55\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        },
+        {
+          "name": "accepts read-only input junctions but rejects overlapping and linked outputs, including force",
+          "status": "failed",
+          "errors": [
+            "Error: expected [Function] to throw error including 'merge-output-overlaps-source' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-build-root.test.ts:162:71\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/assets3d-fx-pilot.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "latest approximate pilot indexes every synthetic merged payload and refreshes sizes/hashes on a forced merge",
+          "status": "failed",
+          "errors": [
+            "Error: EPERM: operation not permitted, realpath 'C:\\Users\\Administrator'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/merge-root-output.mjs:23:15)\n    at buildAssetRoot (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/scripts/assets3d/build-asset-root.mjs:39:18)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/assets3d-fx-pilot.test.ts:172:7\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+          "status": "failed",
+          "errors": [
+            "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1163:52\n    at buildResponseToResult (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1209:7)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1236:16\n    at responseCallbacks.<computed> (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:886:9)\n    at handleIncomingPacket (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:941:12)\n    at Socket.readFromStdout (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:864:7)\n    at Socket.emit (node:events:518:28)\n    at addChunk (node:internal/streams/readable:561:12)"
+          ]
+        },
+        {
+          "name": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+          "status": "failed",
+          "errors": [
+            "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1163:52\n    at buildResponseToResult (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1209:7)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1236:16\n    at responseCallbacks.<computed> (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:886:9)\n    at handleIncomingPacket (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:941:12)\n    at Socket.readFromStdout (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:864:7)\n    at Socket.emit (node:events:518:28)\n    at addChunk (node:internal/streams/readable:561:12)"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-consumable-preview.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "C18-B consumable target answers the fixture holds tools of every kind (precondition)",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected 0 to be greater than 0\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/c18b-consumable-preview.test.ts:28:38\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+          ]
+        },
+        {
+          "name": "C18-B consumable target answers online: the seat view answer equals the authority for every candidate, without reading the authority",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected 0 to be greater than 0\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/c18b-consumable-preview.test.ts:39:21\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+          ]
+        },
+        {
+          "name": "C18-B consumable target answers online: targets the projection does not list (enemy, unknown, consumed tool) are not usable",
+          "status": "failed",
+          "errors": [
+            "TypeError: Cannot read properties of undefined (reading 'consumableId')\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/c18b-consumable-preview.test.ts:43:44\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-use-consumable.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "C18-B useConsumable success through the room (§18.6) a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched",
+          "status": "failed",
+          "errors": [
+            "Error: room never reached the expected state (phase ended, round 36, fault null)\n    at runUntilClaiming (C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/helpers.ts:76:37)\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/c18b-use-consumable.test.ts:90:5\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+          ]
+        },
+        {
+          "name": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+          ]
+        },
+        {
+          "name": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+          ]
+        },
+        {
+          "name": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+          "status": "failed",
+          "errors": [
+            "AssertionError: node:events:496\r\n      throw er; // Unhandled 'error' event\r\n      ^\r\n\r\nError: spawn C:\\Program Files\\nodejs\\node.exe ENOENT\r\n    at ChildProcess._handle.onexit (node:internal/child_process:285:19)\r\n    at onErrorNT (node:internal/child_process:483:16)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\r\nEmitted 'error' event on ChildProcess instance at:\r\n    at ChildProcess._handle.onexit (node:internal/child_process:291:12)\r\n    at onErrorNT (node:internal/child_process:483:16)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {\r\n  errno: -4058,\r\n  code: 'ENOENT',\r\n  syscall: 'spawn C:\\\\Program Files\\\\nodejs\\\\node.exe',\r\n  path: 'C:\\\\Program Files\\\\nodejs\\\\node.exe',\r\n  spawnargs: [\r\n    '-e',\r\n    \"process.stdout.write('READY\\\\n'); setImmediate(() => process.stderr.write('ordinary server warning\\\\n'));\"\r\n  ]\r\n}\r\n\r\nNode.js v22.17.0\r\n: expected 1 to be +0 // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/e2e-replay-errors.test.ts:23:42\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "tests/server/t10-combat-ops.test.ts",
+      "message": "",
+      "assertions": [
+        {
+          "name": "T10 deadline auto-deployment (contract §15.4) fills human boards to the cap from the bench, left slot first, front row centre-out 3/2/4/1/5/0/6; bots are left alone",
+          "status": "failed",
+          "errors": [
+            "AssertionError: expected [ [ 'unit-5', '3,4' ], …(2) ] to deeply equal [ [ 'unit-4', '2,4' ], …(2) ]\n    at C:/Users/Administrator/Desktop/set13-worktrees/epic-loot/tests/server/t10-combat-ops.test.ts:155:127\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+          ]
+        }
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "file": "tests/assets3d-paths.test.ts",
+      "name": "assets3d filesystem boundaries checks the extraction record file itself before reading it",
+      "status": "skipped"
+    }
+  ],
+  "targeted": {
+    "files": 3,
+    "passed": 23,
+    "failed": 0
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "log": "artifacts/v17-merge/typecheck.log"
+  },
+  "build": {
+    "exitCode": 0,
+    "log": "artifacts/v17-merge/build.log",
+    "size": {
+      "baselineFiles": [
+        {
+          "file": "artifacts/premerge-265/baseline/dist/assets/index-CsWIfx1z.js",
+          "bytes": 1497604,
+          "gzip9": 424763,
+          "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+        }
+      ],
+      "currentFiles": [
+        {
+          "file": "dist/assets/index-BNmvDULo.js",
+          "bytes": 1502618,
+          "gzip9": 453890,
+          "sha256": "c29f2b430fe39e7b413bf831cc2d0a6b403af7be6e96f27e47c3bb0222a5c62a"
+        },
+        {
+          "file": "dist/assets/phaser-ax-wMCa1.js",
+          "bytes": 614971,
+          "gzip9": 175652,
+          "sha256": "54af098131ba3056731ae3bf76c15d639ffa0f86d6118e93e626dda3449599e3"
+        }
+      ],
+      "independent3dFiles": [
+        {
+          "file": "dist/assets/3d/basis_transcoder-o4Hde_L7.js",
+          "bytes": 57529,
+          "gzip9": 15143,
+          "sha256": "8478b5b6d6b74e7d3082b89f6417321d8d1dc0307f2b30d4484bb11b441696a1"
+        },
+        {
+          "file": "dist/assets/3d/render3d-BaoOh9Qm.js",
+          "bytes": 769384,
+          "gzip9": 213065,
+          "sha256": "0da8ab5d3a294667734b7cd48b5ca7c2d102c9af865b69cb12c9b30485b55cbd"
+        }
+      ],
+      "baseline": 424763,
+      "current": 629542,
+      "ratio": 1.4821017838182704,
+      "limit": 1.49,
+      "passed": true,
+      "recursiveJsGzip9": 857750
+    }
+  },
+  "epoch": {
+    "baseCommit": "d677a291405ac263b617844d8ae43a604139b7fb",
+    "steps": [
+      {
+        "name": "record-release",
+        "args": [
+          "scripts/record-v17-release.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 90596,
+        "log": "artifacts\\v17-recording\\record-release.log"
+      },
+      {
+        "name": "record-herald",
+        "args": [
+          "tests/fixtures/record-v17-herald.cjs",
+          "--write"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 73880,
+        "log": "artifacts\\v17-recording\\record-herald.log"
+      },
+      {
+        "name": "record-inputs",
+        "args": [
+          "scripts/record-v17-inputs.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 15090,
+        "log": "artifacts\\v17-recording\\record-inputs.log"
+      },
+      {
+        "name": "record-live-reveal",
+        "args": [
+          "scripts/record-v17-live-reveal.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 33140,
+        "log": "artifacts\\v17-recording\\record-live-reveal.log"
+      },
+      {
+        "name": "check-inputs",
+        "args": [
+          "scripts/record-v17-inputs.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 15453,
+        "log": "artifacts\\v17-recording\\check-inputs.log"
+      },
+      {
+        "name": "check-herald",
+        "args": [
+          "scripts/verify-m8-herald-fixtures.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 74040,
+        "log": "artifacts\\v17-recording\\check-herald.log"
+      },
+      {
+        "name": "check-history",
+        "args": [
+          "scripts/v17-fixture-audit.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 4061,
+        "log": "artifacts\\v17-recording\\check-history.log"
+      },
+      {
+        "name": "check-live-reveal",
+        "args": [
+          "scripts/record-v17-live-reveal.cjs",
+          "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 31975,
+        "log": "artifacts\\v17-recording\\check-live-reveal.log"
+      },
+      {
+        "name": "compare-digests",
+        "args": [
+          "scripts/compare-v17-digests.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 13264,
+        "log": "artifacts\\v17-recording\\compare-digests.log"
+      }
+    ],
+    "complete": true
+  },
+  "history": {
+    "epoch": "v17",
+    "baseCommit": "d677a291405ac263b617844d8ae43a604139b7fb",
+    "historicalV15V16Files": 58,
+    "byteIdentical": true,
+    "commitComparison": "git-cat-file--filters",
+    "historicalV16AssertionsByteIdentical": true
+  },
+  "protectedFiles": {
+    "count": 200,
+    "unchangedSinceTaskStart": true
+  },
+  "conflictFiles": [
+    "tests/fixtures/t13-loot-public.ts",
+    "tests/m8-b10-temporary-replay.test.ts",
+    "tests/m8-b8-live-transfer.test.ts",
+    "tests/t12-offline-transfer.test.ts"
+  ],
+  "gitIndex": "Four unmerged index entries intentionally retained; Git writes prohibited.",
+  "digestComparison": {
+    "before": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "after": {
+      "contentDigest": "fnv1a32-utf16:05439fc4",
+      "lootReplayDigest": "fnv1a32-utf16:132ae758",
+      "rulesManifestDigest": "fnv1a32-utf16:2b97ea5f"
+    }
+  },
+  "failureCategories": [
+    {
+      "kind": "environment: ancestor realpath denied",
+      "files": [
+        "tests/assets3d-build-root.test.ts",
+        "tests/assets3d-fx-pilot.test.ts"
+      ],
+      "failed": 12,
+      "evidence": "EPERM realpath C:\\Users\\Administrator; merge-root-output.mjs:23 fails before target assertions",
+      "remaining": "Rerun unchanged tests with ancestor realpath access; no change to the asset-root safety policy."
+    },
+    {
+      "kind": "environment: subprocess bundle denied",
+      "files": [
+        "tests/explorer-bracer-restore-pressure.test.ts"
+      ],
+      "failed": 2,
+      "evidence": "esbuild Cannot read directory ../../..: Access is denied; could not resolve explorer-bracer-stress.ts",
+      "remaining": "The original subprocess memory/time acceptance remains unverified."
+    },
+    {
+      "kind": "server: report only",
+      "files": [
+        "tests/server/c18b-consumable-preview.test.ts",
+        "tests/server/c18b-use-consumable.test.ts",
+        "tests/server/e2e-replay-errors.test.ts",
+        "tests/server/t10-combat-ops.test.ts"
+      ],
+      "failed": 9,
+      "evidence": "consumable prerequisites 3; remover route 1; harness child spawn ENOENT 4; event-order assertion 1",
+      "remaining": "Server owner adaptation/review; protected sources and tests unchanged."
+    }
+  ],
+  "allFastPassed": false
+}

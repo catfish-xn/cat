@@ -44,7 +44,7 @@ export class LeftPanelToggle {
   private apply(): void {
     if (this.collapsed) document.body.dataset.onlineLeft = 'collapsed'; else delete document.body.dataset.onlineLeft;
     if (!this.collapsed) this.toast.hidden = true;
-    this.button.textContent = this.collapsed ? '» 展开面板' : '« 收起面板';
+    this.button.textContent = this.collapsed ? '展开面板 ›' : '‹ 收起面板';
     this.button.setAttribute('aria-expanded', String(!this.collapsed));
     this.button.title = this.collapsed ? '展开左侧操作面板（装备、部署、构筑、记录）' : '收起左侧操作面板，只留羁绊列表';
   }

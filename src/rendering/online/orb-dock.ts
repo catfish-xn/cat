@@ -25,6 +25,18 @@ export function readOrbClaimReceipts(state: MatchState): readonly LootReceipt[] 
   const receipts = (state as MatchState & OrbFields).orbClaimReceipts;
   return Array.isArray(receipts) ? receipts : [];
 }
+/**
+ * Orbs (by orbId) that at least one receipt granted something from; forfeited receipts count for nothing. An orb entry's
+ * dropId is `JSON([orbId, entryOrdinal])` (ORB_RULES.dropId in content/orbs.ts); any other dropId names no orb.
+ */
+export function grantedOrbIds(receipts: readonly LootReceipt[]): string[] {
+  const ids = new Set<string>();
+  for (const receipt of receipts) {
+    if (receipt.resolution === 'forfeited') continue;
+    try { const parsed: unknown = JSON.parse(receipt.dropId); if (Array.isArray(parsed) && typeof parsed[0] === 'string') ids.add(parsed[0]); } catch { /* not an orb entry */ }
+  }
+  return [...ids];
+}
 
 const stars = (payload: LootPayload) => payload.kind === 'unit' ? '★'.repeat(payload.starLevel ?? 1) : '';
 /** Display name of one orb entry, with its count and a unit's star level. */
@@ -151,13 +163,24 @@ export class OrbDock {
     button.append(tip);
     button.addEventListener('click', () => {
       if (button.disabled) return;
-      if (context.inBattle) { this.held.add(orb.orbId); this.actions.status('战斗中 · 法球将在战后结算'); }
-      this.opening.set(orb.orbId, Date.now()); button.classList.add('orb-opening');
-      this.actions.claim(orb.orbId);
-      // A refused or queued claim leaves the orb on the dock: drop the opening look after its animation.
-      window.setTimeout(() => { if (this.opening.delete(orb.orbId) && this.last) this.render(this.last.state, this.last.context); }, OPEN_MS);
+      this.claimShown(orb.orbId, context);
+      button.classList.add('orb-opening');
     });
     return button;
+  }
+  /** A click on this orb drawn elsewhere (the 3D board): the same as its dock button, ignored while that is disabled. */
+  click(orbId: string): void {
+    const last = this.last, orb = last && readUnclaimedOrbs(last.state).find(candidate => candidate.orbId === orbId);
+    if (!last || !orb || orb.queued || this.held.has(orbId) || last.context.locked) return;
+    this.claimShown(orbId, last.context);
+    this.render(last.state, last.context);
+  }
+  private claimShown(orbId: string, context: OrbDockContext): void {
+    if (context.inBattle) { this.held.add(orbId); this.actions.status('战斗中 · 法球将在战后结算'); }
+    this.opening.set(orbId, Date.now());
+    this.actions.claim(orbId);
+    // A refused or queued claim leaves the orb on the dock: drop the opening look after its animation.
+    window.setTimeout(() => { if (this.opening.delete(orbId) && this.last) this.render(this.last.state, this.last.context); }, OPEN_MS);
   }
 
   /** New receipts since the last state: one line each (金币 +N, 已入库, 自动出售 +NG), shown by the dock and the status line. */

@@ -1,5 +1,7 @@
 # v17 第 1–4 阶段法球随机组合
 
+当前合并收尾以文末“合入最新 multiplayer 后的收尾”及对应机器证据为准；此前各轮数字是历史记录。
+
 本次基于 `codex/v17-orb-combo` 的 `3a786fa8f8c7217ec3e1518313b4e1ff0afebd77`，沿用 v17 贪财化身身份。依据为本地任务书 §3 及仓库归档 `content/source/s13-14.24b/raw/map22.bin.json.gz`，没有联网。任务书 §1 的阶段/箱子整数权重原样落表；`Stage1High` 的总权重确为 110，其他阶段表为 100；空权重行不入表。
 
 另直接解压本地原始 map22：对八张阶段表逐行比较整数化权重及 Items/Silver/Blue/Gold/Prismatic，全部与独立字面 oracle 一致；HighOdds 与四个 Min/Max 边界也一致。检查结果位于 `artifacts/orb-combo/raw-stage-check.json`。
@@ -170,7 +172,7 @@
 
 `tests/explorer-bracer-restore-pressure.test.ts` 的两项（五百万次伪造触发的有界拒绝、`26^12` Titan 历史去重）被 esbuild 的 `Cannot read directory "../../..": Access is denied` 阻挡，未完成子进程内存/时限验证。显式 tsconfig 未解除访问限制；诊断另发现本机无可调用的 Python 峰值内存测量器。诊断性改动均已撤回，原压力断言和测量脚本不变；需在具有所需构建访问和 Python 的环境原样重跑，不能声称压力验收通过。
 
-## 本轮收口验收结果（2026-10-21）
+## 上轮收口验收结果（2026-10-21，换基线前的历史记录）
 
 - v17 九步统一重录及复核全部退出 0；固定基线仍为 #295 的 `30cf934446719a0da0d3cea1667bf84a3df5296c`，未换基线。完整步骤及日志索引见 [epoch-verification.json](evidence/v17/epoch-verification.json)。两条录制状态、golden、herald、输入证据及 live reveal 均为当前 v17 schema/digest；没有把 v15/v16 证据改成新版本。
 - 历史审计再次通过：v15/v16 的 58 个证据文件、历史 v16 断言逐字节不变；`g2-4b-herald-raw/manifest.json` 无差异。商店 78 组、重铸 30 组继续与改前对照逐字节相等。
@@ -182,3 +184,29 @@
 本轮可执行的非服务器场景适配与 v17 epoch 重录已收口；**整套 fast 仍有 11 项未通过，不能称完整发布验收通过**。后续由服务器串按上述四文件交接处理，并在具备所需权限和 Python 的环境补跑原样压力测试。
 
 建议提交信息：`test(v17): adapt randomized orb scenarios and rerecord epoch`。
+
+## 合入最新 multiplayer 后的收尾（2026-10-21）
+
+当前在 `codex/v17-orb-combo`（#306，HEAD `e6233c953637065cdb78292e40e54cea5744cb19`）合并 #295 的 `9b0b29fe1ad1db2c259270fb551e19ee8d65a013`；后者已含最新 multiplayer `d677a291405ac263b617844d8ae43a604139b7fb`、#291 的 seed 4 恢复、#292 的侦察四星及 v16 指纹重录、#265。以下结果覆盖这份合并工作区，不表示已写入 Git 索引或完成 merge commit。
+
+历史基线从 `30cf934446719a0da0d3cea1667bf84a3df5296c` 换成 `d677a291405ac263b617844d8ae43a604139b7fb`（只读 `git rev-parse d677a291` 得到完整 SHA）。`v17-fixture-audit.cjs`、`verify-v17-epoch.cjs`、`compare-v17-digests.cjs` 三处同步；v15/v16 的 58 份历史文件以新基线逐字节保留，包括 #292 已重录的 v16 manifest/审计源码指纹，不能以旧 multiplayer 的字节覆盖它们。原 #295 文档的验证数字保留为历史，本轮 v17 证据全部重新生成。
+
+四个测试文件的冲突标记已清除。共享路线固定 seed 4；独立 `orb-combo-oracle.cjs` 算得 v17 的 4-7 为 belt/tear/cloak、Tristana+1金、Leona+1金，共七条奖励，已无 Ezreal 或拆卸器。故将实际升星转移对象改为两张付费 Tristana，商店 generation/slot、出生 sequence、76 条账本、手套原 ID、slime-time 目标及掉落全量 oracle 都作精确断言。两条升星分支仍分别验证手套与临时子装备迁移、冲突退库、异常转移、原始战斗冻结、逐 tick 恢复、唯一发奖/防重发及篡改拒绝；离线分支在准备阶段给 donor 装 vest，战中才把库存手套装给 survivor，同样验证冻结装备溢出退库，不依赖本种子没有的拆卸器。没有伪造资源、改生产规则、放宽断言或时限。定向 3 文件 / 23 项全部通过，原始日志 `artifacts/v17-merge/transfer.log`。
+
+`node scripts/verify-v17-epoch.cjs` 九步全部退出 0，完整顺序与日志索引见 [epoch-verification.json](evidence/v17/epoch-verification.json)。两条录制状态、四路线 golden、五案 Herald、输入和实时揭示证据均完整重录并复核；历史字节审计通过。独立双根重算得到新基线 v16 content/loot 为 `de829c8a` / `62c76cb9`，当前 v17 仍为 `05439fc4` / `132ae758`（均为 `fnv1a32-utf16:` 前缀），没有改写历史版本身份或生产规则。
+
+独立 `npm.cmd run typecheck` 与 `npm.cmd run build -- --configLoader runner`（再次包含 tsc）均退出 0。正式 2D 顶层全部 JS（含拆分后的 Phaser）逐文件 gzip level9 求和 **629542 / 424763 = 1.4821017838 ≤ 1.49**；分母从本地原 M7 构建重新核对字节数与 SHA256。独立 3D JS gzip 228208 B，递归全部 JS 为 857750 B，保持原 2D 预算口径。逐文件证据见 [merge-build-size.json](evidence/v17/merge-build-size.json)；沿用现有大 chunk 警告，不修改构建配置。
+
+最终 fast 命令：`node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers 4 --reporter=default --reporter=json --outputFile=artifacts/v17-merge/fast.json`，在九步全部结束后运行，避免中途证据读入。原始退出码 **1**，耗时 **714.15 秒**；**430 文件：423 通过 / 7 失败；5688 项：5664 通过 / 23 失败 / 1 跳过，0 待执行**。原始 JSON/日志为 `artifacts/v17-merge/fast.json` / `fast.log`；可提交的逐项完整失败、分类、九步、构建和边界核对汇总见 [merge-validation.json](evidence/v17/merge-validation.json)。没有用定向结果或后续复验替换全量数字。
+
+| 分类 | 本轮完整结果与限制 |
+| --- | --- |
+| 服务器，只报告 | 48 文件，44 通过 / 4 失败；288 项通过 / 9 失败，0 未执行。`c18b-consumable-preview` 3 项仍在真实工具获取前提失败；`c18b-use-consumable` 1 项到 round 36 ended 仍缺所需拆卸器场景；`e2e-replay-errors` 4 项仍为 harness 子进程 `spawn node.exe ENOENT`；`t10-combat-ops` 1 项在第 155 行事件顺序失败。处理建议沿用本文上方交接，原测试和服务器未改；其中 e2e 外层已经使用 `fileURLToPath`，失败仍在内层 harness 启动。 |
+| 3D 脚本环境限制 | `assets3d-build-root` 11 项与 `assets3d-fx-pilot` 1 项：`merge-root-output.mjs:23` 沿绝对路径逐层调用 `realpath`，在 `C:\Users\Administrator` 被本机权限以 EPERM 拒绝，尚未到达目标输出策略/合并断言。没有绕过路径安全检查或改 3D 脚本；需在允许祖先路径 realpath 的环境原样补验，不能声明这 12 项目标断言已通过。 |
+| 原压力测试环境限制 | `explorer-bracer-restore-pressure` 2 项：esbuild 报 `Cannot read directory "../../..": Access is denied` 且无法解析原压力入口。保留原测试与脚本，子进程的内存/时限要求仍未完成验证。 |
+
+非服务器合计 382 文件，379 通过 / 3 失败；5376 项通过 / 14 项上述环境失败 / 1 跳过。唯一跳过仍是 `assets3d-paths` 的 extraction-record 条件用例，本轮没有新增 skip。没有其他非服务器失败，本次 23 项转移定向用例在全量中也全部通过；**全套 fast 尚未全绿，不作完整发布验收通过的声明**。
+
+结束时只读核对分支、HEAD、MERGE_HEAD 不变；受保护的 `src/server/`、`tests/server/`、`src/rendering/`、`src/presentation/` 共 200 个已跟踪文件与任务起点 SHA256 相同。新历史基线确为 MERGE_HEAD 的祖先；历史字节复核及 `git diff --check` 通过。未联网、未写 Git、未部署。四个文件内容已解决冲突，但遵守禁止 Git 写入的约束，索引仍保留 UU、MERGE_HEAD 仍存在；后续由有写权限的执行者暂存审阅结果并完成合并。
+
+建议提交信息：`test(v17): resolve seed-4 transfers and rerecord epoch on d677a291`。

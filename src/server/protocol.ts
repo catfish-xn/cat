@@ -67,6 +67,8 @@ export interface PublicBoardUnit {
   readonly summon?: true;
   /** 2026-10-20 scouting: the anomaly (异常) definition id bound to this unit; omitted when it has none. */
   readonly anomaly?: string;
+  /** V16-UI-251: 4 on a promoted 终极英雄 (physically still 3★, `starLevel` stays 3); omitted otherwise. */
+  readonly effectiveStarLevel?: 4;
 }
 /** A unit on the owner's bench (2026-10-20 scouting): same fields as a board unit, a bench slot instead of a cell. */
 export interface PublicBenchUnit {
@@ -77,6 +79,8 @@ export interface PublicBenchUnit {
   readonly items: readonly string[];
   /** The anomaly (异常) definition id bound to this unit; omitted when it has none. */
   readonly anomaly?: string;
+  /** V16-UI-251: 4 on a promoted 终极英雄; omitted otherwise. */
+  readonly effectiveStarLevel?: 4;
 }
 export interface PublicBoard {
   readonly units: readonly PublicBoardUnit[];

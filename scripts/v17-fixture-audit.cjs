@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
 const previous=require('./v16-fixture-audit.cjs');
-const BASELINE='30cf934446719a0da0d3cea1667bf84a3df5296c';
+const BASELINE='d677a291405ac263b617844d8ae43a604139b7fb';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 exports.baselineCommit=()=>{
  const args=process.argv.slice(2),arg=args.find(x=>x.startsWith('--baseline-commit='));
