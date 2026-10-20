@@ -293,8 +293,10 @@ export function approximateEmitter(input, system = {}, options = {}) {
       // Test the actual composed plane, including parent rotation/shear. A
       // local ground plane can become an upright wall after the parent frame;
       // conversely the parent can supply the missing ground-facing normal.
+      // Check every recovered orientation, including ground/shape/parent rules;
+      // only the legacy preview without orientation evidence is exempt.
       // An explicitly attached frame is supplied by the host at playback.
-      if (hasBirthOrientation && !attachmentFrame && !hasGroundNormal(additions.rotation0, system)) {
+      if (additions.rotation0 && !attachmentFrame && !hasGroundNormal(additions.rotation0, system)) {
         return { status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal' };
       }
       // The existing ray primitive already has a base-anchored XY plane. Its

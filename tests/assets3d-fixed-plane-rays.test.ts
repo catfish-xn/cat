@@ -131,6 +131,15 @@ describe('fixed plane ray evidence', () => {
       expect(new Vector3(0, 0, 1).transformDirection(fx.object.children[0].matrixWorld).y).toBeCloseTo(-1);
     } finally { fx.dispose(); }
   });
+  it('skips a ground-layer ray turned upright by its parent without birth rotation', () => {
+    const system = { transform: [[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]] };
+    const result = convert({ isGroundLayer: 1 }, system);
+    expect(result.counts).toMatchObject({ skipped: 1, approximated: 0, rejected: 0 });
+    expect(result.systems[0].report[0]).toMatchObject({
+      status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal',
+    });
+    expect(result.systems[0].document).toBeUndefined();
+  });
   it('preserves size magnitude when mirrored probability signs cancel and annotates static UV rotation', () => {
     const input = { birthRotation0: c([90, 0, 0]), birthVelocity: c([0, 0, 0]), uvRotation: c(30), birthScale0: {
       dynamics: { times: [0], values: [[-4, 8, 1]], probabilityTables: [{ keyValues: [-1, 1] }, {}, {}] },
@@ -148,7 +157,7 @@ describe('fixed plane ray evidence', () => {
       const result = convert(birthRotation0 ? { birthRotation0 } : {});
       const emitter = result.systems[0].document.emitters[0];
       expect(emitter).toMatchObject({ kind: 'ray', direction: [0, 1, 0] });
-      expect((emitter.rotation0 ?? [0, 0, 0]).every((n: number) => n === 0)).toBe(true);
+      expect(emitter.rotation0).toEqual(birthRotation0 ? [0, -0, -0] : undefined);
       const fx = new ParticleEffect(result.systems[0].document, { scale: 1 });
       try {
         fx.update(.1, new PerspectiveCamera());
