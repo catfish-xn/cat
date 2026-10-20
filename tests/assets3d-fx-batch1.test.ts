@@ -41,11 +41,10 @@ describe('TFT13 batch one explicit FX tables', () => {
       expect(fixture.source).toEqual(original);
     } finally { fx.dispose(); }
   });
-  it('keeps a signed-probability ray without plane evidence skipped', () => {
+  it('keeps a signed-probability ray without plane evidence in the legacy preview', () => {
     const fixture = oversize.find((r: any) => r.source.emitterName === 'synthetic_ray');
     const result = mapEmitter(fixture.source, (path: string) => path, { particleMode: 'approximate' });
-    expect(result).toMatchObject({ status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-evidence' });
-    expect(result.emitter).toBeUndefined();
+    expect(result).toMatchObject({ status: 'approximated', emitter: { kind: 'ray', direction: [0, 1, 0] } });
   });
   it('rejects other output roots and unsupported units before writing', async () => {
     for (const out of ['assets3d-local/fx-trial', 'assets3d-local/fx-all', 'public']) {

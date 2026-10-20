@@ -81,7 +81,7 @@ describe('explicit visual preview adapter', () => {
     camera.rotation.set(.8, -.2, 1); fx.update(.1, camera);
     expect(fx.object.children[0].quaternion.angleTo(rotation)).toBeLessThan(1e-6); fx.dispose();
   });
-  it('orients moving ray geometry along velocity and skips stationary rays without evidence', () => {
+  it('orients moving ray geometry along velocity and preserves legacy stationary rays without evidence', () => {
     const { e, doc, row } = mapped({ primitive: { __type: 'VfxPrimitiveRay' }, birthVelocity: c([3, 0, 0]), birthScale0: c([2, 8, 1]), birthRotation0: c([90, 90, 90]) });
     expect(e.direction).toEqual([-3, 0, 0]);
     expect(row.approximations).toContainEqual(expect.objectContaining({ handling: 'ray-or-beam-direction-overrides-birth-rotation' }));
@@ -90,7 +90,7 @@ describe('explicit visual preview adapter', () => {
     expect(new Vector3(0, 1, 0).applyQuaternion(mesh.quaternion).x).toBeCloseTo(-1);
     expect(mesh.scale.y).toBe(8); fx.dispose();
     expect(convert({ primitive: { __type: 'VfxPrimitiveRay' } }).systems[0].report[0]).toMatchObject({
-      status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-evidence' });
+      status: 'approximated', reason: 'visual-preview-conventions' });
   });
   it('uses beam endpoints and skips missing or coincident endpoints without emitting a fake beam', () => {
     const p = { __type: 'VfxPrimitiveBeam', start: [1, 2, 3], end: [1, 8, 3] };

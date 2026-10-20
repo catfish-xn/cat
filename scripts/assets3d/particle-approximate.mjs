@@ -8,6 +8,7 @@ export function particleMode(mode = 'strict') {
 }
 const vector = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
 const defaultCurve = v => ({ constantValue: v });
+const hasPitchOrYaw = rotation => vector(rotation) && rotation.slice(0, 2).some(n => Math.abs(n % 360) > 1e-6);
 const enabled = v => v === true || v === 1;
 const xyzDegrees = rotation => {
   const radians = Math.PI / 180;
@@ -91,6 +92,11 @@ export function approximateEmitter(input, system = {}, options = {}) {
       && shape.emitRotationAngles?.some(nonzero) && nonzero(source.birthVelocity)) {
     return { status: 'skipped', reason: 'unexpressible-emitter:rotated-directional-emission' };
   }
+  const hasPlaneEvidence = () => hasPitchOrYaw(source.rotationOverride ?? source.birthRotation0?.constantValue)
+    || enabled(input.isGroundLayer) || enabled(input.isFollowingTerrain)
+    || enabled(input.isLocalOrientation) || enabled(input.particleIsLocalOrientation)
+    || !!(shapeNormal(shape) && !(shape?.emitRotationAxes?.some(nonzero) && shape.emitRotationAngles?.some(nonzero)))
+    || !!system.transform?.slice(0, 3).some((row, i) => Array.isArray(row) && row.slice(0, 3).some((v, j) => Number.isFinite(v) && (i !== j ? v !== 0 : v < 0)));
   const sample = (value, field, animated = false) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = structuredClone(value), d = v.dynamics;
@@ -103,7 +109,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
       // A signed size distribution can encode mirrored particles. Averaging
       // signs first erases a real surface (symmetric signs collapse to zero).
       // Fixed-ray previews keep mean magnitudes and explicitly omit UV flips.
-      const magnitude = field === 'birthScale0' && source.primitive?.__type === 'VfxPrimitiveRay'
+      const magnitude = field === 'birthScale0' && source.primitive?.__type === 'VfxPrimitiveRay' && hasPlaneEvidence()
         && (source.birthVelocity === undefined || vector(source.birthVelocity?.constantValue) && Math.hypot(...source.birthVelocity.constantValue) === 0);
       const factors = tables.map(t => t.keyValues?.length ? t.keyValues.reduce((a, b) => a + (magnitude ? Math.abs(b) : b), 0) / t.keyValues.length : 1);
       if (magnitude) note(`${field}.dynamics.probabilityTables`, tables, 'fixed-ray-mean-absolute-size-magnitude-omit-mirror-UV-flips');
@@ -129,7 +135,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
     }
     return v;
   };
-  for (const key of ['birthVelocity', 'particleLifetime', 'rate', 'birthScale0', 'birthRotation0', 'birthDrag', 'worldAcceleration',
+  for (const key of ['birthVelocity', 'particleLifetime', 'rate', 'birthRotation0', 'birthScale0', 'birthDrag', 'worldAcceleration',
     'birthColor', 'EmitterPosition', 'birthAcceleration', 'frameRate', 'birthFrameRate']) if (source[key] !== undefined) source[key] = sample(source[key], key);
   for (const key of ['color', 'scale0']) if (source[key] !== undefined) source[key] = sample(source[key], key, true);
   // Numeric frameRate in the source is a scalar, unlike ValueFloat fields.
@@ -177,7 +183,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
     const size = source.birthScale0?.constantValue;
     if (Array.isArray(size)) source.birthScale0 = defaultCurve([size[0], size[0], size[0]]);
   }
-  if (source.primitive?.__type === 'VfxPrimitiveRay'
+  if (source.primitive?.__type === 'VfxPrimitiveRay' && hasPlaneEvidence()
       && (source.birthVelocity === undefined || vector(source.birthVelocity?.constantValue) && Math.hypot(...source.birthVelocity.constantValue) === 0)
       && vector(source.birthScale0?.constantValue) && source.birthScale0.constantValue.some(n => n < 0)) {
     note('birthScale0', input.birthScale0, 'fixed-ray-absolute-size-omit-mirror-UV-flips');
@@ -250,6 +256,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
     additions.kind = 'ray';
     if (velocity === undefined || vector(velocity) && Math.hypot(...velocity) === 0) {
       if (source.birthRotation0 !== undefined && !vector(rotation)) throw new Error('invalid-approximate-ray-rotation');
+      const hasBirthOrientation = hasPitchOrYaw(rotation);
       let normal = shapeNormal(shape), attachmentFrame = false;
       // Shape frame rotations are not volume normals. Do not silently ignore
       // an authored rotation when using a degenerate volume as plane evidence.
@@ -257,7 +264,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
       if (enabled(input.isGroundLayer) || enabled(input.isFollowingTerrain)) {
         additions.rotation0 = xyzDegrees([90, vector(rotation) ? rotation[1] : 0, vector(rotation) ? rotation[2] : 0]);
         note('primitive', p, 'fixed-ray-ground-XZ-preserve-YXZ-heading');
-      } else if (vector(rotation)) {
+      } else if (hasBirthOrientation) {
         additions.rotation0 = xyzDegrees(rotation);
         note('primitive', p, 'fixed-ray-birth-YXZ-X-reflection-to-v2-XYZ-degrees');
       } else if (normal) {
@@ -278,12 +285,16 @@ export function approximateEmitter(input, system = {}, options = {}) {
           note('primitive', p, 'fixed-ray-system-affine-local-XY');
         }
       }
-      if (!additions.rotation0) return { status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-evidence' };
+      if (!additions.rotation0) {
+        // Preserve the pre-fixed-plane preview when no plane can be inferred.
+        // Zero rotation and roll alone do not supply pitch/yaw evidence.
+        note('primitive', p, 'ray-strip-along-birth-velocity-zero-velocity-local-Y');
+      }
       // Test the actual composed plane, including parent rotation/shear. A
       // local ground plane can become an upright wall after the parent frame;
       // conversely the parent can supply the missing ground-facing normal.
       // An explicitly attached frame is supplied by the host at playback.
-      if (!attachmentFrame && !hasGroundNormal(additions.rotation0, system)) {
+      if (hasBirthOrientation && !attachmentFrame && !hasGroundNormal(additions.rotation0, system)) {
         return { status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal' };
       }
       // The existing ray primitive already has a base-anchored XY plane. Its

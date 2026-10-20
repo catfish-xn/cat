@@ -72,7 +72,7 @@ describe('fixed plane ray evidence', () => {
     try { expect(normal(fx).distanceTo(new Vector3(...expected as [number, number, number]))).toBeLessThan(1e-7); }
     finally { fx.dispose(); }
   });
-  it.each([[0, 0, 0], [0, 90, 0], [180, 30, 0], [360, 0, 90]])('keeps upright birth planes skipped: %j', (x, y, z) => {
+  it.each([[0, 90, 0], [180, 30, 0]])('keeps upright birth planes skipped: %j', (x, y, z) => {
     const result = convert({ birthRotation0: c([x, y, z]) });
     expect(result.systems[0].report[0]).toMatchObject({ status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal' });
     expect(result.systems[0].document).toBeUndefined();
@@ -102,17 +102,17 @@ describe('fixed plane ray evidence', () => {
     { SpawnShape: { __type: 'VfxShapeBox', Size: [0, 0, 4] } },
     { SpawnShape: { __type: 'VfxShapeCylinder', radius: 4, height: 0, emitRotationAxes: [[1, 0, 0]], emitRotationAngles: [c(20)] } },
     { rotation0: c([90, 0, 0]) },
-  ])('keeps missing or ambiguous plane evidence skipped: %j', fields => {
+  ])('preserves the legacy local-Y ray without orientation evidence: %j', fields => {
     for (const birthVelocity of [undefined, c([0, 0, 0])]) {
       const result = convert({ ...fields, ...(birthVelocity ? { birthVelocity } : {}) });
-      expect(result.counts).toMatchObject({ skipped: 1, rejected: 0, approximated: 0 });
-      expect(result.systems[0].document).toBeUndefined();
-      expect(result.systems[0].report[0].reason).toBe('unexpressible-emitter:stationary-ray-plane-without-evidence');
+      expect(result.counts).toMatchObject({ skipped: 0, rejected: 0, approximated: 1 });
+      expect(result.systems[0].document.emitters[0]).toMatchObject({ kind: 'ray', direction: [0, 1, 0] });
+      expect(result.systems[0].document.emitters[0].rotation0).toBeUndefined();
     }
   });
   it('does not treat translation/scale as an orientation or hide malformed data and other unsupported fields', () => {
     const transform = [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 2, 0], [3, 4, 5, 1]];
-    expect(convert({}, { transform }).counts.skipped).toBe(1);
+    expect(convert({}, { transform }).counts.approximated).toBe(1);
     expect(convert({ birthRotation0: c([90, 0]) }).counts.rejected).toBe(1);
     expect(convert({ birthRotation0: c([90, 0, 0]), mystery: 1 }).counts.rejected).toBe(1);
     expect(convert({ birthVelocity: c([1, 0]) }).counts.rejected).toBe(1);
@@ -120,7 +120,7 @@ describe('fixed plane ray evidence', () => {
   });
   it('checks the composed parent plane rather than only the birth plane', () => {
     const system = { transform: [[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]] };
-    for (const fields of [{ birthRotation0: c([90, 0, 0]) }, { isGroundLayer: 1 }]) {
+    for (const fields of [{ birthRotation0: c([90, 0, 0]) }, { isGroundLayer: 1, birthRotation0: c([90, 0, 0]) }]) {
       expect(convert(fields, system).systems[0].report[0]).toMatchObject({
         status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal',
       });
@@ -142,6 +142,28 @@ describe('fixed plane ray evidence', () => {
     try { expect(fx.object.children[0].scale.x).toBe(4); expect(fx.object.children[0].scale.y).toBe(8); }
     finally { fx.dispose(); }
     expect(input).toEqual(before);
+  });
+  it('keeps zero/roll-only stationary rays in the old preview while pitch/yaw skip or recover', () => {
+    for (const birthRotation0 of [undefined, c([0, 0, 0]), c([0, 0, 35]), c([360, 0, 90])]) {
+      const result = convert(birthRotation0 ? { birthRotation0 } : {});
+      const emitter = result.systems[0].document.emitters[0];
+      expect(emitter).toMatchObject({ kind: 'ray', direction: [0, 1, 0] });
+      expect((emitter.rotation0 ?? [0, 0, 0]).every((n: number) => n === 0)).toBe(true);
+      const fx = new ParticleEffect(result.systems[0].document, { scale: 1 });
+      try {
+        fx.update(.1, new PerspectiveCamera());
+        expect(normal(fx).distanceTo(new Vector3(0, 0, 1))).toBeLessThan(1e-10);
+      } finally { fx.dispose(); }
+    }
+    expect(convert({ birthRotation0: c([0, 35, 0]) }).counts.skipped).toBe(1);
+    expect(convert({ birthRotation0: c([90, 35, 0]) }).counts.approximated).toBe(1);
+    const signedSize = { dynamics: { times: [0], values: [[2, 8, 1]],
+      probabilityTables: [{ keyValues: [-1, 1] }, {}, {}] } };
+    // The legacy preview averages signed sizes: restoring it must not turn an
+    // originally empty strip into a newly visible surface.
+    expect(convert({ birthScale0: signedSize }).systems[0].document.emitters[0].size0).toEqual([0, 8, 1]);
+    expect(convert({ birthScale0: signedSize, birthRotation0: c([90, 0, 0]) })
+      .systems[0].document.emitters[0].size0).toEqual([2, 8, 1]);
   });
   it('classifies availability separately from enabled flags without exposing values', () => {
     expect(rayFieldGroups({ birthRotation0: c([90, 0, 0]), isLocalOrientation: 0, particleIsLocalOrientation: 1,
