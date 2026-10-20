@@ -1,5 +1,5 @@
-import { AdditiveBlending, Color, DoubleSide, Group, Mesh, MultiplyBlending, NormalBlending,
-  PlaneGeometry, ShaderMaterial, TextureLoader, Vector3, type BufferGeometry, type Camera, type Texture } from 'three';
+import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Group, Mesh, MultiplyBlending, NormalBlending,
+  PlaneGeometry, ShaderMaterial, TextureLoader, Vector3, type Camera, type Texture } from 'three';
 import { assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type ParticleEmitter } from './contracts';
 
 import { parseParticleDocument, parseParticleDocumentV1 } from './particle-validation';
@@ -134,7 +134,7 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
   options: Omit<ParticleOptions, 'texture' | 'mesh'> & { root?: string; readTexture?: (url: string) => Promise<Texture>;
     /** Receives an asset-root URL; the returned value is validated before any resource loads. */
     readJson?: (url: string) => Promise<unknown>;
-    /** Converter supplies static GLB geometry; this segment does not decode arbitrary source meshes. */
+    /** Adapter supplies geometry from one static mesh (or rejects); unavailable emitters are skipped. */
     readMesh?: (url: string) => Promise<BufferGeometry> } = {}): Promise<ParticleEffect> {
   const entry = Object.hasOwn(manifest.effects ?? {}, id) ? manifest.effects![id] : undefined;
   if (manifest.schemaVersion !== 1 || !entry) throw new Error('unknown-effect');
@@ -147,12 +147,24 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
   const doc = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
   const textures = new Map<string, Texture>();
   const meshes = new Map<string, BufferGeometry>();
+  const loadedGeometry = new Set<BufferGeometry>();
   const cleanup = () => { new Set(textures.values()).forEach(t => t.dispose()); textures.clear();
-    new Set(meshes.values()).forEach(g => g.dispose()); meshes.clear(); };
+    loadedGeometry.forEach(g => g.dispose()); loadedGeometry.clear(); meshes.clear(); };
   try {
     if (doc.schemaVersion === 2 && options.readMesh) {
-      for (const e of doc.emitters) if (e.kind === 'mesh' && !meshes.has(e.mesh)) {
-        meshes.set(e.mesh, await options.readMesh(assetUrl(root, e.mesh)));
+      const attempted = new Set<string>();
+      for (const e of doc.emitters) if (e.kind === 'mesh' && !attempted.has(e.mesh)) {
+        attempted.add(e.mesh);
+        // A failed adapter (including non-static/ambiguous models) must not
+        // reject unrelated emitters or trigger this emitter's texture reads.
+        let geometry: BufferGeometry;
+        try { geometry = await options.readMesh(assetUrl(root, e.mesh)); }
+        catch { continue; }
+        if (!(geometry instanceof BufferGeometry)) continue;
+        loadedGeometry.add(geometry);
+        const position = geometry.getAttribute('position');
+        if (!position || position.itemSize !== 3 || position.count === 0) continue;
+        meshes.set(e.mesh, geometry);
       }
     }
     const renderable = doc.schemaVersion === 1 ? doc.emitters.filter(e => e.kind === 'sprite')
