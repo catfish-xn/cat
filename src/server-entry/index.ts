@@ -27,6 +27,7 @@ export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCo
   startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement, readBattleLiveGoldReaders } from '../simulation/two-sided-battle';
 export type { BattleTask, BattleReplayTask, BattleReplayStep, BattleReplayOptions, BattleLiveGoldReader } from '../simulation/two-sided-battle';
 export { sampleD11CombatGold } from '../simulation/d11-fill';
+export { readMatchLiveGoldReaders } from '../simulation/live-gold-readers';
 export type { CombatBankSample } from '../simulation/combat-types';
 export { stepCombat } from '../simulation/combat';
 export type { CombatStep } from '../simulation/combat';

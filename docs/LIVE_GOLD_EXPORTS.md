@@ -16,6 +16,7 @@ interface BattleLiveGoldReader {
 readBattleLiveGoldReaders(
   input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>,
 ): readonly BattleLiveGoldReader[];
+readMatchLiveGoldReaders(state: MatchState): boolean;
 ```
 
 纯函数，读取可信两侧快照或完整 `BattleInput`，固定返回 A/player、B/enemy 两条。
@@ -23,6 +24,16 @@ readBattleLiveGoldReaders(
 `mirrorOfSeatId !== null` 时 B 一律 false；A 仍按自身绑定判断。
 只持有两侧快照时传 `{a, b, mirrorOfSeatId: null}`，镜像局传镜像来源席位 ID。
 此查询不替代 `compileBattle` / `restoreBattleInput` 的输入校验。
+
+PvE 使用 `readMatchLiveGoldReaders(state)`，返回本席位当前或即将开始的 PvE 战斗是否读取实时金币。
+仅 `state.m8.round.kind === 'pve'` 有效：`preparation` 按玩家棋盘上的绑定单位判断；
+`combat` 按当前运行中的 combat 玩家单位判断，要求绑定单位仍存在且 `alive && hp > 0`。
+战中不使用 preparation 的位置，以免战中买卖影响当前战斗的阵容判定。
+未绑定、非贪财化身绑定、备战席、绑定单位缺失或阵亡，以及 choice/settlement/gameOver、
+非 PvE 回合均返回 false。准备阶段的 true 仅表示阵容需要实时金币，不保证其他开战前置条件已满足。
+两入口共用纯函数 `readsLiveGold` 检查 `avarice-incarnate` 绑定及持有者是否在有效阵容中；
+同一席位上场快照的结果一致，PvP 镜像 B 仍额外固定为 false。
+查询不修改 state、消耗 RNG、采样金币或产生事件；服务器无需自行判断绑定和单位位置。
 
 ## R2：计算一个 tick，同时取得显示帧
 
@@ -128,8 +139,8 @@ PvE 也可从 `terminal.bankSamples` 读取，显式 bankSamples 与 terminal �
 
 ## 验证
 
-所有测试逐文件运行：`npx.cmd vitest run <file> --configLoader runner`；新测试不设单条时限。
-`npx.cmd tsc --noEmit` 通过；以下 **7 文件 / 121 项** 全部通过，未跑全套或端到端：
+初版验证逐文件运行：`npx.cmd vitest run <file> --configLoader runner`；新测试不设单条时限。
+初版 `npx.cmd tsc --noEmit` 通过；以下 **7 文件 / 121 项** 全部通过，未跑全套或端到端：
 
 | 文件（tests/） | 通过数 |
 | --- | ---: |
@@ -145,4 +156,9 @@ PvE 也可从 `terminal.bankSamples` 读取，显式 bankSamples 与 terminal �
 `combat-first-pass-frames` 的旧任务键名断言同步包含基线已有的 sampleBankGold，其余验收不变。
 `git diff --check` 通过。所有改动留工作区，未修改 Git 元数据、安装依赖、联网或运行独立 exe。
 
-建议提交信息：`feat(simulation): expose live gold combat frames and replay bank samples`
+R1 PvE 补充验证：本地 `node node_modules/typescript/bin/tsc --noEmit` 通过；
+`node node_modules/vitest/vitest.mjs run tests/live-gold-exports.test.ts tests/d11-wiring-online.test.ts tests/d11-wiring-match.test.ts tests/t2-two-sided-battle.test.ts --configLoader runner`
+通过 **4 文件 / 58 项**（目标文件 22 项，新增 9 项）。覆盖准备/战中绑定、备战席、
+缺失/阵亡、非 PvE/非战斗阶段、纯查询及同席位快照的 PvP/PvE 一致性，未设单条时限。
+
+建议提交信息：`fix(simulation): expose PvE live gold reader eligibility`

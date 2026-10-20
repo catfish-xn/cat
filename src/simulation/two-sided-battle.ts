@@ -1,5 +1,6 @@
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
+import { readsLiveGold } from './live-gold-readers';
 import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
@@ -127,8 +128,8 @@ export interface BattleLiveGoldReader {
 }
 /** Trusted snapshots or a compiled input. B is always frozen in a mirror battle. */
 export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>): readonly BattleLiveGoldReader[] {
-  const reads = (side: PlayerBattleSnapshot) => side.anomalyBinding?.definitionId === 'avarice-incarnate'
-    && side.units.some(u => u.id === side.anomalyBinding!.unitId && u.team === 'player' && u.location.kind === 'board');
+  const reads = (side: PlayerBattleSnapshot) => readsLiveGold(side.anomalyBinding, side.units
+    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id));
   return [
     { seatId: input.a.seatId, team: 'player', readsLiveGold: reads(input.a) },
     { seatId: input.b.seatId, team: 'enemy', readsLiveGold: input.mirrorOfSeatId === null && reads(input.b) },

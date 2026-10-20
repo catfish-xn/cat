@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   compileBattle, snapshotForBattle, startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement,
-  readBattleLiveGoldReaders, sampleD11CombatGold, startTwoSidedCombat, toCombatReplay,
+  readBattleLiveGoldReaders, readMatchLiveGoldReaders, sampleD11CombatGold, startTwoSidedCombat, toCombatReplay,
   applyCombatReplayTick, createCombatReplayRecorder, startMatchCombat, stepMatch, stepCombat,
   enableMultiplayerSettlement, toPrivateSeatView,
   type MatchState, type CombatState, type CombatReplayTick, type CombatBankSample, type LedgerCombatEvent,
@@ -27,6 +27,73 @@ function input(a = true, b = true, mirror = false, empty = false) {
 const bytes = (value: unknown) => JSON.stringify(value);
 
 describe('live gold server exports', () => {
+  function pveSeat(bound = true): MatchState {
+    const base = catalogPreparation('1-2', 5);
+    const holder = base.preparation.units.find(u => u.team === 'player')!;
+    return { ...base, anomalyBinding: bound
+      ? { definitionId: 'avarice-incarnate', unitId: holder.id, choiceId: 'avarice', boundRound: 1 } : null };
+  }
+
+  it.each([true, false])('R1 PvE preparation and running combat eligibility (bound=%s) is pure', bound => {
+    const preparation = pveSeat(bound), running = accepted(startMatchCombat(preparation));
+    expect(running.phase).toBe('combat');
+    for (const state of [preparation, running]) {
+      const before = bytes(state);
+      expect(readMatchLiveGoldReaders(state)).toBe(bound);
+      expect(bytes(state)).toBe(before);
+    }
+  });
+
+  it('R1 PvE rejects bench, absent, enemy and other-anomaly holders', () => {
+    const state = pveSeat(), holderId = state.anomalyBinding!.unitId;
+    const benched: MatchState = { ...state, preparation: { ...state.preparation,
+      units: state.preparation.units.map(u => u.id === holderId ? { ...u, location: { kind: 'bench', slot: 0 } } : u) } };
+    expect(readMatchLiveGoldReaders(benched)).toBe(false);
+    expect(readMatchLiveGoldReaders(accepted(startMatchCombat(benched)))).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...state, preparation: { ...state.preparation,
+      units: state.preparation.units.filter(u => u.id !== holderId) } })).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...state, anomalyBinding: { ...state.anomalyBinding!,
+      unitId: state.preparation.units.find(u => u.team === 'enemy')!.id } })).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...state, anomalyBinding: { ...state.anomalyBinding!, definitionId: 'other' } })).toBe(false);
+  });
+
+  it('R1 PvE reads the live combat roster, rejecting dead and missing holders', () => {
+    const running = accepted(startMatchCombat(pveSeat()));
+    if (running.phase !== 'combat') throw new Error('expected running combat');
+    const holderId = running.anomalyBinding!.unitId;
+    // Combat trading can change preparation; the current battle keeps its own roster.
+    expect(readMatchLiveGoldReaders({ ...running, preparation: { ...running.preparation, units: [] } })).toBe(true);
+    for (const units of [
+      running.combat.units.map(u => u.id === holderId ? { ...u, alive: false, hp: 0 } : u),
+      running.combat.units.filter(u => u.id !== holderId),
+    ]) expect(readMatchLiveGoldReaders({ ...running, combat: { ...running.combat, units } })).toBe(false);
+    let finished: MatchState = running;
+    while (finished.phase === 'combat') finished = stepMatch(finished).state;
+    expect(readMatchLiveGoldReaders(finished)).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...finished, phase: 'gameOver' })).toBe(false);
+  });
+
+  it('R1 nonbattle phases and non-PvE rounds are false', () => {
+    const state = pveSeat();
+    expect(readMatchLiveGoldReaders({ ...state, phase: 'choice', combat: null })).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...state, phase: 'settlement', combat: null })).toBe(false);
+    expect(readMatchLiveGoldReaders(seat())).toBe(false);
+    expect(readMatchLiveGoldReaders({ ...catalogPreparation('2-4'), anomalyBinding: state.anomalyBinding })).toBe(false);
+  });
+
+  it.each(['bound', 'unbound', 'bench', 'absent'] as const)('R1 PvE and PvP agree on the same seat roster (%s)', scenario => {
+    let state = pveSeat(scenario !== 'unbound');
+    const holderId = state.preparation.units.find(u => u.team === 'player')!.id;
+    if (scenario === 'bench') state = { ...state, preparation: { ...state.preparation,
+      units: state.preparation.units.map(u => u.id === holderId ? { ...u, location: { kind: 'bench', slot: 0 } } : u) } };
+    if (scenario === 'absent') state = { ...state, preparation: { ...state.preparation,
+      units: state.preparation.units.filter(u => u.id !== holderId) } };
+    const a = snapshotForBattle(state, 'A');
+    const readers = readBattleLiveGoldReaders({ a, b: { ...a, seatId: 'B' }, mirrorOfSeatId: null });
+    expect(readMatchLiveGoldReaders(state)).toBe(scenario === 'bound');
+    expect(readers.map(r => r.readsLiveGold)).toEqual([readMatchLiveGoldReaders(state), readMatchLiveGoldReaders(state)]);
+  });
+
   it.each([[true, true], [true, false], [false, true], [false, false]])('R1 binding flags A=%s B=%s, pure snapshots and input agree', (a, b) => {
     const battle = input(a, b), before = bytes(battle);
     const expected = [{ seatId: 'A', team: 'player', readsLiveGold: a }, { seatId: 'B', team: 'enemy', readsLiveGold: b }];
