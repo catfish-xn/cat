@@ -26,6 +26,7 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   NET_PROTOCOL_VERSION, readReplayUnitIds, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
+import type { CombatReplay } from '../../presentation/combat-display';
 import type {
   WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, SeatStateView,
 } from './protocol';
@@ -35,6 +36,7 @@ type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
 type Raw = ClientMessage extends infer M ? M extends ClientMessage ? Omit<M, 'protocolVersion' | 'commandId'> : never : never;
 type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
+type ReplayTailMessage = Extract<ServerMessage, { type: 'replay-tail' }>;
 
 export interface WsClientOptions {
   readonly url: string;
@@ -112,6 +114,8 @@ export class WsGameClient implements GameClient {
   private confirmed: (ConfirmedCommand & { seatRevision: number })[] = [];
   private deferredRetries: { commandId: number; reason: ReceiptFailure }[] = [];
   private lastReplayKey = '';
+  /** The replay behind `lastReplayKey`, as revised so far (D11 live bank). */
+  private lastReplay: CombatReplay | null = null;
 
   private lobbyView: LobbyView | null = null;
   private lobbyError: string | null = null;
@@ -158,7 +162,7 @@ export class WsGameClient implements GameClient {
   /** After a finished match: forget the seat and reconnect fresh so the server sends the lobby again. */
   reset(): void {
     this.forgetSeat();
-    this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lobbyError = null;
+    this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lastReplay = null; this.lobbyError = null;
     this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase } });
     this.restart();
   }
@@ -264,11 +268,12 @@ export class WsGameClient implements GameClient {
     switch (message.type) {
       case 'lobby':
         // On a socket bound to my seat in a room, a lobby push means the server revoked it (a new match started).
-        if (this.bound && this.roomId !== null) { this.forgetSeat(); this.lastView = null; this.lastState = null; this.lastReplayKey = ''; }
+        if (this.bound && this.roomId !== null) { this.forgetSeat(); this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lastReplay = null; }
         this.lobbyView = message.view; this.emitLobby(); return;
       case 'view': return this.onView(message.roomId, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state, message.events ?? []);
       case 'replay': return this.onReplay(message);
+      case 'replay-tail': return this.onReplayTail(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
       case 'heartbeat': return this.onHeartbeat(message.intervalMs);
@@ -301,10 +306,23 @@ export class WsGameClient implements GameClient {
   /** My battle as a compact replay (B7/C6). A resume snapshot repeats the battle already played; show it only once. */
   private onReplay(message: ReplayMessage): void {
     const key = `${message.roomId}:${message.round}:${message.battleId}`;
-    if (key === this.lastReplayKey) return;
-    this.lastReplayKey = key;
+    if (key === this.lastReplayKey) {
+      // A resume snapshot of a battle a live run revised since it was first sent: take the revision, keep playing.
+      if (this.lastReplay && JSON.stringify(this.lastReplay) !== JSON.stringify(message.replay)) { this.lastReplay = message.replay; this.listeners?.replayRevised?.(message.replay); }
+      return;
+    }
+    this.lastReplayKey = key; this.lastReplay = message.replay;
     // A missing or malformed id list only costs the equipment icons of this replay (C15), never the battle.
     this.listeners?.replay(message.replay, readReplayUnitIds((message as { unitIds?: unknown }).unitIds) ?? []);
+  }
+  /** D11 live bank: the records of my current battle from `fromTick` on changed; anything else is stale and dropped. */
+  private onReplayTail(message: ReplayTailMessage): void {
+    const last = this.lastReplay;
+    if (!last || `${message.roomId}:${message.round}:${message.battleId}` !== this.lastReplayKey || !Number.isInteger(message.fromTick)
+      || message.fromTick < 0 || message.fromTick > last.ticks.length || !Array.isArray(message.ticks)) return;
+    const revised: CombatReplay = { initial: last.initial, ticks: [...last.ticks.slice(0, message.fromTick), ...message.ticks], terminal: message.terminal };
+    this.lastReplay = revised;
+    this.listeners?.replayRevised?.(revised);
   }
   private onReceipt(receipt: ReceiptMessage): void {
     const entry = this.inflight.get(receipt.commandId);
@@ -335,7 +353,7 @@ export class WsGameClient implements GameClient {
     const type = entry?.type ?? null;
     if (type === 'resume' || receipt.reason === 'invalid-token') {
       this.forgetSeat();
-      this.lastView = null; this.lastState = null; this.lastReplayKey = '';
+      this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lastReplay = null;
       this.lobbyError = '上一局已结束或凭证失效，请重新匹配';
       this.setStatus({ kind: 'seat-lost' });
       this.setStatus({ kind: 'online' });
