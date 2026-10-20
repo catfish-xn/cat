@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile, symlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { createHash } from 'node:crypto';
 // @ts-expect-error Pure Node utility.
 import { mergeManifests, mergeArguments } from '../scripts/assets3d/merge-manifests.mjs';
 // @ts-expect-error Pure Node utility.
@@ -55,11 +56,37 @@ describe('batch manifest merge', () => {
     const manifest = await json(join(args.out, 'manifest.json'));
     expect(manifest.schemaVersion).toBe(1); expect(Object.keys(manifest.models)).toEqual(['one', 'two']);
     expect(Object.keys(manifest.effects)).toEqual(['spark', 'glow']);
+    const precache = await json(join(args.out, 'precache.json'));
+    const paths = ['models/one/model.glb', 'models/two/model.glb', 'effects/one.json', 'effects/two.json',
+      'meshes/shared.glb', 'textures/shared.png', 'textures/normal.png'].sort();
+    expect(precache.schemaVersion).toBe(1);
+    expect(precache.files.map((file: { path: string }) => file.path)).toEqual(paths);
+    for (const file of precache.files) {
+      const bytes = await readFile(join(args.out, file.path));
+      expect(file).toEqual({ path: file.path, bytes: bytes.length,
+        sha256: createHash('sha256').update(bytes).digest('hex') });
+      expect(file.sha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(file.path).not.toContain('\\');
+    }
+    expect(precache.files.reduce((sum: number, file: { bytes: number }) => sum + file.bytes, 0)).toBe(first.bytes);
+    const indexBefore = await readFile(join(args.out, 'precache.json'));
     const path = join(args.out, 'models/one/model.glb'), before = (await stat(path)).mtimeMs;
     expect(await readFile(path, 'utf8')).toBe('synthetic-one');
     const second = await mergeManifests(args);
     expect(second).toMatchObject({ ready: true, written: 0, skipped: 7, writtenBytes: 0, bytes: first.bytes });
     expect((await stat(path)).mtimeMs).toBe(before);
+    expect(await readFile(join(args.out, 'precache.json'))).toEqual(indexBefore);
+  });
+  it('accepts a flat merged root, excludes metadata, and preflights index conflicts before copying', async () => {
+    const root = await fixture(), u = await unit(root, 'a', 'sample');
+    await put(u.dir, 'action-bindings.json', '{}');
+    const out = join(root, 'merged');
+    await put(out, 'precache.json', '{}');
+    await expect(mergeManifests({ from: [u.dir], out })).rejects.toThrow('output-content-conflict:precache.json');
+    await expect(stat(join(out, 'models'))).rejects.toMatchObject({ code: 'ENOENT' });
+    const clean = join(root, 'clean');
+    expect(await mergeManifests({ from: [u.dir], out: clean })).toMatchObject({ ready: true, files: 1 });
+    expect((await json(join(clean, 'precache.json'))).files.map((f: { path: string }) => f.path)).toEqual(['models/sample/model.glb']);
   });
   it('rejects duplicate model/effect ids before copying anything', async () => {
     for (const collision of ['model', 'effect']) {
@@ -89,6 +116,7 @@ describe('batch manifest merge', () => {
     const report = await mergeManifests(args);
     expect(report).toMatchObject({ ready: false, models: 1, written: 0, missing: [{ root: u.dir, path: 'effects/missing.json' }] });
     await expect(stat(join(args.out, 'manifest.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(join(args.out, 'precache.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     expect((await json(join(args.out, 'merge-report.json'))).ready).toBe(false);
   });
   it('rejects existing output with different content and preserves it', async () => {

@@ -1,0 +1,70 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Texture } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadParticleEffect, readParticleMesh } from '../src/rendering3d';
+
+const manifest = { schemaVersion: 1 as const, models: {}, effects: { sample: { path: 'effects/sample.json' } } };
+const document = { schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 10 }, emitters: [
+  { kind: 'mesh', mesh: 'meshes/sample.glb', texture: 'textures/sample.png',
+    emission: { mode: 'burst', count: 1 }, lifetime: 1 },
+] };
+afterEach(() => { vi.restoreAllMocks(); });
+function model() {
+  const scene = new Group(), geometry = new BoxGeometry(2, 2, 2), material = new MeshBasicMaterial();
+  const mesh = new Mesh(geometry, material); mesh.position.x = 10; scene.add(mesh);
+  return { scene, animations: [], geometry, material };
+}
+
+describe('particle cached readers', () => {
+  it('loads JSON, mesh and texture through hooks without fetch and releases owned resources once', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected-network'));
+    const source = model(), geometryDispose = vi.spyOn(source.geometry, 'dispose');
+    const materialDispose = vi.spyOn(source.material, 'dispose');
+    const readModel = vi.fn(async () => source);
+    const readJson = vi.fn(async () => document), texture = new Texture();
+    const textureDispose = vi.spyOn(texture, 'dispose'), readTexture = vi.fn(async () => texture);
+    const effect = await loadParticleEffect(manifest, 'sample', { root: '/synthetic/', readJson, readTexture,
+      readMesh: url => readParticleMesh(url, readModel) });
+    expect(readJson).toHaveBeenCalledExactlyOnceWith('/synthetic/effects/sample.json');
+    expect(readModel).toHaveBeenCalledExactlyOnceWith('/synthetic/meshes/sample.glb');
+    expect(readTexture).toHaveBeenCalledExactlyOnceWith('/synthetic/textures/sample.png');
+    expect(fetch).not.toHaveBeenCalled(); expect(effect.particleCount).toBe(1);
+    const geometry = (effect.object.children[0] as Mesh).geometry;
+    expect(geometry).not.toBe(source.geometry);
+    geometry.computeBoundingBox(); expect(geometry.boundingBox!.min.x).toBe(9);
+    expect(geometryDispose).toHaveBeenCalledTimes(1); expect(materialDispose).toHaveBeenCalledTimes(1);
+    const dispose = vi.spyOn(geometry, 'dispose');
+    effect.dispose(); effect.dispose();
+    expect(dispose).toHaveBeenCalledTimes(1); expect(textureDispose).toHaveBeenCalledTimes(1);
+  });
+  it('rejects failed or invalid JSON before requesting dependent resources', async () => {
+    const readMesh = vi.fn(), readTexture = vi.fn();
+    for (const readJson of [async () => { throw new Error('json-failed'); }, async () => ({ schemaVersion: 10 })]) {
+      await expect(loadParticleEffect(manifest, 'sample', { readJson, readMesh, readTexture })).rejects.toThrow();
+    }
+    expect(readMesh).not.toHaveBeenCalled(); expect(readTexture).not.toHaveBeenCalled();
+  });
+  it('preserves default JSON HTTP errors and omitted-mesh skipping', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('', { status: 404 }))
+      .mockResolvedValueOnce(Response.json(document));
+    await expect(loadParticleEffect(manifest, 'sample', { root: '/synthetic/' })).rejects.toThrow('particle-http-404');
+    const readTexture = vi.fn();
+    const effect = await loadParticleEffect(manifest, 'sample', { root: '/synthetic/', readTexture });
+    expect(fetch).toHaveBeenCalledTimes(2); expect(fetch).toHaveBeenLastCalledWith('/synthetic/effects/sample.json');
+    expect(effect.skipped.mesh).toBe(1); expect(readTexture).not.toHaveBeenCalled(); effect.dispose();
+  });
+  it('defaults the static mesh adapter to the existing GLB reader', async () => {
+    const source = model();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new ArrayBuffer(10)));
+    const parse = vi.spyOn(GLTFLoader.prototype, 'parseAsync').mockResolvedValue(source as never);
+    const geometry = await readParticleMesh('/synthetic/meshes/sample.glb');
+    expect(parse).toHaveBeenCalledWith(expect.any(ArrayBuffer), '/synthetic/meshes/');
+    expect(geometry).not.toBe(source.geometry); geometry.dispose();
+  });
+  it('rejects ambiguous mesh documents and still disposes the source', async () => {
+    const source = model(); source.scene.add(new Mesh(source.geometry, source.material));
+    const dispose = vi.spyOn(source.geometry, 'dispose');
+    await expect(readParticleMesh('/synthetic/sample.glb', async () => source)).rejects.toThrow('particle-mesh-requires-single-static-mesh');
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+});

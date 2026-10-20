@@ -132,14 +132,19 @@ export class ParticleEffect {
 /** Load only when explicitly called by a lazy 3D entry. No browser globals at import. */
 export async function loadParticleEffect(manifest: AssetManifest, id: string,
   options: Omit<ParticleOptions, 'texture' | 'mesh'> & { root?: string; readTexture?: (url: string) => Promise<Texture>;
+    /** Receives an asset-root URL; the returned value is validated before any resource loads. */
+    readJson?: (url: string) => Promise<unknown>;
     /** Converter supplies static GLB geometry; this segment does not decode arbitrary source meshes. */
     readMesh?: (url: string) => Promise<BufferGeometry> } = {}): Promise<ParticleEffect> {
   const entry = Object.hasOwn(manifest.effects ?? {}, id) ? manifest.effects![id] : undefined;
   if (manifest.schemaVersion !== 1 || !entry) throw new Error('unknown-effect');
   const root = options.root ?? DEFAULT_ASSET_ROOT;
-  const response = await fetch(assetUrl(root, entry.path));
-  if (!response.ok) throw new Error(`particle-http-${response.status}`);
-  const doc = parseParticleDocument(await response.json());
+  const readJson = options.readJson ?? (async (url: string): Promise<unknown> => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`particle-http-${response.status}`);
+    return response.json();
+  });
+  const doc = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
   const textures = new Map<string, Texture>();
   const meshes = new Map<string, BufferGeometry>();
   const cleanup = () => { new Set(textures.values()).forEach(t => t.dispose()); textures.clear();
