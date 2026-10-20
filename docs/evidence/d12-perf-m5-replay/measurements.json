@@ -2049,5 +2049,946 @@
     "fingerprint": "9d6fb90d3604f7901858d9aa51b167b11e58a881b11763d686eeffd7839f23b3",
     "goldenPassed": true,
     "note": "CPU profiler enabled for this diagnostic. Rejected; no bundle runtime adopted."
+  },
+  "followup": {
+    "baseSha": "6fad68c809708f68191d879c3396dee4034268da",
+    "after": {
+      "sniper": {
+        "node": "v22.23.3",
+        "build": "sniper",
+        "mode": "vite",
+        "compileMs": 2129.034688,
+        "bodyMs": 148278.055122,
+        "goldenMs": 0.39448499999707565,
+        "stagesMs": {
+          "createMatch": 18.7295180000001,
+          "deepBefore": 4378.684160998724,
+          "rejectionSerialize": 15709.804661999042,
+          "rejections": 127.79564900114747,
+          "secondExecution": 11145.432852999837,
+          "deepResult": 4678.259891000513,
+          "serialize": 7698.870910999744,
+          "restore": 85982.59945399973,
+          "deepRestored": 3857.452052999503
+        },
+        "routeOtherMs": 14680.425970001757,
+        "roundsMs": {
+          "1-2": {
+            "deepBefore": 12.915909000000738,
+            "rejectionSerialize": 26.0445100000029,
+            "rejections": 2.158053000000109,
+            "secondExecution": 60.72035599999663,
+            "deepResult": 16.409926000001178,
+            "serialize": 18.731050999999752,
+            "restore": 300.6595109999971,
+            "deepRestored": 13.307130000000143
+          },
+          "1-3": {
+            "deepBefore": 8.631277999999838,
+            "rejectionSerialize": 22.613027999999304,
+            "rejections": 0.752599000000373,
+            "secondExecution": 41.099040999998124,
+            "deepResult": 10.454353000000992,
+            "serialize": 10.87395400000014,
+            "restore": 182.72115299999905,
+            "deepRestored": 10.482264999996914
+          },
+          "1-4": {
+            "deepBefore": 20.963041000005433,
+            "rejectionSerialize": 51.774163999996745,
+            "rejections": 1.8858720000007452,
+            "secondExecution": 69.45951100000048,
+            "deepResult": 22.909794000002876,
+            "serialize": 27.63984399999572,
+            "restore": 421.878477999996,
+            "deepRestored": 19.307755999996516
+          },
+          "2-1": {
+            "deepBefore": 120.06632000000354,
+            "rejectionSerialize": 369.9331740000039,
+            "rejections": 7.105898000011621,
+            "secondExecution": 345.911502999998,
+            "deepResult": 125.87447799999882,
+            "serialize": 191.3591180000044,
+            "restore": 2405.122368000026,
+            "deepRestored": 110.95560799998611
+          },
+          "2-2": {
+            "deepBefore": 52.59066799998982,
+            "rejectionSerialize": 156.3562960000063,
+            "rejections": 2.64701800002058,
+            "secondExecution": 152.65103499997986,
+            "deepResult": 52.87571700000262,
+            "serialize": 90.92008800000986,
+            "restore": 1053.5319539999828,
+            "deepRestored": 48.00739300001533
+          },
+          "2-3": {
+            "deepBefore": 57.68240200000764,
+            "rejectionSerialize": 191.50565600000482,
+            "rejections": 2.1572890000206826,
+            "secondExecution": 154.9067689999938,
+            "deepResult": 60.967819000004965,
+            "serialize": 99.38615500003289,
+            "restore": 1156.0977670000048,
+            "deepRestored": 56.77272999998604
+          },
+          "2-4": {
+            "deepBefore": 0.10659000000123342,
+            "rejectionSerialize": 0.29006899999876623,
+            "rejections": 0.016864999999597785,
+            "secondExecution": 0.4918020000004617,
+            "deepResult": 0.1302670000004582,
+            "serialize": 0.14692200000172306,
+            "restore": 1.9713020000017423,
+            "deepRestored": 0.10384599999815691
+          },
+          "2-5": {
+            "deepBefore": 71.2678900000119,
+            "rejectionSerialize": 203.00781000000825,
+            "rejections": 2.454043999998248,
+            "secondExecution": 181.1807420000132,
+            "deepResult": 74.21794600000976,
+            "serialize": 110.87018700001681,
+            "restore": 1263.8869249999934,
+            "deepRestored": 67.9397349999781
+          },
+          "2-6": {
+            "deepBefore": 48.3685499999865,
+            "rejectionSerialize": 146.72948100001304,
+            "rejections": 1.486309000001711,
+            "secondExecution": 131.828480999995,
+            "deepResult": 53.70430699998906,
+            "serialize": 72.97974899999826,
+            "restore": 893.9435269999994,
+            "deepRestored": 48.601134999998976
+          },
+          "2-7": {
+            "deepBefore": 27.83520299999327,
+            "rejectionSerialize": 79.56534000000283,
+            "rejections": 0.9388860000035493,
+            "secondExecution": 69.56004200000643,
+            "deepResult": 29.532483000019056,
+            "serialize": 41.644581000011385,
+            "restore": 535.3547429999817,
+            "deepRestored": 25.166237999992518
+          },
+          "3-1": {
+            "deepBefore": 139.78712500000984,
+            "rejectionSerialize": 457.4437450000041,
+            "rejections": 4.580325999981142,
+            "secondExecution": 356.76972800001386,
+            "deepResult": 149.40664199994717,
+            "serialize": 228.82369900001868,
+            "restore": 2582.838764999993,
+            "deepRestored": 127.12348799999381
+          },
+          "3-2": {
+            "deepBefore": 132.30487800004266,
+            "rejectionSerialize": 433.01071899992166,
+            "rejections": 3.958922000016173,
+            "secondExecution": 301.09624699999404,
+            "deepResult": 139.70008100005361,
+            "serialize": 216.61271400003534,
+            "restore": 2336.7892330000104,
+            "deepRestored": 117.11371299997336
+          },
+          "3-3": {
+            "deepBefore": 100.56144000004133,
+            "rejectionSerialize": 359.19324499999857,
+            "rejections": 3.4617629999229393,
+            "secondExecution": 282.64817800001765,
+            "deepResult": 110.33616299994537,
+            "serialize": 179.21591299997817,
+            "restore": 1998.563150999984,
+            "deepRestored": 93.40775900001609
+          },
+          "3-4": {
+            "deepBefore": 0.23033699999723467,
+            "rejectionSerialize": 0.4374699999971199,
+            "rejections": 0.02867300000070827,
+            "secondExecution": 0.754227000001265,
+            "deepResult": 0.16880500000115717,
+            "serialize": 0.37118999999802327,
+            "restore": 3.7562139999972715,
+            "deepRestored": 0.16446799999903305
+          },
+          "3-5": {
+            "deepBefore": 97.15708300000915,
+            "rejectionSerialize": 323.28725000000486,
+            "rejections": 3.051633999981277,
+            "secondExecution": 298.05739499996344,
+            "deepResult": 103.13837799997782,
+            "serialize": 163.48005699998612,
+            "restore": 1959.3488870000292,
+            "deepRestored": 90.6463039999835
+          },
+          "3-6": {
+            "deepBefore": 84.65804400002162,
+            "rejectionSerialize": 300.32384499998807,
+            "rejections": 2.701294000060443,
+            "secondExecution": 234.5934529999613,
+            "deepResult": 92.92515500002992,
+            "serialize": 149.59819900000366,
+            "restore": 1695.6270729999706,
+            "deepRestored": 82.77048499997181
+          },
+          "3-7": {
+            "deepBefore": 36.800511000008555,
+            "rejectionSerialize": 117.628965000069,
+            "rejections": 1.040039000028628,
+            "secondExecution": 100.48745199992845,
+            "deepResult": 44.20107400003326,
+            "serialize": 58.56909800001449,
+            "restore": 705.9405539998843,
+            "deepRestored": 34.00700599999982
+          },
+          "4-1": {
+            "deepBefore": 220.7120449999129,
+            "rejectionSerialize": 704.5708409998333,
+            "rejections": 6.995288999991317,
+            "secondExecution": 582.2101540000294,
+            "deepResult": 234.51521700001467,
+            "serialize": 343.53415299993503,
+            "restore": 4130.4114080000145,
+            "deepRestored": 189.20544399989012
+          },
+          "4-2": {
+            "deepBefore": 145.74104699997406,
+            "rejectionSerialize": 548.4012169998896,
+            "rejections": 4.160382999943977,
+            "secondExecution": 398.01883800005453,
+            "deepResult": 157.7821180000392,
+            "serialize": 250.98202699995454,
+            "restore": 2894.8127010001044,
+            "deepRestored": 126.55685699995956
+          },
+          "4-3": {
+            "deepBefore": 117.07280800000444,
+            "rejectionSerialize": 438.931247000015,
+            "rejections": 3.672521000087727,
+            "secondExecution": 317.7722120000035,
+            "deepResult": 133.28489100003208,
+            "serialize": 225.50123300006817,
+            "restore": 2395.0188909999124,
+            "deepRestored": 109.64579200004664
+          },
+          "4-4": {
+            "deepBefore": 0.21215000000665896,
+            "rejectionSerialize": 0.5878059999959078,
+            "rejections": 0.022412999998778105,
+            "secondExecution": 0.6834600000074715,
+            "deepResult": 0.20272699999623,
+            "serialize": 0.2858810000034282,
+            "restore": 3.9132600000084494,
+            "deepRestored": 0.2032560000079684
+          },
+          "4-5": {
+            "deepBefore": 168.15649899999698,
+            "rejectionSerialize": 589.7696429999778,
+            "rejections": 4.907337000120606,
+            "secondExecution": 447.38450499989995,
+            "deepResult": 184.15285100007168,
+            "serialize": 291.44087099988246,
+            "restore": 3376.934703000028,
+            "deepRestored": 152.89288599995052
+          },
+          "4-6": {
+            "deepBefore": 132.78971700003603,
+            "rejectionSerialize": 477.3972009999561,
+            "rejections": 3.808364999938931,
+            "secondExecution": 336.8744519999527,
+            "deepResult": 153.29826899996988,
+            "serialize": 239.7588460000843,
+            "restore": 2724.856892999989,
+            "deepRestored": 114.34150900001987
+          },
+          "4-7": {
+            "deepBefore": 69.98724999995466,
+            "rejectionSerialize": 245.97281200002908,
+            "rejections": 1.9325999999928172,
+            "secondExecution": 177.95400900003006,
+            "deepResult": 76.33893700006593,
+            "serialize": 118.92571400001907,
+            "restore": 1387.1416470000768,
+            "deepRestored": 63.82241800002521
+          },
+          "5-1": {
+            "deepBefore": 184.47161499987124,
+            "rejectionSerialize": 677.245859999879,
+            "rejections": 4.856972000037786,
+            "secondExecution": 473.2629249999154,
+            "deepResult": 187.12363499987987,
+            "serialize": 334.64619400000083,
+            "restore": 3650.529079000102,
+            "deepRestored": 153.17303500007256
+          },
+          "5-2": {
+            "deepBefore": 243.72478899999987,
+            "rejectionSerialize": 922.2429589999228,
+            "rejections": 6.159047000022838,
+            "secondExecution": 645.2555580000189,
+            "deepResult": 254.691343999948,
+            "serialize": 429.38349599980575,
+            "restore": 4686.014215000003,
+            "deepRestored": 211.85849799992866
+          },
+          "5-3": {
+            "deepBefore": 191.92714499989233,
+            "rejectionSerialize": 711.3642190000246,
+            "rejections": 5.261619000084465,
+            "secondExecution": 475.95780699985335,
+            "deepResult": 196.922931999914,
+            "serialize": 352.5230549998523,
+            "restore": 3820.4040300002525,
+            "deepRestored": 163.28987400018377
+          },
+          "5-4": {
+            "deepBefore": 0.3198019999981625,
+            "rejectionSerialize": 0.7001749999908498,
+            "rejections": 0.031076999992365018,
+            "secondExecution": 1.178356000003987,
+            "deepResult": 0.2604319999954896,
+            "serialize": 0.5197539999935543,
+            "restore": 5.3719879999844125,
+            "deepRestored": 0.3427479999954812
+          },
+          "5-5": {
+            "deepBefore": 181.2550559999363,
+            "rejectionSerialize": 682.4833469998703,
+            "rejections": 4.603902000104426,
+            "secondExecution": 491.51574599991727,
+            "deepResult": 198.97888799986686,
+            "serialize": 330.38740000002144,
+            "restore": 3584.7486869998684,
+            "deepRestored": 177.2192850001593
+          },
+          "5-6": {
+            "deepBefore": 220.4180579998938,
+            "rejectionSerialize": 806.8215099999943,
+            "rejections": 5.781744000123581,
+            "secondExecution": 544.3653950000298,
+            "deepResult": 237.8945839999651,
+            "serialize": 391.856403999991,
+            "restore": 4280.444341000024,
+            "deepRestored": 192.92580899993482
+          },
+          "5-7": {
+            "deepBefore": 65.87382599990815,
+            "rejectionSerialize": 268.0408390001976,
+            "rejections": 2.0462279999483144,
+            "secondExecution": 156.4673209998291,
+            "deepResult": 71.59326900010637,
+            "serialize": 133.30118100000254,
+            "restore": 1506.1040740000608,
+            "deepRestored": 62.48030000006838
+          },
+          "6-1": {
+            "deepBefore": 354.6766069999285,
+            "rejectionSerialize": 1477.0474599995796,
+            "rejections": 8.68269500027236,
+            "secondExecution": 827.6437110001862,
+            "deepResult": 384.52374800016696,
+            "serialize": 703.0253439999506,
+            "restore": 7250.541974999942,
+            "deepRestored": 296.9606169999606
+          },
+          "6-2": {
+            "deepBefore": 166.82291600007738,
+            "rejectionSerialize": 605.1512429996947,
+            "rejections": 3.5303360001998954,
+            "secondExecution": 412.89718400004494,
+            "deepResult": 184.5929630000901,
+            "serialize": 294.54260599998815,
+            "restore": 3236.321658999863,
+            "deepRestored": 150.44761599994672
+          },
+          "6-3": {
+            "deepBefore": 269.52712699989206,
+            "rejectionSerialize": 1039.3966200002178,
+            "rejections": 6.379720999932033,
+            "secondExecution": 636.2793560001301,
+            "deepResult": 292.2007620001532,
+            "serialize": 499.1815920002264,
+            "restore": 5505.603368999931,
+            "deepRestored": 234.60784099984448
+          },
+          "6-4": {
+            "deepBefore": 0.3925629999866942,
+            "rejectionSerialize": 0.9261070000211475,
+            "rejections": 0.03065599998808466,
+            "secondExecution": 0.9364429999986896,
+            "deepResult": 0.3113100000045961,
+            "serialize": 0.40939700001035817,
+            "restore": 8.563701999999466,
+            "deepRestored": 0.39147000000230037
+          },
+          "6-5": {
+            "deepBefore": 266.68836799956625,
+            "rejectionSerialize": 1068.7588410000317,
+            "rejections": 6.74443599996448,
+            "secondExecution": 644.3145149999473,
+            "deepResult": 289.7015329999849,
+            "serialize": 518.732234999683,
+            "restore": 5613.045821999476,
+            "deepRestored": 228.1737610000564
+          },
+          "6-6": {
+            "deepBefore": 237.77139899967005,
+            "rejectionSerialize": 799.8582250000327,
+            "rejections": 4.861128000280587,
+            "secondExecution": 552.6679639996728,
+            "deepResult": 243.69169800012605,
+            "serialize": 383.9104260003078,
+            "restore": 4236.694161000167,
+            "deepRestored": 190.62821399976383
+          },
+          "6-7": {
+            "deepBefore": 128.21610500008683,
+            "rejectionSerialize": 404.9917229998682,
+            "rejections": 2.9016960000735708,
+            "secondExecution": 239.5769800004491,
+            "deepResult": 109.2443950001034,
+            "serialize": 194.8005829998583,
+            "restore": 2187.0912440000684,
+            "deepRestored": 92.4077639997995
+          }
+        },
+        "commands": 219,
+        "ticks": 11934,
+        "digest": "fnv1a32-utf16:ea6b11b6",
+        "fingerprint": "9d6fb90d3604f7901858d9aa51b167b11e58a881b11763d686eeffd7839f23b3",
+        "goldenPassed": true
+      },
+      "sniper-caitlyn": {
+        "node": "v22.23.3",
+        "build": "sniper-caitlyn",
+        "mode": "vite",
+        "compileMs": 1805.680992,
+        "bodyMs": 147207.517727,
+        "goldenMs": 0.43289299999014474,
+        "stagesMs": {
+          "createMatch": 13.807126000000153,
+          "deepBefore": 4146.1773510002595,
+          "rejectionSerialize": 15808.421948001254,
+          "rejections": 128.66053999969586,
+          "secondExecution": 10848.722203999745,
+          "deepResult": 4453.050739999461,
+          "serialize": 7712.932999999545,
+          "restore": 85680.48977400089,
+          "deepRestored": 3795.868787999928
+        },
+        "routeOtherMs": 14619.386255999212,
+        "roundsMs": {
+          "1-2": {
+            "deepBefore": 12.14080099999751,
+            "rejectionSerialize": 23.70790699999725,
+            "rejections": 1.8539669999975104,
+            "secondExecution": 56.02410100000088,
+            "deepResult": 13.836846000002652,
+            "serialize": 12.41182600000252,
+            "restore": 250.39835100000028,
+            "deepRestored": 11.363404999998465
+          },
+          "1-3": {
+            "deepBefore": 6.998942999998235,
+            "rejectionSerialize": 17.368912000002183,
+            "rejections": 0.5073529999999664,
+            "secondExecution": 30.626870000002327,
+            "deepResult": 7.367756000001918,
+            "serialize": 10.450582000000395,
+            "restore": 148.5523659999967,
+            "deepRestored": 7.7351029999990715
+          },
+          "1-4": {
+            "deepBefore": 16.82825299999604,
+            "rejectionSerialize": 50.59719600000108,
+            "rejections": 1.128007999993315,
+            "secondExecution": 65.05731500000456,
+            "deepResult": 19.569743999999446,
+            "serialize": 22.674264000000676,
+            "restore": 348.2147679999989,
+            "deepRestored": 16.175301000000218
+          },
+          "2-1": {
+            "deepBefore": 101.80379299999458,
+            "rejectionSerialize": 382.36175399998683,
+            "rejections": 5.955233000007411,
+            "secondExecution": 318.44762000000037,
+            "deepResult": 116.2422249999936,
+            "serialize": 194.9990719999837,
+            "restore": 2253.5473289999977,
+            "deepRestored": 96.91037399999641
+          },
+          "2-2": {
+            "deepBefore": 47.074218999982804,
+            "rejectionSerialize": 151.60072700000546,
+            "rejections": 2.0721350000085295,
+            "secondExecution": 139.78428899999471,
+            "deepResult": 47.17051499999434,
+            "serialize": 85.34746600001017,
+            "restore": 992.6093030000047,
+            "deepRestored": 44.75932000000739
+          },
+          "2-3": {
+            "deepBefore": 58.28536600003463,
+            "rejectionSerialize": 213.1423550000436,
+            "rejections": 2.7801979999894684,
+            "secondExecution": 162.4253469999985,
+            "deepResult": 61.59642299999723,
+            "serialize": 105.78186499997537,
+            "restore": 1192.2837650000347,
+            "deepRestored": 58.13820100001067
+          },
+          "2-4": {
+            "deepBefore": 0.18450800000027812,
+            "rejectionSerialize": 0.3042589999986376,
+            "rejections": 0.01359000000047672,
+            "secondExecution": 0.6045709999998508,
+            "deepResult": 0.10593000000153552,
+            "serialize": 0.15410200000223995,
+            "restore": 1.950089999998454,
+            "deepRestored": 0.0983780000005936
+          },
+          "2-5": {
+            "deepBefore": 70.76139999999577,
+            "rejectionSerialize": 223.25932900006956,
+            "rejections": 2.4003069999998843,
+            "secondExecution": 192.5034880000294,
+            "deepResult": 74.60541700002432,
+            "serialize": 115.34707099998923,
+            "restore": 1336.0052349999896,
+            "deepRestored": 69.45646899999883
+          },
+          "2-6": {
+            "deepBefore": 51.99758199999451,
+            "rejectionSerialize": 178.89178300001004,
+            "rejections": 1.8248160000130156,
+            "secondExecution": 147.68932300000233,
+            "deepResult": 61.564526999996815,
+            "serialize": 85.81084300002112,
+            "restore": 1029.4712249999884,
+            "deepRestored": 57.05652600000212
+          },
+          "2-7": {
+            "deepBefore": 28.57470800000192,
+            "rejectionSerialize": 88.72006299998793,
+            "rejections": 0.8047060000117199,
+            "secondExecution": 72.21236899998985,
+            "deepResult": 29.644157999999152,
+            "serialize": 46.278221999999005,
+            "restore": 560.4677169999977,
+            "deepRestored": 24.764792000010857
+          },
+          "3-1": {
+            "deepBefore": 121.58036200001334,
+            "rejectionSerialize": 452.52630800006955,
+            "rejections": 3.955210000012812,
+            "secondExecution": 345.8468220000377,
+            "deepResult": 133.39827600001445,
+            "serialize": 222.02655999997842,
+            "restore": 2414.0605619999824,
+            "deepRestored": 112.91241099996478
+          },
+          "3-2": {
+            "deepBefore": 127.19106799997462,
+            "rejectionSerialize": 467.8552329999875,
+            "rejections": 4.336745999986306,
+            "secondExecution": 323.5870029999933,
+            "deepResult": 123.19842699993387,
+            "serialize": 231.66516500007856,
+            "restore": 2457.653776999967,
+            "deepRestored": 117.9337190000515
+          },
+          "3-3": {
+            "deepBefore": 99.7424260000007,
+            "rejectionSerialize": 368.32627500001036,
+            "rejections": 3.537690000015573,
+            "secondExecution": 291.4878329999556,
+            "deepResult": 112.05654099999447,
+            "serialize": 188.7182900000371,
+            "restore": 2111.710805000017,
+            "deepRestored": 100.39381400004277
+          },
+          "3-4": {
+            "deepBefore": 0.1649280000019644,
+            "rejectionSerialize": 0.4394240000001446,
+            "rejections": 0.02256400000260328,
+            "secondExecution": 0.6538960000034422,
+            "deepResult": 0.1884940000018105,
+            "serialize": 0.22721199999796227,
+            "restore": 3.28760599999805,
+            "deepRestored": 0.1824350000024424
+          },
+          "3-5": {
+            "deepBefore": 84.34711499999685,
+            "rejectionSerialize": 323.03032800001165,
+            "rejections": 2.85679800001526,
+            "secondExecution": 287.88678399999844,
+            "deepResult": 93.65038400004414,
+            "serialize": 161.9019000000044,
+            "restore": 1932.3782269999865,
+            "deepRestored": 85.89031599996088
+          },
+          "3-6": {
+            "deepBefore": 78.1597060000604,
+            "rejectionSerialize": 310.35919699991064,
+            "rejections": 2.705835000022489,
+            "secondExecution": 242.55984099996567,
+            "deepResult": 85.3706899999961,
+            "serialize": 150.24108899997736,
+            "restore": 1652.2737699999925,
+            "deepRestored": 78.04847400002836
+          },
+          "3-7": {
+            "deepBefore": 32.57638799989945,
+            "rejectionSerialize": 119.8642339999642,
+            "rejections": 0.9382909999912954,
+            "secondExecution": 99.3232289999869,
+            "deepResult": 33.808456999991904,
+            "serialize": 60.78795699993498,
+            "restore": 678.6642570000258,
+            "deepRestored": 33.181534000017564
+          },
+          "4-1": {
+            "deepBefore": 171.82475299998623,
+            "rejectionSerialize": 631.190111000069,
+            "rejections": 5.378127999952994,
+            "secondExecution": 457.1897480000189,
+            "deepResult": 176.94736099989677,
+            "serialize": 317.0324860000401,
+            "restore": 3518.3228030000537,
+            "deepRestored": 159.13487700005498
+          },
+          "4-2": {
+            "deepBefore": 142.10610599994834,
+            "rejectionSerialize": 567.6378990000812,
+            "rejections": 5.573198000034608,
+            "secondExecution": 391.36184000000503,
+            "deepResult": 151.1879440000339,
+            "serialize": 270.61980800002493,
+            "restore": 3059.508685999863,
+            "deepRestored": 127.60963800008903
+          },
+          "4-3": {
+            "deepBefore": 115.75704899998527,
+            "rejectionSerialize": 444.516256000039,
+            "rejections": 3.5571170000039274,
+            "secondExecution": 313.2677750000803,
+            "deepResult": 128.56250500004535,
+            "serialize": 220.3180910000301,
+            "restore": 2486.4235589999516,
+            "deepRestored": 109.90705999995407
+          },
+          "4-4": {
+            "deepBefore": 0.19122799999604467,
+            "rejectionSerialize": 0.5712720000155969,
+            "rejections": 0.022533000010298565,
+            "secondExecution": 0.6907320000027539,
+            "deepResult": 0.23371200000110548,
+            "serialize": 0.29044900000008056,
+            "restore": 3.7185259999969276,
+            "deepRestored": 0.1865010000037728
+          },
+          "4-5": {
+            "deepBefore": 146.6540120000427,
+            "rejectionSerialize": 575.8952410000711,
+            "rejections": 3.8946140000480227,
+            "secondExecution": 400.03616100009094,
+            "deepResult": 161.6530630000052,
+            "serialize": 285.64476599996124,
+            "restore": 3071.007354999958,
+            "deepRestored": 131.9683210000294
+          },
+          "4-6": {
+            "deepBefore": 117.32108799998969,
+            "rejectionSerialize": 450.5995550000298,
+            "rejections": 3.4846850000249106,
+            "secondExecution": 314.573012999841,
+            "deepResult": 130.37088300005416,
+            "serialize": 225.83523000001878,
+            "restore": 2583.0889950000055,
+            "deepRestored": 114.51203900007386
+          },
+          "4-7": {
+            "deepBefore": 66.70353499996418,
+            "rejectionSerialize": 250.06018400003086,
+            "rejections": 2.4051980000076583,
+            "secondExecution": 189.3854860000647,
+            "deepResult": 78.1637810000102,
+            "serialize": 120.9232520000296,
+            "restore": 1394.0785239999968,
+            "deepRestored": 60.25387399998726
+          },
+          "5-1": {
+            "deepBefore": 199.04021799995826,
+            "rejectionSerialize": 800.0144619998391,
+            "rejections": 6.605721000036283,
+            "secondExecution": 521.7431999999899,
+            "deepResult": 213.82682300013403,
+            "serialize": 376.7736610001375,
+            "restore": 4303.594275000032,
+            "deepRestored": 178.96566099988559
+          },
+          "5-2": {
+            "deepBefore": 222.2991879999172,
+            "rejectionSerialize": 838.1612570000871,
+            "rejections": 7.94820599986997,
+            "secondExecution": 610.2636899999634,
+            "deepResult": 239.54036499994982,
+            "serialize": 406.82812400003604,
+            "restore": 4427.773357999831,
+            "deepRestored": 206.92807000015455
+          },
+          "5-3": {
+            "deepBefore": 204.237984000094,
+            "rejectionSerialize": 687.2097810000996,
+            "rejections": 5.1262920002191095,
+            "secondExecution": 464.587381999896,
+            "deepResult": 184.6357540000754,
+            "serialize": 332.323220000093,
+            "restore": 3618.8316039998463,
+            "deepRestored": 158.4510949999385
+          },
+          "5-4": {
+            "deepBefore": 0.2500069999950938,
+            "rejectionSerialize": 0.6956689999933587,
+            "rejections": 0.02943399998184759,
+            "secondExecution": 0.7616290000005392,
+            "deepResult": 0.2403829999966547,
+            "serialize": 0.37281200001598336,
+            "restore": 4.544179999997141,
+            "deepRestored": 0.23200000000360887
+          },
+          "5-5": {
+            "deepBefore": 187.59213899998576,
+            "rejectionSerialize": 729.3487169998407,
+            "rejections": 5.858497000008356,
+            "secondExecution": 468.18721799987543,
+            "deepResult": 199.09382199998072,
+            "serialize": 352.1098229998024,
+            "restore": 3664.9645920000476,
+            "deepRestored": 175.2699820000562
+          },
+          "5-6": {
+            "deepBefore": 219.30849700009276,
+            "rejectionSerialize": 854.6573720000306,
+            "rejections": 5.857467000110773,
+            "secondExecution": 590.3808389998594,
+            "deepResult": 251.938890000034,
+            "serialize": 415.1897849998495,
+            "restore": 4456.263788000098,
+            "deepRestored": 196.9130139999179
+          },
+          "5-7": {
+            "deepBefore": 64.12344900004973,
+            "rejectionSerialize": 289.7857100001711,
+            "rejections": 2.0889980000065407,
+            "secondExecution": 162.1820180000068,
+            "deepResult": 67.4529809999949,
+            "serialize": 132.92862000009336,
+            "restore": 1468.9366670001036,
+            "deepRestored": 61.22608199993556
+          },
+          "6-1": {
+            "deepBefore": 320.1388999998744,
+            "rejectionSerialize": 1355.9049539998668,
+            "rejections": 8.499188000059803,
+            "secondExecution": 764.8181110001169,
+            "deepResult": 359.36813499998243,
+            "serialize": 658.5130920000811,
+            "restore": 7173.292777000228,
+            "deepRestored": 293.350852000076
+          },
+          "6-2": {
+            "deepBefore": 180.71719000005396,
+            "rejectionSerialize": 656.9327140003297,
+            "rejections": 4.061289000033867,
+            "secondExecution": 440.8388330000598,
+            "deepResult": 196.2148999998608,
+            "serialize": 318.449913000004,
+            "restore": 3585.155748000223,
+            "deepRestored": 165.69717999993009
+          },
+          "6-3": {
+            "deepBefore": 286.0002200000308,
+            "rejectionSerialize": 1057.0359730000055,
+            "rejections": 6.840381999878446,
+            "secondExecution": 661.0911980000383,
+            "deepResult": 290.32287499998347,
+            "serialize": 502.0440420000814,
+            "restore": 5754.0292550001905,
+            "deepRestored": 240.00705400010338
+          },
+          "6-4": {
+            "deepBefore": 0.34862499999871943,
+            "rejectionSerialize": 0.8628899999748683,
+            "rejections": 0.0341820000030566,
+            "secondExecution": 0.875519000008353,
+            "deepResult": 0.33459399999992456,
+            "serialize": 0.4222659999941243,
+            "restore": 9.500864000001457,
+            "deepRestored": 0.4398430000001099
+          },
+          "6-5": {
+            "deepBefore": 259.6967360003473,
+            "rejectionSerialize": 1110.5582530004613,
+            "rejections": 6.860930999566335,
+            "secondExecution": 641.9382809997333,
+            "deepResult": 284.0766340000846,
+            "serialize": 526.0706219995773,
+            "restore": 5713.198016000242,
+            "deepRestored": 237.65187799972773
+          },
+          "6-6": {
+            "deepBefore": 210.75106399986544,
+            "rejectionSerialize": 759.1535609999846,
+            "rejections": 4.304721999942558,
+            "secondExecution": 469.1867620002886,
+            "deepResult": 234.73709699948085,
+            "serialize": 364.2306779998762,
+            "restore": 3933.071995000093,
+            "deepRestored": 178.27479699999094
+          },
+          "6-7": {
+            "deepBefore": 92.70379700014018,
+            "rejectionSerialize": 375.27483300017775,
+            "rejections": 2.5363109998288564,
+            "secondExecution": 208.64206799984095,
+            "deepResult": 90.77342799986945,
+            "serialize": 191.18877399980556,
+            "restore": 2087.655054000148,
+            "deepRestored": 83.88839799992274
+          }
+        },
+        "commands": 254,
+        "ticks": 11896,
+        "digest": "fnv1a32-utf16:ea6b11b6",
+        "fingerprint": "e46feed7e8917edded67d161cb64193a938f7392348d3934169fc954534545fb",
+        "goldenPassed": true
+      }
+    },
+    "diagnosticRestores": {
+      "base": [
+        {
+          "round": 12,
+          "tick": 100,
+          "ms": 1556.3140489999969,
+          "restores": 250,
+          "bytes": 144426
+        },
+        {
+          "round": 19,
+          "tick": 100,
+          "ms": 2110.899078000002,
+          "restores": 250,
+          "bytes": 232557
+        },
+        {
+          "round": 25,
+          "tick": 100,
+          "ms": 2453.576701000002,
+          "restores": 250,
+          "bytes": 292570
+        },
+        {
+          "round": 33,
+          "tick": 100,
+          "ms": 2742.233260000001,
+          "restores": 250,
+          "bytes": 350483
+        }
+      ],
+      "rejectedG23": [
+        {
+          "round": 12,
+          "tick": 100,
+          "ms": 1512.1472179999982,
+          "restores": 250,
+          "bytes": 144426
+        },
+        {
+          "round": 19,
+          "tick": 100,
+          "ms": 2213.4046540000018,
+          "restores": 250,
+          "bytes": 232557
+        },
+        {
+          "round": 25,
+          "tick": 100,
+          "ms": 2421.7210379999997,
+          "restores": 250,
+          "bytes": 292570
+        },
+        {
+          "round": 33,
+          "tick": 100,
+          "ms": 2613.114222,
+          "restores": 250,
+          "bytes": 350483
+        }
+      ],
+      "deferFreeze": [
+        {
+          "round": 12,
+          "tick": 100,
+          "ms": 1438.1396290000012,
+          "restores": 250,
+          "bytes": 144426
+        },
+        {
+          "round": 19,
+          "tick": 100,
+          "ms": 1982.5854099999997,
+          "restores": 250,
+          "bytes": 232557
+        },
+        {
+          "round": 25,
+          "tick": 100,
+          "ms": 2341.583133999997,
+          "restores": 250,
+          "bytes": 292570
+        },
+        {
+          "round": 33,
+          "tick": 100,
+          "ms": 2835.383522,
+          "restores": 250,
+          "bytes": 350483
+        }
+      ],
+      "deferAndReceipts": [
+        {
+          "round": 12,
+          "tick": 100,
+          "ms": 1315.8277159999998,
+          "restores": 250,
+          "bytes": 144426
+        },
+        {
+          "round": 19,
+          "tick": 100,
+          "ms": 1822.6954600000008,
+          "restores": 250,
+          "bytes": 232557
+        },
+        {
+          "round": 25,
+          "tick": 100,
+          "ms": 2258.6962189999977,
+          "restores": 250,
+          "bytes": 292570
+        },
+        {
+          "round": 33,
+          "tick": 100,
+          "ms": 2775.2164239999984,
+          "restores": 250,
+          "bytes": 350483
+        }
+      ]
+    }
   }
 }

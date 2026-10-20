@@ -64,3 +64,26 @@ node docs/evidence/d12-perf-m5-replay/compare-boundaries.cjs /tmp/d12-baseline "
 差异检查使用的 `/tmp/d12-baseline` 为基线提交的 `src/`、`package.json` 和同一依赖目录。两套 Vite 在同进程加载时提示 HMR 端口冲突，81 项规则比较正常完成、退出码为 0；不涉及网络测试。
 
 CI 的实际单项耗时和终态记录在草稿 PR 的最终说明中。本机串行分段数据与双 worker 总时长不替代 CI 240 秒验收。
+
+## 恢复校验跟进（基于 6fad68c8）
+
+保持第一次的完整测量，不重复无变化基线。第二轮只改恢复路径：
+
+- 同一次同步恢复内，完整收据仅构建一次出生投影；按五个完整收据边界（schedule / loot / mechanic / carousel 数组身份及 throughRoundOrdinal）匹配。Map 与记录返回副本，不跨恢复保留；对象/序列化路径关闭复用，异常和重入用 finally 恢复作用域。每个 ledger/prefix 的原有遍历和拒绝检查仍执行。
+- 对私有 JSON basis 延后冻结，到已有的最终 metadata 复用处处理；公开/object 调用仍立即冻结，返回的 Match basis 仍完整冻结且容器独立。没有缓存恢复输出。
+- G23 canonical 比较/经济键实验收益不足 2%，已撤回，没有提交该改动。没有改 D13 的准备文件。
+
+| 路线 | 恢复累计（第一次）s | 恢复累计（第二次）s | 主体（第一次）s | 主体（第二次）s |
+| --- | ---: | ---: | ---: | ---: |
+| sniper | 89.719 | 85.983 | 149.413 | 148.278 |
+| sniper-caitlyn | 91.026 | 85.680 | 151.891 | 147.208 |
+
+两条完整路线均通过原 golden；完整命令数、tick 数、逐轮 state/event 指纹、digest 与第一次及原始基线一致。分阶段和逐轮原始记录在 measurements.json 的 followup 字段。定点诊断的四个检查点、每点 250 次恢复也保留在该字段；这是诊断，不代替原测试或 CI 验收。
+
+本轮相关原有 89 项 + 新增 3 项通过，tsc --noEmit 通过。与 6fad68c8 的通用 81 项比较通过，另有中后期 84 项收据/prefix/runtime 篡改、getter 读取及错误后隔离对照通过，完整异常类型与消息相同；见 phase2-*-comparison.json 和 compare-receipts.cjs。
+
+外部集成事项：本分支实际测量基线是 a0d42c59 / 6fad68c8，两个目标 wrapper 的 timeout 都保持 360000。PR #239 的 HEAD 7a48c2738ce41816e9a2e2f4f76968ace2a967b6 曾说明临时 600 秒及提速后恢复 360 秒；该事项由外部集成跟进，不能作为 D12 的 240 秒验收。已核对 #234 仅改 tests/m8-b4-r3b-lifecycle.test.ts 的 fixture beforeAll，本任务未改该文件，也未重复其工作。
+
+旧 HEAD 6fad68c8 的 CI 39364817788 终态为 cancelled，目标快测分片未产生可验收耗时；不视为 240 秒通过或性能失败。原始 tests-2 取消日志保留为 ci-39364817788-tests-2.log.gz（该分片包含 mage，两个目标分片均取消）。最终以实际新 HEAD 的 CI 单项记录验收。
+
+本轮两项原测试 2/2 通过，2 worker 总 wall time 153.67 秒；此数据仍不代替 CI 单项 240 秒验收。
