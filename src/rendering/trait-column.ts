@@ -15,6 +15,7 @@ import { describeTraitTier } from '../presentation/effect-text';
 import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
 import { s13IconHtml } from '../presentation/s13-assets';
+import { traitTierStyle } from '../presentation/trait-styles';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -66,6 +67,7 @@ export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty:
   for (const row of rows) {
     const item = el('li', '', `trait-row${row.tier > 0 ? ' active' : ' inactive'}`);
     item.dataset.trait = row.traitId; item.dataset.count = String(row.count); item.dataset.tier = String(row.tier); item.tabIndex = 0;
+    const style = traitTierStyle(row.traitId, row.tier, row.thresholds); if (style) item.dataset.style = style;
     item.dataset.debug = `${debug}:${row.traitId}`;
     item.insertAdjacentHTML('afterbegin', traitIconHtml(row.traitId, 22));
     item.append(el('span', String(row.count), 'trait-count'), el('span', row.name, 'trait-name'));
