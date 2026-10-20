@@ -17,7 +17,6 @@ import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
-/** TFT client convention: 1★ bronze, 2★ silver, 3★ gold; v16 Ultimate Hero's effective 4★ is prismatic cyan. */
 export type RingState = 'normal' | 'selected' | 'target';
 /** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
 const ITEM_ICON = 16, ITEM_Y = 32;
