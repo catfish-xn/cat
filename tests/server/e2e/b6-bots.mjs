@@ -50,7 +50,7 @@ const seatOf = page => page.evaluate(() => document.querySelector('.online-seat.
 const seatRow = (page, seatId) => page.evaluate(seat => {
   const row = document.querySelector(`[data-debug="online:seat:${seat}"]`);
   return row ? { kind: row.querySelector('.seat-kind')?.textContent ?? '', takeover: row.querySelector('.seat-kind')?.classList.contains('seat-takeover') ?? false,
-    tag: row.querySelector('.seat-offline')?.textContent ?? '', avatar: row.querySelector('.seat-avatar')?.dataset.definition ?? null } : null;
+    tag: row.querySelector('.seat-offline')?.textContent ?? '', greyed: row.classList.contains('offline'), avatar: row.querySelector('.seat-avatar')?.dataset.definition ?? null } : null;
 }, seatId);
 
 async function main() {
@@ -104,7 +104,7 @@ async function main() {
     a = null;
     await waitRead(b, s => s.m6.seats.find(seat => seat.seatId === seatA)?.connected === false, 'A shown disconnected');
     const offline = await seatRow(b, seatA);
-    check(offline.tag === '断线' && !offline.takeover, 'B sees A as 断线 before the takeover delay');
+    check(offline.tag === '重连中' && offline.greyed && !offline.takeover, 'B sees A greyed out as 重连中 before the takeover delay');
     await waitRead(b, s => s.m6.seats.find(seat => seat.seatId === seatA)?.controller === 'takeover', 'takeover of A', 20_000);
     const taken = await seatRow(b, seatA);
     check(taken.kind === '机' && taken.takeover && taken.tag === '接管中', 'B sees A as 机 (takeover style) + 接管中');
