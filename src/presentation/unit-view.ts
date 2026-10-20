@@ -16,8 +16,8 @@ import { reducedMotion } from './preferences';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
-/** TFT client convention: 1★ bronze, 2★ silver, 3★ gold. */
-const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'] as const;
+/** TFT client convention: 1★ bronze, 2★ silver, 3★ gold; v16 Ultimate Hero's effective 4★ is prismatic cyan. */
+const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d', '#8ff3ff'] as const;
 export type RingState = 'normal' | 'selected' | 'target';
 /** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
 const ITEM_ICON = 16, ITEM_Y = 32;
@@ -100,9 +100,10 @@ export class UnitView {
   /**
    * Preparation identity: hero, star level, cost and equipped item pips. `pending` (C18): items worn now that enter the
    * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
+   * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
-  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = []): void {
-    const key = `${unit.definitionId}|${unit.starLevel}|${equipped.join(',')}|${pending.join(',')}|${unit.team}`;
+  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], star: number = unit.starLevel): void {
+    const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     this.identity = getHeroIdentity(unit.definitionId);
@@ -118,7 +119,7 @@ export class UnitView {
     const points = EMBLEM_POINTS[this.identity.shape].map(([px, py]) => new Phaser.Math.Vector2(px * PIECE_RADIUS * 0.82, py * PIECE_RADIUS * 0.82));
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
     this.emblem.setVisible(!hasPortrait);
-    this.star.setText('★'.repeat(unit.starLevel)).setColor(STAR_COLORS[unit.starLevel - 1]);
+    this.star.setText('★'.repeat(star)).setColor(STAR_COLORS[Math.min(STAR_COLORS.length, Math.max(1, star)) - 1]);
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);

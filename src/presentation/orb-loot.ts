@@ -16,6 +16,7 @@ import { itemMarkHtml } from './item-codex';
 import type { LootLabels } from './loot-view';
 import { NEXT_BATTLE_TEXT, takesEffectNextBattle } from './equipment-feedback';
 import { itemDisplayName } from './g23-display';
+import { lootPayloadDescription } from './loot-payload-text';
 
 /** The orb part of a LootView, or of the private view's revealedLoot (§18.4): the same three fields. */
 export type OrbLoot = Pick<LootView, 'roundId' | 'revealedDrops' | 'revealedOrbs'>;
@@ -74,8 +75,12 @@ function orbEntryRow(drop: RevealedDropView): HTMLElement {
   if (drop.receiptId) row.dataset.receipt = drop.receiptId;
   row.insertAdjacentHTML('afterbegin', payload.icon);
   row.append(node('span', payload.text, 'orb-entry-name'), node('span', status.label, 'loot-badge'));
+  // v16: tools and epic forges say what they do (the content's text); an item's effects stay in the tooltip only.
+  const description = lootPayloadDescription(drop.payload);
+  if (description && (drop.payload.kind === 'consumable' || drop.payload.kind === 'forge')) row.append(node('span', description, 'orb-entry-desc'));
   const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note : status.note;
-  if (note) row.title = note;
+  const title = [description, note].filter(Boolean).join('\n');
+  if (title) row.title = title;
   return row;
 }
 

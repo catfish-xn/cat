@@ -575,8 +575,10 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .orb-prismatic { border-left-color: #c58bff; } .orb-prismatic .orb-gem { background: linear-gradient(135deg, #7ef0e0, #c58bff 50%, #ffb3d9); color: #c58bff; }
 .orb-status-forfeited { opacity: .7; }
 .orb-entries { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
-.orb-entry { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.orb-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
 .orb-entry-name { flex: 1; }
+.orb-entry-desc { flex-basis: 100%; font-size: 12px; color: var(--c-text-muted); }
+.loot-desc { margin: 2px 0 0; font-size: 12px; color: #c9d4da; }
 .orb-entry.loot-forfeited .orb-entry-name { text-decoration: line-through; color: var(--c-text-muted); }
 .loot-forfeited .loot-badge { background: #4a2626; }
 .consumable-shelf h4 { margin: 10px 0 6px; font-size: 13px; }
@@ -661,7 +663,8 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .unit-card-portrait.cost-4 { border-color: #b46be6; } .unit-card-portrait.cost-5 { border-color: #e6bc76; }
 .unit-card-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
 .unit-card-name { font-size: 15px; }
-.unit-card-stars { color: #c9d4da; font-size: 12px; } .unit-card-stars.star-3 { color: #ffd76a; }
+.unit-card-stars { color: #c9d4da; font-size: 12px; } .unit-card-stars.star-3 { color: #ffd76a; } .unit-card-stars.star-4 { color: #8ff3ff; text-shadow: 0 0 4px rgba(143, 243, 255, .6); }
+.unit-card-note { margin: 0; font-size: 12px; color: #8ff3ff; }
 .unit-card-cost { font-size: 12px; color: #e6bc76; }
 .unit-card-traits { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
 .unit-card-traits span { padding: 1px 7px; border-radius: 999px; background: #203440; }
@@ -741,3 +744,8 @@ body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; f
 .left-panel-toast { position: absolute; z-index: 85; left: 50%; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 8px) + 56px); transform: translateX(-50%);
   width: max-content; max-width: min(560px, calc(100% - 24px)); margin: 0; padding: 7px 14px; border-radius: 8px; border: 1px solid #34505f;
   background: rgba(11, 21, 31, .94); color: #e2eef1; font-size: 13px; line-height: 1.45; text-align: center; pointer-events: none; box-shadow: 0 6px 18px #0008; }
+
+/* v16 终极英雄 / 进入未知: the rules' D14 line in the side panel and unit detail. */
+.anomaly-d14, .unit-d14-note { color: #8ff3ff; }
+.d14-away-chip { position: absolute; left: 8px; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); z-index: 80; max-width: min(360px, calc(100% - 16px)); margin: 0; padding: 6px 10px; border: 1px solid #8ff3ff88; border-radius: 8px; background: #16303acc; color: #8ff3ff; font-size: 12px; line-height: 1.4; pointer-events: none; }
+body[data-m6-mode="startup"] .d14-away-chip, body[data-m6-mode="import"] .d14-away-chip, body[data-m6-mode="replay"] .d14-away-chip, body[data-online-mode="online-ended"] .d14-away-chip { display: none !important; }
