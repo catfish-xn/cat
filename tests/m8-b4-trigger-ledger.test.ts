@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { dispatchTriggers, EMPTY_TRIGGER_LEDGER, type TriggerSignal } from '../src/simulation/m8/triggers';
 import { source, trigger, context, amount } from './fixtures/m8-contract-cases';
 import { status } from '../src/simulation/content/item-programs';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const units = [
   { id: 'p', team: 'player' as const, cell: { col: 1, row: 4 }, hp: 1000, maxHp: 1000, alive: true },

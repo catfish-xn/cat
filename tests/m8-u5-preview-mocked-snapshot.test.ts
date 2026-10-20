@@ -9,6 +9,8 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import type { StrategyUnitSnapshot } from '../src/simulation/strategy-types';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { accepted, freeze, reachRound } from './match-helpers';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 type InjectionMode = 'disabled' | 'enhanced' | 'enhanced-start-mana' | 'legacy-ability' | 'zero-ap';
 const injection = vi.hoisted((): { mode: InjectionMode; unitId: string } => ({

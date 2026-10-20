@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, finish, resolveM5Choices, reachRound } from './match-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const copy = <T>(value: T): T => structuredClone(value);
 function roundTrip(state: MatchState): MatchState {
