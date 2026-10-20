@@ -11,6 +11,7 @@ import type { PendingChoice } from '../simulation/strategy-types';
 import { displayUnitName } from '../rendering/display-names';
 import { heroEmblemSvg } from './hero-identity';
 import { itemDescriptions, itemMarkHtml } from './item-codex';
+import { toolMark } from './orb-loot';
 import { itemDisplayName } from './g23-display';
 
 export interface LootLabels {
@@ -45,7 +46,7 @@ export function continueBlockText(reason: NonNullable<LootView['reason']>): stri
 
 function payloadLabel(payload: Payload): { icon: string; text: string } {
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
-  if (payload.kind === 'consumable') return { icon: '', text: ({ 'magnetic-remover': '拆卸器', 'component-reforger': '组件重铸器', 'completed-reforger': '成装重铸器' })[payload.definitionId] };
+  if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: ({ 'magnetic-remover': '拆卸器', 'component-reforger': '组件重铸器', 'completed-reforger': '成装重铸器' })[payload.definitionId] };
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   return payload.kind === 'item'
     ? { icon: itemMarkHtml(payload.definitionId, 26), text: `${itemName(payload.definitionId)}${count}` }
