@@ -1,0 +1,376 @@
+{
+  "baseline": "a0d42c592cbd48fb075175e5f61818dabfe1b320",
+  "initial_checkout": "e958032c878c65bcb8bf05ab963265c31a4f029d",
+  "baseline_tree": "a7fe425dfecd60e2f687e98a025b37ead830534a",
+  "machine": {
+    "os": "Debian 13.6",
+    "kernel": "Linux 6.18.55 x86_64",
+    "cpu": "AMD EPYC 9V74, 5 logical CPUs",
+    "memory_mib": 18007,
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "vitest": "5.0.3",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  },
+  "cases": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "Lux kills two different targets in one root action and gains two +20 stacks",
+      "before_ms": 3.023,
+      "after_ms": 3.982,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "restores the real double kill and continues identically (object)",
+      "before_ms": 267.831,
+      "after_ms": 263.79,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "restores the real double kill and continues identically (json)",
+      "before_ms": 277.974,
+      "after_ms": 264.362,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "saves Renata's tick-60 double kill, restores object/JSON, and replays every complete combat state",
+      "before_ms": 1262.007,
+      "after_ms": 1109.15,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "S1: a holder and its target dying in the same tick award no stack to the dead holder",
+      "before_ms": 10.034,
+      "after_ms": 8.273,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "S1: Sion owns its kill; Black Rose holder earns only a real prior assist (false)",
+      "before_ms": 9.563,
+      "after_ms": 9.071,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "S1: Sion owns its kill; Black Rose holder earns only a real prior assist (true)",
+      "before_ms": 6.747,
+      "after_ms": 8.579,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "S1: Silco monstrosities retain Silco ownership on a delayed lethal packet and award one kill stack",
+      "before_ms": 11.766,
+      "after_ms": 11.662,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing ownerId or clock-derived stacks",
+      "before_ms": 4.105,
+      "after_ms": 5.305,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing sourceKind or clock-derived stacks",
+      "before_ms": 3.94,
+      "after_ms": 4.413,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing definitionId or clock-derived stacks",
+      "before_ms": 3.537,
+      "after_ms": 4.626,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing instanceId or clock-derived stacks",
+      "before_ms": 3.77,
+      "after_ms": 4.085,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing effectIndex or clock-derived stacks",
+      "before_ms": 3.696,
+      "after_ms": 4.203,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing parentItemInstanceId or clock-derived stacks",
+      "before_ms": 3.663,
+      "after_ms": 10.255,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing missing or clock-derived stacks",
+      "before_ms": 3.236,
+      "after_ms": 4.21,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "binds all three effect offsets to settled receipts without borrowing under-count or clock-derived stacks",
+      "before_ms": 4.068,
+      "after_ms": 4.499,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "deduplicates the same target, counts the second target, and keeps kill exclusive",
+      "before_ms": 1.184,
+      "after_ms": 1.816,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "deduplicates the same target, counts the second target, and keeps assist exclusive",
+      "before_ms": 0.693,
+      "after_ms": 1.684,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "only the bracer opts into per-target limits; other item declarations retain action-wide behavior",
+      "before_ms": 0.512,
+      "after_ms": 1.715,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "rejects forged unknown-target receipts despite correct aggregate AP and count",
+      "before_ms": 33.77,
+      "after_ms": 33.214,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "rejects forged duplicate-target receipts despite correct aggregate AP and count",
+      "before_ms": 27.016,
+      "after_ms": 30.656,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "rejects forged old-action-key receipts despite correct aggregate AP and count",
+      "before_ms": 45.658,
+      "after_ms": 30.708,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "retains a dead holder's same-tick killing blow but grants zero kill or assist stacks, with identical restored ticks",
+      "before_ms": 1817.048,
+      "after_ms": 1453.892,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "a holder-owned summon kills as itself; holder contribution=false controls only assists, with identical restored ticks",
+      "before_ms": 3262.972,
+      "after_ms": 3105.284,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "name": "a holder-owned summon kills as itself; holder contribution=true controls only assists, with identical restored ticks",
+      "before_ms": 2366.317,
+      "after_ms": 2349.433,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "plans exactly one permanent sword with no receipt/economy/RNG work",
+      "before_ms": 622.892,
+      "after_ms": 25.077,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "plans exactly one permanent gloves with no receipt/economy/RNG work",
+      "before_ms": 41.957,
+      "after_ms": 12.033,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "plans exactly one permanent blue-buff with no receipt/economy/RNG work",
+      "before_ms": 972.507,
+      "after_ms": 19.315,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "plans exactly one permanent thiefs-gloves with no receipt/economy/RNG work",
+      "before_ms": 904.538,
+      "after_ms": 12.223,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "rejects bad definitions, grant identities and serials without any partial state",
+      "before_ms": 3.398,
+      "after_ms": 3.775,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "real choice commits exactly one item and one caller-owned receipt; restore/retry cannot regrant",
+      "before_ms": 24.69,
+      "after_ms": 21.192,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "legacy multi-component reward uses one caller receipt and rejects a bad batch atomically",
+      "before_ms": 3.603,
+      "after_ms": 3.208,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "inventory view contains only real inventory IDs, is detached and remains correct after combine/equip/sale",
+      "before_ms": 585.847,
+      "after_ms": 545.788,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling",
+      "before_ms": 448.979,
+      "after_ms": 536.85,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "returns unique conflicts and preserves permanent IDs across the complete command",
+      "before_ms": 26.746,
+      "after_ms": 28.443,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "returns exclusive survivor conflicts and preserves permanent IDs across the complete command",
+      "before_ms": 50.508,
+      "after_ms": 45.185,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "returns exclusive incoming conflicts and preserves permanent IDs across the complete command",
+      "before_ms": 48.349,
+      "after_ms": 42.771,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "returns full ordinary conflicts and preserves permanent IDs across the complete command",
+      "before_ms": 65.252,
+      "after_ms": 57.799,
+      "before_status": "passed",
+      "after_status": "passed"
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "name": "failed purchase preserves roll ledger, children, resources and event serials",
+      "before_ms": 35.759,
+      "after_ms": 38.5,
+      "before_status": "passed",
+      "after_status": "passed"
+    }
+  ],
+  "checks": {
+    "before": {
+      "success": true,
+      "passed": 25,
+      "failed": 0
+    },
+    "b5-before": {
+      "success": true,
+      "passed": 14,
+      "failed": 0
+    },
+    "bracer-final": {
+      "success": true,
+      "passed": 25,
+      "failed": 0
+    },
+    "b5-final": {
+      "success": true,
+      "passed": 14,
+      "failed": 0
+    },
+    "shuffle-42": {
+      "success": true,
+      "passed": 39,
+      "failed": 0
+    },
+    "shuffle-20261020": {
+      "success": true,
+      "passed": 39,
+      "failed": 0
+    }
+  },
+  "assertions": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "before": 218,
+      "after": 218,
+      "identical": true
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "before": 135,
+      "after": 135,
+      "identical": true
+    }
+  ]
+}
