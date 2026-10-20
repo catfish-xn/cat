@@ -7,6 +7,9 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { UNIT_DEFINITIONS, validateUnitDefinitions } from '../src/simulation/units';
 import { resolveUnitStats } from '../src/simulation/unit-stats';
 import { battle, unit } from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const request = (patch: Partial<ManaRequest> = {}): ManaRequest => ({ source: source('mana', 'i', 'p'), targetId: 'p', amount: 10, reason: 'attack', bypassLock: 'none', castActionSeq: null, ...patch });
 const state = { unitId: 'p', current: 75, maximum: 80, lockedUntilTick: 0 };
 describe('G08 independent mana and cast vectors (B2 §7)', () => {

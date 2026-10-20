@@ -8,6 +8,9 @@ import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
 import {compileBattle,startTwoSidedCombat} from '../src/simulation/two-sided-battle';
 import {stepCombat,type CombatEvent} from '../src/simulation/combat';
 import type {MatchState} from '../src/simulation/match-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function equip(state:MatchState){
  const g=grantMechanicItem(state,{receiptId:'mogul',source:'test',definitionId:'TFT7_Item_ShimmerscaleMogulsMail'});if(!g.ok)throw Error(g.reason);

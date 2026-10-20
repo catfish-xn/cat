@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateAmount, resolveStat, attackInterval, changeMaxHp, type StatSample } from '../src/simulation/m8/stats';
 import { amount, modifier } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Answers are independently calculated here before the executor is implemented.
 const sample: StatSample = { holder: { id: 'p', hp: 500, maxHp: 1000 }, target: { id: 'e', hp: 1000, maxHp: 1750 },

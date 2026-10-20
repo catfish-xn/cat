@@ -4,6 +4,9 @@ import { G24_VOIDSPAWN_ABILITIES } from '../src/simulation/content/g2-4b-voidspa
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { abilityPlans, type Champion } from './fixtures/m8-ability-plans';
 import type { AbilityPlan, ActionTask } from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const tasks = (p: AbilityPlan): readonly ActionTask[] => p.operations.flatMap(op => op.kind === 'schedule' ? op.tasks : []);
 const encoded = (name: Champion) => JSON.stringify(abilityPlans[name]);
 

@@ -6,6 +6,7 @@
 import { readEncounterPreview } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
 import { heroEmblemSvg } from './hero-identity';
+import { heroPortraitHtml } from './s13-assets';
 import { displayUnitName } from '../rendering/display-names';
 
 export interface EncounterPreviewOptions {
@@ -43,7 +44,7 @@ export function encounterPreviewSection(state: MatchState, options: EncounterPre
     const row = node('article', '', 'encounter-unit'); row.tabIndex = 0;
     row.dataset.debug = `encounter-unit:${unit.definitionId}`; row.dataset.unitIds = ids.join(' ');
     const title = node('h4', label(unit, units.length));
-    title.insertAdjacentHTML('afterbegin', heroEmblemSvg(unit.definitionId, 22));
+    title.insertAdjacentHTML('afterbegin', heroPortraitHtml(unit.definitionId, 22, heroEmblemSvg(unit.definitionId, 22)));
     title.append(node('span', `位置 ${units.map(entry => `${entry.cell.col},${entry.cell.row}`).join(' / ')}`, 'encounter-cell'));
     row.append(title, node('p', `生命 ${unit.stats.maxHp} · 攻击力 ${unit.stats.attackDamage} · 护甲 ${unit.stats.armor} · 魔抗 ${unit.stats.magicResist}`));
     const stats = unit.stats;

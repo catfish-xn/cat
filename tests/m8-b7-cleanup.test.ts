@@ -10,6 +10,8 @@ import { validateNeutralCombat } from '../src/simulation/neutral-restore';
 import { createMatch, startMatchCombat } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted } from './match-helpers';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Isolated hypothetical trusted definitions, never changes the production catalog.
 // Delayed execution additionally proves restore derives activation from the task.

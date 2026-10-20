@@ -4,6 +4,9 @@ import { amount, context, source } from './fixtures/m8-contract-cases';
 import { permissionsFor } from '../src/simulation/m8/damage';
 import { evaluateAmount } from '../src/simulation/m8/stats';
 import type { Source } from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const bt = source('bloodthirster', 'i1'), gun = source('gunblade', 'i2');
 describe('G06 one mutation and independently calculated share vectors', () => {
   it('non-item direct healing preserves provenance and applies wound to a missing-HP request', () => {

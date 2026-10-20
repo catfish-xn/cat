@@ -38,3 +38,34 @@ export class RankingOverlay {
   hide() { this.root.hidden = true; }
   dispose() { this.root.remove(); }
 }
+/**
+ * TFT's placement card, shown the moment my seat is eliminated while the match goes on: 第 N 名, then 继续观看 (close the
+ * card, keep spectating) or 返回匹配 (leave the match). The rank is the server's (`SeatPublic.rank`). The backdrop lets
+ * clicks through, so the player list stays usable while it shows; the final ranking replaces it when the match ends.
+ */
+export class EliminationCard {
+  readonly root: HTMLElement;
+  private rank: HTMLElement;
+  private note: HTMLElement;
+  private keydown = (event: KeyboardEvent) => { if (event.key === 'Escape' && !this.root.hidden) this.hide(); };
+  constructor(host: HTMLElement, onLeave: () => void) {
+    this.root = element('div', '', 'elimination-overlay'); this.root.id = 'elimination-root'; this.root.dataset.debug = 'online:elimination'; this.root.hidden = true;
+    const card = element('div', '', 'elimination-card'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', '本局名次');
+    this.rank = element('strong', '', 'elimination-rank'); this.note = element('span', '', 'elimination-note');
+    const actions = element('div', '', 'elimination-actions');
+    const watch = element('button', '继续观看'); watch.type = 'button'; watch.dataset.debug = 'online:elimination-watch'; watch.addEventListener('click', () => this.hide());
+    const leave = element('button', '返回匹配'); leave.type = 'button'; leave.dataset.debug = 'online:elimination-leave'; leave.classList.add('primary-action'); leave.addEventListener('click', onLeave);
+    actions.append(watch, leave); card.append(element('span', '已淘汰', 'elimination-kicker'), this.rank, this.note, actions);
+    this.root.append(card); host.append(this.root);
+    document.addEventListener('keydown', this.keydown);
+  }
+  show(rank: number | null): void {
+    this.rank.textContent = `第 ${rank ?? '?'} 名`; this.root.dataset.rank = String(rank ?? '');
+    this.root.dataset.tier = rank === null ? '' : rank <= 4 ? 'top4' : 'bottom4';
+    this.note.textContent = rank !== null && rank <= 4 ? '进入前四 · 对局仍在进行' : '对局仍在进行，最终排名在终局公布';
+    this.root.hidden = false;
+  }
+  get showing(): boolean { return !this.root.hidden; }
+  hide() { this.root.hidden = true; }
+  dispose() { document.removeEventListener('keydown', this.keydown); this.root.remove(); }
+}

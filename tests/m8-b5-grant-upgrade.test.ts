@@ -11,6 +11,9 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { accepted, freeze, readyMatch, reachRound } from './match-helpers';
 import { publicInventory, publicRecursivePurchase } from './fixtures/b8-public-acquisition';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },

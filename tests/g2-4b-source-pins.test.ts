@@ -5,6 +5,9 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import extracted from '../src/simulation/content/source/s13-14.24b/normalized/g2-4b-mechanism-items.json';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const root = 'src/simulation/content/source/s13-14.24b/raw/';
 const archive = (name: string) => JSON.parse(gunzipSync(readFileSync(root + name)).toString());
