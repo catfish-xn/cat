@@ -185,6 +185,20 @@ Riot 的 [14.15 官方更新说明](https://teamfighttactics.leagueoflegends.com
 
 PlayerView 以白名单生成。具体哪些公开数据可观战另列表；全池精确可用量、未来奖励和 RNG 不默认公开。客户端不能通过本地导入旧存档替换在线状态。
 
+### 6.1 连接心跳消息（PR #229）
+
+服务器向每条打开的 WebSocket 连接发送文本 JSON `{"type":"heartbeat","intervalMs":10000}`；`intervalMs` 为本服务器配置的心跳间隔（毫秒）。该消息不带 `protocolVersion`、`commandId` 或席位数据，不是命令，也没有应用层回执。服务器同时发送 WebSocket 协议层 ping，浏览器自动回复 pong；客户端无需另发 JSON 心跳或 pong 命令。
+
+`src/server/main.ts` 默认启用每 10 秒一次的心跳，静默阈值为间隔的 2.5 倍，默认 25 秒。任意收到的客户端消息或协议层 pong 都更新该连接的最后活动时间；每次心跳轮询先检查静默是否达到阈值，达到则 `terminate()`，否则向仍为 OPEN 的连接发送 ping 和 heartbeat。**25 秒是判定阈值，不是独立定时器保证的断开时刻**：检查只在心跳轮询时发生，例如从时刻 0 起无回音、轮询在 10/20/30 秒发生时，会在 30 秒断开；事件循环延迟还可能推迟检查。
+
+客户端只在当前 socket 收到首条有效 heartbeat 后启用静默检测（`intervalMs` 必须为有限正数）。此后收到任何 WebSocket 应用消息都会重置检测定时器；连续 `3 × intervalMs` 没有消息，默认 30 秒，客户端以关闭码 `4000`、原因 `heartbeat timeout` 关闭该 socket，并立即进入原有重连调度，不等待旧 socket 的 close 事件。新 socket 必须重新收到首条 heartbeat 才启用检测。
+
+环境变量 `CAT_HEARTBEAT_SEC` 配置整秒间隔：未设置或空字符串用默认 10；`0` 关闭服务器的 ping、heartbeat 消息及静默检查；负数、非整数、非有限数或非数字值在启动时抛出 `RangeError`（沿用非负安全整数解析）。直接调用 `createGameServer` 时，`heartbeat` 省略或为 `null` 也关闭；启用时传入 `{ intervalMs, timeoutMs }`，工厂直接使用这两个值，不另作数值校验。
+
+心跳超时沿用原断线路径：**对局内**仅将原席位标为 disconnected，保留席位、资产和凭证；**尚在匹配队列**则退出队列并撤销凭证，不保座。客户端对局内重连仍带原 token 发送 `resume`，按既有 1/2/4/8/10 秒退避调度（最后一档重复），成功后接收原席位快照。若旧 socket 尚未关闭，服务器先提升 `connectionEpoch`、解除旧连接的席位绑定并通知 `session-superseded`，再绑定新连接；旧连接迟到的 close 不会把新连接的席位标为离线。对局故障释放或新局开始后已撤销的凭证，仍按原逻辑返回 `invalid-token`。
+
+本次 `NET_PROTOCOL_VERSION` 仍为 3：以基线 `a0d42c5` 为准，旧浏览器客户端的接收 switch 对未知消息类型直接忽略，不报错、不主动断开；协议层 ping 仍由浏览器自动响应，所以旧客户端可连新服务器。新客户端连旧服务器（或关闭心跳的新服务器）时，因从未收到 heartbeat，不启用静默检测，也不新增任何客户端命令，所以保留旧连接行为。这是对该基线的兼容结论，不承诺绕过既有版本检查接受其他旧协议版本。
+
 ## 7 机器人合同
 
 机器人通过同一对局命令入口使用共享有限卡池。不能读本应隐藏的其他商店来作弊，也不能直接给自己造卡或越过费用。
