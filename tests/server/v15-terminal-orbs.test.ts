@@ -24,16 +24,26 @@ class EndAtFirstPvp implements BattleResolver {
 }
 
 describe('v15 match end: terminal orb forfeit', () => {
-  it('forfeits the winner\'s unclaimed orbs at the end, with the events the rules numbered', () => {
+  it('forfeits the winner\'s unclaimed orbs at the end (disconnected or not), with the events the rules numbered; eliminated seats get nothing new', () => {
     const { room, clock } = makeRoom(new EndAtFirstPvp(), { pvpMode: 'placeholder' });
     room.start();
     runUntil(room, clock, state => state.roundKind === 'pvp' && state.phase === 'preparation');
     const before = seat(room.state, 's0');
     const owed = unclaimed(before.match);
     expect(owed.length).toBeGreaterThan(0);
+    // The winner drops its connection before the end: the forfeit does not depend on a live client.
+    expect(room.setConnected('s0', false)).toBe(true);
+    let settled: readonly SeatState[] | null = null;
+    const stop = room.subscribe(state => { if (state.ranking && settled === null) settled = state.seats; });
     runUntil(room, clock, state => state.phase === 'ended');
+    stop();
     expect(room.state.fault).toBeNull();
     expectUniqueRanking(room.state);
+    expect(seat(room.state, 's0').connected).toBe(false);
+    // Eliminated seats are published at the end exactly as at the settlement: no new revision, no new events.
+    expect(settled).not.toBeNull();
+    for (const loser of settled!.filter(entry => !entry.alive)) expect(seat(room.state, loser.seatId)).toBe(loser);
+    expect(settled!.filter(entry => !entry.alive).length).toBe(room.state.seats.length - 1);
     const winner = seat(room.state, 's0');
     expect(winner.alive).toBe(true);
     expect(winner.rank).toBe(1);
