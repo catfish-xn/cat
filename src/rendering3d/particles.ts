@@ -21,6 +21,13 @@ export interface ParticleOptions {
   mesh?: (path: string) => BufferGeometry | undefined;
 }
 export interface ParticleSkip { emitterIndex: number; kind: string; reason: string }
+/** Short, stable code for a failed mesh read: HTTP status, the adapter's own code, or `read-failed`. */
+function meshErrorCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const http = /http-(\d{3})/.exec(message);
+  if (http) return `http-${http[1]}`;
+  return /^[a-z0-9][a-z0-9-]{0,63}$/.test(message) ? message : 'read-failed';
+}
 function seededRandom(): () => number {
   let state = 1;
   return () => { state = (Math.imul(1664525, state) + 1013904223) >>> 0; return state / 4294967296; };
@@ -148,6 +155,8 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
   const textures = new Map<string, Texture>();
   const meshes = new Map<string, BufferGeometry>();
   const loadedGeometry = new Set<BufferGeometry>();
+  /** Why each unusable mesh was dropped; appended to its skip reason. */
+  const meshFailures = new Map<string, string>();
   const cleanup = () => { new Set(textures.values()).forEach(t => t.dispose()); textures.clear();
     loadedGeometry.forEach(g => g.dispose()); loadedGeometry.clear(); meshes.clear(); };
   try {
@@ -159,11 +168,12 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
         // reject unrelated emitters or trigger this emitter's texture reads.
         let geometry: BufferGeometry;
         try { geometry = await options.readMesh(assetUrl(root, e.mesh)); }
-        catch { continue; }
-        if (!(geometry instanceof BufferGeometry)) continue;
+        catch (error) { meshFailures.set(e.mesh, meshErrorCode(error)); continue; }
+        if (!(geometry instanceof BufferGeometry)) { meshFailures.set(e.mesh, 'not-buffer-geometry'); continue; }
         loadedGeometry.add(geometry);
         const position = geometry.getAttribute('position');
-        if (!position || position.itemSize !== 3 || position.count === 0) continue;
+        if (!position || position.itemSize !== 3) { meshFailures.set(e.mesh, 'missing-position'); continue; }
+        if (position.count === 0) { meshFailures.set(e.mesh, 'empty-geometry'); continue; }
         meshes.set(e.mesh, geometry);
       }
     }
@@ -173,6 +183,11 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     // Sequential loads ensure a failure never leaves an unobserved in-flight texture.
     for (const path of paths) textures.set(path, await (options.readTexture ?? (url => new TextureLoader().loadAsync(url)))(assetUrl(root, path)));
     const effect = new ParticleEffect(doc, { ...options, texture: path => textures.get(path), mesh: path => meshes.get(path) });
+    if (doc.schemaVersion === 2) for (const skip of effect.skippedReasons as ParticleSkip[]) {
+      const emitter = doc.emitters[skip.emitterIndex];
+      if (skip.kind === 'mesh' && emitter?.kind === 'mesh' && skip.reason === 'mesh-resource-unavailable')
+        skip.reason = `mesh-resource-unavailable:${meshFailures.get(emitter.mesh) ?? (options.readMesh ? 'not-loaded' : 'no-mesh-reader')}`;
+    }
     const dispose = effect.dispose.bind(effect);
     effect.dispose = () => { dispose(); cleanup(); };
     return effect;
