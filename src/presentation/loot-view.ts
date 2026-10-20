@@ -15,6 +15,7 @@ import { heroEmblemSvg } from './hero-identity';
 import { itemDescriptions, itemMarkHtml } from './item-codex';
 import { toolMark } from './orb-loot';
 import { itemDisplayName } from './g23-display';
+import { lootPayloadDescription } from './loot-payload-text';
 
 export interface LootLabels {
   /** Monster name for a drop source; the formal wiring reads it from readEncounterPreview of the same round. */
@@ -65,7 +66,12 @@ export function lootDropRow(drop: RevealedDropView, labels: LootLabels): HTMLEle
   const head = node('div', '', 'loot-drop-head');
   head.insertAdjacentHTML('afterbegin', payload.icon);
   head.append(node('strong', payload.text), node('span', status.label, 'loot-badge'));
-  row.append(head, node('p', `来源：${labels.sourceName(drop.sourceUnitId)} · ${status.note}`, 'loot-note'));
+  // v16: tools and epic forges say what they do (the content's text); an item's effects stay in the tooltip only.
+  const description = lootPayloadDescription(drop.payload);
+  if (description) head.title = description;
+  if (description && (drop.payload.kind === 'consumable' || drop.payload.kind === 'forge')) row.append(head, node('p', description, 'loot-desc'));
+  else row.append(head);
+  row.append(node('p', `来源：${labels.sourceName(drop.sourceUnitId)} · ${status.note}`, 'loot-note'));
   return row;
 }
 

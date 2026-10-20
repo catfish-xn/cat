@@ -50,8 +50,10 @@ function forgeName(offers: readonly unknown[]): string {
 }
 /** Popup heading for a mechanic kind the rules send without a display title. */
 function defaultTitle(choice: object): string | undefined {
-  const { kind, offers } = choice as { kind?: unknown; offers?: unknown };
-  return kind === 'forge' && Array.isArray(offers) ? `${forgeName(offers)} · ${offers.length} 选 1` : undefined;
+  const { kind, offers, payload } = choice as { kind?: unknown; offers?: unknown; payload?: { source?: unknown } };
+  // v16: the 5-7 / 6-7 carriers' forges say where they came from.
+  const epic = payload && typeof payload === 'object' && payload.source === 'epic-loot' ? '史诗奖励 · ' : '';
+  return kind === 'forge' && Array.isArray(offers) ? `${epic}${forgeName(offers)} · ${offers.length} 选 1` : undefined;
 }
 /** Timeout option meaning "skip" (black market): no offer is granted. */
 export const SKIP_OPTION = '@skip';
