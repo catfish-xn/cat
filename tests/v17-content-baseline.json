@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:8a955c10",
+  "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+  "rulesVersion": "s13-g2-3-v17",
+  "contentVersion": "s13-14.24b-g2-3-v17",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:de829c8a",
+  "previousLootReplayDigest": "fnv1a32-utf16:62c76cb9",
+  "traceHashes": {
+    "state": "c928f6a4b2524bb774b6c0769cdf910e044a9c5e1dcdc550008e7e0f5e0ed445",
+    "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+    "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "S13 v17: restore Avarice Incarnate to the online anomaly pool; authoritative live-bank wiring already present; old saves rejected without migration."
+}

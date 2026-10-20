@@ -1,5 +1,11 @@
 # D11 生产接线与 v15 交接
 
+## v17 当前状态（草稿，覆盖下文历史交接）
+
+#254/#258已接通权威实时银行，v17恢复贪财化身联机候选，异常单机56/联机56（原联机55），强化60。获取+5金仍按唯一收据，增伤数值不变。`sampleBankGold(seatId:string,liveGold:number):boolean`；下一tick指规则游标t→t+1，服务器8tick前瞻为0.4秒，不能承诺显示下一帧立即生效。PvP采用live结果结算和推帧，PvE先catchUp再操作。rules/content同升v17，CONTENT `de829c8a→8a955c10`、LOOT `62c76cb9`保持；格式/协议不升。v15/v16证据原字节保留，CURRENT切v17。发版排空对局；PR草稿等v16收口后合。6条服务器新增验收与兼容边界见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md)。
+
+以下“当前收口”“服务器尚未调用”等描述保留v15历史上下文，不再表示当前准入或接线状态。
+
 当前收口（用户 2026-10-20 04:22 确认）：贪财化身联机暂缓，单机 54 异常保留，联机候选为 53，强化仍 60；模块及独立双边战斗能力保留，待服务器接通每 tick 前 `sampleBankGold` 再加回候选。当前身份、digest、v15 epoch 重录与测试以 [V15_RELEASE](V15_RELEASE.md) 为准。下文保留单支交付时的背景。
 
 基线：`codex/d11-wiring`，`6392f319baf9ea6237e0cf8338190cd20f463546`（PR #231）。本轮仅工作区交付，不提交、不联网、不安装依赖。

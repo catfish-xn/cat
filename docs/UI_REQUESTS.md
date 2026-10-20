@@ -1,5 +1,9 @@
 # 界面数据需求（Claude → Codex）
 
+## v17 当前状态（草稿）
+
+贪财化身恢复联机准入，单机/联机异常均56（联机55→56），强化60。#254/#258实时银行已接通；规则游标t注入后t+1生效，8tick=0.4秒显示前瞻不能称“显示下一帧立即生效”。rules/content同升v17、CONTENT `de829c8a→8a955c10`，LOOT保持`62c76cb9`；格式/协议不升。PR保持草稿，等v16发版收口后才合；发版排空对局。6条服务器待补验收（真实抽选、双真人/镜像、同tick增减、物品/Sevika、末尾操作、重连推帧结算）见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md#服务器侧待补测试)，交由Claude，本任务不改服务器或界面。下方旧交接身份与未接线描述以各段时间为历史背景。
+
 ## LOOT-ORB-CLAIM-v15（Codex → Claude，待服务器/界面接线）
 
 - 规则已批准 2026-10-20 02:20，02:26 补定战斗可点、排队、战后结算；第二轮基线 b1c841e6，合同 `multiplayer-orb-claim-v2`。消息新增 `{type:'claimOrb',round:number,orbId:string}`，round 为操作时当前轮，orbId 可来自历史轮；仅用真实席位 state 转发 runSharedMatchCommand，不重算奖励或售价。
@@ -11,12 +15,12 @@
 - bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；整局终局对赢家及其他存活席位调用 `forfeitTerminalOrbs(state: MatchState): MatchStep`（server-entry 公共导出），提交返回 state/events；领域已按 Match 规则编号，服务器不得重复编号。无失败枚举、重复调用无新事件或收据；调用者负责确认整局结束，不要求席位已淘汰。淘汰清理已由领域接上。详见 MATCH_CONTRACT 的 #260 / #262 终局入口。
 - 验收：战斗点击接受且 queued=true，当时资源不变；重复点击失败无变化；战后才入库/按最终容量折金，先淘汰则 forfeited；排队前后重连/恢复不丢不重发；公共不泄露内容或 queued；截止/跨轮不消失，bot 准备入口领完。约定值：完整星级缺货整条按费用补金一次，奖励法球 gray；跨席竞争沿原结算提交顺序。完整签名、恢复边界和 PR 草稿：[v15 交接](LOOT_ORB_CLAIM_V15.md)。
 
-## D11-SERVER-LIVE-BANK（Codex → Claude，v15 发布阻塞）
+## D11-SERVER-LIVE-BANK（已接线；v17新增验收待Claude补）
 
-- 领域已交付：`startTwoSidedBattle` 返回任务的 `sampleBankGold(seatId:string,liveGold:number):void`。仅服务器权威 Match.gold；样本在下一 tick 前生效，不扣费、不发资源、不推进 RNG。非法席位 / 数值 / 超过 100000 条有效样本为 invalid-bank-sample；终战后 wrong-phase；相同采样无操作。
-- 现存缺口：`src/server/room/two-sided-resolver.ts` 当前从冻结快照先算完整结果，播放期间交易不回到计算。因此贪财化身不能声称已完整联机生效；需要把真实规则 tick 与交易排序关联，再在金币变化后、下一 tick 前传入权威样本。不能事后改动画或再写一套增伤公式。
+- 领域已交付：`startTwoSidedBattle` 返回任务的 `sampleBankGold(seatId:string,liveGold:number):boolean`。仅服务器权威 Match.gold；在下一规则tick前生效，不扣费、不发资源、不推进RNG。状态变化并记样本为true，相同有效银行/未绑定/镜像B为false。非法席位 / 数值 / 超过100000条有效样本为invalid-bank-sample；终战后wrong-phase。
+- 当前状态：#254/#258已将成功交易顺序与live规则轨道接通，采用live结果结算并发送公开replay-tail；PvE先catchUp再操作。仍需按v17六条清单补真实抽选和边界验收；不得事后修改动画或另算增伤公式。
 - 字段：私有 `BattleResult.bankSamples?: {tick,team,liveGold}[]`，需原样保留给 proposeSettlement 及 toCombatReplay / startCombatReplay 输入；公开 replay 输出不含银行。已有 g23Facts 整体转发同时承载 d11Headhunter 击杀事实，不要自行计数。
-- 验收：同一 PvP 内真实买卖使后续伤害双向变化；与物品 / Sevika 战斗金币相加一次；切片任务、完整账本、重放一致；镜像不发成长 / 收益，不向他席公开银行。当前仅领域任务与回放测试通过，服务器尚未接线；本轮没有修改 src/server/。
+- 验收：同一PvP真实买卖使后续伤害双向变化；物品/Sevika收益相加一次；切片、完整账本、重放一致；镜像不发成长/收益、不公开银行。服务器已接线；现有注入绑定测试不能替代v17新增6条真实闭环验收，本任务不修改src/server/或tests/server/。
 
 ## D11-DISPLAY（Codex → Claude，v15）
 

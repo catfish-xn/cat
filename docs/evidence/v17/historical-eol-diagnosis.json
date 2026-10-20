@@ -1,0 +1,174 @@
+{
+  "method": "Match both reported hash prefixes against exact checkout SHA256 and its in-memory LF representation; no historical files changed",
+  "cases": [
+    {
+      "test": "g2-2-identity.test.ts",
+      "case": "freezes one G2-2 identity on the P7 merged base and retains historical bytes",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.p7.json",
+          "checkoutSha256": "c93bc7737abe6016e6a8967cc8b30e038ab66ea648b3f8fb12ecf5448c966a22",
+          "canonicalLfSha256": "b3b8d3a80181cbc85f5dabdcf2c3af4563495717e97e419850b02a1c23a2a4c0",
+          "checkoutBytes": 101489,
+          "canonicalLfBytes": 97238
+        }
+      ]
+    },
+    {
+      "test": "g2-augments-identity.test.ts",
+      "case": "retains W4 historical bytes and rejects their obsolete identity",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.g2-augments.json",
+          "checkoutSha256": "9ed91fe64b6ff55a76ebf4754b537e096f77768e9085896e91eda38c1e89d84c",
+          "canonicalLfSha256": "387522c770720d46e7c5f000715d5676f3496c3f437f2adfeaecdd9162ea3699",
+          "checkoutBytes": 105823,
+          "canonicalLfBytes": 101324
+        }
+      ]
+    },
+    {
+      "test": "m8-b8-golden-guard.test.mjs",
+      "case": "B8 exact reviewed golden migration guards preserves the exact ff60a79/4554f5a bytes and rejects a semantically equal reserialization",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.pre-m8-b8.json",
+          "checkoutSha256": "bb6d40336d122149c43b6d4fea93fb6cc7b388d34ba70d61e6444a8a35371222",
+          "canonicalLfSha256": "007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5",
+          "checkoutBytes": 96159,
+          "canonicalLfBytes": 92526
+        }
+      ]
+    },
+    {
+      "test": "m8-b9-golden-guard.test.mjs",
+      "case": "B9 reviewed golden migration binds golden, archive and updater to the reviewed audit",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.json",
+          "checkoutSha256": "0cc4ba7885a375f80355893625e95b434a4b5a8c988c01f9d6b493dc97d3790d",
+          "canonicalLfSha256": "ae227f505d9cdb31fbdd16e37263040e34d100aee40ab5a380ed81aba2176b9b",
+          "checkoutBytes": 126459,
+          "canonicalLfBytes": 121588
+        }
+      ]
+    },
+    {
+      "test": "m8-b9-golden-guard.test.mjs",
+      "case": "B9 reviewed golden migration binds the regenerated Herald fixtures to their classified migration evidence",
+      "matches": [
+        {
+          "file": "tests/fixtures/m8-herald-raw/ionic-spark.json",
+          "checkoutSha256": "4e3f2dad08abd11275d4f6e6e5cd75dcbf86bd17b37e4e92a8f49036e466f564",
+          "canonicalLfSha256": "a530483bdbaeb7c2f218c4dc24cef09c53f67b66c16a181ab938e25442b95fc5",
+          "checkoutBytes": 62623,
+          "canonicalLfBytes": 62622
+        }
+      ]
+    },
+    {
+      "test": "p7-1-identity.test.ts",
+      "case": "binds P7-1 once and preserves all historical golden bytes and route commands/events",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.g2-2.json",
+          "checkoutSha256": "7ab698fe7cc3b790b233d79e1b724e01e3439df352684cae4762a25b404a8d86",
+          "canonicalLfSha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+          "checkoutBytes": 105503,
+          "canonicalLfBytes": 101012
+        }
+      ]
+    },
+    {
+      "test": "p7-identity.test.ts",
+      "case": "binds P7 once and preserves all historical golden bytes and route commands/events",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.g2-1.json",
+          "checkoutSha256": "743db7ee30017e4f57892245bf53f643a7f65115d253c320fc14b14abcb8cc29",
+          "canonicalLfSha256": "2d2c18fe87ae02e396c25a6b55d26ed91fc6b2f69ddb62802355fb0fe73fd6db",
+          "checkoutBytes": 101430,
+          "canonicalLfBytes": 97179
+        }
+      ]
+    },
+    {
+      "test": "t11-golden.test.ts",
+      "case": "T11 binds regenerated route/probe evidence to the reviewed audit and preserved historical identity",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.t11.json",
+          "checkoutSha256": "ae72504bee94f84f0b5393fb62792aeceab5f839061b5fcbd794a309acf8f966",
+          "canonicalLfSha256": "1369f32bb8790f3a756819623e52f857e0e6c3649e511af95359b706c1495c56",
+          "checkoutBytes": 104267,
+          "canonicalLfBytes": 100115
+        }
+      ]
+    },
+    {
+      "test": "t12-golden.test.ts",
+      "case": "T12 binds full-route digest-only audit and historical identity without changing historical evidence",
+      "matches": [
+        {
+          "file": "scripts/update-t12-golden.cjs",
+          "checkoutSha256": "392dcf24b26f709c55c57ac9689b6a661ad55fb865bb90900952bcd532b39c9f",
+          "canonicalLfSha256": "2eb99cc8fdde0be2df0b987fa4eabea554d1f75904b4cd305cec595881a0e460",
+          "checkoutBytes": 5070,
+          "canonicalLfBytes": 5015
+        }
+      ]
+    },
+    {
+      "test": "t13-a-golden.test.ts",
+      "case": "T13-A binds full-route digest-only audit and preserved historical identity without changing historical evidence",
+      "matches": [
+        {
+          "file": "scripts/update-t13-a-golden.cjs",
+          "checkoutSha256": "4a2d6dc716f7260ea0ae48f5b371c85bcacb10afb254cdfab4ef5d90c8dcca96",
+          "canonicalLfSha256": "7827c91f7edb5009f3b8d00bd874b9c29e8983c0eaed6ba811d44acb7816d4f2",
+          "checkoutBytes": 5103,
+          "canonicalLfBytes": 5048
+        }
+      ]
+    },
+    {
+      "test": "t13-golden.test.ts",
+      "case": "T13 records independent full-route audits while preserving the T12 golden bytes",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.t12.json",
+          "checkoutSha256": "778f90be40809c27e71b22ceabe0f2e7869693cada580e214e735323e4daf1b5",
+          "canonicalLfSha256": "9acaea36280a4d7405b59bcfab38e438624ab6667e4771fdd63e3093ba26acf3",
+          "checkoutBytes": 104230,
+          "canonicalLfBytes": 100078
+        }
+      ]
+    },
+    {
+      "test": "t13-identity.test.ts",
+      "case": "preserves original T13 bytes and pins genuinely re-recorded commands, events and states",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.t13.json",
+          "checkoutSha256": "050e49574bdffbd2e5682d588c3e9dbdc07c303633d648128a2a6a12ad13f95d",
+          "canonicalLfSha256": "b45aa9b5a046fffd7a5022a539982ffe4db50c59150e5f6483d07c2a37810e86",
+          "checkoutBytes": 98657,
+          "canonicalLfBytes": 94567
+        }
+      ]
+    },
+    {
+      "test": "t13-identity.test.ts",
+      "case": "pins G2 public-command byte evidence while preserving #90 recording bytes",
+      "matches": [
+        {
+          "file": "tests/fixtures/m5/full-match-golden.p3p4p5.json",
+          "checkoutSha256": "332a6f2555c076c72b349f66afb5858e1fdbf3bcaa13cb750ec7e629ea8a37d8",
+          "canonicalLfSha256": "e5397017e626b068dbf1acf45f2e2c2ee353fef1b9f7ff43f2d15fe75ca8871e",
+          "checkoutBytes": 98638,
+          "canonicalLfBytes": 94548
+        }
+      ]
+    }
+  ]
+}

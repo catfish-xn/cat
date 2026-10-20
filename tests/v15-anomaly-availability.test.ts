@@ -6,13 +6,13 @@ import { enableMultiplayerSettlement } from '../src/simulation/round-settlement'
 import { accepted } from './t10-helpers';
 import { catalogPreparation } from './t5r-helpers';
 
-it('keeps 60 augments and 56 solo anomalies, and defers only Avarice from the 55 online anomalies', () => {
+it('keeps 60 augments and the same complete 56-anomaly pool in both modes', () => {
   const all = Object.keys(ANOMALY_DEFINITIONS).sort();
   expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(60);
   expect(all).toHaveLength(56);
   expect(anomalyCandidates(false).sort()).toEqual(all);
-  expect(anomalyCandidates(true).sort()).toEqual(all.filter(id => id !== 'avarice-incarnate'));
-  expect(anomalyCandidates(true)).toHaveLength(55);
+  expect(anomalyCandidates(true).sort()).toEqual(all);
+  expect(anomalyCandidates(true)).toHaveLength(56);
 });
 
 // Invert the documented LCG with BigInt to exercise every candidate interval,
@@ -29,10 +29,9 @@ it.each([false, true].flatMap(online => (['bench', 'board', 'three-star'] as con
     pendingChoice: { kind: 'anomaly' as const, step: 'target' as const, choiceId, eventId: choiceId,
       generation: 0, offers: [], targetId: null, rerollCount: 0, returnPhase: 'preparation' as const } };
   const target = state.preparation.units.find(u => u.team === 'player')!.id;
-  const expected = Object.keys(ANOMALY_DEFINITIONS).filter(id => (!online || id !== 'avarice-incarnate')
-    && (id !== 'ultimate-hero' || targetKind === 'three-star')
+  const expected = Object.keys(ANOMALY_DEFINITIONS).filter(id => (id !== 'ultimate-hero' || targetKind === 'three-star')
     && (id !== 'into-the-unknown' || targetKind !== 'bench')).sort();
-  expect(expected).toHaveLength((online?53:54)+(targetKind==='bench'?0:targetKind==='board'?1:2));
+  expect(expected).toHaveLength(54+(targetKind==='bench'?0:targetKind==='board'?1:2));
   for (const [index, id] of expected.entries()) {
     const word = Math.ceil(index * 0x100000000 / expected.length);
     const offered = accepted(selectAnomalyTarget({ ...state, choiceRngState: stateForWord(word) }, choiceId, 0, target));

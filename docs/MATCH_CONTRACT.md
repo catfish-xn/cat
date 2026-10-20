@@ -1,14 +1,14 @@
 # M5 Match contract v5
 
-## v16 当前身份（2026-10-20，覆盖下文历史交接状态）
+## v17 当前身份（2026-10-20，草稿，覆盖下文历史交接状态）
 
-#265 体积方案：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用，无构建期替换。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，覆盖范围和 FNV-1a UTF-16 算法不变，四张归档表的说明来源列仍参与完整内容根。`node scripts/update-content-identities.cjs --check` 校验，`--write` 重算；CI fast 测试每次从完整表重算并对比常量。当前值仍为 CONTENT `fnv1a32-utf16:de829c8a`、LOOT `fnv1a32-utf16:62c76cb9`；规则 manifest `fnv1a32-utf16:31950a0f` 不变。规则、内容、存档与协议版本均不变。
+#265 生成流程保持：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，四张归档表的说明来源列仍参与完整内容根。执行 `node scripts/update-content-identities.cjs --write` 后 `--check`；CI fast 从完整表重算核对。v17 CONTENT 为 `fnv1a32-utf16:8a955c10`（v16为`de829c8a`），LOOT `fnv1a32-utf16:62c76cb9`、规则 manifest `fnv1a32-utf16:31950a0f` 保持。
 
-当前 rules/content 为 `s13-g2-3-v16` / `s13-14.24b-g2-3-v16`（v16 变更见下文 v16 小节与 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)；以下 v15 说明为历史）。v15 时为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+当前 rules/content 为 `s13-g2-3-v17` / `s13-14.24b-g2-3-v17`；schema/save/replay/command 为7/3/3/4，领域NET4、服务器网络NET5、法球合同 multiplayer-orb-claim-v2、lcg32-v1、50ms保持。旧v15/v16身份与摘要严格拒绝，无静默迁移；发版须排空当前对局。PR保持草稿，等v16发版收口后才合入。完整说明见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md)，v16历史见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)。
 
-用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 56、联机 55（v16 加入终极英雄、进入未知；联机仍仅排除 `avarice-incarnate`；v15 时为 54/53），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
+v17恢复贪财化身联机准入：`anomalyCandidates(multiplayer:boolean):string[]` 两模式均返回56项（联机55→56），强化仍60；按备战席/普通场上/可晋升场上目标过滤后均54/55/56。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，权重、签名及失败枚举不变；重选目标保留已有候选且不消耗RNG。候选政策进入CONTENT根。#254/#258已接通权威实时银行，获取+5金走唯一收据。`BattleTask.sampleBankGold(seatId:string,liveGold:number):boolean` 在规则游标t之后、t+1执行前注入；相同有效银行、未绑定、镜像B返回false。服务器显示前瞻8tick=0.4秒，不能承诺显示下一帧立即变伤害；末尾操作边界及6条服务器待补验收见v17说明。
 
-新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
+新证据只写 docs/evidence/v17 与 tests/fixtures/v17-*，CURRENT Herald生成器指向v17；v15/v16证据与历史身份断言保留原字节。下文D11/v15/v16段落为历史交接记录，其旧身份、目录数与“服务器待接”不再表示当前状态。历史v15见 [V15_RELEASE](V15_RELEASE.md)。本草稿不修改服务器或表现层，不代表端到端上线验收完成。
 
 
 ## D11 领域接线，等待统一 v15（2026-10-20）
@@ -689,7 +689,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 
 ### v16 D14 专用异常
 
-`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。目录56，联机排除 avarice-incarnate 后55；报价按目标资格过滤，旧权重不变。
+`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。v16历史目录56、联机排除avarice-incarnate后55；v17已恢复联机56，见顶部当前合同。报价按目标资格过滤，旧权重不变。
 
 `MatchBase.d14?:D14Progress` 是私有持久状态；生产证书只由已接纳选择收据、资源事实与结算历史认证，不单凭存档 phase 授权。`readCombatStrategyInputs` 和 `PlayerBattleSnapshot` 可含 `d14Combat:{unitId,anomalyId,phase:'waiting'|'promoted'|'returned'}`，仅对可见绑定有效；离场单位不编入人口/羁绊/战斗。`restorePlayerBattleSnapshot` 结构校验，来源认证仍由上游可信 Match 完成；offline `restoreMatch` 继续拒绝联机完整存档。
 
