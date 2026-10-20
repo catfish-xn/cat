@@ -12,8 +12,9 @@ export async function showDragEndpoints(page, sourceDebug, targetDebug) {
     await new Promise(resolve => requestAnimationFrame(resolve));
     for (const [index, node] of nodes.entries()) {
       const rect = node.getBoundingClientRect(), x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
-      if (document.elementFromPoint(x, y)?.closest('[data-debug]') !== node)
-        throw new Error(`C19 drag endpoint is not hittable: ${[sourceDebug, targetDebug][index]}`);
+      const hit = document.elementFromPoint(x, y);
+      if (hit?.closest('[data-debug]') !== node)
+        throw new Error(`C19 drag endpoint is not hittable: ${[sourceDebug, targetDebug][index]} (covered by ${hit?.closest('[data-debug]')?.dataset.debug ?? hit?.className ?? 'nothing'} at ${Math.round(x)},${Math.round(y)}; rect ${JSON.stringify(rect)})`);
     }
   }, { sourceDebug, targetDebug });
 }

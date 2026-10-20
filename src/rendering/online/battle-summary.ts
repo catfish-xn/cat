@@ -81,16 +81,18 @@ export class BattleSummaryPanel {
   private renderRows(): void {
     for (const tab of Array.from(this.tabs.children) as HTMLElement[]) { const on = tab.dataset.key === this.metric; tab.classList.toggle('active', on); tab.setAttribute('aria-selected', String(on)); }
     this.root.dataset.metric = this.metric;
+    // 终极英雄: the replay's own effective star (4) wins over its physical 3★.
+    const effective = new Map(this.shown!.replay.initial.units.map(unit => [unit.id, unit.effectiveStarLevel ?? unit.starLevel]));
     const metric = this.metric, rows = this.shownRows().map((row, index) => ({ row, index })).sort((a, b) => b.row[metric] - a.row[metric] || a.index - b.index).map(entry => entry.row), top = Math.max(1, ...rows.map(row => row[metric]));
     this.list.replaceChildren(...rows.map(row => {
-      const value = row[metric];
+      const value = row[metric], star = effective.get(row.unitId) ?? row.starLevel;
       const item = element('li', '', `summary-row team-${row.team}${row.alive ? '' : ' dead'}`);
-      Object.assign(item.dataset, { unit: row.unitId, team: row.team, value: String(value), definition: row.definitionId, star: String(row.starLevel),
+      Object.assign(item.dataset, { unit: row.unitId, team: row.team, value: String(value), definition: row.definitionId, star: String(star),
         dealt: String(row.damageDealt), healed: String(row.healingDone), shielded: String(row.shieldGiven), kills: String(row.kills) });
-      item.title = `${displayUnitName(row.definitionId)} ${row.starLevel}星${row.alive ? '' : ' · 阵亡'}`
+      item.title = `${displayUnitName(row.definitionId)} ${star}星${row.alive ? '' : ' · 阵亡'}`
         + `\n输出 ${row.damageDealt} · 治疗 ${row.healingDone} · 防护 ${row.shieldGiven} · 击杀 ${row.kills}`;
       const portrait = element('span', '', 'summary-portrait'); portrait.innerHTML = heroPortraitHtml(row.definitionId, 22, heroEmblemSvg(row.definitionId, 22));
-      const name = element('span', `${displayUnitName(row.definitionId)}${'★'.repeat(row.starLevel)}`, 'summary-name');
+      const name = element('span', `${displayUnitName(row.definitionId)}${'★'.repeat(star)}`, 'summary-name');
       const number = element('span', String(value), 'summary-value');
       const bar = element('span', '', 'summary-bar'); const fill = element('span', '', `summary-fill${metric === 'shieldGiven' ? ' summary-fill-shield' : ''}`);
       fill.style.width = `${Math.round(value / top * 100)}%`; bar.append(fill);

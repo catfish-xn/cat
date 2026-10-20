@@ -17,6 +17,7 @@ import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { createGameClient, isOnlineMode } from './online/mode';
+import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
 import { OnlineApplication, mergeNotice } from './online/online-application';
 import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
@@ -45,7 +46,7 @@ import { itemDisplayName } from '../presentation/g23-display';
 import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
-import { OrbDock, readUnclaimedOrbs } from './online/orb-dock';
+import { OrbDock, grantedOrbIds, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -585,6 +586,7 @@ export class BoardScene extends Phaser.Scene {
     const token = (id: string) => this.draggingId === id && this.gesture3d && this.inputRouter.owns(this.gesture3d) ? this.tokens.get(id) : undefined;
     return {
       hover: id => { this.hover3d = id; },
+      claimOrb: id => this.orbDock?.click(id),
       select: id => {
         const unit = this.displayedUnit(id);
         if (!unit || unit.team !== 'player' || !this.tokens.has(id) || this.inputRouter.current) return;
@@ -809,7 +811,7 @@ export class BoardScene extends Phaser.Scene {
     // Keep that combat view until Continue clears it, including restored settlements.
     for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
       units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
-        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
+        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell }, ...(unit.effectiveStarLevel === 4 ? { effectiveStarLevel: 4 } : {}) } as Unit);
       ids.add(unit.id);
     }
     for (const [id, token] of this.tokens) {
@@ -827,7 +829,7 @@ export class BoardScene extends Phaser.Scene {
       // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
       const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
       const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
-      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS);
+      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS, displayStarLevel(this.session.state, unit));
     }
   }
   /**
@@ -943,8 +945,10 @@ export class BoardScene extends Phaser.Scene {
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
-      const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
+      const definition = getDefinition(displayed), star = displayStarLevel(this.session.state, displayed);
+      // v16 Ultimate Hero: the rules' certified 4★ base (physically 3★, so the sell price stays the rules' 3★ price).
+      const stats = (star === 4 ? fourStarBaseStats(displayed.definitionId) : null) ?? getUnitStats(displayed.definitionId, displayed.starLevel);
+      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
@@ -1042,8 +1046,10 @@ export class BoardScene extends Phaser.Scene {
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
     const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}:${gear}`,
-      () => unitCardBody(unit.definitionId, unit.starLevel, battle, gear)!);
+    // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
+    const star = displayStarLevel(this.session.state, unit), notes = unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [];
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes)!);
     this.unitCardOpen = true;
   }
   private unitCardOpen = false;
@@ -1163,13 +1169,19 @@ export class BoardScene extends Phaser.Scene {
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const result = this.session.state.roundResults?.at(-1);
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
-        starLevel: token.getData('starLevel'), x: token.x, y: token.y, alive: !fallen.has(id),
+        starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
+        ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
+        x: token.x, y: token.y, alive: !fallen.has(id),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
-      fighting: this.session.combatView !== null, dragging: this.draggingId };
+      fighting: this.session.combatView !== null, dragging: this.draggingId,
+      orbs: readUnclaimedOrbs(this.session.state).map(orb => ({ orbId: orb.orbId, tier: orb.tier, queued: orb.queued })),
+      openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
+      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

@@ -7,6 +7,10 @@ import type { DisplayCombatEvent } from '../presentation/combat-display';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
+  /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
+  readonly effectiveStarLevel?: 4;
+  /** A PvE monster (hero-identity `neutral`, from the neutral catalog); the 3D layer gives it no star row. */
+  readonly neutral?: true;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */
   readonly x: number; readonly y: number;
   /** Shown on the board apart from dying: a unit killed in this combat stays visible here and is flagged by `alive`. */
@@ -22,7 +26,16 @@ export interface BoardFrame {
   readonly fighting: boolean;
   /** The unit BoardScene is dragging (either input), or null; the 3D layer drops its own drag once this clears. */
   readonly dragging: string | null;
+  /** v15 (online): my unclaimed orbs as the private view lists them (oldest first); empty offline. Where they sit is the layer's own layout. */
+  readonly orbs?: readonly BoardOrb[];
+  /** Orbs (by orbId) with a claim receipt that granted something (not forfeited); an orb that leaves `orbs` and is named here was opened. */
+  readonly openedOrbs?: readonly string[];
+  /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
+  readonly hit?: BoardHit | null;
 }
+export interface BoardOrb { readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean }
+/** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
+export interface BoardHit { readonly key: string; readonly damage: number }
 export interface BoardDropHint {
   /** Where the dragged unit would land, as BoardScene's own hit test reads the point; undefined over nothing. */
   readonly target?: { readonly kind: 'board'; readonly x: number; readonly y: number } | { readonly kind: 'bench'; readonly x: number; readonly y: number };
@@ -41,6 +54,8 @@ export interface BoardControls {
   dragMove(point: { x: number; y: number }): BoardDropHint;
   dragEnd(point: { x: number; y: number } | null, client: { x: number; y: number }): void;
   dragCancel(): void;
+  /** v15: the same as clicking that orb on the 2D orb dock (the dock decides whether it can be claimed now). */
+  claimOrb?(orbId: string): void;
 }
 export interface BoardFeedListener {
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
@@ -48,12 +63,43 @@ export interface BoardFeedListener {
   unitAt?(client: { x: number; y: number }): string | undefined;
   /** CSS-pixel box of the drawn piece as the layer projects it; undefined when the piece is not drawn or off screen. */
   screenBox?(id: string): BoardScreenBox | undefined;
+  /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
+  carousel?(view: BoardCarousel | null): void;
 }
 export interface BoardScreenBox { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }
+/**
+ * Online 选秀 (docs/ASSETS3D_CAROUSEL.md 界面接线需求) as the 3D layer draws it: copied from `PlayerView.carousel` by the
+ * online application while the carousel side is shown, null otherwise. Display only; the layer decides nothing.
+ */
+export interface BoardCarousel {
+  /** The carousel id; a new one rebuilds the stage. */
+  readonly id: string;
+  readonly slots: readonly BoardCarouselSlot[];
+  /** Public seat order (stable legend anchors); `locked` until the seat's release time, `picked` once it took a unit. */
+  readonly seats: readonly { readonly seatId: string; readonly me: boolean; readonly locked: boolean; readonly picked: boolean }[];
+  /** Logical ms since the carousel opened, as of `at` (performance.now()); the ring's display angle runs from it. */
+  readonly elapsedMs: number;
+  readonly at: number;
+}
+export interface BoardCarouselSlot {
+  readonly slot: number; readonly definitionId: string; readonly starLevel: number;
+  /** Item ids with the 2D icon URL (null when there is none). */
+  readonly items: readonly { readonly id: string; readonly icon: string | null }[];
+  /** Taken in the server's view: the layer removes the unit, its items and its feedback. */
+  readonly picked: boolean;
+  /** The 2D panel would take a click on it now (my batch is out, it still stands, no pick is pending). */
+  readonly takable: boolean;
+  /** My click on it is still waiting for the server's answer. */
+  readonly pending: boolean;
+}
+/** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
+export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
-let listener: BoardFeedListener | null = null, controls: BoardControls | null = null;
+let listener: BoardFeedListener | null = null, listenerGeneration = 0, controls: BoardControls | null = null, carouselControls: CarouselControls | null = null;
 
 export const boardFeedActive = (): boolean => listener !== null;
+/** Grows each time a layer subscribes, so a publisher of state that changes rarely (the carousel) can resend it once. */
+export const boardFeedGeneration = (): number => listenerGeneration;
 /** null when no layer answers (2D picks itself); otherwise the layer's piece under the point, if any. */
 export function boardFeedUnitAt(client: { x: number; y: number }): string | undefined | null {
   return listener?.unitAt ? listener.unitAt(client) : null;
@@ -68,9 +114,15 @@ export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]):
   const events = build();
   if (events.length) listener.events(events);
 }
+/** Only a layer that draws the carousel gets the build called; true when one does (the 2D panel then hides its ring). */
+export function publishCarousel(build: () => BoardCarousel | null): boolean {
+  if (!listener?.carousel) return false;
+  listener.carousel(build());
+  return true;
+}
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {
-  listener = next;
+  listener = next; listenerGeneration++;
   return () => { if (listener === next) listener = null; };
 }
 /** BoardScene registers its controls while it runs; the returned function withdraws them. */
@@ -78,6 +130,11 @@ export function provideBoardControls(next: BoardControls): () => void {
   controls = next;
   return () => { if (controls === next) controls = null; };
 }
+/** The online application registers the carousel panel's click and hover; the returned function withdraws them. */
+export function provideCarouselControls(next: CarouselControls): () => void {
+  carouselControls = next;
+  return () => { if (carouselControls === next) carouselControls = null; };
+}
 /** What three-loader.ts hands the 3D chunk (it must not import this module itself; see placeholder-renderer.ts). */
-export interface BoardFeed { subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null }
-export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls };
+export interface BoardFeed { subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null; carouselControls?(): CarouselControls | null }
+export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls, carouselControls: () => carouselControls };
