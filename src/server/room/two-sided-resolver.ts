@@ -15,6 +15,7 @@
 import {
   BattleValidationError, compileBattle, proposeSettlement, snapshotForBattle, startTwoSidedBattle,
   type BattleIdentity, type BattleReplayTask, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
+  type BattleInput as RulesBattleInput,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from './battle-resolver';
 import { primeCombatReplay } from './projection';
@@ -93,7 +94,18 @@ export function twoSidedResult(envelope: BattleInput, battle: TwoSidedBattleResu
 /** A rules refusal from a live task's call (sample or advance) as the resolver fault the room reports. */
 export function guardedBattle<T>(battleId: string, run: () => T): T { return guarded(battleId, run); }
 
-export function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
+function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
+  const frozen = compileEnvelope(envelope);
+  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen, { captureReplay }));
+}
+
+/** D11 live bank: the same compiled battle as a frame-by-frame replay task, with the rules' input (for its live-gold readers). */
+export function startLiveTask(envelope: BattleInput): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
+  const input = compileEnvelope(envelope);
+  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true })) };
+}
+
+function compileEnvelope(envelope: BattleInput): RulesBattleInput {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -109,6 +121,5 @@ export function startTask(envelope: BattleInput, captureReplay: boolean): Battle
   const a: PlayerBattleSnapshot = guarded(first.seatId, () => snapshotForBattle(first.state, first.seatId));
   const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
-  const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
-  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen, { captureReplay }));
+  return guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
 }

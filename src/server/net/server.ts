@@ -23,7 +23,7 @@ import type { CombatReplay } from '../../server-entry';
 import type { Clock, ClockHandle } from '../room/clock';
 import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
-import { consumableReceiptEvents, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
+import { consumableReceiptEvents, mirrorReplayTick, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleResult, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
@@ -310,6 +310,27 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       }
     }
   }
+  /**
+   * D11 live bank: a battle's live run produced frames that differ from the replay its seats were pushed. Each seat that
+   * holds that replay gets the changed records (side B mirrored, as its replay was); only public view frames leave.
+   */
+  function pushLive(opened: Room, battleId: string): void {
+    const state = opened.state, frames = opened.liveFrames(battleId);
+    const battle = state.battles.find(candidate => candidate.battleId === battleId);
+    if (!frames || !battle || battle.kind !== 'two-sided') return;
+    const key = `${state.round}:${battleId}`;
+    for (const conn of connections.values()) {
+      const seatId = conn.session?.roomId === state.roomId ? conn.session.seatId : null;
+      const sent = conn.sentCombatKey === key ? conn.sentCombat : null;
+      if (!seatId || !sent || !battle.participants.includes(seatId)) continue;
+      const rows = sent.replay.initial.board.rows;
+      const ticks = battle.battle.b.seatId === seatId ? frames.ticks.map(frame => mirrorReplayTick(frame, rows)) : frames.ticks;
+      const revised: CombatReplay = { ...sent.replay, ticks: [...sent.replay.ticks.slice(0, frames.fromTick), ...ticks] };
+      const tail = replayTail(sent.replay, revised);
+      conn.sentCombat = { battle: sent.battle, replay: revised };
+      if (tail) send(conn, { type: 'replay-tail', roomId: state.roomId, round: state.round, battleId, ...tail });
+    }
+  }
   function pushAll(state: RoomState): void { for (const conn of connections.values()) pushRoom(conn, state); }
 
   function attachRoom(opened: Room): void {
@@ -331,7 +352,9 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
     };
-    unsubscribeRoom = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
+    const unsubscribeState = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
+    const unsubscribeLive = opened.subscribeLive(battleId => queue.push(() => pushLive(opened, battleId)));
+    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); };
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;

@@ -12,11 +12,12 @@
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchFailure, MatchState } from '../../simulation/match-types';
 import {
-  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
+  Lobby, PlaceholderBattleResolver, RealClock, mirrorReplayTick, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
 import type { ClientListeners, GameClient, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
+import type { CombatReplay } from '../../presentation/combat-display';
 
 export interface LocalRoomOptions {
   readonly seed: number;
@@ -69,7 +70,8 @@ export class LocalRoomClient implements GameClient {
   /** Round whose battle replay was already pushed. */
   private emittedBattleRound = 0;
   /** My battle result behind the last replay emitted; a live run replacing it (D11 live bank) revises that replay. */
-  private emittedBattle: object | null = null;
+  private emittedBattle: BattleResult | null = null;
+  private emittedReplay: CombatReplay | null = null;
   private flushQueued = false;
   private inCommand = false;
   private disposed = false;
@@ -117,7 +119,7 @@ export class LocalRoomClient implements GameClient {
   }
   reset(): void {
     this.detach();
-    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null;
+    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null; this.emittedReplay = null;
     this.emitLobby(); this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase, serverNow: this.clock.now() } });
   }
   dispose(): void {
@@ -152,8 +154,10 @@ export class LocalRoomClient implements GameClient {
 
   private attach(room: Room): void {
     this.detach();
-    this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null;
-    this.unsubscribeRoom = room.subscribe(() => this.queueFlush());
+    this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null; this.emittedReplay = null;
+    const unsubscribeState = room.subscribe(() => this.queueFlush());
+    const unsubscribeLive = room.subscribeLive(battleId => this.pushLive(room, battleId));
+    this.unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); };
   }
   private detach(): void {
     this.unsubscribeRoom?.(); this.unsubscribeRoom = null;
@@ -186,17 +190,27 @@ export class LocalRoomClient implements GameClient {
       try { replay = toCombatReplayFor(state, this.mySeatId); }
       catch (error) { console.error('[local-room] replay failed', error); }
       if (replay) listeners.replay(replay.replay, replay.unitIds);
-      this.emittedBattle = this.myBattle(state);
+      this.emittedBattle = this.myBattle(state); this.emittedReplay = replay?.replay ?? null;
     } else if (state.round === this.emittedBattleRound && this.emittedBattle !== null && this.myBattle(state) !== this.emittedBattle) {
       this.emittedBattle = this.myBattle(state);
       let replay: ReturnType<typeof toCombatReplayFor> = null;
       try { replay = toCombatReplayFor(state, this.mySeatId); }
       catch (error) { console.error('[local-room] replay failed', error); }
-      if (replay) listeners.replayRevised?.(replay.replay);
+      if (replay) { this.emittedReplay = replay.replay; listeners.replayRevised?.(replay.replay); }
     }
     listeners.view(this.view(state));
   }
-  private myBattle(state: RoomState): object | null {
+  /** D11 live bank: my battle's live run differs from the replay shown; revise it with the new records (side B mirrored). */
+  private pushLive(room: Room, battleId: string): void {
+    const frames = room.liveFrames(battleId), shown = this.emittedReplay, battle = this.myBattle(room.state);
+    if (!frames || !shown || !battle || battle !== this.emittedBattle || battle.battleId !== battleId || battle.kind !== 'two-sided') return;
+    const rows = shown.initial.board.rows;
+    const mirrored = battle.battle.b.seatId === this.mySeatId;
+    const ticks = mirrored ? frames.ticks.map(frame => mirrorReplayTick(frame, rows)) : frames.ticks;
+    this.emittedReplay = { ...shown, ticks: [...shown.ticks.slice(0, frames.fromTick), ...ticks] };
+    this.listeners?.replayRevised?.(this.emittedReplay);
+  }
+  private myBattle(state: RoomState): BattleResult | null {
     const seatId = this.mySeatId;
     return state.battles.find(battle => battle.kind === 'two-sided' ? battle.participants.includes(seatId!) : battle.outcomes.some(outcome => outcome.seatId === seatId)) ?? null;
   }

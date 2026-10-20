@@ -21,6 +21,8 @@ import {
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
+import { toCombatReplayFor } from './projection';
+import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
@@ -54,12 +56,6 @@ export interface RoomOptions extends RoomTimings {
    * default (tests); production may turn it off. The rules' own transactions check their seat either way.
    */
   readonly assertPoolConservation?: boolean;
-  /**
-   * D11 live bank (planning/live-gold-combat-2026-10-20.md): the participants of a two-sided battle whose combat reads
-   * their live gold. A gold change of such a seat during the battle phase is sampled into a live run of that battle,
-   * which is then settled and shown instead of the frozen one. Omitted: none (every PvP battle stays the frozen one).
-   */
-  readonly liveBankSeats?: (input: BattleInput) => readonly string[];
   /**
    * Test fixtures only (§12.2): partial per-hero capacities, unspecified heroes have 0. Production omits it (official sizes).
    * Each seat's random opening one-cost needs a copy, so a hero is raised to at least its number of openings
@@ -239,6 +235,11 @@ export class Room {
   private battleStartedAt: number | null = null;
   /** Live runs of this round's two-sided battles a live-bank seat changed its gold in, by battle id. */
   private readonly livePvp = new Map<string, LivePvpTrack>();
+  /** Two-sided battles of this round checked once and found to have no seat reading its live gold. */
+  private readonly liveIgnored = new Set<string>();
+  /** Battles whose live run finished and was handled (adopted or dropped). */
+  private readonly liveDone = new Set<string>();
+  private readonly liveListeners = new Set<(battleId: string) => void>();
   /** PvE seats whose live combat was stepped during the battle phase, by seat id. */
   private readonly livePve = new Map<string, LivePveTrack>();
   private liveTimer: ClockHandle | null = null;
@@ -291,6 +292,15 @@ export class Room {
   }
 
   get state(): RoomState { return this.current; }
+  /**
+   * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
+   * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
+   */
+  subscribeLive(listener: (battleId: string) => void): () => void { this.liveListeners.add(listener); return () => { this.liveListeners.delete(listener); }; }
+  /** Side A's live frames of a battle from the first tick that differs from its frozen replay; null when there are none. */
+  liveFrames(battleId: string): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
+    return this.livePvp.get(battleId)?.liveFrames ?? null;
+  }
   get clock(): Clock { return this.options.clock; }
   subscribe(listener: (state: RoomState) => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   /**
@@ -301,6 +311,7 @@ export class Room {
     this.disposed = true;
     this.clearTimer();
     this.listeners.clear();
+    this.liveListeners.clear();
     this.releaseRound();
   }
   get retained(): RoomRetained {
@@ -1017,20 +1028,22 @@ export class Room {
 
   /** A live-bank seat's gold changed during the battle: its two-sided battle samples it at the live tick. */
   private sampleLiveBank(seatId: string, gold: number): void {
-    const reads = this.options.liveBankSeats;
-    if (!reads || this.pvpMode !== 'two-sided') return;
+    if (this.pvpMode !== 'two-sided') return;
     const battle = this.current.battles.find(candidate => candidate.kind === 'two-sided' && candidate.participants.includes(seatId));
-    if (!battle || battle.kind !== 'two-sided') return;
+    if (!battle || battle.kind !== 'two-sided' || this.liveIgnored.has(battle.battleId)) return;
     const target = this.liveTarget();
     let track = this.livePvp.get(battle.battleId);
     if (!track) {
       const envelope = this.frozenInputs.find(input => input.battleId === battle.battleId);
       // A battle the playback already finished cannot change any more.
-      if (!envelope || target > battle.battle.terminal.tick || !reads(envelope).includes(seatId)) return;
-      try { track = new LivePvpTrack(envelope, battle); }
-      catch (error) { return this.failLive(battle.battleId, error); }
+      if (!envelope || target > battle.battle.terminal.tick) return;
+      try {
+        track = new LivePvpTrack(envelope, battle, toCombatReplayFor(this.current, battle.battle.a.seatId)!.replay);
+      } catch (error) { return this.failLive(battle.battleId, error); }
+      // The rules' readers: no seat of this battle reads its gold (no avarice-incarnate on its board, a mirror's copy).
+      if (!battle.participants.some(participant => track!.reads(participant))) { this.liveIgnored.add(battle.battleId); return; }
       this.livePvp.set(battle.battleId, track);
-    } else if (!reads(track.envelope).includes(seatId)) return;
+    }
     track.sample(seatId, gold, target);
     this.scheduleLive();
   }
@@ -1047,8 +1060,11 @@ export class Room {
     if (this.disposed || this.current.phase !== 'battle') return;
     const target = this.liveTarget(), budget = Number.isFinite(this.options.sliceTicks ?? Infinity) ? this.options.sliceTicks! : 1200;
     for (const track of this.livePvp.values()) {
-      if (track.result) continue;
-      try { if (track.advance(target, budget)) this.adoptLive(track); }
+      if (this.liveDone.has(track.battleId)) continue;
+      try {
+        if (track.advance(target, budget)) for (const listener of this.liveListeners) listener(track.battleId);
+        if (track.result) { this.liveDone.add(track.battleId); this.adoptLive(track); }
+      }
       catch (error) { return this.failLive(track.battleId, error); }
     }
     if (this.current.phase !== 'battle') return;
@@ -1114,7 +1130,7 @@ export class Room {
   }
   private clearLive(): void {
     if (this.liveTimer !== null) { this.options.clock.cancel(this.liveTimer); this.liveTimer = null; }
-    this.livePvp.clear(); this.livePve.clear(); this.battleStartedAt = null; this.awaitingLive = false; this.liveReplaced = false;
+    this.livePvp.clear(); this.livePve.clear(); this.liveIgnored.clear(); this.liveDone.clear(); this.battleStartedAt = null; this.awaitingLive = false; this.liveReplaced = false;
   }
 
   private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {

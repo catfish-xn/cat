@@ -89,26 +89,40 @@ describe('D11 live bank: PvE', () => {
 });
 
 describe('D11 live bank: two-sided PvP', () => {
-  function playPvp(liveBank: boolean) {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), liveBank ? { liveBankSeats: input => input.seats.map(entry => entry.seatId) } : {});
+  function playPvp(avarice: boolean) {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
-    bindAvarice(room, 's0');
+    if (avarice) bindAvarice(room, 's0');
     runUntil(room, clock, state => state.round === 5 && state.phase === 'battle');
     const frozen = pvpBattle(room.state, 's0');
     const frozenReplay = toCombatReplayFor(room.state, 's0')!.replay;
     const hp = seat(room.state, 's0').hp;
+    const notified: string[] = [];
+    let streamed: { fromTick: number; ticks: number } | null = null;
+    room.subscribeLive(battleId => {
+      notified.push(battleId);
+      const frames = room.liveFrames(battleId)!;
+      if (!streamed) streamed = { fromTick: frames.fromTick, ticks: frames.ticks.length };
+      // Only public view frames leave the room: never the private samples or bank values.
+      expect(JSON.stringify(frames)).not.toMatch(/liveGold|bankSamples|currentItemBankGold|openingItemBankGold/);
+    });
     clock.advance(400);
     changeGold(room, 's0');
     const gold = seat(room.state, 's0').match.gold;
     runUntil(room, clock, state => state.round === 5 && state.phase !== 'battle');
-    return { room, frozen, frozenReplay, hp, gold, published: pvpBattle(room.state, 's0') };
+    return { room, frozen, frozenReplay, hp, gold, notified, streamed: streamed as { fromTick: number; ticks: number } | null, published: pvpBattle(room.state, 's0') };
   }
 
   it('samples the new gold into a live run at the live tick and settles that run', () => {
-    const { room, frozen, hp, gold, published } = playPvp(true);
+    const { room, frozen, frozenReplay, hp, gold, notified, streamed, published } = playPvp(true);
     expect(room.state.fault).toBeNull();
     expect(published).not.toBe(frozen);
+    // The changed frames were streamed while the battle ran, from a tick after the sample, before the run finished.
+    expect(notified.length).toBeGreaterThan(0);
+    expect(streamed!.fromTick).toBeGreaterThan(8);
+    const live = toCombatReplayFor(room.state, 's0')!.replay;
+    expect(live.ticks.slice(0, streamed!.fromTick)).toEqual(frozenReplay.ticks.slice(0, streamed!.fromTick));
     const team = published.battle.a.seatId === 's0' ? 'player' : 'enemy';
     const samples = published.battle.bankSamples!.filter(sample => sample.team === team);
     expect(samples.at(-1)!.liveGold).toBe(gold);
@@ -120,10 +134,11 @@ describe('D11 live bank: two-sided PvP', () => {
     expect(room.retained.timers).toBe(1);
   }, 180_000);
 
-  it('without a live-bank seat the frozen battle stands', () => {
-    const { room, frozen, published } = playPvp(false);
+  it('a battle no seat of which reads its live gold keeps its frozen run, with nothing streamed', () => {
+    const { room, frozen, published, notified } = playPvp(false);
     expect(room.state.fault).toBeNull();
     expect(published).toBe(frozen);
+    expect(notified).toEqual([]);
   }, 180_000);
 });
 
