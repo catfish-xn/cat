@@ -10,6 +10,10 @@ import type { RankTotals, UnitBattleStats } from './battle-ranking';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags } from './hero-identity';
 import { attachHoverCards, unitHoverCard } from './hover-card';
 import { heroPortraitHtml } from './s13-assets';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
+import { itemDisplayName } from './g23-display';
+import { itemMarkHtml } from './item-codex';
+import { CHAMPION_ROLES, ROLE_DISPLAY } from './unit-roles';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -20,6 +24,33 @@ const TICKS_PER_SECOND = 20;
 /** Trait labels: the S13 client list, open where the unit's content traits include it (see `heroTraitTags`). */
 export function unitTraitLabels(definitionId: string): { name: string; open: boolean }[] {
   return heroTraitTags(definitionId);
+}
+
+const ITEM_ID_BY_API = new Map(Object.values(ITEM_DEFINITIONS).flatMap(item => 'apiName' in item && item.apiName ? [[item.apiName, item.id] as const] : []));
+
+/**
+ * The hero's 14.24 client role (角色定位) and that role card's recommended items, limited to items this content has; null
+ * for units without a client role (summons, neutrals). Display only (client data via `unit-roles.ts`).
+ */
+export function unitRole(definitionId: string): { name: string; itemIds: string[] } | null {
+  const hero = definitionId.replace(/-ranged$/, ''), role = Object.hasOwn(CHAMPION_ROLES, hero) ? ROLE_DISPLAY[CHAMPION_ROLES[hero]] : undefined;
+  return role ? { name: role.name, itemIds: role.items.flatMap(api => ITEM_ID_BY_API.get(api) ?? []) } : null;
+}
+function roleSection(definitionId: string): HTMLElement | null {
+  const role = unitRole(definitionId);
+  if (!role) return null;
+  const section = el('div', '', 'unit-card-role'); section.dataset.debug = 'unit-card:role';
+  section.append(el('div', `定位 · ${role.name}`, 'unit-card-label'));
+  if (role.itemIds.length) {
+    const items = el('div', '', 'unit-card-items'); items.title = '推荐装备';
+    items.append(el('span', '推荐装备', 'unit-card-items-label'));
+    for (const id of role.itemIds) {
+      const cell = el('span', '', 'unit-card-item'); cell.dataset.itemDef = id; cell.title = itemDisplayName(id);
+      cell.innerHTML = itemMarkHtml(id, 20); items.append(cell);
+    }
+    section.append(items);
+  }
+  return section;
 }
 
 /** Cache key part of a battle stats line: equal stats draw the same card. */
@@ -45,9 +76,9 @@ function battleLine(stats: UnitBattleStats): HTMLElement {
 
 /**
  * Card body for a unit definition at a star level; `null` when the definition is unknown to the content. `battle` (online)
- * adds the G5 battle stats line when the unit or its kind has fought this match.
+ * adds the G5 battle stats line when the unit or its kind has fought this match; `gear` (board pieces) lists what it carries.
  */
-export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null): HTMLElement | null {
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = ''): HTMLElement | null {
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
@@ -65,6 +96,8 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     const traits = el('div', '', 'unit-card-traits'); traits.dataset.debug = 'unit-card:traits';
     for (const label of unitTraitLabels(definitionId)) { const tag = el('span', label.name, label.open ? 'trait-open' : 'trait-closed'); if (!label.open) tag.title = '本版本未开放'; traits.append(tag); }
     body.append(traits);
+    const role = roleSection(definitionId);
+    if (role) body.append(role);
   }
   const stats = getUnitStats(definitionId, neutral ? 1 : star);
   const ability = abilityText(definitionId, star);
@@ -78,6 +111,7 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     grid.append(el('dt', label), el('dd', String(value)));
   }
   body.append(grid);
+  if (gear) { const line = el('p', `已装备：${gear}`, 'unit-card-text'); line.dataset.debug = 'unit-card:gear'; body.append(line); }
   if (battle && (battle.battle || battle.match)) body.append(battleLine(battle));
   return body;
 }

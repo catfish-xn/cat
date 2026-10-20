@@ -4,6 +4,9 @@ import { stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { CombatUnit } from '../src/simulation/combat';
 import { packets, shieldEvents } from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const holder = (s: MatchState) => s.combat!.units.find(u => u.id === 'unit-1')!;
 const receipts = (s: MatchState) => holder(s).mechanismState!.runtimes.filter(r => r.source.definitionId === 'bloodthirster');

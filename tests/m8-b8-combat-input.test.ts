@@ -6,6 +6,9 @@ import { freezeCombatInput, restoreCombatInput, type CombatInputAuthority } from
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { nextRandom } from '../src/simulation/rng';
 import { restoreMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function fixture() {
   const state = createMatch(42), draw = nextRandom(state.battleSeedRngState);

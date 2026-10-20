@@ -2,6 +2,9 @@ import {describe,it,expect} from 'vitest';
 import {selectTargets,selectAbilityTargets,chooseRandomCenter,coneCells,selectConeTargets,startingRows} from '../src/simulation/m8/targeting';
 import {DEFAULT_BOARD} from '../src/simulation/board';
 import {selector} from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const unit=(id:string,col:number,row:number,team:'player'|'enemy'='enemy')=>({id,cell:{col,row},team,hp:100,maxHp:100,alive:true,untargetable:false});
 const units=[unit('h',3,4,'player'),unit('p',3,3),unit('a',3,2),unit('b',4,3),unit('c',3,1),unit('d',6,3)];
 const env={board:DEFAULT_BOARD,units,holderId:'h',primaryId:'p',tick:1};

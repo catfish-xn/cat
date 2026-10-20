@@ -1,6 +1,9 @@
 import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('B4 cloak: independent numbers in actual combat',()=>{
  it('dragon:HP1090;missing590,1090×2.5%=27 withremainder at40',()=>{const r=run(wearing('dragons-claw',{hp:500,cooldownTicks:1000}),40);expect(r.p.maxHp).toBe(1090);expect(heals(r.events)[0].actual).toBe(27);expect(r.p.hp).toBe(527);});
  it('evenshroud:aura armor100→70;first AD100 gives58;25 bonusresists expire200',()=>{const r=run(wearing('evenshroud'),1,[enemy('e',1,3,{armor:100})]);expect(packets(r.events)[0].hpDamage).toBe(58);const expired=run(wearing('evenshroud',{cooldownTicks:1000}),200);expect(readCombatStats(expired.p,expired.state)).toMatchObject({armor:0,magicResist:20});});

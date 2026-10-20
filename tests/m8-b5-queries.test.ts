@@ -7,6 +7,9 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Acquire public-route fixtures once, outside the query/constraint case timers.
 beforeAll(() => { publicInventory(['thiefs-gloves', 'sword']); });

@@ -20,6 +20,9 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, freeze } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Independent transcription of M8B_ENCOUNTERS §2–3, not derived from the
 // production content/compiler or from readEncounterPreview's own output.
