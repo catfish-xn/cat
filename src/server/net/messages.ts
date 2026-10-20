@@ -118,7 +118,13 @@ export type ServerMessage =
    */
   | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
   | ReceiptMessage
-  | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
+  | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null }
+  /**
+   * Liveness beat, sent every `intervalMs` while the server's heartbeat is on (alongside a WebSocket ping the browser
+   * answers by itself). A client that has seen one may treat a silence of a few intervals as a dead connection and
+   * reconnect; clients that do not know the type ignore it, and a server without it never sends one (no version bump).
+   */
+  | { readonly type: 'heartbeat'; readonly intervalMs: number };
 
 /* ---------------- validation ---------------- */
 
