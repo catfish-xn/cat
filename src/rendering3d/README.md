@@ -65,7 +65,8 @@ ray 与 arbitraryQuad 是上述明确的平面子集；仅凭源 primitive 类�
 
 | reason | 行为 |
 | --- | --- |
-| `mesh-resource-unavailable` | v2 mesh 缺少提供的几何，skipped.mesh 加一 |
+| `mesh-resource-unavailable` | v2 mesh 缺少提供的几何，skipped.mesh 加一（直接构造 `ParticleEffect` 时无后缀） |
+| `mesh-resource-unavailable:<code>` | 经 `loadParticleEffect` 加载时带原因：适配器自身错误码（如 `ambiguous-particle-mesh`）、`http-<状态码>`、`read-failed`（无规范错误码）、`not-buffer-geometry`、`missing-position`、`empty-geometry`、`not-loaded`、`no-mesh-reader` |
 | `screen-distortion-requires-scene-color` | 缺少宿主场景颜色/深度采样输入，无法做真实折射；skipped.screenDistortion 加一 |
 | `total-birth-attempt-budget-exceeded` | 剩余发射器各记录一次，停止后续出生；不增加未渲染发射器的 skipped 计数 |
 | `v1-runtime-skips-mesh/trail/screenDistortion` | v1 原行为，新加可读原因；skipped 计数与原来相同 |
