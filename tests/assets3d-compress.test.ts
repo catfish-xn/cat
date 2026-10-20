@@ -1,4 +1,4 @@
-﻿import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, writeFile, readdir, symlink, lstat } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';

@@ -1,4 +1,4 @@
-﻿import { readFile, readdir, lstat, mkdir, stat } from 'node:fs/promises';
+import { readFile, readdir, lstat, mkdir, stat } from 'node:fs/promises';
 import { resolve, join, dirname, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpath } from 'node:fs/promises';
