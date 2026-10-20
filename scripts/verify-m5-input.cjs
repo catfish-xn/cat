@@ -10,6 +10,8 @@ const { chromium } = require('playwright');
 const { hash } = require('./m4-evidence.cjs');
 const { sourceFingerprint } = require('./m5-evidence.cjs');
 const { resizeViewport } = require('./verify-m4-interactions.cjs');
+const ragebladeRoute = require('./v17-rageblade-route.cjs');
+const { lootPlan: independentLootPlan } = require('../tests/fixtures/orb-combo-oracle.cjs');
 const preview = process.argv.includes('--preview');
 const mode = preview ? 'preview' : 'dev';
 const metricsOnly = process.argv.includes('--metrics-only');
@@ -407,31 +409,57 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       heapNote: 'Heap measurements are observations without forced GC; zero ledger/effects/tweens is asserted, heap reduction is not inferred.' };
     fs.writeFileSync(path.join(output, 'performance.json'), JSON.stringify(report.performance, null, 2));
     fs.writeFileSync(path.join(output, 'frame-intervals.json'), JSON.stringify(frameSamples));
-    // T13 seed 14349 earns Lux, bow and rod as random opening drops
-    // only for real kills, so the original Rageblade-on-Lux chain runs in the
-    // first combat that can have it (2-1) instead of 1-2. Every step is a native
+    // v17 seed 27 earns rod at 1-2, Lux at 1-4 and bow at 2-7 through real kills.
+    // Replay the same public deployment policy as the evidence validator, then
+    // run the original Rageblade-on-Lux chain at 3-1. Every step is a native
     // input whose full resulting state equals the public command's result.
     {
-      await click('mobile:new-match'); await startFixed42(14349);
+      await click('mobile:new-match'); await startFixed42(ragebladeRoute.SEED);
       for (let guard = 0; guard < 40; guard++) {
         const current = await state();
-        if (current.m8.round.roundId === '2-1' && current.phase === 'preparation') break;
+        if (current.m8.round.roundId === ragebladeRoute.ROUND && current.phase === 'preparation') break;
         if (current.phase === 'choice') {
           const choice = current.pendingChoice, start = await offset();
           const pick = choice.offers.find(id => id !== 'placebo');
           assert(pick && choice.offers.includes(pick), `B8 opening offers ${pick}`);
           await click(`choice:${pick}`);
           await record(`b8-opening-${choice.kind}-${pick}`, current, accepted(api.selectChoice(current, choice.choiceId, choice.generation, pick)), start);
-        } else if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
+        } else if (current.phase === 'preparation') {
+          let prepared = current;
+          for (let deployment; deployment = ragebladeRoute.openingDeployment(prepared);) {
+            await click('panel:units'); await click(`mobile:unit:${deployment.unitId}`); await click(`deploy:${deployment.cell.col},${deployment.cell.row}`);
+            prepared = accepted(api.deployMatchUnit(prepared, deployment.unitId, { kind: 'board', cell: deployment.cell }));
+            assert.deepEqual(await state(), prepared, 'v17 opening native deployment equals public command');
+          }
+          await delay(450); await click('start-combat');
+        }
         else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
         else if (current.phase === 'settlement') await click('continue');
         else throw new Error(`B8 opening ended at ${current.phase}`);
       }
       let buildBefore = await state();
-      assert.equal(buildBefore.m8.round.roundId, '2-1'); assert.equal(buildBefore.phase, 'preparation');
-      const [bow, rod] = ['bow', 'rod'].map(id => buildBefore.items.find(item => item.definitionId === id && item.location.kind === 'inventory'));
-      const lux = buildBefore.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'lux');
-      assert(bow && rod && lux, 'real 1-3/1-4 loot granted Lux, bow and rod');
+      assert.equal(buildBefore.m8.round.roundId, ragebladeRoute.ROUND); assert.equal(buildBefore.phase, 'preparation');
+      const oracleDrops = independentLootPlan(ragebladeRoute.SEED, buildBefore.round).rounds.flatMap(round => round.encounterPlan.drops);
+      const entries = drops => drops.map(({ dropId, sourceUnitId, payload }) => ({ dropId, sourceUnitId, payload }));
+      assert.deepEqual(entries(buildBefore.m8.loot.frozen.rounds.flatMap(round => round.encounterPlan.drops)), entries(oracleDrops), 'complete v17 orb combinations equal independent oracle');
+      function earnedReceipt(kind, definitionId, roundId) {
+        const drop = oracleDrops.find(drop => drop.roundId === roundId && drop.payload.kind === kind && drop.payload.definitionId === definitionId);
+        assert(drop, `v17 oracle ${roundId} ${definitionId}`);
+        const receipts = buildBefore.m8.loot.receipts.filter(receipt => receipt.dropId === drop.dropId);
+        assert.equal(receipts.length, 1, `real ${roundId} ${definitionId} granted exactly once`);
+        assert.deepEqual(receipts[0].payload, drop.payload, `real ${roundId} payload equals oracle`);
+        assert(buildBefore.m8.loot.earnedEvidence.some(evidence => evidence.dropId === drop.dropId), `real ${roundId} ${definitionId} carrier killed`);
+        return receipts[0];
+      }
+      const [bow, rod] = [['bow', '2-7'], ['rod', '1-2']].map(([id, round]) => {
+        const receipt = earnedReceipt('item', id, round);
+        assert.equal(receipt.grantedItemIds.length, 1);
+        return buildBefore.items.find(item => item.id === receipt.grantedItemIds[0] && item.definitionId === id && item.location.kind === 'inventory');
+      });
+      const luxReceipt = earnedReceipt('unit', 'lux', '1-4');
+      assert.equal(luxReceipt.grantedUnitIds.length, 1);
+      const lux = buildBefore.preparation.units.find(unit => luxReceipt.grantedUnitIds.includes(unit.id) && unit.team === 'player' && unit.definitionId === 'lux');
+      assert(bow && rod && lux, 'real v17 1-2/1-4/2-7 loot granted Lux, bow and rod');
       let buildStart = await offset();
       await click('panel:items'); await click(`item:${bow.id}`); await click(`item:${rod.id}`); await click('combine-items');
       let buildExpected = accepted(api.combineItems(buildBefore, bow.id, rod.id));
@@ -441,11 +469,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       buildExpected = accepted(api.equipItem(buildBefore, rageblade.id, lux.id, 0));
       await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart);
       if (lux.location.kind !== 'board') {
-        const zone = buildExpected.preparation.board.deploymentZones.player, used = new Set(buildExpected.preparation.units
-          .flatMap(unit => unit.location.kind === 'board' ? [`${unit.location.cell.col},${unit.location.cell.row}`] : []));
-        const cell = Array.from({ length: (zone.lastRow - zone.firstRow + 1) * buildExpected.preparation.board.columns }, (_, n) =>
-          ({ col: n % buildExpected.preparation.board.columns, row: zone.firstRow + Math.floor(n / buildExpected.preparation.board.columns) }))
-          .find(cell => !used.has(`${cell.col},${cell.row}`));
+        // Same back-row swap as the public v17 evidence scenario: Lux must
+        // survive long enough to exercise Rageblade's dynamic attack interval.
+        const cell = { col: 3, row: 7 };
         buildBefore = buildExpected; buildStart = await offset();
         await click('panel:units'); await click(`mobile:unit:${lux.id}`); await click(`deploy:${cell.col},${cell.row}`);
         buildExpected = accepted(api.deployMatchUnit(buildBefore, lux.id, { kind: 'board', cell }));
@@ -457,14 +483,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await delay(450); const b8Start = await offset(); await click('start-combat');
       const b8Deadline = Date.now() + 120000;
       while ((await state()).phase === 'combat') { assert(Date.now() < b8Deadline, 'B8 Rageblade combat timeout'); await delay(250); }
-      const b8Record = await record('b8-rageblade-2-1-combat', b8Before, b8Combat, b8Start);
+      const b8Record = await record('b8-rageblade-3-1-combat', b8Before, b8Combat, b8Start);
       assert.deepEqual(b8Record.snap.combatEvents, b8Events);
       // Original assertion bodies (previously deferred to B8), unit ID now read from the real drop.
       assert(b8Events.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade'));
       const luxCombat = b8Combat.combat.units.find(unit => unit.id === lux.id);
       const luxStats = readCombatStats(luxCombat, b8Combat.combat);
       assert(luxStats.attackIntervalTicks < luxCombat.attackIntervalTicks, 'normal Rageblade attacks change current AS beyond frozen stat');
-      report.b8RagebladeChain = { roundId: '2-1', luxId: lux.id, ragebladeId: rageblade.id, combatTicks: b8Combat.combat.tick,
+      report.b8RagebladeChain = { roundId: ragebladeRoute.ROUND, luxId: lux.id, ragebladeId: rageblade.id, combatTicks: b8Combat.combat.tick,
         frozenAttackIntervalTicks: luxCombat.attackIntervalTicks, currentAttackIntervalTicks: luxStats.attackIntervalTicks };
     }
     const inputs = await page.evaluate(() => window.__M5_INPUTS__); fs.writeFileSync(path.join(output, 'native-inputs.json'), JSON.stringify(inputs));
