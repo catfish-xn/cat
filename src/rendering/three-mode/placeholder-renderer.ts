@@ -326,6 +326,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       canvas.style.cursor = id ? 'grab' : '';
       return;
     }
+    // A mouse that moves with no button held lost its release (synthetic input, a missed pointerup): end the press as a
+    // cancel instead of leaving the drag and its sell hint stuck until the next click.
+    if (event.pointerType === 'mouse' && event.buttons === 0) { onPointerCancel(event); return; }
     if (!dragging && Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
     if (!dragging) {
       if (!controls?.dragStart(press.id)) { endDrag(); return; }
