@@ -121,7 +121,7 @@ export async function mergeManifests({ from, out } = {}) {
   const manifestExists = await destination('manifest.json', hash(manifestBytes));
   const precacheExists = await destination('precache.json', hash(precacheBytes));
   await safeOutputPath(join(output, 'merge-report.json'), { force: true });
-  if (!report.missing.length && report.models > 0) {
+  if (!report.missing.length && report.models + report.effects > 0) {
     for (const [path, p] of plans) {
       if (skipped.get(path)) { report.skipped++; continue; }
       const bytes = await readFile(await safeInputPath(p.root, p.source));

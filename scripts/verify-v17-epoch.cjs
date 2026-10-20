@@ -1,6 +1,6 @@
 /* Run the nine recording/verification steps sequentially, offline, without Git writes. */
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
-const base='30cf934446719a0da0d3cea1667bf84a3df5296c',arg='--baseline-commit='+base;
+const base='d677a291405ac263b617844d8ae43a604139b7fb',arg='--baseline-commit='+base;
 const steps=[
  ['record-release','scripts/record-v17-release.cjs',arg],
  ['record-herald','tests/fixtures/record-v17-herald.cjs','--write'],

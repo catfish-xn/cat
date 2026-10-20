@@ -12,7 +12,7 @@ import {
 } from '../../server-entry';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
+import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -42,7 +42,9 @@ export function toPublicBoard(match: MatchState): PublicBoard {
   const heldBy = (unitId: string) => match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
     .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0))
     .map(item => item.definitionId);
-  const anomalyOf = (unitId: string) => match.anomalyBinding?.unitId === unitId ? { anomaly: match.anomalyBinding.definitionId } : {};
+  const anomalyOf = (unitId: string) => ({ ...(match.anomalyBinding?.unitId === unitId ? { anomaly: match.anomalyBinding.definitionId } : {}),
+    // V16-UI-251: the rules' public mark of a promoted 终极英雄; sell gold, pool copies and the countdown stay private.
+    ...(d14PublicUnitMark(match, unitId) ?? {}) });
   for (const unit of match.preparation.units) {
     if (unit.team !== 'player') continue;
     if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });

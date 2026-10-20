@@ -14,14 +14,16 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick, readParticleMesh,
-  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
+  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
+import { LEGEND_MODEL, createTabletop } from './tabletop';
+import { createCarouselStage } from './carousel-stage';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
@@ -52,6 +54,23 @@ const DEFAULT_EFFECT_SECONDS = 1;
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 const FX_SCALE = 0.44;
+/**
+ * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
+ * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
+ * minions are set lower than the doc's 0.57 because their bind pose is low (idle ≈ 0.77): 0.43 stands about as tall
+ * as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
+ */
+const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly lift: number }>> = {
+  'pve-minion-melee': { height: 0.57, lift: -0.03 }, 'pve-minion-ranged': { height: 0.43, lift: 0.02 },
+  'pve-krug': { height: 0.78, lift: 0.03 },
+  'pve-wolf-large': { height: 0.87, lift: 0.01 }, 'pve-wolf-small': { height: 0.52, lift: 0.04 },
+  'pve-razorbeak-large': { height: 0.87, lift: 0.1 }, 'pve-razorbeak-small': { height: 0.48, lift: 0.05 },
+  'pve-elder-dragon': { height: 1.52, lift: 0 }, 'pve-rift-herald': { height: 1.36, lift: 0.01 },
+};
+/** Minion tiers A/B/C share one look: 'pve-minion-melee-b' → 'pve-minion-melee'. */
+const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
+/** Overhead star row: each star this many board units wide, its center this far above the body's top. */
+const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 
@@ -62,6 +81,9 @@ export function useBoardFeed(next: BoardFeed): void { feed = next; }
 // Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
 let assetProgress: ((text: string) => void) | null = null;
 export function useAssetProgress(next: (text: string) => void): void { assetProgress = next; }
+// Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
+let starColorFor: (level: number) => string = () => '#ffd34d';
+export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
@@ -126,6 +148,11 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
 
 interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
+  /**
+   * Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body).
+   * Null on a PvE monster: as in TFT, monsters carry only their health bar.
+   */
+  stars: StarMark | null; starHeight: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -179,6 +206,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, emissive: TEAM_COLOR.enemy, emissiveIntensity: 0.4 })),
   };
 
+  // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
+  const loadEffect = models.cache && options.assetBase && models.cache.manifest.effects ? (id: string, maxDuration: number) => {
+    if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
+    return loadParticleEffect(models.cache!.manifest, id, { root: options.assetBase!, scale: 1, maxDuration, readTexture: models.reader!.readTexture,
+      readJson: models.reader!.readJson, readMesh: url => readParticleMesh(url, models.reader!.readModel) });
+  } : null;
+  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
+    loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
+    loadEffect, starColor: level => starColorFor(level) });
+  // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
+    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
+    loadEffect });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -213,6 +253,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       boardGroup.add(mesh);
     }
     boardBox.setFromObject(boardGroup);
+    for (const point of tabletop.layout(frame)) boardBox.expandByPoint(point);
     frameCamera();
   };
 
@@ -229,7 +270,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
-    view.body = pawnFor(view.team); view.root.add(view.body);
+    view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
     const definitionId = view.definitionId;
     void models.cache.load(definitionId).then(lease => {
@@ -237,7 +278,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.lease = lease;
       if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
-      view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      const monster = lease.placeholder ? undefined : monsterFit(definitionId);
+      if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
+      else if (monster) {
+        // The offset goes on the GLB root, which the mixer never animates (clips drive its bones).
+        view.body = fit(lease.scene, MODEL_HEIGHT * monster.height); lease.scene.position.y += MODEL_HEIGHT * monster.lift;
+      } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
@@ -247,15 +294,23 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get none.
+  const syncStars = (view: PieceView, piece: BoardPiece) => {
+    if (piece.neutral) { view.stars?.dispose(); view.stars = null; return; }
+    const level = piece.effectiveStarLevel ?? piece.starLevel;
+    if (view.stars) { view.stars.setLevel(level); return; }
+    view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
+    view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
+  };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
     const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
     root.add(ring);
     scene.add(root);
-    const view: PieceView = { root, ring, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
-    attachBody(view);
+    attachBody(view); syncStars(view, piece);
     return view;
   };
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
@@ -267,7 +322,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
-    view.mixer?.dispose(); view.lease?.release();
+    view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null;
     view.root.removeFromParent();
   };
 
@@ -363,6 +418,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
+      syncStars(view, piece);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -381,6 +437,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
+    tabletop.frame(frame);
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
@@ -412,7 +469,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (right < area.left || left > area.left + area.width || bottom < area.top || top > area.top + area.height) return undefined;
     return { left, top, right, bottom };
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, unitAt: client => pickUnit(client, true) ?? undefined, screenBox }) ?? (() => {});
+  // The carousel replaces the board view: a board press or drag in progress is let go first.
+  const onCarousel = (view: Parameters<typeof stage.show>[0]) => {
+    if (view && !stage.active) {
+      if (dragging) feed?.controls()?.dragCancel();
+      feed?.controls()?.hover(null); endDrag();
+    }
+    if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
+    stage.show(view);
+  };
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel,
+    unitAt: client => stage.active ? undefined : pickUnit(client, true) ?? undefined, screenBox: id => stage.active ? undefined : screenBox(id) }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -455,6 +522,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0 || press) return;
+    if (stage.active) {
+      // A unit on the carousel: the 2D panel's own slot click (it checks my release and a pick still out).
+      const hit = stage.slotAt({ x: event.clientX, y: event.clientY }, viewport());
+      if (hit?.takable) { feed?.carouselControls?.()?.pick(hit.slot); event.preventDefault(); }
+      return;
+    }
+    // My orb: the orb dock's own click (it decides whether the rules can be asked now).
+    const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
+    if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
     const id = unitAt(event);
     if (!id) return;
     press = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
@@ -462,12 +538,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     event.preventDefault();
   };
   const onPointerMove = (event: PointerEvent) => {
+    if (stage.active) {
+      const hit = stage.slotAt({ x: event.clientX, y: event.clientY }, viewport()), slot = hit?.slot ?? null;
+      stage.hover(slot); feed?.carouselControls?.()?.hover(slot);
+      canvas.style.cursor = hit?.takable ? 'pointer' : '';
+      return;
+    }
     const controls = feed?.controls();
     if (!press || event.pointerId !== press.pointerId) {
       if (press) return;
       const id = unitAt(event);
       controls?.hover(id);
-      canvas.style.cursor = id ? 'grab' : '';
+      canvas.style.cursor = id ? 'grab' : tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport()) ? 'pointer' : '';
       return;
     }
     // A mouse that moves with no button held lost its release (synthetic input, a missed pointerup): end the press as a
@@ -493,7 +575,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (dragging) feed?.controls()?.dragCancel();
     endDrag();
   };
-  const onPointerLeave = () => { if (!press) { feed?.controls()?.hover(null); canvas.style.cursor = ''; } };
+  const onPointerLeave = () => {
+    if (stage.active) { stage.hover(null); feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; return; }
+    if (!press) { feed?.controls()?.hover(null); canvas.style.cursor = ''; }
+  };
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
@@ -508,7 +593,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    frameCamera();
+    frameCamera(); stage.resize(w / h);
   };
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
@@ -527,16 +612,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      if (view.stars) {
+        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+        view.stars.object.visible = view.root.visible;
+      }
     }
     updateEffects(seconds);
-    if (width > 0) renderer.render(scene, camera);
+    tabletop.update(seconds); stage.update(seconds);
+    if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, stage };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -546,7 +636,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects();
+      clearEffects(); tabletop.dispose(); stage.dispose();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

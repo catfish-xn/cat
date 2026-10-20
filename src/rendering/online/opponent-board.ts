@@ -51,7 +51,7 @@ export function avatarUnit(board: PublicBoard | undefined): PublicBoardUnit | nu
   for (const unit of board?.units ?? []) {
     if (unit.summon) continue;
     const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0, bestCost = best ? UNIT_DEFINITIONS[best.definitionId]?.cost ?? 0 : -1;
-    if (cost > bestCost || (cost === bestCost && unit.starLevel > best!.starLevel)) best = unit;
+    if (cost > bestCost || (cost === bestCost && (unit.effectiveStarLevel ?? unit.starLevel) > (best!.effectiveStarLevel ?? best!.starLevel))) best = unit;
   }
   return best;
 }
@@ -165,14 +165,15 @@ export class OpponentBoardPanel {
     const identity = getHeroIdentity(unit.definitionId);
     const chip = element('div', '', `opponent-unit cost-${UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0}`);
     chip.dataset.debug = `online:opponent-unit:${place}`;
-    chip.dataset.definition = unit.definitionId; chip.dataset.star = String(unit.starLevel);
+    const star = unit.effectiveStarLevel ?? unit.starLevel;
+    chip.dataset.definition = unit.definitionId; chip.dataset.star = String(star);
     // G2-4b: a summon's card would show champion base stats, not its stage values; its title names it instead.
     const summon = 'summon' in unit && unit.summon === true;
     if (summon) chip.dataset.summon = 'true';
-    else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel); }
-    chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
+    else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(star); }
+    chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(star)}${star === 4 ? '（终极英雄）' : ''}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
-    chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
+    chip.append(element('span', '★'.repeat(star), `opponent-stars star-${star}`), portrait);
     if (unit.anomaly) {
       // 2026-10-20 scouting: the anomaly bound to this unit, marked on its portrait with the shared anomaly icon.
       const name = anomalyDisplayName(unit.anomaly), mark = element('span', '', 'opponent-anomaly');

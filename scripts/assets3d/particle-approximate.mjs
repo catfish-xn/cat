@@ -1,4 +1,4 @@
-import { Euler } from 'three';
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
 
 // Explicit preview conventions, not claims about the original engine. Strict
 // conversion never calls this module's adapter. All decisions carry field paths.
@@ -8,6 +8,38 @@ export function particleMode(mode = 'strict') {
 }
 const vector = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
 const defaultCurve = v => ({ constantValue: v });
+const hasPitchOrYaw = rotation => vector(rotation) && rotation.slice(0, 2).some(n => Math.abs(n % 360) > 1e-6);
+const enabled = v => v === true || v === 1;
+const xyzDegrees = rotation => {
+  const radians = Math.PI / 180;
+  const xyz = new Euler(rotation[0] * radians, -rotation[1] * radians, -rotation[2] * radians, 'YXZ').reorder('XYZ');
+  return [xyz.x, xyz.y, xyz.z].map(n => n / radians);
+};
+function reflectedTransform(value) {
+  if (!Array.isArray(value) || value.length !== 4 || value.some(row => !Array.isArray(row) || row.length !== 4 || !row.every(Number.isFinite))
+      || value[0][3] !== 0 || value[1][3] !== 0 || value[2][3] !== 0 || value[3][3] !== 1) throw new Error('invalid-approximate-transform');
+  const signs = [-1, 1, 1, 1];
+  return value.flatMap((row, i) => row.map((n, j) => n * signs[i] * signs[j]));
+}
+function hasGroundNormal(rotation, system) {
+  const euler = new Euler(...rotation.map(n => n * Math.PI / 180), 'XYZ');
+  const x = new Vector3(1, 0, 0).applyEuler(euler), y = new Vector3(0, 1, 0).applyEuler(euler);
+  if (system.transform) {
+    const linear = new Matrix4().fromArray(reflectedTransform(system.transform)).setPosition(0, 0, 0);
+    x.applyMatrix4(linear); y.applyMatrix4(linear);
+  }
+  const normal = x.cross(y), length = normal.length();
+  return Number.isFinite(length) && length > 0 && Math.abs(normal.y) / length >= 1e-6;
+}
+// A position, bind weight, navmesh mask, sphere or volumetric shape supplies
+// no plane normal. Only degenerate, explicitly planar volumes qualify here.
+function shapeNormal(shape) {
+  if (shape?.__type === 'VfxShapeBox' && vector(shape.Size) && shape.Size.every(n => n >= 0)) {
+    const zero = shape.Size.flatMap((n, i) => n === 0 ? [i] : []);
+    if (zero.length === 1) return [0, 1, 2].map(i => i === zero[0] ? 1 : 0);
+  }
+  if (shape?.__type === 'VfxShapeCylinder' && shape.height === 0 && Number.isFinite(shape.radius) && shape.radius > 0) return [0, 1, 0];
+}
 // Known presentation modifiers: a static, single-texture preview omits these.
 // Unknown fields are NOT discarded; the strict adapter will still reject them.
 export const OMIT_PREVIEW_FIELDS = Object.freeze({
@@ -18,7 +50,7 @@ export const OMIT_PREVIEW_FIELDS = Object.freeze({
   particleColorTexture: 'use-birth-and-color-curves', paletteDefinition: 'use-birth-and-color-curves',
   reflectionDefinition: 'unlit-single-texture', softParticleParams: 'omit-depth-fade',
   birthUvScrollRate: 'static-UV', particleUVScrollRate: 'static-UV', emitterUvScrollRate: 'static-UV',
-  birthUVOffset: 'static-UV', uvScale: 'static-UV', uvScrollClamp: 'static-UV', texAddressModeBase: 'static-UV',
+  birthUVOffset: 'static-UV', uvScale: 'static-UV', uvRotation: 'static-UV', uvScrollClamp: 'static-UV', texAddressModeBase: 'static-UV',
   TextureFlipU: 'static-UV', TextureFlipV: 'static-UV', colorLookUpTypeY: 'omit-color-lookup',
   colorLookUpOffsets: 'omit-color-lookup', colorLookUpScales: 'omit-color-lookup',
   doesCastShadow: 'unlit-no-shadow', disableBackfaceCull: 'double-sided', meshRenderFlags: 'ignore-render-state',
@@ -60,6 +92,11 @@ export function approximateEmitter(input, system = {}, options = {}) {
       && shape.emitRotationAngles?.some(nonzero) && nonzero(source.birthVelocity)) {
     return { status: 'skipped', reason: 'unexpressible-emitter:rotated-directional-emission' };
   }
+  const hasPlaneEvidence = () => hasPitchOrYaw(source.rotationOverride ?? source.birthRotation0?.constantValue)
+    || enabled(input.isGroundLayer) || enabled(input.isFollowingTerrain)
+    || enabled(input.isLocalOrientation) || enabled(input.particleIsLocalOrientation)
+    || !!(shapeNormal(shape) && !(shape?.emitRotationAxes?.some(nonzero) && shape.emitRotationAngles?.some(nonzero)))
+    || !!system.transform?.slice(0, 3).some((row, i) => Array.isArray(row) && row.slice(0, 3).some((v, j) => Number.isFinite(v) && (i !== j ? v !== 0 : v < 0)));
   const sample = (value, field, animated = false) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = structuredClone(value), d = v.dynamics;
@@ -69,8 +106,14 @@ export function approximateEmitter(input, system = {}, options = {}) {
     }
     if (d?.probabilityTables) {
       const tables = d.probabilityTables;
-      const factors = tables.map(t => t.keyValues?.length ? t.keyValues.reduce((a, b) => a + b, 0) / t.keyValues.length : 1);
-      note(`${field}.dynamics.probabilityTables`, tables, 'deterministic-mean-keyValue-multiplier-empty-table-one');
+      // A signed size distribution can encode mirrored particles. Averaging
+      // signs first erases a real surface (symmetric signs collapse to zero).
+      // Fixed-ray previews keep mean magnitudes and explicitly omit UV flips.
+      const magnitude = field === 'birthScale0' && source.primitive?.__type === 'VfxPrimitiveRay' && hasPlaneEvidence()
+        && (source.birthVelocity === undefined || vector(source.birthVelocity?.constantValue) && Math.hypot(...source.birthVelocity.constantValue) === 0);
+      const factors = tables.map(t => t.keyValues?.length ? t.keyValues.reduce((a, b) => a + (magnitude ? Math.abs(b) : b), 0) / t.keyValues.length : 1);
+      if (magnitude) note(`${field}.dynamics.probabilityTables`, tables, 'fixed-ray-mean-absolute-size-magnitude-omit-mirror-UV-flips');
+      if (!magnitude) note(`${field}.dynamics.probabilityTables`, tables, 'deterministic-mean-keyValue-multiplier-empty-table-one');
       if (d.values) d.values = d.values.map(x => Array.isArray(x) ? x.map((n, i) => n * (factors[i] ?? 1)) : x * (factors[0] ?? 1));
       delete d.probabilityTables;
     }
@@ -92,7 +135,7 @@ export function approximateEmitter(input, system = {}, options = {}) {
     }
     return v;
   };
-  for (const key of ['particleLifetime', 'rate', 'birthScale0', 'birthRotation0', 'birthVelocity', 'birthDrag', 'worldAcceleration',
+  for (const key of ['birthVelocity', 'particleLifetime', 'rate', 'birthRotation0', 'birthScale0', 'birthDrag', 'worldAcceleration',
     'birthColor', 'EmitterPosition', 'birthAcceleration', 'frameRate', 'birthFrameRate']) if (source[key] !== undefined) source[key] = sample(source[key], key);
   for (const key of ['color', 'scale0']) if (source[key] !== undefined) source[key] = sample(source[key], key, true);
   // Numeric frameRate in the source is a scalar, unlike ValueFloat fields.
@@ -139,6 +182,12 @@ export function approximateEmitter(input, system = {}, options = {}) {
   if (source.isUniformScale === 1 || source.isUniformScale === true) {
     const size = source.birthScale0?.constantValue;
     if (Array.isArray(size)) source.birthScale0 = defaultCurve([size[0], size[0], size[0]]);
+  }
+  if (source.primitive?.__type === 'VfxPrimitiveRay' && hasPlaneEvidence()
+      && (source.birthVelocity === undefined || vector(source.birthVelocity?.constantValue) && Math.hypot(...source.birthVelocity.constantValue) === 0)
+      && vector(source.birthScale0?.constantValue) && source.birthScale0.constantValue.some(n => n < 0)) {
+    note('birthScale0', input.birthScale0, 'fixed-ray-absolute-size-omit-mirror-UV-flips');
+    source.birthScale0.constantValue = source.birthScale0.constantValue.map(Math.abs);
   }
   // V2 has a scalar lifetime size curve. For nonuniform XY planes retain the
   // authored longest edge, rather than multiplying Y by X's unrelated curve.
@@ -204,23 +253,59 @@ export function approximateEmitter(input, system = {}, options = {}) {
   } else if (type === 'VfxPrimitiveRay') {
     const velocity = source.birthVelocity?.constantValue;
     const rotation = source.birthRotation0?.constantValue;
-    // V2 rays face the camera around their direction. A stationary source ray
-    // with authored pitch/yaw instead specifies a plane we cannot preserve.
-    // Do not replace that plane with a large upright local-Y strip. Moving
-    // rays retain the existing velocity-direction preview convention.
-    if ((velocity === undefined || (vector(velocity) && Math.hypot(...velocity) === 0)) && vector(rotation)
-        && rotation.slice(0, 2).some(n => Math.abs(n % 360) > 1e-6)) {
-      return { status: 'skipped', reason: 'unexpressible-emitter:rotated-stationary-ray-plane' };
+    additions.kind = 'ray';
+    if (velocity === undefined || vector(velocity) && Math.hypot(...velocity) === 0) {
+      if (source.birthRotation0 !== undefined && !vector(rotation)) throw new Error('invalid-approximate-ray-rotation');
+      const hasBirthOrientation = hasPitchOrYaw(rotation);
+      let normal = shapeNormal(shape), attachmentFrame = false;
+      // Shape frame rotations are not volume normals. Do not silently ignore
+      // an authored rotation when using a degenerate volume as plane evidence.
+      if (shape?.emitRotationAxes?.some(nonzero) && shape.emitRotationAngles?.some(nonzero)) normal = undefined;
+      if (enabled(input.isGroundLayer) || enabled(input.isFollowingTerrain)) {
+        additions.rotation0 = xyzDegrees([90, vector(rotation) ? rotation[1] : 0, vector(rotation) ? rotation[2] : 0]);
+        note('primitive', p, 'fixed-ray-ground-XZ-preserve-YXZ-heading');
+      } else if (hasBirthOrientation) {
+        additions.rotation0 = xyzDegrees(rotation);
+        note('primitive', p, 'fixed-ray-birth-YXZ-X-reflection-to-v2-XYZ-degrees');
+      } else if (normal) {
+        const q = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), new Vector3(-normal[0], normal[1], normal[2]));
+        const euler = new Euler().setFromQuaternion(q, 'XYZ');
+        additions.rotation0 = [euler.x, euler.y, euler.z].map(n => n * 180 / Math.PI);
+        note('primitive', p, 'fixed-ray-planar-shape-normal-X-reflected');
+      } else if (enabled(input.isLocalOrientation) || enabled(input.particleIsLocalOrientation)) {
+        additions.rotation0 = [0, 0, 0];
+        attachmentFrame = true;
+        note('primitive', p, 'fixed-ray-explicit-host-local-XY-follow-attachment');
+      } else if (system.transform) {
+        // Validation and affine application remain shared with all primitives.
+        // A translation-only matrix is not orientation evidence.
+        const m = system.transform;
+        if (Array.isArray(m) && m.slice(0, 3).some((row, i) => Array.isArray(row) && row.slice(0, 3).some((v, j) => Number.isFinite(v) && (i !== j ? v !== 0 : v < 0)))) {
+          additions.rotation0 = [0, 0, 0];
+          note('primitive', p, 'fixed-ray-system-affine-local-XY');
+        }
+      }
+      if (!additions.rotation0) {
+        // Preserve the pre-fixed-plane preview when no plane can be inferred.
+        // Zero rotation and roll alone do not supply pitch/yaw evidence.
+        note('primitive', p, 'ray-strip-along-birth-velocity-zero-velocity-local-Y');
+      }
+      // Test the actual composed plane, including parent rotation/shear. A
+      // local ground plane can become an upright wall after the parent frame;
+      // conversely the parent can supply the missing ground-facing normal.
+      // Check every recovered orientation, including ground/shape/parent rules;
+      // only the legacy preview without orientation evidence is exempt.
+      // An explicitly attached frame is supplied by the host at playback.
+      if (additions.rotation0 && !attachmentFrame && !hasGroundNormal(additions.rotation0, system)) {
+        return { status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal' };
+      }
+      // The existing ray primitive already has a base-anchored XY plane. Its
+      // local-Y direction is identity; full Euler defines the plane AND roll.
+      additions.direction = [0, 1, 0];
+    } else {
+      additions.direction = vector(velocity) ? [-velocity[0], velocity[1], velocity[2]] : [0, 1, 0];
+      note('primitive', p, 'ray-strip-along-birth-velocity');
     }
-    // A ground-layer tag alone does not supply a ray direction or plane. With
-    // no motion/orientation evidence, local Y would invent an upright strip.
-    // Keep moving rays' existing convention; do not flatten arbitrary meshes.
-    if ((input.isGroundLayer === true || input.isGroundLayer === 1)
-        && (velocity === undefined || (vector(velocity) && Math.hypot(...velocity) === 0))) {
-      return { status: 'skipped', reason: 'unexpressible-emitter:ground-stationary-ray-plane' };
-    }
-    additions.kind = 'ray'; additions.direction = vector(velocity) && Math.hypot(...velocity) > 0 ? [-velocity[0], velocity[1], velocity[2]] : [0, 1, 0];
-    note('primitive', p, 'ray-strip-along-birth-velocity-zero-velocity-local-Y');
     source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
   } else if (type === 'VfxPrimitiveBeam') {
     if (!vector(p.start) || !vector(p.end) || Math.hypot(...p.end.map((n, i) => n - p.start[i])) === 0)
@@ -241,16 +326,15 @@ export function approximateEmitter(input, system = {}, options = {}) {
   // Ry * Rx * Rz (Three YXZ). Both spaces are Y-up; reflect X, hence negate
   // Y/Z angles, without swapping axes. Serialize an equivalent XYZ Euler in
   // degrees for the existing V2 contract. Camera roll and ray direction have
-  // separate conventions below. Never infer orientation from ground-layer flags.
+  // separate conventions below. Ground rules apply only to stationary rays.
   const rotation = source.birthRotation0?.constantValue;
   if (['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveMesh'].includes(type) && vector(rotation)) {
-    const radians = Math.PI / 180;
-    const xyz = new Euler(rotation[0] * radians, -rotation[1] * radians, -rotation[2] * radians, 'YXZ').reorder('XYZ');
-    additions.rotation0 = [xyz.x, xyz.y, xyz.z].map(n => n / radians);
+    additions.rotation0 = xyzDegrees(rotation);
     note('birthRotation0', input.birthRotation0 ?? rotation, 'fixed-primitive-YXZ-X-reflection-to-v2-XYZ-degrees');
   }
   if (additions.kind === 'ray' && source.birthRotation0 !== undefined) {
-    note('birthRotation0', input.birthRotation0 ?? source.birthRotation0, 'ray-or-beam-direction-overrides-birth-rotation');
+    note('birthRotation0', input.birthRotation0 ?? source.birthRotation0, additions.rotation0
+      ? 'fixed-ray-rotation-serialized-in-runtime-coordinates' : 'ray-or-beam-direction-overrides-birth-rotation');
     source.birthRotation0 = defaultCurve([0, 0, 0]);
   }
   if (!source.primitive || source.primitive.__type === 'VfxPrimitiveCameraQuad') {
@@ -286,12 +370,9 @@ export function approximateEmitter(input, system = {}, options = {}) {
   for (const [field, value] of Object.entries(system)) {
     if (['__type', 'complexEmitterDefinitionData', 'simpleEmitterDefinitionData', 'particleName', 'particlePath'].includes(field)) continue;
     if (field === 'transform') {
-      if (!Array.isArray(value) || value.length !== 4 || value.some(row => !Array.isArray(row) || row.length !== 4 || !row.every(Number.isFinite))
-        || value[0][3] !== 0 || value[1][3] !== 0 || value[2][3] !== 0 || value[3][3] !== 1) throw new Error('invalid-approximate-transform');
       // Row-vector League affine matrix, conjugated by X reflection. Three's
       // column-major storage is identical to this flattened row-vector matrix.
-      const signs = [-1, 1, 1, 1];
-      additions.localTransform = value.flatMap((row, i) => row.map((n, j) => n * signs[i] * signs[j]));
+      additions.localTransform = reflectedTransform(value);
       note('system.transform', value, 'row-major-row-vector-last-row-translation-X-reflected-affine-local-position-and-orientation');
     } else if (['flags', 'soundOnCreateDefault', 'soundPersistentDefault', 'visibilityRadius', 'buildUpTime'].includes(field)) {
       note(`system.${field}`, value, 'ignore-preview-system-metadata');

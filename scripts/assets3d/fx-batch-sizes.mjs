@@ -8,19 +8,24 @@ import { contracts } from './runtime.mjs';
 import { readGlb } from './glb.mjs';
 import { readAccessor } from './model.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
-import { safeInputPath, writeOutputFile } from './safe-path.mjs';
+import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 
 export const FX_SCALE = 0.44;
 export const CELL_DISTANCE = 62.4;
-export async function batchSizes({ out = 'assets3d-local/fx-batch1' } = {}) {
-const root = await batchOutputRoot(out);
+export async function batchSizes({ out = 'assets3d-local/fx-batch1', reportOut } = {}) {
+const root = reportOut ? withinRoot(resolve('assets3d-local'), resolve(out)) : await batchOutputRoot(out);
+const reportPath = await safeOutputPath(reportOut ?? join(root, 'size-report.json'), { force: true });
 const read = async p => JSON.parse(await readFile(await safeInputPath(root, join(root, p)), 'utf8'));
 const { parseParticleDocument } = await contracts();
 const { ParticleEffectV2 } = await import('../../src/rendering3d/particles-v2.ts');
 const camera = new PerspectiveCamera(); camera.position.set(4, 6, 8); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
 const results = [];
 const manifest = await read('manifest.json'), bindings = await read('action-bindings.json');
-for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
+const selected = structuredClone(manifest.actionEffects);
+for (const units of Object.values(bindings.variants ?? {})) for (const [unit, actions] of Object.entries(units)) {
+ for (const [action, ids] of Object.entries(actions)) selected[unit][action] = [...new Set([...selected[unit][action], ...ids])];
+}
+for (const [unit, actions] of Object.entries(selected)) {
  for (const [action, ids] of Object.entries(actions)) for (const id of ids) {
   const path = manifest.effects[id].path.slice(0, -5);
   const spec = bindings.playback[id], bodyScale = FX_SCALE;
@@ -67,7 +72,7 @@ for (const [unit, actions] of Object.entries(manifest.actionEffects)) {
   results.push({ unit, action, effectId: id, phase: spec.phase, fxScale: bodyScale, cells: Math.max(0, ...emitters.filter(e => e.nonzeroSurface).map(e => e.cells)), emitters });
  }
 }
-await writeOutputFile(join(root, 'size-report.json'), JSON.stringify({
+await writeOutputFile(reportPath, JSON.stringify({
   method: 'Real ParticleEffectV2; per-particle geometry edge including mesh bounds and affine basis scale; t=0 separately, 50ms samples through each binding duration; scale=0.44 for every unit. Camera (4,6,8); default seeded RNG; no alpha crop. Source edges are orientation-independent; AABB is separate. opacityVisibleCells excludes zero-area and opacity <= 1/255; reviewCells is the same at 0.3s. Neither is a texture-visible footprint.',
   fxScale: FX_SCALE, cellDistance: CELL_DISTANCE, results,
 }, null, 2) + '\n', { force: true });
@@ -75,6 +80,7 @@ await writeOutputFile(join(root, 'size-report.json'), JSON.stringify({
 return results;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
- const results = await batchSizes(argumentsFor(process.argv.slice(2), ['--out']));
+ const args = argumentsFor(process.argv.slice(2), ['--out', '--report-out']);
+ const results = await batchSizes({ out: args.out, reportOut: args['report-out'] });
  for (const r of results) console.log(r.unit, r.action, r.effectId, r.cells.toFixed(2));
 }
