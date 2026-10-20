@@ -5,6 +5,9 @@ import {resolveAbility} from '../src/simulation/combat-abilities';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import {EMPTY_RUNTIME,type S13Unit} from '../src/simulation/combat-s13-state';
 import {unit,freeze} from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 it.each(['melee','ranged'] as const)('copied %s Jayce gets an independent native forge, without inheriting owner buffs',form=>{
  const owner=unit('mirror-jayce','player',2,form==='melee'?4:6,{

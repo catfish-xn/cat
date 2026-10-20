@@ -6,6 +6,9 @@ import type { ItemInstance } from '../src/simulation/strategy-types';
 import { planUnitAcquisition, type UnitAcquisitionInput } from '../src/simulation/unit-acquisition';
 import type { StarLevel, Unit, UnitLocation } from '../src/simulation/unit-types';
 import { planPurchase, transferUpgradeResources } from '../src/simulation/upgrades';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }

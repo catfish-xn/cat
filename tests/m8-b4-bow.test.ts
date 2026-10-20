@@ -1,6 +1,9 @@
 import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('B4 bow recipes: hand vectors through actual combat',()=>{
  it('red:100×1.03=103;target10000×1%=100 burn at t21',()=>{const r=run(wearing('red-buff'),21);expect(packets(r.events)[0].hpDamage).toBe(103);expect(packets(r.events).filter(e=>e.damageType==='true')[0].hpDamage).toBe(100);});
  it('rageblade:10% base+5% first stack→ceil(20/1.15)=18 ticks on next attack',()=>{const r=run(wearing('rageblade'));expect(r.p.runtime?.attackSpeedBps).toBe(500);expect(readCombatStats(r.p,r.state).attackIntervalTicks).toBe(18);});

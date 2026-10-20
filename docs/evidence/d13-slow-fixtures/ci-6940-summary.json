@@ -1,0 +1,191 @@
+{
+  "run_id": 39363364327,
+  "url": "https://github.com/catfish-xn/cat/actions/runs/39363364327",
+  "head_sha": "6940b097f2968c8a7cb1963c2c7136ba70dc266a",
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "cancelled",
+  "updated_at": "2026-10-20T04:52:08Z",
+  "jobs": [
+    {
+      "id": 118434418890,
+      "name": "m8-u6-loot",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419071,
+      "name": "browser-dev-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419089,
+      "name": "m7-presentation-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419095,
+      "name": "input-dev-layout-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419107,
+      "name": "m8-u3-dynamic",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419136,
+      "name": "browser-preview-sniper-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419149,
+      "name": "m6-retention",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419166,
+      "name": "input-dev-archives-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419227,
+      "name": "browser-preview-cannon-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419235,
+      "name": "test-and-build-timing-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419246,
+      "name": "browser-preview-mage-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419260,
+      "name": "input-dev-input-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419267,
+      "name": "browser-dev-mage-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419271,
+      "name": "browser-dev-cannon-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419274,
+      "name": "input-preview-input-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118434419287,
+      "name": "input-preview-touch-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419298,
+      "name": "input-dev-m6-performance-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419308,
+      "name": "input-dev-touch-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419312,
+      "name": "test-and-build-tests-3-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419331,
+      "name": "test-and-build-tests-1-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419342,
+      "name": "test-and-build-tests-2-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419372,
+      "name": "input-preview-layout-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419391,
+      "name": "test-and-build-headless-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419401,
+      "name": "test-and-build-tests-4-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434419485,
+      "name": "test-and-build-performance-sample1",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 118434421007,
+      "name": "heap-diagnostics",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 118434421071,
+      "name": "warmup-experiment",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 118461130303,
+      "name": "ci-required",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 118461131092,
+      "name": "compare-evidence-sample${{ matrix.sample }}",
+      "status": "completed",
+      "conclusion": "cancelled"
+    }
+  ],
+  "notes": [
+    "No rerun was requested by D13. Cancellation source is not established by these logs.",
+    "ci-required failed because several required dependency groups were cancelled.",
+    "Job118434419342 logs report87 files and1262 tests passed before cancellation, but GitHub's job conclusion is cancelled.",
+    "Neither Bracer nor B5 appears in the retrieved shard2 log. No CI timing for these two target files is claimed on this head."
+  ]
+}

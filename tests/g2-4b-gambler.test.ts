@@ -4,6 +4,9 @@ import {grantMechanicItem,grantMechanicGold} from '../src/simulation/seat-mechan
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {readCombatStats} from '../src/simulation/combat-s13';
 import {createItemRandomStreams,drawItemRandom} from '../src/simulation/g2-4b-item-kernel';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function battle(bank:number,seed=42){
  let state=createMatch(seed);

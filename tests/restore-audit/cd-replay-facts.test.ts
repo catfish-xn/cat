@@ -1,5 +1,5 @@
 import { deepStrictEqual } from 'node:assert';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import * as engine from '../../src/simulation/combat';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { buyXp, deployMatchUnit, equipItem, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../../src/simulation/match';
@@ -13,6 +13,10 @@ import { EMPTY_TRIGGER_LEDGER } from '../../src/simulation/m8/triggers';
 import { accepted, battle, emptyBoard, reachRound } from '../match-helpers';
 import { itemMatch } from '../fixtures/m8-b4-match';
 import { configuredPrefix } from '../fixtures/t13-loot-public';
+
+for (const id of ['bloodthirster', 'sunfire-cape']) {
+  beforeAll(() => { itemMatch(id); });
+}
 
 function positive(legal: MatchState) {
   const text = serializeMatch(legal);
