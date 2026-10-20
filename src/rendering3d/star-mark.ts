@@ -1,5 +1,8 @@
 import { Group, Mesh, MeshBasicMaterial, Quaternion, Shape, ShapeGeometry, type Object3D } from 'three';
 
+/** Above models and particle effects. */
+export const STAR_RENDER_ORDER = 1000;
+
 export interface StarMark {
   readonly object: Object3D;
   setLevel(level: number): void;
@@ -34,7 +37,9 @@ export function createStarMark({ effectiveStarLevel, colorFor }: {
   }
   shape.closePath();
   const geometry = new ShapeGeometry(shape);
-  const material = new MeshBasicMaterial({ color: colorFor(level), depthWrite: false, toneMapped: false });
+  // Drawn in the transparent pass after every model and without depth testing, so a model
+  // that renders or loads later can never cover the stars.
+  const material = new MeshBasicMaterial({ color: colorFor(level), transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
   const cameraRotation = new Quaternion(), parentRotation = new Quaternion();
   let disposed = false;
 
@@ -46,6 +51,7 @@ export function createStarMark({ effectiveStarLevel, colorFor }: {
       star.position.x = (i - (level - 1) / 2) * 1.2;
       // Orientation changes during rendering, after the renderer's culling pass.
       star.frustumCulled = false;
+      star.renderOrder = STAR_RENDER_ORDER;
       star.onBeforeRender = (_renderer, _scene, camera) => {
         camera.getWorldQuaternion(cameraRotation);
         if (object.parent) {

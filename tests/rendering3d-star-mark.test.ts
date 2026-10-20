@@ -98,3 +98,21 @@ describe('3D overhead star marks', () => {
     mark.dispose();
   });
 });
+
+describe('star mark draw order', () => {
+  it('renders after models without depth testing so later models cannot cover it', async () => {
+    const { createStarMark, STAR_RENDER_ORDER } = await import('../src/rendering3d/star-mark');
+    const mark = createStarMark({ effectiveStarLevel: 4, colorFor: () => '#00ffcc' });
+    try {
+      const stars = mark.object.children as any[];
+      expect(stars).toHaveLength(4);
+      for (const star of stars) {
+        expect(star.renderOrder).toBe(STAR_RENDER_ORDER);
+        expect(star.renderOrder).toBeGreaterThan(0);
+        expect(star.material.transparent).toBe(true);
+        expect(star.material.depthTest).toBe(false);
+        expect(star.material.depthWrite).toBe(false);
+      }
+    } finally { mark.dispose(); }
+  });
+});
