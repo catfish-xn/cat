@@ -664,6 +664,7 @@ export class BoardScene extends Phaser.Scene {
   /** I6: each upgrade among `events` plays its merge (copies fly in, then a ring); returns the upgrades. */
   private showUpgrades(events: readonly MatchEvent[]) {
     const upgrades = events.filter(event => event.type === 'unitUpgraded');
+    if (!upgrades.length) return upgrades;
     const host = { scene: this, reduced: reducedMotion(), fade: (effect: Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) => this.fadeEffect(effect, duration) };
     const shop = { x: this.scale.gameSize.width / 2, y: this.scale.gameSize.height + PIECE_RADIUS };
     let delay = 0;
