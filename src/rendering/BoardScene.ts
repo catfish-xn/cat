@@ -242,6 +242,8 @@ export class BoardScene extends Phaser.Scene {
       refused: (commandId, reason, text) => {
         this.pendingSuccess.delete(commandId);
         const equipment = this.pendingEquipment.delete(commandId);
+        const orbId = this.pendingOrbClaims.get(commandId);
+        if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.orbDock?.release(orbId); }
         this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
       },
     }, mounts) : new MatchApplication(this.session, {
@@ -546,13 +548,17 @@ export class BoardScene extends Phaser.Scene {
   private pendingSuccess = new Map<number, string>();
   /** Pending combine/equip commands: a refusal is named by the equipment wording table, like the previews. */
   private pendingEquipment = new Set<number>();
+  /** v15: pending claimOrb commands (socket) by command id, so a refusal releases the orb shown as queued. */
+  private pendingOrbClaims = new Map<number, string>();
+  /** Command id of the last command() that went pending; read right after by claimOrb. */
+  private pendingOrbNotice: number | null = null;
   /** Equipment refusal: the shared preview wording for every equipment code (unknown codes get its generic text). */
   private equipmentFailure(reason: string): string {
     return reason in EQUIPMENT_FAILURE_TEXT ? equipmentFailureText(reason) : this.knownFailure(reason) ?? equipmentFailureText(reason);
   }
   private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
     const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
-    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); }
+    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
     this.command({ ok: true, state: this.session.state, events }, success);
   }
@@ -560,7 +566,7 @@ export class BoardScene extends Phaser.Scene {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus('待确认…'); return; }
+      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus('待确认…'); return; }
       this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
     this.clearCombatEffects();
@@ -580,7 +586,8 @@ export class BoardScene extends Phaser.Scene {
   }
   /** v15: a battle of mine is on the board or running; a claim then waits for the rules' post-battle settlement. */
   private orbsInBattle(): boolean {
-    return this.session.phase === 'combat' || (this.session instanceof RemoteSession && this.session.inBattle);
+    return this.session.phase === 'combat' || (this.session instanceof RemoteSession && this.session.inBattle)
+      || (this.application instanceof OnlineApplication && this.application.roomInCombat);
   }
   private syncOrbs() {
     if (!this.orbDock) return;
@@ -589,9 +596,14 @@ export class BoardScene extends Phaser.Scene {
   }
   /** v15: the rules grant the orb now or queue it until the battle ends; the dock announces the receipts when they arrive. */
   private claimOrb(orbId: string) {
+    this.pendingOrbNotice = null;
     const result = this.session.claimOrb(orbId);
     const queued = result.ok && readUnclaimedOrbs(result.state).some(orb => orb.orbId === orbId && orb.queued);
     this.command(result, queued || this.orbsInBattle() ? '法球已排队 · 战后结算' : '法球已打开');
+    // A refusal (now, or later for a pending socket command) puts the orb back to claimable.
+    const notice = !result.ok ? this.pendingOrbNotice : null; this.pendingOrbNotice = null;
+    if (notice !== null) this.pendingOrbClaims.set(notice, orbId);
+    else if (!result.ok) this.orbDock?.release(orbId);
   }
   /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
   private showUpgrades(events: readonly MatchEvent[]) {

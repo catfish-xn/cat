@@ -91,6 +91,12 @@ export class OrbDock {
   private key = '';
   /** Receipt ids already shown; null until the first state is seen, so a reload or a resume does not replay old results. */
   private seen: Set<string> | null = null;
+  /**
+   * Orbs clicked during the room's combat whose `queued` flag has not arrived yet: a click in the frozen moment before the
+   * battle is accepted by the server but only shows as queued with the battle's first push. Shown as queued meanwhile;
+   * dropped when the orb leaves the view or the claim is refused.
+   */
+  private held = new Set<string>();
   /** Orbs clicked within the last OPEN_MS (opening effect), with when it started. */
   private opening = new Map<string, number>();
   private result: HTMLElement | null = null;
@@ -100,7 +106,9 @@ export class OrbDock {
     dock.classList.add('orb-dock'); dock.setAttribute('aria-label', '未领取的法球');
   }
   /** Forget what was announced (new match, back to the lobby). */
-  reset(): void { this.seen = null; this.opening.clear(); this.key = ''; this.last = null; this.clearResult(); this.dock.replaceChildren(); }
+  /** The claim was refused: show the orb as claimable again. */
+  release(orbId: string): void { if (this.held.delete(orbId) && this.last) this.render(this.last.state, this.last.context); }
+  reset(): void { this.seen = null; this.opening.clear(); this.held.clear(); this.key = ''; this.last = null; this.clearResult(); this.dock.replaceChildren(); }
   dispose(): void { this.reset(); this.dock.remove(); }
 
   render(state: MatchState, context: OrbDockContext): void {
@@ -108,7 +116,8 @@ export class OrbDock {
     this.announce(readOrbClaimReceipts(state));
     const orbs = readUnclaimedOrbs(state), present = new Set(orbs.map(orb => orb.orbId));
     for (const id of this.opening.keys()) if (!present.has(id)) this.opening.delete(id);
-    const key = JSON.stringify([orbs, context.inBattle, context.locked, [...this.opening.keys()]]);
+    for (const id of this.held) if (!present.has(id) || orbs.some(orb => orb.orbId === id && orb.queued)) this.held.delete(id);
+    const key = JSON.stringify([orbs, context.inBattle, context.locked, [...this.opening.keys()], [...this.held]]);
     if (key === this.key) return;
     this.key = key;
     const list = element('div', '', 'orb-dock-list');
@@ -116,7 +125,8 @@ export class OrbDock {
     this.dock.replaceChildren(list, ...(this.result ? [this.result] : []));
   }
 
-  private orbButton(orb: UnclaimedOrbView, context: OrbDockContext): HTMLButtonElement {
+  private orbButton(shown: UnclaimedOrbView, context: OrbDockContext): HTMLButtonElement {
+    const orb = this.held.has(shown.orbId) ? { ...shown, queued: true } : shown;
     const button = element('button', '', `orb-token orb-${orb.tier}${orb.source === 'mechanic' ? ' orb-mechanic' : ''}`);
     button.type = 'button'; button.dataset.debug = `orb-claim:${orb.orbId}`; button.dataset.tier = orb.tier; button.dataset.source = orb.source;
     if (orb.queued) button.dataset.queued = 'true';
@@ -140,7 +150,7 @@ export class OrbDock {
     button.append(tip);
     button.addEventListener('click', () => {
       if (button.disabled) return;
-      if (context.inBattle) this.actions.status('战斗中 · 法球将在战后结算');
+      if (context.inBattle) { this.held.add(orb.orbId); this.actions.status('战斗中 · 法球将在战后结算'); }
       this.opening.set(orb.orbId, Date.now()); button.classList.add('orb-opening');
       this.actions.claim(orb.orbId);
       // A refused or queued claim leaves the orb on the dock: drop the opening look after its animation.
