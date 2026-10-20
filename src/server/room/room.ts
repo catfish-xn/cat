@@ -16,7 +16,7 @@ import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
@@ -584,6 +584,25 @@ export class Room {
     return { ok: true, state: this.current };
   }
 
+  /**
+   * v15 (MATCH_CONTRACT #260 / #262 终局入口): once the match is over, every seat still alive (the winner and any other
+   * active seat) has its earned, unclaimed orbs forfeited by the rules' `forfeitTerminalOrbs`, whose events the rules already
+   * number. Eliminated seats were cleared by the rules at their elimination. One publication; a seat with nothing to forfeit
+   * keeps its state reference and revision.
+   */
+  private forfeitTerminalOrbs(): void {
+    let changed = false;
+    const seats = this.current.seats.map((seat): SeatState => {
+      if (!seat.alive) return seat;
+      const step = forfeitTerminalOrbs(seat.match);
+      if (step.state === seat.match) return seat;
+      changed = true;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match: step.state, seatRevision, serverEvents: { seatRevision, events: step.events } };
+    });
+    if (changed) this.replaceSeats(seats);
+  }
+
   /* ---------------- phase machine ---------------- */
 
   private aliveSeats(): readonly SeatState[] { return this.current.seats.filter(seat => seat.alive); }
@@ -1000,7 +1019,7 @@ export class Room {
       }
       if (!commit.ok && commit.reason !== 'duplicate-settlement') return this.fail({ kind: 'invalid-results', detail: commit.reason });
     }
-    if (this.current.ranking) return this.setPhase('ended', null);
+    if (this.current.ranking) { this.forfeitTerminalOrbs(); return this.setPhase('ended', null); }
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) return this.setPhase('choice', this.options.choiceMs);
     this.setPhase('settlement', this.options.settlementMs);
   }
