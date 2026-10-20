@@ -35,11 +35,12 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
-import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, wornDefinitions } from '../presentation/equipment-feedback';
+import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
 import { itemDisplayName } from '../presentation/g23-display';
+import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
 
@@ -655,7 +656,7 @@ export class BoardScene extends Phaser.Scene {
       // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
       const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
       const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
-      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? []);
+      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS);
     }
   }
   /**
@@ -854,8 +855,9 @@ export class BoardScene extends Phaser.Scene {
     // G5 (online): the ranking's numbers of this unit; a battle still being played back is left out until it ends.
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
-    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}`,
-      () => unitCardBody(unit.definitionId, unit.starLevel, battle)!);
+    const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
+    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}:${gear}`,
+      () => unitCardBody(unit.definitionId, unit.starLevel, battle, gear)!);
     this.unitCardOpen = true;
   }
   private unitCardOpen = false;
