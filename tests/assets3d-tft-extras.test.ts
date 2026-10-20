@@ -78,6 +78,8 @@ describe('offline TFT extras', () => {
     expect(composeStaticChildren([dynamic, child], { entries: [entry, resolver(73)] })).toEqual([]);
   });
   it('merges a synthetic effects-only payload into a verified precache', async () => {
+    // A clean checkout has no local asset directory; create it so the test does not rely on extracted assets.
+    await mkdir(resolve('assets3d-local/tft-extras'), { recursive: true });
     const root = await mkdtemp(resolve('assets3d-local/tft-extras/test-'));
     try {
       const source = join(root, 'source'), out = join(root, 'runtime'); await mkdir(source);
