@@ -449,8 +449,11 @@ jobs:
   # leaves it out (docs: all gate jobs; ui: complete routes, retention and compare-evidence).
   # Splitting or renaming the gate jobs never touches the protection rule. Wall-clock budgets
   # live in wallclock.yml and are not part of this gate.
+  # !cancelled() lets a run superseded by a newer push end at once instead of queueing this job
+  # for a runner while the PR's new run waits behind it. A skipped required check counts as
+  # passing, so never cancel the run of a PR's latest commit by hand; to stop it, push a new commit.
   ci-required:
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     name: ci-required
     needs: [changes, test-and-build, chromium-match, chromium-input, m8-ui-dynamic, m6-retention, m7-presentation, compare-evidence]
     runs-on: ubuntu-24.04
@@ -474,7 +477,7 @@ jobs:
   # A red full run after a merge into multiplayer or release/* comments on the merged pull
   # request, so the failure is seen even though nothing is waiting on this run.
   post-merge-alert:
-    if: ${{ always() && github.event_name == 'push' && github.ref != 'refs/heads/main' && needs.ci-required.result != 'success' }}
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/main' && needs.ci-required.result != 'success' }}
     needs: ci-required
     runs-on: ubuntu-24.04
     timeout-minutes: 3
