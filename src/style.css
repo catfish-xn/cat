@@ -478,6 +478,12 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-trait { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
 .opponent-trait.active { background: #1f4a46; color: #68ddd0; }
 .opponent-note { margin: 0; font-size: 11px; color: #7e95a4; }
+.opponent-augments, .opponent-loose-items { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.opponent-augment { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px 2px 3px; border-radius: 999px; background: #2a2f4a; color: #d6dcf5; }
+.opponent-augment .augment-icon { width: 18px; height: 18px; border-radius: 4px; }
+.opponent-empty, .opponent-loose-label { font-size: 11px; color: #7e95a4; }
+.opponent-bench { --cell: 44px; display: grid; grid-template-columns: repeat(9, var(--cell)); gap: 2px; justify-content: center; padding-top: 4px; border-top: 1px solid #2a3f49; }
+.opponent-bench .opponent-cell { height: 40px; background: #16252b; }
 /* G1-P7 carousel: a ring over the enemy half of the board; the bench rows below stay visible. */
 .carousel-panel { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
   width: min(640px, calc(100% - 16px)); display: grid; gap: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid #b4a1f5;
