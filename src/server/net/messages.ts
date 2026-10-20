@@ -18,8 +18,13 @@ import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
 
 /**
+ * Network message envelope contract version, independent of the rules-side multiplayer command/state
+ * contract version MULTIPLAYER_NET_PROTOCOL_VERSION. Bump for incompatible wire shape or meaning changes;
+ * the rules version advances for incompatible rules contract changes. Neither requires the other to bump
+ * or have the same value. Compatible additive view fields do not require a network bump (see below).
+ *
  * 2 since T13-B (contract §18.7): R3/R4 projection and the useConsumable receipt; protocol 1 clients are refused.
- * Bumped only when a client message or receipt changes shape or meaning (the server validates client messages strictly).
+ * Client messages are validated strictly; incompatible server messages also require a bump (see protocol 5 below).
  * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
  * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
  * until the freeze only means an older client highlights the opponent from the battle on.
@@ -27,17 +32,16 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * its receipts carry the rules' CarouselFailure reasons plus `stale-carousel`. A protocol 2 client could not take part either:
  * the match then opened on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
  * `PlayerView.carousel` and the `carousel` phase kind alone would have been additive. A protocol 2 client is refused at its
- * first message with `unsupported-protocol` ("protocolVersion must be 3").
+ * first message with `unsupported-protocol` (the detail names the current NET_PROTOCOL_VERSION).
  * P7-1 stays at 3: the 1-1 carousel is gone (the match opens on 1-2 preparation with the free unit) and the seat view's
  * `pendingCarouselUnits` became `heldCarouselUnits`; no client message or receipt changed, a held unit is sold with `sell`.
  * 4 since v15: the client may send `claimOrb` {round, orbId} (rewards are no longer granted on their own), and `rerollAugment`
  * requires `optionIndex` (one card at a time). A protocol 3 client could neither claim its orbs nor reroll a card, so it is
- * refused at its first message with `unsupported-protocol`, whose detail names both versions. It equals the rules'
- * MULTIPLAYER_NET_PROTOCOL_VERSION (tests/server/v15-orb-claim.test.ts holds them together; net/ imports no rules value).
+ * refused at its first message with `unsupported-protocol`, whose detail names the required and received wire versions.
  * 5 since the D11 live bank (planning/live-gold-combat-2026-10-20.md): the replay of a battle already pushed may be revised
  * during its playback (`replay-tail`), because a gold change can alter a combat that reads live gold. A protocol 4 client
  * would ignore it and show a battle other than the one settled. The rules did not change, so the rules' constant stays 4:
- * the wire is now one ahead of it (tests/server/v15-orb-claim.test.ts).
+ * the independent wire version is 5.
  */
 export const NET_PROTOCOL_VERSION: number = 5;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */

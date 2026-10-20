@@ -25,8 +25,8 @@ const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
 
 describe('v15 wire: protocol 5, claimOrb and per-card rerollAugment', () => {
-  it('runs one ahead of the rules\' protocol 4 (D11 replay-tail) and refuses an older client with a message naming both versions', () => {
-    // The D11 live bank added a server message (replay-tail) without a rules change: the wire is 5, the rules' constant 4.
+  it('versions the rules and wire contracts independently (rules 4, wire 5) and refuses an older client with a message naming both versions', () => {
+    // These contracts are versioned independently; equality is not required. D11 replay-tail only bumped the wire version.
     expect(MULTIPLAYER_NET_PROTOCOL_VERSION).toBe(4);
     expect(NET_PROTOCOL_VERSION).toBe(5);
     for (const version of [3, 4]) {
