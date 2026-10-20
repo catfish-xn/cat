@@ -326,7 +326,7 @@ export class BoardScene extends Phaser.Scene {
         this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率');
       } else if (event.code === 'KeyW') {
         event.preventDefault();
-        if (!this.draggingId) this.benchBoardSwap(this.hoveredId() ?? this.selectedId);
+        if (!this.draggingId && !event.repeat) this.benchBoardSwap(this.hoveredId() ?? this.selectedId);
       } else if (event.code === 'KeyE') {
         event.preventDefault();
         if (this.strategyPanel?.blocksSell) { this.setStatus('无出售单位目标 · 物品操作不会出售背景单位'); return; }

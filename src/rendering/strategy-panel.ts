@@ -867,6 +867,7 @@ export class StrategyPanel {
       const targets = element('div', '', 'choice-targets');
       for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
+      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
       if (choice.kind === 'anomaly') {
         const target = state.preparation.units.find(unit => unit.id === choice.targetId);
@@ -891,13 +892,7 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
-      if (generic || isOnline()) {
-        // Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments can be hidden to view the board.
-        const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-        if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
-        row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
-        card.append(row);
-      }
+      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
       const rerollAugment = this.actions.rerollAugment;
       // Rules expose the remaining free rerolls on the offer; the button only forwards, the rules check count and generation again.
       if (choice.kind === 'augment' && rerollAugment && choice.rerollsRemaining !== undefined) {
@@ -926,6 +921,14 @@ export class StrategyPanel {
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
+  /** Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments and anomaly targets can be hidden to view the board. */
+  private choiceExtras(choice: MatchState['pendingChoice'] & object, title: string, generic: boolean, extras: ReturnType<typeof readChoiceExtras>): HTMLElement {
+    const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
+    if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+    row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
+    return row;
+  }
+
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
