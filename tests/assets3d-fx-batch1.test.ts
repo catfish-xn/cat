@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assertManifest } from '../src/rendering3d/contracts';
+import { ParticleEffect, parseParticleDocument } from '../src/rendering3d/particles';
+import { PerspectiveCamera, Vector3 } from 'three';
+// @ts-expect-error Offline conversion module is JavaScript.
+import { mapEmitter } from '../scripts/assets3d/particles.mjs';
 // @ts-expect-error Offline converter module is JavaScript.
 import { batchActionBindings, batchOutputRoot, fxBatch1 } from '../scripts/assets3d/fx-batch1.mjs';
 // @ts-expect-error Offline hand-authored tables are JavaScript.
@@ -10,8 +14,42 @@ import { trialActionBindings } from '../scripts/assets3d/fx-trial.mjs';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/assets3d-fx-batch1.json', import.meta.url), 'utf8'));
 const legacy = JSON.parse(readFileSync(new URL('./fixtures/assets3d-fx-legacy-bindings.json', import.meta.url), 'utf8'));
+const oversize = JSON.parse(readFileSync(new URL('./fixtures/assets3d-fx-synthetic-oversize.json', import.meta.url), 'utf8'));
 
 describe('TFT13 batch one explicit FX tables', () => {
+  it.each([
+    ['synthetic_glow_a', 1000, .5],
+    ['synthetic_glow_b', 800 * (1 - .5 * .1), .4],
+    ['synthetic_glow_c', 900, .6],
+  ])('keeps synthetic %s edges without turning its arbitrary plane toward the camera', (name, edge, scale) => {
+    const fixture = oversize.find((r: any) => r.source.emitterName === name);
+    const original = structuredClone(fixture.source);
+    const result = mapEmitter(fixture.source, (path: string) => path, { particleMode: 'approximate' });
+    expect(result.emitter.kind).toBe('arbitraryQuad');
+    const doc = parseParticleDocument({ schemaVersion: 2, limits: { maxParticles: 100, maxDuration: 3 }, emitters: [result.emitter] });
+    const camera = new PerspectiveCamera(); camera.rotation.set(.2, .4, .1);
+    const fx = new ParticleEffect(doc, { scale: scale as number });
+    try {
+      fx.update(.1, camera);
+      expect(Math.max(...fx.object.children[0].scale.toArray().slice(0, 2))).toBeCloseTo(edge as number, 3);
+      const rotation = fx.object.children[0].quaternion.clone();
+      expect(rotation.angleTo(camera.quaternion)).toBeGreaterThan(.1);
+      camera.rotation.set(.6, -.4, .3); fx.update(0, camera);
+      expect(fx.object.children[0].quaternion.angleTo(rotation)).toBeLessThan(1e-6);
+      expect(new Vector3().setFromMatrixScale(fx.object.matrix).x).toBeCloseTo(scale as number);
+      expect(Math.max(...fx.object.children[0].scale.toArray().slice(0, 2)) * new Vector3().setFromMatrixScale(fx.object.matrix).x).toBeCloseTo((edge as number) * (scale as number), 3);
+      expect(fixture.source).toEqual(original);
+    } finally { fx.dispose(); }
+  });
+  it('keeps a signed-probability ray at zero width rather than treating it as a glow surface', () => {
+    const fixture = oversize.find((r: any) => r.source.emitterName === 'synthetic_ray');
+    const result = mapEmitter(fixture.source, (path: string) => path, { particleMode: 'approximate' });
+    expect(result.emitter.kind).toBe('ray');
+    expect(result.emitter.size0).toEqual([0, 600, 0]);
+    // Signed probability keys cancel in the existing deterministic mean preview.
+    // Its long bounding line has no surface, unlike the synthetic glow quads.
+    expect(result.emitter.size[0].value).toBe(2);
+  });
   it('rejects other output roots and unsupported units before writing', async () => {
     for (const out of ['assets3d-local/fx-trial', 'assets3d-local/fx-all', 'public']) {
       await expect(batchOutputRoot(out)).rejects.toThrow();

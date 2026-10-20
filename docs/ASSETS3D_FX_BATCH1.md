@@ -91,3 +91,29 @@ Ziggs 爆炸、Caitlyn 轰炸、Ekko P_Proc 在此假设下超过 3 格；没有
 | ekko | 0.478 | p_proc 2.60、r_mark 0.16 |
 
 共享普攻命中 global_ba_hit 随身体缩放从 0.34 格（darius）到 1.00 格（ziggs），说明按身体缩放换算会让小模型的特效偏大、大模型偏小。超过 3 格的 blitzcrank q_cas、lux w_mis、caitlyn r_bombardment_impact 待逐个查是哪个字段造成的。
+
+## 三个超大特效查因与修正（2026-10-20，Codex）
+
+以下使用用户提供的身体缩放及一格 62.4 场景单位，测量单粒子几何长边，不裁贴图透明边缘，不等于伤害范围或整个系统的 AABB。依据来自本地原始 sidecar。用途判断基于字段、贴图名称和局部旋转，未经过原引擎对照。
+
+| 系统 / 发射器 | 原始字段与原因 | 处理与预计尺寸 |
+| --- | --- | --- |
+| blitzcrank Q_cas / praxis | birthScale0=[1200,450,0]，isUniformScale=1；scale0.X 从 0.6 经 0.95 到 1，尺寸概率表为空。primitive=ArbitraryQuad，贴图 Q_Shockwave，birthRotation0.X=90。1200 是直接写入源文件的冲击波长边，并非重复乘常量。 | 保留大范围冲击波，修复平面朝向；长边仍约 1200×0.543÷62.4=10.44 格。 |
+| caitlyn R_Bombardment_Impact / Add_Glow1 | birthScale0 的 dynamics 首键约 [1200,330,330] 替代 fallback；isUniformScale=1；scale0.X 从 1.1 到 0.7，寿命 0.3s；没有尺寸概率倍率。ArbitraryQuad，birthRotation0.X=-90，贴图 SS_BOSS_Herald_BackDrop，判断为短暂轰炸地面背光。 | 保留背光并恢复源地面朝向；0.1s 长边约 1200×(1.1+(0.7-1.1)/3)=1160，1160×0.441÷62.4=8.20 格。出生瞬间约 1320×0.441÷62.4=9.33 格，8.20 不是连续时间上界。 |
+| lux W_mis / Temp_GroundGlow | birthScale0=[700,650,160]，没有 scale0 或尺寸概率表；ArbitraryQuad，birthRotation0=[0,0,90]，偏移 [0,-350,-120]，贴图 Lux_W_Shape。源文件本来就是宽的局部形状光，不是 beam 端点撑长。 | 保留源形状及 Z 旋转，不凭 GroundGlow 名字强行压到地面；不再随镜头旋转。长边仍为 700×0.673÷62.4=7.55 格。 |
+
+三者长边均可由源数值解释，按冲击波、轰炸背光和 W 形状光保留是本轮判断。没有证据将其认定为应移除的镜头发射器，因此绑定表未删改，未加英雄特例或尺寸上限。**修的是平面朝向错误，不承诺长边降到 3 格。**
+
+通用修改：近似转换器把 VfxPrimitiveArbitraryQuad 输出为运行时已有的 arbitraryQuad，保留反射换算后的完整 birth Euler。此前输出 camera-facing quad，并清零 X/Y 旋转，会把源地面冲击波/背光竖起。CameraQuad 仍沿用 billboard 约定，strict 模式未改。isUniformScale 和非等比 scale0 取绝对 X 的现有近似仍有信息损失；三个指定长边并非由该信息损失凭空放大，本轮未扩展为全套非等比曲线实现。
+
+额外排查：Caitlyn Alpha_Ray 原始尺寸 [100,500,0]，X 概率键 [-1.5,-1,1,1.5] 在现有确定性均值预览中抵消为 0，输出 [0,500,0]；虽有很长的退化包围线但没有面，不是实测 8.20 格的来源。Blitzcrank Ring_Ground_ 是真实 mesh，几何长边约 61.11×birthScale0 20≈1222.11，即 10.63 格；Circle mesh 约 808.11 源单位，即 7.03 格。它们也来自源几何/缩放，只测单位面片会漏掉；报告包含透明时刻，不应把几何上界直接称为可见尺寸。
+
+复现：`node scripts/assets3d/fx-batch1.mjs --force` 已重新生成整个本地批次；`node scripts/assets3d/fx-batch1-oversize.mjs` 以真实 ParticleEffectV2 和 mesh 几何逐发射器测量，写入 `assets3d-local/fx-batch1/oversize-report.json`。报告分开记录 t=0 与 0.1–2.2s 采样、几何长边及 AABB，nonzeroSurface 标识是否存在非退化面。新增原始字段 fixture 及尺寸/朝向回归。本轮未做浏览器截图验收。
+
+验证：`npx.cmd --no-install tsc --noEmit -p .` 通过；指定的 assets3d-fx-batch1、assets3d-particle-approximations、assets3d-visual-approximate、rendering3d-action-effects 四个测试文件共 **136 项通过**。默认配置打包器在沙箱内读取父目录失败，使用同一仓库配置的 `--configLoader runner` 执行通过，未改配置或依赖。素材只写 assets3d-local，未修改 src、未联网、未执行 Git 操作。
+
+## 统一换算系数（协调者定 A，2026-10-20）
+
+外壳不再按各英雄身体缩放换算特效，统一用 `FX_SCALE = 0.44`（`src/rendering/three-mode/placeholder-renderer.ts`，60 个模型 92/高度 的中位数 0.438）。上表格数按 ×0.44/身体缩放 换算：共享普攻命中统一约 0.5 格；blitzcrank q_cas ≈ 8.5、caitlyn 轰炸命中 ≈ 8.2、lux w_mis ≈ 4.9 格。三者都是原始数据本身就大的低透明度地面/背光辉光（见上节），ArbitraryQuad 朝向修复后平铺在地面；浏览器按 0.44 摆放复看，表现为淡的大范围光晕，不遮挡棋子，保留。
+
+#276 fixture ???`assets3d-fx-batch1.json` ?????????/manifest ???????`assets3d-fx-legacy-bindings.json` ???????????????????????????????
