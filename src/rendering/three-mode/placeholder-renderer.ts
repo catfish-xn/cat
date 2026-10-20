@@ -52,6 +52,21 @@ const DEFAULT_EFFECT_SECONDS = 1;
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 const FX_SCALE = 0.44;
+/**
+ * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
+ * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
+ * minions are set lower than the doc's 0.57 because their bind pose is low (idle ≈ 0.77): 0.43 stands about as tall
+ * as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
+ */
+const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly lift: number }>> = {
+  'pve-minion-melee': { height: 0.57, lift: -0.03 }, 'pve-minion-ranged': { height: 0.43, lift: 0.02 },
+  'pve-krug': { height: 0.78, lift: 0.03 },
+  'pve-wolf-large': { height: 0.87, lift: 0.01 }, 'pve-wolf-small': { height: 0.52, lift: 0.04 },
+  'pve-razorbeak-large': { height: 0.87, lift: 0.1 }, 'pve-razorbeak-small': { height: 0.48, lift: 0.05 },
+  'pve-elder-dragon': { height: 1.52, lift: 0 }, 'pve-rift-herald': { height: 1.36, lift: 0.01 },
+};
+/** Minion tiers A/B/C share one look: 'pve-minion-melee-b' → 'pve-minion-melee'. */
+const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
@@ -244,8 +259,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.lease = lease;
       if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
-      view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
-      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT) + STAR_GAP;
+      const monster = lease.placeholder ? undefined : monsterFit(definitionId);
+      if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
+      else if (monster) {
+        // The offset goes on the GLB root, which the mixer never animates (clips drive its bones).
+        view.body = fit(lease.scene, MODEL_HEIGHT * monster.height); lease.scene.position.y += MODEL_HEIGHT * monster.lift;
+      } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
