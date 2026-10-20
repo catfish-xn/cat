@@ -146,8 +146,11 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
 
 interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
-  /** Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body). */
-  readonly stars: StarMark; starHeight: number;
+  /**
+   * Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body).
+   * Null on a PvE monster: as in TFT, monsters carry only their health bar.
+   */
+  stars: StarMark | null; starHeight: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -275,18 +278,23 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. Monsters get none.
+  const syncStars = (view: PieceView, piece: BoardPiece) => {
+    if (monsterFit(view.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
+    const level = piece.effectiveStarLevel ?? piece.starLevel;
+    if (view.stars) { view.stars.setLevel(level); return; }
+    view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
+    view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
+  };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
     const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
     root.add(ring);
-    // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them.
-    const stars = createStarMark({ effectiveStarLevel: piece.effectiveStarLevel ?? piece.starLevel, colorFor: starColorFor });
-    stars.object.scale.setScalar(STAR_SIZE);
-    scene.add(root, stars.object);
-    const view: PieceView = { root, ring, stars, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    scene.add(root);
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
-    attachBody(view);
+    attachBody(view); syncStars(view, piece);
     return view;
   };
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
@@ -298,7 +306,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
-    view.mixer?.dispose(); view.lease?.release(); view.stars.dispose();
+    view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null;
     view.root.removeFromParent();
   };
 
@@ -394,7 +402,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
-      view.stars.setLevel(piece.effectiveStarLevel ?? piece.starLevel);
+      syncStars(view, piece);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -559,8 +567,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
-      view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
-      view.stars.object.visible = view.root.visible;
+      if (view.stars) {
+        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+        view.stars.object.visible = view.root.visible;
+      }
     }
     updateEffects(seconds);
     if (width > 0) renderer.render(scene, camera);
