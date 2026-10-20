@@ -1758,16 +1758,17 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 ## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
 
-用户决定：点开别的玩家时能看到对方的强化、装备、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
+用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
 
 **投影**：`SeatPublic.publicBoard`（`PublicBoard`）在原 `units` 之外由 `toPublicBoard` 逐字段新增三个字段，均为可选类型、房间总是填写：
 - `bench: PublicBenchUnit[]`：本席 `preparation.units` 中 `team:'player'`、位于备战席的单位，`{definitionId, starLevel, slot, items[]}`，按 slot 升序；`items` 为该单位所持装备定义 id，按装备槽序。
 - `looseItems: string[]`：`location.kind === 'inventory'`（未装备）的装备定义 id，按 `MatchState.items` 原顺序。
 - `augments: string[]`：已拥有强化的定义 id，按 `MatchState.augments` 顺序（获得顺序）。
+- `anomaly?: string`（加在 `units[]` 与 `bench[]` 的单位上）：`anomalyBinding.unitId` 指向该单位时为其异常定义 id，否则省略该键。不带 `choiceId`、`boundRound`、单位 id。
 
-不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
+不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
 
-**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
+**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
 
 ### First-pass replay capture supplement
 

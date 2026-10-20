@@ -78,6 +78,7 @@ describe('toPublicBoard (C5)', () => {
       ],
       augments: [{ definitionId: 'lineup', choiceId: 'choice-secret-1', acquiredRound: 5 }, { definitionId: 'backup', choiceId: 'choice-secret-2', acquiredRound: 12 }],
       streak: { kind: 'win', count: 4 },
+      anomalyBinding: { definitionId: 'anomaly-public-test', unitId: 'unit-91', choiceId: 'choice-secret-3', boundRound: 20 },
     } as unknown as MatchState;
     const board = toPublicBoard(match);
     const deployed = base.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
@@ -88,12 +89,13 @@ describe('toPublicBoard (C5)', () => {
     const benched = base.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench');
     expect(board.bench).toHaveLength(benched.length + 1);
     expect(board.bench!.map(unit => unit.slot)).toEqual([...board.bench!.map(unit => unit.slot)].sort((a, b) => a - b));
-    expect(board.bench!.find(unit => unit.slot === 0)).toEqual({ definitionId: base.preparation.units[0]!.definitionId, starLevel: 1, slot: 0, items: [first] });
-    for (const unit of board.bench!) expect(Object.keys(unit).sort()).toEqual(['definitionId', 'items', 'slot', 'starLevel']);
+    expect(board.bench!.find(unit => unit.slot === 0)).toEqual({ definitionId: base.preparation.units[0]!.definitionId, starLevel: 1, slot: 0, items: [first], anomaly: 'anomaly-public-test' });
+    for (const unit of board.bench!) expect(Object.keys(unit).filter(key => key !== 'anomaly').sort()).toEqual(['definitionId', 'items', 'slot', 'starLevel']);
+    expect([...board.units, ...board.bench!].filter(unit => 'anomaly' in unit)).toHaveLength(1);
     expect(board.looseItems).toEqual([second]);
     expect(board.augments).toEqual(['lineup', 'backup']);
     const text = JSON.stringify(board);
-    for (const forbidden of ['unit-9', 'item-', 'choice-secret', 'acquiredRound', 'streak', 'gold', 'shop', 'seed', 'rngState', 'pve-', 'enemy', 'inventory']) expect(text).not.toContain(forbidden);
+    for (const forbidden of ['unit-9', 'item-', 'choice-secret', 'acquiredRound', 'boundRound', 'unitId', 'streak', 'gold', 'shop', 'seed', 'rngState', 'pve-', 'enemy', 'inventory']) expect(text).not.toContain(forbidden);
   });
   it('rides on every seat of every view, so each player sees the same public board of a seat', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));

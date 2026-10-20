@@ -27,7 +27,7 @@ export function toSeatPublic(seat: SeatState): SeatPublic {
 
 /**
  * Public build of one seat (C5, 2026-10-20 scouting): its own board and bench units, each with the definition ids
- * of the items it holds, its unequipped item definitions and its owned augment definitions. Built field by field
+ * of the items it holds and of its bound anomaly, its unequipped item definitions and its owned augment definitions. Built field by field
  * from the preparation state; shop, gold, XP, streak, pending choices, unit/item instance ids and RNG never leave
  * the room. Board sorted by cell and bench by slot so equal builds serialize identically.
  */
@@ -36,10 +36,11 @@ export function toPublicBoard(match: MatchState): PublicBoard {
   const heldBy = (unitId: string) => match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
     .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0))
     .map(item => item.definitionId);
+  const anomalyOf = (unitId: string) => match.anomalyBinding?.unitId === unitId ? { anomaly: match.anomalyBinding.definitionId } : {};
   for (const unit of match.preparation.units) {
     if (unit.team !== 'player') continue;
-    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id) });
-    else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id) });
+    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });
+    else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id), ...anomalyOf(unit.id) });
   }
   // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
   for (const summon of readItemSummons(match)) {

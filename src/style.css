@@ -484,6 +484,8 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-empty, .opponent-loose-label { font-size: 11px; color: #7e95a4; }
 .opponent-bench { --cell: 44px; display: grid; grid-template-columns: repeat(9, var(--cell)); gap: 2px; justify-content: center; padding-top: 4px; border-top: 1px solid #2a3f49; }
 .opponent-bench .opponent-cell { height: 40px; background: #16252b; }
+.opponent-anomaly { position: absolute; top: -4px; right: -6px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; background: #3a1f4a; border: 1px solid #c48ae6; font-size: 9px; color: #f0dcff; }
+.opponent-anomaly img { width: 14px; height: 14px; border-radius: 50%; }
 /* G1-P7 carousel: a ring over the enemy half of the board; the bench rows below stay visible. */
 .carousel-panel { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
   width: min(640px, calc(100% - 16px)); display: grid; gap: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid #b4a1f5;

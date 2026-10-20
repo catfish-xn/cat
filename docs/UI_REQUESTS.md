@@ -349,7 +349,7 @@
 | --- | --- | --- | --- | --- |
 | `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
 | `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
-| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5）；`bench[{definitionId,starLevel,slot,items[]}]`、`looseItems[]`、`augments[]`（2026-10-20，合同 §27） | 该席场上与备战席单位、所持与未装备的装备定义、已有强化（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读（只算棋盘） | 不含连胜/连败、商店、金币、经验、待选强化、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
+| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5）；`bench[{definitionId,starLevel,slot,items[]}]`、`looseItems[]`、`augments[]`、单位上的 `anomaly?`（2026-10-20，合同 §27） | 该席场上与备战席单位、所持与未装备的装备定义、单位异常、已有强化（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读（只算棋盘） | 不含连胜/连败、商店、金币、经验、待选强化、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
 | `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
@@ -835,7 +835,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 候选：排除最近 `avoidRecentRounds` 轮对手；为空则窗口减 1，直到 0（全部存活席）。若各席候选互不相容、凑不出完整配对，全体同时减 1 再试（2 → 1 → 0），保证开战抽到的对手一定在准备期展示的候选里。不消耗 RNG。
 - 时机：回合进入时只算候选（`RoomState.opponentCandidates`）；配对与全部 `battleSeeds` 挪到准备截止冻结时抽取，抽取顺序仍是"洗牌 → 奇数镜像来源 → 每场种子"。空历史时与原先无约束洗牌逐位相同。配对历史 `RoomState.pairingHistory` 在房间状态里，断线、接管、重连后候选不变。
 - 投影：`PlayerView.opponentCandidates?: string[]`（选择/准备期、PvP 轮，按座位序，只含存活、不含自己；其它时候为空）；`opponentSeatId` 在冻结前为 null。`NET_PROTOCOL_VERSION` 保持 2（只增视图字段，依据写在 `messages.ts`）。
-- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。2026-10-20 起另显示对方强化、备战席和未装备装备，不显示连胜/连败（合同 §27）。
+- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。2026-10-20 起另显示对方强化、异常、备战席和未装备装备，不显示连胜/连败（合同 §27）。
 
 ### SR-G1-01 请 Codex 用 §10 规则替换占位数值（P2，只改参数）
 

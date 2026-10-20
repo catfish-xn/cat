@@ -1,7 +1,7 @@
 /**
  * Read-only "对方阵容" panel (work order C5): opened by clicking a seat in the right column, it floats over
  * the top of my board without replacing it. It shows what the server published as that seat's public
- * build (board and bench units, stars, items, unequipped items, augments) and the traits the board units
+ * build (board and bench units, stars, items, anomalies, unequipped items, augments) and the traits the board units
  * activate. Streak, gold and shop are not published. It sends no command and reads no private state:
  * everything comes from `SeatPublic.publicBoard`.
  */
@@ -17,7 +17,7 @@ import { traitHoverCard } from '../../presentation/hover-card';
 import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBenchUnit, PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
-import { itemDisplayName } from '../../presentation/g23-display';
+import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../../presentation/augment-display';
 
 /** Bench slots drawn when the seat's bench is shorter (TFT bench width); a longer bench draws every slot. */
@@ -169,6 +169,13 @@ export class OpponentBoardPanel {
     chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
+    if (unit.anomaly) {
+      // 2026-10-20 scouting: the anomaly bound to this unit, marked on its portrait with the shared anomaly icon.
+      const name = anomalyDisplayName(unit.anomaly), mark = element('span', '', 'opponent-anomaly');
+      mark.dataset.anomaly = unit.anomaly; mark.title = [`异常：${name}`, anomalyPlayerDescription(unit.anomaly)].filter(Boolean).join('\n');
+      mark.insertAdjacentHTML('afterbegin', anomalyIconHtml(14) || '<b>异</b>');
+      chip.title += ` · 异常：${name}`; chip.append(mark);
+    }
     if (unit.items.length) {
       const items = element('span', '', 'opponent-items');
       for (const id of unit.items) {

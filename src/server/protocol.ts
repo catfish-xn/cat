@@ -41,7 +41,7 @@ export interface SeatPublic {
   readonly controller: SeatController;
   /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
-   * Board and bench units with the items they hold, unequipped items and owned augments (2026-10-20 scouting).
+   * Board and bench units with the items and anomaly they hold, unequipped items and owned augments (2026-10-20 scouting).
    * Never the shop, gold, XP, streak, pending choices or RNG. Optional so older views and tests stay valid; the room always fills it.
    */
   readonly publicBoard?: PublicBoard;
@@ -58,6 +58,8 @@ export interface PublicBoardUnit {
    * `starLevel` is its stage appearance. Not a champion: no trait, no avatar, no items; the holder and item instance stay private.
    */
   readonly summon?: true;
+  /** 2026-10-20 scouting: the anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
 }
 /** A unit on the owner's bench (2026-10-20 scouting): same fields as a board unit, a bench slot instead of a cell. */
 export interface PublicBenchUnit {
@@ -66,6 +68,8 @@ export interface PublicBenchUnit {
   readonly slot: number;
   /** Item definition ids held by the unit, in slot order. */
   readonly items: readonly string[];
+  /** The anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
 }
 export interface PublicBoard {
   readonly units: readonly PublicBoardUnit[];
