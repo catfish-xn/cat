@@ -203,7 +203,7 @@ export class BoardScene extends Phaser.Scene {
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
-      rerollAugment: (choice, generation) => this.command(this.session.augmentReroll(choice, generation), '强化选项已刷新 · 等级不变'),
+      rerollAugment: (choice, generation, optionIndex) => this.command(this.session.augmentReroll(choice, generation, optionIndex), '强化卡已刷新 · 等级不变'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
       control: name => this.panelControl(name),
