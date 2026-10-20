@@ -30,8 +30,8 @@ async function walk(root, directory = root) {
     }
     return files.sort();
 }
-export function makeManifest(models, effects, validate) {
-    const manifest = { schemaVersion: 1, models, effects };
+export function makeManifest(models, effects, validate, actionEffects) {
+    const manifest = { schemaVersion: 1, models, effects, ...(actionEffects === undefined ? {} : { actionEffects }) };
     validate(manifest);
     return manifest;
 }
@@ -46,6 +46,7 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
         await write(reportPath, json({ sourcePath: system.sourcePath, reason: system.reason, emitters: system.report,
             originalFields: system.originalFields, systemGaps: system.systemGaps }));
         const counts = { mapped: 0, skipped: 0, rejected: 0 };
+        if (converted.counts.approximated !== undefined) counts.approximated = 0;
         system.report.forEach(e => counts[e.status]++);
         if (!system.document) {
             // Remove this system's former payload on --force; retain its sidecar.
@@ -62,7 +63,7 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
     }
     return { effects, systems, actionEffects };
 }
-export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false } = {}) {
+export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
     if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)))
         throw new Error('output-overlaps-source');
@@ -248,7 +249,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             } catch (error) { meshReasons.set(ref, error.message); meshReports.push({ source: ref, status: 'skipped', reason: error.message }); }
         }
         const converted = convertParticles(particleSources[id] ?? {}, p => textureByCanonical.get(canonical(p)), parseParticleDocument,
-            { meshPath: p => meshPaths.get(p), meshReasons });
+            { meshPath: p => meshPaths.get(p), meshReasons, approximateLinger });
         const usedMeshes = new Set(converted.systems.flatMap(s => s.document?.emitters.map(e => e.mesh).filter(Boolean) ?? []));
         for (const path of usedMeshes) await write(path, meshBuffers.get(path));
         for (const row of meshReports) if (row.path) row.written = usedMeshes.has(row.path);

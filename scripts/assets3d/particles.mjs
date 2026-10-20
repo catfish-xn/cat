@@ -112,6 +112,18 @@ export function mapEmitter(source, texturePath, options = {}) {
   try {
     const p = primitive(source, options);
     if (p.status) return p;
+    const approximations = [];
+    // Explicit opt-in only. This policy omits the tail, never claims equivalence
+    // or infers linger types/curves from these two duration fields.
+    if (options.approximateLinger === true) {
+      source = { ...source };
+      for (const field of ['particleLinger', 'emitterLinger']) if (Object.hasOwn(source, field)) {
+        const value = source[field];
+        if (!Number.isFinite(value) || value < 0 || value > 3600) throw new Error(`invalid-source-linger:${field}`);
+        approximations.push({ field, value, handling: 'omit-tail', reason: 'preview-omits-post-lifetime-residue' });
+        delete source[field];
+      }
+    }
     if (source.__type && source.__type !== 'VfxEmitterDefinitionData') throw new Error(`unsupported-emitter-type:${source.__type}`);
     if (![undefined, true, false, 0, 1].includes(source.isSingleParticle)) throw new Error('invalid-source-single-particle');
     for (const key of Object.keys(source)) if (!allowed.has(key)) throw new Error(`unmapped-source-field:${key}`);
@@ -163,12 +175,15 @@ export function mapEmitter(source, texturePath, options = {}) {
       if (div[0] * div[1] > 1 && source.frameRate === undefined) throw new Error('unverified-atlas-frame-rate');
       out.frames = { columns: div[0], rows: div[1], fps: source.frameRate === undefined ? 0 : constant(source.frameRate, 'frameRate'), loop: false };
     }
-    return { status: 'mapped', reason: 'exact-v2-subset', emitter: out };
+    return approximations.length
+      ? { status: 'approximated', reason: 'omitted-linger-tail', approximations, emitter: out }
+      : { status: 'mapped', reason: 'exact-v2-subset', emitter: out };
   } catch (error) { return { status: 'rejected', reason: error.message }; }
 }
 export function convertParticles(source, texturePath, validate, options = {}) {
   const inventory = inventoryParticles(source), counts = { mapped: 0, skipped: 0, rejected: 0 }, systems = [], byReason = {};
-  const reasonsByStatus = { skipped: {}, rejected: {} };
+  if (options.approximateLinger === true) counts.approximated = 0;
+  const reasonsByStatus = { approximated: {}, skipped: {}, rejected: {} };
   const limits = { ...PARTICLE_LIMITS, ...options.limits };
   let budgetError;
   try { validate({ schemaVersion: 2, limits, emitters: [] }); }
@@ -195,12 +210,16 @@ export function convertParticles(source, texturePath, validate, options = {}) {
       catch (error) { result = { status: 'rejected', reason: `contract-rejected:${error.message}` }; }
       if (result.emitter) { accepted.push(result.emitter); maxDuration = candidateDuration; }
       report.push({ sourcePath: e.id, mapped: result.status === 'mapped', status: result.status, reason: result.reason,
+        ...(result.approximations ? { approximations: result.approximations } : {}),
         inventoryGaps: e.gaps, originalFields: e.source });
     }
     let document = accepted.length ? { schemaVersion: 2, limits: { ...limits, maxDuration }, emitters: accepted } : undefined;
     if (document) try { validate(document); }
     catch (error) {
-      for (const row of report.filter(r => r.mapped)) Object.assign(row, { mapped: false, status: 'rejected', reason: `contract-rejected:${error.message}` });
+      for (const row of report.filter(r => ['mapped', 'approximated'].includes(r.status))) {
+        Object.assign(row, { mapped: false, status: 'rejected', reason: `contract-rejected:${error.message}` });
+        delete row.approximations;
+      }
       document = undefined;
     }
     for (const row of report) {
