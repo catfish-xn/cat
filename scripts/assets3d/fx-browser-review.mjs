@@ -1,19 +1,22 @@
-﻿// Offline, isolated-emitter review. Generated evidence stays in the local batch.
+﻿// Offline, isolated-emitter review. Read-only linked inputs may use a separate evidence directory.
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
-import { resolve } from 'node:path';
-import { readFile } from 'node:fs/promises';
-import { safeInputPath, writeOutputFile } from './safe-path.mjs';
+import { resolve, basename } from 'node:path';
+import { mkdir, readFile, realpath } from 'node:fs/promises';
 import { argumentsFor } from './plan-fetch.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
+import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 
-const args = argumentsFor(process.argv.slice(2), ['--out', '--effect']);
-const root = await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
+const args = argumentsFor(process.argv.slice(2), ['--out', '--effect', '--screenshots']);
+const root = args.screenshots
+ ? withinRoot(resolve('assets3d-local'), resolve(args.out ?? 'assets3d-local/fx-batch3'))
+ : await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
+await safeInputPath(root, resolve(root, 'manifest.json'));
 const sizes = await readFile(await safeInputPath(root, resolve(root, 'size-report.json')), 'utf8').then(JSON.parse);
 const evidence = [];
- const server = await createServer({ configFile: false, cacheDir: resolve(root, 'browser-cache'),
-  resolve: { preserveSymlinks: true }, optimizeDeps: { noDiscovery: true, entries: [] },
-  server: { host: '127.0.0.1', port: 5197 } });
+const screenshots = await safeOutputPath(args.screenshots ?? root, { directory: true });
+await mkdir(screenshots, { recursive: true });
+const server = await createServer({ configFile: false, resolve: { preserveSymlinks: true }, optimizeDeps: { noDiscovery: true, entries: [], include: [] }, cacheDir: resolve(screenshots, 'browser-cache'), server: { host: '127.0.0.1', port: 5197, fs: { allow: [resolve('.'), await realpath(root)] } } });
 let browser;
 try {
  await server.listen();
@@ -26,7 +29,11 @@ try {
  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
  await page.route('http://127.0.0.1:*/review', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
  await page.goto(server.resolvedUrls.local[0] + 'review', { waitUntil: 'domcontentloaded' });
- for (const effect of (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',')) {
+ const effects = args.effect === 'all'
+  ? await page.evaluate(async base => Object.keys((await (await fetch(base + '/manifest.json')).json()).effects), '/' + resolve(root).split(/[\\/]/).slice(-2).join('/'))
+  : (args.effect ?? 'garen_tft13_garen_base_r_aoe_impact').split(',');
+ for (const effect of effects) {
+ await page.goto(server.resolvedUrls.local[0] + 'review', { waitUntil: 'domcontentloaded' });
  console.log('review-effect', effect);
  const samples = sizes.results.find(r => r.effectId === effect)?.emitters.map(e => ({ index: e.index, time: e.opacityVisibleAt ?? e.at })) ?? [];
  const result = await page.evaluate(async ({ base, effect, samples }) => {
@@ -68,11 +75,11 @@ try {
   textures.forEach(t => t.dispose()); meshes.forEach(g => g.dispose());
   return { id, emitters: doc.emitters.length, errors };
  }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples });
- await page.screenshot({ path: resolve(root, 'browser-review-' + result.id + '.png'), fullPage: true });
+ await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'browser-review-' + result.id + '.png'), { force: true }), fullPage: true });
  console.log(JSON.stringify(result));
  evidence.push({ ...result, samples });
  }
- await writeOutputFile(resolve(root, 'browser-review-report.json'), JSON.stringify(evidence, null, 2) + '\n', { force: true });
+ await writeOutputFile(resolve(screenshots, 'browser-review-report.json'), JSON.stringify(evidence, null, 2) + '\n', { force: true });
 } finally { await browser?.close(); await server.close(); }
 
 
