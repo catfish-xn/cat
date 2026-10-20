@@ -16,6 +16,8 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  /** Private PvE replay inputs, never included in seat/public projections. */
+  readonly bankSamples?: readonly import('./combat-types').CombatBankSample[];
   readonly mechanicReceiptPrefixLength?:number;
   readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
   readonly combatEventCount: number;

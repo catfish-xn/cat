@@ -84,6 +84,8 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  /** Private PvE live-bank transcript. Absent when no authoritative sample changed state. */
+  readonly bankSamples?: readonly CombatBankSample[];
   readonly trenchSplits?:readonly {readonly ownerId:string;readonly itemInstanceId:string;readonly tick:number;readonly maxHp:number;readonly permanentAdBps:number;readonly copyIds:readonly string[];readonly g23?:Pick<G23State,'conquestTakedowns'|'highRoller'>}[];
   readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
   readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;

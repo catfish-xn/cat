@@ -103,7 +103,8 @@ export interface CombatReplay {
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;
 }
-export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>;
+export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>
+  & Partial<Pick<import('./two-sided-types').BattleResult, 'mirrorOfSeatId'>>;
 /** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
 export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
   return events.flatMap(event => {
@@ -124,6 +125,8 @@ function equalViewField(a: unknown, b: unknown): boolean {
 }
 
 export interface CombatReplayRecorder {
+  readonly initial: CombatViewState;
+  readonly initialFrame: CombatReplayTick;
   record(previousState: CombatState, step: import('./combat').CombatStep): CombatReplayTick;
   finish(terminalState: CombatState): CombatReplay;
 }
@@ -139,6 +142,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
     events: toCombatViewEvents(initialEvents.filter(event => event.eventSeq < firstStepEventSeq)) })];
   let previous = initial, result: CombatReplay | null = null;
   return {
+    initial, initialFrame: ticks[0],
     record(previousState, next) {
       if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
         || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
@@ -183,7 +187,13 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const recorder = createCombatReplayRecorder(battle.initial, battle.events);
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
   let state = battle.initial;
-  validateD11BankSamples(battle.bankSamples,battle.terminal.tick);
+  const bankSamples = battle.bankSamples ?? battle.terminal.bankSamples;
+  validateD11BankSamples(bankSamples,battle.terminal.tick);
+  if (bankSamples?.some(sample => sample.team === 'enemy' && battle.mirrorOfSeatId != null || !battle.initial.units.some(unit => unit.team === sample.team
+    && unit.mechanics?.some(m => m.mechanic === 'd11Anomaly' && m.source.definitionId === 'avarice-incarnate'))))
+    throw new RangeError('invalid-replay-input');
+  if (battle.bankSamples && battle.terminal.bankSamples
+    && canonicalContent(battle.bankSamples) !== canonicalContent(battle.terminal.bankSamples)) throw new RangeError('replay-divergence');
   let bankCursor=0;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
@@ -207,8 +217,11 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     if (result) return result;
     let steps = 0;
     while (steps < maxTicks && state.status === 'running' && state.tick < battle.terminal.tick) {
-      while(battle.bankSamples?.[bankCursor]?.tick===state.tick){
-        const sample=battle.bankSamples[bankCursor++];state=sampleD11CombatGold(state,sample.team,sample.liveGold);
+      while(bankSamples?.[bankCursor]?.tick===state.tick){
+        const sample=bankSamples[bankCursor++];
+        const sampled=sampleD11CombatGold(state,sample.team,sample.liveGold);
+        if(sampled===state)throw new RangeError('replay-divergence');
+        state=sampled;
       }
       const next = stepCombat(state);
       const frame = recorder.record(state, next);
@@ -227,6 +240,13 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     }
     if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
     if (canonicalContent(toCombatViewState(state)) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+    if (bankSamples) {
+      // PvE carries the private transcript on terminal; it is metadata, not a rule input to stepCombat.
+      const { bankSamples: _actualSamples, ...actual } = state;
+      const { bankSamples: _expectedSamples, ...expected } = battle.terminal;
+      if (bankCursor !== bankSamples.length || canonicalContent(actual) !== canonicalContent(expected))
+        throw new RangeError('replay-divergence');
+    }
     if (comparisonFailed) throw comparisonError;
     if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');
