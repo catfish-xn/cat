@@ -810,7 +810,7 @@ export class BoardScene extends Phaser.Scene {
     // Keep that combat view until Continue clears it, including restored settlements.
     for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
       units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
-        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
+        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell }, ...(unit.effectiveStarLevel === 4 ? { effectiveStarLevel: 4 } : {}) } as Unit);
       ids.add(unit.id);
     }
     for (const [id, token] of this.tokens) {
@@ -1171,7 +1171,8 @@ export class BoardScene extends Phaser.Scene {
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
-        starLevel: token.getData('starLevel'), x: token.x, y: token.y, alive: !fallen.has(id),
+        starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
+        x: token.x, y: token.y, alive: !fallen.has(id),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
       fighting: this.session.combatView !== null, dragging: this.draggingId };
