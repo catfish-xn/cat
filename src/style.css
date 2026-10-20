@@ -943,3 +943,29 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 .shop-dock .mobile-controls [data-debug="shop-lock"][aria-pressed="true"] { border-color: var(--lol-gold); color: #ffd782; background: linear-gradient(180deg, #3a2f18, #1d170b); }
 .shop-dock .hud-chip { border: 1px solid #1d2f3d; background: #08121c; }
 .shop-dock .hud-gold strong { color: #f2c24f; }
+/* 2D 面板美化 · 右侧玩家列表（online）：按云顶右侧血条列还原——圆形头像（自己金边、对手红边），名字与细血条居中，
+   右侧大号血量和等级；行更矮，八人一屏放下。数据和排序不变。 */
+.online-seats { gap: 4px; }
+.online-seat { grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding: 5px 8px 5px 5px; border-radius: 26px 6px 6px 26px;
+  background: linear-gradient(90deg, #0b151fcc, #14212ccc); border: 1px solid #1d2f3d; cursor: pointer; transition: background .15s ease; }
+.online-seat:hover { background: linear-gradient(90deg, #12202c, #1c2e3b); }
+.online-seat.me { border-color: #c8aa6e; background: linear-gradient(90deg, #2a2412, #14212c 70%); }
+.online-seat.opponent { border-color: #f08080; }
+.online-seat.viewing { box-shadow: 0 0 0 1px #68ddd0; }
+.online-seat .seat-avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #0b151f;
+  box-shadow: 0 0 0 2px #3a5260, 0 2px 6px #0008; }
+.online-seat .seat-avatar img, .online-seat .seat-avatar svg { width: 100%; height: 100%; border: 0; border-radius: 50%; object-fit: cover; }
+.online-seat .seat-avatar-placeholder { font-size: 18px; font-weight: 700; color: #9aaeb9; }
+.online-seat.me .seat-avatar { box-shadow: 0 0 0 2px #c8aa6e, 0 0 8px #c8aa6e88; }
+.online-seat.opponent .seat-avatar { box-shadow: 0 0 0 2px #f08080, 0 0 8px #f0808088; }
+.online-seat.candidate .seat-avatar { box-shadow: 0 0 0 2px #f0808088; }
+.online-seat .seat-main { display: grid; gap: 5px; min-width: 0; }
+.online-seat .seat-head { gap: 4px; font-size: 13px; }
+.online-seat.me .seat-name { color: #f0e6d2; font-weight: 700; }
+.online-seat .seat-bar { height: 6px; }
+.online-seat .seat-foot { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: baseline; column-gap: 4px; row-gap: 1px; min-width: 32px; }
+.online-seat .seat-foot .seat-hp { grid-column: 1 / -1; }
+.online-seat .seat-hp { font-size: 18px; line-height: 1; }
+.online-seat.eliminated .seat-hp { font-size: 12px; color: #9aaeb9; }
+.online-seat .seat-level { font-size: 11px; color: #7e95a4; }
+.online-seat .seat-damage { margin: 0; font-size: 12px; line-height: 1; }
