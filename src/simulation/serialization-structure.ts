@@ -163,6 +163,12 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(!augmentIds.has(augment.definitionId), 'duplicate augment');
     augmentIds.add(augment.definitionId); id(augment.choiceId); integer(augment.acquiredRound, 1); requireValue(augment.acquiredRound <= state.round, 'augment round');
   }
+  if(state.d14?.held){
+    const held=state.d14.held;
+    validateInputAssets({preparation:{...state.preparation,units:[held.unit]},items:held.items},{playerLevel:state.level,nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial,teamSizeBonus},[],inputValidation);
+    requireValue(!units.has(held.unit.id)&&held.items.every(i=>!state.items.some(v=>v.id===i.id)),'D14 duplicate holding');
+    units.set(held.unit.id,held.unit);
+  }
   if (state.anomalyBinding !== null) {
     record(state.anomalyBinding); const binding = state.anomalyBinding;
     definitionId(binding.definitionId, ANOMALY_DEFINITIONS, 'anomaly definition'); id(binding.unitId);
@@ -338,7 +344,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       const formOrigin=resolved.itemSummon?{...origin,location:{kind:'board' as const,cell:resolved.itemSummon.formCell}}:origin;
       if(resolved.itemSummon)requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'summon starting cell');
       requireValue((unit.form??null)===getUnitForm(formOrigin,combatPreparation.board),'frozen unit form');
-      requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
+      requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel && unit.effectiveStarLevel===resolved.effectiveStarLevel, 'combat unit identity');
       if (unit.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass'))
         requireValue(origin.location.kind==='board'&&same(unit.startingCell,origin.location.cell),'cutlass starting cell');
       const { stats } = resolved;

@@ -1,3 +1,4 @@
+import { d14PrivateDisplay } from './d14-runtime';
 import type { MatchState } from './match-types';
 import { d11PrivateDisplay } from './d11-display';
 import type { RevealedDropView } from './m8/ui-contracts';
@@ -75,6 +76,7 @@ export function toPrivateSeatView(state: MatchState) {
     ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
       orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
     ...(d11Display?{d11Display}:{}),
+    ...(state.d14?{d14Display:d14PrivateDisplay(state)}:{}),
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),
@@ -87,7 +89,7 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
-      units: [...units, ...enemies].map(preparationUnitView) },
+      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:9,poolCopies:9}:{})})) },
     items: items.map(item => ({ ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
       ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) })),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId

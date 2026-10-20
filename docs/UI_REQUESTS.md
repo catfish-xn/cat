@@ -1046,3 +1046,17 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 用途：准确展示新工具、满席拒绝与锻造器领取内容。继续调用useConsumable/claimOrb/selectChoice；不改变排版、动画或规则。
 
 验收：tsc无旧枚举错误；两种复制器/重铸器/拆卸器名称与14.24 zh_cn一致；forge不进入英雄渲染回退；复制预览、bench-full拒绝可读；单位整装重铸目标正确；联机领取后四选一及重连收据展示正确。未获越界修改授权前，Codex只提交领域和此需求，保留明确编译阻塞。
+
+## V16-UI-250：终极英雄与进入未知
+
+领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
+
+- `PrivateSeatView.d14Display?`：`anomalyId, choiceId, unitId, phase(waiting/promoted/absent/returned/retired), dueOrdinal, remainingSettlements, effectiveStarLevel, physicalStarLevel`。进入未知 absent 时另有仅本席可见的 `heldUnit, heldItems`；它们已从 `preparation.units/items` 移出，不提供出售/装备/复制控件。满席到期显示等待空位，不能当成已获得增益。
+- 终极英雄私有单位行在 promoted 时有 `starLevel:3, effectiveStarLevel:4, sellGold:9, poolCopies:9`；`d14Display` 也提供 `sellGold:9,poolCopies:9`。显示为四星，但出售说明明确写 **“四星卖9金（专用永久晋升，物理9份）”**，不可按通用四星27份推导售价或退池数。
+- 公共 `CombatViewUnit.effectiveStarLevel?`：晋升单位为4，其余省略并读取已有 starLevel；`choiceEffects` 包含两个异常的名称/说明。物理 starLevel 仍1–3，UI 不能把它写回4。
+- 私有 `d11Display.definitions` 现在也提供两个 D14 异常的名称/说明；待选择的报价也可读取。`remainingSettlements` 是权威数据，不按动画、计时器或 Continue 点击次数另算。
+- 验收：3星1费目标能看到终极英雄、其它目标不提供；选择后3次真实结算晋升显示四星且卖9金；进入未知携装备离场，倒数归零满席仍等待，腾位归来显示永久+50%AD/+50AP；读档/重连不重复发放。其它席的候选和托管装备不进入公共投影。
+
+只定义数据和行为，不规定视觉布局；服务器/表现层接入由其负责人完成。本轮实际 `tsc --noEmit` 通过，无额外编译阻塞。前一节 V16-UI-01 的编译诊断是史诗奖励交接时记录。
+
+全套检查另发现 `g23AnomalyApiName` 缺少两个 D14 名称映射；基线还缺 D11 的贪财化身/猎头者映射。最小待审补丁为 `artifacts/v16-recording/UI_ADAPTER_250.patch`，只补四个已由本地来源证实的 apiName，不改布局、素材或规则；未写入表现层源码。该补丁不包含四星、售价、离场倒数等控件接线，仍须完成上面的验收。准备阶段四星基础/技能应读取领域导出的 `d14UnitBase(unit, true)`，上场后的含装备/羁绊数值读取 `buildStrategySnapshot(state)`；战斗中读取现有 `CombatViewUnit` 数值，不能在界面自行续推星级倍率。

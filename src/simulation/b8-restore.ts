@@ -1,3 +1,4 @@
+import { validateD14,d14OwnedUnits,d14OwnedItems,d14HeldAtPrefix,d14CertificateAtCombat } from './d14-runtime';
 import {validateAnomalyAcquisition} from './anomaly-acquisition';
 import {readItemSummonPositions} from './g2-4b-voidspawn';
 import {validateG23GrantEvidence} from './g2-3-grant-evidence';
@@ -76,22 +77,34 @@ function replayEquipment(items: readonly ItemInstance[], preparation: GameState,
 /** Carry exact equipment bindings through the ordered resource ledger.
  * Before the first battle, start empty and rebuild units/items from validated births. */
 export function validateHistoricalEquipment(previous: MatchState | null, next: MatchState): void {
-  let items: readonly ItemInstance[] = previous?.items ?? [], serial = previous?.nextItemSerial ?? 1;
+  let items: readonly ItemInstance[] = previous?d14OwnedItems(previous):[], serial = previous?.nextItemSerial ?? 1;
   let preparation = previous?.preparation ?? {...next.preparation, units:[]};
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
   const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
+  const absentItems=new Set<string>();
   const checkOpening = (prefixLength: number) => {
     const basis = next.combatInputBasis;
     if (basis?.provenancePrefixLength === prefixLength) {
-      check(equipmentContinuation(items, basis.inputs.items), 'historical opening equipment continuation');
-      items = basis.inputs.items;
+      const hidden=new Set(d14HeldAtPrefix(next,prefixLength).heldItemIds);
+      check(equipmentContinuation(items.filter(i=>!hidden.has(i.id)), basis.inputs.items), 'historical opening equipment continuation');
     }
   };
   for (const fact of next.resourceProvenance.entries.slice(previous?.resourceProvenance.entries.length ?? 0)) {
     checkOpening(fact.sequence);
+    if(fact.kind==='item-combined')check(fact.event.consumedIds.every(id=>!absentItems.has(id)),'D14 hidden combine');
+    if(fact.kind==='consumable-used')check(fact.record.affectedItems.every(i=>!absentItems.has(i.id)),'D14 hidden consumable');
     switch (fact.kind) {
+      case 'd14-selected': {
+        const receipt=next.scheduleReceipts.find(r=>r.eventId===fact.choiceId);
+        if(receipt?.definitionId==='into-the-unknown'){
+          const attached=items.filter(i=>i.location.kind==='unit'&&i.location.unitId===fact.unitId);
+          check(equipmentContinuation(attached,fact.heldItems),'D14 departure equipment');
+          fact.heldItems.forEach(i=>absentItems.add(i.id));
+        }break;
+      }
+      case 'd14-returned': absentItems.clear();break;
       case 'unit-acquired': {
         const definitionId = fact.source.kind === 'opening' ? selectOpeningUnit(fact.source.seed, fact.source.seatId)
           : fact.source.kind === 'shop' ? fact.source.definitionId : birthById.get(fact.unitId)?.definitionId;
@@ -148,7 +161,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
     }
   }
   checkOpening(next.resourceProvenance.entries.length);
-  check(equipmentContinuation(items, next.items) && serial === next.nextItemSerial, 'historical equipment continuation');
+  check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
 
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
@@ -262,10 +275,11 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   validateG23GrantEvidence(state,context,parsedJsonInput);
   validateAnomalyAcquisition(state,context,parsedJsonInput);
-  check(equal(current,{units:sorted([...state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
-    items:sorted(state.items.map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
+  validateD14(state,context);
+  check(equal(current,{units:sorted([...d14OwnedUnits(state).filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
+    items:sorted(d14OwnedItems(state).map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
-  if (!state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
+  if (state.d14 || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);
@@ -280,7 +294,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -322,6 +336,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   let preparation = structuredClone(basis.inputs.preparation), items = structuredClone(basis.inputs.items), binding = structuredClone(basis.inputs.anomalyBinding);
   let nextUnit = basis.nextUnitSerial, nextItem = basis.nextItemSerial, cursor = basis.provenancePrefixLength, saleGold = 0;
   let committed = false;
+  const heldIds=new Set(d14HeldAtPrefix(state,basis.provenancePrefixLength).heldItemIds);
+  let hiddenItems=state.resourceProvenance.entries.flatMap(e=>e.kind==='d14-selected'?e.heldItems:[]).filter(i=>heldIds.has(i.id));
+  if(state.d14?.anomalyId==='into-the-unknown'&&!binding)binding={definitionId:state.d14.anomalyId,unitId:state.d14.originalUnit.id,choiceId:state.d14.choiceId,boundRound:state.d14.atOrdinal+1};
   const take = (fact: ResourceFact) => {
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
@@ -424,6 +441,12 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     return true;
   };
   const continuation = () => {
+    if(entries[cursor]?.kind==='d14-returned'){
+      const fact=entries[cursor];check(fact.kind==='d14-returned'&&state.d14&&committed,'D14 return boundary');
+      const unit=state.preparation.units.find(u=>u.id===fact.unitId);check(unit,'D14 returned unit');
+      preparation={...preparation,units:[...preparation.units,unit]};items=[...items,...hiddenItems];hiddenItems=[];
+      take({kind:'d14-returned',choiceId:fact.choiceId,unitId:fact.unitId,settledOrdinal:fact.settledOrdinal});
+    }
     combinations();
     while (mechanicBirth()) combinations();
   };

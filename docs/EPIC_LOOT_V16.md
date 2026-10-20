@@ -216,3 +216,89 @@ feat(simulation): add v16 epic PvE rewards and unify reforger
 - 一组一珠及锻造器/冠冕显示gold，铜gray、银blue；史诗变体使用每席内容流，冻结次序如上。
 - 锻造器四选一、相同seed稳定、收据唯一；单机终局首候选政策沿用G24现有约定，不开新终局窗口。
 - 满席复制器严格拒绝，包含可能合星的情况；单机直接授予，联机成功使用后生成已有mechanic英雄法球，领取时共享池扣卡/缺货折费用金币/满席按原getUnitSellPrice折金。未修改售价。
+
+## 终极英雄与进入未知（#250，同一 v16 收口）
+
+本轮基线 `b531bfa3`；工作区分支 `v16-250` 的合并 HEAD 为 `debfad8a`。版本仍为 `s13-g2-3-v16` / `s13-14.24b-g2-3-v16`，不再升版。#250 的独立 D3/D14 引擎继续作为认证事务参考和46项来源/机制回归；生产适配器 `d14-runtime.ts` 使用 Match 的现有资源账本，不并行运行第二套所有权引擎。四星基础/技能编译与独立包共用 `d14UnitBase`。
+
+- 注册两个等权异常，强化仍60；异常定义与单机候选54→56，联机53→55（继续仅排除贪财化身）。实际目标池要求两者为场上普通英雄，终极英雄另需物理三星一费且有完整四星技能表；旧条目数值和权重不变。按实际目标过滤后，单机/联机分别为：备战席54/53、无晋升资格的棋盘英雄55/54、有晋升资格的棋盘英雄56/55；刷新仍排除当前报价。
+- 获取使用现有 `selectAnomalyTarget` → `selectChoice`，失败 `invalid-target` 原子返回原 state；新增目录资格过滤，付费刷新仍1金/一词。联机保留报价重新选目标时也校验资格，不能把终极英雄转给不合法目标。
+- `MatchBase.d14` 保存原始选择、资源前缀边界、当前绑定身份、阶段和托管实体；选择/归来追加 `d14-selected` / `d14-returned` 资源事实。物理资源、装备、成长、金币和共享池不由证书另算。
+- 以选择时最后已结算 ordinal 为基点，未来第三次真实结算后晋升/归来。单机、联机 PvE/PvP、补给/轮选和加时使用同一个真实结算计数；重复 step/结算不推进。结算、延迟合星后及解锁的资源命令后重试归来；板凳 slot 升序优先，再 row/col 升序合法棋盘且不超人口；满席保留原实例及装备。
+- 进入未知即时从可见 preparation/items 移出实体，人口、羁绊、战斗、出售、装备和复制都不再能选它；不死亡、不售出、不退池。归位后才启用永久 AD +5000Bps / AP +50，flat 先加、percent 求和、最终 floor；正常合星跟随已有绑定迁移，出售退休。
+- 终极英雄永久有效星级4，物理 `Unit.starLevel` 始终3/9份。战斗基础 HP/AD 和实际 rank4 技能在 resolveEffects 前编译；辛吉德 rank4 减伤按14.24b为6000Bps。bully 比较、使者按星级攻速、黑玫瑰 Sion 星数使用有效星级；友谊之力沿用“三星特殊，其它按星数”公式。对手伤害既有合同按存活普通英雄人数，不改成按星级加伤。复制不会复制证书。
+- `readCombatStrategyInputs` / 双边 `PlayerBattleSnapshot.d14Combat` 只冻结可见单位的最小证书；双边映射给 unitId 加席位命名空间。公开 replay 仅新增 `effectiveStarLevel` 和异常说明，私有投影新增 `d14Display`；不公开候选、托管装备或资源历史。
+- `restoreMatch` 经 `validateB8Resources` 校验选择收据、独立资源前缀的物理单位、装备离场清单、时序及唯一归来事实，再重算阶段和冻结战斗证书。当前战斗仍走原严格数值/技能/事件恢复校验；拒绝提前四星、提前归来、换装备、改星级/绑定/前缀。联机完整 Match 仍沿用既有“不由 offline restore 接受”合同，联机冻结快照提供独立恢复入口。
+
+### #250 约定值（须随 PR 正文保留）
+
+四星基础 HP/AD **583.2%（58320Bps）**：从一星生产底值 floor；这是按100/180/324序列续推的项目约定，**不是原版已证实倍率**。专用晋升的一费单位仍按9个物理份额出售：**9金、退池9**，不是原版四星售价的考证。NumRounds=3、GainedAD=0.5、GainedAP=50、14个一费实际 rank4 技能来自 #250 的本地14.24来源档案；计数时机、满席托管和归位规则仍是已批准的项目政策。
+
+界面需求见 `UI_REQUESTS.md` 的 V16-UI-250；本轮不修改任何服务器/界面目录。
+
+### #250 指纹与录制边界
+
+| 身份 | `b531bfa3` | 本轮 |
+| --- | --- | --- |
+| CONTENT_DIGEST | `fnv1a32-utf16:7181dce2` | `fnv1a32-utf16:f8a31ce9` |
+| LOOT_REPLAY_DIGEST | `fnv1a32-utf16:cee1d7d7` | `fnv1a32-utf16:cee1d7d7` |
+| RULES_GAP_MANIFEST digest | `fnv1a32-utf16:81596be6` | `fnv1a32-utf16:81596be6` |
+
+离线比较命令为 `node scripts/compare-v16-250-digests.cjs`，直接编译 `b531bfa3` 的 Git 归档源与当前源，不用旧文档猜 digest。录制继续使用既有 v16 epoch 的历史边界 `46454b77348c86b70a4fec57869f95c22ecf9682`，与上述本轮比较基线区分。仅更新 v16 的 content baseline、M5 golden、recorded states、Herald、inputs 和 live-reveal；v15 及更早目录不动。
+
+本环境为 Node 24.21.0。录制时 Node 的同步 Git 子进程会在进程正常退出0且输出完整时附带 `EPERM`；使用仅存于 gitignore 的 `artifacts/v16-recording/git-read-shim.cjs` 处理 `show/rev-parse/ls-tree/archive` 的这一种成功读取，仍拒绝非零退出、信号退出与其它错误。所有录制命令以 `V16_CACHE_DIR=/tmp/v16-250-cache node --require ./artifacts/v16-recording/git-read-shim.cjs ...` 执行；不联网、不修改 Git 历史、不替换指纹校验逻辑。
+
+| 本轮录制/验证 | 结果 |
+| --- | --- |
+| release → Herald write → inputs → live-reveal | 全部退出0；四构筑各33战、6-7胜利，cannon/sniper各67个原始检查点严格恢复。 |
+| inputs `--check` | 退出0，9组证据一致。 |
+| Herald verify | 退出0，5条真实路线/7个文件，原始状态、开战及后继15 tick 恢复一致。 |
+| live-reveal `--check` | 退出0，full/simultaneous/loris/zyra四分支，tick44、4/0部分收据等原断言全部保持。 |
+| 历史 audit | 退出0，G2-3/G2-4b 86文件及v15 23文件逐字节相同，历史断言字节相同。 |
+| 最终 source guard | release/inputs/live-reveal各350个源码指纹、Herald sources全部匹配当前工作区。 |
+
+### #250 测试与交接
+
+原包来源4项与独立机制42项全部通过；新增生产接线23项通过，无单条时限设置。生产测试从真实购买/升星/付费报价开始，验证两个异常的3次真实结算、逐检查点文本/对象恢复、相同续步、装备离场/归来、四星战斗与实际rank4技能、9金出售、证书/时序/装备篡改拒绝、双边命名空间，以及两个真实PvP终场的第三次结算、解锁与重复收据拒绝。联机完整存档仍明确由offline restore拒绝；联机读档检查覆盖公开冻结快照，不冒充服务器重连验收。
+
+实际 `node node_modules/typescript/bin/tsc --noEmit` 退出0，含src/tests全工程；本轮没有界面编译阻塞；全套另发现名称映射缺口，已提供只补四个 apiName 的 `artifacts/v16-recording/UI_ADAPTER_250.patch`（含基线已有的两个 D11 映射），未修改表现层源码。前文的6条界面诊断为史诗奖励初次交接记录。#250新增显示字段仍需Claude消费与浏览器验收；本轮没有修改任何禁改目录。
+
+
+### #250 最终全量验证（当前工作区）
+
+离线分11批跑314份TypeScript测试，另外补齐8份JS/MJS，共发现并执行 **322/322文件、4469项测试：4385通过、35失败、49未执行**，无遗漏；排除整个 `tests/server/`，没有运行浏览器脚本。这里按每个文件最终完整执行结果去重，修正前或并发超时的结果由后续该文件顺序运行覆盖，不累计复跑次数。原包46项及新增23项共69项仍全过；恢复审计最终34/34、P3获取12/12、报价可用性7/7、独立M5边界oracle20/20均通过。
+
+全套仍有 **22个失败文件**。35个测试失败分为：22项已在 `b531bfa3` 同名测试复现、2项沙箱 `spawnSync python3 EPERM`（基线同错）、1项旧成长夹具异常选择缺口（基线原测试先遇10秒hook超时，另以未改源的SSR公开路线诊断复现相同业务错误）、10项原有时限超时。另有两个基线 `bench-full` 前置失败导致49项未执行，以及 `m8-b8-input-evidence.test.mjs` 基线同样加载失败、0断言，不能把它计成通过。
+
+本轮引起的力量吸收/龙魂固定种子路线回归已改为实际能支付的公开获取路线，所有原断言、100次刷新预算和原时限保留；D11用种子10保留完整战斗历史与全部断言，但仍有2项5秒超时。未修改时限、删除测试或改golden掩盖规则差异。最后单独顺序复跑D11、crown-history、unstable-chest、dual-wielding、T12装备后仍保留表内超时；三个长回放则保留180/360/600秒原限时的批次结果。超时尚未证明是否由本轮开销导致，不能归为已排除的回归。
+
+| 剩余失败文件 | 通过 / 失败 / 未执行 | 证据分类 |
+| --- | --- | --- |
+| `tests/bracer-multikill-stacks.test.ts` | 0 / 0 / 25 | 基线同样前置/加载失败 |
+| `tests/chest-bracer-integration-trial.test.ts` | 8 / 3 / 0 | 基线逐文件复现相同失败 |
+| `tests/d11-wiring-match.test.ts` | 3 / 2 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/explorer-bracer-restore-pressure.test.ts` | 0 / 2 / 0 | python3 EPERM，基线同错 |
+| `tests/explorer-bracer-restore.test.ts` | 0 / 0 / 24 | 基线同样前置/加载失败 |
+| `tests/g2-4a-crown-history.test.ts` | 54 / 2 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/g2-4b-pr161-restore.test.ts` | 2 / 9 / 0 | 基线逐文件复现相同失败 |
+| `tests/g2-4b-resists-restore.test.ts` | 19 / 2 / 0 | 基线逐文件复现相同失败 |
+| `tests/g2-4b-trench-gold.test.ts` | 0 / 1 / 0 | 基线逐文件复现相同失败 |
+| `tests/g2-4b-unstable-chest.test.ts` | 38 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/m5-growth.test.ts` | 1 / 1 / 0 | 基线公开路线诊断复现异常选择缺口 |
+| `tests/m5-replay-cannon.test.ts` | 0 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/m5-replay-mage.test.ts` | 0 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/m5-replay.test.ts` | 0 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/m8-b8-input-evidence.test.mjs` | 0 / 0 / 0 | 基线同样前置/加载失败 |
+| `tests/match-session.test.ts` | 14 / 2 / 0 | 基线逐文件复现相同失败 |
+| `tests/opening-random-1cost.test.ts` | 3 / 1 / 0 | 基线逐文件复现相同失败 |
+| `tests/presentation/g2-3-display.test.ts` | 15 / 1 / 0 | 基线D11缺映射；本轮另缺D14，待UI补丁 |
+| `tests/restore-audit/bounds-preflight.test.ts` | 14 / 2 / 0 | 基线逐文件复现相同失败 |
+| `tests/s13-p1-dual-wielding.test.ts` | 1 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/t12-combat-equip.test.ts` | 47 / 1 / 0 | 原有时限超时（未证实基线同错） |
+| `tests/t12-offline-transfer.test.ts` | 0 / 1 / 0 | 基线逐文件复现相同失败 |
+
+完整逐文件结果、失败测试名、基线复现、三类digest、录制命令/日志hash及实际tsc结果见 [ultimate-unknown-validation.json](evidence/v16/ultimate-unknown-validation.json)。实际最终 `tsc --noEmit` 退出0；`git diff --check` 通过。录制后源码指纹再次只读核对通过，历史目录、服务器/表现层源码和素材目录均未修改；没有联网、commit或push。
+
+界面最小映射补丁已在内存加载覆盖的独立审阅中 **16/16通过**，不写入禁改源码、也不计入上述工作区通过数；patch全文同时保存在验证JSON的 `uiAdapter.patch`，避免仅取Git改动时丢失gitignore的artifacts。四星、9金、离场倒数和归来控件仍交Claude按V16-UI-250完成，浏览器/服务器重连验收未执行。
+
+本轮建议提交信息（只建议，不执行提交）：`feat(simulation): integrate ultimate hero and into the unknown in v16`。合并前应先接入界面字段与补丁，再单独修复基线夹具/沙箱执行问题并定位10项超时；本报告不宣称全套已绿或已经上线验收。

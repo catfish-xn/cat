@@ -1,11 +1,18 @@
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {afterEach,expect,it,vi} from 'vitest';
 const fault=vi.hoisted(()=>({hook:''}));
-vi.mock('../src/simulation/seat-mechanics',async importOriginal=>{
- const real=await importOriginal<typeof import('../src/simulation/seat-mechanics')>();
+// Intercept the implementation leaves: the public barrel now participates in
+// the Match/D14 restore graph, so importOriginal(barrel) can re-enter itself.
+vi.mock('../src/simulation/seat-mechanics/grants',async importOriginal=>{
+ const real=await importOriginal<typeof import('../src/simulation/seat-mechanics/grants')>();
  return {...real,
   grantMechanicGold:(...args:Parameters<typeof real.grantMechanicGold>)=>fault.hook==='rewards'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.grantMechanicGold(...args),
   grantMechanicItem:(...args:Parameters<typeof real.grantMechanicItem>)=>fault.hook==='academy'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.grantMechanicItem(...args),
+ };
+});
+vi.mock('../src/simulation/seat-mechanics/choices',async importOriginal=>{
+ const real=await importOriginal<typeof import('../src/simulation/seat-mechanics/choices')>();
+ return {...real,
   openMechanicChoice:(...args:Parameters<typeof real.openMechanicChoice>)=>fault.hook==='choice'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.openMechanicChoice(...args),
  };
 });

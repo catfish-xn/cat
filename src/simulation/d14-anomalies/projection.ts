@@ -23,12 +23,24 @@ export function projectD14Unit(state: D14State, seatId: string, unitId: string,
   if (!unit) return null;
   const record = state.records.find(r => r.selection.seatId === seatId && r.unitId === unitId && r.phase !== 'retired');
   const promoted = record?.phase === 'promoted';
+  if(promoted&&record.selection.anomalyId!=='ultimate-hero')throw new RangeError('Invalid Ultimate Hero certificate');
   const sources = [...otherSources];
+  const {base,ability}=d14UnitBase(unit,promoted);
+  if (record?.phase === 'returned') sources.push(...makeSourcedEffects(unitId, 'anomaly', 'into-the-unknown', record.selection.choiceId, [
+    { kind: 'statPercentBps', stat: 'attackDamage', bps: 5000 },
+    { kind: 'statFlat', stat: 'abilityPower', amount: 50 },
+  ]));
+  return { ...resolveEffects(base, ability, sources), effectiveStarLevel: promoted ? 4 as const : unit.starLevel,
+    physicalStarLevel: unit.starLevel, unitId, location: unit.location };
+}
+
+/** Shared certified base compiler; callers authenticate the promotion certificate first. */
+export function d14UnitBase(unit: Pick<import('../unit-types').Unit,'definitionId'|'starLevel'>, promoted: boolean) {
   let base: ResolvedUnitStats = getUnitStats(unit.definitionId, unit.starLevel);
   let ability = resolveAbility(base.abilityId, unit.starLevel);
   if (promoted) {
     const definition = UNIT_DEFINITIONS[unit.definitionId];
-    if (record.selection.anomalyId !== 'ultimate-hero' || definition.cost !== 1 || unit.starLevel !== 3
+    if (definition.cost !== 1 || unit.starLevel !== 3
       || !Object.hasOwn(D14_FOURTH_ABILITY, unit.definitionId)) throw new RangeError('Invalid Ultimate Hero certificate');
     base = { ...base, health: Math.floor(definition.baseStats.health * D14_ULTIMATE_BASE_BPS / 10000),
       attack: Math.floor(definition.baseStats.attack * D14_ULTIMATE_BASE_BPS / 10000) };
@@ -37,10 +49,5 @@ export function projectD14Unit(state: D14State, seatId: string, unitId: string,
     if (unit.definitionId === 'singed') variables.DR = 6000;
     ability = { id: base.abilityId, amount: 0, kind: 's13', championId: unit.definitionId, variables } satisfies S13ResolvedAbility;
   }
-  if (record?.phase === 'returned') sources.push(...makeSourcedEffects(unitId, 'anomaly', 'into-the-unknown', record.selection.choiceId, [
-    { kind: 'statPercentBps', stat: 'attackDamage', bps: 5000 },
-    { kind: 'statFlat', stat: 'abilityPower', amount: 50 },
-  ]));
-  return { ...resolveEffects(base, ability, sources), effectiveStarLevel: promoted ? 4 as const : unit.starLevel,
-    physicalStarLevel: unit.starLevel, unitId, location: unit.location };
+  return {base,ability};
 }

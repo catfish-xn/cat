@@ -676,3 +676,25 @@ P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循�
 LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_ArmoryKeyOrnn',quantity:1}。领域内部 epicForgeOffers(seed:number,receiptId:string,selector:string):readonly string[] 返回既有 G24 独立流的四个不同候选；openEpicForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]} 只开启现有 forge choice。客户端继续 selectChoice，不新增发奖入口。收据ID为 JSON ['epic-forge',lootReceiptId]，source=epic-loot；恢复必须绑定原锻造器领取收据与合法候选。单机6-7终局无法打开选择时沿用现有首候选策略，英雄保持 retained-terminal；重复step/恢复不重发。冠冕沿用现有永久人口+1路径，当前战斗只读冻结前缀中已存在的收据。
 
 英雄复制器费用上限null，次级上限3；复制获得1星，随后沿用现有正常升星路径。单机直接授予；联机创建现有机制英雄法球，claimOrb时同一共享池事务扣库存，缺货折费用金币、满席按getUnitSellPrice折金。useConsumable仅消费工具并产生唯一来源事实，不另算卡池。
+
+### v16 D14 专用异常
+
+`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。目录56，联机排除 avarice-incarnate 后55；报价按目标资格过滤，旧权重不变。
+
+`MatchBase.d14?:D14Progress` 是私有持久状态；生产证书只由已接纳选择收据、资源事实与结算历史认证，不单凭存档 phase 授权。`readCombatStrategyInputs` 和 `PlayerBattleSnapshot` 可含 `d14Combat:{unitId,anomalyId,phase:'waiting'|'promoted'|'returned'}`，仅对可见绑定有效；离场单位不编入人口/羁绊/战斗。`restorePlayerBattleSnapshot` 结构校验，来源认证仍由上游可信 Match 完成；offline `restoreMatch` 继续拒绝联机完整存档。
+
+真实结算三次后准备边界生效，满席进入未知继续托管；解锁的 deploy/sell/claim 等资源命令后重试。新 `d14Promoted` / `d14Returned` Match 事件只表示阶段转换；资源账本的 `d14-selected`（含已验证装备清单）/`d14-returned`（含真实结算 ordinal）不产生资源奖励。物理三星不改，专用有效四星基础58320Bps、一费售价9/退池9是明确项目约定；不提供通用四星合成接口。完整来源、时序和显示字段见 EPIC_LOOT_V16 与 UI_REQUESTS V16-UI-250。
+
+调用方继续使用 Match 公共命令与 `snapshotForBattle(state:MatchState,seatId:string):PlayerBattleSnapshot`；不应直接调用下面的规则内部接线函数。既有命令失败枚举不增加：目标资格失败为 `invalid-target`，过期 choice/generation、阶段错误与金币不足沿用原合同。内部恢复失败抛出 `RangeError`，不是可提交的部分成功。
+
+| 内部导出（`d14-runtime.ts`，除特别标注） | 输入与输出 |
+| --- | --- |
+| `eligibleD14Target(unit:Unit\|undefined,id:string):boolean` / `isD14(id:string):boolean` | 纯资格/身份检查，无资源与 RNG 变化；非 D14 的目标资格交还原合同。 |
+| `acquireD14(state:MatchState):MatchState` / `reconcileD14(state:MatchState,events?:MatchEvent[]):MatchState` | 成功选择后的唯一证书/托管转换及结算重试；事件追加到调用方事务数组；无变化返回原引用。 |
+| `d14OwnedUnits(state):readonly Unit[]` / `d14OwnedItems(state):readonly ItemInstance[]` | 合并可见与托管资源，仅用于资源守恒/共享池；不能据此生成战斗阵容。 |
+| `d14Certificate(state):D14CombatCertificate\|undefined` / `d14PrivateDisplay(state:MatchState)` | 最小战斗证书及本席展示 DTO；完整字段见 V16-UI-250。 |
+| `validateD14(state:MatchState,context:ResourceProvenanceContext):void` | 使用已认证账本/选择收据校验全快照；缺失、篡改或时序不符抛出异常。 |
+| `d14HeldAtPrefix(state:MatchState,prefix:number)` / `d14CertificateAtCombat(state:MatchState)` | 由当前战斗的已认证来源前缀重建隐藏资源 ID 与当时证书，不信任候选战斗字段。 |
+| `d14UnitBase(unit:Pick<Unit,'definitionId'\|'starLevel'>,promoted:boolean)`（`d14-anomalies/projection.ts`） | 返回 `{base:ResolvedUnitStats,ability:ResolvedAbility}`；调用方先认证证书，非法专用晋升抛出 `RangeError`。全部效果源随后仅解析一次。 |
+
+`restoreD14` 保留为独立 D3/D14 事务包 API；生产 `restoreMatch` 使用上述 Match/B8 账本认证，不要求另传或信任独立包的候选命令日志。两个恢复入口的可信边界不同，不能混用。

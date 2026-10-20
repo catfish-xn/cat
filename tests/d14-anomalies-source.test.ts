@@ -8,6 +8,7 @@ import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { CONTENT_DIGEST } from '../src/simulation/content';
+import { M8_VERSION } from '../src/simulation/m8/version';
 
 const root='src/simulation/content/source/s13-14.24b/raw/';
 const raw=(name:string)=>JSON.parse(gunzipSync(readFileSync(root+name)).toString());
@@ -51,9 +52,9 @@ it('reconciles the official Chinese description keys and keeps selection semanti
   expect(strings.tft13_goopbuff_ultimatehero_description).toContain('4');
   expect(map['{560f71cc}'].name).toBe('TFT13_GoopBuff_IntoTheUnknown_ReturnState');
 });
-it('does not register D14 or D11, alter production counts/digest, or overwrite retained intentional values',()=>{
-  expect(ANOMALY_DEFINITIONS).not.toHaveProperty('ultimate-hero');expect(ANOMALY_DEFINITIONS).not.toHaveProperty('into-the-unknown');
-  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(52);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:ea6b11b6');
+it('registers the two D14 anomalies in v16 without overwriting retained intentional values',()=>{
+  expect(ANOMALY_DEFINITIONS['ultimate-hero'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);expect(ANOMALY_DEFINITIONS['into-the-unknown'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);
+  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:f8a31ce9');expect(M8_VERSION.rulesVersion).toBe('s13-g2-3-v16');
   // Protect existing live source values; this pack never replaces lower-star tables.
   expect(S13_ABILITY_DATA['singed-ability'].variables.DR).toEqual([0.5,0.5,0.6]);
 });

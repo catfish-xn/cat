@@ -32,7 +32,7 @@ function statusView(state: CombatState, unitId: string): { readonly statuses?: r
 }
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
-const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
+const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'effectiveStarLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {

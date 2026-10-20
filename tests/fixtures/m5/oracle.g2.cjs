@@ -34,6 +34,7 @@ AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','h
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
 // D11 raw identities/tags, independently transcribed from the retained archive.
 AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link');AUGMENTS.sort();
+ANOMALIES.push('ultimate-hero','into-the-unknown');
 ANOMALIES.push('avarice-incarnate','headhunter');ANOMALIES.sort();
 // Literal tier identities, transcribed independently; no runtime content imports.
 const AUGMENT_POOLS={
@@ -227,7 +228,7 @@ class Ledger {
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,before.augments.some(a=>a.definitionId==='going-long')?4:0);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
-  if(command?.type==='target'||command?.type==='anomalyReroll'){choice=word(choice);const pool=ANOMALIES.filter(id=>command.type!=='anomalyReroll'||!before.pendingChoice.offers.includes(id));assert.deepEqual(after.pendingChoice.offers,[pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)]],'independent anomaly offer');}
+  if(command?.type==='target'||command?.type==='anomalyReroll'){choice=word(choice);const target=before.preparation.units.find(u=>u.id===(command.unitId??before.pendingChoice.targetId));const pool=ANOMALIES.filter(id=>(command.type!=='anomalyReroll'||!before.pendingChoice.offers.includes(id))&&(id!=='ultimate-hero'||target?.location.kind==='board'&&target.starLevel===3&&COST[target.definitionId]===1)&&(id!=='into-the-unknown'||target?.location.kind==='board'));assert.deepEqual(after.pendingChoice.offers,[pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)]],'independent anomaly offer');}
   for(const event of events){
    if(event.type==='choiceOpened'&&event.choice.kind==='augment'){
     const c=event.choice,tier=augmentTier(augmentSeed(after),c.choiceId),rerolled=command?.type==='rerollAugment';

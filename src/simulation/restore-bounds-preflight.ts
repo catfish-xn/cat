@@ -30,7 +30,7 @@ export function validateRestoreBoundsPreflight(combat: CombatState, preparation:
     const origin = preparation.units.find(u => u.id === unit.id);
     const resolved = strategy.units.find(u => u.unitId === unit.id);
     authenticate(origin?.location.kind === 'board' && resolved, 'combat unit origin');
-    authenticate(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel,
+    authenticate(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel && unit.effectiveStarLevel===resolved.effectiveStarLevel,
       'combat unit identity');
     authenticate(same(unit.ability, resolved.ability), 'resolved ability');
     if (resolved.ability.kind !== 's13') continue;

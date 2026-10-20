@@ -1,3 +1,4 @@
+import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
 import { grantConsumableCopy } from './consumables';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
@@ -78,6 +79,7 @@ export { readLootView } from './loot-view';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  const d14Events:MatchEvent[]=[];state=reconcileD14(state,d14Events);events=[...events,...d14Events];
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
@@ -392,7 +394,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
-  let settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
+  let settled=reconcileD14(settledPlan.state,events); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const terminalForges=settleTerminalEpicForges(settled);settled=terminalForges.state;events.push(...terminalForges.events);
@@ -517,9 +519,10 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
   if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
+  if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
-    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer), state.choiceRngState);
+    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id=>eligibleD14Target(target,id)), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
@@ -553,7 +556,7 @@ export function rerollAnomaly(state: MatchState, choiceId: string, generation: n
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
   if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
-  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)), state.choiceRngState);
+  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)&&eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),id)), state.choiceRngState);
   return accept({ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
     pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } },
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);
@@ -586,7 +589,7 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
     let current: MatchState = state;
     const events: MatchEvent[] = [];
     if (choice.kind === 'anomaly' && choice.step === 'target') {
-      const target = state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
+      const target = state.preparation.units.filter(u=>u.team==='player'&&choice.offers.every(id=>eligibleD14Target(u,id))).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
       if (!target) return accept({...state,phase:choice.returnPhase ?? 'preparation',combat:null,pendingChoice:null,
         multiplayer:{...state.multiplayer,forfeitedChoices:[...new Set([...state.multiplayer.forfeitedChoices,choice.eventId])]}} as MatchState,
         [{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'empty-anomaly'}]);
@@ -684,6 +687,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     return acceptEquipment(entered.state,[...events,...capacity.events,...entered.events]);
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
+  if(choice.kind==='anomaly'&&!eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),definitionId))return fail(state,'invalid-target');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
   const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
@@ -708,7 +712,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
-  if(choice.kind==='anomaly'){const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
+  if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   const forge=openAugmentForge(entered.state);

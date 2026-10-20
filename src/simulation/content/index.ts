@@ -1,3 +1,5 @@
+import { D14_POLICY } from './d14-anomalies';
+import { D14_FOURTH_ABILITY } from '../d14-anomalies/fourth-ability';
 import {DUAL_WIELDING_POOLS,DUAL_WIELDING_ROLES} from './s13-p1-dual-wielding';
 import {G24_VOIDSPAWN_POLICY,G24_VOIDSPAWN_UNITS} from './g2-4b-voidspawn';
 import { P4_SOURCE } from '../anomalies/source';
@@ -154,6 +156,7 @@ import { P2_ITEM_GRANTS } from './s13-augments-p2';
 import { D11_FILL_SOURCE } from './d11-fill-source';
 import { D11_EXECUTION_POLICY } from './d11-fill';
 export const CONTENT_DIGEST = digestContent({
+  d14:{policy:D14_POLICY,fourthAbility:D14_FOURTH_ABILITY,singedFourthDRBps:6000},
   d11:{source:D11_FILL_SOURCE,execution:D11_EXECUTION_POLICY},
   anomalyOfferPolicy:ANOMALY_OFFER_POLICY,
   s13AugmentsP2: { source:S13_P2_SOURCE, itemGrants:P2_ITEM_GRANTS, acquisitionRng:'fnv1a32-seat-choice-lcg32', openingRng:'combat-after-existing-opening-consumers', sharing:'freeze-all-then-broadcast' },

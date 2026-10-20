@@ -66,7 +66,7 @@ const history=new BattleHistory('d11-public-anomaly');
 let prefix:MatchState|undefined;
 const stop=new Error('D11 captured public 4-5 prefix');
 try{
-  await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:42,
+  await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:10,
     onStep(before:MatchState,result:{state:MatchState;events:readonly api.MatchEvent[]}){
       observe(history,before,result);
       if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation'){prefix=result.state;throw stop;}
