@@ -1,4 +1,5 @@
 import { validateAugmentOfferHistory } from './augment-offers';
+import { withResourceReceiptReuse } from './resource-provenance';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
@@ -115,7 +116,7 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
  * Resist-scaled shields are checked by a trusted-input battle replay.
  */
 export function validateMatchStructure(input: unknown): MatchState {
-  return withItemRestoreCache(()=>restoreMatchWithinCall(input));
+  return withItemRestoreCache(()=>withResourceReceiptReuse(typeof input === 'string',()=>restoreMatchWithinCall(input)));
 }
 function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
@@ -272,7 +273,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
   validateMatchEquipment(state);
-  const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
+  const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
@@ -319,7 +320,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     if(!verifiedDynamic)validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
-    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick);
+    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick, typeof input === 'string');
     if(!verifiedDynamic)validateP2Opening(combat,replay);
     if(!verifiedDynamic)validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     if(!verifiedDynamic)validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
@@ -414,7 +415,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
 export function validateMatchStructureForSerialization(state: MatchState): MatchState {
-  return withItemRestoreCache(() => restoreMatchWithinCall(state, true));
+  return withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)));
 }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.

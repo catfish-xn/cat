@@ -85,7 +85,7 @@ const record: (value: unknown) => void = inputValidation.record;
 const sorted = <T extends { readonly id: string }>(values: readonly T[]): T[] => [...values].sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 /** Pure own-format validation. Caller first validates history, receipts and the provenance prefix.
  * No combat creation, RNG mutation, inventory grant, or replacement of saved values. */
-export function restoreCombatInput(value: unknown, authority: CombatInputAuthority, parsedJsonInput = false): CombatInputBasis {
+export function restoreCombatInput(value: unknown, authority: CombatInputAuthority, parsedJsonInput = false, deferFreeze = false): CombatInputBasis {
   // Only restoreMatch's own fully validated JSON.parse graph uses this path.
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   if (!parsedJsonInput) canonicalContent(value);
@@ -163,5 +163,8 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     return projectTemporaryEquipment(roll, item.location.unitId);
   });
   requireBasis(equal(input.temporaryEquipment, expectedChildren));
-  return freezeContent(parsedJsonInput ? basis : structuredClone(basis));
+  // The Match restore boundary can defer freezing its private parsed graph to
+  // its final metadata interning. It still runs every check above, and keeps
+  // freezing public/object callers here. No candidate validation is memoized.
+  return parsedJsonInput && deferFreeze ? basis : freezeContent(parsedJsonInput ? basis : structuredClone(basis));
 }

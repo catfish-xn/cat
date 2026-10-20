@@ -183,7 +183,23 @@ function mechanicBirths(receipts: readonly import('./seat-mechanics/types').Mech
     return [{ key, kind: 'item' as const, id: itemId, definitionId, roundId: receipt.roundId }];
   });
 }
-export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>): Map<string, BirthReceipt> {
+type ReceiptContext = Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>;
+let receiptScope: { context: ReceiptContext; births: Map<string, BirthReceipt> }[] | undefined;
+/** Only Match's private parsed graph is stable during a synchronous restore.
+ * Object inputs, nested object restores and serialization keep every old read.
+ * This reuses one within-call receipt projection, never a restored Match or a
+ * result from another input/call. Returned maps and records stay detached. */
+export function withResourceReceiptReuse<T>(parsedJsonInput: boolean, run: () => T): T {
+  const previous = receiptScope;
+  receiptScope = parsedJsonInput ? [] : undefined;
+  try { return run(); } finally { receiptScope = previous; }
+}
+const copyBirths = (births: Map<string, BirthReceipt>) => new Map([...births].map(([key, value]) => [key, { ...value }]));
+export function validateResourceReceipts(context: ReceiptContext): Map<string, BirthReceipt> {
+  const known = receiptScope?.find(entry => entry.context.scheduleReceipts === context.scheduleReceipts
+    && entry.context.lootReceipts === context.lootReceipts && entry.context.mechanicReceipts === context.mechanicReceipts
+    && entry.context.carouselReceipts === context.carouselReceipts && entry.context.throughRoundOrdinal === context.throughRoundOrdinal);
+  if (known) return copyBirths(known.births);
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
@@ -284,6 +300,7 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     requireValue(getCatalogRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
     add(birth.key, birth);
   }
+  receiptScope?.push({ context: { ...context }, births: copyBirths(births) });
   return births;
 }
 

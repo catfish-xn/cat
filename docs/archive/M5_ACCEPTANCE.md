@@ -1,6 +1,6 @@
 # M5 ACCEPTANCE — 独立规则、正常对局、原生输入与证据门禁
 
-状态：ba5c057的技术门禁通过记录可信，但用户审计确认六项缺陷，M5尚未验收；本轮修复需在新提交完整复验，实际证据见 docs/M5_VALIDATION.md 和 docs/M5_FIX_REVIEW.md。范围与基线见 [M5_PLAN](M5_PLAN.md)，唯一详细规则来源为 [M5_RULES](M5_RULES.md)。规划审查的 M4 测试结果不等于 M5 验收通过。
+状态：ba5c057的技术门禁通过记录可信，但用户审计确认六项缺陷，M5尚未验收；本轮修复需在新提交完整复验，实际证据见 docs/M5_VALIDATION.md 和 docs/M5_FIX_REVIEW.md。范围与基线见 [M5_PLAN](M5_PLAN.md)，唯一详细规则来源为 [M5_RULES](../../M5_RULES.md)。规划审查的 M4 测试结果不等于 M5 验收通过。
 
 ## A1. 必做能力与验收映射
 
@@ -79,7 +79,7 @@
 9. 保留构筑持续至6-7，获得明确终局。
 10. 终局普通命令全部拒绝，正常 New Match 清除全部旧局状态。
 
-具体阵容、核心星级和装备完成标准见 [RULES R5](M5_RULES.md#r5-内容与三套构筑)。
+具体阵容、核心星级和装备完成标准见 [RULES R5](../../M5_RULES.md#r5-内容与三套构筑)。
 
 F3 前用有限 headless 搜索确定实际可行 seed、slot、generation、ID、站位和购买顺序，再冻结 transcript。三路线种子从固定24-seed集合中选择，默认优先42；不得增加隐藏种子特例。
 
@@ -161,7 +161,7 @@ job预算 = 向上取整(三次最大实测分钟数 × 1.5 + 5分钟)
 
 前期使用90分钟临时watchdog，依据30场战斗各最多60秒及操作/追踪余量设置；它不是实测性能指标。最终数值必须替换为上述实测结果，不能把预算制定留到F4之后。
 
-F3 已按 [CI run 37378727483](https://github.com/catfish-xn/cat/actions/runs/37378727483) 的30个成功job冻结预算：测试/构建/headless/性能22分钟；每个桌面浏览器job28分钟；每个原生输入+触摸完整路线job32分钟；证据比较6分钟。三次原始分项耗时与公式结果见 [M5_CI_BUDGET.json](docs/evidence/M5_CI_BUDGET.json)。固定runner为Ubuntu24.04、4核、约16GiB、Node22；具体CPU型号仍由托管runner分配。常规CI各负载运行一次，手动profile=true运行三次。预算冻结后的最终提交仍须完整通过同一SHA门禁。
+F3 已按 [CI run 37378727483](https://github.com/catfish-xn/cat/actions/runs/37378727483) 的30个成功job冻结预算：测试/构建/headless/性能22分钟；每个桌面浏览器job28分钟；每个原生输入+触摸完整路线job32分钟；证据比较6分钟。三次原始分项耗时与公式结果见 [M5_CI_BUDGET.json](../evidence/M5_CI_BUDGET.json)。固定runner为Ubuntu24.04、4核、约16GiB、Node22；具体CPU型号仍由托管runner分配。常规CI各负载运行一次，手动profile=true运行三次。预算冻结后的最终提交仍须完整通过同一SHA门禁。
 
 最大负载覆盖9名玩家英雄、8名敌人、27件装备、3强化、1异常及合法最大状态/持续动作。记录 tick 计算耗时p50/p95/p99、帧耗时、峰值内存、事件数、JSON大小和observer成本。满负载域事件不得丢失；Continue/New Match必须释放旧战斗账本及动画对象。
 

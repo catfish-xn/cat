@@ -453,7 +453,7 @@ GC 后 RSS 为245,587,968 / 238,657,536 / 245,084,160字节，非单向增长，
 
 - 旧单机存档作废：存档/回放格式 2→3，CONTENT_DIGEST 今天改为 `fnv1a32-utf16:bd9c3a8e`；旧档只能原字节导出、新开局，不迁移续玩。
 - 掉线接管：用户决定按云顶"掉线不接管"。`bot-driver` 已加 `takeover` 开关且默认关，部署无需再把 `CAT_TAKEOVER_SEC` 调大；需要接管时设 `CAT_TAKEOVER=1`（见 §3.2）。启动日志末尾显示 `takeover on/off`。
-- 真机反馈 backlog 见 `SESSION_HANDOVER.md` §0.0.6。
+- 真机反馈 backlog 原在会话交接文件 `SESSION_HANDOVER.md` §0.0.6（2026-10-20 已移出仓库，只保留在项目内部资料中）。
 
 ## P3/P4/P5 单批发布：旧档作废原因（2026-10-14）
 

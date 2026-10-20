@@ -351,7 +351,7 @@ T13-A 发布顺序更新（2026-10-14 用户指示）：单位全槽自动合成
 
 ## 9. P3/P4/P5：14.24b 数值资料与一次发布提案（2026-10-14，未实施）
 
-范围来自 `SESSION_HANDOVER.md` §0.0.6 的 P3、P4、P5。本节是新增资料与提案，不批准玩法、不修改代码、测试或 digest。下文“现行”统一指远端 `multiplayer@20c5f053a416ca51bc7b10ac26698fa67d1b35ea`，不是上文早期 R1–R4 设计时点；T13 已实施 R3/R4，格式为 schema7/save3/replay3/command3，NET_PROTOCOL=2。交接 §0.0.5 记录 CONTENT=`fnv1a32-utf16:bd9c3a8e`、LOOT_REPLAY=`fnv1a32-utf16:5cd0487c`；本单只读核对生成配置，未运行引擎重新计算这两个值。
+范围来自会话交接文件 `SESSION_HANDOVER.md`（2026-10-20 已移出仓库）§0.0.6 的 P3、P4、P5。本节是新增资料与提案，不批准玩法、不修改代码、测试或 digest。下文“现行”统一指远端 `multiplayer@20c5f053a416ca51bc7b10ac26698fa67d1b35ea`，不是上文早期 R1–R4 设计时点；T13 已实施 R3/R4，格式为 schema7/save3/replay3/command3，NET_PROTOCOL=2。交接 §0.0.5 记录 CONTENT=`fnv1a32-utf16:bd9c3a8e`、LOOT_REPLAY=`fnv1a32-utf16:5cd0487c`；本单只读核对生成配置，未运行引擎重新计算这两个值。
 
 ### 9.1 来源可信度与适用边界
 
