@@ -721,7 +721,7 @@ body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; f
 }
 .shop-dock .shop-odds { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shop-dock .shop-panel { container-type: inline-size; }
-@container (max-width: 320px) { .shop-dock .shop-odds { font-size: 10px; letter-spacing: -.06em; word-spacing: -.1em; } }
+@container (max-width: 320px) { .shop-dock .shop-odds { font-size: 10px; letter-spacing: -.08em; word-spacing: -.2em; } }
 
 .online-seat { position: relative; }
 .seat-hp { font-size: 15px; font-variant-numeric: tabular-nums; }
