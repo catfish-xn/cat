@@ -32,7 +32,7 @@ import type { Clock, ClockHandle } from './clock';
 import { DEFAULT_PAIRING_POLICY, findPairing, planCandidates, planPairings, recordPairings, type PairingPolicy } from './pairing';
 import {
   DEFAULT_BATTLE_MAX_STEPS, ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleInput, type BattleResult, type PvpMode, type RankEntry,
-  type RoomCommandResult, type RoomFault, type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
+  type RoomCommandResult, type RoomFault, type RoomNotice, type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
 } from './types';
 
 export interface RoomTimings {
@@ -242,6 +242,7 @@ export class Room {
   /** Battles whose live run finished and was handled (adopted or dropped). */
   private readonly liveDone = new Set<string>();
   private readonly liveListeners = new Set<(battleId: string) => void>();
+  private readonly noticeListeners = new Set<(notice: RoomNotice) => void>();
   /** PvE seats whose live combat was stepped during the battle phase, by seat id. */
   private readonly livePve = new Map<string, LivePveTrack>();
   private liveTimer: ClockHandle | null = null;
@@ -303,6 +304,8 @@ export class Room {
   liveFrames(battleId: string): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
     return this.livePvp.get(battleId)?.liveFrames ?? null;
   }
+  /** v15: one-seat notices that change no state, so no publication carries them (a frozen claim the rules refused at battle entry). */
+  subscribeNotices(listener: (notice: RoomNotice) => void): () => void { this.noticeListeners.add(listener); return () => { this.noticeListeners.delete(listener); }; }
   get clock(): Clock { return this.options.clock; }
   subscribe(listener: (state: RoomState) => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   /**
@@ -314,6 +317,7 @@ export class Room {
     this.clearTimer();
     this.listeners.clear();
     this.liveListeners.clear();
+    this.noticeListeners.clear();
     this.releaseRound();
   }
   get retained(): RoomRetained {
@@ -423,13 +427,20 @@ export class Room {
     this.frozenClaims.push({ seatId: seat.seatId, command });
     return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
   }
-  /** Hands the claims held during `frozen` to the rules through the normal gate, in arrival order (battle or settlement phase). */
+  /**
+   * Hands the claims held during `frozen` to the rules through the normal gate, in arrival order (battle or settlement phase).
+   * The seat already had an ok receipt for each, so a refusal here (seat unchanged, orb still unclaimed) goes out as a notice.
+   */
   private flushFrozenClaims(): void {
     const held = this.frozenClaims;
     this.frozenClaims = [];
     for (const { seatId, command } of held) {
       const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
-      if (seat && seat.controller !== 'takeover') this.apply(seat, command);
+      if (!seat || seat.controller === 'takeover') continue;
+      const result = this.apply(seat, command);
+      if (result.ok || this.disposed) continue;
+      const notice: RoomNotice = { type: 'orb-claim-refused', seatId, round: command.round, orbId: command.orbId, reason: result.reason };
+      for (const listener of this.noticeListeners) listener(notice);
     }
   }
 

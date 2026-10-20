@@ -5,7 +5,7 @@
  * computed on the client.
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
-import type { ReceiptFailure } from '../../server/net/messages';
+import type { ReceiptFailure, SeatNotice } from '../../server/net/messages';
 import type { WireCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 
@@ -50,6 +50,8 @@ export interface ClientListeners {
    */
   replayRevised?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
+  /** v15: an orb claim held while the round was frozen was refused by the rules at battle entry (its receipt was ok). */
+  notice?(notice: SeatNotice): void;
   connection?(status: ConnectionStatus): void;
 }
 /** What the UI talks to: the real room run in-browser (local-room-client.ts) or the game server over a socket (ws-client.ts). */
