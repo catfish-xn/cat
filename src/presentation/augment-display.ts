@@ -64,11 +64,12 @@ export const augmentPlayerDescription = (id: string): string | null =>
   p3Description(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
 /**
  * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
- * `s13P2Augment`) are left out when the augment has a player description, which already says what they do.
+ * `s13P2Augment`) are left out when the augment has a player description, which already says what they do; so is the
+ * one-off gold (`acquisitionGold`), which every such description already states (对冲基金, 安慰剂: no gold twice).
  */
 export function augmentEffectText(id: string): string {
   const effects: readonly Effect[] = AUGMENT_DEFINITIONS[id]?.effects ?? [], described = augmentPlayerDescription(id) !== null;
-  return effects.filter(effect => !(described && effect.kind === 'mechanic' && describeEffect(effect) === effect.mechanic)).map(describeEffect).join('；');
+  return effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；');
 }
 
 /** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */
