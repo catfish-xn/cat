@@ -16,7 +16,7 @@ import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
@@ -237,6 +237,8 @@ export class Room {
   private readonly livePvp = new Map<string, LivePvpTrack>();
   /** Two-sided battles of this round checked once and found to have no seat reading its live gold. */
   private readonly liveIgnored = new Set<string>();
+  /** PvE seats whose combat the rules said, at its start, does not read live gold: never stepped live this round. */
+  private readonly pveIgnored = new Set<string>();
   /** Battles whose live run finished and was handled (adopted or dropped). */
   private readonly liveDone = new Set<string>();
   private readonly liveListeners = new Set<(battleId: string) => void>();
@@ -1006,9 +1008,11 @@ export class Room {
    * live battle now. Its first catch-up starts the seat's track from the frozen run's opening ledger.
    */
   private pveCatchUp(seat: SeatState): LiveCatchUp | null {
-    if (seat.match.phase !== 'combat') return null;
+    if (seat.match.phase !== 'combat' || this.pveIgnored.has(seat.seatId)) return null;
     let track = this.livePve.get(seat.seatId);
     if (!track) {
+      // Judged once, at the combat's start: a holder that dies later still has its samples recorded by the rules.
+      if (!readMatchLiveGoldReaders(seat.match)) { this.pveIgnored.add(seat.seatId); return null; }
       const frozen = this.frozenOutcome(seat.seatId);
       if (!frozen?.combat) return null;
       track = new LivePveTrack(seat.seatId, seat.match, frozen.combat.events);
@@ -1130,7 +1134,7 @@ export class Room {
   }
   private clearLive(): void {
     if (this.liveTimer !== null) { this.options.clock.cancel(this.liveTimer); this.liveTimer = null; }
-    this.livePvp.clear(); this.livePve.clear(); this.liveIgnored.clear(); this.liveDone.clear(); this.battleStartedAt = null; this.awaitingLive = false; this.liveReplaced = false;
+    this.livePvp.clear(); this.livePve.clear(); this.liveIgnored.clear(); this.pveIgnored.clear(); this.liveDone.clear(); this.battleStartedAt = null; this.awaitingLive = false; this.liveReplaced = false;
   }
 
   private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {

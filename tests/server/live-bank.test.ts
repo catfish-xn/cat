@@ -82,6 +82,8 @@ describe('D11 live bank: PvE', () => {
     const frozen = pveOutcome(room.state, 's0');
     clock.advance(400);
     changeGold(room, 's0');
+    // The rules' PvE judge said, at the combat's start, that it reads no live gold: the room never stepped it.
+    expect(seat(room.state, 's0').match.combat!.tick).toBe(0);
     runUntil(room, clock, state => state.round === 3 && state.phase !== 'battle');
     expect(room.state.fault).toBeNull();
     expect(pveOutcome(room.state, 's0')).toBe(frozen);

@@ -24,7 +24,7 @@ const receipts = (match: MatchState) => readLootView(match).claimReceipts ?? [];
 const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
 
-describe('v15 wire: protocol 4, claimOrb and per-card rerollAugment', () => {
+describe('v15 wire: protocol 5, claimOrb and per-card rerollAugment', () => {
   it('runs one ahead of the rules\' protocol 4 (D11 replay-tail) and refuses an older client with a message naming both versions', () => {
     // The D11 live bank added a server message (replay-tail) without a rules change: the wire is 5, the rules' constant 4.
     expect(MULTIPLAYER_NET_PROTOCOL_VERSION).toBe(4);
@@ -43,7 +43,7 @@ describe('v15 wire: protocol 4, claimOrb and per-card rerollAugment', () => {
     for (const value of [{ ...command, seatId: 's1' }, { ...command, gold: 9 }, { type: 'claimOrb', round: 3 }, { type: 'claimOrb', orbId: 'x' },
       { ...command, orbId: '' }, { ...command, round: -1 }, { ...command, round: 1.5 }, { ...command, orbId: 7 }])
       expect(() => validateClientCommand(value)).toThrow();
-    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 4, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
+    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 5, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
     expect(message).toMatchObject({ ok: true, message: { command } });
   });
 
