@@ -111,7 +111,7 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     grid.append(el('dt', label), el('dd', String(value)));
   }
   body.append(grid);
-  if (gear) { const line = el('p', `装备：${gear}`, 'unit-card-text'); line.dataset.debug = 'unit-card:gear'; body.append(line); }
+  if (gear) { const line = el('p', `已装备：${gear}`, 'unit-card-text'); line.dataset.debug = 'unit-card:gear'; body.append(line); }
   if (battle && (battle.battle || battle.match)) body.append(battleLine(battle));
   return body;
 }
