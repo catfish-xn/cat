@@ -4,7 +4,7 @@
  * `@PercentShieldDamage*100@` are looked up as given, never multiplied or recomputed here. Riot markup is reduced to plain
  * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note.
  */
-import { abilityDisplayName, abilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
+import { abilityDisplayName, abilityDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 
@@ -63,7 +63,9 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
   if (!data) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
   try {
-    return { name: abilityDisplayName(definitionId), ...fillAbilityTemplate(data.description, abilityDisplayValues(definitionId, star, stats)) };
+    const values = starLevel === 4 ? ultimateHeroAbilityDisplayValues(definitionId, stats)
+      : abilityDisplayValues(definitionId, star, stats);
+    return { name: abilityDisplayName(definitionId), ...fillAbilityTemplate(data.description, values) };
   } catch (error) {
     if (error instanceof RangeError) return null;
     throw error;

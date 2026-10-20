@@ -1,0 +1,355 @@
+{
+  "baseCommit": "b13373c67bf7056e1e56e99e4d7cd5f875df7712",
+  "node": "v22.17.0",
+  "zlib": "1.3.0.1-motley-780819f",
+  "status": "Implementation and requested tests passed; original scouting visibility remains unverified under the offline constraint.",
+  "identities": {
+    "contentDigest": "fnv1a32-utf16:f8a31ce9",
+    "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
+    "unchanged": true
+  },
+  "build": {
+    "command": "npm.cmd run build -- --configLoader runner",
+    "projectTypecheckPassed": true,
+    "buildPassed": true,
+    "buildPluginStrictTypecheckPassed": true,
+    "chunks": [
+      {
+        "file": "index-Cb-NjoLi.js",
+        "bytes": 1446664,
+        "gzip9Bytes": 435317,
+        "sha256": "249b2b404e564f54490889c7f4f28c7ee3d172fff5024a5b985e3b4ce3ed0f37"
+      },
+      {
+        "file": "phaser-CD8tQlfa.js",
+        "bytes": 680170,
+        "gzip9Bytes": 194304,
+        "sha256": "aa746f0b0f878ae0fde5c010c098ebbc2f49346e590b73b99658e384aeee4766"
+      }
+    ]
+  },
+  "budget": {
+    "method": "scripts/m7-budget.cjs; all assets/*.js, gzip level 9",
+    "baselineCommit": "15313a75c6e74beec739fe52a2875c104c55eae3",
+    "baselineBytes": 424763,
+    "beforeBytes": 641071,
+    "beforeRatio": 1.5092439784067821,
+    "currentBytes": 629621,
+    "currentRatio": 1.4822877698857952,
+    "savedBytes": 11450,
+    "budget": 1.5,
+    "target": 1.49,
+    "with1400ExtraBytesRatio": 1.4855837255128155,
+    "interactive": {
+      "base": [
+        802,
+        956,
+        753
+      ],
+      "current": [
+        905,
+        795,
+        756
+      ],
+      "baseMedian": 802,
+      "currentMedian": 795
+    },
+    "interactiveRatio": 0.9912718204488778,
+    "interactiveSamples": 3
+  },
+  "tests": {
+    "files": 13,
+    "passed": 399,
+    "failed": 0,
+    "pending": 0,
+    "results": [
+      {
+        "file": "tests/match-session.test.ts",
+        "exitCode": 0,
+        "passed": 18,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/s13-p1-dual-wielding.test.ts",
+        "exitCode": 0,
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-anomalies-source.test.ts",
+        "exitCode": 0,
+        "passed": 4,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-anomalies.test.ts",
+        "exitCode": 0,
+        "passed": 42,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-wiring-match.test.ts",
+        "exitCode": 0,
+        "passed": 39,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-ability-display.test.ts",
+        "exitCode": 0,
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/epic-loot-reforger.test.ts",
+        "exitCode": 0,
+        "passed": 29,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/g2-2-ability-display.test.ts",
+        "exitCode": 0,
+        "passed": 73,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/choice-fallback.test.ts",
+        "exitCode": 0,
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/g2-3-display.test.ts",
+        "exitCode": 0,
+        "passed": 16,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/g2-4a-crown-display.test.ts",
+        "exitCode": 0,
+        "passed": 1,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/unit-revived-display.test.ts",
+        "exitCode": 0,
+        "passed": 3,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "exitCode": 0,
+        "passed": 142,
+        "failed": 0,
+        "pending": 0
+      }
+    ],
+    "originalThreeFileReproduction": {
+      "passed": 162,
+      "failed": 0,
+      "dualCaseMs": 15151.602399999998
+    }
+  },
+  "dual": {
+    "v15OriginalCaseMs": 11104.153,
+    "v16FinalCaseMs": 13774.3198,
+    "timeoutMs": 30000,
+    "profile": {
+      "v15": {
+        "generationMs": 7576.1883,
+        "replayMs": 3948.0242,
+        "restorePairMs": 45.783299999999144,
+        "commands": 6996,
+        "counts": {
+          "start": 19,
+          "step": 6815,
+          "continue": 22,
+          "buy": 24,
+          "sell": 3,
+          "deploy": 14,
+          "select": 6,
+          "combine": 5,
+          "equip": 7,
+          "lock": 2,
+          "buyXp": 10,
+          "reroll": 39,
+          "target": 1,
+          "anomalyReroll": 29
+        },
+        "eventCounts": {
+          "movement": 279,
+          "targetChanged": 356,
+          "attack": 1931,
+          "packetDamage": 2752,
+          "manaChanged": 2764,
+          "kill": 86,
+          "death": 86,
+          "lootRevealed": 17,
+          "cast": 243,
+          "shieldLayerChanged": 3137,
+          "combatFinished": 19,
+          "lootGranted": 17,
+          "roundSettled": 22,
+          "choiceOpened": 7,
+          "choiceSelected": 6,
+          "itemCombined": 5,
+          "itemEquipped": 7,
+          "statusChanged": 716,
+          "activityChanged": 118,
+          "heal": 627,
+          "growth": 7,
+          "unitUpgraded": 8,
+          "statChanged": 37,
+          "mechanicGranted": 1,
+          "itemsReturned": 1,
+          "anomalyTargetSelected": 1,
+          "anomalyRerolled": 29
+        },
+        "aliveUnitTicks": 54932,
+        "rounds": 22,
+        "lootReceipts": 17,
+        "provenanceEntries": 83
+      },
+      "v16": {
+        "generationMs": 7918.221999999998,
+        "replayMs": 5212.502999999997,
+        "restorePairMs": 44.62129999999888,
+        "commands": 7146,
+        "counts": {
+          "start": 19,
+          "step": 6989,
+          "continue": 22,
+          "buy": 24,
+          "sell": 3,
+          "deploy": 14,
+          "select": 6,
+          "combine": 5,
+          "equip": 6,
+          "lock": 2,
+          "buyXp": 10,
+          "reroll": 39,
+          "target": 1,
+          "anomalyReroll": 6
+        },
+        "eventCounts": {
+          "movement": 292,
+          "targetChanged": 369,
+          "attack": 1967,
+          "packetDamage": 2879,
+          "manaChanged": 2883,
+          "kill": 87,
+          "death": 87,
+          "lootRevealed": 16,
+          "cast": 251,
+          "shieldLayerChanged": 3161,
+          "combatFinished": 19,
+          "lootGranted": 16,
+          "roundSettled": 22,
+          "choiceOpened": 7,
+          "choiceSelected": 6,
+          "itemCombined": 5,
+          "itemEquipped": 8,
+          "heal": 784,
+          "statusChanged": 14583,
+          "activityChanged": 120,
+          "growth": 11,
+          "maxHpChanged": 3,
+          "unitUpgraded": 8,
+          "statChanged": 38,
+          "mechanicGranted": 1,
+          "itemsReturned": 1,
+          "anomalyTargetSelected": 1,
+          "anomalyRerolled": 6
+        },
+        "aliveUnitTicks": 56051,
+        "rounds": 22,
+        "lootReceipts": 16,
+        "provenanceEntries": 82
+      }
+    },
+    "interpretation": "Main cost is public-route generation and full command replay; v16 traverses a different trajectory (more combat steps, live-unit ticks, packets and casts). Strict restore pair is about 45 ms. These different trajectories do not isolate a per-tick causal regression."
+  },
+  "productionEquivalence": {
+    "checked": [
+      "CONTENT_DIGEST",
+      "ITEM_DEFINITIONS",
+      "TRAIT_DEFINITIONS",
+      "AUGMENT_DEFINITIONS",
+      "ANOMALY_DEFINITIONS",
+      "UNIT_DEFINITIONS",
+      "ABILITY_DEFINITIONS",
+      "LOOT_REPLAY_DIGEST",
+      "REFORGE_POOLS"
+    ],
+    "firstBattleSeeds": [
+      42,
+      7216,
+      6240
+    ],
+    "equal": true
+  },
+  "epoch": {
+    "releaseRecorded": true,
+    "heraldRecordedAndStrictlyVerified": true,
+    "inputsRecordedAndChecked": true,
+    "liveRevealRecordedAndChecked": true,
+    "sourceDigestsMatchWorkspace": true,
+    "historicalG23G24Files": 86,
+    "historicalV15Files": 23,
+    "historyAndHistoricalAssertionsByteIdentical": true
+  },
+  "scouting": {
+    "source": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
+    "sha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "pointer": "{cf1ee294}",
+    "name": "TFT13_GoopBuff_UltimateHero",
+    "fields": [
+      "name",
+      "{900aff58}",
+      "effectAmounts",
+      "{4e874e78}",
+      "ExcludedAugments",
+      "__type"
+    ],
+    "tooltip": {
+      "name": "TFT13_GoopBuff_UltimateHero_Tooltip",
+      "TitleTra": "TFT13_GoopBuff_UltimateHero_Title",
+      "SubtitleTra": "TFT13_GoopBuff_Categories_Utility",
+      "DescriptionTra": "TFT13_GoopBuff_UltimateHero_Description",
+      "__type": "TftTooltipData"
+    },
+    "effectAmounts": [
+      {
+        "name": "NumRounds",
+        "value": 3,
+        "__type": "TftEffectAmount"
+      }
+    ],
+    "executionReferences": [
+      {
+        "pointer": "{44055224}",
+        "resolvedInArchive": false
+      },
+      {
+        "pointer": "{7fa976fb}",
+        "resolvedInArchive": false
+      }
+    ],
+    "originalOpponentVisibility": "unknown",
+    "reason": "The retained metadata archive lacks the referenced execution records and client/network star-display replication data. Rank-4 ability values and upgrade description do not establish scouting visibility.",
+    "currentProjection": "Keep publicBoard.starLevel physical 3; no inferred effectiveStarLevel. This is a conservative project fallback, not a claim that the original client hides rank 4."
+  },
+  "forbiddenDirectoriesUnmodified": true,
+  "suggestedCommit": "fix(v16): repair epoch audit, trim 2D bundle and expose four-star tooltips"
+}

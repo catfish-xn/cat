@@ -1049,7 +1049,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 ## V16-UI-250：终极英雄与进入未知
 
-对手在公共棋盘上看到的晋升单位按物理 3 星显示，有效 4 星只在战斗录像里体现（有意设计）。
+对手公共棋盘目前保留物理 3 星；有效 4 星已在战斗录像中提供。原版侦察是否公开四星 **尚未核实**，不能将当前回退描述成原版隐藏规则。#265 离线核对的 14.24 map22 元数据含升级描述和 NumRounds=3，但两个执行引用未收录，也没有客户端星级显示/网络复制字段；技能 rank 4 表不能证明对手可见性。证据见 [侦察可见性审计](evidence/v16/scouting-visibility-audit.json)，可用 `node scripts/audit-d14-scouting.cjs` 复核。当前禁止联网且不改服务器，因此不凭推断新增公共标记；后续取得本地原版客户端执行/同步证据或可核验录像后再决定。此项保留证据缺口。
 
 领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
 
@@ -1062,3 +1062,9 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 只定义数据和行为，不规定视觉布局；服务器/表现层接入由其负责人完成。本轮实际 `tsc --noEmit` 通过，无额外编译阻塞。前一节 V16-UI-01 的编译诊断是史诗奖励交接时记录。
 
 全套检查另发现 `g23AnomalyApiName` 缺少两个 D14 名称映射；基线还缺 D11 的贪财化身/猎头者映射。最小待审补丁为 `artifacts/v16-recording/UI_ADAPTER_250.patch`，只补四个已由本地来源证实的 apiName，不改布局、素材或规则；未写入表现层源码。该补丁不包含四星、售价、离场倒数等控件接线，仍须完成上面的验收。准备阶段四星基础/技能应读取领域导出的 `d14UnitBase(unit, true)`，上场后的含装备/羁绊数值读取 `buildStrategySnapshot(state)`；战斗中读取现有 `CombatViewUnit` 数值，不能在界面自行续推星级倍率。
+
+### #265 / #270：有效四星技能说明（已提供）
+
+`src/simulation/ability-display.ts` 导出纯查询 `ultimateHeroAbilityDisplayValues(definitionId: string, stats?: AbilityDisplayStats): Readonly<Record<string, number>>`。仅供已认证 `effectiveStarLevel===4` 的终极英雄使用；返回已替换派生值与表达式的只读 token 映射，直接交给现有模板。默认 AD 取专用四星基础值、AP=100；传入快照 AD/AP 时沿用普通技能说明的整数边界（0–1000000），无效英雄/数值抛 `RangeError`。函数不授予晋升，不改变物理星级或玩法。
+
+来源复用 `d14UnitBase` 的实际 rank 4 表及 14.24b 辛吉德 DR=60% 覆盖，不能外推三星。`src/presentation/ability-text.ts` 仅做显示映射：`abilityText(id,4,stats)` 调用此查询，普通 1–3 星沿用原函数。Lux 默认伤害1260/护盾300，150AP时1890/450；辛吉德减伤60%。14个一费英雄模板无未替换 token，原有1–3星显示回归通过。

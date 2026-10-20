@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
+import { productionIdentities } from './scripts/production-identities';
 
 // Phaser's source tree is written for its webpack DefinePlugin: `typeof FLAG`
 // must become a literal, otherwise every optional branch (WebGL debug, FB
@@ -21,7 +22,10 @@ export default defineConfig(({ mode }) => ({
   // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
-  plugins: [phaserFlags],
+  plugins: [phaserFlags, productionIdentities()],
+  build: { rollupOptions: { output: { manualChunks(id) {
+    if (/[\\/]node_modules[\\/]phaser[\\/]/.test(id)) return 'phaser';
+  } } } },
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.
