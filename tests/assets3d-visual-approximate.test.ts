@@ -99,6 +99,38 @@ describe('explicit visual preview adapter', () => {
       expect(convert({ primitive }).systems[0].report[0]).toMatchObject({ status: 'skipped', reason: 'beam-endpoints-unavailable' });
     }
   });
+  it('counts ground stationary rays without direction evidence as skipped, leaving strict mode unchanged', () => {
+    const fields = { primitive: { __type: 'VfxPrimitiveRay' }, isGroundLayer: 1,
+      texture: 'synthetic/ray.png', birthScale0: c([12, 240, 1]) };
+    const before = structuredClone(fields);
+    for (const birthVelocity of [undefined, c([0, 0, 0])]) {
+      const result = convert({ ...fields, ...(birthVelocity ? { birthVelocity } : {}) });
+      expect(result.counts).toEqual({ mapped: 0, approximated: 0, skipped: 1, rejected: 0 });
+      expect(result.systems[0].report[0].reason).toBe('unexpressible-emitter:ground-stationary-ray-plane');
+      expect(result.systems[0].document).toBeUndefined();
+    }
+    expect(convert(fields, {}, { particleMode: 'strict' }).counts.rejected).toBe(1);
+    expect(mapped({ ...fields, birthVelocity: c([8, 0, 0]) }).e.direction).toEqual([-8, 0, 0]);
+    expect(fields).toEqual(before);
+  });
+  it('keeps ground decals flat after affine stretch, host placement and camera changes', () => {
+    const fields = { emitterName: 'synthetic-ground', isGroundLayer: 1,
+      primitive: { __type: 'VfxPrimitiveArbitraryQuad' }, birthRotation0: c([90, -90, 0]),
+      EmitterPosition: c([0, 0, 100]), birthScale0: c([200, 400, 1]) };
+    const { doc } = mapped(fields, { transform: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 2, 0], [0, 0, 100, 1]] });
+    const fx = new ParticleEffect(doc, { scale: .44 });
+    const camera = new PerspectiveCamera(); fx.object.position.set(200, 0, 300);
+    try {
+      for (const angle of [.3, 1]) {
+        camera.rotation.set(angle, -.2, 0); fx.update(.15, camera); fx.object.updateMatrixWorld(true);
+        const mesh = fx.object.children[0] as Mesh, vertices = mesh.geometry.getAttribute('position');
+        const points = Array.from({ length: vertices.count }, (_, i) => new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(mesh.matrixWorld));
+        expect(Math.max(...points.map(p => p.y)) - Math.min(...points.map(p => p.y))).toBeLessThan(1e-8);
+        expect(Math.max(...points.map(p => p.z)) - Math.min(...points.map(p => p.z))).toBeCloseTo(176);
+        expect(mesh.material).toBeDefined();
+      }
+    } finally { fx.dispose(); }
+  });
   it.each([[1, 'normal'], [2, 'additive'], [3, 'normal'], [4, 'additive'], [991, 'normal']])('annotates numeric blend %s as %s', (value, blend) => {
     const { e, row } = mapped({ blendMode: value }); expect(e.blend).toBe(blend);
     expect(row.status).toBe('approximated'); expect(row.approximations[0].field).toBe('blendMode');
