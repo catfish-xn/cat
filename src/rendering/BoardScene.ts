@@ -379,8 +379,11 @@ export class BoardScene extends Phaser.Scene {
       if (target.kind === 'board') this.dropZones.fillPoints(this.layout.corners(target.cell), true);
       else { const p = this.benchCenter(target.slot); this.dropZones.fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
     }
-    const count = getPlayerDeploymentCount(this.state), cap = getDeploymentCap(state);
-    if (unit.location.kind === 'bench' && this.session.phase === 'preparation' && count >= cap) this.setStatus(`人口已满 ${count}/${cap} · 只能与场上单位互换，或升级提高人口`);
+    if (unit.location.kind === 'bench' && this.session.phase === 'preparation' && getPlayerDeploymentCount(this.state) >= getDeploymentCap(state)) this.setStatus(this.populationCapText());
+  }
+  /** Population-cap hint with the x/y count, shared by the drag start and every drag frame over a refused cell. */
+  private populationCapText(): string {
+    return `人口已满 ${getPlayerDeploymentCount(this.state)}/${getDeploymentCap(this.session.state)} · 只能与场上单位互换，或升级提高人口`;
   }
   /**
    * W (TFT): the hovered piece of mine moves board → first open bench slot, or bench → first open cell of my rows,
@@ -499,7 +502,7 @@ export class BoardScene extends Phaser.Scene {
       } else if (target) {
         // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
         const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
-        this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
+        this.setStatus(reason ? (reason === 'population-cap' ? this.populationCapText() : this.failureMessage(reason)) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
         else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
