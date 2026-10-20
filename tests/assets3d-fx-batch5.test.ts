@@ -12,22 +12,24 @@ const fixture = JSON.parse(readFileSync(new URL('./fixtures/assets3d-fx-batch5.j
 const tables = Object.fromEntries(Object.values(batch5Tables).map((t, i) => [`synthetic-unit-${i}`, t]));
 
 describe('batch five offline FX bindings', () => {
-  it('omits rotated stationary ray planes rather than drawing upright slabs', () => {
+  it('restores rotated stationary ray planes with full fixed orientation', () => {
     const input = { emitterName: 'synthetic-ray', isSingleParticle: true,
       particleLifetime: { constantValue: 1 }, texture: 'synthetic/ray.png',
       primitive: { __type: 'VfxPrimitiveRay' }, birthScale0: { constantValue: [100, 200, 1] },
       birthRotation0: { constantValue: [90, 0, 0] } };
     const before = structuredClone(input);
     const convert = (v: object, particleMode = 'approximate') => mapEmitter(v, (p: string) => p, { particleMode });
-    for (const rotation of [[90, 0, 0], [0, 90, 0], [-90, 0, 0]]) {
+    for (const rotation of [[90, 0, 0], [-90, 0, 0]]) {
       expect(convert({ ...input, birthRotation0: { constantValue: rotation } })).toMatchObject({
-        status: 'skipped', reason: 'unexpressible-emitter:rotated-stationary-ray-plane' });
+        status: 'approximated', emitter: { kind: 'ray', direction: [0, 1, 0] } });
     }
-    expect(convert({ ...input, birthVelocity: { constantValue: [0, 0, 0] } }).status).toBe('skipped');
+    expect(convert({ ...input, birthVelocity: { constantValue: [0, 0, 0] } }).status).toBe('approximated');
     expect(convert({ ...input, birthVelocity: { constantValue: [100, 0, 0] } }).emitter.direction).toEqual([-100, 0, 0]);
     expect(convert({ ...input, birthVelocity: { constantValue: [100, 0] } }).status).toBe('rejected');
-    expect(convert({ ...input, birthRotation0: { constantValue: [0, 0, 90] } }).emitter.kind).toBe('ray');
-    expect(convert({ ...input, birthRotation0: { constantValue: [360, 0, 0] } }).emitter.kind).toBe('ray');
+    for (const rotation of [[0, 90, 0], [0, 0, 90], [360, 0, 0]]) {
+      expect(convert({ ...input, birthRotation0: { constantValue: rotation } })).toMatchObject({
+        status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-ground-normal' });
+    }
     expect(convert(input, 'strict')).toEqual(mapEmitter(input, (p: string) => p));
     expect(input).toEqual(before);
   });

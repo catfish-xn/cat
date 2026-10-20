@@ -81,7 +81,7 @@ describe('explicit visual preview adapter', () => {
     camera.rotation.set(.8, -.2, 1); fx.update(.1, camera);
     expect(fx.object.children[0].quaternion.angleTo(rotation)).toBeLessThan(1e-6); fx.dispose();
   });
-  it('orients ray geometry along velocity and uses local Y for stationary rays', () => {
+  it('orients moving ray geometry along velocity and skips stationary rays without evidence', () => {
     const { e, doc, row } = mapped({ primitive: { __type: 'VfxPrimitiveRay' }, birthVelocity: c([3, 0, 0]), birthScale0: c([2, 8, 1]), birthRotation0: c([90, 90, 90]) });
     expect(e.direction).toEqual([-3, 0, 0]);
     expect(row.approximations).toContainEqual(expect.objectContaining({ handling: 'ray-or-beam-direction-overrides-birth-rotation' }));
@@ -89,7 +89,8 @@ describe('explicit visual preview adapter', () => {
     const mesh = fx.object.children[0] as Mesh;
     expect(new Vector3(0, 1, 0).applyQuaternion(mesh.quaternion).x).toBeCloseTo(-1);
     expect(mesh.scale.y).toBe(8); fx.dispose();
-    expect(mapped({ primitive: { __type: 'VfxPrimitiveRay' } }).e.direction).toEqual([0, 1, 0]);
+    expect(convert({ primitive: { __type: 'VfxPrimitiveRay' } }).systems[0].report[0]).toMatchObject({
+      status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-evidence' });
   });
   it('uses beam endpoints and skips missing or coincident endpoints without emitting a fake beam', () => {
     const p = { __type: 'VfxPrimitiveBeam', start: [1, 2, 3], end: [1, 8, 3] };
@@ -99,15 +100,16 @@ describe('explicit visual preview adapter', () => {
       expect(convert({ primitive }).systems[0].report[0]).toMatchObject({ status: 'skipped', reason: 'beam-endpoints-unavailable' });
     }
   });
-  it('counts ground stationary rays without direction evidence as skipped, leaving strict mode unchanged', () => {
+  it('restores ground stationary rays as fixed XZ planes, leaving strict mode unchanged', () => {
     const fields = { primitive: { __type: 'VfxPrimitiveRay' }, isGroundLayer: 1,
       texture: 'synthetic/ray.png', birthScale0: c([12, 240, 1]) };
     const before = structuredClone(fields);
     for (const birthVelocity of [undefined, c([0, 0, 0])]) {
       const result = convert({ ...fields, ...(birthVelocity ? { birthVelocity } : {}) });
-      expect(result.counts).toEqual({ mapped: 0, approximated: 0, skipped: 1, rejected: 0 });
-      expect(result.systems[0].report[0].reason).toBe('unexpressible-emitter:ground-stationary-ray-plane');
-      expect(result.systems[0].document).toBeUndefined();
+      expect(result.counts).toEqual({ mapped: 0, approximated: 1, skipped: 0, rejected: 0 });
+      const fx = new ParticleEffect(result.systems[0].document, { scale: 1 });
+      expect(Math.abs(new Vector3(0, 0, 1).applyQuaternion(fx.object.children[0].quaternion).y)).toBeCloseTo(1);
+      fx.dispose();
     }
     expect(convert(fields, {}, { particleMode: 'strict' }).counts.rejected).toBe(1);
     expect(mapped({ ...fields, birthVelocity: c([8, 0, 0]) }).e.direction).toEqual([-8, 0, 0]);

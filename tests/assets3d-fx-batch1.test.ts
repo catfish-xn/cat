@@ -41,14 +41,11 @@ describe('TFT13 batch one explicit FX tables', () => {
       expect(fixture.source).toEqual(original);
     } finally { fx.dispose(); }
   });
-  it('keeps a signed-probability ray at zero width rather than treating it as a glow surface', () => {
+  it('keeps a signed-probability ray without plane evidence skipped', () => {
     const fixture = oversize.find((r: any) => r.source.emitterName === 'synthetic_ray');
     const result = mapEmitter(fixture.source, (path: string) => path, { particleMode: 'approximate' });
-    expect(result.emitter.kind).toBe('ray');
-    expect(result.emitter.size0).toEqual([0, 600, 0]);
-    // Signed probability keys cancel in the existing deterministic mean preview.
-    // Its long bounding line has no surface, unlike the synthetic glow quads.
-    expect(result.emitter.size[0].value).toBe(2);
+    expect(result).toMatchObject({ status: 'skipped', reason: 'unexpressible-emitter:stationary-ray-plane-without-evidence' });
+    expect(result.emitter).toBeUndefined();
   });
   it('rejects other output roots and unsupported units before writing', async () => {
     for (const out of ['assets3d-local/fx-trial', 'assets3d-local/fx-all', 'public']) {
