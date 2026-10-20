@@ -34,6 +34,9 @@ function jsGzip(dir, sub = 'assets') {
 }
 // The 3D chunk is optional (base builds predate it); the 2D assets/ folder must exist and still throws ENOENT.
 const js3dGzip = dir => (fs.existsSync(path.join(dir, 'assets', '3d')) ? jsGzip(dir, path.join('assets', '3d')) : 0);
+const js3dFiles = dir => (fs.existsSync(path.join(dir, 'assets', '3d')) ? fs.readdirSync(path.join(dir, 'assets', '3d')).filter(file => file.endsWith('.js')) : []);
+// Excluding assets/3d/ from the 2D ratio is only valid while index.html never preloads it (a preload would ship it on 2D first load).
+const preloads3d = dir => /assets\/3d\//.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'));
 function serve(dir) {
   const server = http.createServer((req, res) => {
     const file = path.join(dir, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html');
@@ -63,7 +66,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
   const result = {
     baselineDirectories: { js: jsBaseDir, interactive: baseDir },
     jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.50,
-    js3dGzipBytes: js3dGzip(currentDir),
+    js3dGzipBytes: js3dGzip(currentDir), js3dFiles: js3dFiles(currentDir), js3dPreloadedByIndex: preloads3d(currentDir),
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
   };
@@ -71,7 +74,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
   // JS gzip budget is deterministic and always enforced. Both budgets are unchanged.
   const interactivePassed = result.interactiveRatio <= result.interactiveBudget;
   result.wallClock = { enforced: wallClockEnforced, gates: recordWallClock('m7-budget', [{ name: 'firstInteractiveRatio', metric: 'median ratio', actual: result.interactiveRatio, limit: result.interactiveBudget, comparison: '<=', passed: interactivePassed }]) };
-  result.passed = result.jsRatio <= result.jsBudget && (interactivePassed || !wallClockEnforced);
+  result.passed = result.jsRatio <= result.jsBudget && !result.js3dPreloadedByIndex && (interactivePassed || !wallClockEnforced);
   fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   if (!result.passed) process.exitCode = 1;
