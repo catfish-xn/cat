@@ -3,6 +3,9 @@ import type { ActionTask, DamageFilter, DamageRequest, Effect, EffectRuntime, He
 import type { LegacyExportRequest, LegacyExportResult, LegacyRecord, LegacyRecordAccess } from '../src/simulation/m8/ui-contracts';
 import { shiv, titan, nashor } from './fixtures/m8-audit-definitions';
 import { amount, cast, context, key, modifier, selector, source, trigger } from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const roundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = { domain: 'combat', combatId: 'c1', tick: 10, eventSeq: 1 } as const;
 

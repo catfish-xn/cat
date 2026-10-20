@@ -5,6 +5,9 @@ import {grantMechanicItem,grantMechanicUnit} from '../src/simulation/seat-mechan
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import {createItemRandomStreams,drawItemRandom} from '../src/simulation/g2-4b-item-kernel';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 it('executes through real combat, settles only successful independent rolls, and restores exact gold authority',()=>{
  let executions=0,awards=0;

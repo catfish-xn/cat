@@ -1,0 +1,1 @@
+{"seed":23,"round":"4-6","elapsedMs":16227.648195000002,"rawBytes":84055,"verified":"public commands -> serialize -> production restore","mode":"check"}

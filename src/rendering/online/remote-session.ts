@@ -25,7 +25,9 @@ export type IntentNotice = { readonly kind: 'pending'; readonly commandId: numbe
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
-const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable']);
+const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable',
+  // v15: an orb clicked during my battle is queued by the rules and settled after it (user 2026-10-20 02:26).
+  'claimOrb']);
 /** G5: my finished battle of a round, kept after the settlement took it off the board (post-battle ranking). */
 export interface FinishedBattle { readonly round: number; readonly roundId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
 /** Playback behind wall time by more than this (dropped or stalled frames) catches up at once; 1x otherwise. */
@@ -114,6 +116,22 @@ export class RemoteSession extends MatchSession {
     this.finished = [...this.finished.filter(entry => entry.round !== battle.round), battle];
     this.notify(before, [], 'command');
   }
+  /**
+   * D11 live bank: the battle on the board was revised from some tick on. The records already shown stay (the server
+   * only revises ticks the playback has not reached, unless it lagged); the view is rebuilt on the revised records up
+   * to the same point and playback continues from there.
+   */
+  reviseReplay(replay: CombatReplay): void {
+    const current = this.replay;
+    if (!current || !replay.ticks.length || replay.initial.combatId !== current.initial.combatId) return;
+    const shown = Math.min(this.nextTick, replay.ticks.length);
+    let view: CombatViewState = replay.initial;
+    for (let index = 0; index < shown; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
+    this.replay = replay; this.nextTick = shown;
+    if (this.view !== null) this.view = shown === replay.ticks.length ? replay.terminal : view;
+    this.finished = this.finished.map(entry => entry.replay === current ? { ...entry, replay } : entry);
+    const before = this.matchState; this.notify(before, [], 'command');
+  }
   /** Display-only: my last authoritative state in the combat phase; the combat itself is `combatView`. */
   private overlay(): MatchState { return { ...(this.playbackBase ?? this.matchState), phase: 'combat', combat: null } as unknown as MatchState; }
   /** Debug/acceptance read: playback progress and how many battles a newer state cut short. */
@@ -189,6 +207,9 @@ export class RemoteSession extends MatchSession {
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
+  override augmentReroll(choiceId: string, generation: number, optionIndex: number) { return this.intent({ type: 'rerollAugment', choiceId, generation, optionIndex }); }
+  /** v15: claim one of my unclaimed orbs; `round` is the round shown now (the orb may come from an earlier one). */
+  override claimOrb(orbId: string) { return this.intent({ type: 'claimOrb', round: this.matchState.round, orbId }); }
   /** G2-4b (§26): the room hands it to the rules' moveItemSummon; refused outside preparation like any board move. */
   override moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.intent({ type: 'moveItemSummon', itemInstanceId, cell: { col: cell.col, row: cell.row } }); }
   /** G2-4b: the summons of my last state push as the server placed them; never derived from items or rounds here. */

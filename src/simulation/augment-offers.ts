@@ -1,0 +1,100 @@
+import { AUGMENT_DEFINITIONS } from './content/augments';
+import { AUGMENT_OFFER_POLICY, AUGMENT_TIERS } from './content/augment-policy';
+import { generateChoices } from './choices';
+import { nextRandom } from './rng';
+import { getRoundSchedule } from './round-schedule';
+import { isCombatRosterLocked } from './operation-policy';
+import type { MatchState } from './match-types';
+import type { OwnedAugment } from './strategy-types';
+
+export type AugmentTier = 'silver' | 'gold' | 'prismatic';
+/** Retained after selection so restore can reconstruct every offer and consumed word. */
+export interface AugmentOfferRecord {
+  readonly choiceId: string;
+  readonly tier: AugmentTier;
+  readonly rerollCount: number;
+  /** Successful slot indices in command order; sufficient to replay the private RNG. */
+  readonly rerolledIndices: readonly number[];
+}
+
+/** User convention 2026-10-19: FNV-1a UTF-16 node ID, seed xor namespace, one private LCG word. */
+export function deriveAugmentTier(seed: number, choiceId: string): AugmentTier {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < choiceId.length; i++) hash = Math.imul(hash ^ choiceId.charCodeAt(i), 0x01000193) >>> 0;
+  const word = nextRandom((seed ^ AUGMENT_OFFER_POLICY.tierSeedXor ^ hash) >>> 0).word;
+  return AUGMENT_OFFER_POLICY.tiers[word % AUGMENT_OFFER_POLICY.tiers.length];
+}
+
+/** One use per slot per node. ExtraRolls is not admitted by the current card-reroll rule. */
+export function augmentRerollLimit(_augments: readonly OwnedAugment[]): number {
+  return 1;
+}
+
+export function augmentCandidates(tier: AugmentTier, owned: readonly OwnedAugment[], excluded: readonly string[] = []): string[] {
+  return Object.keys(AUGMENT_DEFINITIONS).filter(id => AUGMENT_TIERS[id] === tier
+    && !owned.some(a => a.definitionId === id) && !excluded.includes(id));
+}
+
+/** One LCG word, sorted IDs, modulo selection. Caller validates nonempty before drawing. */
+export function drawAugmentCard(candidates: readonly string[], rng: number): { definitionId: string; choiceRngState: number } {
+  if (!candidates.length) throw new Error('Empty augment card pool');
+  const pool = [...candidates].sort(), draw = nextRandom(rng);
+  return { definitionId: pool[draw.word % pool.length], choiceRngState: draw.state };
+}
+
+/** Detached owner-visible buttons; an exhausted pool disables even an unused slot. */
+export function augmentOptionViews(state: MatchState) {
+  const choice = state.pendingChoice;
+  if (choice?.kind !== 'augment') return [];
+  const candidates = augmentCandidates(choice.augmentTier!, state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  return choice.offers.map((definitionId, optionIndex) => ({ definitionId, optionIndex,
+    rerollAvailable: state.phase === 'choice' && choice.step === 'offer' && !isCombatRosterLocked(state)
+      && state.multiplayer?.status !== 'eliminated'
+      && choice.rerolledSlots?.[optionIndex] === false && candidates.length > 0 }));
+}
+
+/** Restore from seed and node history, never from saved candidate IDs or a saved RNG checkpoint.
+ * Scheduled augment nodes precede the anomaly node in the admitted S13 schedule. */
+export function validateAugmentOfferHistory(state: MatchState): void {
+  const check = (condition: boolean) => { if (!condition) throw new Error('Invalid augment offer history'); };
+  check(state.augmentTierSeed === state.seed);
+  check(Array.isArray(state.augmentOffers) && state.augmentOffers.length <= 3);
+  let rng = (state.seed ^ 0x9e3779b9) >>> 0;
+  const owned: OwnedAugment[] = [];
+  const removed: string[] = [];
+  check(Array.isArray(state.removedAugmentIds));
+  let index = 0;
+  for (let round = 1; round <= state.round; round++) for (const node of getRoundSchedule(round)) {
+    if (node.kind !== 'augment') continue;
+    const selected = state.augments.find(a => a.choiceId === node.id);
+    const pending = state.pendingChoice?.kind === 'augment' && state.pendingChoice.choiceId === node.id ? state.pendingChoice : null;
+    if (!selected && !pending) continue;
+    const record = state.augmentOffers[index++];
+    const tier = deriveAugmentTier(state.seed, node.id);
+    check(!!record && record.choiceId === node.id && record.tier === tier
+      && Number.isSafeInteger(record.rerollCount) && record.rerollCount >= 0 && record.rerollCount <= 3
+      && Array.isArray(record.rerolledIndices) && record.rerolledIndices.length === record.rerollCount
+      && new Set(record.rerolledIndices).size === record.rerollCount);
+    const initial = generateChoices(augmentCandidates(tier, owned, removed), rng);
+    const offers = [...initial.offers], rerolledSlots = [false, false, false];
+    rng = initial.choiceRngState;
+    for (const slot of record.rerolledIndices) {
+      check(Number.isSafeInteger(slot) && slot >= 0 && slot < 3);
+      const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers]), rng);
+      removed.push(offers[slot]); offers[slot] = draw.definitionId;
+      rng = draw.choiceRngState; rerolledSlots[slot] = true;
+    }
+    if (pending) check(pending.augmentTier === tier && pending.rerollCount === record.rerollCount
+      && pending.generation === record.rerollCount && pending.rerollsRemaining === 3 - record.rerollCount
+      && JSON.stringify(pending.rerolledSlots) === JSON.stringify(rerolledSlots)
+      && JSON.stringify(pending.offers) === JSON.stringify(offers));
+    if (selected) { check(selected.acquiredRound === round && offers.includes(selected.definitionId)); owned.push(selected); }
+  }
+  check(index === state.augmentOffers.length && owned.length === state.augments.length);
+  check(JSON.stringify(state.removedAugmentIds) === JSON.stringify(removed));
+  // No other consumer of this stream exists until the later anomaly target/offer.
+  // Selling the bound target removes anomalyBinding but retains its schedule receipt and consumed words.
+  const anomalyDrawn = state.scheduleReceipts.some(receipt => receipt.kind === 'anomaly')
+    || state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.generation > 0;
+  if (!anomalyDrawn) check(state.choiceRngState === rng);
+}

@@ -1,3 +1,5 @@
+import { Euler } from 'three';
+
 // Explicit preview conventions, not claims about the original engine. Strict
 // conversion never calls this module's adapter. All decisions carry field paths.
 export function particleMode(mode = 'strict') {
@@ -33,7 +35,7 @@ export const OMIT_PREVIEW_FIELDS = Object.freeze({
   '{cb13aff1}': 'ignore-unknown-scalar-preview-modifier',
 });
 
-export function approximateEmitter(input, system = {}) {
+export function approximateEmitter(input, system = {}, options = {}) {
   const source = structuredClone(input), approximations = [], additions = {};
   const note = (field, value, handling) => approximations.push({ field, value: structuredClone(value), handling });
   const omit = (field, handling) => { note(field, source[field], handling); delete source[field]; };
@@ -41,6 +43,22 @@ export function approximateEmitter(input, system = {}) {
   // not quietly drop these and pretend the parent's resource chain rendered.
   for (const field of ['childParticleSetDefinition', 'fieldCollectionDefinition', 'fieldCollection']) {
     if (Object.hasOwn(source, field)) return { status: 'skipped', reason: `unexpressible-emitter:${field}` };
+  }
+  const shape = source.SpawnShape;
+  if (options.textureAlpha?.(source.texture) === false
+      && (source.textureMult || source.alphaErosionDefinition)) {
+    return { status: 'skipped', reason: 'unexpressible-emitter:opaque-base-requires-secondary-mask' };
+  }
+  const nonzero = value => typeof value === 'number' ? value !== 0
+    : Array.isArray(value) ? value.some(nonzero)
+    : value && typeof value === 'object' ? Object.entries(value).some(([key, v]) =>
+      ['constantValue', 'values', 'keyValues', 'dynamics', 'probabilityTables'].includes(key) && nonzero(v)) : false;
+  // A rotated emission frame affects BOTH position and velocity. Collapsing it
+  // to a mean point/velocity stacks a continuous stream into a saturated slab.
+  // V2 has no emission-frame distribution; omit rather than invent its motion.
+  if (!source.isSingleParticle && shape?.emitRotationAxes?.some(nonzero)
+      && shape.emitRotationAngles?.some(nonzero) && nonzero(source.birthVelocity)) {
+    return { status: 'skipped', reason: 'unexpressible-emitter:rotated-directional-emission' };
   }
   const sample = (value, field, animated = false) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
@@ -89,10 +107,17 @@ export function approximateEmitter(input, system = {}) {
     note('birthAcceleration', input.birthAcceleration, 'constant-birth-acceleration-added-to-gravity');
     source.worldAcceleration = defaultCurve(a.map((n, i) => n + g[i])); delete source.birthAcceleration;
   }
-  if (typeof source.blendMode === 'number') {
-    note('blendMode', source.blendMode, source.blendMode === 4 ? 'community-preview-4-additive' : [1, 3].includes(source.blendMode)
-      ? 'community-preview-1-or-3-alpha' : 'unknown-number-falls-back-to-alpha');
-    source.blendMode = source.blendMode === 4 ? 'additive' : 'normal';
+  // Numeric selectors are named preview conventions, not proven GPU equations.
+  const blend = source.blendMode;
+  const alpha = options.textureAlpha?.(source.texture);
+  if (!['normal', 'additive', 'multiply'].includes(blend) && (blend !== undefined || alpha === false)) {
+    const mapped = typeof blend === 'number' && [1, 2, 3, 4].includes(blend)
+      ? ({ 1: 'normal', 2: 'additive', 3: 'normal', 4: 'additive' })[blend] : undefined;
+    source.blendMode = mapped ?? (alpha === false ? 'additive' : 'normal');
+    note('blendMode', blend ?? null, mapped
+      ? 'league-preview-' + blend + '-' + source.blendMode
+      : 'league-preview-unknown-' + (alpha === false ? 'opaque-texture-additive' : 'alpha-or-unverified-normal'));
+    if (!mapped) note('texture.alpha', alpha ?? null, 'PNG-any-alpha-below-255-effective-alpha-unknown-is-not-opaque');
   }
   if (source.SpawnShape !== undefined) {
     const s = source.SpawnShape;
@@ -115,6 +140,42 @@ export function approximateEmitter(input, system = {}) {
     const size = source.birthScale0?.constantValue;
     if (Array.isArray(size)) source.birthScale0 = defaultCurve([size[0], size[0], size[0]]);
   }
+  // V2 has a scalar lifetime size curve. For nonuniform XY planes retain the
+  // authored longest edge, rather than multiplying Y by X's unrelated curve.
+  // Aspect ratio animation remains approximated; strict conversion is unchanged.
+  const primitiveType = source.primitive?.__type ?? 'VfxPrimitiveCameraQuad';
+  const plane = ['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveCameraQuad', 'VfxPrimitiveRay'].includes(primitiveType);
+  const meshBounds = primitiveType === 'VfxPrimitiveMesh' ? options.meshBounds?.(source.primitive.mMesh?.mSimpleMeshName) : undefined;
+  const axes = plane ? [0, 1] : [0, 1, 2];
+  const birth = source.birthScale0?.constantValue ?? [1, 1, 1];
+  const weights = plane ? birth : vector(meshBounds) ? birth.map((n, i) => n * meshBounds[i]) : undefined;
+  if (weights && !source.isUniformScale && vector(birth) && Math.max(...axes.map(i => Math.abs(weights[i]))) > 0 && source.scale0) {
+    const curve = source.scale0, values = curve.dynamics?.values ?? [curve.constantValue];
+    if (values.every(vector) && values.some(v => axes.some(i => v[i] !== v[0]))) {
+      note('scale0', input.scale0, plane ? 'scalar-v2-XY-long-edge-envelope-static-aspect-ratio' : 'scalar-v2-mesh-bounds-long-edge-envelope-static-aspect-ratio');
+      const width = Math.max(...axes.map(i => Math.abs(weights[i])));
+      const edge = v => Math.max(...axes.map(i => Math.abs(weights[i] * v[i]))) / width;
+      if (!curve.dynamics) source.scale0 = defaultCurve(Array(3).fill(edge(values[0])));
+      else {
+        const times = curve.dynamics.times, keys = new Map();
+        for (let i = 0; i < times.length; i++) {
+          keys.set(times[i], edge(values[i]));
+          if (!i || times[i] <= times[i - 1]) continue;
+          const a = values[i - 1], b = values[i];
+          // Max of signed axis-linear functions; insert every crossing so the
+          // interpolated scalar preserves the long edge between source keys.
+          const lines = axes.flatMap(axis => [1, -1].map(sign => [weights[axis] * a[axis] * sign, weights[axis] * b[axis] * sign]));
+          for (let j = 0; j < lines.length; j++) for (let k = j + 1; k < lines.length; k++) {
+            const [a0, a1] = lines[j], [b0, b1] = lines[k];
+            const den = (a1 - a0) - (b1 - b0), f = (b0 - a0) / den;
+            if (Number.isFinite(f) && f > 0 && f < 1) keys.set(times[i - 1] + f * (times[i] - times[i - 1]), edge(a.map((v, axis) => v + f * (b[axis] - v))));
+          }
+        }
+        const sorted = [...keys].sort(([a], [b]) => a - b);
+        source.scale0 = { dynamics: { times: sorted.map(([t]) => t), values: sorted.map(([, n]) => [n, n, n]) } };
+      }
+    }
+  }
   if (source.scale0) {
     const s = source.scale0;
     const uniform = v => Array.isArray(v) ? [Math.abs(v[0]), Math.abs(v[0]), Math.abs(v[0])] : v;
@@ -136,7 +197,10 @@ export function approximateEmitter(input, system = {}) {
   const p = source.primitive, type = p?.__type;
   if (p && Object.hasOwn(p, 'AlignYawToCamera')) { note('primitive.AlignYawToCamera', p.AlignYawToCamera, 'keep-static-mesh-birth-orientation'); delete p.AlignYawToCamera; }
   if (type === 'VfxPrimitiveArbitraryQuad') {
-    note('primitive', p, 'arbitrary-quad-as-camera-facing-quad'); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
+    // V2 already supports a fixed XY plane with birth Euler orientation.
+    // Billboarding this plane turns authored ground decals into upright walls.
+    additions.kind = 'arbitraryQuad';
+    note('primitive', p, 'arbitrary-quad-local-XY-preserve-birth-Euler'); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
   } else if (type === 'VfxPrimitiveRay') {
     const velocity = source.birthVelocity?.constantValue;
     additions.kind = 'ray'; additions.direction = vector(velocity) && Math.hypot(...velocity) > 0 ? [-velocity[0], velocity[1], velocity[2]] : [0, 1, 0];
@@ -156,6 +220,18 @@ export function approximateEmitter(input, system = {}) {
     additions.kind = 'trail'; additions.trail = { width: [{ time: 0, value: width }], lifetime: 0.3, segments: 32, uvMode: 'stretch' };
     note('primitive', p, 'v2-trail-width-birthTilingSize-X-tail-0.3s-32-segments-stretch-no-source-smoothing');
     source.birthScale0 = defaultCurve([1, 1, 1]); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
+  }
+  // Fixed planes/meshes: preview League pitch(X), yaw(Y), roll(Z) as
+  // Ry * Rx * Rz (Three YXZ). Both spaces are Y-up; reflect X, hence negate
+  // Y/Z angles, without swapping axes. Serialize an equivalent XYZ Euler in
+  // degrees for the existing V2 contract. Camera roll and ray direction have
+  // separate conventions below. Never infer orientation from ground-layer flags.
+  const rotation = source.birthRotation0?.constantValue;
+  if (['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveMesh'].includes(type) && vector(rotation)) {
+    const radians = Math.PI / 180;
+    const xyz = new Euler(rotation[0] * radians, -rotation[1] * radians, -rotation[2] * radians, 'YXZ').reorder('XYZ');
+    additions.rotation0 = [xyz.x, xyz.y, xyz.z].map(n => n / radians);
+    note('birthRotation0', input.birthRotation0 ?? rotation, 'fixed-primitive-YXZ-X-reflection-to-v2-XYZ-degrees');
   }
   if (additions.kind === 'ray' && source.birthRotation0 !== undefined) {
     note('birthRotation0', input.birthRotation0 ?? source.birthRotation0, 'ray-or-beam-direction-overrides-birth-rotation');

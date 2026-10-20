@@ -2,12 +2,15 @@ import { heroEmblemSvg } from '../../presentation/hero-identity';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { avatarUnit } from './opponent-board';
 import type { PlayerView, SeatPublic } from './protocol';
+import { StageTrack } from './stage-track';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 /** G1-P6 mark of a seat in my pairing: drawn opponent (strong), possible opponent before the freeze (weak), or none. */
 type Pairing = 'opponent' | 'candidate' | null;
+/** How long a seat's HP drop stays marked (lost segment and -N chip). */
+const HIT_MS = 2600;
 const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', carousel: '选秀', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
 /** TFT-style right column: phase badge on top, eight seats ordered by HP below. The big countdown sits above the
  *  board when a countdown host is given (TFT top centre); without one it stays in the sidebar's top bar.
@@ -19,10 +22,14 @@ export class PlayersSidebar {
   private timerLabel: HTMLElement;
   private connectionBadge: HTMLElement;
   private countdownRound: HTMLElement | null = null;
+  /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
+  private stageTrack: StageTrack | null = null;
   private list: HTMLElement;
   private view: PlayerView | null = null;
   private viewing: string | null = null;
   private spectateBanner: HTMLElement;
+  /** Last HP shown per seat: a drop leaves a fading "lost" segment and a -N chip on the bar (presentation only). */
+  private shownHp = new Map<string, { hp: number; from: number; at: number }>();
   /** performance.now() minus the server clock, so the countdown follows the server. */
   private clockOffset = 0;
   constructor(host: HTMLElement, private readonly countdownHost: HTMLElement | null = null, private readonly onSelect: ((seatId: string) => void) | null = null) {
@@ -32,7 +39,8 @@ export class PlayersSidebar {
     this.timerLabel.dataset.debug = 'online:timer'; this.timerLabel.setAttribute('role', 'timer'); this.timerLabel.setAttribute('aria-label', '阶段倒计时');
     if (countdownHost) {
       countdownHost.classList.add('online-countdown'); this.countdownRound = element('span', '', 'countdown-round');
-      countdownHost.replaceChildren(this.countdownRound, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
+      this.stageTrack = new StageTrack();
+      countdownHost.replaceChildren(this.countdownRound, this.stageTrack.root, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
     } else top.append(this.phaseBadge, this.roundLabel, this.timerLabel);
     this.connectionBadge = element('span', '', 'online-connection'); this.connectionBadge.dataset.debug = 'online:connection'; this.connectionBadge.hidden = true;
     this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
@@ -53,6 +61,7 @@ export class PlayersSidebar {
     this.spectateBanner.textContent = spectateText; this.spectateBanner.hidden = !spectating;
     if (this.countdownRound) {
       this.countdownRound.textContent = spectating ? `${spectateText} · ${view.phase.roundName}` : `${view.phase.roundName} · ${PHASE_TEXT[view.phase.kind]}`;
+      this.stageTrack!.render(view.phase.kind === 'lobby' || view.phase.kind === 'ended' ? 0 : view.phase.round);
       this.countdownHost!.dataset.phase = view.phase.kind; this.countdownHost!.toggleAttribute('data-spectating', spectating);
     }
     const ordered = [...view.seats].sort(compareSeats);
@@ -64,7 +73,9 @@ export class PlayersSidebar {
     this.tick();
   }
   private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
-    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${seat.seatId === this.viewing ? ' viewing' : ''}`);
+    // A human whose connection dropped (server `connected`, kept fresh by the #229 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
+    const offline = seat.kind === 'human' && !seat.connected;
+    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`);
     row.dataset.debug = `online:seat:${seat.seatId}`;
     if (pairing) row.dataset.pairing = pairing;
     if (this.onSelect) {
@@ -85,13 +96,33 @@ export class PlayersSidebar {
     head.append(avatar, element('span', seat.name, 'seat-name'), kind);
     if (pairing === 'opponent') head.append(element('span', '对手', 'seat-opponent'));
     else if (pairing === 'candidate') { const tag = element('span', '可能', 'seat-candidate'); tag.title = '本回合可能的对手，开战时确定'; head.append(tag); }
-    // Bots never hold a connection; a dropped human shows 断线, and 接管中 once a bot plays the seat.
+    // Bots never hold a connection; a dropped human shows 重连中, and 接管中 once a bot plays the seat.
     if (seat.controller === 'takeover') head.append(element('span', '接管中', 'seat-offline seat-takeover-tag'));
-    else if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));
-    const bar = element('div', '', 'seat-bar'); const fill = element('div', '', 'seat-fill'); fill.style.width = `${Math.max(0, Math.min(100, seat.hp))}%`; bar.append(fill);
+    else if (offline) { const tag = element('span', '重连中', 'seat-offline'); tag.title = '玩家断线，等待重新连接'; head.append(tag); }
+    const bar = element('div', '', 'seat-bar'); const fill = element('div', '', 'seat-fill');
+    const percent = (hp: number) => `${Math.max(0, Math.min(100, hp))}%`;
+    fill.style.width = percent(seat.hp); bar.dataset.tier = seat.hp > 60 ? 'high' : seat.hp > 30 ? 'mid' : 'low';
+    // The row is rebuilt on every view push; a drop is kept for HIT_MS so a push right after it does not cut the effect short.
+    const now = performance.now(), last = this.shownHp.get(seat.seatId);
+    const hit = last && seat.hp < last.hp ? { hp: seat.hp, from: last.hp, at: now } : last && seat.hp === last.hp && now - last.at < HIT_MS ? last : { hp: seat.hp, from: seat.hp, at: -Infinity };
+    this.shownHp.set(seat.seatId, hit);
     const foot = element('div', '', 'seat-foot');
     foot.append(element('span', seat.alive ? `${seat.hp}` : `第 ${seat.rank ?? '?'} 名`, 'seat-hp'), element('span', `Lv ${seat.level}`, 'seat-level'));
+    if (hit.from > seat.hp) {
+      // A CSS animation with a negative delay resumes at the drop's real progress when a later push rebuilds the row.
+      const elapsed = `${-(now - hit.at)}ms`;
+      const lost = element('div', '', 'seat-lost'); lost.style.setProperty('--lost-from', percent(hit.from)); lost.style.setProperty('--lost-to', percent(seat.hp));
+      lost.style.animationDelay = elapsed; bar.append(lost);
+      const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
+      chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
+    }
+    bar.append(fill);
     row.append(head, bar, foot); return row;
+  }
+  /** Whole seconds left on the phase countdown, or null when the phase has none. */
+  secondsLeft(): number | null {
+    const endsAt = this.view?.phase.endsAt ?? null;
+    return endsAt === null ? null : Math.ceil(Math.max(0, endsAt - (performance.now() - this.clockOffset)) / 1000);
   }
   /** Called every frame; only touches the countdown text. */
   tick(): void {

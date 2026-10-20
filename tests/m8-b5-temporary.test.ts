@@ -9,6 +9,9 @@ import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equi
 import { accepted, emptyBoard, freeze } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { publicGlovesInventory } from './fixtures/t13-public-gloves';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
 // Its public control uses level 5, which has the identical <=6 equipment pool.
@@ -191,11 +194,18 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
    * therefore 5 x 5 s, not 5 s. Every group prepares its own routes from createMatch,
    * shares no state with other tests, and asserts the definitions it ACTUALLY bound. */
   const TG_ROUND_GROUPS = 5;
+  const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9605],
+    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340]]);
   /** Pure planning only: the original greedy choice over 512 candidates (two unseen
    * children first, ties by ascending seed), computed afresh by each caller. */
   function plannedTemporaryRoutes() {
     const candidates = Array.from({ length: 512 }, (_, seed) => {
-      const matchSeed = Math.imul(seed, 2654435761) >>> 0;
+      const originalSeed = Math.imul(seed, 2654435761) >>> 0;
+      // The old seed now offers only P2 item gifts. Seed 47 preserves the
+      // independent Ionic Spark/Vest vector without shifting the TG parent ID.
+      // Likewise, the larger augment/anomaly pools give these old seeds an earlier
+      // item, so TG is no longer item-3; each substitute rolls the identical pair.
+      const matchSeed = TG_SEED_SUBSTITUTES.get(originalSeed) ?? originalSeed;
       const planned = generateRoundRolls({ equipment: initializeStreams(matchSeed).equipment, rolls: [] },
         [{ parentItemInstanceId: 'item-3', roundId: '2-5', playerLevel: 6 }], TEMPORARY_EQUIPMENT_POOL);
       return { matchSeed, children: planned.rolls[0].children };

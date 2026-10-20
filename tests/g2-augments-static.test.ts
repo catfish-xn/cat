@@ -35,6 +35,16 @@ function resolved(id: string, state = fixture(), target = 'lux') {
 const history = (round: number, hpAfter = 100): RoundResult => ({ round, hpAfter } as RoundResult);
 
 const expected: Record<string, Effect[]> = {
+  'all-for-one-i': [mech('d11Fill', { enabled: 1 })],
+  'trifecta-i': [mech('d11Fill', { enabled: 1 })],
+  'spirit-link': [mech('d11Fill', { enabled: 1 })],
+  'blinding-speed':[mech('acquisitionBundle',{enabled:1})],
+  'portable-forge':[mech('acquisitionBundle',{enabled:1})],
+  'radiant-relics':[mech('acquisitionBundle',{enabled:1})],
+  'going-long':[mech('acquisitionGold',{amount:15}),mech('incomePolicy',{interestDisabled:1,interestCap:0,roundXp:4})],
+  'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
+  'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
+  ...Object.fromEntries(['crown-guarded','not-today','all-for-one-ii','belt-overflow','calculated-enhancement','crownguard-spirit','flurry-of-blows','guardbreaker-spirit','pair-of-fours','immovable-object','shojin-spirit','sword-overflow','trifecta-ii','wand-overflow'].map(id=>[id,[mech('s13P2Augment',{enabled:1})]])),
   'placebo': [speed(100), mech('acquisitionGold', { amount: 8 })],
   'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
@@ -66,8 +76,8 @@ const expected: Record<string, Effect[]> = {
   'climb-the-ladder-ii': [mech('climbLadder', { adBps: 500, abilityPower: 5, armor: 5, magicResist: 5 })],
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
-describe('G2 thirty augments: independent exact source parameters', () => {
-  it('contains exactly the thirty audited definitions', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(Object.keys(expected).sort()));
+describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
+  it('contains exactly the thirty existing, six P1, fourteen P2, seven P3 and three D11 augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

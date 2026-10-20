@@ -7,6 +7,11 @@ export const COST: Record<string, number>;
 export const SELL: Record<number, number[]>;
 export const COMPONENTS: readonly string[];
 export type OracleCommand = Readonly<{ type: string; [key: string]: unknown }>;
+export type OracleAugmentTier = 'silver' | 'gold' | 'prismatic';
+export function augmentTier(seed: number, node: string): OracleAugmentTier;
+export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[]): string[];
+export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[]): { offers: string[]; rng: number };
+export function validateAugmentReroll(before: MatchState, result: unknown, command: OracleCommand): void;
 export type EconomyInput = Pick<MatchState, 'round' | 'gold' | 'level' | 'xp' | 'playerHp' | 'streak'> & Partial<Pick<MatchState, 'seed' | 'm8'>>;
 export type EconomyCombat = Pick<CombatState, 'result' | 'tick' | 'nextEventSeq'> & {
   readonly units: readonly (Pick<CombatState['units'][number], 'team' | 'alive'> & Partial<Pick<CombatState['units'][number], 'id'>>)[];

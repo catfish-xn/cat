@@ -10,8 +10,26 @@ import { BOT_MAX_STEPS, type BotContext, type BotDecision } from './types';
 import { byId, cheapest, formationAction, strongest, strength } from './formation';
 import { legal } from './preflight';
 import { isMechanicChoice } from '../seat-mechanics/choices';
+import { unclaimedOrbPlans } from '../orb-claim';
+import { runSharedMatchCommand } from '../shared-pool';
+import type { SharedPoolState, SharedPoolResult, SharedPoolEvent } from '../shared-pool-types';
+import type { MatchEvent } from '../match-types';
 export { BOT_MAX_STEPS, BOT_POLICY_VERSION } from './types';
 export type { BotContext, BotDecision } from './types';
+
+/** Server invokes once on preparation entry, before its existing action budget. */
+export function claimBotPreparationOrbs(pool: SharedPoolState, state: MatchState): SharedPoolResult {
+  if (state.phase!=='preparation') return {ok:false,pool,state,reason:'wrong-phase'};
+  const initialPool=pool, initialState=state, events:MatchEvent[]=[],poolEvents:SharedPoolEvent[]=[];
+  for(;;) {
+    const orbId=unclaimedOrbPlans(state).map(o=>o.orbId).sort((a,b)=>a<b?-1:a>b?1:0)[0];
+    if(!orbId)break;
+    const result=runSharedMatchCommand(pool,state,{type:'claimOrb',round:state.round,orbId});
+    if(!result.ok) return {...result,pool:initialPool,state:initialState};
+    pool=result.pool;state=result.state;events.push(...result.events);poolEvents.push(...result.poolEvents);
+  }
+  return {ok:true,pool,state,events,poolEvents};
+}
 
 /** One intention, never a state commit. B6 owns execution, pool transactions and attempt budgets. */
 export function decideBotAction(state: MatchState, context: BotContext, rng: number): BotDecision {

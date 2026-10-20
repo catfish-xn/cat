@@ -1,6 +1,10 @@
+import { P3_TIERS } from './s13-p3';
+import { D11_FILL_TIERS } from './d11-fill';
 import { freezeContent } from './freeze';
-/** U: no primary historical offer probabilities found; preserve equal three-word sampling. */
-export const AUGMENT_OFFER_POLICY = freezeContent({version:'aug30-equal-v1',evidence:'U',sampling:'equal-without-replacement',words:3} as const);
+import { S13_P2_TIERS } from './s13-augments-p2';
+/** User convention: shared node tier; v15 rerolls each slot once and permanently excludes discarded IDs.
+ * No historical tier probabilities/weights found: equal tiers pending user confirmation. */
+export const AUGMENT_OFFER_POLICY = freezeContent({version:'augment-card-reroll-v15',evidence:'user-convention-2026-10-20',tierEvidence:'unweighted-project-convention-pending-confirmation',tiers:['silver','gold','prismatic'],tierSeedXor:0x61756774,freeRerolls:1,rerollScope:'per-slot-per-choice',sampling:'equal-without-replacement',words:{initial:3,reroll:1},reroll:'single-card-locked-tier-exclude-current-owned-and-permanently-removed-reject-empty-pool'} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
 export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[]>> = freezeContent({
   // S13 14.24 source style 1; later content releases added these active traits.
@@ -56,6 +60,15 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  ...D11_FILL_TIERS,
+  "blinding-speed": "prismatic",
+  "portable-forge": "gold",
+  "radiant-relics": "prismatic",
+  "going-long": "prismatic",
+  "hedge-fund": "prismatic",
+  "investment-strategy-ii": "prismatic",
+  ...S13_P2_TIERS,
+  ...P3_TIERS,
   "manaflow-ii": "gold",
   "glass-cannon-ii": "gold",
   "pumping-up-ii": "gold",

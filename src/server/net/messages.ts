@@ -18,8 +18,13 @@ import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
 
 /**
+ * Network message envelope contract version, independent of the rules-side multiplayer command/state
+ * contract version MULTIPLAYER_NET_PROTOCOL_VERSION. Bump for incompatible wire shape or meaning changes;
+ * the rules version advances for incompatible rules contract changes. Neither requires the other to bump
+ * or have the same value. Compatible additive view fields do not require a network bump (see below).
+ *
  * 2 since T13-B (contract §18.7): R3/R4 projection and the useConsumable receipt; protocol 1 clients are refused.
- * Bumped only when a client message or receipt changes shape or meaning (the server validates client messages strictly).
+ * Client messages are validated strictly; incompatible server messages also require a bump (see protocol 5 below).
  * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
  * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
  * until the freeze only means an older client highlights the opponent from the battle on.
@@ -27,11 +32,18 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * its receipts carry the rules' CarouselFailure reasons plus `stale-carousel`. A protocol 2 client could not take part either:
  * the match then opened on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
  * `PlayerView.carousel` and the `carousel` phase kind alone would have been additive. A protocol 2 client is refused at its
- * first message with `unsupported-protocol` ("protocolVersion must be 3").
+ * first message with `unsupported-protocol` (the detail names the current NET_PROTOCOL_VERSION).
  * P7-1 stays at 3: the 1-1 carousel is gone (the match opens on 1-2 preparation with the free unit) and the seat view's
  * `pendingCarouselUnits` became `heldCarouselUnits`; no client message or receipt changed, a held unit is sold with `sell`.
+ * 4 since v15: the client may send `claimOrb` {round, orbId} (rewards are no longer granted on their own), and `rerollAugment`
+ * requires `optionIndex` (one card at a time). A protocol 3 client could neither claim its orbs nor reroll a card, so it is
+ * refused at its first message with `unsupported-protocol`, whose detail names the required and received wire versions.
+ * 5 since the D11 live bank (planning/live-gold-combat-2026-10-20.md): the replay of a battle already pushed may be revised
+ * during its playback (`replay-tail`), because a gold change can alter a combat that reads live gold. A protocol 4 client
+ * would ignore it and show a battle other than the one settled. The rules did not change, so the rules' constant stays 4:
+ * the independent wire version is 5.
  */
-export const NET_PROTOCOL_VERSION = 3;
+export const NET_PROTOCOL_VERSION: number = 5;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -117,8 +129,20 @@ export type ServerMessage =
    * through `readReplayUnitIds` and never parses a battle id.
    */
   | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
+  /**
+   * D11 live bank: my battle of this round, already sent as `replay`, now differs from tick `fromTick` on (a gold change
+   * fed a live run of it). The client keeps the records before `fromTick`, replaces the rest with `ticks` and the terminal
+   * view with `terminal`, and keeps playing from where it is. Only ever for the battle of the last `replay` it was sent.
+   */
+  | { readonly type: 'replay-tail'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] }
   | ReceiptMessage
-  | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
+  | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null }
+  /**
+   * Liveness beat, sent every `intervalMs` while the server's heartbeat is on (alongside a protocol-level ping the browser
+   * answers by itself). A client that has seen one may treat a silence of a few intervals as a dead connection and
+   * reconnect; clients that do not know the type ignore it, and a server without it never sends one (no version bump).
+   */
+  | { readonly type: 'heartbeat'; readonly intervalMs: number };
 
 /* ---------------- validation ---------------- */
 
@@ -200,6 +224,10 @@ export function validateClientCommand(value: unknown): WireCommand {
       return { type: 'choose', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), definitionId: str(value.definitionId, `${w}.definitionId`) };
     case 'anomalyTarget': onlyKeys(value, ['type', 'choiceId', 'generation', 'unitId'], w);
       return { type: 'anomalyTarget', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), unitId: str(value.unitId, `${w}.unitId`, LIMITS.idChars, true) };
+    case 'rerollAugment': onlyKeys(value, ['type', 'choiceId', 'generation', 'optionIndex'], w);
+      return { type: 'rerollAugment', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), optionIndex: int(value.optionIndex, `${w}.optionIndex`, 0) };
+    case 'claimOrb': onlyKeys(value, ['type', 'round', 'orbId'], w);
+      return { type: 'claimOrb', round: int(value.round, `${w}.round`, 0), orbId: str(value.orbId, `${w}.orbId`) };
     case 'anomalyReroll': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
       return { type: 'anomalyReroll', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
     case 'carousel-pick': onlyKeys(value, ['type', 'carouselId', 'revision', 'slot'], w);
@@ -233,7 +261,7 @@ export function parseClientMessage(raw: string): ParseResult {
   const commandId = isValidCommandId(value.commandId) ? value.commandId : null;
   if (commandId === null) return { ok: false, code: 'invalid-message', detail: 'commandId must be a positive integer', commandId: null };
   if (value.protocolVersion !== NET_PROTOCOL_VERSION) {
-    return { ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION}`, commandId };
+    return { ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION} (got ${JSON.stringify(value.protocolVersion) ?? 'none'}): client and server versions differ, reload the page`, commandId };
   }
   try { return { ok: true, message: validateEnvelopeBody(value, commandId) }; }
   catch (error) {

@@ -1,0 +1,147 @@
+[
+  {
+    "file": "tests/restore-audit/cd-replay-facts.test.ts",
+    "disposition": "optimized",
+    "reason": "Warm the two legal item inputs; prepare absorption/cuts/eagle-eye public route prefixes in independent hooks. Every until, restore, corruption, rejection and continuation remains inside the cases."
+  },
+  {
+    "file": "tests/g2-4a-crown-history.test.ts",
+    "disposition": "optimized",
+    "reason": "Prepare the repeated remover opening once; clone mutable MatchState for every scenario. Existing recursively immutable BattleHistory records retain identity. Consumable commands, validation, restore and next-battle comparison remain live."
+  },
+  {
+    "file": "tests/m8-b8-live-growth.test.ts",
+    "disposition": "already prepared",
+    "reason": "The command route, prior/current growth facts and live boundary inputs are constructed at module setup. Cases perform actual strict restore, state/event continuation and negative validation; no large acquisition remains in them."
+  },
+  {
+    "file": "tests/match-lifecycle.test.ts",
+    "disposition": "actual operation / no single-case evidence",
+    "reason": "Source CI lists only aggregate2769ms across12 cases. The explicit round/start/settlement/identity transitions are what the tests verify; no identified large repeated case-local input construction."
+  },
+  {
+    "file": "tests/m8-b5-grant-upgrade.test.ts",
+    "disposition": "optimized phase1",
+    "reason": "Retain previously delivered frozen legal inputs, per-case copies, live planning/duplicate/restore checks."
+  },
+  {
+    "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+    "disposition": "optimized",
+    "reason": "Four distinct Room/Clock pairs reach round4 battle in separate hooks. toForgeWindow assertions, tier injection, round4 settlement, choices, grants and deadlines remain in each case. The network reconnect case remains live because it tests its own protocol sequence."
+  },
+  {
+    "file": "tests/m5-route.test.ts",
+    "disposition": "D12 / actual operation",
+    "reason": "The run and independent golden/resource ledger are the operation being tested, not disposable setup. Its shared driver is excluded for D12. No changes."
+  },
+  {
+    "file": "tests/m8-b10-encounter-outcomes.test.ts",
+    "disposition": "already prepared / actual operation",
+    "reason": "The public neutral route runs once at fixture-module setup; each call intentionally restores its own independent input. The46 cases test actual kills/loss/loot/terminal/restore outcomes; do not cache those restores."
+  },
+  {
+    "file": "tests/combat-first-pass-frames.test.ts",
+    "disposition": "actual operation / no single-case evidence",
+    "reason": "Source CI lists only an aggregate3455ms over11 cases. The measured capture/re-run comparison and every resumable boundary are the actual test; synthetic one-unit input construction is small."
+  },
+  {
+    "file": "tests/server/replay-first-pass.test.ts",
+    "disposition": "actual operation",
+    "reason": "The two reported >2s cases are the live network background-spot-check cadence and mismatch logging across rounds. Their capture, re-execution and later-round checks stay live. Already prepared idle-room lineups are outside case timers."
+  },
+  {
+    "file": "tests/tp-rewards-and-rounds.test.ts",
+    "disposition": "actual operation",
+    "reason": "The 24 PvE plus four PvP battles, shared-pool transactions and next-round conservation are the specified integration scenario. The initial eight-seat construction is small; do not replace the live transactions with prepared results."
+  },
+  {
+    "file": "tests/server/replay-client.test.ts",
+    "disposition": "optimized",
+    "reason": "Build and dispose the producer room once; save frozen plain battle inputs and copy them for each caller. No RemoteSession or playback result is cached."
+  },
+  {
+    "file": "tests/server/lifecycle.test.ts",
+    "disposition": "optimized",
+    "reason": "Commands, dispose and BusyClock cases own separate rooms prepared only to round4 preparation. Actual freeze, slice steps, clock budgets and disposal stay in the cases. The complete one-shot/sliced comparison remains live over every original round."
+  },
+  {
+    "file": "tests/m6-integration-mage.test.ts",
+    "disposition": "actual operation",
+    "reason": "Route/history observation and real per-tick playback/validation are the integration target. Full envelope acceptance is itself tested. Moving its results to hooks or reusing restored envelopes would cache the operation being tested. Existing helper unchanged."
+  },
+  {
+    "file": "tests/m8-b8-live-capacity.test.ts",
+    "disposition": "already prepared / actual operation",
+    "reason": "The shared lethal campaign prefix already warms in beforeAll and returns copies. Each live lethal battle, loot/terminal checks and strict negative restore is the test target."
+  },
+  {
+    "file": "tests/m4-ledger-bound.test.ts",
+    "disposition": "optimized",
+    "reason": "Capture genuine public preparation at ordinal33 in beforeAll, stopping fixture construction at the required boundary instead of simulating the unused suffix. All Match restore, synthetic-input rejection, session combat, ledger, copy isolation and capacity/timing assertions stay in the case."
+  },
+  {
+    "file": "tests/m5-growth.test.ts",
+    "disposition": "D12 / already prepared",
+    "reason": "The large equipment acquisition route already warms in beforeAll; original CI evidence lists only a file total, not an individual >2s case. An uncommitted extra change was withdrawn; file is identical to baseline."
+  },
+  {
+    "file": "tests/m8-b8-live-economy.test.ts",
+    "disposition": "already prepared",
+    "reason": "Large common economy/combat preparation is at module scope; case-local gold-boundary and restore validation remain. Source CI provides only the aggregate file duration."
+  },
+  {
+    "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+    "disposition": "already prepared",
+    "reason": "Junker/Academy campaigns already build in beforeAll with their original30000ms hook unchanged. Remaining larger costs are genuine restore/rejection checks; the five-unit planner vector is small."
+  },
+  {
+    "file": "tests/g2-augments-multiplayer.test.ts",
+    "disposition": "actual operation",
+    "reason": "The bronze-tier cases compile and resolve each independently changed board then inspect settlement facts; this is the scenario under test. The eight-unit array is small; hoisting combat/settlement would cache tested results."
+  },
+  {
+    "file": "tests/server/g2-2-emissary-wins.test.ts",
+    "disposition": "already prepared",
+    "reason": "The real round5 room input is already captured in beforeAll (original60000ms preserved); cases inspect and execute the selected battle independently."
+  },
+  {
+    "file": "tests/g2-4b-source-pins.test.ts",
+    "disposition": "optimized",
+    "reason": "Decompress once and retain independent raw-source oracle fields, then copy them per case. All raw archive SHA256 checks and every content comparison still execute in the original case."
+  },
+  {
+    "file": "tests/g2-4b-replay.test.ts",
+    "disposition": "actual operation / no single-case evidence",
+    "reason": "Source CI lists only aggregate4468ms across10 cases. Combat/replay reconstruction and negative missing-action validation are the actual target; a one-unit fixture is small."
+  },
+  {
+    "file": "tests/server/pairing-room.test.ts",
+    "disposition": "optimized",
+    "reason": "Only the disconnect/takeover/resume case gets its own prepared room. Subscription assertions and both same-seed executions stay live; caching either would remove the behavior being tested."
+  },
+  {
+    "file": "tests/m5-match-integration.test.ts",
+    "disposition": "D12 / actual operation",
+    "reason": "The 30s failure is restoring every real tick across rounds, exactly the test target. Do not move/cache those restores, skip rounds, or change its limit. No changes."
+  },
+  {
+    "file": "tests/s13-anomalies-restore.test.ts",
+    "disposition": "actual operation / no single-case evidence",
+    "reason": "Source CI lists aggregate2964ms across11 cases; its reported slower cases are408/479ms. Small anomaly input construction feeds live140-tick reconstruction, deterministic order and forged-state rejection, which must stay in the case."
+  },
+  {
+    "file": "tests/m8-b10-item-save-replay.test.ts",
+    "disposition": "already prepared",
+    "reason": "Every legal holderPreparation is already warmed in hooks. Its BattleHistory recording, four checkpoint restores, continuation and replay validation are the target and remain live."
+  },
+  {
+    "file": "tests/b8-resumable-battle.test.ts",
+    "disposition": "already prepared / actual operation",
+    "reason": "Its helper already warms PvE and control battles in beforeAll. Each resumable task, budget boundary, divergence and resulting byte comparison remains live; no helper change."
+  },
+  {
+    "file": "tests/bracer-multikill-stacks.test.ts",
+    "disposition": "optimized phase1",
+    "reason": "Retain Renata/dead-holder/summon input preparation and detached per-case Lux snapshots. Real restore, continuation, target steps and playback remain live."
+  }
+]

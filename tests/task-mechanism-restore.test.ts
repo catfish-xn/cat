@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import * as replayCombat from '../src/simulation/combat';
 import * as content from '../src/simulation/content';
 import { BattleHistory } from '../src/replay/history';
@@ -9,8 +9,16 @@ import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mec
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
+import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
+
+// Acquisition is input preparation; all behavior and restoration stay in cases.
+for (const options of [
+  { seed: 77 }, { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] },
+  { seed: 42 }, { seed: 112 },
+]) beforeAll(() => { acquireEquipment(['rod'], options); });
+beforeAll(() => { publicEquipmentPreparation(['rod']); });
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
 // The two public Sion positions are copied from c0fe4c1; no battle facts are patched.
@@ -57,10 +65,12 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
+  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = publicEquipmentPreparation(['rod']);
+  // v15 seed 3151248 offers Manaflow II (inert in row 4); seed 5 offers
+  // Manaflow I for the back-row contribution=false board.
+  let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
@@ -265,7 +275,8 @@ it('rejects an appended fake bleed while retaining every genuine Morgana curse p
 
 it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  let state = prepare(['rod'], { seed: 26 });
+  // v15 seed 53 offers Bulky Buddies I at the same 2-1 node.
+  let state = prepare(['rod'], { seed: 53 });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

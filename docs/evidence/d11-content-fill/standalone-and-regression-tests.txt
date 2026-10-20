@@ -1,0 +1,18 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/d11-fill-source.test.ts tests/d11-fill-mechanics.test.ts tests/s13-p1-avarice.test.ts tests/s13-anomalies-source.test.ts tests/augment-tier-consistency.test.ts tests/s13-augments-p3.test.ts tests/s13-anomalies-b.test.ts tests/s13-anomalies-c.test.ts tests/s13-anomalies-d.test.ts tests/s13-anomalies-review.test.ts tests/s13-anomalies-redirect.test.ts tests/s13-anomalies-restore-review.test.ts tests/s13-augments-p2-choice.test.ts tests/s13-augments-p2-combat.test.ts tests/g2-augments-static.test.ts
+
+
+ RUN  v5.0.3 /workspace/cat
+
+
+ Test Files  15 passed (15)
+      Tests  265 passed (265)
+   Start at  01:16:36
+   Duration  7.10s (tests 59%, transform 23%, import 18%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

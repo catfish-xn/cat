@@ -23,7 +23,11 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
-  if(!zephyr&&!trench&&!mirrorForge){
+  const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
+  const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
+  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11){
+    if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
+    if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
     if(candidate.units.some(u=>u.itemSummon?.kind==='trench'))throw new RangeError('Unexpected Trench copy');
     if(candidate.units.some(u=>u.itemBanish!==undefined))throw new RangeError('Unexpected item banishment');
@@ -32,7 +36,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid dynamic combat checkpoint');
   let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
   while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
   return true;
 }
 

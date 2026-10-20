@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { Mesh, PerspectiveCamera, Vector3 } from 'three';
+import { AdditiveBlending, Mesh, NormalBlending, PerspectiveCamera, PlaneGeometry, Vector3 } from 'three';
 import { ParticleEffect, parseParticleDocument } from '../src/rendering3d/particles';
 import type { ParticleDocumentV2 } from '../src/rendering3d/contracts';
 // @ts-expect-error Node conversion module.
@@ -11,6 +11,10 @@ import { OMIT_PREVIEW_FIELDS, particleMode } from '../scripts/assets3d/particle-
 import { writeParticleEffects } from '../scripts/assets3d/build.mjs';
 // @ts-expect-error Node trial module.
 import { trialActionBindings } from '../scripts/assets3d/fx-trial.mjs';
+// @ts-expect-error Offline PNG inspection module.
+import { pngHasEffectiveAlpha, textureAlphaLookup } from '../scripts/assets3d/texture-alpha.mjs';
+// @ts-expect-error Offline synthetic PNG encoder.
+import { encodePng } from '../scripts/assets3d/texture.mjs';
 
 const c = (constantValue: unknown) => ({ constantValue });
 const emitter = (fields = {}) => ({ isSingleParticle: true, particleLifetime: c(1), ...fields });
@@ -23,6 +27,35 @@ const mapped = (fields = {}, system = {}) => {
 };
 
 describe('explicit visual preview adapter', () => {
+  it('inspects synthetic alpha pixels and resolves unknown blends without changing strict conversion', async () => {
+    const png = (alpha: number) => encodePng({ width: 2, height: 1, rgba: Buffer.from([0, 0, 0, 255, 255, 180, 0, alpha]) });
+    expect(pngHasEffectiveAlpha(png(255))).toBe(false);
+    expect(pngHasEffectiveAlpha(png(254))).toBe(true);
+    expect(pngHasEffectiveAlpha(png(0))).toBe(true);
+    const textureAlpha = await textureAlphaLookup([{ source: 'Synthetic/Glow.dds', path: 'glow.png', status: 'converted' }], async () => png(255));
+    expect(textureAlpha('synthetic/glow.dds')).toBe(false);
+    expect(textureAlpha('synthetic/missing.dds')).toBeUndefined();
+    for (const blendMode of [991, 'unknown', undefined]) for (const alpha of [false, true, undefined]) {
+      const fields = emitter({ blendMode, texture: 'synthetic/glow.dds' });
+      const original = structuredClone(fields);
+      const result = mapEmitter(fields, () => 'glow.png', { particleMode: 'approximate', textureAlpha: () => alpha });
+      expect(result.emitter.blend ?? 'normal').toBe(alpha === false ? 'additive' : 'normal');
+      if (alpha === false) {
+        expect(result.status).toBe('approximated');
+        expect(result.approximations).toContainEqual(expect.objectContaining({ handling: 'league-preview-unknown-opaque-texture-additive' }));
+        const fx = new ParticleEffect(parseParticleDocument({ schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 2 }, emitters: [result.emitter] }));
+        fx.update(0);
+        expect((fx.object.children[0] as Mesh).material).toMatchObject({ blending: AdditiveBlending, premultipliedAlpha: false });
+        fx.dispose();
+      }
+      expect(fields).toEqual(original);
+      expect(mapEmitter(fields, () => 'glow.png', { textureAlpha: () => alpha })).toEqual(mapEmitter(fields, () => 'glow.png'));
+    }
+    for (const blendMode of [1, 2, 3, 4, 'normal', 'additive', 'multiply']) {
+      const result = mapEmitter(emitter({ blendMode, texture: 'synthetic/glow.dds' }), () => 'glow.png', { particleMode: 'approximate', textureAlpha });
+      expect(result.emitter.blend).toBe(typeof blendMode === 'string' ? blendMode : [2, 4].includes(blendMode) ? 'additive' : 'normal');
+    }
+  });
   it('matches full round-one results, including rejection order, without the switch and in strict mode', async () => {
     const fixture = JSON.parse(await readFile(new URL('./fixtures/assets3d-round1-strict.json', import.meta.url), 'utf8'));
     expect(fixture.head).toBe('52688b3'); expect(fixture.rows).toHaveLength(30);
@@ -33,16 +66,20 @@ describe('explicit visual preview adapter', () => {
     expect(() => particleMode('typo')).toThrow('invalid-particle-mode');
     expect(() => convert({}, {}, { particleMode: 'typo' })).toThrow('invalid-particle-mode');
   });
-  it('maps ArbitraryQuad to an actually camera-facing quad, retaining only birth Z roll', () => {
+  it('preserves ArbitraryQuad birth Euler orientation independently of the camera', () => {
     const { e, row, doc } = mapped({ primitive: { __type: 'VfxPrimitiveArbitraryQuad' }, birthRotation0: c([90, 45, 0]) });
-    expect(e.kind).toBe('quad'); expect(e.rotation0).toEqual([0, -0, -0]);
+    expect(e.kind).toBe('arbitraryQuad');
     expect(row).toMatchObject({ status: 'approximated', mapped: false, approximations: [
-      expect.objectContaining({ handling: 'arbitrary-quad-as-camera-facing-quad' }),
-      expect.objectContaining({ handling: 'camera-facing-quads-keep-only-Z-roll' }),
+      expect.objectContaining({ handling: 'arbitrary-quad-local-XY-preserve-birth-Euler' }),
+      expect.objectContaining({ handling: 'fixed-primitive-YXZ-X-reflection-to-v2-XYZ-degrees' }),
     ] });
     const camera = new PerspectiveCamera(); camera.rotation.set(.2, .4, .1);
     const fx = new ParticleEffect(doc, { scale: 1 }); fx.update(0, camera);
-    expect(fx.object.children[0].quaternion.angleTo(camera.quaternion)).toBeLessThan(1e-6); fx.dispose();
+    const normal = new Vector3(0, 0, 1).applyQuaternion(fx.object.children[0].quaternion);
+    expect(normal.y).toBeCloseTo(-1);
+    const rotation = fx.object.children[0].quaternion.clone();
+    camera.rotation.set(.8, -.2, 1); fx.update(.1, camera);
+    expect(fx.object.children[0].quaternion.angleTo(rotation)).toBeLessThan(1e-6); fx.dispose();
   });
   it('orients ray geometry along velocity and uses local Y for stationary rays', () => {
     const { e, doc, row } = mapped({ primitive: { __type: 'VfxPrimitiveRay' }, birthVelocity: c([3, 0, 0]), birthScale0: c([2, 8, 1]), birthRotation0: c([90, 90, 90]) });
@@ -62,9 +99,57 @@ describe('explicit visual preview adapter', () => {
       expect(convert({ primitive }).systems[0].report[0]).toMatchObject({ status: 'skipped', reason: 'beam-endpoints-unavailable' });
     }
   });
-  it.each([[1, 'normal'], [3, 'normal'], [4, 'additive'], [991, 'normal']])('annotates numeric blend %s as %s', (value, blend) => {
+  it.each([[1, 'normal'], [2, 'additive'], [3, 'normal'], [4, 'additive'], [991, 'normal']])('annotates numeric blend %s as %s', (value, blend) => {
     const { e, row } = mapped({ blendMode: value }); expect(e.blend).toBe(blend);
     expect(row.status).toBe('approximated'); expect(row.approximations[0].field).toBe('blendMode');
+  });
+  it.each([[-90, -90, 0], [90, 90, 0], [90, 270, -90], [-90, 270, -90], [90, 0, 90], [90, 0, 0], [-90, 0, 0]])(
+    'keeps synthetic pitched/yawed planes horizontal: %j', (x, y, z) => {
+      const fields = { emitterName: 'synthetic_sweep', primitive: { __type: 'VfxPrimitiveArbitraryQuad' },
+        birthRotation0: c([x, y, z]), birthScale0: c([800, 400, 0]), texture: 'synthetic/sweep.png' };
+      const original = structuredClone(fields);
+      const result = mapEmitter(fields, (p: string) => p, { particleMode: 'approximate' });
+      const doc = parseParticleDocument({ schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 2 }, emitters: [result.emitter] });
+      const camera = new PerspectiveCamera(); camera.rotation.set(.5, .4, .3);
+      const fx = new ParticleEffect(doc, { scale: .44 });
+      try {
+        fx.update(.1, camera); fx.object.updateWorldMatrix(true, true);
+        const mesh = fx.object.children[0] as Mesh;
+        expect(Math.abs(new Vector3(0, 0, 1).applyQuaternion(mesh.quaternion).y)).toBeCloseTo(1);
+        const vertices = mesh.geometry.getAttribute('position');
+        const heights = Array.from({ length: vertices.count }, (_, i) => new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(mesh.matrixWorld).y);
+        expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1e-8);
+        expect(mesh.scale.x).toBe(800); expect(mesh.scale.y).toBe(400);
+        const before = mesh.quaternion.clone(); camera.rotation.set(1, -.5, .2); fx.update(0, camera);
+        expect(mesh.quaternion.angleTo(before)).toBeLessThan(1e-6);
+        expect(fields).toEqual(original);
+      } finally { fx.dispose(); }
+    });
+  it.each(['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveMesh'])('converts synthetic %s compound rotations by reflected basis vectors', type => {
+    const rotation = [30, 60, 90];
+    const fields = { primitive: type === 'VfxPrimitiveMesh'
+      ? { __type: type, mMesh: { mSimpleMeshName: 'synthetic/shape.scb' } } : { __type: type }, birthRotation0: c(rotation) };
+    const result = convert(fields, {}, { meshPath: () => 'synthetic/shape.glb' });
+    const geometry = new PlaneGeometry();
+    const fx = new ParticleEffect(result.systems[0].document, { scale: 1, mesh: () => geometry });
+    try {
+      for (const basis of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+        // Independent reference: S * Ry * Rx * Rz * S, S=diag(-1,1,1).
+        const reference = new Vector3(-basis[0], basis[1], basis[2])
+          .applyAxisAngle(new Vector3(0, 0, 1), Math.PI / 2)
+          .applyAxisAngle(new Vector3(1, 0, 0), Math.PI / 6)
+          .applyAxisAngle(new Vector3(0, 1, 0), Math.PI / 3);
+        reference.x *= -1;
+        expect(new Vector3(...basis as [number, number, number]).applyQuaternion(fx.object.children[0].quaternion).distanceTo(reference)).toBeLessThan(1e-10);
+      }
+    } finally { fx.dispose(); geometry.dispose(); }
+  });
+  it.each([1, 2, 3, 4])('passes numeric blend %s through to the runtime material', blendMode => {
+    const { doc } = mapped({ blendMode, texture: 'synthetic/glow.png' });
+    const fx = new ParticleEffect(doc);
+    try { expect((fx.object.children[0] as Mesh).material).toMatchObject({
+      blending: [2, 4].includes(blendMode) ? AdditiveBlending : NormalBlending, depthWrite: false,
+    }); } finally { fx.dispose(); }
   });
   it.each(Object.entries(OMIT_PREVIEW_FIELDS))('records omitted field %s separately', (field, handling) => {
     const value = field === 'isUniformScale' ? 1 : 0;

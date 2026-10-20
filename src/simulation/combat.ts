@@ -1,3 +1,4 @@
+import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
 import {createG23Forge} from './combat-g2-3-summons';
 import {projectItemSummons,initializeMirrorHealth} from './g2-4b-summons';
 import {getUnitForm} from './seat-mechanics/forms';
@@ -36,7 +37,7 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
-  preparationState=projectItemSummons(projectG23Summons(preparationState),strategy);
+  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits),strategy);
   let units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -54,6 +55,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       ...(resolved?.openingItemBankGold===undefined?{}:{openingItemBankGold:resolved.openingItemBankGold,currentItemBankGold:resolved.openingItemBankGold}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24Mogul')?{itemMogulHits:[]}:{}),
+      ...(resolved?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')?{d11Kills:[]}:{}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
@@ -102,8 +104,9 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   return stampCombatStep(state,events);
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState).state; }
-export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42): CombatStep {
-  const spawned=snapshotCombat(preparation,strategy,combatId,rngState);
+export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42, context?:TraitProjectionContext): CombatStep {
+  const projected=projectEffectiveMembership(preparation,context);
+  const spawned=snapshotCombat(projected.preparation,strategy,combatId,rngState);
   const start=applyCombatStart(spawned.state);
   const started={state:start.state,events:[...spawned.events,...start.events]};
   for (const unit of started.state.units) if (unit.mechanismDefinitions)

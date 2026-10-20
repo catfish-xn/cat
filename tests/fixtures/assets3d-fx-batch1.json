@@ -1,0 +1,2394 @@
+{
+  "provenance": "14.24 TFT13 local report system rows and all-anim GLB skin joint names. Payload bytes stay in assets3d-local.",
+  "bones": {
+    "drmundo": [
+      "Root",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "Spine1",
+      "Spine2",
+      "Chest",
+      "Neck",
+      "Head",
+      "L_Mouth_Crnr",
+      "Top_Mouth",
+      "Top_Teeth",
+      "R_Mouth_Crnr",
+      "Jaw",
+      "L_Eye_Ball",
+      "L_Upper_Eye_Lid",
+      "Bottom_Mouth",
+      "Bottom_Teeth",
+      "L_Brow_Mid",
+      "L_Brow_Front",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Shoulder_Helper",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "Weapon1",
+      "R_Lower_Eye_Lid",
+      "R_Upper_Eye_Lid",
+      "L_Lower_Eye_Lid",
+      "R_Brow_Mid",
+      "R_Brow_Front",
+      "R_Ult_Clavicle",
+      "R_Ult_Shoulder",
+      "R_Ult_Elbow",
+      "R_Ult_Hand",
+      "R_Ult_Pinky1",
+      "R_Ult_Pinky2",
+      "R_Ult_Ring1",
+      "R_Ult_Ring2",
+      "R_Ult_Middle1",
+      "R_Ult_Middle2",
+      "R_Ult_Index1",
+      "R_Ult_Index2",
+      "R_Ult_Thumb1",
+      "R_Ult_Thumb2",
+      "R_Ult_Hand_Scale",
+      "R_Ult_Elbow_Scale",
+      "R_Ult_Shoulder_Scale",
+      "R_Ult_Clavicle_Scale",
+      "L_Ult_Clavicle",
+      "L_Ult_Clavicle_Scale",
+      "L_Ult_Shoulder",
+      "L_Ult_Shoulder_Scale",
+      "L_Ult_Elbow",
+      "L_Ult_Elbow_Scale",
+      "L_Ult_Hand",
+      "L_Ult_Hand_Scale",
+      "L_Ult_Thumb1",
+      "L_Ult_Thumb2",
+      "L_Ult_Index1",
+      "L_Ult_Index2",
+      "L_Ult_Middle1",
+      "L_Ult_Middle2",
+      "L_Ult_Ring1",
+      "L_Ult_Ring2",
+      "L_Ult_Pinky1",
+      "L_Ult_Pinky2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Index1",
+      "L_Index2",
+      "L_Thumb1",
+      "L_Thumb2",
+      "R_Elbow",
+      "R_Hand",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Index1",
+      "R_Index2",
+      "R_Thumb1",
+      "R_Thumb2",
+      "L_Elbow_Scale",
+      "L_Hand_Scale",
+      "L_Shoulder_Scale",
+      "L_Clavicle_Scale",
+      "R_Elbow_Scale",
+      "R_Shoulder_Scale",
+      "R_Clavicle_Scale",
+      "R_Hand_Scale",
+      "Chest_Scale",
+      "R_Chest_Scale",
+      "L_Chest_Scale",
+      "R_Ult_Shoulder_Bicep",
+      "L_Ult_Shoulder_Bicep",
+      "Bag1",
+      "Tongue_Root",
+      "Tongue1",
+      "Tongue2",
+      "Tongue3",
+      "R_Eye_Ball",
+      "Hair1",
+      "Hair2",
+      "L_Screw",
+      "R_Screw",
+      "R_Ult_Screw",
+      "L_Ult_Screw",
+      "Bag_Open",
+      "Jaw_end",
+      "Top_Hair1",
+      "Top_Hair2",
+      "Clipboard",
+      "Shimmer1",
+      "Shimmer2",
+      "ToeTag_Root",
+      "ToeTag1",
+      "Weapon1_Ult",
+      "L_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Ability_Loc",
+      "L_Ult_Buffbone_Glb_Ability_Loc",
+      "L_Ult_Buffbone_Glb_Hand_Loc",
+      "R_Ult_Buffbone_Glb_Ability_Loc",
+      "R_Ult_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Ability_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Cstm_Healthbar",
+      "Buffbone_Glb_Weapon_1",
+      "R_Slipper",
+      "L_Slipper",
+      "Weapon1_Snap",
+      "C_Buffbone_Glb_Center_Loc",
+      "Bag_end",
+      "True_World",
+      "runPython_node"
+    ],
+    "blitzcrank": [
+      "Root",
+      "Spine1",
+      "Neck",
+      "Head",
+      "R_Chest",
+      "L_Chest",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Hand_Grab",
+      "R_Thumb1",
+      "R_Index1",
+      "R_Index2",
+      "R_Index3",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Index1",
+      "L_Index2",
+      "L_Index3",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "R_PARENTING_HAND_LOC",
+      "L_PARENTING_HAND_LOC",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "R_Buffbone_Glb_Knee_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Knee_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "Back_Booster",
+      "L_Booster",
+      "R_Booster",
+      "L_Shoulder_Pad",
+      "R_Shoulder_Pad",
+      "BUFFBONE_GLB_WEAPON_1",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "Crystal",
+      "L_Tank",
+      "R_Tank",
+      "Buffbone_Cstm_Healthbar",
+      "L_Armor",
+      "L_BatonUp",
+      "L_BatonUp_End",
+      "L_BatonLow",
+      "L_BatonLow_End",
+      "R_Armor",
+      "R_BatonUp",
+      "R_BatonUp_End",
+      "R_BatonLow",
+      "R_BatonLow_End"
+    ],
+    "heimerdinger": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "Neck",
+      "Head",
+      "Hair1",
+      "Hair2",
+      "Mustache",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "R_Coat_Front1",
+      "R_Coat_Front2",
+      "R_Coat1",
+      "R_Coat2",
+      "Coat_Back",
+      "Coat_Back1_end",
+      "R_Coat_Back",
+      "L_Coat_Back",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "L_Coat_Front1",
+      "L_Coat_Front2",
+      "L_Coat1",
+      "L_Coat2",
+      "L_Weapon",
+      "R_Weapon",
+      "Rocket_Base",
+      "Rocket_Mid",
+      "Rocket_End",
+      "Rocket_Holder",
+      "Rocket",
+      "Rocket_Base_Scale",
+      "Rocket_End_Scale",
+      "Rocket_Holder_Scale",
+      "Rocket_Mid_Scale",
+      "R_Mustache",
+      "L_Mustache",
+      "Grab_Hand_Base_Space",
+      "Grab_Hand_Base",
+      "Grab_Hand_Top",
+      "Grab_Hand_Bottom",
+      "Snap_Rocket_Base_To_World",
+      "Snap_Rocket_Mid_To_World",
+      "Snap_Rocket_End_To_World",
+      "Snap_Rocket_Holder_To_World",
+      "Snap_Rocket_To_World",
+      "L_Snap_Weapon_To_World",
+      "R_Snap_Weapon_To_World",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "C_Buffbone_Cstm_Rocket",
+      "Buffbone_Cstm_Healthbar"
+    ],
+    "ziggs": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "C_Buffbone_Glb_Head_Loc",
+      "Jaw",
+      "L_Ear",
+      "R_Ear",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Finger",
+      "R_Finger_b",
+      "R_Thumb",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "R_Hand_Twist",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Finger",
+      "L_Finger_b",
+      "L_Thumb",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "L_Hand_Twist",
+      "C_Buffbone_Glb_Chest_Loc",
+      "R_Cloth1",
+      "R_Cloth2",
+      "L_Cloth1",
+      "L_Cloth2",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Foot_end",
+      "R_HeelRoll_end",
+      "R_Toe",
+      "R_Toe_end",
+      "R_ToeRoll_end",
+      "R_OuterRoll_end",
+      "R_InnerRoll_end",
+      "R_SwivelRoll_end",
+      "R_Buffbone_Glb_Foot_Loc",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Foot_end",
+      "L_HeelRoll_end",
+      "L_Toe",
+      "L_Toe_end",
+      "L_ToeRoll_end",
+      "L_OuterRoll_end",
+      "L_InnerRoll_end",
+      "L_SwivelRoll_end",
+      "L_Buffbone_Glb_Foot_Loc",
+      "Bomb",
+      "Wick",
+      "Wick_b",
+      "Bomb_b",
+      "Wick_c",
+      "Wick_d",
+      "BUFFBONE_CSTM_WICKL",
+      "Bomb_c",
+      "Wick_e",
+      "Wick_f",
+      "BUFFBONE_CSTM_WICKB",
+      "R_Snap_Bomb2World",
+      "L_Snap_Bomb2World",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "L_Brow",
+      "R_Brow",
+      "buffbone_glb_weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "BUFFBONE_CSTM_WICKR",
+      "Snap_Bomb_c_World"
+    ],
+    "lux": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "BUFFBONE_CSTM_SHOULDER_L",
+      "R_Clavicle",
+      "R_Shoulder",
+      "BUFFBONE_CSTM_SHOULDER_R",
+      "R_Elbow",
+      "R_Hand",
+      "WeaponBottom",
+      "BUFFBONE_CSTM_WEAPON_1",
+      "BUFFBONE_CSTM_WEAPON_2",
+      "BUFFBONE_CSTM_WEAPON_3",
+      "WeaponTop",
+      "BUFFBONE_GLB_WEAPON_1",
+      "BUFFBONE_CSTM_WEAPON_4",
+      "BUFFBONE_CSTM_WEAPON_5",
+      "Weapon",
+      "BUFFBONE_CSTM_WEAPON_6",
+      "Pelvis",
+      "B_L_Cloth1",
+      "B_L_Cloth2",
+      "B_R_Cloth1",
+      "B_R_Cloth2",
+      "F_Belt1",
+      "F_Belt2",
+      "F_L_Cloth1",
+      "F_R_Cloth1",
+      "L_Cloth1",
+      "L_Elbow",
+      "L_Hand",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Toe",
+      "R_Cloth1",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Toe",
+      "Neck",
+      "Head",
+      "Hair1",
+      "Hair2",
+      "Jaw",
+      "C_BUFFBONE_CSTM_BEAM",
+      "F_Hair",
+      "Bun1",
+      "Bun2",
+      "Bun3",
+      "L_Tassle1",
+      "L_Tassle2",
+      "L_Tassle3",
+      "WeaponBottom_World",
+      "WeaponTop_World",
+      "Weapon_World",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "B_Hair1",
+      "B_Hair2",
+      "B_Hair3",
+      "WeaponBottomHead",
+      "Keychain1",
+      "Keychain2"
+    ],
+    "caitlyn": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Chest",
+      "Neck",
+      "Head",
+      "C_Buffbone_Glb_Head_Loc",
+      "Jaw",
+      "L_Brow",
+      "L_Brow_Inner",
+      "R_Brow",
+      "R_Brow_Inner",
+      "L_Eye",
+      "R_Eye",
+      "L_Up_Eyelid",
+      "R_Up_Eyelid",
+      "C_Mouth_All",
+      "L_MouthCrnr",
+      "R_MouthCrnr",
+      "Hair1",
+      "Hair2",
+      "Hair3",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Hand_Twist",
+      "C_Buffbone_Glb_Chest_Loc",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Hand_Twist",
+      "Pelvis",
+      "L_Hip_Dress",
+      "R_Hip_Dress",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "Hair4",
+      "Hair5",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "L_Foot",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Toe",
+      "R_Foot",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Toe",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "C_Skirt1",
+      "C_Skirt2",
+      "C_Skirt3",
+      "L_Low_Eyelid",
+      "R_Low_Eyelid",
+      "L_Buffbone_Glb_Ability_Loc",
+      "R_Buffbone_Glb_Ability_Loc",
+      "HairFront1",
+      "HairFront2",
+      "HairFront3",
+      "HairFront4",
+      "HairFront5",
+      "Hat",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Rifle_Root",
+      "Rifle_OpticB",
+      "Rifle_Bolt",
+      "Rifle_BoltHandle",
+      "Rifle_Trigger",
+      "Rifle_TopBarrel1",
+      "Rifle_OpticC",
+      "Rifle_TopBarrel2",
+      "Rifle_BottomBarrel",
+      "Rifle_Buttstock",
+      "Rifle_OpticA",
+      "Buffbone_Cstm_Rifle_Laser_Loc",
+      "Rifle_TopBarrel3",
+      "Rifle_TopBarrel4",
+      "Rifle_TopBarrel5",
+      "Buffbone_Cstm_Rifle_Barrel_Loc",
+      "Buffbone_Cstm_Rifle_Scope_Loc",
+      "Buffbone_Cstm_Rifle_Bolt_Loc",
+      "Cape1",
+      "Cape2",
+      "Cape3",
+      "Cape4",
+      "Cape5",
+      "Cape6",
+      "Cape7",
+      "L_Hipcloth1",
+      "L_Hipcloth2",
+      "L_Hipcloth3",
+      "L_Hipcloth4",
+      "L_Hipcloth5",
+      "L_Hipcloth6",
+      "L_Hipcloth7",
+      "R_Hipcloth1",
+      "R_Hipcloth2",
+      "R_Hipcloth3",
+      "R_Hipcloth4",
+      "R_Hipcloth5",
+      "R_Hipcloth6",
+      "R_Hipcloth7",
+      "Rifle_World_Snap"
+    ],
+    "darius": [
+      "Root",
+      "Pelvis",
+      "front_cloth_1",
+      "front_cloth_2",
+      "front_cloth_3",
+      "front_cloth_4",
+      "front_cloth_5",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "Spine_01",
+      "Spine_02",
+      "Head",
+      "C_Cape_1",
+      "C_Cape_2",
+      "C_Cape_3",
+      "C_Cape_4",
+      "C_Cape_5",
+      "R_Clavicle",
+      "R_Shoulderpad",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb",
+      "R_Thumb_End",
+      "R_Index",
+      "R_Index_End",
+      "R_Middle",
+      "R_Middle_End",
+      "R_Ring",
+      "R_Ring_End",
+      "R_Pinky",
+      "R_Pinky_End",
+      "R_Cape_1",
+      "R_Cape_2",
+      "R_Cape_3",
+      "R_Cape_4",
+      "R_Cape_5",
+      "L_Clavicle",
+      "L_Shoulderpad",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb",
+      "L_Index",
+      "L_Thumb_End",
+      "L_Index_End",
+      "L_Middle",
+      "L_Middle_End",
+      "L_Ring",
+      "L_Ring_End",
+      "L_Pinky",
+      "L_Pinky_End",
+      "L_Cape_1",
+      "L_Cape_2",
+      "L_Cape_3",
+      "L_Cape_4",
+      "L_Cape_5",
+      "Weapon",
+      "Backpack_Bot",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Layout_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Cstm_Healthbar"
+    ],
+    "twistedfate": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Spine3",
+      "Neck",
+      "Head",
+      "Hair1",
+      "Hair2",
+      "Hair3",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_ShoulderPad",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_ShoulderPad",
+      "C_Coat1",
+      "C_Coat2",
+      "C_Coat3",
+      "C_Coat4",
+      "L_Coat1",
+      "L_Coat2",
+      "L_Coat3",
+      "L_Coat4",
+      "R_Coat1",
+      "R_Coat2",
+      "R_Coat3",
+      "R_Coat4",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Foot_end",
+      "L_Toe",
+      "L_Toe_end",
+      "L_HeelRoll_end",
+      "L_InnerRoll_end",
+      "L_SwivelRoll_end",
+      "L_OuterRoll_end",
+      "L_ToeRoll_end",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Foot_end",
+      "R_Toe",
+      "R_Toe_end",
+      "R_HeelRoll_end",
+      "R_InnerRoll_end",
+      "R_SwivelRoll_end",
+      "R_OuterRoll_end",
+      "R_ToeRoll_end",
+      "Hat",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "R_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Cstm_Healthbar"
+    ],
+    "malzahar": [
+      "ROOT",
+      "waist",
+      "chest",
+      "L_shoulder",
+      "L_uparm",
+      "L_forearm",
+      "L_hand",
+      "BUFFBONE_GLB_HAND_L",
+      "R_shoulder",
+      "R_uparm",
+      "R_forearm",
+      "R_hand",
+      "weapon",
+      "BUFFBONE_GLB_WEAPON_1",
+      "BUFFBONE_GLB_HAND_R",
+      "neck",
+      "head",
+      "cap",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "BUFFBONE_GLB_HEAD",
+      "L_thumb",
+      "L_thumb_b",
+      "L_finger",
+      "L_finger_b",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "L_PARENTING_HAND_LOC",
+      "R_thumb",
+      "R_thumb_b",
+      "R_finger",
+      "R_finger_b",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "R_PARENTING_HAND_LOC",
+      "cloth",
+      "cloth_b",
+      "cloth_c",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "BUFFBONE_GLB_CHEST",
+      "weapon_b",
+      "Pelvis",
+      "L_thigh",
+      "L_calfUpper",
+      "L_calf",
+      "L_foot",
+      "L_toe",
+      "L_tip",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "B_cloth",
+      "B_cloth_b",
+      "F_L_cloth",
+      "F_L_cloth_b",
+      "F_L_cloth_c",
+      "F_R_cloth",
+      "R_thigh",
+      "R_calfUpper",
+      "R_calf",
+      "R_foot",
+      "R_toe",
+      "R_tip",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "B_cloth_c",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Cstm_Healthbar",
+      "Helmet",
+      "L_Mask",
+      "R_Mask",
+      "Mouth"
+    ],
+    "ekko": [
+      "GlobalRoot",
+      "Root",
+      "Pelvis",
+      "Weapon_Back_Base",
+      "Weapon_Back",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "Spine1",
+      "Spine2",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Thumb1",
+      "R_Thumb2",
+      "Weapon",
+      "Neck",
+      "Head",
+      "F_Mohawk1",
+      "F_Mohawk2",
+      "B_Mohawk1",
+      "B_Mohawk2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Buffbone_Glb_Foot_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Collar",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Weapon_Back_Handle",
+      "Book_Pen",
+      "L_Book",
+      "R_Book",
+      "Weapon_Front",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "Pen",
+      "Snap_Weapon2World"
+    ]
+  },
+  "rows": {
+    "drmundo": [
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_buf",
+        "path": "effects/drmundo/tft13_drmundo_base_r_buf.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_buf.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Buf",
+        "counts": {
+          "mapped": 0,
+          "skipped": 3,
+          "rejected": 0,
+          "approximated": 13
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_cas_01",
+        "path": "effects/drmundo/tft13_drmundo_base_r_cas_01.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_cas_01.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_cas_01",
+        "counts": {
+          "mapped": 0,
+          "skipped": 4,
+          "rejected": 1,
+          "approximated": 12
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_cas_02",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_cas_02.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_cas_02",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_e_knockback_wave",
+        "path": "effects/drmundo/tft13_drmundo_base_e_knockback_wave.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_e_knockback_wave.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_E_Knockback_Wave",
+        "counts": {
+          "mapped": 0,
+          "skipped": 9,
+          "rejected": 3,
+          "approximated": 15
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_zap_aoe_tar",
+        "path": "effects/drmundo/tft13_drmundo_base_r_zap_aoe_tar.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_zap_aoe_tar.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Zap_AoE_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 2,
+          "approximated": 7
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_eyeglow",
+        "path": "effects/drmundo/tft13_drmundo_base_r_eyeglow.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_eyeglow.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_EyeGlow",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 4
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_beam_tar",
+        "path": "effects/drmundo/tft13_drmundo_base_r_beam_tar.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_beam_tar.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Beam_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 3,
+          "approximated": 4
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_zap_aoe",
+        "path": "effects/drmundo/tft13_drmundo_base_r_zap_aoe.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_zap_aoe.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Zap_AoE",
+        "counts": {
+          "mapped": 0,
+          "skipped": 5,
+          "rejected": 7,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_beam",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_beam.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Beam",
+        "counts": {
+          "mapped": 0,
+          "skipped": 6,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_e_knockback_tar",
+        "path": "effects/drmundo/tft13_drmundo_base_e_knockback_tar.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_e_knockback_tar.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_E_Knockback_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 9
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_r_buf_bubble_child",
+        "path": "effects/drmundo/tft13_drmundo_base_r_buf_bubble_child.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_r_buf_bubble_child.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_R_Buf_Bubble_child",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 1,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "drmundo_tft13_drmundo_base_e_tar",
+        "path": "effects/drmundo/tft13_drmundo_base_e_tar.json",
+        "reportPath": "effects/drmundo/tft13_drmundo_base_e_tar.report.json",
+        "sourcePath": "Characters/TFT13_DrMundo/Skins/Skin0/Particles/TFT13_DrMundo_Base_E_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 15
+        }
+      }
+    ],
+    "blitzcrank": [
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_q_mis",
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_mis.json",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_q_mis.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_Q_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 1,
+          "approximated": 14
+        }
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_q_tar2",
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_tar2.json",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_q_tar2.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_Q_Tar2",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 2,
+          "approximated": 7
+        }
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_drmundo_elecbeam",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_drmundo_elecbeam.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_DrMundo_ElecBeam",
+        "counts": {
+          "mapped": 0,
+          "skipped": 6,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_p_energy_body",
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_p_energy_body.json",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_p_energy_body.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_P_Energy_Body",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_q_mis_return",
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_mis_return.json",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_q_mis_return.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_Q_mis_return",
+        "counts": {
+          "mapped": 0,
+          "skipped": 3,
+          "rejected": 0,
+          "approximated": 7
+        }
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_q_cas",
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_cas.json",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_q_cas.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_Q_cas",
+        "counts": {
+          "mapped": 0,
+          "skipped": 6,
+          "rejected": 4,
+          "approximated": 12
+        }
+      },
+      {
+        "effectId": "blitzcrank_tft13_blitzcrank_base_q_shield",
+        "reportPath": "effects/blitzcrank/tft13_blitzcrank_base_q_shield.report.json",
+        "sourcePath": "Characters/TFT13_Blitzcrank/Skins/Skin0/Particles/TFT13_Blitzcrank_Base_Q_Shield",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 17,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      }
+    ],
+    "heimerdinger": [
+      {
+        "effectId": "heimerdinger_tft13_heimerdinger_base_w_tar",
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_tar.json",
+        "reportPath": "effects/heimerdinger/tft13_heimerdinger_base_w_tar.report.json",
+        "sourcePath": "Characters/TFT13_Heimerdinger/Skins/Skin0/Particles/TFT13_Heimerdinger_Base_W_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 7
+        }
+      },
+      {
+        "effectId": "heimerdinger_tft13_heimerdinger_base_ba_mis",
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_ba_mis.json",
+        "reportPath": "effects/heimerdinger/tft13_heimerdinger_base_ba_mis.report.json",
+        "sourcePath": "Characters/TFT13_Heimerdinger/Skins/Skin0/Particles/TFT13_Heimerdinger_Base_BA_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "heimerdinger_tft13_heimerdinger_base_w_cas",
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_cas.json",
+        "reportPath": "effects/heimerdinger/tft13_heimerdinger_base_w_cas.report.json",
+        "sourcePath": "Characters/TFT13_Heimerdinger/Skins/Skin0/Particles/TFT13_Heimerdinger_Base_W_Cas",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 3,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "heimerdinger_tft13_heimerdinger_base_w_mis",
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_mis.json",
+        "reportPath": "effects/heimerdinger/tft13_heimerdinger_base_w_mis.report.json",
+        "sourcePath": "Characters/TFT13_Heimerdinger/Skins/Skin0/Particles/TFT13_Heimerdinger_Base_W_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 11
+        }
+      }
+    ],
+    "ziggs": [
+      {
+        "effectId": "ziggs_tft13_ziggs_base_q_explosion",
+        "path": "effects/ziggs/tft13_ziggs_base_q_explosion.json",
+        "reportPath": "effects/ziggs/tft13_ziggs_base_q_explosion.report.json",
+        "sourcePath": "Characters/TFT13_Ziggs/Skins/Skin0/Particles/TFT13_Ziggs_Base_Q_explosion",
+        "counts": {
+          "mapped": 0,
+          "skipped": 3,
+          "rejected": 1,
+          "approximated": 9
+        }
+      },
+      {
+        "effectId": "ziggs_tft13_ziggs_q_mis_01",
+        "reportPath": "effects/ziggs/tft13_ziggs_q_mis_01.report.json",
+        "sourcePath": "Characters/TFT13_Ziggs/Skins/Skin0/Particles/TFT13_Ziggs_Q_mis_01",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "ziggs_tft13_ziggs_base_ba_mis",
+        "path": "effects/ziggs/tft13_ziggs_base_ba_mis.json",
+        "reportPath": "effects/ziggs/tft13_ziggs_base_ba_mis.report.json",
+        "sourcePath": "Characters/TFT13_Ziggs/Skins/Skin0/Particles/TFT13_Ziggs_Base_BA_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 1
+        }
+      }
+    ],
+    "lux": [
+      {
+        "effectId": "lux_tft13_lux_base_p_tar",
+        "path": "effects/lux/tft13_lux_base_p_tar.json",
+        "reportPath": "effects/lux/tft13_lux_base_p_tar.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_P_tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "lux_tft13_lux_base_p_empowered_weapon",
+        "reportPath": "effects/lux/tft13_lux_base_p_empowered_weapon.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_P_Empowered_Weapon",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 2,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "lux_tft13_lux_base_w_shield",
+        "path": "effects/lux/tft13_lux_base_w_shield.json",
+        "reportPath": "effects/lux/tft13_lux_base_w_shield.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_W_Shield",
+        "counts": {
+          "mapped": 0,
+          "skipped": 4,
+          "rejected": 4,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "lux_tft13_lux_base_ba_mis",
+        "path": "effects/lux/tft13_lux_base_ba_mis.json",
+        "reportPath": "effects/lux/tft13_lux_base_ba_mis.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_BA_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "lux_tft13_lux_base_w_mis_child",
+        "path": "effects/lux/tft13_lux_base_w_mis_child.json",
+        "reportPath": "effects/lux/tft13_lux_base_w_mis_child.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_W_mis_child",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "lux_tft13_lux_base_w_mis",
+        "path": "effects/lux/tft13_lux_base_w_mis.json",
+        "reportPath": "effects/lux/tft13_lux_base_w_mis.report.json",
+        "sourcePath": "Characters/TFT13_Lux/Skins/Skin0/Particles/TFT13_Lux_Base_W_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 3,
+          "approximated": 4
+        }
+      }
+    ],
+    "caitlyn": [
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_q_targetting_beam",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_q_targetting_beam.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_Q_targetting_beam",
+        "counts": {
+          "mapped": 0,
+          "skipped": 7,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_p_headshot_tar",
+        "path": "effects/caitlyn/tft13_caitlyn_base_p_headshot_tar.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_p_headshot_tar.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_P_headshot_tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 10
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_ba_crit_cas",
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_crit_cas.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_ba_crit_cas.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_BA_Crit_Cas",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_ba_shell_parent",
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_parent.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_ba_shell_parent.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_BA_Shell_Parent",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_p_headshot_mis",
+        "path": "effects/caitlyn/tft13_caitlyn_base_p_headshot_mis.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_p_headshot_mis.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_P_Headshot_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 4,
+          "rejected": 1,
+          "approximated": 18
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_ba_mis",
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_mis.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_ba_mis.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_BA_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_ba_shell_child",
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_child.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_ba_shell_child.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_BA_Shell_Child",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 3
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_scope_hologram",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_scope_hologram.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_scope_hologram.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Scope_Hologram",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 14
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_ba_shell_groundbounce",
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_groundbounce.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_ba_shell_groundbounce.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_BA_Shell_GroundBounce",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_q_chargeup",
+        "path": "effects/caitlyn/tft13_caitlyn_base_q_chargeup.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_q_chargeup.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_Q_ChargeUp",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_bombardment_impact",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_impact.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_impact.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Bombardment_Impact",
+        "counts": {
+          "mapped": 0,
+          "skipped": 8,
+          "rejected": 2,
+          "approximated": 25
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_bombardment_mis",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_mis.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_mis.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Bombardment_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 2,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_q_blimp_spawn",
+        "path": "effects/caitlyn/tft13_caitlyn_base_q_blimp_spawn.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_q_blimp_spawn.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_Q_Blimp_Spawn",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_target",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_target.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_target.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Target",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_blimp",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_blimp.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_blimp.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Blimp",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 3
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_cas",
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_cas.json",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_cas.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Cas",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 4
+        }
+      },
+      {
+        "effectId": "caitlyn_tft13_caitlyn_base_r_blimp_child",
+        "reportPath": "effects/caitlyn/tft13_caitlyn_base_r_blimp_child.report.json",
+        "sourcePath": "Characters/TFT13_Caitlyn/Skins/Skin0/Particles/TFT13_Caitlyn_Base_R_Blimp_Child",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 2,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      }
+    ],
+    "darius": [
+      {
+        "effectId": "darius_tft13_darius_base_q_ring",
+        "path": "effects/darius/tft13_darius_base_q_ring.json",
+        "reportPath": "effects/darius/tft13_darius_base_q_ring.report.json",
+        "sourcePath": "Characters/TFT13_Darius/Skins/Skin0/Particles/TFT13_Darius_Base_Q_Ring",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "darius_tft13_darius_base_q_tar",
+        "path": "effects/darius/tft13_darius_base_q_tar.json",
+        "reportPath": "effects/darius/tft13_darius_base_q_tar.report.json",
+        "sourcePath": "Characters/TFT13_Darius/Skins/Skin0/Particles/TFT13_Darius_Base_Q_tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 1,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "darius_tft13_darius_base_q_ring_windup",
+        "path": "effects/darius/tft13_darius_base_q_ring_windup.json",
+        "reportPath": "effects/darius/tft13_darius_base_q_ring_windup.report.json",
+        "sourcePath": "Characters/TFT13_Darius/Skins/Skin0/Particles/TFT13_Darius_Base_Q_Ring_Windup",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "darius_tft13_darius_base_q_heal",
+        "path": "effects/darius/tft13_darius_base_q_heal.json",
+        "reportPath": "effects/darius/tft13_darius_base_q_heal.report.json",
+        "sourcePath": "Characters/TFT13_Darius/Skins/Skin0/Particles/TFT13_Darius_Base_Q_Heal",
+        "counts": {
+          "mapped": 0,
+          "skipped": 4,
+          "rejected": 0,
+          "approximated": 4
+        }
+      },
+      {
+        "effectId": "darius_tft13_darius_base_q_hemo_debuff",
+        "reportPath": "effects/darius/tft13_darius_base_q_hemo_debuff.report.json",
+        "sourcePath": "Characters/TFT13_Darius/Skins/Skin0/Particles/TFT13_Darius_Base_Q_hemo_debuff",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      }
+    ],
+    "twistedfate": [
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_yellow_tar",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_yellow_tar.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_yellow_tar.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Yellow_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_ba_mis",
+        "path": "effects/twistedfate/tft13_twistedfate_base_ba_mis.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_ba_mis.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_BA_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_red_mis",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_red_mis.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_red_mis.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Red_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_bluecard_tar",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_bluecard_tar.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_bluecard_tar.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_BlueCard_tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_cas",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_cas.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_cas.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Cas",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 1,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_bluecard",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_bluecard.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_bluecard.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_BlueCard",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 16
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_yellow_mis",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_yellow_mis.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_yellow_mis.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Yellow_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 8
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_blue_mis",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_blue_mis.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_blue_mis.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Blue_Mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "twistedfate_tft13_twistedfate_base_w_red_tar",
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_red_tar.json",
+        "reportPath": "effects/twistedfate/tft13_twistedfate_base_w_red_tar.report.json",
+        "sourcePath": "Characters/TFT13_TwistedFate/Skins/Skin0/Particles/TFT13_TwistedFate_Base_W_Red_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 3,
+          "rejected": 0,
+          "approximated": 9
+        }
+      }
+    ],
+    "malzahar": [
+      {
+        "effectId": "malzahar_tft13_malzahar_base_e_spread_beam",
+        "reportPath": "effects/malzahar/tft13_malzahar_base_e_spread_beam.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Base_E_Spread_Beam",
+        "counts": {
+          "mapped": 0,
+          "skipped": 5,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_spell_portal_1",
+        "path": "effects/malzahar/tft13_malzahar_spell_portal_1.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_spell_portal_1.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Spell_portal_1",
+        "counts": {
+          "mapped": 0,
+          "skipped": 7,
+          "rejected": 1,
+          "approximated": 19
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzhar_idle_03",
+        "path": "effects/malzahar/tft13_malzhar_idle_03.json",
+        "reportPath": "effects/malzahar/tft13_malzhar_idle_03.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzhar_Idle_03",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_aa_mis",
+        "path": "effects/malzahar/tft13_malzahar_aa_mis.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_aa_mis.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_AA_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 2,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_base_q_cas_handtrail",
+        "path": "effects/malzahar/tft13_malzahar_base_q_cas_handtrail.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_base_q_cas_handtrail.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Base_Q_CAS_HandTrail",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 5
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_idle",
+        "path": "effects/malzahar/tft13_malzahar_idle.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_idle.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_idle",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_q_mis",
+        "path": "effects/malzahar/tft13_malzahar_q_mis.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_q_mis.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Q_mis",
+        "counts": {
+          "mapped": 0,
+          "skipped": 6,
+          "rejected": 0,
+          "approximated": 10
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_e_buf",
+        "path": "effects/malzahar/tft13_malzahar_e_buf.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_e_buf.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_E_buf",
+        "counts": {
+          "mapped": 0,
+          "skipped": 2,
+          "rejected": 4,
+          "approximated": 16
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_spell_tar",
+        "path": "effects/malzahar/tft13_malzahar_spell_tar.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_spell_tar.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Spell_Tar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 6
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_idle_04",
+        "path": "effects/malzahar/tft13_malzahar_idle_04.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_idle_04.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Idle_04",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_idle_02",
+        "path": "effects/malzahar/tft13_malzahar_idle_02.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_idle_02.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_Idle_02",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 2
+        }
+      },
+      {
+        "effectId": "malzahar_tft13_malzahar_e_damage",
+        "path": "effects/malzahar/tft13_malzahar_e_damage.json",
+        "reportPath": "effects/malzahar/tft13_malzahar_e_damage.report.json",
+        "sourcePath": "Characters/TFT13_Malzahar/Skins/Skin0/Particles/TFT13_Malzahar_E_Damage",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 7
+        }
+      }
+    ],
+    "ekko": [
+      {
+        "effectId": "ekko_tft13_ekko_base_r_mark",
+        "path": "effects/ekko/tft13_ekko_base_r_mark.json",
+        "reportPath": "effects/ekko/tft13_ekko_base_r_mark.report.json",
+        "sourcePath": "Characters/TFT13_Ekko/Skins/Skin0/Particles/TFT13_Ekko_Base_R_Mark",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "ekko_tft13_ekko_base_r_mark_enemy",
+        "path": "effects/ekko/tft13_ekko_base_r_mark_enemy.json",
+        "reportPath": "effects/ekko/tft13_ekko_base_r_mark_enemy.report.json",
+        "sourcePath": "Characters/TFT13_Ekko/Skins/Skin0/Particles/TFT13_Ekko_Base_R_Mark_Enemy",
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        }
+      },
+      {
+        "effectId": "ekko_tft13_ekko_base_p_minion_avatar",
+        "path": "effects/ekko/tft13_ekko_base_p_minion_avatar.json",
+        "reportPath": "effects/ekko/tft13_ekko_base_p_minion_avatar.report.json",
+        "sourcePath": "Characters/TFT13_Ekko/Skins/Skin0/Particles/TFT13_Ekko_Base_P_Minion_Avatar",
+        "counts": {
+          "mapped": 0,
+          "skipped": 1,
+          "rejected": 1,
+          "approximated": 11
+        }
+      },
+      {
+        "effectId": "ekko_tft13_ekko_base_p_proc",
+        "path": "effects/ekko/tft13_ekko_base_p_proc.json",
+        "reportPath": "effects/ekko/tft13_ekko_base_p_proc.report.json",
+        "sourcePath": "Characters/TFT13_Ekko/Skins/Skin0/Particles/TFT13_Ekko_Base_P_Proc",
+        "counts": {
+          "mapped": 0,
+          "skipped": 7,
+          "rejected": 1,
+          "approximated": 26
+        }
+      },
+      {
+        "effectId": "ekko_tft13_ekko_base_p_tar_impact",
+        "path": "effects/ekko/tft13_ekko_base_p_tar_impact.json",
+        "reportPath": "effects/ekko/tft13_ekko_base_p_tar_impact.report.json",
+        "sourcePath": "Characters/TFT13_Ekko/Skins/Skin0/Particles/TFT13_Ekko_Base_P_Tar_Impact",
+        "counts": {
+          "mapped": 0,
+          "skipped": 4,
+          "rejected": 1,
+          "approximated": 6
+        }
+      }
+    ],
+    "global": [
+      {
+        "effectId": "global_tft_global_ba_hit",
+        "path": "effects/global/tft_global_ba_hit.json",
+        "sourcePath": "shared/TFT_Global_BA_Hit"
+      }
+    ]
+  },
+  "manifest": {
+    "schemaVersion": 1,
+    "models": {
+      "drmundo": {
+        "path": "models/drmundo/model.glb",
+        "animations": {
+          "idle": "tft13_drmundo_idle1",
+          "move": "tft13_drmundo_run",
+          "death": "drmundo_death"
+        }
+      },
+      "blitzcrank": {
+        "path": "models/blitzcrank/model.glb",
+        "animations": {
+          "idle": "tft13_blitzcrank_skin22_idle1",
+          "move": "tft13_blitzcrank_skin22_run",
+          "attack": "tft13_blitzcrank_skin20_attack1",
+          "cast": "tft13_blitzcrank_spell",
+          "death": "tft13_blitzcrank_skin22_death"
+        }
+      },
+      "heimerdinger": {
+        "path": "models/heimerdinger/model.glb",
+        "animations": {
+          "idle": "tft13_heimerdinger_base_idle1",
+          "move": "tft13_heimerdinger_base_run1",
+          "attack": "tft13_heimerdinger_base_attack1",
+          "cast": "tft13_heimerdinger_spell1",
+          "death": "heimerdinger_base_death"
+        }
+      },
+      "ziggs": {
+        "path": "models/ziggs/model.glb",
+        "animations": {
+          "idle": "idle1",
+          "move": "run",
+          "attack": "attack1",
+          "cast": "spell",
+          "death": "ziggs_death"
+        }
+      },
+      "lux": {
+        "path": "models/lux/model.glb",
+        "animations": {
+          "idle": "tft13_lux_idle1",
+          "move": "lux_skin15_run",
+          "attack": "tft13_lux_attack1",
+          "cast": "tft13_lux_spell",
+          "death": "lux_skin15_death"
+        }
+      },
+      "caitlyn": {
+        "path": "models/caitlyn/model.glb",
+        "animations": {
+          "idle": "caitlyn_idle1",
+          "move": "tft13_caitlyn_run",
+          "attack": "attack1",
+          "cast": "tft13_caitlyn_spell_first",
+          "death": "death"
+        }
+      },
+      "darius": {
+        "path": "models/darius/model.glb",
+        "animations": {
+          "idle": "idle_new",
+          "move": "run",
+          "attack": "attack1",
+          "cast": "spell1",
+          "death": "death"
+        }
+      },
+      "twistedfate": {
+        "path": "models/twistedfate/model.glb",
+        "animations": {
+          "idle": "idle1",
+          "move": "tft13_twistedfate_run",
+          "attack": "attack1_new",
+          "cast": "spell1",
+          "death": "death1"
+        }
+      },
+      "malzahar": {
+        "path": "models/malzahar/model.glb",
+        "animations": {
+          "idle": "tft13_malzahar_skin06_idle1",
+          "move": "tft13_malzahar_run",
+          "attack": "tft13_malzahar_attack1",
+          "cast": "tft13_malzahar_spell",
+          "death": "malzahar_skin06_death"
+        }
+      },
+      "ekko": {
+        "path": "models/ekko/model.glb",
+        "animations": {
+          "idle": "idle_new",
+          "move": "punkgenius_run1",
+          "attack": "punkgenius_attack1",
+          "cast": "tft13_ekko_spell_start",
+          "death": "death"
+        }
+      }
+    },
+    "effects": {
+      "drmundo_tft13_drmundo_base_r_buf": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_buf.json"
+      },
+      "drmundo_tft13_drmundo_base_r_cas_01": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_cas_01.json"
+      },
+      "drmundo_tft13_drmundo_base_e_knockback_wave": {
+        "path": "effects/drmundo/tft13_drmundo_base_e_knockback_wave.json"
+      },
+      "drmundo_tft13_drmundo_base_r_zap_aoe_tar": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_zap_aoe_tar.json"
+      },
+      "drmundo_tft13_drmundo_base_r_eyeglow": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_eyeglow.json"
+      },
+      "drmundo_tft13_drmundo_base_r_beam_tar": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_beam_tar.json"
+      },
+      "drmundo_tft13_drmundo_base_r_zap_aoe": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_zap_aoe.json"
+      },
+      "drmundo_tft13_drmundo_base_e_knockback_tar": {
+        "path": "effects/drmundo/tft13_drmundo_base_e_knockback_tar.json"
+      },
+      "drmundo_tft13_drmundo_base_r_buf_bubble_child": {
+        "path": "effects/drmundo/tft13_drmundo_base_r_buf_bubble_child.json"
+      },
+      "drmundo_tft13_drmundo_base_e_tar": {
+        "path": "effects/drmundo/tft13_drmundo_base_e_tar.json"
+      },
+      "blitzcrank_tft13_blitzcrank_base_q_mis": {
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_mis.json"
+      },
+      "blitzcrank_tft13_blitzcrank_base_q_tar2": {
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_tar2.json"
+      },
+      "blitzcrank_tft13_blitzcrank_base_p_energy_body": {
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_p_energy_body.json"
+      },
+      "blitzcrank_tft13_blitzcrank_base_q_mis_return": {
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_mis_return.json"
+      },
+      "blitzcrank_tft13_blitzcrank_base_q_cas": {
+        "path": "effects/blitzcrank/tft13_blitzcrank_base_q_cas.json"
+      },
+      "heimerdinger_tft13_heimerdinger_base_w_tar": {
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_tar.json"
+      },
+      "heimerdinger_tft13_heimerdinger_base_ba_mis": {
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_ba_mis.json"
+      },
+      "heimerdinger_tft13_heimerdinger_base_w_cas": {
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_cas.json"
+      },
+      "heimerdinger_tft13_heimerdinger_base_w_mis": {
+        "path": "effects/heimerdinger/tft13_heimerdinger_base_w_mis.json"
+      },
+      "ziggs_tft13_ziggs_base_q_explosion": {
+        "path": "effects/ziggs/tft13_ziggs_base_q_explosion.json"
+      },
+      "ziggs_tft13_ziggs_base_ba_mis": {
+        "path": "effects/ziggs/tft13_ziggs_base_ba_mis.json"
+      },
+      "lux_tft13_lux_base_p_tar": {
+        "path": "effects/lux/tft13_lux_base_p_tar.json"
+      },
+      "lux_tft13_lux_base_w_shield": {
+        "path": "effects/lux/tft13_lux_base_w_shield.json"
+      },
+      "lux_tft13_lux_base_ba_mis": {
+        "path": "effects/lux/tft13_lux_base_ba_mis.json"
+      },
+      "lux_tft13_lux_base_w_mis_child": {
+        "path": "effects/lux/tft13_lux_base_w_mis_child.json"
+      },
+      "lux_tft13_lux_base_w_mis": {
+        "path": "effects/lux/tft13_lux_base_w_mis.json"
+      },
+      "caitlyn_tft13_caitlyn_base_p_headshot_tar": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_p_headshot_tar.json"
+      },
+      "caitlyn_tft13_caitlyn_base_ba_crit_cas": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_crit_cas.json"
+      },
+      "caitlyn_tft13_caitlyn_base_ba_shell_parent": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_parent.json"
+      },
+      "caitlyn_tft13_caitlyn_base_p_headshot_mis": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_p_headshot_mis.json"
+      },
+      "caitlyn_tft13_caitlyn_base_ba_mis": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_mis.json"
+      },
+      "caitlyn_tft13_caitlyn_base_ba_shell_child": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_child.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_scope_hologram": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_scope_hologram.json"
+      },
+      "caitlyn_tft13_caitlyn_base_ba_shell_groundbounce": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_ba_shell_groundbounce.json"
+      },
+      "caitlyn_tft13_caitlyn_base_q_chargeup": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_q_chargeup.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_bombardment_impact": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_impact.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_bombardment_mis": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_bombardment_mis.json"
+      },
+      "caitlyn_tft13_caitlyn_base_q_blimp_spawn": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_q_blimp_spawn.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_target": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_target.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_blimp": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_blimp.json"
+      },
+      "caitlyn_tft13_caitlyn_base_r_cas": {
+        "path": "effects/caitlyn/tft13_caitlyn_base_r_cas.json"
+      },
+      "darius_tft13_darius_base_q_ring": {
+        "path": "effects/darius/tft13_darius_base_q_ring.json"
+      },
+      "darius_tft13_darius_base_q_tar": {
+        "path": "effects/darius/tft13_darius_base_q_tar.json"
+      },
+      "darius_tft13_darius_base_q_ring_windup": {
+        "path": "effects/darius/tft13_darius_base_q_ring_windup.json"
+      },
+      "darius_tft13_darius_base_q_heal": {
+        "path": "effects/darius/tft13_darius_base_q_heal.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_yellow_tar": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_yellow_tar.json"
+      },
+      "twistedfate_tft13_twistedfate_base_ba_mis": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_ba_mis.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_red_mis": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_red_mis.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_bluecard_tar": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_bluecard_tar.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_cas": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_cas.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_bluecard": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_bluecard.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_yellow_mis": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_yellow_mis.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_blue_mis": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_blue_mis.json"
+      },
+      "twistedfate_tft13_twistedfate_base_w_red_tar": {
+        "path": "effects/twistedfate/tft13_twistedfate_base_w_red_tar.json"
+      },
+      "malzahar_tft13_malzahar_spell_portal_1": {
+        "path": "effects/malzahar/tft13_malzahar_spell_portal_1.json"
+      },
+      "malzahar_tft13_malzhar_idle_03": {
+        "path": "effects/malzahar/tft13_malzhar_idle_03.json"
+      },
+      "malzahar_tft13_malzahar_aa_mis": {
+        "path": "effects/malzahar/tft13_malzahar_aa_mis.json"
+      },
+      "malzahar_tft13_malzahar_base_q_cas_handtrail": {
+        "path": "effects/malzahar/tft13_malzahar_base_q_cas_handtrail.json"
+      },
+      "malzahar_tft13_malzahar_idle": {
+        "path": "effects/malzahar/tft13_malzahar_idle.json"
+      },
+      "malzahar_tft13_malzahar_q_mis": {
+        "path": "effects/malzahar/tft13_malzahar_q_mis.json"
+      },
+      "malzahar_tft13_malzahar_e_buf": {
+        "path": "effects/malzahar/tft13_malzahar_e_buf.json"
+      },
+      "malzahar_tft13_malzahar_spell_tar": {
+        "path": "effects/malzahar/tft13_malzahar_spell_tar.json"
+      },
+      "malzahar_tft13_malzahar_idle_04": {
+        "path": "effects/malzahar/tft13_malzahar_idle_04.json"
+      },
+      "malzahar_tft13_malzahar_idle_02": {
+        "path": "effects/malzahar/tft13_malzahar_idle_02.json"
+      },
+      "malzahar_tft13_malzahar_e_damage": {
+        "path": "effects/malzahar/tft13_malzahar_e_damage.json"
+      },
+      "ekko_tft13_ekko_base_r_mark": {
+        "path": "effects/ekko/tft13_ekko_base_r_mark.json"
+      },
+      "ekko_tft13_ekko_base_r_mark_enemy": {
+        "path": "effects/ekko/tft13_ekko_base_r_mark_enemy.json"
+      },
+      "ekko_tft13_ekko_base_p_minion_avatar": {
+        "path": "effects/ekko/tft13_ekko_base_p_minion_avatar.json"
+      },
+      "ekko_tft13_ekko_base_p_proc": {
+        "path": "effects/ekko/tft13_ekko_base_p_proc.json"
+      },
+      "ekko_tft13_ekko_base_p_tar_impact": {
+        "path": "effects/ekko/tft13_ekko_base_p_tar_impact.json"
+      },
+      "global_tft_global_ba_hit": {
+        "path": "effects/global/tft_global_ba_hit.json"
+      }
+    },
+    "actionEffects": {
+      "drmundo": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "drmundo_tft13_drmundo_base_r_cas_01",
+          "drmundo_tft13_drmundo_base_r_buf"
+        ]
+      },
+      "blitzcrank": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "blitzcrank_tft13_blitzcrank_base_q_cas",
+          "blitzcrank_tft13_blitzcrank_base_q_mis",
+          "blitzcrank_tft13_blitzcrank_base_q_tar2",
+          "blitzcrank_tft13_blitzcrank_base_q_mis_return"
+        ]
+      },
+      "heimerdinger": {
+        "attack": [
+          "heimerdinger_tft13_heimerdinger_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "heimerdinger_tft13_heimerdinger_base_w_cas",
+          "heimerdinger_tft13_heimerdinger_base_w_mis",
+          "heimerdinger_tft13_heimerdinger_base_w_tar"
+        ]
+      },
+      "ziggs": {
+        "attack": [
+          "ziggs_tft13_ziggs_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "ziggs_tft13_ziggs_base_q_explosion"
+        ]
+      },
+      "lux": {
+        "attack": [
+          "lux_tft13_lux_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "lux_tft13_lux_base_w_mis",
+          "lux_tft13_lux_base_w_shield"
+        ]
+      },
+      "caitlyn": {
+        "attack": [
+          "caitlyn_tft13_caitlyn_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "caitlyn_tft13_caitlyn_base_r_cas",
+          "caitlyn_tft13_caitlyn_base_r_scope_hologram",
+          "caitlyn_tft13_caitlyn_base_r_target",
+          "caitlyn_tft13_caitlyn_base_r_bombardment_mis",
+          "caitlyn_tft13_caitlyn_base_r_bombardment_impact"
+        ]
+      },
+      "darius": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "darius_tft13_darius_base_q_ring_windup",
+          "darius_tft13_darius_base_q_ring",
+          "darius_tft13_darius_base_q_tar",
+          "darius_tft13_darius_base_q_heal"
+        ]
+      },
+      "twistedfate": {
+        "attack": [
+          "twistedfate_tft13_twistedfate_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "twistedfate_tft13_twistedfate_base_w_cas",
+          "twistedfate_tft13_twistedfate_base_w_red_mis",
+          "twistedfate_tft13_twistedfate_base_w_red_tar"
+        ]
+      },
+      "malzahar": {
+        "attack": [
+          "malzahar_tft13_malzahar_aa_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "malzahar_tft13_malzahar_base_q_cas_handtrail",
+          "malzahar_tft13_malzahar_q_mis",
+          "malzahar_tft13_malzahar_spell_tar",
+          "malzahar_tft13_malzahar_e_buf",
+          "malzahar_tft13_malzahar_e_damage"
+        ]
+      },
+      "ekko": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "ekko_tft13_ekko_base_r_mark",
+          "ekko_tft13_ekko_base_r_mark_enemy",
+          "ekko_tft13_ekko_base_p_proc",
+          "ekko_tft13_ekko_base_p_tar_impact"
+        ]
+      }
+    }
+  }
+}

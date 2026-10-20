@@ -65,6 +65,7 @@ export interface BattleSideResult {
   readonly growth: readonly PersistentGrowth[];
 }
 export interface BattleResult {
+  readonly bankSamples?:readonly import('./combat-types').CombatBankSample[];
   readonly version: typeof TWO_SIDED_BATTLE_VERSION;
   readonly battleId: string;
   readonly roundId: string;
@@ -95,6 +96,7 @@ export interface SideProposal {
   readonly events: readonly LedgerCombatEvent[];
 }
 export type BattleFailure = 'snapshot-version' | 'content-digest' | 'invalid-snapshot' | 'wrong-phase'
+  | 'invalid-bank-sample'
   | 'seat-collision' | 'round-mismatch' | 'round-kind' | 'invalid-seed' | 'invalid-battle-id'
   | 'invalid-mirror' | 'battle-input' | 'invalid-budget' | 'step-limit-exceeded' | 'invalid-result';
 export class BattleValidationError extends RangeError {

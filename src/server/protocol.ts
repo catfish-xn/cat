@@ -6,7 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
 export type { ConsumableFailure, ConsumableTarget, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
@@ -41,11 +41,18 @@ export interface SeatPublic {
   readonly controller: SeatController;
   /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
-   * Only units deployed on the board, with the items they hold. Never the bench, shop, gold, XP or RNG.
-   * Optional so older views and tests stay valid; the room always fills it.
+   * Board and bench units with the items and anomaly they hold, unequipped items and owned augments (2026-10-20 scouting).
+   * Never the shop, gold, XP, streak, pending choices or RNG. Optional so older views and tests stay valid; the room always fills it.
    */
   readonly publicBoard?: PublicBoard;
+  /**
+   * v15: this seat's unclaimed orbs as everyone may see them, the rules' `readPublicOrbSummary` copied field by field:
+   * how many and of which tiers. Never their ids, rounds, contents, receipts or whether one is queued. Optional like
+   * `publicBoard`; the room always fills it.
+   */
+  readonly orbs?: PublicOrbSummary;
 }
+export interface PublicOrbSummary { readonly count: number; readonly tiers: readonly OrbTier[] }
 export interface PublicBoardUnit {
   readonly definitionId: string;
   readonly starLevel: number;
@@ -58,8 +65,28 @@ export interface PublicBoardUnit {
    * `starLevel` is its stage appearance. Not a champion: no trait, no avatar, no items; the holder and item instance stay private.
    */
   readonly summon?: true;
+  /** 2026-10-20 scouting: the anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
 }
-export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
+/** A unit on the owner's bench (2026-10-20 scouting): same fields as a board unit, a bench slot instead of a cell. */
+export interface PublicBenchUnit {
+  readonly definitionId: string;
+  readonly starLevel: number;
+  readonly slot: number;
+  /** Item definition ids held by the unit, in slot order. */
+  readonly items: readonly string[];
+  /** The anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
+}
+export interface PublicBoard {
+  readonly units: readonly PublicBoardUnit[];
+  /** Bench units by slot. Optional so older views stay valid; the room always fills it. */
+  readonly bench?: readonly PublicBenchUnit[];
+  /** Item definition ids not held by any unit (the item bench), in the owner's item order. */
+  readonly looseItems?: readonly string[];
+  /** Augment definition ids the seat owns, in the order acquired. Offers and rerolls stay private. */
+  readonly augments?: readonly string[];
+}
 /**
  * C15: one of MY units in my battle replay. The replay names units by their battle ids (contract §10.2); this pair
  * says which of my own units a battle id stands for, so the client can show that unit's equipment without
@@ -198,6 +225,8 @@ export type ClientCommand =
   | { readonly type: 'equip'; readonly itemId: string; readonly unitId: string; readonly slot: number }
   | { readonly type: 'choose'; readonly choiceId: string; readonly generation: number; readonly definitionId: string }
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
+  /** v15 (AUGMENT-CARD-REROLL): rerolls only the card at `optionIndex` (0..2) of the pending augment choice; each card once. */
+  | { readonly type: 'rerollAugment'; readonly choiceId: string; readonly generation: number; readonly optionIndex: number }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
 export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
 /**
@@ -213,5 +242,13 @@ export interface CarouselPickCommand { readonly type: 'carousel-pick'; readonly 
  * ClientCommand for the same reason as the carousel pick: the bot policy never moves a summon.
  */
 export interface MoveItemSummonCommand { readonly type: 'moveItemSummon'; readonly itemInstanceId: string; readonly cell: { readonly col: number; readonly row: number } }
-/** Every command a seat may send over the wire: the match.ts commands (§18.8), the carousel pick (G1-P7) and the summon move (G2-4b). */
-export type WireCommand = ClientCommand | CarouselPickCommand | MoveItemSummonCommand;
+/**
+ * v15 (LOOT-ORB-CLAIM, MULTIPLAYER_CONTRACT §claimOrb): claim the whole unclaimed orb `orbId` of my seat (`unclaimedOrbs` of my
+ * private view; it may come from an earlier round). `round` is the round I act in. The room hands it as is to the rules'
+ * shared-pool `claimOrb`, which decide everything: in preparation, choice and settlement it is claimed at once, during my
+ * battle (or under the PvP roster lock) it is only queued (`queued: true`) and settled after the battle. Kept out of
+ * ClientCommand like the carousel pick: bots claim through the rules' `claimBotPreparationOrbs`, never through the policy.
+ */
+export interface ClaimOrbCommand { readonly type: 'claimOrb'; readonly round: number; readonly orbId: string }
+/** Every command a seat may send over the wire: the match.ts commands (§18.8), the carousel pick (G1-P7), the summon move (G2-4b) and the orb claim (v15). */
+export type WireCommand = ClientCommand | CarouselPickCommand | MoveItemSummonCommand | ClaimOrbCommand;

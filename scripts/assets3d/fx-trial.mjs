@@ -1,8 +1,11 @@
+import jinxBindings from './fx-bindings/jinx.mjs';
+import viBindings from './fx-bindings/vi.mjs';
 import { readFile, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { writeParticleEffects } from './build.mjs';
+import { textureAlphaLookup, pngHasEffectiveAlpha } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
 import { contracts } from './runtime.mjs';
 import { compareParticleSources } from './particle-bin.mjs';
@@ -68,8 +71,10 @@ export async function recountParticles(write, parseParticleDocument, { particleM
       const textures = new Map(report.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), t.path]));
       const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, m.path]));
       const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+      const textureAlpha = mode === 'strict' ? undefined : await textureAlphaLookup(report.textures,
+        async p => readFile(await safeInputPath(root, join(root, p))));
       const converted = convertParticles(source, p => textures.get(canonical(p)), parseParticleDocument,
-        { meshPath: p => meshes.get(p), meshReasons, approximateLinger: true, particleMode: mode });
+        { textureAlpha, meshPath: p => meshes.get(p), meshReasons, approximateLinger: true, particleMode: mode });
       if (prior.emitters !== converted.emitters || prior.systemCount !== converted.systems.length) throw new Error('recount-inventory-mismatch');
       const counts = { systems: converted.systems.length, emitters: converted.emitters, ...converted.counts };
       if (counts.mapped + counts.approximated + counts.skipped + counts.rejected !== counts.emitters) throw new Error('recount-partition-mismatch');
@@ -115,30 +120,10 @@ export function trialActionBindings(manifest, systemRows, sharedRows = []) {
     playback[row.effectId] = { status: 'approximated', convention: 'explicit-preview-stage-timing-and-placement', phase, anchor,
       ...(bone ? { bone } : {}), delay, maxDuration };
   };
-  select('jinx', 'BA_Minigun_Cas_Medium', actionEffects.jinx.attack, 'start', 'source', 'Minigun_Barrel1', 0, 0.3);
-  select('jinx', 'BA_Minigun_Mis', actionEffects.jinx.attack, 'travel', 'projectile', 'Minigun_Barrel1', 0, 0.35);
-  const jinx = (skill, suffix, phase, anchor, bone, delay, duration) => select('jinx', suffix, variants[skill].jinx.cast, phase, anchor, bone, delay, duration);
-  jinx('W', 'W_Cas', 'start', 'source', 'Cstm_Buffbone_Pistol', 0, 0.3);
-  jinx('W', 'W_Mis', 'travel', 'projectile', 'Cstm_Buffbone_Pistol', 0.1, 0.4);
-  jinx('W', 'W_Beam', 'travel', 'projectile', 'Cstm_Buffbone_Pistol', 0.1, 0.4);
-  jinx('W', 'W_Tar', 'impact', 'target', undefined, 0.5, 0.5);
-  jinx('E', 'E_Mis', 'travel', 'projectile', 'L_Hand', 0, 0.5);
-  jinx('E', 'E_Mine_Explosion', 'impact', 'target', undefined, 0.5, 1);
-  jinx('R', 'R_MuzzleFlash', 'start', 'source', 'Rocket_Launcher_End', 0, 0.3);
-  jinx('R', 'R_Cast_Mouth', 'start', 'source', 'Rocket_Launcher_Mouth_Top', 0, 0.4);
-  // R_Mis is a child-only emitter and remains skipped. This is an explicit
-  // visual substitution, not implicit recursive execution of its source chain.
-  jinx('R', 'R_Rocket_Child', 'travel', 'projectile', 'Rocket_Launcher_End', 0.1, 0.7);
-  jinx('R', 'R_Tar', 'impact', 'target', undefined, 0.8, 1.5);
-  for (const [suffix, phase, anchor, bone, delay, duration] of [
-    ['Q_activate_hands_R', 'start', 'source', 'R_GloveHand', 0, 0.5],
-    ['Q_activate_hands_L', 'start', 'source', 'L_GloveHand', 0, 0.5],
-    ['Q_Jumping_Dust', 'start', 'source', 'Buffbone_Glb_Ground_Loc', 0.1, 0.4],
-    ['Q_Landing_Mis', 'travel', 'source', 'C_Buffbone_Glb_Center_Loc', 0.1, 0.35],
-    ['Q_Landing_AoE', 'impact', 'target', undefined, 0.45, 1],
-    ['Q_Landing_AoE_Child', 'impact', 'target', undefined, 0.45, 1],
-    ['Q_Tar', 'impact', 'target', undefined, 0.45, 0.8],
-  ]) select('vi', suffix, variants.Q.vi.cast, phase, anchor, bone, delay, duration);
+  for (const [unit, rows] of Object.entries({ jinx: jinxBindings, vi: viBindings })) {
+    for (const [action, variant, suffix, phase, anchor, bone, delay, duration] of rows)
+      select(unit, suffix, variant ? variants[variant][unit][action] : actionEffects[unit][action], phase, anchor, bone, delay, duration);
+  }
   actionEffects.jinx.cast = [...variants.R.jinx.cast]; actionEffects.vi.cast = [...variants.Q.vi.cast];
   const missingShared = [], unboundShared = [];
   for (const key of ['TFT_Global_BA_Hit', 'TFT_Global_BA_Crit']) {
@@ -158,9 +143,13 @@ export function trialActionBindings(manifest, systemRows, sharedRows = []) {
     actionEffects, variants, playback, unavailable, missingShared, unboundShared };
 }
 
-export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'assets3d-local/trial/local', force = false,
+export async function fxTrial({ units = 'jinx,vi', out = units === 'jinx,vi' ? 'assets3d-local/fx-trial' : 'assets3d-local/fx-batch1', source = 'assets3d-local/trial/local', force = false,
   particleMode: mode = 'approximate' } = {}) {
   particleMode(mode);
+  if (units !== 'jinx,vi') {
+    if (mode !== 'approximate') throw new Error('batch1-requires-approximate-mode');
+    return (await import('./fx-batch1.mjs')).fxBatch1({ units, out, force });
+  }
   const output = await safeOutputPath(out, { directory: true });
   withinRoot(await safeOutputPath('assets3d-local/fx-trial', { directory: true }), output, 'fx-trial-output-only');
   const write = (p, bytes) => writeOutputFile(join(output, p), bytes, { force });
@@ -179,8 +168,10 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
     const textures = new Map(previous.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), `${prefix}${t.path}`]));
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, `${prefix}${m.path}`]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
+    const textureAlpha = mode === 'strict' ? undefined : await textureAlphaLookup(previous.textures,
+      async p => readFile(await safeInputPath(root, join(root, p))));
     const converted = convertParticles(particleSource, p => textures.get(canonical(p)), parseParticleDocument,
-      { particleMode: mode, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
+      { particleMode: mode, textureAlpha, approximateLinger: true, meshPath: p => meshes.get(p), meshReasons });
     // Every document is validated by convertParticles, again here before ANY
     // particle/resource write, and at the actual payload write boundary below.
     for (const s of converted.systems) if (s.document) parseParticleDocument(s.document);
@@ -205,19 +196,19 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
     manifest.models[id] = { ...model, path: `${prefix}${model.path}` };
   }
   const global = await globalVfx({ source, force });
-  const globalTextures = new Map(), textureConversions = [];
+  const globalTextures = new Map(), globalAlphas = new Map(), textureConversions = [];
   for (const f of global.report.files.filter(f => /\.(tex|dds)$/i.test(f.path))) {
     const bytes = await readFile(await safeInputPath(resolve('assets3d-local/global-vfx/extracted'), resolve('assets3d-local/global-vfx/extracted', f.path)));
     try {
       const png = encodePng(decodeTexture(bytes)), path = `global/textures/${f.path.replace(/\.(tex|dds)$/i, '.png')}`;
-      await write(path, png); globalTextures.set(canonical(f.path), path);
+      await write(path, png); globalTextures.set(canonical(f.path), path); globalAlphas.set(canonical(f.path), pngHasEffectiveAlpha(png));
       textureConversions.push({ source: f.path, status: 'converted', path });
     } catch (error) {
       global.report.failures.push({ path: f.path, stage: 'texture-convert', reason: error.message });
       textureConversions.push({ source: f.path, status: 'rejected', reason: error.message });
     }
   }
-  const shared = convertParticles(global.systems, p => globalTextures.get(canonical(p)), parseParticleDocument, { particleMode: mode, approximateLinger: true });
+  const shared = convertParticles(global.systems, p => globalTextures.get(canonical(p)), parseParticleDocument, { particleMode: mode, textureAlpha: p => p ? globalAlphas.get(canonical(p)) : undefined, approximateLinger: true });
   const sharedOutput = await writeParticleEffects('global', shared, {}, {
     write: async (p, bytes) => { if (!p.endsWith('.report.json')) parseParticleDocument(JSON.parse(bytes)); await write(p, bytes); },
     remove: async p => { try { await unlink(await safeOutputPath(join(output, p), { force: true })); } catch (e) { if (e.code !== 'ENOENT') throw e; } },
@@ -245,11 +236,11 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
   return summary;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const args = argumentsFor(process.argv.slice(2), ['--out', '--source', '--mode', '--particle-mode']);
+  const args = argumentsFor(process.argv.slice(2), ['--units', '--out', '--source', '--mode', '--particle-mode']);
   if (args['particle-mode'] !== undefined) { args.particleMode = particleMode(args['particle-mode']); delete args['particle-mode']; }
   if (args.mode !== undefined && args.mode !== 'recount' && args.mode !== 'build') throw new Error('invalid-fx-trial-mode');
   const result = args.mode === 'recount'
     ? await recountParticles((p, b) => writeOutputFile(join(args.out ?? 'assets3d-local/fx-trial', p), b, { force: args.force }), (await contracts()).parseParticleDocument, args)
     : await fxTrial(args);
-  console.log(JSON.stringify(result.totals));
+  console.log(JSON.stringify(result.totals ?? result));
 }

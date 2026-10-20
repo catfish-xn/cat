@@ -3,6 +3,9 @@ import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const prepared=fillBench(await publicPrefix('3-7',36),['tristana']),live=battle(prepared),frozen=plan(prepared);
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);

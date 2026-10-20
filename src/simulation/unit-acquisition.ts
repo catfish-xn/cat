@@ -21,11 +21,11 @@ export type UnitAcquisitionPlan = { readonly ok: false; readonly reason: 'bench-
 
 /** One candidate birth and its real upgrades, without economy, growth, RNG or receipt commits. */
 export function planUnitAcquisition(
-  input: UnitAcquisitionInput, definitionId: string, source: UnitAcquisitionSource, acquisitionSequence: number, benchOnly = false,
+  input: UnitAcquisitionInput, definitionId: string, source: UnitAcquisitionSource, acquisitionSequence: number, benchOnly = false, starLevel: 1 | 2 | 3 = 1,
 ): UnitAcquisitionPlan {
   const serial = input.nextUnitSerial;
   if (!Number.isSafeInteger(serial) || serial < 1 || !Number.isSafeInteger(serial + 1)) throw new RangeError('Invalid unit serial');
-  const unitId = `unit-${serial}`, purchase = planPurchase(input.preparation, definitionId, unitId, benchOnly);
+  const unitId = `unit-${serial}`, purchase = planPurchase(input.preparation, definitionId, unitId, benchOnly, starLevel);
   if (!purchase.ok) return purchase;
   const resources = transferUpgradeResources(input.items, input.anomalyBinding, purchase.events);
   return { ok: true, unitId, nextUnitSerial: serial + 1, preparation: purchase.preparation,
