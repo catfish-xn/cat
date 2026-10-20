@@ -1,7 +1,7 @@
 import { canonicalContent, equalValidatedContent } from './content';
 import { shareGeneratedJson } from './immutable-json';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { ORB_SLOTS, ORB_RULES } from './content/orbs';
+import { ORB_SLOTS, ORB_RULES, EPIC_SOURCES } from './content/orbs';
 import { nextRandom, validateSeed } from './rng';
 import type { RngStream } from './m8/contracts';
 
@@ -86,7 +86,8 @@ function replayUncached(seed: number, ordinal: number): OrbLayoutLedger {
   for (const round of ROUND_CATALOG) {
     if (round.ordinal > ordinal) break;
     if (round.kind !== 'pve') continue;
-    const orbs = ORB_SLOTS[round.roundId].map(slot => {
+    const slots = ORB_SLOTS[round.roundId] ?? [{sourceSlotId:EPIC_SOURCES[round.roundId as keyof typeof EPIC_SOURCES],slotOrdinal:0,tier:'gold' as const,templateId:'epic-reward'}];
+    const orbs = slots.map(slot => {
       let templateId = slot.templateId, tier: OrbTier = slot.tier;
       if (templateId === 'opening-bonus' || templateId === 'equipment') {
         const weights = templateId === 'opening-bonus' ? ORB_RULES.openingWeights : ORB_RULES.equipmentWeights;

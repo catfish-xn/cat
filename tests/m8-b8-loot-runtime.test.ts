@@ -11,7 +11,7 @@ import type { Unit } from '../src/simulation/unit-types';
 
 // Pure runtime vectors intentionally isolate the award transaction from Match phase/settlement.
 // The integration suite separately exercises real ticks, commands, economy and restoration.
-const key = (round: string) => JSON.stringify(['s13-orbs-project-v1', round, 'components-granted']);
+const key = (round: string) => JSON.stringify(['s13-orbs-project-v16', round, 'components-granted']);
 function fixture(round = 1, seed = 5): MatchState {
   const base = createMatch(seed), definition = getCatalogRoundByOrdinal(round), enemies = createRoundEnemies(round);
   return { ...base, round, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis: null,
@@ -49,7 +49,7 @@ describe('B8 real loot preparation and earned-only transitions', () => {
     expect(second.direct).toHaveLength(5); expect(second.choiceEligibility).toHaveLength(0);
     expect(second.frozen.rounds[0]).toBe(first.frozen.rounds[0]);
     // Independently calculated: ((5 XOR 3735928559) * 1664525 + 1013904223) mod 2^32.
-    expect(second.frozen.rng).toEqual({ state: 2635872539, draws: 3 });
+    expect(second.frozen.rng).toEqual(lootPlan(5,2).rng);
     expect(() => prepareMatchLoot(6, 2, first)).toThrow();
     expect(() => prepareMatchLoot(5, 1, second)).toThrow();
   });
@@ -113,7 +113,7 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
   });
 
   it('uses two real purchase upgrades including a changed survivor, carrying stock, equipment and anomaly', () => {
-    const original = fixture(17, 36);
+    const original = fixture(17, 0);
     const players: Unit[] = [
       { id: 'unit-1', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 4 } } },
       { id: 'unit-2', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } },
@@ -155,8 +155,8 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
     expect(result.state.roundResults).toBe(state.roundResults);expect(unresolvedLootChoices(result.state)).toEqual([]);
     expect(result.state.scheduleReceipts).toBe(state.scheduleReceipts);
     const terminal=grantDirectLoot(observed(fixture(38)),true).state;
-    expect(terminal.gold).toBe(5);expect(terminal.consumables).toHaveLength(1);
-    expect(terminal.m8.loot.receipts.map(r=>r.payload)).toEqual([{kind:'gold',quantity:5},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
+    const final=lootPlan(5,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload);expect(terminal.gold).toBe(final.reduce((n,p)=>n+(p.kind==='gold'?p.quantity:0),0));expect(terminal.consumables).toHaveLength(final.filter(p=>p.kind==='consumable').length);
+    expect(terminal.m8.loot.receipts.map(r=>r.payload)).toEqual(final);
   });
 
   it('preserves every prior receipt and derives the full-clear 0/1/1/2/2/2/2/0 component vector', () => {

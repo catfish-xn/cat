@@ -127,58 +127,18 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
   baseDamage,survivingEnemyCount,playerDamage,hpLost};
 }
 // Independent transcription of LOOT §§2–5,7 and ADDENDUM §§1–3. Never import a planner.
-const LOOT_HEROES=[[],['darius','irelia','lux','maddie','zyra'],['leona','vander','rell','tristana','urgot'],['loris','ezreal','scar','kogmaw','nami'],['corki','garen','zoe']];
-const LOOT_TABLE=[
- ['1-2','minions-a-v1',[['m01',0,'opening-unit']]],
- ['1-3','minions-b-v1',[['m01',0,'opening-unit'],['r01',0,'component']]],
- ['1-4','minions-c-v1',[['m01',0,'remover'],['r01',0,'component'],['r02',0,'bonus']]],
- ['2-7','krugs-v1',[['k01',0,'equipment'],['k01',1,'extra',1]]],
- ['3-7','wolves-v1',[['w00',0,'equipment'],['w00',1,'extra',2]]],
- ['4-7','razorbeaks-v1',[['r00',0,'equipment'],['r00',1,'extra',3]]],
- ['5-7','elder-dragon-v1',[['d01',0,'equipment'],['d01',1,'extra',4]]],
- ['6-7','rift-herald-v1',[['h01',0,'terminal']]],
-];
-const COMPLETED=['adaptive-helm','archangel','bloodthirster','blue-buff','bramble-vest','crownguard','deathblade','dragons-claw','protectors-vow','gargoyle','edge-of-night','rageblade','gunblade','infinity-edge','ionic-spark','jeweled-gauntlet','last-whisper','nashors-tooth','giant-slayer','morellonomicon','steadfast-heart','guardbreaker','quicksilver','deathcap','red-buff','sunfire-cape','redemption','runaans-hurricane','shojin','evenshroud','statikk-shiv','steraks-gage','thiefs-gloves','titans-resolve','hand-of-justice','warmog'];
-const counterKey=id=>JSON.stringify(['s13-orbs-project-v1',id,'components-granted']);
+const LOOT_TABLE=['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7'].map(id=>[id]);
+const counterKey=id=>JSON.stringify(['s13-orbs-project-v16',id,'components-granted']);
 const receiptId=id=>JSON.stringify([id,'grant']);
 const choiceId=id=>JSON.stringify(['m8b-loot-choice',id]);
 function lootIndex(rng,n){const limit=4294967296n/BigInt(n)*BigInt(n);let state=rng.state,draws=rng.draws;do{state=word(state);draws++;}while(BigInt(state)>=limit);return {index:state%n,rng:{state,draws}};}
-const lootPlans=new Map();
-function lootPlan(seed,ordinal){
- const key=JSON.stringify([seed,ordinal]);if(lootPlans.has(key))return lootPlans.get(key);
- assert(Number.isInteger(seed)&&seed>=0&&seed<=0xffffffff);assert(Number.isInteger(ordinal)&&ordinal>=0&&ordinal<=38);
- let rng={state:(seed^0xdeadbeef)>>>0,draws:0},layout={state:(seed^0x4f524253)>>>0,draws:0};const rounds=[];
- const draw=n=>{const next=lootIndex(rng,n);rng=next.rng;return next.index;};
- const color=()=>{const next=lootIndex(layout,100);layout=next.rng;return next.index;};
- const item=definitionId=>({kind:'item',definitionId,quantity:1}),component=()=>item(COMPONENTS[draw(8)]);
- const gold=quantity=>({kind:'gold',quantity}),tool=definitionId=>({kind:'consumable',definitionId,quantity:1});
- const remover=()=>tool('magnetic-remover'),hero=cost=>({kind:'unit',definitionId:LOOT_HEROES[cost][draw(LOOT_HEROES[cost].length)],quantity:1});
- for(const [roundId,encounterId,slots] of LOOT_TABLE){if(roundOrdinal(roundId)>ordinal)break;const drops=[],orbs=[];
-  for(const [local,slotOrdinal,kind,value] of slots){
-   const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,local]),orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]);
-   const identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};let tier='gray',templateId=kind,payloads;
-   if(kind==='opening-unit')payloads=[hero(1),remover()];
-   if(kind==='component'){tier='blue';payloads=[component()];}
-   if(kind==='remover')payloads=[remover()];
-   if(kind==='bonus'){const roll=color();tier=roll<50?'blue':'gray';templateId=roll<50?'component':'opening-gold';payloads=roll<50?[component()]:[gold(3)];}
-   if(kind==='equipment'){const roll=color();tier=roll<90?'blue':roll<99?'gold':'prismatic';templateId=roll<90?'blue-pair':roll<99?'gold-pair':'prismatic-standard';
-    payloads=roll<90?[component(),component()]:roll<99?[component(),component(),gold(4)]:[item(COMPLETED[draw(36)]),gold(8),tool('component-reforger'),tool('completed-reforger')];}
-   if(kind==='extra'){templateId=`gray-${value}`;const roll=draw(100),amount=roll<(value===4?70:75)?value:value===4&&roll<80?5:0;
-    payloads=[amount?gold(amount):hero(value),remover()];const extra=draw(100);if(extra>=80)payloads.push(tool(extra<90?'component-reforger':'completed-reforger'));}
-   if(kind==='terminal')payloads=[gold(5),remover()];
-   const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));
-   drops.push(...entries);orbs.push({...identity,tier,templateId,entries});
-  }
-  rounds.push({encounterPlan:{roundId,encounterId,policyVersion:'m8b-pve-project-v2',drops},choices:[],orbs});
- }
- const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
- const result=freeze({rng,rounds});lootPlans.set(key,result);return result;
-}
+function lootPlan(seed,ordinal){const {rng,rounds}=require('../epic-loot-oracle.cjs').lootPlan(seed,ordinal);return {rng,rounds};}
+
 function appended(before,after,key,label){assert.deepEqual(after.slice(0,before.length),before,`${label} append-only`);assert.equal(new Set(after.map(x=>x[key])).size,after.length,`${label} unique identity`);return after.slice(before.length);}
 function bare(event){const {domain,eventSeq,...value}=event;return value;}
 function validateLoot(state){
  const loot=state.m8.loot,expected=lootPlan(state.seed,state.round),frozen=loot.frozen;
- assert.equal(frozen.version,'s13-orb-freeze-v1');assert.equal(frozen.seed,state.seed);assert.equal(frozen.throughRoundOrdinal,state.round);
+ assert.equal(frozen.version,'s13-orb-freeze-v16');assert.equal(frozen.seed,state.seed);assert.equal(frozen.throughRoundOrdinal,state.round);
  assert.deepEqual(frozen.rounds,expected.rounds,'independent frozen loot source/payload/fallback');assert.deepEqual(frozen.rng,expected.rng,'independent loot RNG conservation');
  const direct=expected.rounds.flatMap(r=>r.encounterPlan.drops),choices=expected.rounds.flatMap(r=>r.choices);
  const entries=new Map([...direct,...choices].map(d=>[d.dropId,d]));
@@ -324,4 +284,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(state.items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

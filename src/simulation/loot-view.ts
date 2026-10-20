@@ -9,6 +9,7 @@ import { unclaimedOrbPlans } from './orb-claim';
 /** Payload is a display whitelist too: future nested fields must neither leak nor freeze input references. */
 export function payloadView(payload: LootPayload): LootPayload {
   return payload.kind === 'gold' ? { kind: payload.kind, quantity: payload.quantity }
+    : payload.kind==='forge' ? {kind:'forge',definitionId:payload.definitionId,quantity:1}
     : payload.kind==='consumable' ? {kind:'consumable',definitionId:payload.definitionId,quantity:payload.quantity}
     : { kind: payload.kind, definitionId: payload.definitionId, quantity: payload.quantity,
       ...(payload.kind==='unit'&&payload.starLevel?{starLevel:payload.starLevel}:{}) };
@@ -70,7 +71,8 @@ export function readLootView(state: Readonly<MatchState>): LootView {
 
 export function readComponentEquivalent(state:Readonly<MatchState>):number {
   return state.scheduleReceipts.filter(r=>r.kind==='component').reduce((n,r)=>n+r.itemIds.length,0)
-    + Object.values(state.m8.loot.guaranteeCounters).reduce((a,b)=>a+b,0);
+    + Object.values(state.m8.loot.guaranteeCounters).reduce((a,b)=>a+b,0)
+    + (state.seatMechanics?.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null)).length??0)*2;
 }
 
 /** Opponents receive count/tier only; never identities or contents. */

@@ -4,9 +4,9 @@ import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
-const prefix=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']);
+const prefix=fillBench(await publicPrefix('3-7',0,'cannon',['bulky-buddies-i']),['tristana']);
 // v15's expanded augment pool changes the real combat program. Two public
-// moves retain the original exact reveal-117 / final-137 boundary and resources.
+// moves retain the original exact reveal-74 / final-98 boundary and resources.
 const moved=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
 const prepared=accepted(api.deployMatchUnit(moved,'unit-1',{kind:'board',cell:{col:3,row:4}}));
 const live=battle(prepared),waiting=live.ended;
@@ -18,10 +18,10 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(18);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.gold).toBe(23);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(117);expect(waiting.combat!.tick).toBe(137);
+  expect(live.revealed!.combat!.tick).toBe(74);expect(waiting.combat!.tick).toBe(98);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);

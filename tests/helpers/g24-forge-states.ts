@@ -1,4 +1,4 @@
-import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,type MatchState} from '../../src/simulation/match';
+import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,claimOrb,type MatchState} from '../../src/simulation/match';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../../src/simulation/round-settlement';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {validateG23Restoration} from '../../src/simulation/g2-3-restore';
@@ -31,8 +31,9 @@ export function forgeStates():Map<number,MatchState>{
    for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(deployMatchUnit(state,u.id,{kind:'bench',slot:0}));
    for(const [col,definitionId] of ['darius','draven','rell','swain','ambessa','mordekaiser'].entries()){
     const result=grantMechanicUnit(state,{receiptId:'fixture:'+definitionId,source:'fixture',definitionId});state=accepted(result);
-    if(!result.ok||result.receipt.kind!=='unit'||!result.receipt.unitId)throw Error('fixture hero');
-    state=accepted(deployMatchUnit(state,result.receipt.unitId,{kind:'board',cell:{col,row:4}}));
+    if(!result.ok||result.receipt.kind!=='unit'||!result.receipt.orbId)throw Error('fixture hero');
+    const serial=state.nextUnitSerial;state=accepted(claimOrb(state,result.receipt.orbId,state.round));
+    state=accepted(deployMatchUnit(state,`unit-${serial}`,{kind:'board',cell:{col,row:4}}));
    }
    recruited=true;
   }

@@ -3,7 +3,7 @@ import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
-const prepared=fillBench(await publicPrefix('3-7',36),['tristana']),live=battle(prepared),frozen=plan(prepared);
+const prepared=fillBench(await publicPrefix('3-7',0),['tristana']),live=battle(prepared),frozen=plan(prepared);
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);
  expect(Object.isFrozen(v)&&Object.isFrozen(v.revealedDrops)&&Object.isFrozen(v.revealedOrbs)).toBe(true);

@@ -12,7 +12,7 @@ export interface G23RewardAtom {readonly id:string;readonly kind:'unit'|'item'|'
 export interface G23RewardClaim {readonly id:string;readonly bundleId:string;readonly atomId:string;readonly copy:number;readonly round:number;readonly kind:G23RewardAtom['kind'];readonly definitionId:string;readonly instanceId:string|null;readonly gold:number}
 const apiUnits:Readonly<Record<string,string>>={TFT13_Lieutenant:'sevika',TFT13_Chainsaw:'renni',TFT13_Gremlin:'smeech',TFT13_RenataGlasc:'renata',TFT13_Singed:'singed',TFT13_Silco:'silco'};
 const components=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='component').map(i=>i.id).sort();
-function sample(pool:readonly string[],seedText:string,n:number):readonly string[]{
+export function sampleG24Reward(pool:readonly string[],seedText:string,n:number):readonly string[]{
  if(!pool.length)throw new RangeError('Empty G23 reward pool');
  let seed=0x67323372;for(const c of seedText)seed=(Math.imul(seed,31)+c.charCodeAt(0))>>>0;
  const remaining=[...pool].sort(),out:string[]=[];
@@ -41,16 +41,16 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=fa
  const reward=frozenReward(bundle);
  const key=canonicalContent([seed,bundle,multiplayer]),cached=atomCache.get(key);if(cached)return cached;
  const out:G23RewardAtom[]=[],add=(kind:G23RewardAtom['kind'],pool:readonly string[],quantity=1,gold=0,choices=1,duplicatorDefinitionId?:G23RewardAtom['duplicatorDefinitionId'])=>{
- const id=`${bundle.id}:atom:${out.length}`;out.push({id,kind,options:kind==='gold'?[]:sample(pool,`${seed}:${id}`,choices),quantity,gold,...(duplicatorDefinitionId?{duplicatorDefinitionId}:{})});
+ const id=`${bundle.id}:atom:${out.length}`;out.push({id,kind,options:kind==='gold'?[]:sampleG24Reward(pool,`${seed}:${id}`,choices),quantity,gold,...(duplicatorDefinitionId?{duplicatorDefinitionId}:{})});
  };
  const item=(api:string)=>{
   if(Object.hasOwn(G23_POLICY.duplicators,api)){
    const rule=G23_POLICY.duplicators[api as keyof typeof G23_POLICY.duplicators];
-   add('duplicator',Object.values(M5_UNIT_DEFINITIONS).filter(u=>u.cost<=rule.maxCost
+   add('duplicator',Object.values(M5_UNIT_DEFINITIONS).filter(u=>(rule.maxCost===null||u.cost<=rule.maxCost)
     &&(rule.traitId===null||u.traits.includes(rule.traitId))).map(u=>u.id),1,0,60,api as G23RewardAtom['duplicatorDefinitionId']);return;
   }
   if(api==='TFT_Consumable_ItemRemover'){add('tool',['magnetic-remover']);return;}
-  if(api==='TFT_Consumable_ItemReroller'){add('tool',['completed-reforger']);return;}
+  if(api==='TFT_Consumable_ItemReroller'){add('tool',['reforger']);return;}
   if(api==='COMPONENT_NOSPAT'){add('item',components);return;}
   const pools=G23_SPECIAL_ITEM_POOLS as Readonly<Record<string,readonly string[]>>;
   if(pools[api]){add('item',pools[api].filter(id=>api!=='RADIANTITEMS_SET5'||!G23_POLICY.conqueror.radiantPoolExclusions.includes(id)));return;}

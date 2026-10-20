@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:7181dce2",
+  "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
+  "rulesVersion": "s13-g2-3-v16",
+  "contentVersion": "s13-14.24b-g2-3-v16",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:70dbb056",
+  "previousLootReplayDigest": "fnv1a32-utf16:61568ec0",
+  "traceHashes": {
+    "state": "a542e9f32cf8e7567954b52314531b8bf5ab409b5c53db11b5cee715d03b43f2",
+    "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+    "rng": "0974f38e0fc49ba95e7a52d58135172b219beb078efbb5d550e9211c13e3f283"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "S13 v16: approved 5-7/6-7 epic rewards, independent additive duplicator bonuses, full champion duplicator, unit-target same-category permanent-equipment reforge; old saves rejected without migration."
+}

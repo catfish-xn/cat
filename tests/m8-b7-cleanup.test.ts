@@ -66,7 +66,9 @@ describe('B7 cleanup independent restore boundaries', () => {
       for (let tick = 1; tick <= end; tick++) {
         combat = stepCombat(combat).state;
         if (tick < execution) continue;
-        expect(() => validateNeutralCombat(combat, f.preparation, f.strategy)).not.toThrow();
+        const authenticOpening=structuredClone(combat.openingState);
+        const expectedOpening=()=>authenticOpening;
+        expect(() => validateNeutralCombat(combat, f.preparation, f.strategy, expectedOpening)).not.toThrow();
         const control = combat.units.find(u => u.id === 'p')!.mechanismState!.statuses
           .flatMap(g => g.contributions).find(c => c.application.kind === 'stun');
         if (tick < end) {
@@ -74,13 +76,13 @@ describe('B7 cleanup independent restore boundaries', () => {
           const forged = structuredClone(combat);
           const status = forged.units.find(u => u.id === 'p')!.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.application.kind === 'stun')!;
           Object.assign(status, { appliedAtTick: start + 1, expiresAtTick: end + 1 });
-          expect(() => validateNeutralCombat(forged, f.preparation, f.strategy)).toThrow('status declaration');
+          expect(() => validateNeutralCombat(forged, f.preparation, f.strategy, expectedOpening)).toThrow('status declaration');
         } else {
           expect(control).toBeUndefined();
           expect(combat.neutralReceipts!.controls[0]).toMatchObject({ removedAtTick: end, removedReason: 'expired' });
           const forged = structuredClone(combat);
           Object.assign(forged.neutralReceipts!.controls[0], { removedAtTick: end - 1 });
-          expect(() => validateNeutralCombat(forged, f.preparation, f.strategy)).toThrow('control removal reason');
+          expect(() => validateNeutralCombat(forged, f.preparation, f.strategy, expectedOpening)).toThrow('control removal reason');
         }
       }
     });

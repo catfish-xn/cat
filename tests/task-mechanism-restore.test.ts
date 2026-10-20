@@ -4,17 +4,20 @@ import * as content from '../src/simulation/content';
 import { BattleHistory } from '../src/replay/history';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import { purchasedThreeHeroMatch } from './match-helpers';
-import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, sellUnit, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
-import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
+// Keep the original seed/2-1 combat and passive augment; its v16 opening
+// gloves are genuinely acquired, while the old unused rod now arrives later.
+const cursePreparation=()=>acquireEquipment(['gloves'],{seed:3151248,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
-// The two public Sion positions are copied from c0fe4c1; no battle facts are patched.
+// v16 public position vectors: real Sion attack kills at244/355, zero personal
+// kill reward and exactly0/15 assist stats; no battle facts or stats are patched.
 function bracerCounts(state: MatchState, ownerId: string) {
   const owner = state.combat!.units.find(u => u.id === ownerId)!;
   return Object.fromEntries(['kill', 'assist'].map(id => {
@@ -58,12 +61,12 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
-  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
+  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 5, row: 7 }], tick: 244, targetId: 'enemy-r4-1' },
+  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 5, row: 7 }, { col: 6, row: 7 }], tick: 355, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
   // Seed 3151248's v14 fallback gifts an unequipped Spark; seed 77 offers Manaflow I
   // for the back-row contribution=false board.
-  let state = contribution ? acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] }) : acquireEquipment(['rod'],{seed:77});
+  let state = contribution ? acquireEquipment(['gloves'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] }) : acquireEquipment(['bow'],{seed:77});
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
@@ -102,8 +105,9 @@ it.each([
   const checkpoints = [initial, before, after];
   if (contribution) {
     let completed = initial;
-    while (!completed.combat!.units.find(u => u.id === owner.id)!.tasks!.some(t => t.kind === 'g22Curse'))
-      completed = stepMatch(completed).state;
+    while (!completed.combat!.units.find(u => u.id === owner.id)!.tasks!.some(t => t.kind === 'g22Curse')){
+      expect(completed.phase).toBe('combat');completed = stepMatch(completed).state;
+    }
     const firstCast = completed.combat!.units.find(u => u.id === owner.id)!.tasks!.filter(t => t.kind === 'g22Curse');
     const actionSeq = firstCast[0].actionSeq;
     while (completed.phase === 'combat' && completed.combat!.units.find(u => u.id === owner.id)!.tasks!
@@ -123,7 +127,7 @@ it.each([
 }, 30000);
 
 function morganaCurseSave(twoOwners = false): MatchState {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = cursePreparation();
   state = accepted(grantMechanicUnit(state, { receiptId: 'curse-morgana', source: 'test', definitionId: 'morgana' }));
   if (twoOwners) state = accepted(grantMechanicUnit(state, { receiptId: 'second-morgana', source: 'test', definitionId: 'morgana' }));
   const owners = state.preparation.units.filter(u => u.definitionId === 'morgana' && u.team === 'player');
@@ -193,7 +197,7 @@ async function blackRoseSave(): Promise<MatchState> {
 
 it('rejects forged Black Rose member cast counts, including redistribution with an unchanged team total', async () => {
   const state = await blackRoseSave(), bad = structuredClone(state);
-  const member = bad.combat!.units.find(u => u.id === 'unit-13')!;
+  const member = bad.combat!.units.find(u => u.id === 'unit-15')!;
   expect(member).toMatchObject({ definitionId: 'vladimir', runtime: { castCount: 0 } });
   Object.assign(member.runtime!, { castCount: 5 });
   expectRejectedAtAllEntrances(bad, 'Black Rose cast binding facts');
@@ -268,8 +272,9 @@ it('rejects an appended fake bleed while retaining every genuine Morgana curse p
 
 it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  // Seed 112 offers Bulky Buddies I at 2-1 under the v14 same-tier pool.
-  let state = prepare(['rod'], { seed: 112 });
+  // Seed77 still offers Bulky Buddies I; public rod supply reaches2-5.
+  let state = prepare(['rod'], { seed: 77 });
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))state=accepted(sellUnit(state,unit.id));
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));
@@ -397,7 +402,7 @@ it('bounds replay evidence, separates complete input contents and detaches every
 });
 
 it('reuses verified hashes and incrementally hashes appended events against the full-ledger oracle', () => {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = cursePreparation();
   state = accepted(grantMechanicUnit(state, { receiptId: 'capture-curse', source: 'test', definitionId: 'morgana' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'morgana')!;
   state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 0, row: 4 } }));
@@ -409,6 +414,7 @@ it('reuses verified hashes and incrementally hashes appended events against the 
   if (!started.ok) throw Error(started.reason);
   observe(state, initial, started.events, 'command'); state = initial;
   while (state.combat!.tick < 89) {
+    expect(state.phase).toBe('combat');
     const next = stepMatch(state); observe(state, next.state, next.events, 'tick'); state = next.state;
   }
   const prefix = history.capturePrefix()!;

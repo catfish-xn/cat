@@ -1036,3 +1036,13 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 实现：领域只读回放投影直接复用纯函数 `readUnitStatusRows`，仅保留 `effective` / `active` 行，复制 `kind/harmful`，按二者去重。顺序固定为 kind 的 ASCII 字符升序，同 kind 下 `harmful:false` 在前；无状态显式发 `[]`，最后一项消失也会产生 tick 末 `unitUpdated.changes.statuses:[]`。初始帧、关键帧、终态、`unitEntered.unit` 均带完整数组。护盾沿用 `shield` 数值，不加入 statuses。类型 `CombatViewStatus` / `StatusKind` 已经 server-entry 导出。
 
 本轮未修改 presentation/server/UI，直接复用避免在禁改文件外复制状态判定；该读取函数没有 DOM/Phaser 运行时依赖。netProtocol 与 claimOrb 共用目标 4，不另升版本。只读帧及关键帧恢复测试已通过；实际联机图标接线/浏览器验收留 Claude。旧帧指纹本轮不重录，清单和测试结果见 [v15 第四块](LOOT_ORB_CLAIM_V15.md#v15-第四块ur-i3-01-联机战斗状态种类)。
+
+## V16-UI-01：史诗奖励与统一工具适配（领域完成，界面待Claude）
+
+本任务明确禁止Codex修改presentation/rendering。当前编译阻塞位于 src/presentation/loot-view.ts:48 和 orb-loot.ts:43/48：旧工具名/图标枚举缺少reforger、两种复制器，失败映射缺少bench-full（共6条tsc诊断）。另外两个payloadLabel必须处理新增forge分支，复制器成功预览必须显示复制目标，不能走“重铸—”文案。现有consumableTargetHint已读取targetKind，领域四种工具均为unit；界面不得自算合法性。
+
+字段与来源：CONSUMABLE_DEFINITIONS[id].name / description / targetKind；ConsumablePreview.effect='remove-all'|'reforge-all'|'duplicate-unit'，affectedItemIds表示永久装备；failure='bench-full'；LootPayload.kind='forge'与definitionId，名称由EPIC_REWARD_NAMES提供（成装锻造器、神器装备锻造器）；冠冕显示金铲铲冠冕。RevealedOrbView.tier/entryDropIds保持领域冻结值，不重算颜色/概率。
+
+用途：准确展示新工具、满席拒绝与锻造器领取内容。继续调用useConsumable/claimOrb/selectChoice；不改变排版、动画或规则。
+
+验收：tsc无旧枚举错误；两种复制器/重铸器/拆卸器名称与14.24 zh_cn一致；forge不进入英雄渲染回退；复制预览、bench-full拒绝可读；单位整装重铸目标正确；联机领取后四选一及重连收据展示正确。未获越界修改授权前，Codex只提交领域和此需求，保留明确编译阻塞。

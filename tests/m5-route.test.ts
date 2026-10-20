@@ -1,3 +1,4 @@
+import { readComponentEquivalent } from '../src/simulation/loot-view';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
@@ -58,7 +59,8 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
    expect(loot.every(r=>r.grantedItemIds.length===1&&r.payload.quantity===1)).toBe(true);
    const value=loot.reduce((n,r)=>n+(r.payload.kind==='item'&&ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1),0);
-   expect([15,16]).toContain(supply+value);
+   const forges=route.final.seatMechanics!.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null));
+   expect(forges).toHaveLength(3);expect(supply+value+forges.length*2).toBe(19);expect(readComponentEquivalent(route.final)).toBe(19);
   }
  });
 });

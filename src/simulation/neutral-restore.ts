@@ -5,14 +5,13 @@ import type { StatusApplication } from './m8/contracts';
 import { canonicalContent } from './content';
 import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { freezeCompanions } from './m8/companions';
-import { planOpening } from './m8/opening';
 import { declaredEffects } from './m8/item-restore';
 import { canonicalSource, effectIdentity } from './m8/identity';
 
 const same = (a: unknown, b: unknown) => a === b || a !== undefined && b !== undefined && canonicalContent(a) === canonicalContent(b);
 function check(value: unknown, label: string): asserts value { if (!value) throw new Error(`Invalid Match save: neutral ${label}`); }
-/** Same-version static content and once-only consumption validation; no combatStart, draws or effects. */
-export function validateNeutralCombat(combat: CombatState, preparation: GameState, strategy: StrategySnapshot): ReadonlySet<string> {
+/** Same-version declarations and once-only consumption; opening evidence is replayed from authenticated inputs. */
+export function validateNeutralCombat(combat: CombatState, preparation: GameState, strategy: StrategySnapshot, expectedOpening: () => CombatState['openingState']): ReadonlySet<string> {
   const trusted = combat.units.flatMap(u => { const n = readNeutralCombatUnit(u.id); return n ? [n] : []; });
   const openings = COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>trusted.some(u=>u.id===d.source.ownerId));
   const companionDefs = trusted.flatMap(u=>u.companionDefinitions ?? []);
@@ -42,15 +41,9 @@ export function validateNeutralCombat(combat: CombatState, preparation: GameStat
   check(trusted.every(n=>combat.units.find(u=>u.id===n.id)!.alive || deathIds.has(n.id)),'lost death fact');
   check(same(combat.openingDefinitions, trusted.length ? openings : undefined), 'opening declarations');
   if (openings.length && tick>0) {
-    // Current catalog has no initial stun/untargetability; glass-cannon is the sole starting HP adjustment.
-    const initial = preparation.units.filter(u=>u.location.kind==='board').map(u=>{
-      const r=strategy.units.find(r=>r.unitId===u.id)!;
-      return {id:u.id,team:u.team,cell:u.location.kind==='board'?u.location.cell:{col:0,row:0},
-        hp:Math.floor(r.stats.health*(r.mechanics?.find(m=>m.mechanic==='glassCannon')?.values.startingHealthBps ?? 10000)/10000),
-        maxHp:r.stats.health,alive:true,untargetable:false,controlled:false};
-    });
-    const planned=planOpening(combatId,combat.board,initial,openings);
-    check(same(combat.openingState,{...planned,committed:true,plans:planned.plans.map(p=>({...p,task:p.task?{...p.task,status:'executed'}:null}))}), 'opening plan/consumption');
+    // Tick-0 item auras can change health before neutral occupancy freezes.
+    // Re-simulate authenticated inputs; never trust a candidate's recorded initial HP.
+    check(same(combat.openingState,expectedOpening()), 'opening plan/consumption');
   } else check(combat.openingState===undefined, 'unexpected opening state');
   if (companionDefs.length && tick>0) {
     const state=combat.companionState, expected=freezeCompanions(combatId,trusted,companionDefs);

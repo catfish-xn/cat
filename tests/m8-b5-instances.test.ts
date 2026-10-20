@@ -8,10 +8,10 @@ import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-h
 import { publicInventory } from './fixtures/b8-public-acquisition';
 
 // Acquire public-route fixtures once, outside the query/constraint case timers.
-beforeAll(() => { publicInventory(['blue-buff', 'blue-buff'], false, 9); });
+beforeAll(() => { publicInventory(['blue-buff', 'blue-buff'], false, 3); });
 beforeAll(() => { publicInventory(['last-whisper', 'last-whisper']); });
 beforeAll(() => { publicInventory(['quicksilver', 'quicksilver']); });
-beforeAll(() => { publicInventory(['sword', 'sword', 'sword', 'sword'], false, 4); });
+beforeAll(() => { publicInventory(['sword', 'sword', 'sword', 'sword'], false, 6); });
 beforeAll(() => { publicInventory(['thiefs-gloves', 'sword']); });
 beforeAll(() => { publicInventory(['thiefs-gloves', 'thiefs-gloves']); });
 beforeAll(() => { publicInventory(['gloves', 'gloves']); });
@@ -42,9 +42,9 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const next = accepted(equipItem(state, 'item-21', 'unit-2', 2));
     // Synthetic items have no birth fact, so restore rejects their ordered placement fact first.
     expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid resource provenance: equipment ownership/slot');
-    // Seed 9 acquires all four real tears by 4-1 through drops and supply picks;
-    // seed 17 now needs 4-5 after the expanded-shop route changes.
-    const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 9 : undefined);
+    // Seed3 independently supplies two tears by2-7; two public supply choices
+    // finish both real Blue Buff recipes by3-4 under the v16 stream.
+    const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 3 : undefined);
     const equipped = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', 0));
     rejected(equipped, s => equipItem(s, legal.itemIds[1], 'unit-1', 1), 'unique-conflict');
     const control = accepted(equipItem(equipped, legal.itemIds[1], 'unit-2', 2));
@@ -57,8 +57,8 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid resource provenance: equipment ownership/slot');
     // Keep the four-Deathblade capacity mechanism above. Four genuinely acquired
     // swords additionally prove T13 automatic combination without losing other drops.
-    // Seed 4 supplies an opening sword, retaining all four real acquisitions.
-    const legal = publicInventory(['sword', 'sword', 'sword', 'sword'], false, 4);
+    // Seed6 supplies an opening sword, retaining all four real acquisitions.
+    const legal = publicInventory(['sword', 'sword', 'sword', 'sword'], false, 6);
     let control = legal.state;
     for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
     // T13 combines the first pair automatically; the fourth joins the remaining worn sword for any request slot.

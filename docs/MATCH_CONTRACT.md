@@ -662,3 +662,17 @@ P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循�
 本包承诺数值与主要效果对齐；原版互斥（一费奉献 II ↔ 一对4、冕已有卫 ↔ 不是今天）不在本 PR 范围。
 
 购买触发的 P2 重试与卖出入口沿用同一冻结边界：`phase === 'combat'` 或 `isCombatRosterLocked(state)` 时不重试；这些阶段释放的备战席容量不会触发可能合并棋盘英雄的赠品。下一次合法准备操作仍按原计划重试。
+
+## v16：史诗奖励、复制器、统一重铸器（2026-10-20）
+
+本节覆盖旧 R4 的两个重铸器及旧 5-7/6-7 奖励说明。完整冻结表、预算、RNG 次序、约定值与验收记录见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md) 和 [M8B_LOOT §11](M8B_LOOT.md#11)。规则身份为 s13-g2-3-v16，内容身份为 s13-14.24b-g2-3-v16；旧存档严格拒绝，不迁移。schema7/save3/replay3/command4 保持。
+
+公共命令 useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult 与 previewUseConsumable(state:Readonly<MatchState>,consumableId:string,target:ConsumableTarget):ConsumablePreview 签名不变。definitionId 仅 magnetic-remover、reforger、TFT_Consumable_ChampionDuplicator_III、TFT_Consumable_NeekosHelp；客户端传唯一实例 consumableId。target 的兼容联合仍接受 item 形状，但本版四种工具都只接受己方 unit 目标。成功 effect 是 remove-all / reforge-all / duplicate-unit；预览不抽随机结果、不授予资源。
+
+失败全集：wrong-phase、unknown-consumable、temporary-item、unknown-item、unknown-unit、invalid-consumable-target、no-removable-items、bench-full；后两种旧兼容身份保留，空装备重铸返回 invalid-consumable-target，空装备拆卸返回 no-removable-items。复制器目标不合法/超过费用上限返回 invalid-consumable-target；满席一律 bench-full，包含本可能合星的情况。失败保持原对象、事件/资源/RNG/ID 全不变。满席约束仅复制器使用；普通奖励仍按原容量路径处理。
+
+重铸按永久装备槽号升序处理全部装备，产物全部进库存；普通组件/成装分别从8/36池排除自身后等权抽样，光明/神器/辅助从各自已上线池抽，纹章或未知/无其他候选原物原ID退回且不抽RNG。临时战斗装备不进此数组；窃贼父件移除仍遵守原临时子件生命周期。成功每件随机换物分配新永久ID；原样退回不分配ID。收据 outputs[] 保存全部输出，output 保留首件兼容字段；copiedUnit 保存复制目标出生ID与定义，非复制用途为null；恢复重新验证来源、槽序、随机游标、输出和出生事实。
+
+LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_ArmoryKeyOrnn',quantity:1}。领域内部 epicForgeOffers(seed:number,receiptId:string,selector:string):readonly string[] 返回既有 G24 独立流的四个不同候选；openEpicForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]} 只开启现有 forge choice。客户端继续 selectChoice，不新增发奖入口。收据ID为 JSON ['epic-forge',lootReceiptId]，source=epic-loot；恢复必须绑定原锻造器领取收据与合法候选。单机6-7终局无法打开选择时沿用现有首候选策略，英雄保持 retained-terminal；重复step/恢复不重发。冠冕沿用现有永久人口+1路径，当前战斗只读冻结前缀中已存在的收据。
+
+英雄复制器费用上限null，次级上限3；复制获得1星，随后沿用现有正常升星路径。单机直接授予；联机创建现有机制英雄法球，claimOrb时同一共享池事务扣库存，缺货折费用金币、满席按getUnitSellPrice折金。useConsumable仅消费工具并产生唯一来源事实，不另算卡池。

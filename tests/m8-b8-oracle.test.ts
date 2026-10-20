@@ -59,10 +59,11 @@ describe('independent B8 oracle arithmetic and frozen reference', () => {
     const plan=lootPlan(230,38);
     expect(plan.rounds.map(r=>r.encounterPlan.roundId)).toEqual(['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7']);
     expect(plan.rounds.flatMap(r=>r.choices)).toEqual([]);
-    expect(plan.rounds.slice(3,7).map(r=>r.encounterPlan.drops.slice(0,2).map(d=>d.payload.kind!=='gold'&&d.payload.definitionId))).toEqual([['sword','tear'],['cloak','rod'],['sword','tear'],['cloak','rod']]);
-    expect(plan.rounds.slice(3,7).map(r=>r.encounterPlan.drops[2].payload)).toEqual([1,2,3,4].map(quantity=>({kind:'gold',quantity})));
-    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'gold',quantity:5},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
-    expect(lootPlan(230,31).rng).toEqual(plan.rng);
+    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops.slice(0,2).map(d=>d.payload.kind!=='gold'&&d.payload.definitionId))).toEqual([['gloves','bow'],['rod','gloves'],['vest','cloak']]);
+    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops[2].payload)).toEqual([{kind:'unit',definitionId:'darius',quantity:1},{kind:'gold',quantity:2},{kind:'gold',quantity:3}]);
+    expect(plan.rounds[6].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'vander',quantity:1},{kind:'gold',quantity:1},{kind:'unit',definitionId:'loris',quantity:1},{kind:'unit',definitionId:'ezreal',quantity:1},{kind:'gold',quantity:2}]);
+    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'blitzcrank',quantity:1},{kind:'gold',quantity:3},{kind:'consumable',definitionId:'TFT_Consumable_NeekosHelp',quantity:1}]);
+    expect(lootPlan(230,31).rng).toEqual({state:598952902,draws:35});expect(plan.rng).toEqual({state:1937565786,draws:39});
     expect(COMPONENTS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
   });
 });
@@ -147,11 +148,11 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);
-    expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'item')).toHaveLength(10);
+    expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'item')).toHaveLength(8);
     expect(route.final.scheduleReceipts.filter((r: MatchState['scheduleReceipts'][number]) => r.kind === 'component')).toHaveLength(5);
-    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 2, 0]);
+    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 0, 0]);
     if (seed === 230) expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'unit')
       .map((r: MatchState['m8']['loot']['receipts'][number]) => r.payload)).toEqual(
-        ['darius','irelia'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
+        ['darius','maddie','darius','vander','loris','ezreal','blitzcrank'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
   }, 120000);
 });

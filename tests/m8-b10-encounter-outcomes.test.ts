@@ -60,9 +60,9 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      // D4: the terminal Herald package grants its one-time remover as well as 5G.
-      expect(receipts.map(r => r.payload)).toEqual([{ kind: 'gold', quantity: 5 },
-        { kind: 'consumable', definitionId: 'magnetic-remover', quantity: 1 }]);
+      // v16 independent seed42 terminal vector: forge, 3-cost, 4-cost and4G.
+      expect(receipts.map(r => r.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},
+        {kind:'unit',definitionId:'blitzcrank',quantity:1},{kind:'unit',definitionId:'heimerdinger',quantity:1},{kind:'gold',quantity:4}]);
     }
   });
 });

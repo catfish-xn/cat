@@ -1,0 +1,907 @@
+{
+  "status": "domain-verified; overall blocked by explicitly prohibited UI files",
+  "branch": "codex/epic-loot-reforger",
+  "baseCommit": "46454b77348c86b70a4fec57869f95c22ecf9682",
+  "digests": {
+    "before": {
+      "contentDigest": "fnv1a32-utf16:70dbb056",
+      "lootReplayDigest": "fnv1a32-utf16:61568ec0",
+      "rulesManifestDigest": "fnv1a32-utf16:97c14bf3"
+    },
+    "after": {
+      "contentDigest": "fnv1a32-utf16:7181dce2",
+      "lootReplayDigest": "fnv1a32-utf16:cee1d7d7",
+      "rulesManifestDigest": "fnv1a32-utf16:81596be6"
+    }
+  },
+  "recording": [
+    {
+      "name": "release",
+      "command": "node scripts/record-v16-release.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0
+    },
+    {
+      "name": "herald-write",
+      "command": "node tests/fixtures/record-v16-herald.cjs --write",
+      "exitCode": 0
+    },
+    {
+      "name": "inputs",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0
+    },
+    {
+      "name": "live-reveal",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0
+    },
+    {
+      "name": "inputs-check",
+      "command": "node scripts/record-v16-inputs.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
+      "exitCode": 0
+    },
+    {
+      "name": "herald-verify",
+      "command": "node scripts/verify-m8-herald-fixtures.cjs",
+      "exitCode": 0
+    },
+    {
+      "name": "history",
+      "command": "node scripts/v16-fixture-audit.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682",
+      "exitCode": 0
+    },
+    {
+      "name": "live-reveal-check",
+      "command": "node scripts/record-v16-live-reveal.cjs --baseline-commit=46454b77348c86b70a4fec57869f95c22ecf9682 --check",
+      "exitCode": 0
+    },
+    {
+      "name": "digests",
+      "command": "node scripts/compare-v16-digests.cjs",
+      "exitCode": 0
+    }
+  ],
+  "history": {
+    "g23AndG24Files": 86,
+    "v15Files": 23,
+    "byteIdentical": true,
+    "historicalIdentityAuditAssertionLinesByteIdentical": true
+  },
+  "sourcesMatchCurrentWorkspace": true,
+  "forbiddenSourceDirectoriesUnmodified": true,
+  "testFiles": 90,
+  "passed": 1514,
+  "failed": 0,
+  "pending": 0,
+  "files": [
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/c19-missed-pulse.test.ts --configLoader runner",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.454,
+      "success": true
+    },
+    {
+      "file": "tests/d11-wiring-bank.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/d11-wiring-bank.test.ts --configLoader runner",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.802,
+      "success": true
+    },
+    {
+      "file": "tests/epic-loot-reforger.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/epic-loot-reforger.test.ts --configLoader runner",
+      "passed": 29,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 8.329,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-content.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-content.test.ts --configLoader runner",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.463,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-hook-failures.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-hook-failures.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.054,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-identity.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-identity.test.ts --configLoader runner",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 9.433,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-integration.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-integration.test.ts --configLoader runner",
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.15,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-lesser-shimmer-duplicator.test.ts --configLoader runner",
+      "passed": 37,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 16.267,
+      "success": true
+    },
+    {
+      "file": "tests/g2-3-netcode-hooks.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-3-netcode-hooks.test.ts --configLoader runner",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 9.674,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4a-conqueror-items.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-conqueror-items.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.063,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4a-crown-gold.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown-gold.test.ts --configLoader runner",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 7.452,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown-history.test.ts --configLoader runner",
+      "passed": 56,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 35.979,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4a-crown.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4a-crown.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.783,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-artifact-forge.test.ts --configLoader runner",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.908,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4b-clone-forges.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-clone-forges.test.ts --configLoader runner",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.008,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4b-reward-order.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-reward-order.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.039,
+      "success": true
+    },
+    {
+      "file": "tests/g2-4b-support-forge.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/g2-4b-support-forge.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 4.167,
+      "success": true
+    },
+    {
+      "file": "tests/loot-orb-claim.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/loot-orb-claim.test.ts --configLoader runner",
+      "passed": 20,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.917,
+      "success": true
+    },
+    {
+      "file": "tests/m5-replay-cannon.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-cannon.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 157.287,
+      "success": true
+    },
+    {
+      "file": "tests/m5-replay-mage.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-mage.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 265.723,
+      "success": true
+    },
+    {
+      "file": "tests/m5-replay-sniper-caitlyn.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay-sniper-caitlyn.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 352.858,
+      "success": true
+    },
+    {
+      "file": "tests/m5-replay.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-replay.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 237.434,
+      "success": true
+    },
+    {
+      "file": "tests/m5-route.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m5-route.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 53.399,
+      "success": true
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m6-persistence.test.ts --configLoader runner",
+      "passed": 44,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.065,
+      "success": true
+    },
+    {
+      "file": "tests/m7-m6-save-compat.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m7-m6-save-compat.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.261,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b10-encounter-outcomes.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-encounter-outcomes.test.ts --configLoader runner",
+      "passed": 46,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 6.173,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b10-item-save-replay.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-item-save-replay.test.ts --configLoader runner",
+      "passed": 45,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 24.022,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b10-temporary-replay.test.ts --configLoader runner",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.078,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-audit-regressions.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-audit-regressions.test.ts --configLoader runner",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 17.751,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-belt.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-belt.test.ts --configLoader runner",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.041,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-bow.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-bow.test.ts --configLoader runner",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.093,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-cloak.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-cloak.test.ts --configLoader runner",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.166,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-gloves.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-gloves.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.022,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-integration.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-integration.test.ts --configLoader runner",
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 4.751,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-r3b-lifecycle.test.ts --configLoader runner",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 3.88,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-rod.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-rod.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.169,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-sword.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-sword.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.06,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-tear.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-tear.test.ts --configLoader runner",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.165,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-trigger-ledger.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-trigger-ledger.test.ts --configLoader runner",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.006,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b4-vest.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b4-vest.test.ts --configLoader runner",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.071,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-equipment-history.test.ts --configLoader runner",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 9.155,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-grant-upgrade.test.ts --configLoader runner",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 13.721,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-instances.test.ts --configLoader runner",
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.692,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b5-queries.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-queries.test.ts --configLoader runner",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.306,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b5-temporary.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b5-temporary.test.ts --configLoader runner",
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 11.909,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-match-wiring.test.ts --configLoader runner",
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 6.218,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b6-opening-economy.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-opening-economy.test.ts --configLoader runner",
+      "passed": 27,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.021,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b6-round-catalog.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b6-round-catalog.test.ts --configLoader runner",
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.014,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b7-cleanup.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-cleanup.test.ts --configLoader runner",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.288,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b7-match-wiring.test.ts --configLoader runner",
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 16.755,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-acquisition.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-acquisition.test.ts --configLoader runner",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.037,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-combat-input.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-combat-input.test.ts --configLoader runner",
+      "passed": 38,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.448,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-command-oracle.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-command-oracle.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.061,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-copy-semantics.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-copy-semantics.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.082,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-equipment-fixture.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-equipment-fixture.test.ts --configLoader runner",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 7.792,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-capacity.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-capacity.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 3.246,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-cross-round.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-cross-round.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.996,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-economy.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-economy.test.ts --configLoader runner",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.17,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-growth.test.ts --configLoader runner",
+      "passed": 26,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.626,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-reveal.test.ts --configLoader runner",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.991,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-live-transfer.test.ts --configLoader runner",
+      "passed": 19,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 3.31,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-loot-freeze.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-freeze.test.ts --configLoader runner",
+      "passed": 67,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.217,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-loot-runtime.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-runtime.test.ts --configLoader runner",
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.155,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-loot-view.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-loot-view.test.ts --configLoader runner",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.804,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-oracle.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-oracle.test.ts --configLoader runner",
+      "passed": 24,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 24.783,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-resource-provenance.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-resource-provenance.test.ts --configLoader runner",
+      "passed": 64,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.079,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-restore-fold-reuse.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-restore-fold-reuse.test.ts --configLoader runner",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.269,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-restore.test.ts --configLoader runner",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.387,
+      "success": true
+    },
+    {
+      "file": "tests/m8-b8-token-lifecycle.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-b8-token-lifecycle.test.ts --configLoader runner",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.091,
+      "success": true
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-content-equivalence.test.ts --configLoader runner",
+      "passed": 138,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 19.798,
+      "success": true
+    },
+    {
+      "file": "tests/m8-contracts.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/m8-contracts.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.008,
+      "success": true
+    },
+    {
+      "file": "tests/match-contract.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/match-contract.test.ts --configLoader runner",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.134,
+      "success": true
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/opening-random-identity.test.ts --configLoader runner",
+      "passed": 142,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 26.628,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-consumable-targets.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-consumable-targets.test.ts --configLoader runner",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.914,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-consumables.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-consumables.test.ts --configLoader runner",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 18.527,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-legacy.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-legacy.test.ts --configLoader runner",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.031,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-loot-weights.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-loot-weights.test.ts --configLoader runner",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.009,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-loot.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-loot.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.674,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-oracle.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-oracle.test.ts --configLoader runner",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 1.302,
+      "success": true
+    },
+    {
+      "file": "tests/r3r4-shared.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/r3r4-shared.test.ts --configLoader runner",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 2.771,
+      "success": true
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/restore-audit/cd-replay-facts.test.ts --configLoader runner",
+      "passed": 34,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 35.502,
+      "success": true
+    },
+    {
+      "file": "tests/server/c18b-consumable-preview.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/server/c18b-consumable-preview.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.028,
+      "success": true
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t12-combat-equip.test.ts --configLoader runner",
+      "passed": 48,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 11.711,
+      "success": true
+    },
+    {
+      "file": "tests/t3-round-settlement.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t3-round-settlement.test.ts --configLoader runner",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 3.077,
+      "success": true
+    },
+    {
+      "file": "tests/t3-timeout-loot.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t3-timeout-loot.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.187,
+      "success": true
+    },
+    {
+      "file": "tests/t5r-b7-integration.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-b7-integration.test.ts --configLoader runner",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 30.288,
+      "success": true
+    },
+    {
+      "file": "tests/t5r-loot-view.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-loot-view.test.ts --configLoader runner",
+      "passed": 24,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.517,
+      "success": true
+    },
+    {
+      "file": "tests/t5r-private-seat-view.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/t5r-private-seat-view.test.ts --configLoader runner",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.569,
+      "success": true
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/task-mechanism-restore.test.ts --configLoader runner",
+      "passed": 20,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 16.89,
+      "success": true
+    },
+    {
+      "file": "tests/ur-i3-combat-statuses.test.ts",
+      "command": "node node_modules/vitest/vitest.mjs run tests/ur-i3-combat-statuses.test.ts --configLoader runner",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "seconds": 0.157,
+      "success": true
+    }
+  ],
+  "compiler": {
+    "command": "npx.cmd tsc --noEmit",
+    "exitCode": 2,
+    "diagnostics": [
+      "src/presentation/loot-view.ts(48,57): error TS2322: Type 'string | undefined' is not assignable to type 'string'.",
+      "  Type 'undefined' is not assignable to type 'string'.",
+      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'TFT_Consumable_ChampionDuplicator_III' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
+      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'TFT_Consumable_NeekosHelp' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
+      "src/presentation/loot-view.ts(48,63): error TS2339: Property 'reforger' does not exist on type '{ 'magnetic-remover': string; 'component-reforger': string; 'completed-reforger': string; }'.",
+      "src/presentation/orb-loot.ts(43,96): error TS2353: Object literal may only specify known properties, and ''component-reforger'' does not exist in type 'Readonly<Record<\"TFT_Consumable_ChampionDuplicator_III\" | \"TFT_Consumable_NeekosHelp\" | \"magnetic-remover\" | \"reforger\", string>>'.",
+      "src/presentation/orb-loot.ts(48,14): error TS2741: Property '\"bench-full\"' is missing in type '{ 'unknown-consumable': string; 'invalid-consumable-target': string; 'no-removable-items': string; 'temporary-item': string; 'wrong-phase': string; 'unknown-unit': string; 'unknown-item': string; }' but required in type 'Readonly<Record<ConsumableFailure, string>>'."
+    ],
+    "diagnosticCount": 6
+  },
+  "reviewOnlyUiCompilerOverlay": {
+    "scope": "Review-only compiler-host overlay of UI_ADAPTER.patch; actual source is unchanged",
+    "errors": 0,
+    "diagnostics": []
+  }
+}

@@ -1,11 +1,11 @@
-import ionicRaw from './v15-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './v15-herald-raw/evenshroud.json?raw';
-import dualRaw from './v15-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './v15-herald-raw/quicksilver.json?raw';
-import edgeRaw from './v15-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './v16-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './v16-herald-raw/evenshroud.json?raw';
+import dualRaw from './v16-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './v16-herald-raw/quicksilver.json?raw';
+import edgeRaw from './v16-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v15-herald-support/generate';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v16-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
 const preparations = new Map<string, api.MatchState>();

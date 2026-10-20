@@ -4,10 +4,10 @@ import type { MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, transferPreparation, players, plan } from './fixtures/t13-loot-public';
-const SURVIVOR='unit-9',DONOR='unit-13',REWARD='unit-22',TG='item-9';
+const SURVIVOR='unit-20',DONOR='unit-16',REWARD='unit-29',TG='item-13';
 const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
-const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-6',SURVIVOR,0)));
+const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-17',SURVIVOR,0)));
 const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'conflicting TG returns',live:conflict,returned:true}];
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 describe('B8 live randomized reward upgrade with equipment, anomaly and G12 transfer',()=>{
@@ -15,16 +15,16 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(players(prepared).filter(u=>u.definitionId==='ezreal').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[SURVIVOR,DONOR].includes(e.unitId)).every(e=>e.kind==='unit-acquired'&&e.source.kind==='shop')).toBe(true);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[DONOR,SURVIVOR].includes(e.unitId))).toEqual([
-   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:14,slotIndex:4,definitionId:'ezreal'},sequence:29,roundId:'3-3'},
-   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:20,slotIndex:3,definitionId:'ezreal'},sequence:34,roundId:'3-3'},
+   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:16,slotIndex:0,definitionId:'ezreal'},sequence:43,roundId:'3-3'},
+   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:21,slotIndex:3,definitionId:'ezreal'},sequence:49,roundId:'3-3'},
   ]);
-  // v15 public-route accounting: 21 births + 20 growth + 10 item births + 5 upgrades + 3 combines + 2 sales + 4 placements = 65.
-  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([21,20,10,5,3,2,4]);
+  // v16 public-route accounting: 28 births + 20 growth + 13 item births + 7 upgrades + 4 combines + 5 sales + 6 placements = 83.
+  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([28,20,13,7,4,5,6]);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
   expect(prepared.anomalyBinding).toEqual({definitionId:'slime-time',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(10);
-  expect(prepared.resourceProvenance.entries).toHaveLength(65);
-  expect(prepared.nextUnitSerial).toBe(22);
+  expect(prepared.resourceProvenance.entries).toHaveLength(83);
+  expect(prepared.nextUnitSerial).toBe(29);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'cloak',quantity:1},{kind:'item',definitionId:'rod',quantity:1},{kind:'gold',quantity:4},{kind:'unit',definitionId:'ezreal',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
  });
  it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live,returned})=>{
@@ -106,7 +106,7 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
     state.m8.loot.receipts.find(receipt => receipt.grantedUnitIds.includes(REWARD))!.grantedUnitIds = [SURVIVOR];
   }, 'Invalid resource provenance: receipt birth binding'],
   ['neutral death identity rewritten', state => { state.combat!.neutralReceipts!.deaths[0].eventSeq++; },
-    'Invalid B8 Match: current death evidence'],
+    'Invalid Match save: neutral death event identity'],
 ];
 describe('B8 strict live transfer corruption boundaries', () => {
   it.each(corruptions)('rejects %s without changing the live route', (_label, change, message) => {

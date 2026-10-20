@@ -3,12 +3,13 @@ import {readItemSummonPositions} from './g2-4b-voidspawn';
 import {validateG23GrantEvidence} from './g2-3-grant-evidence';
 import { selectOpeningUnit } from './opening-unit';
 import {validateG23Restoration} from './g2-3-restore';
-import {readG23Progress} from './g2-3-state';
+import {readG23Progress,epicCrownsAtResourcePrefix} from './g2-3-state';
 import {g23RadiantRound} from './g2-3-settlement';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
+import { EPIC_SOURCES } from './content/orbs';
 import { LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
 import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
@@ -238,7 +239,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     if (slot.roundId !== state.roundDefinitionId || state.phase === 'gameOver') check(eligibility.status !== 'revealed' || resolution, 'unresolved completed choice');
     if (state.combat?.status === 'running' && slot.roundId === state.roundDefinitionId) check(!resolution, 'combat choice grant');
   }
-  const counters = Object.fromEntries(Object.keys(LOOT_SLOTS).map(roundId => [JSON.stringify([LOOT_POLICY_VERSION,roundId,'components-granted']),0]));
+  const counters = Object.fromEntries([...Object.keys(LOOT_SLOTS),...Object.keys(EPIC_SOURCES)].map(roundId => [JSON.stringify([LOOT_POLICY_VERSION,roundId,'components-granted']),0]));
   for (const receipt of loot.receipts) if (receipt.payload.kind === 'item') counters[JSON.stringify([LOOT_POLICY_VERSION,slots.get(receipt.dropId)!.roundId,'components-granted'])]+=ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1;
   check(equal(counters,loot.guaranteeCounters), 'actual guarantee counters');
   const unresolved = orderedUnresolvedLootChoices(choices,loot.choiceEligibility,loot.choiceResolutions);
@@ -279,7 +280,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.

@@ -58,20 +58,20 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
     expect([opening.gold, opening.level, opening.xp]).toEqual([10, 3, 2]);
     expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['amumu', 'irelia', 'lux']);
-    expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['gloves', 'inventory'], ['rod', 'inventory']]);
+    expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['belt', 'inventory'], ['bow', 'inventory'], ['cloak', 'inventory']]);
     expect(opening.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'item').map(receipt => [JSON.parse(JSON.parse(receipt.dropId)[0])[1], 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))
-      .toEqual([['1-3', 'rod'], ['1-4', 'gloves'], ['1-4', 'bow']]);
+      .toEqual([['1-3', 'bow'], ['1-4', 'belt'], ['1-4', 'cloak']]);
     expect(opening.consumables.map(tool => tool.definitionId)).toEqual(Array(3).fill('magnetic-remover'));
     expect(api.readLootView(opening)).toEqual({ roundId: '2-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
   });
 
   // 2-1: combine the two loot components from different rounds, equip the loot-born Lux, fight.
-  const bow = lootItem(opening, 'bow'), rod = lootItem(opening, 'rod');
+  const bow = lootItem(opening, 'bow'), rod = lootItem(opening, 'cloak');
   const combined = accepted(api.combineItems(opening, bow.grantedItemIds[0], rod.grantedItemIds[0]));
-  const rageblade = combined.items.find(item => item.definitionId === 'rageblade')!;
+  const hurricane = combined.items.find(item => item.definitionId === 'runaans-hurricane')!;
   const lux = players(opening).find(unit => unit.definitionId === 'lux')!;
-  const equipped = accepted(api.equipItem(combined, rageblade.id, lux.id, 0));
+  const equipped = accepted(api.equipItem(combined, hurricane.id, lux.id, 0));
   const fielded = accepted(api.deployMatchUnit(equipped, lux.id, { kind: 'board', cell: { col: 3, row: 7 } }));
   const battle = fight(fielded);
   const nextPreparation = accepted(api.nextRound(battle.state, battle.state.round));
@@ -105,8 +105,8 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect(facts.map(fact => fact.kind)).toEqual(['item-combined']);
     for (const step of [combined, equipped, fielded]) roundTrip(step);
   });
-  it('fights 2-1 with the cross-round Rageblade and keeps loot identity through settlement and Continue', () => {
-    expect(battle.events.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade' && event.unitId === lux.id)).toBe(true);
+  it('fights 2-1 with the cross-round Runaan and keeps loot identity through settlement and Continue', () => {
+    expect(battle.events.some(event => event.type === 'packetDamage' && event.outcome.context.source.definitionId === 'runaans-hurricane' && event.outcome.context.source.ownerId === lux.id)).toBe(true);
     expect(battle.state.m8.loot.receipts).toEqual(opening.m8.loot.receipts);
     roundTrip(battle.state);
     expect(nextPreparation.roundDefinitionId).toBe('2-2');
@@ -116,7 +116,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   it('selling the loot-born carrier returns the combined item and remains a legal history', () => {
     if (!sold.ok) throw new Error(sold.reason);
     expect(sold.events.map(event => event.type)).toContain('itemsReturned');
-    expect(sold.state.items.find(item => item.id === rageblade.id)?.location).toEqual({ kind: 'inventory' });
+    expect(sold.state.items.find(item => item.id === hurricane.id)?.location).toEqual({ kind: 'inventory' });
     expect(players(sold.state).some(unit => unit.id === lux.id)).toBe(false);
     expect(sold.state.m8.loot.receipts).toEqual(opening.m8.loot.receipts);
     const restored = roundTrip(sold.state);
@@ -131,7 +131,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
       raw.resourceProvenance.entries.splice(index, 1);
       raw.resourceProvenance.entries.forEach((entry: any, sequence: number) => { entry.sequence = sequence; });
     });
-    reject(after, 'Invalid resource provenance: receipt birth binding', raw => { raw.m8.loot.receipts.find((r: any) => r.payload.definitionId === 'bow').grantedItemIds = [rageblade.id]; });
+    reject(after, 'Invalid resource provenance: receipt birth binding', raw => { raw.m8.loot.receipts.find((r: any) => r.payload.definitionId === 'bow').grantedItemIds = [hurricane.id]; });
     reject(after, 'Invalid resource provenance: duplicate loot receipt', raw => { raw.m8.loot.receipts.push({ ...raw.m8.loot.receipts.at(-1) }); });
     // A consumed loot component cannot reappear in inventory.
     reject(after, 'Invalid B8 Match: current resource fold', raw => { raw.items.push({ id: bow.grantedItemIds[0], definitionId: 'bow', location: { kind: 'inventory' } }); });

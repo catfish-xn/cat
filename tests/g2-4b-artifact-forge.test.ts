@@ -107,7 +107,7 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
 
 it('completed reforger refuses artifacts in inventory or equipped without consuming tool/RNG; ordinary reforge still restores',()=>{
  let state=accepted(nextRound(publicConsumables(162),10));
- const tool=state.consumables.find(c=>c.definitionId==='completed-reforger')!;
+ const tool=state.consumables.find(c=>c.definitionId==='reforger')!;
  const definitionId=artifactIds[0];state=accepted(grantMechanicItem(state,{receiptId:'fixture:artifact',source:'fixture',definitionId}));
  const item=state.items.find(i=>i.definitionId===definitionId)!,unit=state.preparation.units.find(u=>u.team==='player')!;
  for(const candidate of [state,accepted(equipItem(state,item.id,unit.id,0))]){
@@ -120,7 +120,8 @@ it('completed reforger refuses artifacts in inventory or equipped without consum
  expect(REFORGE_POOLS.completed.some(i=>artifactIds.includes(i.definitionId))).toBe(false);
  state=accepted(grantMechanicItem(state,{receiptId:'fixture:ordinary',source:'fixture',definitionId:'warmog'}));
  const ordinary=state.items.find(i=>i.definitionId==='warmog')!;
- const reforged=accepted(useConsumable(state,tool.consumableId,{kind:'item',itemId:ordinary.id}));
+ state=accepted(equipItem(state,ordinary.id,unit.id,0));
+ const reforged=accepted(useConsumable(state,tool.consumableId,{kind:'unit',unitId:unit.id}));
  expect(restoreMatch(serializeMatch(reforged))).toEqual(reforged);
  const forged={...reforged,resourceProvenance:{...reforged.resourceProvenance,entries:reforged.resourceProvenance.entries.map(f=>f.kind==='consumable-used'?{...f,record:{...f.record,affectedItems:f.record.affectedItems.map(i=>({...i,definitionId}))}}:f)}};
  expect(()=>validateConsumableState(forged)).toThrow('Invalid consumable ledger');

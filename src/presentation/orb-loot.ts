@@ -40,7 +40,7 @@ const FORFEIT_TEXT: Readonly<Record<'timeout-forfeited' | 'eliminated-forfeited'
 };
 
 /** A one-glyph mark per tool kind (presentation only; the name and description are the content table's). */
-const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, string>> = { 'magnetic-remover': '拆', 'component-reforger': '铸', 'completed-reforger': '铸' };
+const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, string>> = { 'magnetic-remover': '拆', reforger: '铸', TFT_Consumable_ChampionDuplicator_III: '复', TFT_Consumable_NeekosHelp: '复' };
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
 const toolMark = (id: string) => `<span class="consumable-mark" aria-hidden="true">${TOOL_MARK[id as ConsumableDefinitionId] ?? '?'}</span>`;
 
@@ -53,12 +53,14 @@ export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>
   'wrong-phase': '当前阶段不能使用消耗品',
   'unknown-unit': '该单位已不存在，请重新选择',
   'unknown-item': '该装备已不存在，请重新选择',
+  'bench-full': '备战席已满，腾出空位后再使用',
 };
 
 function payloadLabel(payload: RevealedDropView['payload']): { icon: string; text: string } {
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
+  if (payload.kind === 'forge') return { icon: '', text: itemDisplayName(payload.definitionId) };
   if (payload.kind === 'item') return { icon: itemMarkHtml(payload.definitionId, 22), text: `${itemDisplayName(payload.definitionId)}${count}` };
   return { icon: heroEmblemSvg(payload.definitionId, 22), text: `${displayUnitName(payload.definitionId)}${count}` };
 }
@@ -164,7 +166,7 @@ export function consumableDropText(tool: ConsumableInstance, targetLabel: string
   const name = consumableName(tool.definitionId);
   if (!preview.ok) return `${name} → ${targetLabel}：${CONSUMABLE_FAILURE_TEXT[preview.reason] ?? '当前无法使用该消耗品'}`;
   const items = preview.affectedItemIds.map(itemName).join('、') || '—';
-  const what = preview.effect === 'remove-all' ? `将拆下 ${items}，放回物品备战席` : `将重铸 ${items}（结果随机），产物进入物品备战席`;
+  const what = preview.effect === 'duplicate-unit' ? `将复制 ${targetLabel}，获得一张1星英雄` : preview.effect === 'remove-all' ? `将拆下 ${items}，放回物品备战席` : `将重铸 ${items}（结果随机），产物进入物品备战席`;
   return `${name} → ${targetLabel}：${what}${takesEffectNextBattle(phase) ? ` · ${NEXT_BATTLE_TEXT}` : ''}`;
 }
 

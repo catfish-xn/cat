@@ -318,7 +318,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     if(!verifiedDynamic)validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     if(!verifiedDynamic)validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
     if(!verifiedDynamic)validateMirrorOpening(combat,basis,expectedStrategy);
-    const neutralStatuses = verifiedDynamic?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy);
+    const neutralStatuses = verifiedDynamic?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy, () => replay.atSaveTick().openingState);
     if(!verifiedDynamic)mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy, replay), 'resists shield replay');
     const cells = new Set<string>();
     for (const unit of verifiedDynamic?[]:combat.units) {

@@ -253,6 +253,10 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
       }
       requireValue(receipt.gold===(receipt.payload.kind==='gold'?receipt.payload.quantity:0),'held orb gold');
     }
+    if(receipt.payload.kind==='forge') {
+      keys(receipt.payload,['kind','definitionId','quantity']);
+      requireValue(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyOrnn'].includes(receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'forge grant');continue;
+    }
     if(receipt.payload.kind==='consumable') {
       requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');
       continue;
@@ -500,8 +504,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry,[...common,'record',...(Object.hasOwn(entry,'tick') ? ['tick'] : [])]);
       if (Object.hasOwn(entry,'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'consumable tick'); }
       const r=entry.record;
-      keys(r,['consumableId','definitionId','target','effect','affectedItems','output','rngBefore','rngAfter']);
-      requireValue(Array.isArray(r.affectedItems)&&r.affectedItems.length>0,'consumable affected items');
+      keys(r,['consumableId','definitionId','target','effect','affectedItems','output','outputs','copiedUnit','rngBefore','rngAfter']);
+      requireValue(Array.isArray(r.affectedItems)&&(r.effect==='duplicate-unit'||r.affectedItems.length>0),'consumable affected items');
       for(const rawItem of r.affectedItems) {
         keys(rawItem, ['id','definitionId','location']);
         const item = rawItem as unknown as import('./strategy-types').ItemInstance;
@@ -515,11 +519,19 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(r.target, r.target.kind === 'unit' ? ['kind','unitId'] : ['kind','itemId']);
       keys(r.rngBefore, ['state','draws']); keys(r.rngAfter, ['state','draws']);
       if (r.output) keys(r.output, ['id','definitionId']);
-      if(r.effect==='remove-all')requireValue(r.target.kind==='unit'&&units.has(r.target.unitId)&&r.output===null,'remover target');
-      else {
-        requireValue(r.target.kind==='item'&&r.affectedItems.length===1&&r.affectedItems[0].id===r.target.itemId
-          &&r.output?.id===`item-${nextItemSerial}`&&!!ITEM_DEFINITIONS[r.output.definitionId],'reforge serial');
-        items.delete(r.target.itemId);items.set(r.output.id,{...r.output});nextItemSerial++;
+      requireValue(r.target.kind==='unit'&&units.has(r.target.unitId),'consumable target');
+      if(r.effect==='duplicate-unit'){
+        requireValue(r.copiedUnit&&r.target.kind==='unit'&&r.copiedUnit.id===r.target.unitId&&units.get(r.target.unitId)?.definitionId===r.copiedUnit.definitionId&&r.affectedItems.length===0&&r.outputs.length===0,'duplicator target ownership');
+        const receipt=context.mechanicReceipts?.find(x=>x.receiptId===JSON.stringify(['consumable-copy',r.consumableId]));
+        requireValue(receipt?.kind==='unit'&&receipt.definitionId===r.copiedUnit?.definitionId,'duplicator receipt');
+      }else{
+        requireValue(Array.isArray(r.outputs)&&r.outputs.length===r.affectedItems.length,'consumable output count');
+        for(const [n,output] of r.outputs.entries()){
+          keys(output,['id','definitionId']);nonempty(output.id);nonempty(output.definitionId);const original=r.affectedItems[n];
+          requireValue(!!ITEM_DEFINITIONS[output.definitionId],'consumable output definition');
+          if(output.id!==original.id){requireValue(output.id===`item-${nextItemSerial}`,'reforge serial');nextItemSerial++;}
+          items.delete(original.id);items.set(output.id,{id:output.id,definitionId:output.definitionId});
+        }
       }
     } else if (entry.kind === 'combat-growth-committed') {
       keys(entry, [...common, 'combatId', 'settlementId', 'combatStartProvenancePrefixLength', 'sourceDeltas']);

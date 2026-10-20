@@ -18,11 +18,15 @@ export function publicInventory(definitions: readonly string[], late = false, se
     return [...(definition.recipe ?? [id])];
   });
   if (late) while (components.length < 4) components.push('sword');
-  // Recursive nine-card purchase controls need the later seeded economy;
-  // the faster seed-38 glove route intentionally stops with less liquid gold.
-  const routeSeed = seed ?? (late ? ((components.filter(id => id === 'gloves').length >= 2 || components.every(id => id === 'tear')) ? 38 : 9)
-    : components.length === 4 && components.every(id => id === 'tear') ? 9 : undefined);
-  let state = publicEquipmentPreparation(components, routeSeed === undefined ? {} : { seed: routeSeed });
+  // v16 independent loot oracle: seed16 earns two real gloves by2-7;
+  // seed3 earns two tears by2-7. Supply choices complete the duplicate recipes
+  // by3-4, before the anomaly window, with all extra rewards retained.
+  const routeSeed=seed??(components.filter(id=>id==='gloves').length>=2?16:
+    components.length===4&&components.every(id=>id==='tear')?3:undefined);
+  // Reserve the two genuine seed16 glove drops; use earlier supply choices
+  // for the other recipe inputs instead of accidentally buying a third glove.
+  const acquisitionComponents=routeSeed===16?[...components].sort((a,b)=>Number(a==='gloves')-Number(b==='gloves')):components;
+  let state = publicEquipmentPreparation(acquisitionComponents, routeSeed === undefined ? {} : { seed: routeSeed });
   const available = [...state.items], itemIds: string[] = [];
   for (const id of definitions) {
     const definition = ITEM_DEFINITIONS[id];

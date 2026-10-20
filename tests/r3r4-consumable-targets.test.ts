@@ -11,7 +11,7 @@ import type { MatchState } from '../src/simulation/match-types';
 import { publicConsumables, accepted, finish } from './fixtures/r3r4-public';
 
 function prepared(phase: MatchState['phase']) {
-  let state = publicConsumables(162);
+  let state = publicConsumables(72);
   const parent = state.items.find(item => item.definitionId === 'thiefs-gloves')!;
   const holder = state.preparation.units.find(unit => unit.team === 'player')!;
   state = accepted(equipItem(state, parent.id, holder.id, 0));
@@ -45,9 +45,9 @@ describe('SR-C18 authority-projected consumable targets', () => {
       }
     }
     const remover = state.consumables.find(c => c.definitionId === 'magnetic-remover')!;
-    const reforger = state.consumables.find(c => c.definitionId === 'completed-reforger')!;
+    const reforger = state.consumables.find(c => c.definitionId === 'reforger')!;
     expect(previewUseConsumable(state, remover.consumableId, { kind: 'unit', unitId: 'missing' })).toEqual({ ok: false, reason: 'unknown-unit' });
-    expect(previewUseConsumable(state, reforger.consumableId, { kind: 'item', itemId: 'missing' })).toEqual({ ok: false, reason: 'unknown-item' });
+    expect(previewUseConsumable(state, reforger.consumableId, { kind: 'item', itemId: 'missing' })).toEqual({ ok: false, reason: 'invalid-consumable-target' });
     const terminal = toPrivateSeatView({ ...state, phase: 'gameOver', combat: null });
     expect(terminal.consumableTargets.every(row => row.targets.every(t => !t.allowed && t.reason === 'wrong-phase'))).toBe(true);
     const row = view.consumableTargets.find(c => c.consumableId === remover.consumableId)!;
@@ -58,7 +58,7 @@ describe('SR-C18 authority-projected consumable targets', () => {
     const child = state.temporaryEquipment.find(t => t.parentItemInstanceId === parent.id)!;
     expect(child).toBeDefined();
     expect(previewUseConsumable(state, reforger.consumableId, { kind: 'item', itemId: child.temporaryId }))
-      .toEqual({ ok: false, reason: 'temporary-item' });
+      .toEqual({ ok: false, reason: 'invalid-consumable-target' });
     const enemy = state.preparation.units.find(u => u.team === 'enemy')!;
     expect(enemy).toBeDefined();
     expect(previewUseConsumable(state, remover.consumableId, { kind: 'unit', unitId: enemy.id }))
@@ -77,8 +77,8 @@ describe('SR-C18 authority-projected consumable targets', () => {
       .toEqual({ ok: false, reason: 'unknown-consumable' });
     expect(toPrivateSeatView(state)).toEqual(view);
   }, 30000);
-  it('exports three frozen content definitions with UI text and target kind', () => {
-    expect(Object.keys(CONSUMABLE_DEFINITIONS)).toEqual(['magnetic-remover', 'component-reforger', 'completed-reforger']);
+  it('exports four frozen content definitions with UI text and target kind', () => {
+    expect(Object.keys(CONSUMABLE_DEFINITIONS)).toEqual(['magnetic-remover', 'reforger', 'TFT_Consumable_ChampionDuplicator_III', 'TFT_Consumable_NeekosHelp']);
     expect(RULES_GAP_MANIFEST.consumables.definitions).toBe(CONSUMABLE_DEFINITIONS);
     const changed = structuredClone(RULES_GAP_MANIFEST);
     Object.assign(changed.consumables.definitions['magnetic-remover'], { description: 'changed' });

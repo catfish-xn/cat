@@ -1,3 +1,5 @@
+import { settleTerminalEpicForges } from './epic-forges';
+import { grantConsumableCopy } from './consumables';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
 import { sampleD11CombatGold } from './d11-fill';
 import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
@@ -393,6 +395,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   let settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
+    const terminalForges=settleTerminalEpicForges(settled);settled=terminalForges.state;events.push(...terminalForges.events);
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
   }
   const queued=settleQueuedOrbClaims(settled,unitLootPolicy);settled=queued.state;events.push(...queued.events);
@@ -477,8 +480,10 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
-  return acceptEquipment({...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
-    {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})},plan.events);
+  const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
+    {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})};
+  const copied=grantConsumableCopy(used,plan.record);
+  return acceptEquipment(copied.state,[...plan.events,...copied.events]);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);

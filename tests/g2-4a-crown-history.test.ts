@@ -49,7 +49,7 @@ describe('M1 crown history authority', () => {
   it('rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history', () => {
     const { forged, live } = forgedHistory();
     for (const input of [forged, JSON.stringify(forged)]) {
-      expect(() => restoreMatch(input)).toThrow(/缺少冠冕历史证据/);
+      expect(() => restoreMatch(input)).toThrow(/缺少冠冕或猎头者历史证据/);
       expect(() => restoreMatch(input, live.battles)).toThrow(/历史经济收据/);
     }
   });
@@ -66,7 +66,7 @@ describe('M1 crown history authority', () => {
     const { forged, live } = forgedHistory();
     const second = recordedCrownBattle(forged, live.history);
     expect(() => restoreMatch(second.state, second.battles)).toThrow(/历史经济收据/);
-    expect(() => validateBattleRecord(second.battles[1])).toThrow(/缺少冠冕历史证据/);
+    expect(() => validateBattleRecord(second.battles[1])).toThrow(/缺少冠冕或猎头者历史证据/);
     expect(() => validateBattleRecord(second.battles[1], [second.battles[0]])).toThrow(/历史经济收据/);
   });
   it('accepts the public-command no-crown control and resumes identically', () => {
@@ -83,7 +83,7 @@ describe('M1 crown history authority', () => {
       opening = accepted(equipItem(opening, opening.items.at(-1)!.id, holder.id, slot));
     }
     const first = recordedCrownBattle(opening), state = advance(first.state);
-    expect(() => restoreMatch(state)).toThrow(/缺少冠冕历史证据/);
+    expect(() => restoreMatch(state)).toThrow(/缺少冠冕或猎头者历史证据/);
     expect(() => restoreMatch(state, [])).toThrow(/缺少历史证据/);
     const text = serializeMatch(state, first.battles);
     const restored = restoreMatch(text, first.battles);
@@ -423,7 +423,7 @@ describe('M7/S7 combat equipment command replay', () => {
       : equipItem(live.state,kind === 'ordinary' ? 'item-1' : 'item-2','unit-1',0),'command');
     return live.finish();
   }
-  type ConsumableScenario = 'remove' | 'reequip' | 'combine' | 'component-reforger' | 'completed-reforger';
+  type ConsumableScenario = 'remove' | 'reequip' | 'combine' | 'component' | 'completed';
   let reforgerOpening: {state: MatchState; battles: readonly BattleRecord[]} | undefined;
   function recordedReforgerOpening() {
     if (reforgerOpening) return reforgerOpening;
@@ -465,7 +465,7 @@ describe('M7/S7 combat equipment command replay', () => {
   // each reforger case still validates its own prefix and full history against it.
   beforeAll(() => { const opening = recordedReforgerOpening(); validateMatchHistory(opening.state, opening.battles); });
   function usedEquipment(mode: ConsumableScenario) {
-    const reforge = mode === 'component-reforger' || mode === 'completed-reforger';
+    const reforge = mode === 'component' || mode === 'completed';
     const first = reforge ? recordedReforgerOpening()
       : (() => {
         const live = recorder(accepted(equipItem(swords(),'item-1','unit-1',0)));
@@ -474,11 +474,11 @@ describe('M7/S7 combat equipment command replay', () => {
     let opening = first.state;
     const inputId = `item-${opening.nextItemSerial}`;
     if (reforge) opening = accepted(grantMechanicItem(opening,{receiptId:`m10:${mode}`,source:'test',
-      definitionId:mode === 'component-reforger' ? 'sword' : 'deathblade'}));
-    const tool = opening.consumables.find(tool => tool.definitionId === (reforge ? mode : 'magnetic-remover'))!;
+      definitionId:mode === 'component' ? 'sword' : 'deathblade'}));
+    if(reforge)opening=accepted(equipItem(opening,inputId,'unit-1',0));
+    const tool = opening.consumables.find(tool => tool.definitionId === (reforge ? 'reforger' : 'magnetic-remover'))!;
     expect(tool).toBeDefined();
-    const target = reforge ? {kind:'item' as const,itemId:inputId}
-      : {kind:'unit' as const,unitId:'unit-1'};
+    const target = {kind:'unit' as const,unitId:'unit-1'};
     const live = recorder(opening,new BattleHistory('crown-history',first.battles));
     live.commit(stepMatch(live.state),'tick');
     const outputId = `item-${live.state.nextItemSerial}`;
@@ -500,14 +500,14 @@ describe('M7/S7 combat equipment command replay', () => {
     expect(validateBattleRecord(live.history.capturePrefix()!,first.battles).settledMatch).toEqual(live.state);
     return live.finish();
   }
-  it.each(['remove','reequip','combine','component-reforger','completed-reforger'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
+  it.each(['remove','reequip','combine','component','completed'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     if (mode === 'remove' || mode === 'reequip' || mode === 'combine')
       expect(battles[1]).toMatchObject({endTick:240,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
   });
-  it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s command tick at all three entries (M10)', mode => {
+  it.each(['remove','component','completed'] as const)('rejects changing the %s command tick at all three entries (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     // Preserve recorder ownership of the unchanged prefix; the altered record
     // is detached and must be replayed afresh at every admission entry.
@@ -516,7 +516,7 @@ describe('M7/S7 combat equipment command replay', () => {
     Object.assign(records.at(-1)!.equipmentCommands![0],{tick:0});
     rejectAll(state,records,'历史获得或合成记录不一致');
   });
-  it.each(['remove','component-reforger','completed-reforger'] as const)('rejects changing the %s resource tick at all three entries (M10)', mode => {
+  it.each(['remove','component','completed'] as const)('rejects changing the %s resource tick at all three entries (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     const forged = structuredClone(state);
     Object.assign(forged.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')!,{tick:2});
