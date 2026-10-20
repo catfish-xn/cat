@@ -1,3 +1,4 @@
+import { reconcileD14 } from './d14-runtime';
 import type {TraitProjectionContext} from './traits/effective-membership';
 import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
 import { readAugmentIncome } from './augment-income';
@@ -150,7 +151,8 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
-    const forfeited=hpAfter===0?forfeitUnclaimedOrbs(merged.state):settleQueuedOrbClaims(merged.state,unitLootPolicy);
+    const d14State=reconcileD14(merged.state,hookEvents);
+    const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const opened=openG23Choice(forfeited.state);
     const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},

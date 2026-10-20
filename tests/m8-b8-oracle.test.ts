@@ -62,15 +62,50 @@ describe('independent B8 oracle arithmetic and frozen reference', () => {
     const plan=lootPlan(230,38);
     expect(plan.rounds.map(r=>r.encounterPlan.roundId)).toEqual(['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7']);
     expect(plan.rounds.flatMap(r=>r.choices)).toEqual([]);
-    expect(plan.rounds.slice(3,7).map(r=>r.encounterPlan.drops.slice(0,2).map(d=>d.payload.kind!=='gold'&&d.payload.definitionId))).toEqual([['sword','tear'],['cloak','rod'],['sword','tear'],['cloak','rod']]);
-    expect(plan.rounds.slice(3,7).map(r=>r.encounterPlan.drops[2].payload)).toEqual([1,2,3,4].map(quantity=>({kind:'gold',quantity})));
-    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'gold',quantity:5},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
-    expect(lootPlan(230,31).rng).toEqual(plan.rng);
+    // Restore v15's original 2-7/3-7/4-7 vectors after scheme A isolated bonuses.
+    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops.slice(0,2).map(d=>d.payload.kind!=='gold'&&d.payload.definitionId))).toEqual([['sword','tear'],['cloak','rod'],['sword','tear']]);
+    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops[2].payload)).toEqual([1,2,3].map(quantity=>({kind:'gold',quantity})));
+    // Approved v16 epic tables, independently calculated by both literal-table
+    // BigInt oracles from the preserved early stream (not production output).
+    expect(plan.rounds[6].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'gold',quantity:2}]);
+    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'camille',quantity:1},{kind:'gold',quantity:1},{kind:'unit',definitionId:'vi',quantity:1},{kind:'gold',quantity:4}]);
+    expect(lootPlan(230,31).rng).toEqual({state:3428120343,draws:22});expect(plan.rng).toEqual({state:2408570974,draws:27});
     expect(COMPONENTS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
   });
 });
 
 describe('independent B8 oracle checks authentic command transitions', () => {
+  it('counts Into the Unknown held ownership through real departure and return, rejecting missing or duplicated resources', async () => {
+    const ledger=new Ledger(api.createMatch(4096));let departures=0,returns=0;
+    const stop=new Error('verified D14 return');
+    try {await run(api,{seed:4096,build:'cannon',onStep(before,result,command){
+      if(!('events' in result))throw Error(result.reason);
+      const after=result.state;
+      const departed=before.d14?.phase!=='absent'&&after.d14?.phase==='absent';
+      const returned=before.d14?.phase==='absent'&&after.d14?.phase==='returned';
+      if(departed||returned){
+        const verify=(invalid:MatchState)=>{
+          const prior=Object.assign(Object.create(Ledger.prototype),structuredClone(ledger));
+          expect(()=>prior.apply(before,invalid,command,result.events)).toThrow();
+        };
+        if(departed){
+          departures++;
+          const missing=copy(after);missing.d14!.held=null;verify(missing);
+          const duplicated=copy(after);duplicated.preparation.units.push(copy(after.d14!.held!.unit));verify(duplicated);
+          const missingItem=copy(after);expect(missingItem.d14!.held!.items.length).toBeGreaterThan(0);
+          missingItem.d14!.held!.items.pop();verify(missingItem);
+        }else{
+          returns++;expect(after.roundResults.length-before.d14!.atOrdinal).toBe(3);
+          expect(after.preparation.units.some(u=>u.id===before.d14!.unitId)).toBe(true);
+          const lost=copy(after);lost.preparation.units=lost.preparation.units.filter(u=>u.id!==before.d14!.unitId);verify(lost);
+        }
+      }
+      ledger.apply(before,after,command,result.events);
+      if(returned)throw stop;
+    }});}catch(e){if(e!==stop)throw e;}
+    expect([departures,returns]).toEqual([1,1]);
+  },120000);
+
   it('counts a real reward candidate even when immediately consumed by its upgrade', () => {
     const transition = timeline.find(t => t.after.roundDefinitionId==='3-7' && t.events.some(e => e.type === 'unitUpgraded'))!;
     expect(transition).toBeDefined();
@@ -150,11 +185,11 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);
-    expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'item')).toHaveLength(10);
+    expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'item')).toHaveLength(8);
     expect(route.final.scheduleReceipts.filter((r: MatchState['scheduleReceipts'][number]) => r.kind === 'component')).toHaveLength(5);
-    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 2, 0]);
+    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 0, 0]);
     if (seed === 230) expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'unit')
       .map((r: MatchState['m8']['loot']['receipts'][number]) => r.payload)).toEqual(
-        ['darius','irelia'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
+        ['darius','irelia','swain','swain','swain','camille','vi'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
   }, 120000);
 });

@@ -8,8 +8,10 @@ import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchComm
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
-import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
+// Keep the original seed/2-1 combat and passive augment; its v16 opening
+// gloves are genuinely acquired, while the old unused rod now arrives later.
+const cursePreparation=()=>acquireEquipment(['gloves'],{seed:3151248,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 
@@ -18,10 +20,11 @@ for (const options of [
   { seed: 77 }, { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] },
   { seed: 42 }, { seed: 112 },
 ]) beforeAll(() => { acquireEquipment(['rod'], options); });
-beforeAll(() => { publicEquipmentPreparation(['rod']); });
+beforeAll(() => { acquireEquipment(['rod']); });
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
-// The two public Sion positions are copied from c0fe4c1; no battle facts are patched.
+// v16 public position vectors: real Sion attack kills at244/355, zero personal
+// kill reward and exactly0/15 assist stats; no battle facts or stats are patched.
 function bracerCounts(state: MatchState, ownerId: string) {
   const owner = state.combat!.units.find(u => u.id === ownerId)!;
   return Object.fromEntries(['kill', 'assist'].map(id => {
@@ -109,8 +112,9 @@ it.each([
   const checkpoints = [initial, before, after];
   if (contribution) {
     let completed = initial;
-    while (!completed.combat!.units.find(u => u.id === owner.id)!.tasks!.some(t => t.kind === 'g22Curse'))
-      completed = stepMatch(completed).state;
+    while (!completed.combat!.units.find(u => u.id === owner.id)!.tasks!.some(t => t.kind === 'g22Curse')){
+      expect(completed.phase).toBe('combat');completed = stepMatch(completed).state;
+    }
     const firstCast = completed.combat!.units.find(u => u.id === owner.id)!.tasks!.filter(t => t.kind === 'g22Curse');
     const actionSeq = firstCast[0].actionSeq;
     while (completed.phase === 'combat' && completed.combat!.units.find(u => u.id === owner.id)!.tasks!
@@ -130,7 +134,7 @@ it.each([
 }, 30000);
 
 function morganaCurseSave(twoOwners = false): MatchState {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = cursePreparation();
   state = accepted(grantMechanicUnit(state, { receiptId: 'curse-morgana', source: 'test', definitionId: 'morgana' }));
   if (twoOwners) state = accepted(grantMechanicUnit(state, { receiptId: 'second-morgana', source: 'test', definitionId: 'morgana' }));
   const owners = state.preparation.units.filter(u => u.definitionId === 'morgana' && u.team === 'player');
@@ -200,7 +204,7 @@ async function blackRoseSave(): Promise<MatchState> {
 
 it('rejects forged Black Rose member cast counts, including redistribution with an unchanged team total', async () => {
   const state = await blackRoseSave(), bad = structuredClone(state);
-  const member = bad.combat!.units.find(u => u.id === 'unit-13')!;
+  const member = bad.combat!.units.find(u => u.definitionId === 'vladimir' && u.team === 'player')!;
   expect(member).toMatchObject({ definitionId: 'vladimir', runtime: { castCount: 0 } });
   Object.assign(member.runtime!, { castCount: 5 });
   expectRejectedAtAllEntrances(bad, 'Black Rose cast binding facts');
@@ -404,7 +408,7 @@ it('bounds replay evidence, separates complete input contents and detaches every
 });
 
 it('reuses verified hashes and incrementally hashes appended events against the full-ledger oracle', () => {
-  let state = publicEquipmentPreparation(['rod']);
+  let state = cursePreparation();
   state = accepted(grantMechanicUnit(state, { receiptId: 'capture-curse', source: 'test', definitionId: 'morgana' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'morgana')!;
   state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 0, row: 4 } }));
@@ -416,6 +420,7 @@ it('reuses verified hashes and incrementally hashes appended events against the 
   if (!started.ok) throw Error(started.reason);
   observe(state, initial, started.events, 'command'); state = initial;
   while (state.combat!.tick < 89) {
+    expect(state.phase).toBe('combat');
     const next = stepMatch(state); observe(state, next.state, next.events, 'tick'); state = next.state;
   }
   const prefix = history.capturePrefix()!;

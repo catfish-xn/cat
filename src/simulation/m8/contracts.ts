@@ -425,6 +425,7 @@ export interface RoundDefinition {
   readonly displayName: string;
 }
 export type LootPayload =
+  | { readonly kind:'forge';readonly definitionId:keyof typeof import('../content/g2-4-forges').G24_FORGE_POOLS;readonly quantity:1 }
   | { readonly kind: 'gold'; readonly quantity: number }
   | { readonly kind: 'consumable'; readonly definitionId: import('../consumable-types').ConsumableDefinitionId; readonly quantity: number }
   | { readonly kind: 'item'; readonly definitionId: string; readonly quantity: number }
@@ -486,8 +487,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v15';
-  readonly contentVersion: 's13-14.24b-g2-3-v15';
+  readonly rulesVersion: 's13-g2-3-v16';
+  readonly contentVersion: 's13-14.24b-g2-3-v16';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

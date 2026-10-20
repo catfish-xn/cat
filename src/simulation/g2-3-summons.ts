@@ -27,10 +27,10 @@ export function projectG23Summons(preparation:GameState,traits?:readonly TraitSn
  }
  return added.length?{...preparation,units:[...units,...added]}:preparation;
 }
-export function g23SionTeam(preparation:GameState,team:Team,traits?:readonly TraitSnapshot[]){
+export function g23SionTeam(preparation:GameState,team:Team,traits?:readonly TraitSnapshot[],promotedUnitId?:string){
  const rose=traits?traits.find(t=>t.team===team&&t.traitId==='black-rose'):deriveEffectiveTrait(projectEffectiveMembership(preparation),team,'black-rose');
  const roses=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&(rose?.memberUnitIds?rose.memberUnitIds.includes(u.id):rose?.memberDefinitionIds.includes(u.definitionId)));
- return {tier:rose?.tier??0,stars:roses.reduce((n,u)=>n+u.starLevel,0)};
+ return {tier:rose?.tier??0,stars:roses.reduce((n,u)=>n+(u.id===promotedUnitId?4:u.starLevel),0)};
 }
 
 /** Skill bodies use owner-relative placement; full boards never overlap or displace units. */

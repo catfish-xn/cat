@@ -84,7 +84,10 @@ beforeAll(async () => {
       // P1 and P3 anomaly literals, independent from production registration.
       'dual-wielding', 'the-finisher', 'touch-of-frost', 'fireball', 'dragonsoul', 'nothing-wasted', 'thornskin', 'knockout',
       // D11 identities from the retained source, not the production registry.
-      'avarice-incarnate', 'headhunter'].sort();
+      'avarice-incarnate', 'headhunter',
+      // D14 literals and target policy, independent of the production helper.
+      ...(target.location.kind==='board'?['into-the-unknown',...(COST[target.definitionId]===1&&target.starLevel===3?['ultimate-hero']:[])]:[])].sort();
+    expect(ids).toHaveLength(54+(target.location.kind==='board'?1+(COST[target.definitionId]===1&&target.starLevel===3?1:0):0));
     expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * BigInt(ids.length) / 4294967296n)]);
     const seen = new Set(s.pendingChoice!.offers);
     for (let i = 0; i < 400; i++) {

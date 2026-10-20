@@ -1,3 +1,4 @@
+import { d14Certificate, type D14CombatCertificate } from './d14-runtime';
 import { investmentGrowth } from './augment-income';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
@@ -25,7 +26,7 @@ export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
-  & { readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
+  & { readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
@@ -43,6 +44,9 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
+  readonly d14Combat?:D14CombatCertificate;
+  readonly heldUnitIds?:readonly string[];readonly heldItemIds?:readonly string[];
+  readonly epicCrownsBeforeCombat?:NonNullable<import('./g2-3-match-progress').G23MatchProgress['epicCrowns']>;
   readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
   readonly bankGold?:number;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly playerHp?:number;
@@ -61,7 +65,9 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
   const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
-  return { ...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+  const d14='d14' in state?d14Certificate(state as MatchBase):'d14Combat' in state?state.d14Combat:undefined;
+  const absent='d14' in state&&state.d14&&'held' in state.d14&&state.d14.held;
+  return { ...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
@@ -99,6 +105,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     requireBasis(equal(input.g23.economyReceipts,authority.g23.economyReceipts.slice(0,input.g23.economyReceipts.length)));
     requireBasis(input.g23.economyReceipts.filter(r=>r.kind==='battle').length===authority.g23.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round<authority.round).length);
     requireBasis(equal(input.g23.itemReceipts,authority.g23.itemReceipts));
+    requireBasis(equal(input.g23.epicCrowns??[],authority.epicCrownsBeforeCombat??(authority.g23.epicCrowns??[]).filter(r=>r.round<authority.round)));
     // Junker purchases only happen in preparation, before this frozen combat.
     requireBasis(equal(input.g23.junkerPurchases,authority.g23.junkerPurchases));
     // Claims only append, and the crown's team size is read from them: the frozen claims are an authoritative prefix.
@@ -121,9 +128,10 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
   const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round).units, inputValidation);
+  requireBasis(equal(input.d14Combat??null,authority.d14Combat??null));
   const players = input.preparation.units.filter(unit => unit.team === 'player');
-  requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
-  requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.map(({id,definitionId}) => ({id,definitionId})))));
+  requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.filter(u=>!authority.heldUnitIds?.includes(u.id)).map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
+  requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.filter(i=>!authority.heldItemIds?.includes(i.id)).map(({id,definitionId}) => ({id,definitionId})))));
   requireBasis(Array.isArray(input.augments) && input.augments.length <= 3);
   const receipts = authority.scheduleReceipts.filter(receipt => receipt.round <= authority.round);
   const expectedAugments = receipts.filter(receipt => receipt.kind === 'augment').map(receipt => ({definitionId:receipt.definitionId,choiceId:receipt.eventId,acquiredRound:receipt.round}));
@@ -135,7 +143,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
       && receipts.some(receipt => receipt.kind === 'anomaly' && receipt.eventId === binding.choiceId
         && receipt.definitionId === binding.definitionId && receipt.round === binding.boundRound));
   }
-  requireBasis(Array.isArray(input.persistentGrowth) && equal(input.persistentGrowth, authority.resources.persistentGrowth));
+  requireBasis(Array.isArray(input.persistentGrowth) && equal(input.persistentGrowth, authority.resources.persistentGrowth.filter(g=>!authority.heldUnitIds?.includes(g.unitId))));
   const growthIds = new Set<string>();
   for (const growth of input.persistentGrowth) {
     record(growth); integer(growth.attackDamageBps,1);

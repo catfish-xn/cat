@@ -1,3 +1,4 @@
+import { D14_ANOMALIES } from './d14-anomalies';
 import { P3_ANOMALIES } from './s13-p3';
 import { D11_ANOMALIES } from './d11-fill';
 import { G23_ANOMALIES } from './g2-3-anomalies';
@@ -7,6 +8,7 @@ import { S13_P2_ANOMALIES } from './s13-augments-p2';
 import { S13_ANOMALY_DEFINITIONS } from '../anomalies/definitions';
 export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
   ...D11_ANOMALIES,
+  ...D14_ANOMALIES,
   ...S13_P2_ANOMALIES,
   ...P3_ANOMALIES,
   "titanic-strikes": {

@@ -1,3 +1,4 @@
+import { d14OwnedUnits } from './d14-runtime';
 import {findMechanicReceipt} from './seat-mechanics/state';
 import { validateCarouselMetadata } from './carousel-units';
 import { isImmutableJson } from './immutable-json';
@@ -135,7 +136,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     const seat=seats.get(binding.seatId);requirePool(seat,'invalid-seat-state');
     requirePool(binding.revision===seat.revision,'stale-seat');
     requirePool(state.multiplayer?.seatId===seat.seatId&&((state.shop===seat.shop&&isImmutableJson(state.shop))||canonicalContent(state.shop)===canonicalContent(seat.shop)),'invalid-seat-state');
-    const roster=state.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
+    const roster=d14OwnedUnits(state).filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
     if(seat.released) {requirePool(state.multiplayer?.status==='eliminated'&&state.playerHp===0,'invalid-seat-state');continue;}
     requirePool(roster.length+(state.carousel?.pendingUnits.length??0)===held.length,'invalid-seat-state');
     for(const u of roster) requirePool(held.some(h=>h.unitId===u.id&&h.definitionId===u.definitionId&&h.sources.length===3**(u.starLevel-1)),'invalid-seat-state');

@@ -1,0 +1,198 @@
+{
+  "{cf1ee294}": {
+    "name": "TFT13_GoopBuff_UltimateHero",
+    "{900aff58}": "{04ce615c}",
+    "effectAmounts": [
+      {
+        "name": "NumRounds",
+        "value": 3.0,
+        "__type": "TftEffectAmount"
+      }
+    ],
+    "{4e874e78}": [
+      "{44055224}",
+      "{7fa976fb}"
+    ],
+    "ExcludedAugments": [
+      "TFT13_Augment_AnotherAnomaly"
+    ],
+    "__type": "{a0c80919}"
+  },
+  "{711fd99c}": {
+    "name": "TFT13_GoopBuff_IntoTheUnknown",
+    "{900aff58}": "{7f1fcc94}",
+    "effectAmounts": [
+      {
+        "name": "GainedAD",
+        "value": 0.5,
+        "__type": "TftEffectAmount"
+      },
+      {
+        "name": "GainedAP",
+        "value": 50.0,
+        "__type": "TftEffectAmount"
+      },
+      {
+        "name": "NumRounds",
+        "value": 3.0,
+        "__type": "TftEffectAmount"
+      }
+    ],
+    "{4e874e78}": [
+      "{44055224}",
+      "{897b5f7a}",
+      "{64e3eb60}",
+      "{aa95b730}",
+      "{7013d630}"
+    ],
+    "ExcludedAugments": [
+      "TFT13_Augment_AnotherAnomaly"
+    ],
+    "__type": "{a0c80919}"
+  },
+  "{560f71cc}": {
+    "DefaultValue": {
+      "__type": "TftUnitPropertyValueBool"
+    },
+    "ReplicationRule": 1,
+    "name": "TFT13_GoopBuff_IntoTheUnknown_ReturnState",
+    "__type": "TftUnitPropertyDefinition"
+  },
+  "TFTSet13": {
+    "pointer": "{e6ddca72}",
+    "entries": [
+      {
+        "{16c534fd}": "{711fd99c}",
+        "__type": "{e59d98ad}"
+      },
+      {
+        "{16c534fd}": "{cf1ee294}",
+        "__type": "{e59d98ad}"
+      }
+    ]
+  },
+  "TFTSet13_Evolved": {
+    "pointer": "{cc0b6cb2}",
+    "entries": [
+      {
+        "{16c534fd}": "{711fd99c}",
+        "__type": "{e59d98ad}"
+      },
+      {
+        "{16c534fd}": "{cf1ee294}",
+        "__type": "{e59d98ad}"
+      }
+    ]
+  },
+  "strings": {
+    "tft13_goopbuff_ultimatehero_title": "终极英雄",
+    "tft13_goopbuff_intotheunknown_title": "进入未知",
+    "tft13_goopbuff_intotheunknown_desc": "该弈子消失@NumRounds@回合。当该弈子归来时，该弈子会获得@GainedAP@法术强度和@GainedAD*100@%攻击力。",
+    "tft13_goopbuff_ultimatehero_description": "在@NumRounds@回合之后，将1个3星1费弈子升到4星！"
+  },
+  "files": {
+    "map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "zh_cn.tft.stringtable.json.gz": "ae17b0ce7ebc199e3b3c8dbc7fc906cfb0a83a1c45a9d6ce2d4a78e1526ebca4"
+  },
+  "upstream": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+  "rawFourthAbilityVariables": {
+    "singed": {
+      "AttackSpeed": 200.0,
+      "Duration": 4.0,
+      "DR": 0.699999988079071,
+      "HEROSpellBaseDamage": 420.0,
+      "HEROOmnivamp": 0.20000000298023224,
+      "HERODuration": 5.0,
+      "HEROCloudDuration": 3.0,
+      "HEROMoveSpeed": 250.0
+    },
+    "amumu": {
+      "FlatDamageReduction": 35.0,
+      "Damage": 35.0,
+      "DamageRefreshDuration": 1.0,
+      "FlatDRCooldownPerAttacker": 1.0
+    },
+    "draven": {
+      "PercentAD": 1.399999976158142,
+      "BaseDamage": 35.0
+    },
+    "trundle": {
+      "PercentAttackDamage": 2.799999952316284,
+      "GainHealth": 270.0,
+      "AmountIncreaseMax": 0.75
+    },
+    "fish": {
+      "PercentAlliedHealShare": 0.25,
+      "NumAlliesToShare": 2.0,
+      "Damage": 780.0,
+      "Heal": 410.0,
+      "HEROOmnivamp": 0.30000001192092896,
+      "HEROSpellDamageMod": 0.6499999761581421,
+      "HEROMaxHits": 3.0
+    },
+    "shooter": {
+      "PercentAttackDamage": 1.399999976158142,
+      "APDamage": 35.0,
+      "NumOfShots": 6.0,
+      "TotalSpellTime": 1.149999976158142,
+      "ShotsPerSimulatedLaunchAttack": 3.0
+    },
+    "blue": {
+      "Damage": 900.0,
+      "IgniteDuration": 5.0,
+      "FalloffPercent": 0.25,
+      "HERODamage": 900.0,
+      "HEROFalloffPercent": 0.20000000298023224,
+      "HEROFriendlyFire": 0.6000000238418579,
+      "HeroBigFalloffPerc": 0.5
+    },
+    "red": {
+      "PercentAttackDamage": 1.350000023841858,
+      "StunDuration": 0.25,
+      "APDamage": 60.0,
+      "PercentIncreasedAttackDamage": 3.299999952316284,
+      "NumStrikes": 2.0
+    },
+    "vex": {
+      "Damage": 770.0,
+      "SecondaryDamage": 385.0,
+      "DOTDuration": 0.800000011920929
+    },
+    "darius": {
+      "BleedDuration": 4.0,
+      "PercentAttackDamage": 2.4000000953674316,
+      "Heal": 225.0,
+      "BleedPercentAttackDamage": 2.0
+    },
+    "irelia": {
+      "ShieldDuration": 3.0,
+      "ShieldHealth": 675.0,
+      "StrikeBaseDamage": 200.0,
+      "PercentShieldDamage": 0.30000001192092896,
+      "HERODashNum": 2.0,
+      "HEROBaseDashDamage": 3.450000047683716,
+      "HEROAttackSpeed": 0.4000000059604645,
+      "HEROSpellAPBase": 120.0
+    },
+    "zyra": {
+      "TargetDamage": 780.0,
+      "StunDuration": 1.0,
+      "AOEDamage": 290.0,
+      "ExperimentTrueDamage": 0.5,
+      "ExperimentDuration": 2.0,
+      "NumSmallerVines": 2.0
+    },
+    "lux": {
+      "Damage": 1260.0,
+      "Shield": 300.0,
+      "ShieldDuration": 4.0,
+      "DamageReduction": 0.3499999940395355
+    },
+    "morgana": {
+      "Damage": 1550.0,
+      "ShieldReavePercent": 0.5,
+      "Duration": 10.0
+    }
+  }
+}

@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
   plugins: [phaserFlags, stripAssetChecks],
+  build: { rollupOptions: { output: { manualChunks(id) {
+    if (/[\\/]node_modules[\\/]phaser[\\/]/.test(id)) return 'phaser';
+  } } } },
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.

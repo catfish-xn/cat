@@ -5,7 +5,7 @@
  * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note. The player sees the
  * 14.24 zh_cn client name and tooltip (`ABILITY_ZH`, same tokens as the English content text) where the client has one.
  */
-import { abilityDisplayName, abilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
+import { abilityDisplayName, abilityDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { ABILITY_ZH } from './ability-zh';
@@ -66,7 +66,8 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
   const zh = Object.hasOwn(ABILITY_ZH, data.id) ? ABILITY_ZH[data.id] : undefined;
   try {
-    const values = abilityDisplayValues(definitionId, star, stats);
+    const values = starLevel === 4 ? ultimateHeroAbilityDisplayValues(definitionId, stats)
+      : abilityDisplayValues(definitionId, star, stats);
     return { name: zh?.name ?? abilityDisplayName(definitionId), ...fillAbilityTemplate(zh?.text ?? data.description, values) };
   } catch (error) {
     if (error instanceof RangeError) return null;

@@ -1,6 +1,6 @@
 import {g23RadiantProgram} from './g2-3-radiant-programs';
 import {ITEM_DEFINITIONS as ORDINARY} from './items';
-import {G23_SPECIAL_ITEM_SOURCE,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
+import {G23_SPECIAL_ITEM_SOURCE,G23_RADIANT_MAPPING} from './g2-3-special-item-runtime';
 import type {Effect,ItemDefinition} from '../strategy-types';
 import {G24_MECHANISM_ITEMS} from './g2-4b-mechanism-items';
 import type {ItemProgram} from '../m8/item-program';
@@ -35,7 +35,7 @@ export const G23_SPECIAL_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeCon
  if(gloves)program.effects=[...program.effects??[],...ORDINARY['thiefs-gloves'].combatProgram!.effects!];
  // G2-4a: the crown has no combat stats; its permanent team size lives in deployment-cap.ts, its win gold in g2-3-economy.ts.
  const crown=id==='TFT_Item_ForceOfNature';
- return [id,{id,apiName:id,name:s.name,kind:isRadiant?'radiant':'completed',...(isRadiant?{radiantOf:Object.keys(G23_RADIANT_MAPPING).find(k=>(G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[k]===id)!}:{}),...(!isRadiant&&id.includes('TFT13_')?{restriction:{kind:'trait' as const,traitId:'chem-baron'}}:{}),evidenceStatus:'approved-provisional',unique:s.unique,slotCost:gloves?3:1,effects,combatProgram:program,conventionIds:['G23-SPECIAL-FINITE-01'],effectDescriptions:crown?['获得时队伍人口上限永久+1，与是否装备无关。','装备在出战单位身上时，每次赢下战斗有10%几率掉落1金币。']:['有限奖励装备：源基础属性与部分程序；省略清单见 G2-3 RECONCILIATION。']} satisfies ItemDefinition];
+ return [id,{id,apiName:id,name:crown?'金铲铲冠冕':s.name,kind:isRadiant?'radiant':'completed',...(isRadiant?{radiantOf:Object.keys(G23_RADIANT_MAPPING).find(k=>(G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[k]===id)!}:{}),...(!isRadiant&&id.includes('TFT13_')?{restriction:{kind:'trait' as const,traitId:'chem-baron'}}:{}),evidenceStatus:'approved-provisional',unique:s.unique,slotCost:gloves?3:1,effects,combatProgram:program,conventionIds:['G23-SPECIAL-FINITE-01'],effectDescriptions:crown?['获得时队伍人口上限永久+1，与是否装备无关。','装备在出战单位身上时，每次赢下战斗有10%几率掉落1金币。']:['有限奖励装备：源基础属性与部分程序；省略清单见 G2-3 RECONCILIATION。']} satisfies ItemDefinition];
 })));
 /** Acquisition pools/recipes retain the ordinary 44-entry catalogue. Domain ownership admits reward-only identities too. */
 export const ITEM_DEFINITIONS:Readonly<Record<string,ItemDefinition>>=freezeContent({...ORDINARY,...G23_SPECIAL_ITEMS,...G24_ARTIFACT_ITEMS,...G24_SUPPORT_ITEMS,...G24_MECHANISM_ITEMS});

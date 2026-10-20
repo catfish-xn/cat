@@ -1,10 +1,12 @@
 # M5 Match contract v5
 
-## v15 统一身份（2026-10-20，覆盖下文历史交接状态）
+## v16 当前身份（2026-10-20，覆盖下文历史交接状态）
 
-当前 rules/content 为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+#265 体积方案：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用，无构建期替换。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，覆盖范围和 FNV-1a UTF-16 算法不变，四张归档表的说明来源列仍参与完整内容根。`node scripts/update-content-identities.cjs --check` 校验，`--write` 重算；CI fast 测试每次从完整表重算并对比常量。当前值仍为 CONTENT `fnv1a32-utf16:de829c8a`、LOOT `fnv1a32-utf16:62c76cb9`；规则 manifest `fnv1a32-utf16:31950a0f` 不变。规则、内容、存档与协议版本均不变。
 
-用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 54、联机 53（仅排除 `avarice-incarnate`），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
+当前 rules/content 为 `s13-g2-3-v16` / `s13-14.24b-g2-3-v16`（v16 变更见下文 v16 小节与 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)；以下 v15 说明为历史）。v15 时为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+
+用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 56、联机 55（v16 加入终极英雄、进入未知；联机仍仅排除 `avarice-incarnate`；v15 时为 54/53），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
 
 新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
 
@@ -668,3 +670,41 @@ P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循�
 本包承诺数值与主要效果对齐；原版互斥（一费奉献 II ↔ 一对4、冕已有卫 ↔ 不是今天）不在本 PR 范围。
 
 购买触发的 P2 重试与卖出入口沿用同一冻结边界：`phase === 'combat'` 或 `isCombatRosterLocked(state)` 时不重试；这些阶段释放的备战席容量不会触发可能合并棋盘英雄的赠品。下一次合法准备操作仍按原计划重试。
+
+## v16：史诗奖励、复制器、统一重铸器（2026-10-20）
+
+#265 方案 A：1–4阶段原法球先完成全部原内容抽取，再追加独立复制器抽签。派生种子为 `JSON.stringify(['orb-duplicator-v16', state.seed, orbId])` 的 FNV-1a UTF-16（初值2166136261，逐字符 XOR 后乘16777619取uint32），随后使用全新 lcg32-v1 拒绝采样 `%100`；各珠独立，棱彩及5阶段以后不执行。原 loot/layout/shop/choice 流均不推进，1-3/1-4原掉落保持v15；新增entry排在原珠内容之后。完整次序及抽样界限见 M8B_LOOT §11。
+
+本节覆盖旧 R4 的两个重铸器及旧 5-7/6-7 奖励说明。完整冻结表、预算、RNG 次序、约定值与验收记录见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md) 和 [M8B_LOOT §11](M8B_LOOT.md#11)。规则身份为 s13-g2-3-v16，内容身份为 s13-14.24b-g2-3-v16；旧存档严格拒绝，不迁移。schema7/save3/replay3/command4 保持。
+
+公共命令 useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult 与 previewUseConsumable(state:Readonly<MatchState>,consumableId:string,target:ConsumableTarget):ConsumablePreview 签名不变。definitionId 仅 magnetic-remover、reforger、TFT_Consumable_ChampionDuplicator_III、TFT_Consumable_NeekosHelp；客户端传唯一实例 consumableId。target 的兼容联合仍接受 item 形状，但本版四种工具都只接受己方 unit 目标。成功 effect 是 remove-all / reforge-all / duplicate-unit；预览不抽随机结果、不授予资源。
+
+失败全集：wrong-phase、unknown-consumable、temporary-item、unknown-item、unknown-unit、invalid-consumable-target、no-removable-items、bench-full；后两种旧兼容身份保留，空装备重铸返回 invalid-consumable-target，空装备拆卸返回 no-removable-items。复制器目标不合法/超过费用上限返回 invalid-consumable-target；满席一律 bench-full，包含本可能合星的情况。失败保持原对象、事件/资源/RNG/ID 全不变。满席约束仅复制器使用；普通奖励仍按原容量路径处理。
+
+重铸按永久装备槽号升序处理全部装备，产物全部进库存；普通组件/成装分别从8/36池排除自身后等权抽样，光明/神器/辅助从各自已上线池抽，纹章或未知/无其他候选原物原ID退回且不抽RNG。临时战斗装备不进此数组；窃贼父件移除仍遵守原临时子件生命周期。成功每件随机换物分配新永久ID；原样退回不分配ID。收据 outputs[] 保存全部输出，output 保留首件兼容字段；copiedUnit 保存复制目标出生ID与定义，非复制用途为null；恢复重新验证来源、槽序、随机游标、输出和出生事实。
+
+LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_ArmoryKeyOrnn',quantity:1}。领域内部 epicForgeOffers(seed:number,receiptId:string,selector:string):readonly string[] 返回既有 G24 独立流的四个不同候选；openEpicForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]} 只开启现有 forge choice。客户端继续 selectChoice，不新增发奖入口。收据ID为 JSON ['epic-forge',lootReceiptId]，source=epic-loot；恢复必须绑定原锻造器领取收据与合法候选。单机6-7终局无法打开选择时沿用现有首候选策略，英雄保持 retained-terminal；重复step/恢复不重发。冠冕沿用现有永久人口+1路径，当前战斗只读冻结前缀中已存在的收据。
+
+英雄复制器费用上限null，次级上限3；复制获得1星，随后沿用现有正常升星路径。单机直接授予；联机创建现有机制英雄法球，claimOrb时同一共享池事务扣库存，缺货折费用金币、满席按getUnitSellPrice折金。useConsumable仅消费工具并产生唯一来源事实，不另算卡池。
+
+### v16 D14 专用异常
+
+`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。目录56，联机排除 avarice-incarnate 后55；报价按目标资格过滤，旧权重不变。
+
+`MatchBase.d14?:D14Progress` 是私有持久状态；生产证书只由已接纳选择收据、资源事实与结算历史认证，不单凭存档 phase 授权。`readCombatStrategyInputs` 和 `PlayerBattleSnapshot` 可含 `d14Combat:{unitId,anomalyId,phase:'waiting'|'promoted'|'returned'}`，仅对可见绑定有效；离场单位不编入人口/羁绊/战斗。`restorePlayerBattleSnapshot` 结构校验，来源认证仍由上游可信 Match 完成；offline `restoreMatch` 继续拒绝联机完整存档。
+
+真实结算三次后准备边界生效，满席进入未知继续托管；解锁的 deploy/sell/claim 等资源命令后重试。新 `d14Promoted` / `d14Returned` Match 事件只表示阶段转换；资源账本的 `d14-selected`（含已验证装备清单）/`d14-returned`（含真实结算 ordinal）不产生资源奖励。物理三星不改，专用有效四星基础58320Bps、售价与该英雄三星同价、退池9份是明确项目约定；出售及私有 sellGold 均复用 `getUnitSellPrice({definitionId,starLevel:3})`（1费9、2费17），不保留写死售价，不扩大仅一费的目标准入；不提供通用四星合成接口。完整来源、时序和显示字段见 EPIC_LOOT_V16 与 UI_REQUESTS V16-UI-250。
+
+调用方继续使用 Match 公共命令与 `snapshotForBattle(state:MatchState,seatId:string):PlayerBattleSnapshot`；不应直接调用下面的规则内部接线函数。既有命令失败枚举不增加：目标资格失败为 `invalid-target`，过期 choice/generation、阶段错误与金币不足沿用原合同。内部恢复失败抛出 `RangeError`，不是可提交的部分成功。
+
+| 内部导出（`d14-runtime.ts`，除特别标注） | 输入与输出 |
+| --- | --- |
+| `eligibleD14Target(unit:Unit\|undefined,id:string):boolean` / `isD14(id:string):boolean` | 纯资格/身份检查，无资源与 RNG 变化；非 D14 的目标资格交还原合同。 |
+| `acquireD14(state:MatchState):MatchState` / `reconcileD14(state:MatchState,events?:MatchEvent[]):MatchState` | 成功选择后的唯一证书/托管转换及结算重试；事件追加到调用方事务数组；无变化返回原引用。 |
+| `d14OwnedUnits(state):readonly Unit[]` / `d14OwnedItems(state):readonly ItemInstance[]` | 合并可见与托管资源，仅用于资源守恒/共享池；不能据此生成战斗阵容。 |
+| `d14Certificate(state):D14CombatCertificate\|undefined` / `d14PrivateDisplay(state:MatchState)` | 最小战斗证书及本席展示 DTO；完整字段见 V16-UI-250。 |
+| `validateD14(state:MatchState,context:ResourceProvenanceContext):void` | 使用已认证账本/选择收据校验全快照；缺失、篡改或时序不符抛出异常。 |
+| `d14HeldAtPrefix(state:MatchState,prefix:number)` / `d14CertificateAtCombat(state:MatchState)` | 由当前战斗的已认证来源前缀重建隐藏资源 ID 与当时证书，不信任候选战斗字段。 |
+| `d14UnitBase(unit:Pick<Unit,'definitionId'\|'starLevel'>,promoted:boolean)`（`d14-anomalies/projection.ts`） | 返回 `{base:ResolvedUnitStats,ability:ResolvedAbility}`；调用方先认证证书，非法专用晋升抛出 `RangeError`。全部效果源随后仅解析一次。 |
+
+`restoreD14` 保留为独立 D3/D14 事务包 API；生产 `restoreMatch` 使用上述 Match/B8 账本认证，不要求另传或信任独立包的候选命令日志。两个恢复入口的可信边界不同，不能混用。

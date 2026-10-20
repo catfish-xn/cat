@@ -9,6 +9,7 @@ export const PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1';
 export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 /** Server-private frozen assets. No economy, shop, random stream or resolved combat numbers. */
 export interface PlayerBattleSnapshot {
+  readonly d14Combat?:import('./d14-runtime').D14CombatCertificate;
   /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
   readonly bankGold?:number;
   readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;

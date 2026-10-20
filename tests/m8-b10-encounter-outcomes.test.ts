@@ -63,9 +63,11 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      // D4: the terminal Herald package grants its one-time remover as well as 5G.
-      expect(receipts.map(r => r.payload)).toEqual([{ kind: 'gold', quantity: 5 },
-        { kind: 'consumable', definitionId: 'magnetic-remover', quantity: 1 }]);
+      // Seed42 after the independent additive bonus stream: both literal-table
+      // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
+      expect(receipts.map(r => r.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},
+        {kind:'unit',definitionId:'leona',quantity:1},{kind:'gold',quantity:1},
+        {kind:'unit',definitionId:'ekko',quantity:1},{kind:'gold',quantity:4}]);
     }
   });
 });

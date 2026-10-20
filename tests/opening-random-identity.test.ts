@@ -13,7 +13,7 @@ const bytes = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url));
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const load = (p: string) => JSON.parse(bytes(p).toString());
 const baseline = () => load('tests/g2-4b-content-baseline.json');
-const currentBaseline = () => load('tests/v15-content-baseline.json');
+const currentBaseline = () => load('tests/v16-content-baseline.json');
 const g23 = () => load('tests/g2-3-content-baseline.json');
 
 it('preserves the historical opening-random to G2-3 identity chain', () => {
@@ -85,7 +85,8 @@ it('binds preserved G2-4b checkpoints to historical G2-3 byte evidence', () => {
 });
 
 it('binds v15 to fresh public rules and preserved G2-4b byte evidence', () => {
-  const recorded = currentBaseline(), previous = baseline(), fresh = createMatch(42);
+  const recorded = load('tests/v15-content-baseline.json'), previous = baseline(), fresh = JSON.parse(gunzipSync(bytes('tests/fixtures/v15-recorded-states/cannon.json.gz')).toString()).states[0];
+  const CONTENT_DIGEST=fresh.contentDigest,LOOT_REPLAY_DIGEST=fresh.m8.loot.frozen.replayDigest;
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
@@ -132,6 +133,54 @@ it('binds v15 to fresh public rules and preserved G2-4b byte evidence', () => {
   }
 });
 
+it('binds v16 to fresh public rules and preserved G2-4b byte evidence', () => {
+  const recorded = currentBaseline(), previous = load('tests/v15-content-baseline.json'), fresh = createMatch(42);
+  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
+    expect(fresh[key]).toBe(recorded[key]);
+  expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
+  expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
+  // v16 has its own identity; retained v14 evidence remains byte-for-byte unchanged.
+  expect(recorded.contentDigest).not.toBe(previous.contentDigest);
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v16');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v16');
+  expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
+  expect(recorded.contentVersion).not.toBe(previous.contentVersion);
+  expect(recorded.previousContentDigest).toBe(previous.contentDigest);
+  expect(recorded.previousLootReplayDigest).toBe(previous.lootReplayDigest);
+  const audit = load('docs/evidence/v16/release-audit.json');
+  expect(audit.baseline).toEqual(recorded);
+  expect(audit.baseCommit).toMatch(/^[0-9a-f]{40}$/);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v15.json'))).toBe(audit.previousGoldenSha256);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v16.json'))).toBe(audit.candidateSha256);
+  const historicalAudit = load('docs/evidence/v15/release-audit.json');
+  expect(audit.previousGoldenSha256).toBe(historicalAudit.candidateSha256);
+  for (const build of ['cannon', 'sniper']) {
+    const oldBytes = bytes(`tests/fixtures/v15-recorded-states/${build}.json.gz`);
+    const currentBytes = bytes(`tests/fixtures/v16-recorded-states/${build}.json.gz`);
+    const evidence = audit.builds[build].recording;
+    expect(sha(oldBytes)).toBe(evidence.previousGzipSha256);
+    expect(sha(oldBytes)).toBe(historicalAudit.builds[build].recording.gzipSha256);
+    expect(sha(currentBytes)).toBe(evidence.gzipSha256);
+    expect(evidence.byteEvidence.previousBytes).toBe(oldBytes.length);
+    expect(evidence.byteEvidence.currentBytes).toBe(currentBytes.length);
+    expect(evidence.textAndObjectRestoreBytesEqual).toBe(true);
+    const old = JSON.parse(gunzipSync(oldBytes).toString()).states;
+    expect(old).toHaveLength(67);
+    for (const state of [old[0], old.at(-1)]) {
+      expect(() => restoreMatch(state)).toThrow();
+      expect(() => restoreMatch(JSON.stringify(state))).toThrow();
+    }
+  }
+  const inputs = load('docs/evidence/v16/input-fixture-audit.json');
+  expect(inputs.baseCommit).toBe(audit.baseCommit);
+  expect(inputs.contentDigest).toBe(recorded.contentDigest);
+  for (const [path, raw] of Object.entries(inputs.files)) {
+    const evidence = raw as {previousSha256: string; currentSha256: string};
+    expect(sha(bytes(path))).toBe(evidence.currentSha256);
+    expect(sha(bytes(path.replace('v16-', 'v15-')))).toBe(evidence.previousSha256);
+  }
+});
+
 it('rejects each old release identity without migration shortcuts', () => {
   const fresh = createMatch(42);
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const)
@@ -155,7 +204,7 @@ it('rejects each old release identity without migration shortcuts', () => {
 });
 for (const build of ['cannon', 'sniper']) {
   const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
-  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/v15-recorded-states/${build}.json.gz`)).toString()).states;
+  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/v16-recorded-states/${build}.json.gz`)).toString()).states;
   it(`${build}: preserves all 67 raw checkpoints and rejects old first/final states`,()=>{
     expect(old).toHaveLength(67);expect(current).toHaveLength(67);
     for (const state of [old[0], old.at(-1)]) expect(() => restoreMatch(state)).toThrow();

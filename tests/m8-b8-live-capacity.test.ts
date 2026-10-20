@@ -9,7 +9,7 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 20_000 });
 const prefix=fillBench(await publicPrefix('3-7',36,'cannon',['bulky-buddies-i']),['tristana']);
 // v15's expanded augment pool changes the real combat program. Two public
-// moves retain the original exact reveal-117 / final-137 boundary and resources.
+// moves retain the merged exact reveal-117 / final-137 boundary and resources.
 const moved=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
 const prepared=accepted(api.deployMatchUnit(moved,'unit-1',{kind:'board',cell:{col:3,row:4}}));
 const live=battle(prepared),waiting=live.ended;
@@ -75,12 +75,12 @@ describe('B8 live lethal PvE with randomized orbs',()=>{
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(scenario.deaths);
   expect(s.roundResults.at(-1)).toMatchObject({hpBefore:3,hpAfter:0,hpLost:3,result:'enemyWin'});
   const drops=plan(s).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
-  expect(s.m8.loot.direct.filter(d=>ids.has(d.dropId)).map(d=>d.status)).toEqual(scenario.earned?['granted','granted','retained-terminal','granted']:Array(4).fill('forfeited'));
+  expect(s.m8.loot.direct.filter(d=>ids.has(d.dropId)).map(d=>d.status)).toEqual(scenario.earned?['granted','granted','retained-terminal','granted','granted']:Array(5).fill('forfeited'));
   expect(s.nextUnitSerial).toBe(preparation.nextUnitSerial);expect(s.preparation).toEqual(preparation.preparation);
   expect(s.nextItemSerial).toBe(preparation.nextItemSerial+(scenario.earned?2:0));
   expect(s.m8.loot.choiceResolutions).toEqual([]);expect(s.pendingChoice).toBeNull();
   expect(l.events.filter(e=>e.type==='roundSettled')).toHaveLength(1);
-  expect(l.events.filter(e=>e.type==='lootGranted')).toHaveLength(scenario.earned?3:0);
+  expect(l.events.filter(e=>e.type==='lootGranted')).toHaveLength(scenario.earned?4:0);
   expect(s.scheduleReceipts).toEqual(preparation.scheduleReceipts);expect(s.m8.loot.frozen).toEqual(preparation.m8.loot.frozen);
   const hero=drops.find(d=>d.payload.kind==='unit')!;
   reject(s,scenario.earned?'unit capacity status':'qualification evidence',x=>{x.m8.loot.direct.find((d:any)=>d.dropId===hero.dropId).status='pending-capacity';});

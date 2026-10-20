@@ -1,4 +1,4 @@
-import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
@@ -48,7 +48,7 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
     }
     if(e.mechanic==='emissary'){
       if(trait.memberDefinitionIds.includes('nami'))result.push({kind:'mechanic',mechanic:'extraAttackMana',values:{amount:e.values.mana}});
-      if(trait.memberDefinitionIds.includes('tristana'))result.push({kind:'attackSpeedBps',bps:e.values.starSpeedBps*unit.starLevel});
+      if(trait.memberDefinitionIds.includes('tristana'))result.push({kind:'attackSpeedBps',bps:e.values.starSpeedBps*(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted'?4:unit.starLevel)});
       if(trait.memberDefinitionIds.includes('ambessa')){
         const wins=unit.team!=='player'?0:state.priorPvpWins??priorPvpWins(state.roundResults??[],state.round),amount=wins*e.values.armorPerWin;
         result.push({kind:'statFlat',stat:'armor',amount},{kind:'statFlat',stat:'magicResist',amount});

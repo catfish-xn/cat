@@ -28,7 +28,7 @@ export interface FrozenLootRound {
  * One authoritative frozen plan per entered PvE. Never copy these into a second writable plan.
  */
 export interface FrozenLootLedger {
-  readonly version: 's13-orb-freeze-v1';
+  readonly version: 's13-orb-freeze-v16';
   readonly seed: number;
   readonly replayDigest: string;
   readonly throughRoundOrdinal: number;

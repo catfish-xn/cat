@@ -139,6 +139,8 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
       }
     } else if (payload.kind === 'item') {
       const grant = grantItem(state, payload.definitionId, receiptId); state = grant.state; grantedItemIds = grant.grantedItemIds;
+    } else if(payload.kind==='forge') {
+      // The claim receipt owns one pending four-choice forge. No item is minted yet.
     } else if(payload.kind==='consumable') {
       const serial=state.nextConsumableSerial;
       if(!Number.isSafeInteger(serial+1)||serial<1)throw new RangeError('Invalid consumable serial');

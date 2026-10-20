@@ -1,3 +1,4 @@
+import { validateEpicForges } from './epic-forges';
 import { validateAugmentAcquisition } from './augment-acquisition';
 import { validateD11Acquisition } from './d11-fill';
 import type {MatchState} from './match-types';
@@ -12,6 +13,7 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 /** Shared restore checks for G23 escrow, pending offers, receipts and settlement history.
  * Runs no grant hooks and consumes no live RNG; callers still validate the surrounding seat/save. */
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
+ validateEpicForges(state);
  validateP2Gifts(state);
  validateD11Acquisition(state);
  const equal=parsedJsonInput?equalValidatedContent:(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);

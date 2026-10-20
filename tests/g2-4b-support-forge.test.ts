@@ -126,7 +126,7 @@ it('tier 13 automatically grants the three fixed supports, remover and 20 gold e
 });
 
 it('completed reforger rejects every support in inventory and on a holder without tool, receipt or RNG changes',()=>{
- const base=accepted(nextRound(publicConsumables(162),10)),tool=base.consumables.find(c=>c.definitionId==='completed-reforger')!;
+ const base=accepted(nextRound(publicConsumables(162),10)),tool=base.consumables.find(c=>c.definitionId==='reforger')!;
  for(const definitionId of supportIds){
   const state=accepted(grantMechanicItem(base,{receiptId:'fixture:support',source:'fixture',definitionId}));
   const item=state.items.at(-1)!,unit=state.preparation.units.find(u=>u.team==='player')!;
@@ -139,7 +139,9 @@ it('completed reforger rejects every support in inventory and on a holder withou
  }
  expect(REFORGE_POOLS.completed.some(i=>supportIds.includes(i.definitionId))).toBe(false);
  const ordinary=accepted(grantMechanicItem(base,{receiptId:'fixture:ordinary',source:'fixture',definitionId:'warmog'}));
- const reforged=accepted(useConsumable(ordinary,tool.consumableId,{kind:'item',itemId:ordinary.items.at(-1)!.id}));
+ const holder=ordinary.preparation.units.find(u=>u.team==='player')!;
+ const equipped=accepted(equipItem(ordinary,ordinary.items.at(-1)!.id,holder.id,0));
+ const reforged=accepted(useConsumable(equipped,tool.consumableId,{kind:'unit',unitId:holder.id}));
  const forged={...reforged,resourceProvenance:{...reforged.resourceProvenance,entries:reforged.resourceProvenance.entries.map(f=>f.kind==='consumable-used'?{...f,record:{...f.record,affectedItems:f.record.affectedItems.map(i=>({...i,definitionId:supportIds[0]}))}}:f)}};
  expect(()=>validateConsumableState(forged)).toThrow('Invalid consumable ledger');
 });

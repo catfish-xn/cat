@@ -29,7 +29,8 @@ function publicAnomalyPrefix(seed = 42) {
 // The existing public-neutral fixture also builds its public route at module setup.
 // Test bodies retain Vitest's unchanged 5s limit; no workload or assertion is skipped.
 const publicPrefix = await publicAnomalyPrefix();
-// Keep the six existing routes on seed 42; seed 44 reaches nothing-wasted within 100 rerolls in the expanded pool.
+// Keep five routes on seed 42; seed 44 publicly affords both nothing-wasted
+// and dragonsoul within the existing 100-reroll budget in the expanded pool.
 const nothingWastedPrefix = await publicAnomalyPrefix(44);
 
 it('independently checks every new coefficient and Chinese label against compressed raw, with no archive writes', () => {
@@ -70,7 +71,7 @@ it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the ex
   const next = stepMatch(combat).state; expect(restoreMatch(serializeMatch(next))).toEqual(next);
 });
 it.each(['the-finisher','touch-of-frost','fireball','dragonsoul','nothing-wasted','thornskin','knockout'])('%s is publicly selectable and strictly restores after entering and advancing combat',async id=>{
-  let s=id==='nothing-wasted'?nothingWastedPrefix:publicPrefix;
+  let s=id==='nothing-wasted'||id==='dragonsoul'?nothingWastedPrefix:publicPrefix;
   const target=s.preparation.units.find(u=>u.team==='player')!;
   // Pay for rerolls with real sales from the acquired army, retaining the bound target.
   for(const other of s.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))s=accepted(sellUnit(s,other.id));

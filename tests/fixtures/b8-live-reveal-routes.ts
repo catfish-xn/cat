@@ -1,14 +1,15 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
-// v15 independent-oracle seed search preserves the original exact partial-death assertions.
+// #265 independent bonus stream restores the original v15 public acquisition vectors.
 export const PARTIAL_REVEAL_SEEDS = {loris:139464,zyra:3464} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command, preserving the exact tick/eventSeq assertions below.
-export async function simultaneousPrefix():Promise<api.MatchState>{
+export const SIMULTANEOUS_REVEAL_SEED=242874;
+export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[
   {definitionId:'irelia',col:1,row:4},{definitionId:'lux',col:5,row:7},
@@ -16,7 +17,7 @@ export async function simultaneousPrefix():Promise<api.MatchState>{
   {definitionId:'zoe',col:3,row:7},{definitionId:'loris',col:5,row:4},
   {definitionId:'leona',col:0,row:5},{definitionId:'zyra',col:1,row:7},
  ];
- let state=await configuredPrefix('4-7',{build:'mage',seed:242874,goldReserves:{'4-7':0},goldReserveByRound:{'4-5':100,'4-7':100},
+ let state=await configuredPrefix('4-7',{build:'mage',seed,goldReserves:{'4-7':0},goldReserveByRound:{'4-3':100,'4-5':100,'4-7':100},
   augmentPriorities:['bronze-for-life-ii','pumping-up-iii','item-collector-ii'],anomalyDefinitionId:'protective-shielding',anomalyTargetDefinitionId:'zoe',
   equipmentTargets,reservedComponents:['sword','vest','belt','rod','cloak','bow','gloves','tear'],supplyChoices:['sword','rod','sword']});
  while(state.level<8){const r=api.buyXp(state);if(!r.ok)break;state=r.state;}
@@ -33,7 +34,7 @@ export async function simultaneousPrefix():Promise<api.MatchState>{
   if(complete())break;
   const result=api.rerollShop(state);if(!result.ok)break;state=result.state;
  }
- if(state.level<8||!complete())throw Error('Public simultaneous route did not form eight two-star holders');
+ if(state.level<8||!complete())throw Error('Public simultaneous roster '+JSON.stringify({gold:state.gold,level:state.level,missing:board.filter(w=>!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===w.definitionId&&u.starLevel===2)).map(w=>w.definitionId),anomaly:state.anomalyBinding,units:state.preparation.units.filter(u=>u.team==='player').map(u=>[u.definitionId,u.starLevel])}));
  const kept=board.map(w=>state.preparation.units.find(u=>u.team==='player'&&u.definitionId===w.definitionId&&u.starLevel===2)!);
  const keep=new Set(kept.map(u=>u.id));
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!keep.has(u.id)))state=accepted(api.sellUnit(state,unit.id));
