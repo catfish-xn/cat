@@ -105,7 +105,7 @@ export async function recountParticles(write, parseParticleDocument, { particleM
 export function trialActionBindings(manifest, systemRows, sharedRows = []) {
   const actionEffects = { jinx: { attack: [], cast: [] }, vi: { attack: [], cast: [] } };
   const variants = { W: { jinx: { cast: [] } }, E: { jinx: { cast: [] } }, R: { jinx: { cast: [] } },
-    Q: { vi: { cast: [] } }, crit: { vi: { attack: [] } } };
+    Q: { vi: { cast: [] } } };
   const playback = {}, unavailable = [];
   const select = (unit, suffix, target, phase, anchor, bone, delay = 0, maxDuration = 1) => {
     const row = systemRows[unit].find(r => r.sourcePath.endsWith(`_Base_${suffix}`));
@@ -140,17 +140,22 @@ export function trialActionBindings(manifest, systemRows, sharedRows = []) {
     ['Q_Tar', 'impact', 'target', undefined, 0.45, 0.8],
   ]) select('vi', suffix, variants.Q.vi.cast, phase, anchor, bone, delay, duration);
   actionEffects.jinx.cast = [...variants.R.jinx.cast]; actionEffects.vi.cast = [...variants.Q.vi.cast];
-  const missingShared = [];
-  for (const [key, target] of [['TFT_Global_BA_Hit', actionEffects.vi.attack], ['TFT_Global_BA_Crit', variants.crit.vi.attack]]) {
+  const missingShared = [], unboundShared = [];
+  for (const key of ['TFT_Global_BA_Hit', 'TFT_Global_BA_Crit']) {
     const row = sharedRows.find(r => r.sourcePath.toLowerCase().includes(key.toLowerCase()));
+    // ActionState has attack but no crit discriminator. Export the Crit effect
+    // for inspection, without inventing a crit event or binding it to attack.
+    if (key === 'TFT_Global_BA_Crit') unboundShared.push({ unit: 'vi', key,
+      effectId: row?.path ? row.effectId : null, reason: 'action-state-has-no-crit-discriminator' });
     if (!row?.path) { missingShared.push(key); continue; }
     if (!manifest.effects[row.effectId]) throw new Error('dangling-trial-binding');
-    target.push(row.effectId);
+    if (key === 'TFT_Global_BA_Crit') continue;
+    actionEffects.vi.attack.push(row.effectId);
     playback[row.effectId] = { status: 'approximated', convention: 'shared-basic-attack-target-preview-delay',
       phase: 'impact', anchor: 'target', delay: 0.35, maxDuration: 0.5 };
   }
   return { schemaVersion: 1, status: 'approximated', convention: 'Medium-only-muzzle; default-Jinx-R-Vi-Q; explicit-child-substitution; stage-delays-are-preview-values-not-gameplay',
-    actionEffects, variants, playback, unavailable, missingShared };
+    actionEffects, variants, playback, unavailable, missingShared, unboundShared };
 }
 
 export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'assets3d-local/trial/local', force = false,
@@ -200,13 +205,17 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
     manifest.models[id] = { ...model, path: `${prefix}${model.path}` };
   }
   const global = await globalVfx({ source, force });
-  const globalTextures = new Map();
+  const globalTextures = new Map(), textureConversions = [];
   for (const f of global.report.files.filter(f => /\.(tex|dds)$/i.test(f.path))) {
     const bytes = await readFile(await safeInputPath(resolve('assets3d-local/global-vfx/extracted'), resolve('assets3d-local/global-vfx/extracted', f.path)));
     try {
       const png = encodePng(decodeTexture(bytes)), path = `global/textures/${f.path.replace(/\.(tex|dds)$/i, '.png')}`;
       await write(path, png); globalTextures.set(canonical(f.path), path);
-    } catch (error) { global.report.failures.push({ path: f.path, stage: 'texture-convert', reason: error.message }); }
+      textureConversions.push({ source: f.path, status: 'converted', path });
+    } catch (error) {
+      global.report.failures.push({ path: f.path, stage: 'texture-convert', reason: error.message });
+      textureConversions.push({ source: f.path, status: 'rejected', reason: error.message });
+    }
   }
   const shared = convertParticles(global.systems, p => globalTextures.get(canonical(p)), parseParticleDocument, { particleMode: mode, approximateLinger: true });
   const sharedOutput = await writeParticleEffects('global', shared, {}, {
@@ -214,7 +223,12 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
     remove: async p => { try { await unlink(await safeOutputPath(join(output, p), { force: true })); } catch (e) { if (e.code !== 'ENOENT') throw e; } },
   });
   Object.assign(manifest.effects, sharedOutput.effects);
-  await write('global-vfx-status.json', json({ ...global.report, counts: shared.counts }));
+  await write('global-vfx-status.json', json({ ...global.report, counts: shared.counts, textureConversions,
+    systems: sharedOutput.systems.map(row => {
+      const system = shared.systems.find(s => s.sourcePath === row.sourcePath);
+      return { ...row, emitters: system.report.map(r => ({ sourcePath: r.sourcePath,
+        name: r.originalFields.emitterName, status: r.status, reason: r.reason })) };
+    }) }));
   const bindings = trialActionBindings(manifest, systemRows, sharedOutput.systems);
   manifest.actionEffects = bindings.actionEffects;
   // Validate every alternative action table through the real manifest contract.
@@ -226,7 +240,8 @@ export async function fxTrial({ out = 'assets3d-local/fx-trial', source = 'asset
   await write('trial-status.json', json({ modelBuildReady: true, particleMode: mode, particleDocumentsValidated: true, shellConnected: false,
     effectDocuments: Object.keys(manifest.effects).length, counts: summary.totals,
     globalVfx: { found: global.report.found, downloadBytes: global.report.downloadBytes, report: '../global-vfx/report.json' },
-    blockers: ['vi-shared-basic-attack-hit-system-not-in-cache', 'shell-has-no-particle-wiring'] }));
+    blockers: [...(bindings.missingShared.includes('TFT_Global_BA_Hit') ? ['vi-shared-basic-attack-hit-system-unavailable'] : []),
+      'shell-has-no-particle-wiring'] }));
   return summary;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

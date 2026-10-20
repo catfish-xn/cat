@@ -1,13 +1,13 @@
-# 粒子映射第二轮：视觉近似模式
+# 粒子映射第二、三轮：视觉近似与共享普攻 VFX
 
-2026-10-20；起点：`codex/assets3d-particles-map@52688b3`。方案 A 已按用户决定实施。
+2026-10-20；第二轮基线：`52688b3`，第三轮起点：`codex/assets3d-particles-map@8a983024`。方案 A 已按用户决定实施。
 
 ## 交付与边界
 
 - 独立根：`assets3d-local/fx-trial/manifest.json`，含 jinx、vi 的自包含 GLB、effects、纹理、静态 mesh、`actionEffects`；阶段/挂点/寿命在 `action-bindings.json`。
 - `fx-trial.mjs --particle-mode approximate|strict`，默认 approximate；strict 保持第一轮的 linger opt-in，其余拒绝逻辑原封保留。底层 `mapEmitter/convertParticles` 与通用 build API 默认 strict，避免改变既有调用者；通用 build 也可显式传开关。
 - 未改 `src/rendering/three-mode/placeholder-renderer.ts`。此交付证明可供现有 v2 runtime 分配几何/材质和回收；**未完成外壳接线或浏览器 GPU 视觉验收**。
-- `trial/`、`source-json/`、`prepared/`、`out/` 为只读输入联接，未向其中写入。新产物只在 `fx-trial/`、`global-vfx/`；测试临时目录在真实根下新建并清理，日志在 `artifacts/particles-map-round2-tests/`。
+- `trial/`、`source-json/`、`prepared/`、`out/` 为只读输入联接，未向其中写入。第三轮新产物只在 `fx-trial/`、`global-vfx/`。
 - 当前所有读取均通过原 `safeInputPath`：联接作为输入根时，其 realpath 与候选保持同根，未遇拒绝，因此**无需放宽读路径**；写路径的严格 realpath 检查未改。
 - 未联网、未 npm ci、未启动外部转换 EXE、未写 .git、未提交或改分支。
 
@@ -175,7 +175,7 @@ v2 的新增可选能力仅有 `shape.kind=cylinder` 与 `localTransform`。前�
 | Q_Landing_Mis_Child | 0 | 0 | 2 | 4 | 0 | 2 | 3 | 1 |
 | **合计 11 系统 / 47 发射器** | 0 | 0 | 8 | 39 | 0 | 36 | 10 | 1 |
 
-蔚唯一拒绝：Q_Landing_Mis_Child/StrokeDissolve_Right 的 particleLinger=null（保留 invalid-source-linger 拒绝）。本地 Hit/Crit 共享系统缺失，不计入这 47 个专属发射器。child/fieldCollection/attached mesh/distortion/不可转换 mesh 的跳过均保留具体原因，详见各系统旁路与 recount/vi.json、jinx.json。
+蔚专属系统唯一拒绝：Q_Landing_Mis_Child/StrokeDissolve_Right 的 particleLinger=null（保留 invalid-source-linger 拒绝）。第三轮已解析的 Hit/Crit 属共享系统，不计入这 47 个专属发射器。child/fieldCollection/attached mesh/distortion/不可转换 mesh 的跳过均保留具体原因，详见各系统旁路与 recount/vi.json、jinx.json。
 
 ## 60 单位重算
 
@@ -186,64 +186,64 @@ v2 的新增可选能力仅有 `shape.kind=cylinder` 与 `localTransform`。前�
 | 严格（第一轮） | 60 | 466 | 3481 | 0 | 0 | 493 | 2988 |
 | 视觉近似 | 60 | 466 | 3481 | 0 | 2333 | 663 | 485 |
 
-## 全局 VFX：当前需补离线缓存
+## 第三轮全局 VFX：系统已定位，贴图仍缺块
 
-已检索 extraction.json 所列缓存 PROP/BIN（包括 extensionless character）、现有两 TFT WAD fetch-plan、RMAN、Map22 缓存索引和本地 hashes.game.txt。实际找到共享系统 **0** 个，提取目标 BIN/贴图 **0** 个；未联网。
+Map22 的 42 块 / 1,699,502 字节已由外部调度方补齐。离线提取的 `data/maps/shipping/map22/map22.bin` 为 26,646,502 字节，SHA-256：`627fabe4594998b6f479d918533e20d19824f82f1ec8d9092807ca33a414af6f`。解析得到 12,168 个 entry，其中 1,724 个 VfxSystemDefinitionData；linked 为空。两个共享系统均由 ResourceResolver 的 effect-key 哈希定位，非名称猜测。
 
-本地未有 `data/maps/shipping/map22/map22.bin` 的全部块。它是从本地索引发现的共享 resolver/粒子候选入口，**尚未证实包含这两个 effect key，也未确定全部贴图依赖**。下面是下一步读取候选 BIN 所需的准确缺块范围，不冒充最终 Hit/Crit 依赖闭包。取到 BIN 后脚本会按哈希 ResourceResolver 跨 BIN 解析，再按源纹理引用找缓存、提取或继续报缺块。
+### 专用解析预算
 
-WAD：`DATA/FINAL/Maps/Shipping/Map22.wad.client`。共 **42 块 / 1,699,502 字节（压缩下载量）**。原始清单含 bundleId、offset、size、targetSize、requiredBy：`assets3d-local/global-vfx/report.json`；试验根内副本：`global-vfx-status.json`。
+`parseGlobalVfxBin` 仅供全局 VFX 离线入口使用，显式传 `GLOBAL_VFX_BIN_LIMITS`：maxValues=4,000,000、累计 maxStringBytes=8 MiB。Map22 同时包含地图放置与大量共享 VFX，先后触发了默认 1,000,000 值和 4 MiB 字符串限制，因此给出有界的 4 倍/2 倍余量。32 MiB 输入、64 层深度、单容器 100,000 项等上限保持不变；超过任一新上限仍拒绝。`parseBin` 默认和其余调用者未改；本次没有放宽路径或使用无限预算。
+
+### 系统及转换结果
+
+实际解析 **2** 个系统，提取 BIN/贴图 **5** 个。原始 BIN 和已取得纹理位于 `global-vfx/extracted/`，选中的完整系统在 `global-vfx/systems.json`；转换报告在 `fx-trial/effects/global/*.report.json`。
+
+| 系统 | 所在 BIN / WAD | Resolver target hash | 原始 particlePath |
+| --- | --- | ---: | --- |
+| TFT_Global_BA_Hit | data/maps/shipping/map22/map22.bin / DATA/FINAL/Maps/Shipping/Map22.wad.client | 254473835 | Maps/Shipping/Map22/Particles/TFT_VFX_Library/TFT_Global_BA_Hit |
+| TFT_Global_BA_Crit | data/maps/shipping/map22/map22.bin / DATA/FINAL/Maps/Shipping/Map22.wad.client | 607576198 | Maps/Shipping/Map22/Particles/TFT_VFX_Library/TFT_Global_BA_Crit |
+
+| 系统 | 映射 | 近似 | 跳过 | 拒绝 | 输出 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| TFT_Global_BA_Hit | 0 | 0 | 0 | 3 | no-writable-emitters |
+| TFT_Global_BA_Crit | 0 | 0 | 0 | 9 | no-writable-emitters |
+
+Hit 的 3 个发射器均缺主贴图；Crit 的 9 个发射器中，7 个首先因缺主贴图拒绝，Flash1、ring 因 `unmapped-source-field:falloffTexture` 拒绝（ring 的主贴图也缺块）。仍按既有近似白名单处理，未新增省略 falloffTexture 的约定。所有发射器无可写 payload，因此当前不生成共享 effects 引用，Vi attack 也没有悬空绑定。补块后 Hit 可重新尝试；不能预先宣称会通过 v2 校验。
+
+### 贴图及精确缺块
+
+两个系统共引用 10 张贴图；已提取并成功转 PNG 4 张，其余 6 张等待块。已取得的 defaultcoloroverlifetime、defaultfalloff、flash_01、tft_glb_gradient 为原始依赖；只有实际被通过校验的文档使用的资源才计入 verify-fx-trial 引用数。
+
+| 依赖 | 状态 |
+| --- | --- |
+| ASSETS/Maps/Particles/TFT/Crescent.tex | missing-cached-chunks |
+| ASSETS/Maps/Particles/TFT/DefaultColorOverlifetime.TFT_Set13.tex | PNG: global/textures/assets/maps/particles/tft/defaultcoloroverlifetime.tft_set13.png |
+| ASSETS/Maps/Particles/TFT/DefaultFalloff.TFT_Set13.tex | PNG: global/textures/assets/maps/particles/tft/defaultfalloff.tft_set13.png |
+| ASSETS/Maps/Particles/TFT/Flash_01.tex | PNG: global/textures/assets/maps/particles/tft/flash_01.png |
+| ASSETS/Maps/Particles/TFT/TFT_Glb_Gradient.TFT_Set13_MacaoMode.tex | PNG: global/textures/assets/maps/particles/tft/tft_glb_gradient.tft_set13_macaomode.png |
+| ASSETS/Shared/Particles/3161Glow.SKINS_Sona_Skin56.dds | missing-cached-chunks |
+| ASSETS/Shared/Particles/Kassadin_Skin05_Star.dds | missing-cached-chunks |
+| ASSETS/Shared/Particles/Lux_Skin07_Z_Flash.StrawberryRebuild.dds | missing-cached-chunks |
+| ASSETS/Shared/Particles/Warwick_Base_Yasuo_skin01_sword.dds | missing-cached-chunks |
+| ASSETS/Shared/Particles/Warwick_Base_Z_BightSpark.dds | missing-cached-chunks |
+
+缺块均属 `DATA/FINAL/Maps/Shipping/Map22.wad.client` 的纹理，共 **7 块 / 70,346 字节（压缩下载量）**，无需再下载 Map22 BIN。完整字段 id、bundleId、offset、size、targetSize、fileOffset、requiredBy 位于 `assets3d-local/global-vfx/report.json` 的 missingChunks；试验根内副本：`global-vfx-status.json`。当前 dependencyClosureKnown=false，报告保留 6 个纹理缺块失败。
 
 | Chunk ID | Bundle ID | Bundle offset | 压缩字节 | 解压字节 |
 | --- | --- | ---: | ---: | ---: |
-| 015B73A5B84F96FD | 74889B390D14BE23 | 4112614 | 27483 | 27473 |
-| 017D7ABFAA14B4DB | 74889B390D14BE23 | 3781347 | 23298 | 23288 |
-| 0770DCA5153BEAD7 | 74889B390D14BE23 | 4332808 | 18375 | 18365 |
-| 0865B3A73FFC570D | 74889B390D14BE23 | 3804645 | 20053 | 20043 |
-| 0F3F4DBE2B11D964 | 74889B390D14BE23 | 3124714 | 262159 | 262144 |
-| 14F06BB6AE2283C2 | 74889B390D14BE23 | 4030999 | 22092 | 22082 |
-| 1991AC949501FBD9 | 74889B390D14BE23 | 3450033 | 34676 | 34666 |
-| 26A3452E5A95D09A | 74889B390D14BE23 | 3998742 | 32257 | 32247 |
-| 28EF76656F53A495 | 74889B390D14BE23 | 3896887 | 27115 | 27105 |
-| 2B4FA18DFAD1E4ED | 74889B390D14BE23 | 3409003 | 19096 | 19086 |
-| 2B659ABBBEB16F38 | 74889B390D14BE23 | 2697730 | 262159 | 262144 |
-| 2F74CF50C993ADA6 | 74889B390D14BE23 | 3428099 | 21934 | 21924 |
-| 307DDB6817C53D5A | 74889B390D14BE23 | 3956880 | 41862 | 41852 |
-| 373999AF67D1B4AE | 74889B390D14BE23 | 3669965 | 28192 | 28182 |
-| 4CF710A5A702F49D | 74889B390D14BE23 | 4212183 | 28482 | 28472 |
-| 59542B8ECCD24CF4 | 74889B390D14BE23 | 4267150 | 19597 | 19587 |
-| 5C1003ED729C1814 | 74889B390D14BE23 | 4073905 | 38709 | 38699 |
-| 5CC89376E2A6037B | 74889B390D14BE23 | 3043487 | 51416 | 51406 |
-| 5F8BFD0735C10EFA | 74889B390D14BE23 | 4172462 | 19032 | 19022 |
-| 60385FE68E6C7F7B | 74889B390D14BE23 | 4053091 | 20814 | 20804 |
-| 6A9D7C85742AC078 | 74889B390D14BE23 | 3844855 | 52032 | 52022 |
-| 707D8C4192A72266 | 74889B390D14BE23 | 3924002 | 32878 | 32868 |
-| 72552F65B4998E59 | 74889B390D14BE23 | 2959889 | 49468 | 49458 |
-| 7897DF2F64DA494E | 74889B390D14BE23 | 3484709 | 28890 | 28880 |
-| 90EB7C32B689D355 | 74889B390D14BE23 | 4240665 | 26485 | 26475 |
-| 9E3503C2921D62AB | 74889B390D14BE23 | 3513599 | 23747 | 23737 |
-| A4F996E067B6CAC9 | 74889B390D14BE23 | 2679477 | 18253 | 18243 |
-| A5489BA448697885 | 74889B390D14BE23 | 3589409 | 23489 | 23479 |
-| AACB2A7F09D5CB84 | 74889B390D14BE23 | 3824698 | 20157 | 20147 |
-| B84CE0D2DC4193BE | 74889B390D14BE23 | 4286747 | 46061 | 46051 |
-| C0B7DCF4BF31D4CA | 74889B390D14BE23 | 3698157 | 55947 | 55937 |
-| D0A333CF21994321 | 74889B390D14BE23 | 4191494 | 20689 | 20679 |
-| D1737DD5364144FA | 74889B390D14BE23 | 3537346 | 30329 | 30319 |
-| D30BE80AC0BAB5E4 | 74889B390D14BE23 | 4140097 | 32365 | 32355 |
-| D828544BE4B1547A | 74889B390D14BE23 | 3094903 | 29811 | 29801 |
-| DCD09B9F4522AF53 | 74889B390D14BE23 | 3567675 | 21734 | 21724 |
-| E0D5EBCBBBA7C3CF | 74889B390D14BE23 | 3612898 | 57067 | 57057 |
-| E39CDCB13561E15A | 74889B390D14BE23 | 3386873 | 22130 | 22120 |
-| E7BD02C6628FFB10 | 74889B390D14BE23 | 3754104 | 27243 | 27233 |
-| E9FB37F68AF1C001 | 74889B390D14BE23 | 3009357 | 34130 | 34120 |
-| F688772202D37695 | 74889B390D14BE23 | 4376237 | 2742 | 2732 |
-| F6CDCE03777C64E1 | 74889B390D14BE23 | 4351183 | 25054 | 25044 |
+| 15CF47EC37FCA372 | 2F3CF978C44ADEC5 | 2987758 | 18573 | 18563 |
+| 17D5DDDD52412F9E | 525EB2A9ECE83B50 | 2297338 | 12354 | 12344 |
+| 2F7EB58EEA1FB349 | 2F3CF978C44ADEC5 | 2968798 | 18960 | 18950 |
+| 9C4C2C2736B71A73 | AC1F49C05DAFAB4E | 7152541 | 1761 | 1751 |
+| A33BC0FED859B6A8 | 2B85C8B069FB6C8C | 2461654 | 5474 | 5464 |
+| A4C79E517817CEF1 | 743E15EB451E365E | 2922326 | 9264 | 9254 |
+| FDC8A3DE6C8B5410 | 03DD2F8B367BCFA5 | 1861335 | 3960 | 3950 |
 
 外部调度方按每行 bundleId 的 Range `offset..offset+size-1` 取得压缩块，作为 `chunks/<ID>.zst` 交回只读输入缓存；本轮没有下载或修改缓存。新提取文件只写 `global-vfx/extracted/`，转换后被试验根引用的 PNG/effects 再写到 `fx-trial/`，不会让独立根引用 ../global-vfx。
 
 ## 动作绑定与外壳接线（交 Claude）
 
-根 manifest.actionEffects 的默认动作：Jinx attack=BA_Minigun_Mis + **Cas_Medium 唯一一个枪口**；cast=R；Vi cast=Q。W/E/R 的替代表分别在 action-bindings.json.variants.W/E/R，Q 在 variants.Q，Vi crit 在 variants.crit。不能把 W/E/R 三套表同时混入一次 cast。
+根 manifest.actionEffects 的默认动作：Jinx attack=BA_Minigun_Mis + **Cas_Medium 唯一一个枪口**；cast=R；Vi cast=Q。W/E/R 的替代表分别在 action-bindings.json.variants.W/E/R，Q 在 variants.Q。Vi attack 仅在 BA_Hit 有通过 v2 校验的 payload 时绑定目标命中；本次尚无可写发射器，保持空数组。ActionState 无暴击区分，删除旧的空 variants.crit，以 unboundShared 明确记录 Crit 不绑定的原因。不能把 W/E/R 三套表同时混入一次 cast。
 
 动作阶段是明确的预览编排，时间不是原版脚本证据：
 
@@ -254,7 +254,8 @@ WAD：`DATA/FINAL/Maps/Shipping/Map22.wad.client`。共 **42 块 / 1,699,502 字
 | E | E_Mis=0，E_Mine_Explosion=0.5 | L_Hand 出发；弹道 0.5，目标爆炸 1 |
 | R | R_MuzzleFlash/R_Cast_Mouth=0，R_Rocket_Child=0.1，R_Tar=0.8 | Rocket_Launcher_End / Rocket_Launcher_Mouth_Top；起手 0.3/0.4，弹道 0.7，目标 1.5 |
 | Vi Q | hands_R=0，Jumping_Dust=0.1，Landing_Mis=0.1，Landing_AoE/AoE_Child/Tar=0.45 | R_GloveHand / Buffbone_Glb_Ground_Loc / C_Buffbone_Glb_Center_Loc；上限 0.5/0.4/0.35/1/1/0.8 |
-| Vi 普攻/暴击 | 仅在共享 Hit/Crit 真的提取转换成功时填入 | target，预览延迟 0.35，上限 0.5；当前均为空，不能拿 Q 命中冒充 |
+| Vi 普攻 | 仅在共享 BA_Hit 转换成功时填入；当前缺主贴图，空数组 | target，预览延迟 0.35，上限 0.5 |
+| Vi 暴击 | 当前 ActionState 无 crit，保持不绑定 | 可写时保留独立 Crit effect；不将 Crit 混入普攻 |
 
 Jinx R_Mis 是 child-only emitter，仍 skipped；动作表显式拿独立 R_Rocket_Child 充当弹道外观。Vi hands_L 是空系统，当前不绑定；不制造左手粒子。所有骨名均在复制的 GLB nodes 中核对存在。动作表标 status=approximated，逐效果 playback 指明 phase、anchor、bone、delay、maxDuration。
 
@@ -297,7 +298,7 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 
 资源入口仍是 `?render=3d&assets3d=/assets3d-local/fx-trial/`；目前只说明如何指向素材根，**不能用现有未接粒子的外壳来宣称特效已经屏幕可见**。
 
-## 验证与剩余限制
+## 第二轮验证基线与剩余限制
 
 - `npx.cmd tsc --noEmit` 通过。
 - 逐个执行 `npx.cmd vitest run <file> --configLoader runner`：全部 29 个 assets3d-* / rendering3d-* 文件通过，最终 575 passed、1 skipped。跳过项是既有 Windows 文件 symlink 权限分支；未跑全套。
@@ -307,4 +308,10 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 - verification.json：真实运行时 CPU 烟测 38 份文档、104 张 PNG 引用、11 份 mesh；逐份有实际几何、材质、有限变换、粒子出生及生命周期完成，无运行时跳过。拖尾的测试宿主每 50 ms 沿 X 移动 5 League 单位；这是合成运动，非外壳已接线的证据。没有 GPU 截图或原版视觉等价结论。
 - 重算以旧批次纹理/mesh 转换决策为只读基线，所以仍可能保留资源缺失、颜色顶点/附着 mesh 不支持等拒绝。两英雄输出实际用到的未写 mesh 从验证哈希的源缓存单独重建。所有新结果不回写 batch/all。
 
-建议英文提交信息：`feat(assets3d): add traceable approximate particle previews and offline global VFX planning`
+## 第三轮验证
+
+- `npx.cmd tsc --noEmit` 通过；逐个执行 `npx.cmd vitest run <file> --configLoader runner`：assets3d-bin（8）、assets3d-global-vfx（8）、assets3d-fx-evidence（2）、assets3d-visual-approximate（82），共 100 项通过；未跑全套，无新单条时限。
+- 新增合成覆盖默认预算不变、全局预算生效及超限拒绝、真实 PROP 编码的两个 resolver key 跨 BIN 命中（含逆序）、Hit 目标挂点和 Crit 无状态区分时不绑定。
+- 已重跑 approximate 与 verify-fx-trial；仍是 38 份既有 v2 文档、104 张被引用 PNG、11 份 mesh 的运行时烟测通过。共享 Hit/Crit 仅有拒绝报告，不计入已验证文档。
+
+建议英文提交信息：`fix(assets3d): bound global BIN parsing and resolve shared attack VFX`

@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { zstdCompressSync } from 'node:zlib';
 // @ts-expect-error Node offline adapter.
-import { offlineArchiveReader, globalVfx, findGlobalSystems } from '../scripts/assets3d/global-vfx.mjs';
+import { offlineArchiveReader, globalVfx, findGlobalSystems, parseGlobalVfxBin, GLOBAL_VFX_BIN_LIMITS } from '../scripts/assets3d/global-vfx.mjs';
 // @ts-expect-error Node chunk verifier.
 import { riotChunkId } from '../scripts/assets3d/chunk-hash.mjs';
 // @ts-expect-error Node BIN parser.
-import { parseBin, fnv1a } from '../scripts/assets3d/bin.mjs';
+import { parseBin, fnv1a, BIN_LIMITS } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Node VFX parser.
 import { particleSourcesFromBins } from '../scripts/assets3d/particle-bin.mjs';
 
@@ -20,6 +20,21 @@ function globalBin(name: string) {
   const fields = [field('particlePath', `Particles/${name}`), field('particleName', name)];
   return Buffer.concat([Buffer.from('PROP'), u32(3), u32(0), u32(1), u32(fnv1a('VfxSystemDefinitionData')),
     block(Buffer.concat([u32(fnv1a(name)), u16(fields.length), ...fields]))]);
+}
+function resolverBin(links: string[], pairs: [string, string][]) {
+  const map = Buffer.concat([Buffer.from([17, 0x84]), block(Buffer.concat([u32(pairs.length),
+    ...pairs.flatMap(([key, target]) => [u32(fnv1a(key)), u32(fnv1a(target))])]))]);
+  return Buffer.concat([Buffer.from('PROP'), u32(3), u32(links.length), ...links.map(str),
+    u32(1), u32(fnv1a('ResourceResolver')), block(Buffer.concat([u32(42), u16(1),
+      u32(fnv1a('resourceMap')), Buffer.from([0x86]), map]))]);
+}
+function budgetBin(type: number, value: Buffer) {
+  return Buffer.concat([Buffer.from('PROP'), u32(3), u32(0), u32(1), u32(1),
+    block(Buffer.concat([u32(1), u16(1), u32(1), Buffer.from([type]), value]))]);
+}
+function manyValues(groups: number) {
+  const group = Buffer.concat([Buffer.from([3]), block(Buffer.concat([u32(100_000), Buffer.alloc(100_000)]))]);
+  return budgetBin(0x80, Buffer.concat([Buffer.from([0x80]), block(Buffer.concat([u32(groups), ...Array(groups).fill(group)]))]));
 }
 function fixture() {
   const wad = 'DATA/FINAL/GlobalSynthetic.wad.client';
@@ -45,15 +60,41 @@ function fixture() {
   return { wad, payloads, entries, chunks, packed, write, options };
 }
 describe('shared global VFX offline cache extraction', () => {
+  it('opts into a bounded larger value budget only at the global VFX entry point', () => {
+    const defaults = { ...BIN_LIMITS }, bytes = manyValues(11);
+    expect(defaults).toEqual({ maxBytes: 32 * 1024 * 1024, maxDepth: 64,
+      maxValues: 1_000_000, maxCount: 100_000, maxStringBytes: 4 * 1024 * 1024 });
+    expect(() => parseBin(bytes)).toThrow('bin-value-budget');
+    expect(parseGlobalVfxBin(bytes).entries).toHaveLength(1);
+    expect(() => parseBin(bytes)).toThrow('bin-value-budget');
+    expect(() => parseGlobalVfxBin(manyValues(40))).toThrow('bin-value-budget');
+    expect(BIN_LIMITS).toEqual(defaults);
+    expect(GLOBAL_VFX_BIN_LIMITS).toEqual({ ...defaults, maxValues: 4_000_000, maxStringBytes: 8 * 1024 * 1024 });
+  });
+  it('caps global string bytes at 8 MiB and preserves all other parser caps', () => {
+    const bytes = (count: number) => budgetBin(0x80, Buffer.concat([Buffer.from([16]),
+      block(Buffer.concat([u32(count), ...Array(count).fill(str('x'.repeat(65_535)))]))]));
+    expect(() => parseBin(bytes(65))).toThrow('bin-string-budget');
+    expect(parseGlobalVfxBin(bytes(65)).entries).toHaveLength(1);
+    expect(() => parseGlobalVfxBin(bytes(129))).toThrow('bin-string-budget');
+    expect(() => parseGlobalVfxBin(Buffer.alloc(BIN_LIMITS.maxBytes + 1))).toThrow('bin-byte-budget');
+    expect(() => parseGlobalVfxBin(budgetBin(0x80, Buffer.concat([Buffer.from([3]),
+      block(Buffer.concat([u32(BIN_LIMITS.maxCount + 1), Buffer.alloc(BIN_LIMITS.maxCount + 1)]))])))).toThrow('bin-count-budget');
+  });
   it('resolves hashed global keys across BIN documents even when the particle name differs', () => {
-    const target = parseBin(globalBin('unrelated-source-name'));
-    const hash = target.entries[0].hash;
-    const resolver = { patches: [], entries: [{ type: fnv1a('ResourceResolver'), hash: 42, fields: [
-      { hash: fnv1a('resourceMap'), value: { entries: [[{ kind: 'hash', hash: fnv1a('TFT_Global_BA_Hit') }, { kind: 'link', hash }]] } },
-    ] }] };
-    const found = findGlobalSystems([resolver, target]);
-    expect(Object.keys(found.systems)).toEqual(['ResolvedGlobals/TFT_Global_BA_Hit']);
-    expect(found.resolvedKeys.TFT_Global_BA_Hit).toEqual({ sourcePath: 'Particles/unrelated-source-name', resolverTargetHash: hash });
+    const pairs: [string, string][] = [['TFT_Global_BA_Hit', 'unrelated-source-name'], ['TFT_Global_BA_Crit', 'another-source-name']];
+    const paths = ['data/shared/hit.bin', 'data/shared/crit.bin'];
+    const resolver = { ...parseBin(resolverBin(paths, pairs)), sourceBin: 'map.bin', sourceWad: 'map.wad.client' };
+    expect(resolver.linked).toEqual(paths);
+    const targets = pairs.map(([, name], i) => ({ ...parseBin(globalBin(name)), sourceBin: paths[i], sourceWad: 'shared.wad.client' }));
+    for (const docs of [[resolver, ...targets], [...targets].reverse().concat(resolver)]) {
+      const found = findGlobalSystems(docs);
+      expect(Object.keys(found.systems)).toEqual(pairs.map(([key]) => `ResolvedGlobals/${key}`));
+      for (const [i, [key, name]] of pairs.entries()) expect(found.resolvedKeys[key]).toEqual({
+        sourcePath: `Particles/${name}`, resolverTargetHash: fnv1a(name), sourceBin: paths[i],
+        sourceWad: 'shared.wad.client', resolution: 'resource-resolver-hash' });
+      expect(Object.values(found.systems).map((s: any) => s.particleName)).toEqual(pairs.map(([, name]) => name));
+    }
   });
   it('extracts both actual synthetic PROP systems and a texture solely through cached WAD chunks', async () => {
     const f = fixture(), reader = offlineArchiveReader(f.options);

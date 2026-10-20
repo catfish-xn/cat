@@ -5,16 +5,16 @@ import { OMIT_PREVIEW_FIELDS } from './particle-approximate.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 import { argumentsFor } from './plan-fetch.mjs';
 
-const notes = `# 粒子映射第二轮：视觉近似模式
+const notes = `# 粒子映射第二、三轮：视觉近似与共享普攻 VFX
 
-2026-10-20；起点：\`codex/assets3d-particles-map@52688b3\`。方案 A 已按用户决定实施。
+2026-10-20；第二轮基线：\`52688b3\`，第三轮起点：\`codex/assets3d-particles-map@8a983024\`。方案 A 已按用户决定实施。
 
 ## 交付与边界
 
 - 独立根：\`assets3d-local/fx-trial/manifest.json\`，含 jinx、vi 的自包含 GLB、effects、纹理、静态 mesh、\`actionEffects\`；阶段/挂点/寿命在 \`action-bindings.json\`。
 - \`fx-trial.mjs --particle-mode approximate|strict\`，默认 approximate；strict 保持第一轮的 linger opt-in，其余拒绝逻辑原封保留。底层 \`mapEmitter/convertParticles\` 与通用 build API 默认 strict，避免改变既有调用者；通用 build 也可显式传开关。
 - 未改 \`src/rendering/three-mode/placeholder-renderer.ts\`。此交付证明可供现有 v2 runtime 分配几何/材质和回收；**未完成外壳接线或浏览器 GPU 视觉验收**。
-- \`trial/\`、\`source-json/\`、\`prepared/\`、\`out/\` 为只读输入联接，未向其中写入。新产物只在 \`fx-trial/\`、\`global-vfx/\`；测试临时目录在真实根下新建并清理，日志在 \`artifacts/particles-map-round2-tests/\`。
+- \`trial/\`、\`source-json/\`、\`prepared/\`、\`out/\` 为只读输入联接，未向其中写入。第三轮新产物只在 \`fx-trial/\`、\`global-vfx/\`。
 - 当前所有读取均通过原 \`safeInputPath\`：联接作为输入根时，其 realpath 与候选保持同根，未遇拒绝，因此**无需放宽读路径**；写路径的严格 realpath 检查未改。
 - 未联网、未 npm ci、未启动外部转换 EXE、未写 .git、未提交或改分支。
 
@@ -69,7 +69,7 @@ v2 的新增可选能力仅有 \`shape.kind=cylinder\` 与 \`localTransform\`。
 
 const shell = `## 动作绑定与外壳接线（交 Claude）
 
-根 manifest.actionEffects 的默认动作：Jinx attack=BA_Minigun_Mis + **Cas_Medium 唯一一个枪口**；cast=R；Vi cast=Q。W/E/R 的替代表分别在 action-bindings.json.variants.W/E/R，Q 在 variants.Q，Vi crit 在 variants.crit。不能把 W/E/R 三套表同时混入一次 cast。
+根 manifest.actionEffects 的默认动作：Jinx attack=BA_Minigun_Mis + **Cas_Medium 唯一一个枪口**；cast=R；Vi cast=Q。W/E/R 的替代表分别在 action-bindings.json.variants.W/E/R，Q 在 variants.Q。Vi attack 仅在 BA_Hit 有通过 v2 校验的 payload 时绑定目标命中；本次尚无可写发射器，保持空数组。ActionState 无暴击区分，删除旧的空 variants.crit，以 unboundShared 明确记录 Crit 不绑定的原因。不能把 W/E/R 三套表同时混入一次 cast。
 
 动作阶段是明确的预览编排，时间不是原版脚本证据：
 
@@ -80,7 +80,8 @@ const shell = `## 动作绑定与外壳接线（交 Claude）
 | E | E_Mis=0，E_Mine_Explosion=0.5 | L_Hand 出发；弹道 0.5，目标爆炸 1 |
 | R | R_MuzzleFlash/R_Cast_Mouth=0，R_Rocket_Child=0.1，R_Tar=0.8 | Rocket_Launcher_End / Rocket_Launcher_Mouth_Top；起手 0.3/0.4，弹道 0.7，目标 1.5 |
 | Vi Q | hands_R=0，Jumping_Dust=0.1，Landing_Mis=0.1，Landing_AoE/AoE_Child/Tar=0.45 | R_GloveHand / Buffbone_Glb_Ground_Loc / C_Buffbone_Glb_Center_Loc；上限 0.5/0.4/0.35/1/1/0.8 |
-| Vi 普攻/暴击 | 仅在共享 Hit/Crit 真的提取转换成功时填入 | target，预览延迟 0.35，上限 0.5；当前均为空，不能拿 Q 命中冒充 |
+| Vi 普攻 | 仅在共享 BA_Hit 转换成功时填入；当前缺主贴图，空数组 | target，预览延迟 0.35，上限 0.5 |
+| Vi 暴击 | 当前 ActionState 无 crit，保持不绑定 | 可写时保留独立 Crit effect；不将 Crit 混入普攻 |
 
 Jinx R_Mis 是 child-only emitter，仍 skipped；动作表显式拿独立 R_Rocket_Child 充当弹道外观。Vi hands_L 是空系统，当前不绑定；不制造左手粒子。所有骨名均在复制的 GLB nodes 中核对存在。动作表标 status=approximated，逐效果 playback 指明 phase、anchor、bone、delay、maxDuration。
 
@@ -123,7 +124,7 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 
 资源入口仍是 \`?render=3d&assets3d=/assets3d-local/fx-trial/\`；目前只说明如何指向素材根，**不能用现有未接粒子的外壳来宣称特效已经屏幕可见**。
 
-## 验证与剩余限制
+## 第二轮验证基线与剩余限制
 
 - \`npx.cmd tsc --noEmit\` 通过。
 - 逐个执行 \`npx.cmd vitest run <file> --configLoader runner\`：全部 29 个 assets3d-* / rendering3d-* 文件通过，最终 575 passed、1 skipped。跳过项是既有 Windows 文件 symlink 权限分支；未跑全套。
@@ -133,7 +134,13 @@ enqueue 按渲染时间累计，不用长时间 setTimeout；任务归属 source
 - verification.json：真实运行时 CPU 烟测 38 份文档、104 张 PNG 引用、11 份 mesh；逐份有实际几何、材质、有限变换、粒子出生及生命周期完成，无运行时跳过。拖尾的测试宿主每 50 ms 沿 X 移动 5 League 单位；这是合成运动，非外壳已接线的证据。没有 GPU 截图或原版视觉等价结论。
 - 重算以旧批次纹理/mesh 转换决策为只读基线，所以仍可能保留资源缺失、颜色顶点/附着 mesh 不支持等拒绝。两英雄输出实际用到的未写 mesh 从验证哈希的源缓存单独重建。所有新结果不回写 batch/all。
 
-建议英文提交信息：\`feat(assets3d): add traceable approximate particle previews and offline global VFX planning\`
+## 第三轮验证
+
+- \`npx.cmd tsc --noEmit\` 通过；逐个执行 \`npx.cmd vitest run <file> --configLoader runner\`：assets3d-bin（8）、assets3d-global-vfx（8）、assets3d-fx-evidence（2）、assets3d-visual-approximate（82），共 100 项通过；未跑全套，无新单条时限。
+- 新增合成覆盖默认预算不变、全局预算生效及超限拒绝、真实 PROP 编码的两个 resolver key 跨 BIN 命中（含逆序）、Hit 目标挂点和 Crit 无状态区分时不绑定。
+- 已重跑 approximate 与 verify-fx-trial；仍是 38 份既有 v2 文档、104 张被引用 PNG、11 份 mesh 的运行时烟测通过。共享 Hit/Crit 仅有拒绝报告，不计入已验证文档。
+
+建议英文提交信息：\`fix(assets3d): bound global BIN parsing and resolve shared attack VFX\`
 `;
 
 export async function fxTrialReport({ root = 'assets3d-local/fx-trial', force = false } = {}) {
@@ -152,10 +159,42 @@ export async function fxTrialReport({ root = 'assets3d-local/fx-trial', force = 
     }
     md += `| **合计 ${unit.counts.systems} 系统 / ${unit.counts.emitters} 发射器** | ${['mapped', 'approximated', 'skipped', 'rejected'].map(k => unit.strictCounts[k] ?? 0).join(' | ')} | ${['mapped', 'approximated', 'skipped', 'rejected'].map(k => unit.counts[k] ?? 0).join(' | ')} |\n`;
   }
-  md += '\n蔚唯一拒绝：Q_Landing_Mis_Child/StrokeDissolve_Right 的 particleLinger=null（保留 invalid-source-linger 拒绝）。本地 Hit/Crit 共享系统缺失，不计入这 47 个专属发射器。child/fieldCollection/attached mesh/distortion/不可转换 mesh 的跳过均保留具体原因，详见各系统旁路与 recount/vi.json、jinx.json。\n';
+  md += '\n蔚专属系统唯一拒绝：Q_Landing_Mis_Child/StrokeDissolve_Right 的 particleLinger=null（保留 invalid-source-linger 拒绝）。第三轮已解析的 Hit/Crit 属共享系统，不计入这 47 个专属发射器。child/fieldCollection/attached mesh/distortion/不可转换 mesh 的跳过均保留具体原因，详见各系统旁路与 recount/vi.json、jinx.json。\n';
   md += `\n## 60 单位重算\n\n全部明细只写到 \`fx-trial/recount/\`：60 个单位文件和 summary.json，未修改旧 batch/all。逐单位与总量均核对 M+A+S+R=emitters，并与旧 inventory 的单位/系统/发射器数一致。\n\n| 模式 | 单位 | 系统 | 发射器 | 精确映射 | 近似 | 跳过 | 拒绝 |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n`;
   for (const [name, t] of [['严格（第一轮）', summary.strictTotals], ['视觉近似', summary.totals]]) md += `| ${name} | 60 | ${t.systems} | ${t.emitters} | ${t.mapped} | ${t.approximated} | ${t.skipped} | ${t.rejected} |\n`;
-  md += `\n## 全局 VFX：当前需补离线缓存\n\n已检索 extraction.json 所列缓存 PROP/BIN（包括 extensionless character）、现有两 TFT WAD fetch-plan、RMAN、Map22 缓存索引和本地 hashes.game.txt。实际找到共享系统 **${global.found.length}** 个，提取目标 BIN/贴图 **${global.files.length}** 个；未联网。\n\n本地未有 \`data/maps/shipping/map22/map22.bin\` 的全部块。它是从本地索引发现的共享 resolver/粒子候选入口，**尚未证实包含这两个 effect key，也未确定全部贴图依赖**。下面是下一步读取候选 BIN 所需的准确缺块范围，不冒充最终 Hit/Crit 依赖闭包。取到 BIN 后脚本会按哈希 ResourceResolver 跨 BIN 解析，再按源纹理引用找缓存、提取或继续报缺块。\n\nWAD：\`DATA/FINAL/Maps/Shipping/Map22.wad.client\`。共 **${global.missingChunks.length} 块 / ${global.downloadBytes.toLocaleString('en-US')} 字节（压缩下载量）**。原始清单含 bundleId、offset、size、targetSize、requiredBy：\`assets3d-local/global-vfx/report.json\`；试验根内副本：\`global-vfx-status.json\`。\n\n| Chunk ID | Bundle ID | Bundle offset | 压缩字节 | 解压字节 |\n| --- | --- | ---: | ---: | ---: |\n`;
+  md += `\n## 第三轮全局 VFX：系统已定位，贴图仍缺块\n
+Map22 的 42 块 / 1,699,502 字节已由外部调度方补齐。离线提取的 \`data/maps/shipping/map22/map22.bin\` 为 26,646,502 字节，SHA-256：\`627fabe4594998b6f479d918533e20d19824f82f1ec8d9092807ca33a414af6f\`。解析得到 12,168 个 entry，其中 1,724 个 VfxSystemDefinitionData；linked 为空。两个共享系统均由 ResourceResolver 的 effect-key 哈希定位，非名称猜测。
+
+### 专用解析预算
+
+\`parseGlobalVfxBin\` 仅供全局 VFX 离线入口使用，显式传 \`GLOBAL_VFX_BIN_LIMITS\`：maxValues=4,000,000、累计 maxStringBytes=8 MiB。Map22 同时包含地图放置与大量共享 VFX，先后触发了默认 1,000,000 值和 4 MiB 字符串限制，因此给出有界的 4 倍/2 倍余量。32 MiB 输入、64 层深度、单容器 100,000 项等上限保持不变；超过任一新上限仍拒绝。\`parseBin\` 默认和其余调用者未改；本次没有放宽路径或使用无限预算。
+
+### 系统及转换结果
+
+实际解析 **${global.found.length}** 个系统，提取 BIN/贴图 **${global.files.length}** 个。原始 BIN 和已取得纹理位于 \`global-vfx/extracted/\`，选中的完整系统在 \`global-vfx/systems.json\`；转换报告在 \`fx-trial/effects/global/*.report.json\`。
+
+| 系统 | 所在 BIN / WAD | Resolver target hash | 原始 particlePath |
+| --- | --- | ---: | --- |
+`;
+  for (const [key, r] of Object.entries(global.resolvedKeys)) md += `| ${key} | ${r.sourceBin} / ${r.sourceWad} | ${r.resolverTargetHash} | ${r.sourcePath} |\n`;
+  md += '\n| 系统 | 映射 | 近似 | 跳过 | 拒绝 | 输出 |\n| --- | ---: | ---: | ---: | ---: | --- |\n';
+  for (const s of global.systems) md += `| ${s.sourcePath.split('/').at(-1)} | ${s.counts.mapped} | ${s.counts.approximated} | ${s.counts.skipped} | ${s.counts.rejected} | ${s.path ?? s.reason} |\n`;
+  md += `
+Hit 的 3 个发射器均缺主贴图；Crit 的 9 个发射器中，7 个首先因缺主贴图拒绝，Flash1、ring 因 \`unmapped-source-field:falloffTexture\` 拒绝（ring 的主贴图也缺块）。仍按既有近似白名单处理，未新增省略 falloffTexture 的约定。所有发射器无可写 payload，因此当前不生成共享 effects 引用，Vi attack 也没有悬空绑定。补块后 Hit 可重新尝试；不能预先宣称会通过 v2 校验。
+
+### 贴图及精确缺块
+
+两个系统共引用 ${global.textureReferences.length} 张贴图；已提取并成功转 PNG ${global.textureConversions.filter(t => t.status === 'converted').length} 张，其余 6 张等待块。已取得的 defaultcoloroverlifetime、defaultfalloff、flash_01、tft_glb_gradient 为原始依赖；只有实际被通过校验的文档使用的资源才计入 verify-fx-trial 引用数。
+
+| 依赖 | 状态 |
+| --- | --- |
+`;
+  for (const ref of global.textureReferences) {
+    const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
+    const converted = global.textureConversions.find(t => canonical(t.source) === canonical(ref));
+    md += `| ${ref} | ${converted?.status === 'converted' ? `PNG: ${converted.path}` : converted?.reason ?? global.failures.find(f => f.path === ref)?.reason ?? 'unresolved'} |\n`;
+  }
+  md += `\n缺块均属 \`DATA/FINAL/Maps/Shipping/Map22.wad.client\` 的纹理，共 **${global.missingChunks.length} 块 / ${global.downloadBytes.toLocaleString('en-US')} 字节（压缩下载量）**，无需再下载 Map22 BIN。完整字段 id、bundleId、offset、size、targetSize、fileOffset、requiredBy 位于 \`assets3d-local/global-vfx/report.json\` 的 missingChunks；试验根内副本：\`global-vfx-status.json\`。当前 dependencyClosureKnown=false，报告保留 6 个纹理缺块失败。\n\n| Chunk ID | Bundle ID | Bundle offset | 压缩字节 | 解压字节 |\n| --- | --- | ---: | ---: | ---: |\n`;
   for (const c of global.missingChunks) md += `| ${c.id} | ${c.bundleId} | ${c.offset} | ${c.size} | ${c.targetSize} |\n`;
   md += `\n外部调度方按每行 bundleId 的 Range \`offset..offset+size-1\` 取得压缩块，作为 \`chunks/<ID>.zst\` 交回只读输入缓存；本轮没有下载或修改缓存。新提取文件只写 \`global-vfx/extracted/\`，转换后被试验根引用的 PNG/effects 再写到 \`fx-trial/\`，不会让独立根引用 ../global-vfx。\n\n${shell}`;
   await writeOutputFile(join(output, 'report.md'), md, { force });

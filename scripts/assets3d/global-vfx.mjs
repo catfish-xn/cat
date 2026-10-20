@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { readRman, chunksForRange, readCachedRange, MAX_CACHED_CHUNK_BYTES } from './rman.mjs';
 import { readWadIndex, extractWadEntry } from './wad.mjs';
 import { verifyChunk } from './chunk-hash.mjs';
-import { parseBin, binField, binIs, fnv1a } from './bin.mjs';
+import { parseBin, BIN_LIMITS, binField, binIs, fnv1a } from './bin.mjs';
 import { particleSourcesFromBins } from './particle-bin.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFileAtomic } from './safe-path.mjs';
 import { assertEntryPath } from './extract-from-chunks.mjs';
@@ -18,12 +18,19 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 export const GLOBAL_KEYS = ['TFT_Global_BA_Hit', 'TFT_Global_BA_Crit'];
 const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
 
+// Map22 contains map placements plus 1,724 VFX systems in one 26.6 MB PROP.
+// Its value count and aggregate strings exceed the character-BIN defaults.
+// Only this offline entry point opts in; byte/depth/count caps stay unchanged.
+export const GLOBAL_VFX_BIN_LIMITS = Object.freeze({ ...BIN_LIMITS,
+  maxValues: 4_000_000, maxStringBytes: 8 * 1024 * 1024 });
+export const parseGlobalVfxBin = bytes => parseBin(bytes, GLOBAL_VFX_BIN_LIMITS);
+
 export function findGlobalSystems(documents) {
   const all = particleSourcesFromBins(documents), targets = new Map(), byHash = new Map();
   for (const doc of documents) for (const entry of doc.entries) {
     if (binIs(entry, 'VfxSystemDefinitionData')) {
       const values = particleSourcesFromBins([{ ...doc, entries: [entry] }]);
-      byHash.set(entry.hash, Object.entries(values)[0]);
+      byHash.set(entry.hash, { system: Object.entries(values)[0], bin: doc.sourceBin ?? null, wad: doc.sourceWad ?? null });
     }
     if (binIs(entry, 'ResourceResolver')) for (const [key, value] of binField(entry, 'resourceMap')?.entries ?? []) {
       for (const name of GLOBAL_KEYS) if ((typeof key === 'string' ? fnv1a(key) : key?.hash) === fnv1a(name)) targets.set(name, value?.hash);
@@ -31,8 +38,14 @@ export function findGlobalSystems(documents) {
   }
   const systems = {}, resolvedKeys = {};
   for (const key of GLOBAL_KEYS) {
-    const hit = byHash.get(targets.get(key)) ?? Object.entries(all).find(([p, v]) => `${p} ${v.particleName}`.toLowerCase().includes(key.toLowerCase()));
-    if (hit) { systems[`ResolvedGlobals/${key}`] = hit[1]; resolvedKeys[key] = { sourcePath: hit[0], resolverTargetHash: targets.get(key) ?? null }; }
+    const target = targets.get(key), resolved = byHash.get(target);
+    const hit = resolved?.system ?? Object.entries(all).find(([p, v]) => `${p} ${v.particleName}`.toLowerCase().includes(key.toLowerCase()));
+    if (hit) {
+      const origin = resolved ?? [...byHash.values()].find(v => v.system[0] === hit[0]);
+      systems[`ResolvedGlobals/${key}`] = hit[1];
+      resolvedKeys[key] = { sourcePath: hit[0], resolverTargetHash: target ?? null,
+        sourceBin: origin?.bin ?? null, sourceWad: origin?.wad ?? null, resolution: resolved ? 'resource-resolver-hash' : 'particle-name' };
+    }
   }
   return { systems, resolvedKeys };
 }
@@ -119,8 +132,8 @@ export async function globalVfx({ source = 'assets3d-local/trial/local', out = '
       catch (error) { if (error.code !== 'ENOENT') throw error; }
     }, write: (p, b) => writeOutputFileAtomic(join(output, p), b, { force }) });
   const inspected = [], failures = [], documents = [], cachedCandidates = [];
-  function inspect(bytes, path) {
-    const doc = parseBin(bytes), found = particleSourcesFromBins([doc]);
+  function inspect(bytes, path, wad) {
+    const doc = { ...parseGlobalVfxBin(bytes), sourceBin: path, sourceWad: wad }, found = particleSourcesFromBins([doc]);
     inspected.push({ path, systems: Object.keys(found).length }); documents.push(doc);
     return doc;
   }
@@ -128,12 +141,12 @@ export async function globalVfx({ source = 'assets3d-local/trial/local', out = '
   for (const r of records.files.filter(r => r.path.endsWith('.bin') || r.path.startsWith('characters/'))) {
     const bytes = await read(`extracted/${r.path}`);
     if (bytes.length !== r.bytes || sha(bytes) !== r.sha256) throw new Error('source-hash-mismatch');
-    const parsed = parseBin(bytes), found = findGlobalSystems([parsed]);
+    const parsed = { ...parseGlobalVfxBin(bytes), sourceBin: r.path, sourceWad: r.wad }, found = findGlobalSystems([parsed]);
     const relevant = parsed.entries.filter(e => binIs(e, 'ResourceResolver') || binIs(e, 'VfxSystemDefinitionData'));
     if (relevant.length) cachedCandidates.push({ record: r, document: { ...parsed, entries: relevant } });
     const hasResolver = parsed.entries.some(e => binIs(e, 'ResourceResolver') && (binField(e, 'resourceMap')?.entries ?? []).some(([key]) => GLOBAL_KEYS.some(name => (typeof key === 'string' ? fnv1a(key) : key?.hash) === fnv1a(name))));
     if (Object.keys(found.systems).length || hasResolver) {
-      await reader.extract({ path: r.path, wad: r.wad }); inspect(bytes, r.path);
+      await reader.extract({ path: r.path, wad: r.wad }); inspect(bytes, r.path, r.wad);
     }
   }
   // The two TFT plans contain no shared VFX BIN. The shipping map may contain
@@ -152,7 +165,7 @@ export async function globalVfx({ source = 'assets3d-local/trial/local', out = '
     plan.wads.push({ name: mapWad, entries: named });
     const bins = named.filter(e => /\.bin$/i.test(e.path) && /particle|shared|shipping\/map22\/map22\.bin/i.test(e.path));
     for (const e of bins) {
-      try { inspect(await reader.extract(e), e.path); }
+      try { inspect(await reader.extract(e), e.path, e.wad); }
       catch (error) { failures.push({ path: e.path, stage: 'candidate-bin', reason: error.message }); }
     }
     const requests = [...documents.flatMap(d => d.linked)];
@@ -161,7 +174,7 @@ export async function globalVfx({ source = 'assets3d-local/trial/local', out = '
       const path = requests.shift(), key = canonical(path); if (seen.has(key)) continue; seen.add(key);
       const e = named.find(e => canonical(e.path) === key) ?? plan.wads.flatMap(w => w.entries.map(e => ({ ...e, wad: w.name }))).find(e => e.path && canonical(e.path) === key);
       if (!e) { failures.push({ path, stage: 'linked-bin', reason: 'outside-indexed-wads' }); continue; }
-      try { const d = inspect(await reader.extract(e), e.path); requests.push(...d.linked); }
+      try { const d = inspect(await reader.extract(e), e.path, e.wad); requests.push(...d.linked); }
       catch (error) { failures.push({ path, stage: 'linked-bin', reason: error.message }); }
     }
   }
@@ -184,7 +197,9 @@ export async function globalVfx({ source = 'assets3d-local/trial/local', out = '
   }
   const missingChunks = [...reader.missing.values()].sort((a, b) => a.id.localeCompare(b.id));
   const report = { policy: 'offline-only-read-cache-write-new-root; index requests precede exact BIN/texture dependency discovery',
-    requested: GLOBAL_KEYS, found: Object.keys(systems), resolvedKeys, files: reader.files, inspected, failures, missingChunks,
+    binLimits: GLOBAL_VFX_BIN_LIMITS,
+    requested: GLOBAL_KEYS, found: Object.keys(systems), resolvedKeys, textureReferences: [...references].sort(),
+    files: reader.files, inspected, failures, missingChunks,
     downloadBytes: missingChunks.reduce((s, c) => s + c.size, 0),
     dependencyClosureKnown: failures.length === 0 && GLOBAL_KEYS.every(k => Object.keys(systems).some(p => p.toLowerCase().includes(k.toLowerCase()))) };
   await writeOutputFileAtomic(join(output, 'systems.json'), json(systems), { force });

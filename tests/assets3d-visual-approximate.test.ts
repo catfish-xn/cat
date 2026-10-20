@@ -188,8 +188,23 @@ describe('explicit visual preview adapter', () => {
     const plan = trialActionBindings(manifest, rows);
     expect(plan.actionEffects.jinx.attack).toEqual(['jinx_BA_Minigun_Cas_Medium', 'jinx_BA_Minigun_Mis']);
     expect(plan.actionEffects.jinx.cast).toEqual(plan.variants.R.jinx.cast);
-    expect(plan.actionEffects.vi.attack).toEqual([]); expect(plan.variants.crit.vi.attack).toEqual([]);
+    expect(plan.actionEffects.vi.attack).toEqual([]); expect(plan.variants.crit).toBeUndefined();
     expect(plan.playback.jinx_W_Tar).toMatchObject({ status: 'approximated', phase: 'impact', anchor: 'target', delay: .5 });
     expect(plan.unavailable).toContainEqual(expect.objectContaining({ system: 'Q_activate_hands_L' }));
+  });
+  it('binds resolved shared Hit at the target and exports Crit without inventing an action discriminator', () => {
+    const rows = ['TFT_Global_BA_Hit', 'TFT_Global_BA_Crit'].map(key => ({ sourcePath: `ResolvedGlobals/${key}`,
+      effectId: key, path: `${key}.json` }));
+    const manifest = { effects: Object.fromEntries(rows.map(r => [r.effectId, { path: r.path }])) };
+    const plan = trialActionBindings(manifest, { jinx: [], vi: [] }, rows);
+    expect(plan.actionEffects.vi.attack).toEqual(['TFT_Global_BA_Hit']);
+    expect(plan.playback.TFT_Global_BA_Hit).toMatchObject({ phase: 'impact', anchor: 'target', delay: .35, maxDuration: .5 });
+    expect(plan.playback.TFT_Global_BA_Crit).toBeUndefined();
+    expect(plan.variants.crit).toBeUndefined(); expect(plan.missingShared).toEqual([]);
+    expect(plan.unboundShared).toEqual([{ unit: 'vi', key: 'TFT_Global_BA_Crit', effectId: 'TFT_Global_BA_Crit',
+      reason: 'action-state-has-no-crit-discriminator' }]);
+    expect(() => trialActionBindings({ effects: {} }, { jinx: [], vi: [] }, rows)).toThrow('dangling-trial-binding');
+    const rejected = trialActionBindings(manifest, { jinx: [], vi: [] }, rows.map(r => ({ ...r, path: undefined })));
+    expect(rejected.actionEffects.vi.attack).toEqual([]); expect(rejected.missingShared).toEqual(rows.map(r => r.effectId));
   });
 });
