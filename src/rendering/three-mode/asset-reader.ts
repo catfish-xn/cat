@@ -4,13 +4,13 @@
  * (PNG/JPEG/WebP, or .ktx2). Bytes come from the preloader, so a cached file never touches the network.
  * The Basis transcoder (≈ 0.5 MB wasm) is fetched only when the first KTX2 texture is decoded.
  */
-import { LoadingManager, Texture, TextureLoader, type WebGLRenderer } from 'three';
+import { BufferGeometry, LoadingManager, Texture, TextureLoader, type WebGLRenderer } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import transcoderJs from 'three/addons/libs/basis/basis_transcoder.js?url';
 import transcoderWasm from 'three/addons/libs/basis/basis_transcoder.wasm?url';
-import type { ModelTemplate } from '../../rendering3d';
+import { readParticleMesh, type ModelTemplate } from '../../rendering3d';
 
 export type ReadBlob = (url: string) => Promise<Blob>;
 
@@ -19,6 +19,15 @@ export interface AssetReader {
   readTexture(url: string): Promise<Texture>;
   readJson(url: string): Promise<unknown>;
   dispose(): void;
+}
+
+/**
+ * readMesh for loadParticleEffect: a mesh it cannot use (missing, not one static Mesh) becomes an empty geometry, so only
+ * that emitter draws nothing and the effect's other emitters still play (a thrown error would drop the whole effect).
+ * `readModel` must parse a fresh template per call: readParticleMesh disposes it.
+ */
+export function particleMeshOrEmpty(readModel: (url: string) => Promise<ModelTemplate>): (url: string) => Promise<BufferGeometry> {
+  return url => readParticleMesh(url, readModel).catch(() => new BufferGeometry());
 }
 
 export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob): AssetReader {
