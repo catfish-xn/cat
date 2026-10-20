@@ -1,0 +1,163 @@
+{
+  "baseline": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "branch": "codex/s13-augments-p2",
+  "tests": {
+    "files": [
+      {
+        "file": "tests/g2-3-anomalies.test.ts",
+        "tests": 42,
+        "passed": 42,
+        "durationMs": 216.057
+      },
+      {
+        "file": "tests/g2-4b-support-items.test.ts",
+        "tests": 17,
+        "passed": 17,
+        "durationMs": 606.289
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "tests": 39,
+        "passed": 39,
+        "durationMs": 19076.427
+      },
+      {
+        "file": "tests/g2-augments-choice.test.ts",
+        "tests": 49,
+        "passed": 49,
+        "durationMs": 4360.703
+      },
+      {
+        "file": "tests/g2-augments-combat.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "durationMs": 1802.351
+      },
+      {
+        "file": "tests/g2-augments-identity.test.ts",
+        "tests": 1,
+        "passed": 1,
+        "durationMs": 131.871
+      },
+      {
+        "file": "tests/g2-augments-multiplayer.test.ts",
+        "tests": 4,
+        "passed": 4,
+        "durationMs": 25.918
+      },
+      {
+        "file": "tests/g2-augments-static.test.ts",
+        "tests": 74,
+        "passed": 74,
+        "durationMs": 101.534
+      },
+      {
+        "file": "tests/m4-effects.test.ts",
+        "tests": 21,
+        "passed": 21,
+        "durationMs": 9.381
+      },
+      {
+        "file": "tests/m4-strategy-snapshot.test.ts",
+        "tests": 10,
+        "passed": 10,
+        "durationMs": 32.909
+      },
+      {
+        "file": "tests/m5-content.test.ts",
+        "tests": 9,
+        "passed": 9,
+        "durationMs": 25.778
+      },
+      {
+        "file": "tests/m8-b4-rod.test.ts",
+        "tests": 6,
+        "passed": 6,
+        "durationMs": 63.892
+      },
+      {
+        "file": "tests/m8-b4-sword.test.ts",
+        "tests": 8,
+        "passed": 8,
+        "durationMs": 9.875
+      },
+      {
+        "file": "tests/s13-augments-p2-choice.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "durationMs": 1417.205
+      },
+      {
+        "file": "tests/s13-augments-p2-combat.test.ts",
+        "tests": 24,
+        "passed": 24,
+        "durationMs": 183.885
+      },
+      {
+        "file": "tests/s13-augments-p2-multiplayer.test.ts",
+        "tests": 18,
+        "passed": 18,
+        "durationMs": 562.723
+      },
+      {
+        "file": "tests/t3-round-settlement.test.ts",
+        "tests": 10,
+        "passed": 10,
+        "durationMs": 2008.99
+      },
+      {
+        "file": "tests/tp-shared-pool.test.ts",
+        "tests": 14,
+        "passed": 14,
+        "durationMs": 570.354
+      },
+      {
+        "file": "tests/restore-audit/bounds-preflight.test.ts",
+        "tests": 16,
+        "passed": 16,
+        "durationMs": 3002.919
+      },
+      {
+        "file": "tests/restore-audit/cd-replay-facts.test.ts",
+        "tests": 34,
+        "passed": 34,
+        "durationMs": 22377.652
+      }
+    ],
+    "total": 428,
+    "passed": 428,
+    "failed": 0,
+    "pending": 0,
+    "elapsedSeconds": 38.99,
+    "newP2Tests": 58,
+    "crossBreakpointCases": 12
+  },
+  "checks": {
+    "typecheck": "passed",
+    "diffCheck": "passed"
+  },
+  "sourceSha256": {
+    "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "src/simulation/content/source/s13-14.24b/raw/zh_cn.tft.stringtable.json.gz": "ae17b0ce7ebc199e3b3c8dbc7fc906cfb0a83a1c45a9d6ce2d4a78e1526ebca4"
+  },
+  "fingerprints": [
+    {
+      "name": "herald-check",
+      "command": "node tests/fixtures/record-g2-4b-herald.cjs",
+      "exitCode": 0,
+      "elapsedSeconds": 48.779
+    },
+    {
+      "name": "inputs-record",
+      "command": "node scripts/record-g2-4b-inputs.cjs --baseline-commit=075e9a494758b13620c8ae36e55364cc214fd364",
+      "exitCode": 0,
+      "elapsedSeconds": 2.928
+    },
+    {
+      "name": "inputs-check",
+      "command": "node scripts/record-g2-4b-inputs.cjs --baseline-commit=075e9a494758b13620c8ae36e55364cc214fd364 --check",
+      "exitCode": 0,
+      "elapsedSeconds": 2.892
+    }
+  ]
+}

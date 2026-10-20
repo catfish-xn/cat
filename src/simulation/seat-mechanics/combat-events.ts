@@ -1,3 +1,4 @@
+import { occupiesCell } from '../anomalies/availability';
 import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
 
@@ -26,7 +27,7 @@ export interface CombatMembershipChange { readonly state: CombatState; readonly 
  */
 export function spawnCombatUnit(state: CombatState, unit: CombatUnit, source: CombatOrigin, tick: number): CombatMembershipChange {
   if (state.units.some(other => other.id === unit.id)||state.removedUnitIds?.includes(unit.id)) throw new RangeError(`Duplicate combat unit ${unit.id}`);
-  if (!contains(state.board, unit.cell) || state.units.some(other => other.alive && sameCell(other.cell, unit.cell)))
+  if (!contains(state.board, unit.cell) || state.units.some(other => occupiesCell(other, tick) && sameCell(other.cell, unit.cell)))
     throw new RangeError(`Spawn cell unavailable for ${unit.id}`);
   return { state: { ...state, units: [...state.units, unit] }, events: [{ type: 'unitSpawned', tick, unitId: unit.id,
     definitionId: unit.definitionId, team: unit.team, cell: { col: unit.cell.col, row: unit.cell.row }, source: { ...source } }] };

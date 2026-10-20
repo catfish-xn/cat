@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../../src/server/net/messages';
 import { applySeatCommand, ROOM_COMMAND_GATE } from '../../src/server/room/room';
 import type { RoomPhase } from '../../src/server/room/types';
-import { makeRoom, runUntil } from './helpers';
+import { makeRoom, runUntil, runUntilClaiming } from './helpers';
 import { consumableReceiptEvents } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
@@ -86,7 +86,8 @@ describe('C18-B useConsumable success through the room (§18.6)', () => {
     // After the 1-4 battle a seat holds the gray orb's remover (§18 ORB_SLOTS); find one with an inventory item too.
     const holder = () => room.state.seats.find(seat => seat.alive && seat.match.consumables.some(tool => tool.definitionId === 'magnetic-remover')
       && seat.match.items.some(item => item.location.kind === 'inventory'));
-    runUntil(room, clock, state => state.phase === 'preparation' && holder() !== undefined, 4_000);
+    // v15: the items (and the remover) arrive as orbs each seat claims in preparation.
+    runUntilClaiming(room, clock, state => state.phase === 'preparation' && holder() !== undefined, 4_000);
     const seat = holder()!, seatId = seat.seatId;
     const unit = seat.match.preparation.units.find(entry => entry.team === 'player' && entry.location.kind === 'board')!;
     const item = seat.match.items.find(entry => entry.location.kind === 'inventory')!;

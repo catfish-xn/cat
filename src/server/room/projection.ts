@@ -1,7 +1,7 @@
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized. Other seats'
- * deployed units and their items are public (C5, `publicBoard`). A seat's own state leaves only
+ * board and bench units, items and augments are public (C5, `publicBoard`). A seat's own state leaves only
  * as the rules' `toPrivateSeatView` (B7, contract §14.1), its battle as a compact replay (§14.2).
  */
 import type { HexCell } from '../../simulation/board';
@@ -10,9 +10,9 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, ItemSummonView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { listCarouselSlots, readItemSummons } from '../../server-entry';
+import { listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -22,21 +22,31 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
   return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
-    publicBoard: toPublicBoard(seat.match) };
+    publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match) };
+}
+
+/** v15: the rules' public orb summary (count and tiers only), copied field by field; ids, contents and the queue stay private. */
+export function toPublicOrbs(match: MatchState): PublicOrbSummary {
+  const summary = readPublicOrbSummary(match);
+  return { count: summary.count, tiers: [...summary.tiers] };
 }
 
 /**
- * Public build of one seat (C5): its own units deployed on the board, each with the definition ids of the
- * items it holds. Built field by field from the preparation state; bench, shop, gold, XP, item instance ids
- * and RNG never leave the room. Sorted by cell so equal boards serialize identically.
+ * Public build of one seat (C5, 2026-10-20 scouting): its own board and bench units, each with the definition ids
+ * of the items it holds and of its bound anomaly, its unequipped item definitions and its owned augment definitions. Built field by field
+ * from the preparation state; shop, gold, XP, streak, pending choices, unit/item instance ids and RNG never leave
+ * the room. Board sorted by cell and bench by slot so equal builds serialize identically.
  */
 export function toPublicBoard(match: MatchState): PublicBoard {
-  const units: PublicBoardUnit[] = [];
+  const units: PublicBoardUnit[] = [], bench: PublicBenchUnit[] = [];
+  const heldBy = (unitId: string) => match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
+    .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0))
+    .map(item => item.definitionId);
+  const anomalyOf = (unitId: string) => match.anomalyBinding?.unitId === unitId ? { anomaly: match.anomalyBinding.definitionId } : {};
   for (const unit of match.preparation.units) {
-    if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
-    const held = match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
-      .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
-    units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: held.map(item => item.definitionId) });
+    if (unit.team !== 'player') continue;
+    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });
+    else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id), ...anomalyOf(unit.id) });
   }
   // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
   for (const summon of readItemSummons(match)) {
@@ -45,7 +55,9 @@ export function toPublicBoard(match: MatchState): PublicBoard {
     units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: [], summon: true });
   }
   units.sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
-  return { units };
+  bench.sort((a, b) => a.slot - b.slot);
+  return { units, bench, looseItems: match.items.filter(item => item.location.kind === 'inventory').map(item => item.definitionId),
+    augments: match.augments.map(augment => augment.definitionId) };
 }
 
 export function toPlayerView(room: RoomState, seatId: string, serverNow: number): PlayerView {
@@ -194,6 +206,16 @@ const mirroredReplays = new WeakMap<object, CombatReplay>();
  * rethrown as is instead of re-running the whole battle inside every later push, resume or second participant.
  */
 const failedReplays = new WeakMap<object, unknown>();
+/** Replays the rules recorded while first computing the battle (not re-run); only these are spot-checked. */
+const firstPassReplays = new WeakSet<object>();
+/**
+ * Stores the replay the rules recorded during the battle's first computation under the same key toCombatReplayFor
+ * reads (the two-sided result, or a PvE seat outcome), so no push or warm-up re-runs that battle.
+ */
+export function primeCombatReplay(key: object, replay: CombatReplay): void {
+  replays.set(key, replay);
+  firstPassReplays.add(key);
+}
 function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => CombatReplay): CombatReplay {
   const hit = cache.get(key);
   if (hit) return hit;
@@ -291,10 +313,13 @@ export function mirrorCombatReplay(replay: CombatReplay): CombatReplay {
   const rows = replay.initial.board.rows;
   return {
     initial: mirrorViewState(replay.initial, rows),
-    ticks: replay.ticks.map(frame => ({ tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)),
-      ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) })),
+    ticks: replay.ticks.map(frame => mirrorReplayTick(frame, rows)),
     terminal: mirrorViewState(replay.terminal, rows),
   };
+}
+/** One replay record of side A as side B sees it (the same flip as `mirrorCombatReplay`); `rows` from the replay's board. */
+export function mirrorReplayTick(frame: CombatReplay['ticks'][number], rows: number): CombatReplay['ticks'][number] {
+  return { tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)), ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) };
 }
 function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
   const { player, enemy } = view.board.deploymentZones;
@@ -322,4 +347,73 @@ function mirrorViewEvent(event: CombatViewEvent, rows: number): CombatViewEvent 
     }
     default: return event;
   }
+}
+
+/* ---------------- first-pass replay spot check ---------------- */
+
+/** One audited battle: what the log needs to find it again, and the first frame the re-run disagrees on (null: equal). */
+export interface SpotCheckResult {
+  readonly battleId: string;
+  readonly seatIds: readonly string[];
+  readonly battleSeed: number | null;
+  /** `initial`, `tick <n>` (by frame tick), `frames` (frame count), `terminal`, or the re-run's own refusal. */
+  readonly firstDifference: string | null;
+}
+/** A sliced re-run of the chosen battles; `advance` returns every result once all are done. */
+export interface SpotCheck { advance(maxTicks: number): readonly SpotCheckResult[] | null }
+
+interface AuditCandidate { readonly key: object; readonly input: CombatReplayInput; readonly battleId: string; readonly seatIds: readonly string[]; readonly battleSeed: number | null }
+
+/**
+ * Background audit of first-pass replays: re-runs a round's captured battles with `startCombatReplay` (the rules'
+ * re-execution and comparison) and compares the result with the frames already pushed. One battle per round in
+ * rotation (`round % count`, no RNG), or every captured battle when `all`. Null when the round captured nothing.
+ */
+export function startReplaySpotCheck(battles: readonly BattleResult[], round: number, all: boolean, battleSeeds: Readonly<Record<string, number>> = {}): SpotCheck | null {
+  const candidates: AuditCandidate[] = [];
+  for (const battle of battles) {
+    if (battle.kind === 'two-sided') {
+      if (firstPassReplays.has(battle)) candidates.push({ key: battle, input: battle.battle, battleId: battle.battleId, seatIds: battle.participants, battleSeed: battle.battle.battleSeed });
+      continue;
+    }
+    for (const outcome of battle.outcomes) {
+      if (outcome.combat && firstPassReplays.has(outcome)) candidates.push({ key: outcome, input: outcome.combat, battleId: battle.battleId, seatIds: [outcome.seatId], battleSeed: battleSeeds[battle.battleId] ?? null });
+    }
+  }
+  if (candidates.length === 0) return null;
+  const chosen = all ? candidates : [candidates[round % candidates.length]!];
+  const results: SpotCheckResult[] = [];
+  let index = 0, task: CombatReplayTask | null = null;
+  const finish = (candidate: AuditCandidate, firstDifference: string | null) => {
+    results.push({ battleId: candidate.battleId, seatIds: candidate.seatIds, battleSeed: candidate.battleSeed, firstDifference });
+    index++; task = null;
+  };
+  return {
+    advance(maxTicks: number): readonly SpotCheckResult[] | null {
+      const candidate = chosen[index];
+      if (!candidate) return results;
+      try {
+        task ??= startCombatReplay(candidate.input);
+        // The room passes Infinity when it does not slice; the rules take a positive safe integer.
+        const rerun = task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
+        if (!rerun) return null;
+        finish(candidate, firstReplayDifference(replays.get(candidate.key)!, rerun));
+      } catch (error) {
+        finish(candidate, `rerun-refused:${error instanceof Error ? error.message : String(error)}`);
+      }
+      return index < chosen.length ? null : results;
+    },
+  };
+}
+
+/** Both replays come from the same rules recorder, so equal content serializes identically frame by frame. */
+function firstReplayDifference(captured: CombatReplay, rerun: CombatReplay): string | null {
+  if (JSON.stringify(captured.initial) !== JSON.stringify(rerun.initial)) return 'initial';
+  const count = Math.min(captured.ticks.length, rerun.ticks.length);
+  for (let i = 0; i < count; i++) {
+    if (JSON.stringify(captured.ticks[i]) !== JSON.stringify(rerun.ticks[i])) return `tick ${captured.ticks[i]!.tick}`;
+  }
+  if (captured.ticks.length !== rerun.ticks.length) return `frames ${captured.ticks.length}/${rerun.ticks.length}`;
+  if (JSON.stringify(captured.terminal) !== JSON.stringify(rerun.terminal)) return 'terminal';
+  return null;
 }

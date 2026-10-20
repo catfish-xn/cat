@@ -4,7 +4,7 @@
  * listeners) and the credentials return to the same baseline, and a replaced room is disposed and silent. The frozen
  * round is resolved in clock slices: the sliced and the one-shot resolution publish the same rounds.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { Lobby } from '../../src/server/room/lobby';
 import { SLICE_STEP_TICKS, type Room, type RoomRetained } from '../../src/server/room/room';
@@ -108,6 +108,30 @@ describe('B8 lifecycle: the network server across matches', () => {
 });
 
 describe('B8 sliced resolution', () => {
+  const prepared = new Map<string, ReturnType<typeof makeRoom>>();
+  for (const key of ['commands', 'dispose']) beforeAll(() => {
+    const own = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
+    own.room.start();
+    runUntil(own.room, own.clock, current => current.round === 4 && current.phase === 'preparation');
+    prepared.set(key, own);
+  });
+  // Every clock read during resolution costs 1 ms, as if each step of rules work took that long.
+  class BusyClock extends ManualClock { busy = false; override now(): number { if (this.busy) this.advance(1); return super.now(); } }
+  let budgetInput: { oneShot: ReturnType<typeof makeRoom>; clock: BusyClock; room: Room };
+  beforeAll(() => {
+    const oneShot = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
+    const clock = new BusyClock();
+    const { room } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50, sliceMs: 1, clock });
+    for (const { room: each } of [oneShot, { room }]) each.start();
+    const ready = (current: RoomState) => current.round === 4 && current.phase === 'preparation';
+    runUntil(oneShot.room, oneShot.clock, ready); runUntil(room, clock, ready);
+    budgetInput = { oneShot, clock, room };
+  });
+  afterAll(() => {
+    for (const own of prepared.values()) own.room.dispose();
+    budgetInput.oneShot.room.dispose(); budgetInput.room.dispose();
+  });
+
   it('publishes the same rounds whether a frozen round is resolved in one go or in slices of a few ticks', () => {
     const oneShot = makeRoom(new TwoSidedBattleResolver());
     const sliced = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 37 });
@@ -125,9 +149,7 @@ describe('B8 sliced resolution', () => {
   }, 120_000);
 
   it('refuses commands while the round is frozen and resolves one slice per clock turn', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
-    room.start();
-    runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');
+    const { room, clock } = prepared.get('commands')!;
     clock.fireNext();
     // The deadline froze the round and scheduled the first slice; nothing is resolved yet.
     expect(room.state.phase).toBe('frozen');
@@ -145,14 +167,7 @@ describe('B8 sliced resolution', () => {
   }, 60_000);
 
   it('ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round', () => {
-    // Every clock read during resolution costs 1 ms, as if each step of rules work took that long.
-    class BusyClock extends ManualClock { busy = false; override now(): number { if (this.busy) this.advance(1); return super.now(); } }
-    const oneShot = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
-    const clock = new BusyClock();
-    const { room } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50, sliceMs: 1, clock });
-    for (const { room: each } of [oneShot, { room }]) each.start();
-    const prepared = (current: RoomState) => current.round === 4 && current.phase === 'preparation';
-    runUntil(oneShot.room, oneShot.clock, prepared); runUntil(room, clock, prepared);
+    const { oneShot, clock, room } = budgetInput;
     oneShot.clock.fireNext(); clock.fireNext();
     expect(room.state.phase).toBe('frozen');
     clock.busy = true;
@@ -169,9 +184,7 @@ describe('B8 sliced resolution', () => {
   }, 60_000);
 
   it('stops resolving and publishes nothing once disposed in the middle of a frozen round', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
-    room.start();
-    runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');
+    const { room, clock } = prepared.get('dispose')!;
     clock.fireNext(); clock.fireNext();
     expect(room.state.phase).toBe('frozen');
     expect(room.retained.resolving).toBe(true);

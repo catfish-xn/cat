@@ -56,6 +56,8 @@ export type Condition =
   | { readonly kind: 'target-magic-resist'; readonly op: 'gt' | 'lte'; readonly value: number }
   /** G2-4b: the triggering facts contain a critical basic-attack hit. */
   | { readonly kind: 'critical-attack' }
+  | { readonly kind: 'critical-hit' }
+  | { readonly kind: 'damage-delivery'; readonly deliveries: readonly DamageDelivery[] }
   | { readonly kind: 'all'; readonly conditions: readonly Condition[] };
 /** A08: evaluate applicable contributions before selecting strongest reduction. */
 export interface DamageFilter {
@@ -425,7 +427,8 @@ export interface RoundDefinition {
 export type LootPayload =
   | { readonly kind: 'gold'; readonly quantity: number }
   | { readonly kind: 'consumable'; readonly definitionId: import('../consumable-types').ConsumableDefinitionId; readonly quantity: number }
-  | { readonly kind: 'item' | 'unit'; readonly definitionId: string; readonly quantity: number };
+  | { readonly kind: 'item'; readonly definitionId: string; readonly quantity: number }
+  | { readonly kind: 'unit'; readonly definitionId: string; readonly quantity: number; readonly starLevel?: 1 | 2 | 3 };
 export interface DropIdentity {
   readonly dropId: string;
   readonly encounterId: string;
@@ -439,6 +442,10 @@ export type DropState = DropIdentity & { readonly payload: LootPayload } & (
   | { readonly status: 'forfeited'; readonly receiptId: null }
 );
 export interface LootReceipt {
+  readonly resolution?: 'held' | 'gold' | 'capacity-sold' | 'forfeited';
+  readonly gold?: number;
+  /** Round of the actual transaction, distinct from the orb's source round. */
+  readonly claimedRoundId?: string;
   readonly grantedConsumableIds?: readonly string[];
   readonly receiptId: string;
   readonly dropId: string;
@@ -479,12 +486,12 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v12';
-  readonly contentVersion: 's13-14.24b-g2-3-v12';
+  readonly rulesVersion: 's13-g2-3-v15';
+  readonly contentVersion: 's13-14.24b-g2-3-v15';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;
-  readonly commandProtocolVersion: 3;
+  readonly commandProtocolVersion: 4;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

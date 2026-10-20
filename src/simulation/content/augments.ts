@@ -1,6 +1,14 @@
+import { S13_P1_AUGMENTS } from './s13-p1-augments';
+import { D11_AUGMENTS } from './d11-fill';
+import { P3_AUGMENTS } from './s13-p3';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
+import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...D11_AUGMENTS,
+  ...S13_P1_AUGMENTS,
+  ...S13_P2_AUGMENTS,
+  ...P3_AUGMENTS,
   "placebo": {
     "id": "placebo",
     "name": "安慰剂",

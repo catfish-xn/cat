@@ -2,6 +2,9 @@ import {describe,it,expect} from 'vitest';
 import {planOpening,commitOpening,validateOpeningState,advanceOpeningTasks} from '../src/simulation/m8/opening';
 import {DEFAULT_BOARD} from '../src/simulation/board';
 import {source,amount} from './fixtures/m8-contract-cases';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const u=(id:string,col:number,row:number,team:'player'|'enemy'='enemy')=>({id,cell:{col,row},team,hp:1000,maxHp:1000,alive:true,untargetable:false,controlled:false});
 const s=(id:string)=>({...source('opening',id,id),sourceKind:'ability' as const});
 describe('IF-OPEN shared opening occupancy and independent delayed-task state',()=>{

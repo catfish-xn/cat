@@ -11,11 +11,13 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import type { BattleInput, BattleResult, RoomPhase, RoomState, SeatState, SharedPoolState } from '../../src/server/room/types';
 import type { MatchState } from '../../src/simulation/match-types';
 import type { Unit } from '../../src/simulation/units';
-import { makeRoom, runUntil } from './helpers';
+import { makeRoom, runUntil, runUntilClaiming } from './helpers';
 import { readLootView } from '../../src/simulation/match';
 
 const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
-const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll'];
+const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
+/** v15: an orb claim passes wherever an operation does (queued by the rules during a battle). */
+const ORB = ['claimOrb'];
 /** Gold the rules granted from this round's revealed orbs (granted receipts only; 0 for PvP). */
 const lootGold = (match: MatchState, round: number) => match.round !== round ? 0 : readLootView(match).revealedDrops
   .reduce((sum, drop) => sum + (drop.status === 'granted' && drop.payload.kind === 'gold' ? drop.payload.quantity : 0), 0);
@@ -35,8 +37,8 @@ describe('T10 room gate (contract §15.2)', () => {
   it('passes exactly OPS, CHOICES and the summon move per room phase', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
       // G2-4b (contract §26): the summon move passes only while seats prepare.
-      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...CHOICES, 'moveItemSummon'], frozen: [],
-      battle: OPS, 'awaiting-settlement': OPS, settlement: OPS, ended: [],
+      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], frozen: [],
+      battle: [...OPS, ...ORB], 'awaiting-settlement': [...OPS, ...ORB], settlement: [...OPS, ...ORB], ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());
   });
@@ -44,7 +46,8 @@ describe('T10 room gate (contract §15.2)', () => {
   it('in a PvP battle: shop, XP and bench pass; choices and board targets are refused with wrong-phase and change nothing', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
-    runUntil(room, clock, state => state.round === 5 && state.phase === 'battle');
+    // v15: rewards are orbs; s4 (a bot without a driver here) claims them in each preparation, as its driver would.
+    runUntilClaiming(room, clock, state => state.round === 5 && state.phase === 'battle');
     const s4 = () => seat(room.state, 's4');
     const before = room.state;
     // Board targets: the rules refuse them under the roster lock, without publishing anything.
@@ -124,7 +127,8 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     const { inputs, resolver } = recording();
     const { room, clock } = makeRoom(resolver);
     room.start();
-    runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
+    // v15: rewards are orbs every seat claims in preparation, so s0 has its units before the deadline places them.
+    runUntilClaiming(room, clock, state => state.round === 5 && state.phase === 'preparation');
     // Human s0: send its whole board to the bench, so the deadline must place every unit itself.
     for (const unit of onBoard(seat(room.state, 's0').match)) {
       const used = new Set(own(seat(room.state, 's0').match).flatMap(other => other.location.kind === 'bench' ? [other.location.slot] : []));
@@ -173,16 +177,16 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
 
 describe('T10 deferred merge after the battle (contract §15.3)', () => {
   it('board A + bench A + a third A bought during the battle merges only after the settlement, onto the board copy', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), {seed:23});
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), {seed:1});
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
     // A bot seat (no auto-deployment) with a unit on the board and two offers of it in its shop. Which seat that is
-    // follows the seed's random openings (T13-B), so it is read from the state (G2-2 seed 23: s4).
+    // follows the seed's random openings (T13-B), so it is read from the state (seed 1 since the v13 augment pool).
     const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
       .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
     const botIds = ['s4', 's5', 's6', 's7'];
     // Seek the required pair through paid public rerolls; random openings no longer
-    // guarantee that seed 23's original board hero appears twice in its first shop.
+    // guarantee that the seed's board hero appears twice in its first shop.
     for(const id of botIds) {
       while(!onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2)&&seat(room.state,id).match.gold>=2) {
         const result=room.handle(id,{type:'reroll'});if(!result.ok)break;

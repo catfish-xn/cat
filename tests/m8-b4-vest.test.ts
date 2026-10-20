@@ -1,6 +1,9 @@
 import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 describe('B4 vest: independent numbers in actual combat',()=>{
  it('bramble:HP1070;armor65 mitigates100→60 then8%→55;retort100,only one within40ticks',()=>{const r=run(wearing('bramble-vest',{cooldownTicks:1000}),39,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100,attackIntervalTicks:5})]);expect(r.p.maxHp).toBe(1070);expect(packets(r.events,'e')[0].hpDamage).toBe(55);expect(packets(r.events).map(e=>e.raw)).toEqual([100]);});
  it('gargoyle:one targeting enemy gives25+10=35 resists;100/1.35→74 damage',()=>{const r=run(wearing('gargoyle',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(74);expect(readCombatStats(r.p,r.state)).toMatchObject({armor:35,magicResist:35});});

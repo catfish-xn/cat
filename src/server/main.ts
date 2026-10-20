@@ -16,6 +16,8 @@
  *                            e2e scripts only
  *   CAT_STALL_SEC            G3 watchdog: end a match that publishes nothing this long past its phase deadline (default 120, 0 = off)
  *   CAT_ABANDON_SEC          G3 watchdog: end a match whose human seats are all disconnected this long (default 90, 0 = off)
+" *   CAT_HEARTBEAT_SEC        ping + heartbeat message every this many seconds (default 10, 0 = off); a connection silent for
+ *                            2.5 intervals is dropped (its seat is kept and resumes as after any disconnect)
  *   CAT_LOG_LEVEL            debug / info (default) / warn / error; one JSON object per line on stdout
  *   CAT_GIT_SHA              commit the bundle was built from, reported by GET /healthz (deploy/deploy.sh sets it)
  *   CAT_FAULT_INJECT_ROUND   TEST ONLY (G3 e2e): the first battle of this round number throws once, so the room ends
@@ -26,7 +28,7 @@
 import { CONTENT_DIGEST } from '../simulation/content';
 import { LOOT_REPLAY_DIGEST } from '../simulation/loot-freeze';
 import { createJsonLogger, parseLogLevel } from './log';
-import { createGameServer } from './net/server';
+import { HEARTBEAT_DEFAULTS, createGameServer } from './net/server';
 import type { BattleResolver } from './room/battle-resolver';
 import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
 import { CAROUSEL_RULES_BINDING } from './room/carousel';
@@ -57,6 +59,8 @@ const host = env.CAT_HOST || '127.0.0.1';
 const takeover = flag('CAT_TAKEOVER', BOT_DRIVER_DEFAULTS.takeover);
 const queueTimeout = env.CAT_QUEUE_TIMEOUT_SEC ? seconds('CAT_QUEUE_TIMEOUT_SEC', 0) : null;
 const sha = (env.CAT_GIT_SHA ?? '').trim() || 'unknown';
+const heartbeatMs = seconds('CAT_HEARTBEAT_SEC', HEARTBEAT_DEFAULTS.intervalMs);
+const heartbeat = heartbeatMs > 0 ? { intervalMs: heartbeatMs, timeoutMs: Math.round(heartbeatMs * 2.5) } : null;
 const watchdog = { stallMs: seconds('CAT_STALL_SEC', 120_000), abandonMs: seconds('CAT_ABANDON_SEC', 90_000) };
 const faultRound = integer('CAT_FAULT_INJECT_ROUND', 0);
 const carousel = flag('CAT_CAROUSEL', true);
@@ -93,7 +97,7 @@ createGameServer({
   },
   queueTimeoutMs: queueTimeout,
   bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeover, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
-  logger: log, watchdog,
+  logger: log, watchdog, heartbeat,
   ...(carousel ? { carousel: CAROUSEL_RULES_BINDING } : {}),
   build: { sha, contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST },
   processStats: () => ({ uptimeSec: Math.round(process.uptime()), rssBytes: process.memoryUsage.rss() }),
@@ -101,7 +105,7 @@ createGameServer({
   // `msg` keeps the "listening on" text the e2e harness and operators wait for.
   log('info', 'server.listening', { msg: `listening on ws://${host}:${server.port} (http://${host}:${server.port}/healthz)`, host, port: server.port, sha,
     contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST, prepSec: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000,
-    takeover, carousel, stallSec: watchdog.stallMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
+    takeover, carousel, stallSec: watchdog.stallMs / 1000, heartbeatSec: heartbeatMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
   const shutdown = (signal: string) => { log('info', 'server.stopping', { signal }); server.close().then(() => { clock.dispose(); process.exit(0); }); };
   process.once('SIGINT', () => shutdown('SIGINT'));
   process.once('SIGTERM', () => shutdown('SIGTERM'));

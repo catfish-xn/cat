@@ -16,6 +16,8 @@ export function execute(state:api.MatchState,a:ClientCommand):api.MatchCommandRe
     case 'equip': return api.equipItem(state,a.itemId,a.unitId,a.slot);
     case 'choose': return api.selectChoice(state,a.choiceId,a.generation,a.definitionId);
     case 'anomalyTarget': return api.selectAnomalyTarget(state,a.choiceId,a.generation,a.unitId);
+    case 'rerollAugment': return api.rerollAugment(state,a.choiceId,a.generation,
+      (a as ClientCommand & {readonly optionIndex?:number}).optionIndex);
     case 'anomalyReroll': return api.rerollAnomaly(state,a.choiceId,a.generation);
   }
 }

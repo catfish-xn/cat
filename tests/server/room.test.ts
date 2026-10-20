@@ -175,7 +175,8 @@ describe('Room: real resolver end to end', () => {
 
 describe('Room: choice window and stuck seats', () => {
   it('opens a choice window at a round with a pending choice and moves on as soon as every seat chose', () => {
-    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    // Room seed 1: every seat's first offer at 2-1 closes the choice (no follow-up forge choice from the chosen augment).
+    const { room, clock } = makeRoom(new PlaceholderBattleResolver(), { seed: 1 });
     room.start();
     runUntil(room, clock, current => current.round === 4);
     expect(room.state.phase).toBe('choice');
@@ -192,7 +193,7 @@ describe('Room: choice window and stuck seats', () => {
     expect(room.state.phase).toBe('preparation');
     expect(clock.now()).toBeLessThan(deadline);
     expect(room.state.deadlineAt).toBe(clock.now() + 1_000);
-  });
+  }, 20_000); // Temporary (user-approved 2026-10-20): ~3.5s alone, over the 5s default on loaded CI runners.
   it('re-arms the settlement a bounded number of times for a seat the rules refuse to advance, then faults', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start(); clock.advance(1_000); clock.runNext();

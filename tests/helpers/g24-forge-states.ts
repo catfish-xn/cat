@@ -1,4 +1,4 @@
-import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,buyXp,deployMatchUnit,type MatchState} from '../../src/simulation/match';
+import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,type MatchState} from '../../src/simulation/match';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../../src/simulation/round-settlement';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {validateG23Restoration} from '../../src/simulation/g2-3-restore';
@@ -31,8 +31,12 @@ export function forgeStates():Map<number,MatchState>{
    for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(deployMatchUnit(state,u.id,{kind:'bench',slot:0}));
    for(const [col,definitionId] of ['darius','draven','rell','swain','ambessa','mordekaiser'].entries()){
     const result=grantMechanicUnit(state,{receiptId:'fixture:'+definitionId,source:'fixture',definitionId});state=accepted(result);
-    if(!result.ok||result.receipt.kind!=='unit'||!result.receipt.unitId)throw Error('fixture hero');
-    state=accepted(deployMatchUnit(state,result.receipt.unitId,{kind:'board',cell:{col,row:4}}));
+    if(!result.ok||result.receipt.kind!=='unit'||result.receipt.resolution!=='orb')throw Error('fixture hero orb');
+    expectOrbUnallocated(state, definitionId);
+    state=accepted(claimOrb(state,result.receipt.orbId!,state.round));
+    const unit=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId)!;
+    if(!unit)throw Error('fixture claimed hero');
+    state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:4}}));
    }
    recruited=true;
   }
@@ -46,6 +50,10 @@ export function forgeStates():Map<number,MatchState>{
   }else state=accepted(startMatchCombat(state));
  }
  throw Error('forge fixture budget');
+}
+
+function expectOrbUnallocated(state:MatchState,definitionId:string):void{
+ if(state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))throw Error('fixture hero allocated before claim');
 }
 
 export function restoreDomain(input:unknown):MatchState{

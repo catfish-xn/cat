@@ -10,6 +10,7 @@ import { UNIT_DEFINITIONS } from '../units';
 import type { UnitUpgradedEvent } from '../unit-types';
 import { appendMechanicReceipt, findMechanicReceipt } from './state';
 import type { MechanicReceipt, MechanicSource } from './types';
+import { enqueueRewardOrb } from '../orb-claim';
 
 export interface MechanicGrantRequest { readonly receiptId: string; readonly source: MechanicSource }
 export type MechanicGrantResult =
@@ -53,19 +54,19 @@ export function grantMechanicItem(state: MatchState, request: MechanicGrantReque
   return commit(granted, { ...identity(state, request), kind: 'item', definitionId: request.definitionId, itemId });
 }
 
-/**
- * One hero to the bench, through the shared pool when `unitLootPolicy` is the transaction's policy (runSharedMatchCommand
- * passes it to every command). Shared and the pool has no copy: pays the unit's cost in gold instead, like PvE unit loot.
- * Bench full: refused with 'bench-full' before the pool is touched, nothing changes. A successful result must be committed
- * in the same command: an uncommitted shared reservation fails the pool's conservation check.
- * Offline (no policy) the unit is always born when the bench has room. A summon definition is born the same way without
- * the pool; place it with deployMatchUnit or the mechanic's own placement afterwards.
- */
-export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
+/** Online heroes enqueue an exactly-once reward orb without inventory or pool allocation.
+ * Offline grants retain their original capacity retry/policy behavior. Summons remain direct, unpooled births. */
+export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3 }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
   const bad = badRequest(state, request); if (bad) return bad;
   // Pooled shop heroes, or summons (UnitDefinition.summon), which never touch the shared pool.
   const summon = !!UNIT_DEFINITIONS[request.definitionId]?.summon;
   if (!summon && !SHOP_CATALOG.includes(request.definitionId)) return refuse(state, 'invalid-mechanic-state');
+  if (state.multiplayer && !summon) {
+    if (![1,2,3].includes(request.starLevel??1)) return refuse(state,'invalid-mechanic-state');
+    const queued=enqueueRewardOrb(state,request.receiptId,request.definitionId,request.starLevel??1);
+    return commit(queued.state,{...identity(state,request),kind:'unit',definitionId:request.definitionId,
+      starLevel:request.starLevel??1,resolution:'orb',orbId:queued.orbId,unitId:null,gold:0});
+  }
   const plan = planUnitAcquisition(state, request.definitionId, { kind: 'mechanic', receiptId: request.receiptId }, state.resourceProvenance.entries.length);
   if (!plan.ok) return refuse(state, 'bench-full');
   const drop = { dropId: mechanicDropId(request.receiptId), payload: { kind: 'unit', definitionId: request.definitionId, quantity: 1 } } as unknown as FrozenDirectDrop;

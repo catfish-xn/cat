@@ -89,7 +89,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
     requireSnapshot(s.augmentProgress.pumpingRounds <= round.ordinal
       && (augmentIds.has('pumping-up-i') || s.augmentProgress.pumpingRounds === 0)
-      && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
+      && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
@@ -130,7 +130,7 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   return restorePlayerBattleSnapshot({
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
-    ...(state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),

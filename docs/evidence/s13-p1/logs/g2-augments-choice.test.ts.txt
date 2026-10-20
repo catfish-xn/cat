@@ -1,0 +1,19 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast tests/g2-augments-choice.test.ts
+
+
+ RUN  v5.0.3 /workspace/scratch/2d61d723fa5a/cat-s13-augments-p1
+
+
+ Test Files  1 passed (1)
+      Tests  41 passed (41)
+   Start at  18:28:23
+   Duration  8.45s (tests 70%, transform 26%, import 5%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

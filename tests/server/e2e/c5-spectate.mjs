@@ -4,8 +4,8 @@
  *   npm run build:game && node tests/server/e2e/c5-spectate.mjs
  *
  * 1. Real server (`?server=ws`), two browser contexts: A opens B's board from the right column; the panel
- *    matches B's own `__CAT_DEBUG__` deployed units; every `view` frame A received carries public boards
- *    without bench/shop/gold/ids. Esc and a second click close it.
+ *    matches B's own `__CAT_DEBUG__` deployed and bench units and shows no streak; every `view` frame A received
+ *    carries public boards without shop/gold/streak/ids. Esc and a second click close it.
  * 2. A empties its board and is eliminated while the match goes on: spectate banner, every command control
  *    disabled, no command frame leaves the page, opponent boards still open; the ranking appears at the end.
  * 3. Local room (`?mode=online`): the panel opens and matches my own deployed units.
@@ -54,7 +54,18 @@ function deployed(state) {
     items: state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id).sort((a, b) => a.location.slot - b.location.slot).length,
   })).sort((a, b) => a.cell.localeCompare(b.cell));
 }
-const panelUnits = page => page.evaluate(() => [...document.querySelectorAll('#opponent-board .opponent-unit')].map(node => ({
+/** Bench units of a MatchState in the panel's shape (definition, star, `bench-<slot>`, item count). */
+function benched(state) {
+  return state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench').map(unit => ({
+    definitionId: unit.definitionId, starLevel: unit.starLevel, cell: `bench-${unit.location.slot}`,
+    items: state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id).length,
+  })).sort((a, b) => a.cell.localeCompare(b.cell));
+}
+const panelBench = page => page.evaluate(() => [...document.querySelectorAll('#opponent-board .opponent-bench .opponent-unit')].map(node => ({
+  definitionId: node.dataset.definition, starLevel: Number(node.dataset.star), cell: node.dataset.debug.replace('online:opponent-unit:', ''),
+  items: node.querySelectorAll('.item-mark').length,
+})).sort((a, b) => a.cell.localeCompare(b.cell)));
+const panelUnits = page => page.evaluate(() => [...document.querySelectorAll('#opponent-board .opponent-grid .opponent-unit')].map(node => ({
   definitionId: node.dataset.definition, starLevel: Number(node.dataset.star), cell: node.dataset.debug.replace('online:opponent-unit:', ''),
   items: node.querySelectorAll('.item-mark').length,
 })).sort((a, b) => a.cell.localeCompare(b.cell)));
@@ -99,7 +110,9 @@ async function main() {
     const shownB = await panelUnits(a), ownB = deployed((await read(b)).state);
     check(JSON.stringify(shownB) === JSON.stringify(ownB), `A's panel of B matches B's deployed units ${JSON.stringify(ownB)}`);
     const panelText = await a.textContent('#opponent-board');
-    check(!/金币|商店|备战席 \d/.test(panelText.replace('不含备战席、商店、金币', '')), 'panel shows no gold, shop or bench');
+    const shownBench = await panelBench(a), ownBench = benched((await read(b)).state);
+    check(JSON.stringify(shownBench) === JSON.stringify(ownBench), `A's panel of B matches B's bench units ${JSON.stringify(ownBench)}`);
+    check(!/金币|商店|连胜|连败/.test(panelText.replace('不含商店、金币、连胜', '')), 'panel shows no gold, shop or streak');
     check((await read(a)).m6.viewingSeatId === seatB && await a.evaluate(seat => document.querySelector(`[data-debug="online:seat:${seat}"]`).classList.contains('viewing'), seatB), 'B is marked as the seat being viewed');
     await a.screenshot({ path: `${OUT}/1-a-views-b.png` });
     await a.keyboard.press('Escape');
@@ -108,7 +121,7 @@ async function main() {
     check(await a.isHidden('#opponent-board'), 'a second click on the same seat closes it');
     check(sentA.every(message => message.type !== 'command'), 'opening and closing the panel sent no command');
 
-    const forbidden = ['gold', 'shop', 'bench', 'slot', 'xp', 'seed', 'rngState', 'id', 'location', 'units:bench'];
+    const forbidden = ['gold', 'shop', 'streak', 'xp', 'seed', 'rngState', 'id', 'location', 'choiceId'];
     const leaks = viewsA.flatMap(message => message.view.seats.flatMap(seat => {
       const keys = new Set(); const walk = value => { if (Array.isArray(value)) value.forEach(walk); else if (value && typeof value === 'object') for (const [key, inner] of Object.entries(value)) { keys.add(key); walk(inner); } };
       walk(seat.publicBoard); return forbidden.filter(key => keys.has(key)).map(key => `${seat.seatId}.${key}`);

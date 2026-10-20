@@ -1,0 +1,364 @@
+{
+  "initialHead": "2b7b170bfa063fd69d22ff5a57de7a8d039eaf58",
+  "multiplayerBaseline": "a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+  "changes": {
+    "M1": "继承双抗只排除 Shred/Sunder，保留正向解析加成；依据官方 14.24 补丁说明。",
+    "M2": "保留最远距离、行列决胜，沿确定路径逐格检查击退，遇阻即停。",
+    "M3": "occupiesCell 统一在场实体占格；双狼和迷你不阻挡灵风、短刀、分裂、跳跃、锻炉及召唤落点。",
+    "M4": "减甲钩子排除 redirected 分担包，分担伤害仍结算。",
+    "M5": "轨道优先跟踪有效 targetId，失效才按原距离、ID选敌。",
+    "S1": "真实复活、tick119 缺席、三类真实召唤及两种准备期的单字段篡改拒绝回归，合法状态同时通过。",
+    "S2": "MoveSpeed=500 未映射、语义未证实；螃蟹不攻击为项目约定；轨道参数为确定性近似。"
+  },
+  "officialReference": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+  "verification": {
+    "files": 21,
+    "total": 251,
+    "passed": 251,
+    "failed": 0,
+    "wallSeconds": 51.234,
+    "newRegressionInstances": 17
+  },
+  "testTimingBasis": "每文件独立 npm test 进程、文件间串行；wallSeconds 为最终通过执行的墙钟秒数，含 npm 启动。未运行全套。",
+  "tests": [
+    {
+      "file": "tests/s13-anomalies-b.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.767,
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-c.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.795,
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-d.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.839,
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-redirect.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.683,
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-replay.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.74,
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 8.047,
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-restore.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.757,
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.957,
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-settlement.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.956,
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "tests/s13-anomalies-source.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.212,
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-zephyr.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.225,
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-cutlass.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.868,
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.397,
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-restore.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.768,
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-gold.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.405,
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-resists-restore.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 5.404,
+      "total": 21,
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-skills.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.613,
+      "total": 18,
+      "passed": 18,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-anomalies.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 2.006,
+      "total": 40,
+      "passed": 40,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b7-mechanisms.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.571,
+      "total": 21,
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b3-damage-control-order.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.499,
+      "total": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "file": "tests/m5-combat.test.ts",
+      "exitCode": 0,
+      "wallSeconds": 1.725,
+      "total": 48,
+      "passed": 48,
+      "failed": 0
+    }
+  ],
+  "newRegressions": [
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M1 Scuttle clears 30 percent Shred/Sunder at death while retaining +0 resolved resists",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M1 Scuttle clears 30 percent Shred/Sunder at death while retaining +40 resolved resists",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M2 Repulsor stops at the first occupied step instead of jumping to (0,1)",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 WolfFamiliars plus enemy Zephyr returns the owner to (3,7)",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 DeftHands plus enemy Zephyr returns the owner to (3,7)",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 WolfFamiliars cannot reserve the Cutlass return cell",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 DeftHands cannot reserve the Cutlass return cell",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 WolfFamiliars cannot reserve a Trench replacement landing",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M3 DeftHands cannot reserve a Trench replacement landing",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M4 Mini Mees preserves redirected damage without reducing redirect-only Loris armor",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-review.test.ts",
+      "name": "M5 orbit follows a real three-hex Fishbones attack target and falls back only when invalid",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 actual Last Chance revival rejects deleting only revivedAtTick",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 tick119 Dramatic Entrance rejects changing only the absence deadline",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 real ScuttleFamiliar birth rejects changing only summon ownership",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 real WolfFamiliars birth rejects changing only summon ownership",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 real DeftHands birth rejects changing only summon ownership",
+      "status": "passed"
+    },
+    {
+      "file": "tests/s13-anomalies-restore-review.test.ts",
+      "name": "S1 preparation and next-round preparation restore legally and reject a leaked prior combat",
+      "status": "passed"
+    }
+  ],
+  "fingerprintAndTypeChecks": [
+    {
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 38.756
+    },
+    {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 2.781
+    },
+    {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-inputs.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+        "--check"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 2.874
+    },
+    {
+      "command": [
+        "node",
+        "tests/fixtures/record-g2-4b-herald.cjs"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 38.812
+    },
+    {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 49.747
+    },
+    {
+      "command": [
+        "node",
+        "scripts/record-g2-4b-release.cjs",
+        "--baseline-commit=a4871fa8a290fd9371ff9d2014e3c3d04bc1fc53",
+        "--check"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 51.179
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "wallSeconds": 11.275
+    }
+  ],
+  "guards": {
+    "serverAndRenderingUnchanged": true,
+    "historicalRawUnchanged": true,
+    "versionsAndDependenciesUnchanged": true,
+    "existingTestAssertionsAndTimeoutsUnchanged": true,
+    "gitDiffCheckPassed": true
+  },
+  "decisions": [
+    "统一占格扩展到所有相关位移/出生路径，避免同类漏洞。",
+    "保留所有既有数值与版本；轨道近似只标注文档与注释。",
+    "S1 使用现有严格恢复校验，未修改验证器。"
+  ],
+  "unfinishedThisReview": [],
+  "inheritedRisk": "上单 m5-audit-boundaries 的 4 条旧完整异常池数量断言仍失败（预期 30、实际 41）；按禁止修改断言要求保留，本轮未重跑，不声称全 CI 通过。",
+  "limits": [
+    "星原之准轨道为确定性近似。",
+    "最后机会 MoveSpeed=500 语义未证实，未映射。"
+  ]
+}

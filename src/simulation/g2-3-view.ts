@@ -12,5 +12,5 @@ export function readG23MechanismState(state:MatchState){
  return structuredClone({conqueror:{stacks:p.conquest.stacks,chestsOpened:p.conquest.chestsOpened},academy:{sponsored:p.sponsored,receipts:p.itemReceipts},
   chemBaron:p.chem,junkerKing:{eligibleRounds:p.junkerRounds,purchases:p.junkerPurchases,menu:g23JunkerMenu(state)},
   laboratories:g23Laboratories(p.seed,'player',tier),radiantConversion:p.conquest.radiantConversion,
-  rewards:p.rewards.flatMap(b=>g23RewardAtoms(b,p.seed).map(a=>({...a,remaining:a.quantity-p.rewardClaims.filter(c=>c.atomId===a.id).length}))).filter(a=>a.remaining>0)});
+  rewards:p.rewards.flatMap(b=>g23RewardAtoms(b,p.seed,!!state.multiplayer).map(a=>({...a,remaining:a.quantity-p.rewardClaims.filter(c=>c.atomId===a.id).length}))).filter(a=>a.remaining>0)});
 }

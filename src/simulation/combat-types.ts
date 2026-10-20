@@ -36,8 +36,13 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly d11Kills?:readonly {readonly eventSeq:number;readonly victimId:string}[];
+  readonly s13P2Opening?: import('./s13-augments-p2-combat').P2Opening;
+  readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
+  readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
+  readonly s13P3?: import('./s13-p3-combat').P3CombatState;
   readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
   readonly openingItemBankGold?:number;
   readonly currentItemBankGold?:number;
@@ -79,6 +84,8 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  /** Private PvE live-bank transcript. Absent when no authoritative sample changed state. */
+  readonly bankSamples?: readonly CombatBankSample[];
   readonly trenchSplits?:readonly {readonly ownerId:string;readonly itemInstanceId:string;readonly tick:number;readonly maxHp:number;readonly permanentAdBps:number;readonly copyIds:readonly string[];readonly g23?:Pick<G23State,'conquestTakedowns'|'highRoller'>}[];
   readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
   readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
@@ -94,6 +101,8 @@ export interface CombatState {
   readonly board: Board; readonly units: readonly CombatUnit[]; readonly tick: number; readonly maxTicks: number;
   readonly status: 'running' | 'finished'; readonly result: CombatResult | null;
 }
+/** Private, authoritative economy inputs between combat ticks, never public replay payload. */
+export interface CombatBankSample {readonly tick:number;readonly team:Team;readonly liveGold:number}
 /** Engine-level event: every combat event carries a tick; Match/strategy combats add the ledger envelope. */
 export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readonly combatId?: string; readonly eventSeq?: number };
 /** B9 replay2: the frozen M8 ledger event (contracts.ts M8CombatEvent). Match, saves, replay, stats and UI use only this. */
@@ -130,7 +139,7 @@ export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | Le
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {
-  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'player');
-  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'enemy');
+  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && !['wolf','mini'].includes(unit.anomalySummon?.kind??'') && unit.team === 'player');
+  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && !['wolf','mini'].includes(unit.anomalySummon?.kind??'') && unit.team === 'enemy');
   return player && enemy ? null : player ? 'playerWin' : enemy ? 'enemyWin' : 'draw';
 }

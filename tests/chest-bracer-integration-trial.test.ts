@@ -21,7 +21,9 @@ const accepted = (result: MatchCommandResult): MatchState => {
  * "test"), equip/deploy/start/step. The special items are NOT claimed to be
  * naturally rolled by the acquisition route. No combat facts, stats or RNG edits. */
 function startFight(): { state: MatchState; receiverId: string; chestHolderId: string } {
-  let state = publicEquipmentPreparation(['rod'], { seed: 19 });
+  // v15 seed 554 publicly offers Manaflow I and reaches the same 2-5 rod/chest trial.
+  // Its real grant/pulse/stack/death boundaries are pinned below.
+  let state = publicEquipmentPreparation(['rod'], { seed:554, augmentPriorities:['manaflow-i'] });
   const chestHolderId = state.preparation.units.find(u => u.team === 'player' && u.definitionId !== 'lux')!.id;
   for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.definitionId !== 'lux' && u.id !== chestHolderId))
     state = accepted(sellUnit(state, unit.id));
@@ -41,10 +43,10 @@ function startFight(): { state: MatchState; receiverId: string; chestHolderId: s
 }
 
 const checkpointCases = [
-  ['before grant', 162], ['grant tick', 163],
-  ['before first pulse', 262], ['first pulse', 263],
-  ['first bracer stack', 352], ['repeated bracer stack', 469],
-  ['before receiver death', 550], ['after receiver death', 551],
+  ['before grant', 79], ['grant tick', 80],
+  ['before first pulse', 179], ['first pulse', 180],
+  ['first bracer stack', 220], ['repeated bracer stack', 344],
+  ['before receiver death', 451], ['after receiver death', 452],
 ] as const;
 const checkpoints = new Map<number, { state: MatchState; eventOffset: number }>();
 const events: MatchEvent[] = [];
@@ -86,31 +88,31 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(receiverOf(initial).itemPrograms!.map(p => p.source.definitionId)).toContain(BRACER);
     expect(receiverOf(initial).combatItemGrants ?? []).toEqual([]);
     const at = (tick: number) => checkpoints.get(tick)!.state;
-    expect(receiverOf(at(162)).combatItemGrants ?? []).toEqual([]);
-    expect(receiverOf(at(163)).combatItemGrants).toMatchObject([{ definitionId: 'archangel', grantedAtTick: 163 }]);
-    expect(at(163).combat!.units.find(u => u.id === chestHolderId)!.alive).toBe(false);
-    expect(pulses(at(262))).toEqual([0]);
-    expect(pulses(at(263))).toEqual([1]);
-    expect(readCombatStats(receiverOf(at(263)), at(263).combat!).abilityPower
-      - readCombatStats(receiverOf(at(262)), at(262).combat!).abilityPower).toBe(30);
-    expect(stacks(at(263))).toBe(0);
-    expect(stacks(at(352))).toBe(1);
-    expect(stacks(at(469))).toBe(2);
-    expect(receiverOf(at(550)).alive).toBe(true);
-    expect(receiverOf(at(551)).alive).toBe(false);
-    expect(pulses(at(550))).toEqual([3]);
+    expect(receiverOf(at(79)).combatItemGrants ?? []).toEqual([]);
+    expect(receiverOf(at(80)).combatItemGrants).toMatchObject([{ definitionId: 'archangel', grantedAtTick: 80 }]);
+    expect(at(80).combat!.units.find(u => u.id === chestHolderId)!.alive).toBe(false);
+    expect(pulses(at(179))).toEqual([0]);
+    expect(pulses(at(180))).toEqual([1]);
+    expect(readCombatStats(receiverOf(at(180)), at(180).combat!).abilityPower
+      - readCombatStats(receiverOf(at(179)), at(179).combat!).abilityPower).toBe(30);
+    expect(stacks(at(180))).toBe(0);
+    expect(stacks(at(220))).toBe(1);
+    expect(stacks(at(344))).toBe(2);
+    expect(receiverOf(at(451)).alive).toBe(true);
+    expect(receiverOf(at(452)).alive).toBe(false);
+    expect(pulses(at(451))).toEqual([3]);
     // Production death cleanup cancels attached periodic tasks, but preserves
     // the earned grant and bracer receipts in the deceased receiver’s save.
-    expect(pulses(at(551))).toEqual([]);
-    expect(receiverOf(at(551)).combatItemGrants).toEqual(receiverOf(at(550)).combatItemGrants);
-    expect(receiverOf(at(551)).triggerLedger).toEqual(receiverOf(at(550)).triggerLedger);
-    expect(stacks(at(551))).toBe(2);
-    expect(terminal.combat!.tick).toBe(551);
+    expect(pulses(at(452))).toEqual([]);
+    expect(receiverOf(at(452)).combatItemGrants).toEqual(receiverOf(at(451)).combatItemGrants);
+    expect(receiverOf(at(452)).triggerLedger).toEqual(receiverOf(at(451)).triggerLedger);
+    expect(stacks(at(452))).toBe(2);
+    expect(terminal.combat!.tick).toBe(452);
     expect(terminal.phase).not.toBe('combat');
   });
 
   it.each(['restore', 'serialize'] as const)('rejects an in-place grant edit after successful %s validation', warmup => {
-    const candidate = structuredClone(checkpoints.get(263)!.state);
+    const candidate = structuredClone(checkpoints.get(180)!.state);
     const grants = receiverOf(candidate).combatItemGrants!;
     expect(grants[0].definitionId).toBe('archangel');
     if (warmup === 'restore') expect(restoreMatch(candidate)).toEqual(candidate);

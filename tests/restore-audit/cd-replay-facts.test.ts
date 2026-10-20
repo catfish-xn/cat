@@ -1,8 +1,8 @@
 import { deepStrictEqual } from 'node:assert';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import * as engine from '../../src/simulation/combat';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buyXp, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchState } from '../../src/simulation/match';
+import { buyXp, deployMatchUnit, equipItem, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../../src/simulation/match';
 import type { CombatUnit } from '../../src/simulation/combat-types';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from '../../src/simulation/seat-mechanics';
 import { g23Laboratories } from '../../src/simulation/g2-3-experiment';
@@ -13,6 +13,10 @@ import { EMPTY_TRIGGER_LEDGER } from '../../src/simulation/m8/triggers';
 import { accepted, battle, emptyBoard, reachRound } from '../match-helpers';
 import { itemMatch } from '../fixtures/m8-b4-match';
 import { configuredPrefix } from '../fixtures/t13-loot-public';
+
+for (const id of ['bloodthirster', 'sunfire-cape']) {
+  beforeAll(() => { itemMatch(id); });
+}
 
 function positive(legal: MatchState) {
   const text = serializeMatch(legal);
@@ -37,8 +41,8 @@ function until(initial: MatchState, found: (s: MatchState) => boolean): MatchSta
   return state;
 }
 const player = (s: MatchState) => s.combat!.units.find(u => u.team === 'player')!;
-function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[]): MatchState {
-  let state = emptyBoard(reachRound('2-1', true, 5));
+function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[], seed = 5): MatchState {
+  let state = emptyBoard(reachRound('2-1', true, seed));
   state = accepted(grantMechanicGold(state, { receiptId: 'cd-funding', source: 'test', amount: 200 }));
   while (state.level < definitions.length) state = accepted(buyXp(state));
   for (const [i, definitionId] of definitions.entries()) {
@@ -92,9 +96,12 @@ it('G-C05 binds a genuinely damaged ordinary shield even when both projections c
 });
 
 it('G-C06 binds the real absorption value even when its status is forged coherently', async () => {
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 42, anomalyDefinitionId: 'power-absorption' });
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 4, anomalyDefinitionId: 'power-absorption' });
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
+  // Public bench sales leave room to move the seeded roster off the board.
+  for (const unit of prep.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench' && u.id !== ownerId))
+    prep = accepted(sellUnit(prep, unit.id));
   prep = emptyBoard(prep);
   prep = accepted(deployMatchUnit(prep, ownerId, { kind: 'board', cell: { col: 3, row: 7 } }));
   prep = accepted(grantMechanicUnit(prep, { receiptId: 'cd-absorb-ally', source: 'test', definitionId: 'zyra' }));
@@ -132,9 +139,10 @@ it('G-C07 authenticates burn phase even when the group and task agree', () => {
 });
 
 it('G-C08 rejects invented Experiment takedowns plus matching maximum health', () => {
-  const seed = readG23Progress(reachRound('2-1', true, 5))!.seed;
+  // Seed 1: after the augment pool grew, seed 5's route holds a sampled shield whose check fires before the G23 facts.
+  const seed = readG23Progress(reachRound('2-1', true, 1))!.seed;
   const labs = g23Laboratories(seed, 'player', 3);
-  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }]);
+  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], 1);
   const eligible = (s: MatchState) => s.combat!.units.find(u => u.team === 'player' && u.mechanics?.some(m => m.mechanic === 'g23Experiment' && m.values.mundo > 0)
     && s.combat!.units.some(v => v.team === 'enemy' && !v.alive && !u.g23?.experimentTakedowns.includes(v.id)));
   const legal = until(initial, s => !!eligible(s));
@@ -216,7 +224,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 42, anomalyDefinitionId });
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId });
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;

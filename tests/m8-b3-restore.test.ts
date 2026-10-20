@@ -5,6 +5,9 @@ import { battle, deployed, freeze } from './match-helpers';
 import { BattleHistory, PlaybackSession } from '../src/replay';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import type { MatchState } from '../src/simulation/match-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 function active(): MatchState {
   let state = battle();
   for (let i = 0; i < 120 && state.phase === 'combat'; i++) {

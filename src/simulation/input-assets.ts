@@ -56,6 +56,7 @@ export function validateInputAssets(
   const units = new Map<string, Unit>(), locations = new Set<string>();
   for (const unit of input.preparation.units) {
     record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
+    requireValue(!['s13-crab','s13-wolf','s13-mini'].includes(unit.definitionId), 'combat-only anomaly identity');
     definitionId(unit.definitionId, unit.team === 'player'&&!UNIT_DEFINITIONS[unit.definitionId]?.summon ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
     requireValue([1, 2, 3].includes(unit.starLevel), 'star'); record(unit.location);

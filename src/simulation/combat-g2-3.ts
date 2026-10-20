@@ -1,3 +1,5 @@
+import { occupiesCell } from './anomalies/availability';
+import { isAttackProxy } from './anomalies/availability';
 import { reviveG23Forge } from './combat-g2-3-summons';
 import { g23State } from './g2-3-combat';
 /** Fixed-form, finite hex execution. All delayed work is part of the combat snapshot. */
@@ -22,7 +24,7 @@ function split(total:number,n:number,i:number){return Math.floor(total/n)+(i<tot
 /** 约定值: instant leap to the nearest unoccupied adjacent hex; no movement animation. */
 function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
  if(hexDistance(u.cell,t.cell)<=1)return;
- const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>x.alive&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
+ const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>occupiesCell(x,ctx.tick)&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
  if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
@@ -49,7 +51,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'renata':{
       const cells=path(ctx.board,u.cell,t.cell);
-      for(const ally of ctx.units.filter(x=>x.alive&&x.hp>0&&x.team===u.team&&cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))
+      for(const ally of ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,mag('TargetDamage'));
       for(const x of foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1))strike(x,mag('ExplosionDamage'),'magic',true);break;
@@ -112,7 +114,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'jayce':{
       const forge=reviveG23Forge(ctx,u)??u;
-      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&x.team===u.team)).slice(0,v('NumAlliesShield')))
+      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesShield')))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events);
       const cells=path(ctx.board,u.cell,t.cell);
@@ -121,7 +123,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
       const targets=foes();for(let i=0;i<v('NumOfCrystals');i++)strike(targets[i%targets.length],physical(i===0?'ClosestEnemyPercentAD':'PercentAttackDamage'),'physical');
-      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&x.team===u.team)).slice(0,v('NumAlliesAS')))
+      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesAS')))
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
     case 'sevika':{

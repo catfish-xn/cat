@@ -27,7 +27,8 @@ function richSeat():MatchState {
   let state=accepted(advanceMultiplayerRound(finalSettlement(),38));const id=state.preparation.units[0].id;
   state=accepted(equipItem({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'inventory'}}]},'item-1',id,0));
   return {...state,phase:'choice',combat:null,pendingChoice:{kind:'augment',step:'offer',choiceId:'shown',eventId:'secret-event',
-    generation:3,offers:['placebo'],targetId:null,rerollCount:0,returnPhase:'preparation'},
+    generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
+    augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],returnPhase:'preparation'},
     shop:{generation:17,locked:true,slots:[{status:'available',definitionId:'maddie'},{status:'purchased',empty:true},{status:'purchased'}]},
     augments:[{definitionId:'pumping-up-i',choiceId:'known',acquiredRound:4}],
     anomalyBinding:{definitionId:'mage-armor',unitId:id,choiceId:'known-anomaly',boundRound:20},
@@ -84,7 +85,12 @@ describe('T5R private own-seat whitelist',()=>{
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'shown',
-      generation:3,offers:['placebo'],targetId:null,rerollCount:0});
+      generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
+      augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],augmentOptions:[
+        {optionIndex:0,definitionId:'placebo',rerollAvailable:false},
+        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:true},
+        {optionIndex:2,definitionId:'backup',rerollAvailable:true},
+      ]});
     expect(view.temporaryEquipment).toEqual(state.temporaryEquipment);expect(view.augments).toEqual(state.augments);
     expect(view.anomalyBinding).toEqual(state.anomalyBinding);expect(view.roundResults).toHaveLength(38);
     expect(view.m8.round).toMatchObject({roundId:'overtime-1',kind:'pvp'});
@@ -92,13 +98,25 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
     expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
-      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics'].sort());
+      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
+      'unclaimedOrbs','orbClaimReceipts'].sort());
+    expect(view.unclaimedOrbs).toEqual([]);expect(view.orbClaimReceipts).toEqual([]);
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{
     const state=richSeat(),before=JSON.stringify(state),expected=toPrivateSeatView(state),hidden=structuredClone(state);
     Object.assign(hidden,{seed:999,rngState:123,battleSeedRngState:321,choiceRngState:444,rewardRngState:555,
       combatInputBasis:{secret:'DO_NOT_SEND'},resourceProvenance:{secret:'DO_NOT_SEND'},equipmentState:{...hidden.equipmentState,equipment:{state:123,draws:999},secret:'DO_NOT_SEND'}});
-    Object.assign(hidden.m8,{loot:{secret:'DO_NOT_SEND'},encounterPlan:{secret:'DO_NOT_SEND'}});
+    // Loot now also supplies earned orb projections; preserve that ledger while changing only hidden data.
+    Object.assign(hidden.m8.loot,{secret:'DO_NOT_SEND'});
+    Object.assign(hidden.m8.loot.frozen.rng,{state:123,draws:999});
+    for(const round of hidden.m8.loot.frozen.rounds) {
+      for(const drop of round.encounterPlan.drops) if(hidden.m8.loot.direct.some(d=>d.dropId===drop.dropId&&d.status==='planned'))
+        Object.assign(drop,{payload:{kind:'gold',quantity:999}});
+      for(const choice of round.choices) Object.assign(choice,{terminalFallbackDefinitionId:'DO_NOT_SEND'});
+      for(const orb of round.orbs) for(const entry of orb.entries) if(hidden.m8.loot.direct.some(d=>d.dropId===entry.dropId&&d.status==='planned'))
+        Object.assign(entry,{payload:{kind:'gold',quantity:999}});
+    }
+    Object.assign(hidden.m8,{encounterPlan:{secret:'DO_NOT_SEND'}});
     expect(toPrivateSeatView(hidden)).toEqual(expected);
     const injected=structuredClone(state);sentinels(injected);
     expect(toPrivateSeatView(injected)).toEqual(expected);expect(JSON.stringify(toPrivateSeatView(injected))).not.toContain('DO_NOT_SEND');

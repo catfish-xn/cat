@@ -1,7 +1,8 @@
+import { prepareInput, copyInput } from './fixtures/prepared-input';
 /** G2-4b Unstable Treasure Chest (user 2026-10-17, option A "完整原版"; conventions G24-CHEST-01…04 in
  * docs/evidence/g2-4/SUPPORT_ITEMS.md): pool, targeting, items gained mid-combat (stats, start effects, legacy
  * mechanic rewrites), restore validation of every mid-combat state, and two-sided/mirror determinism. */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
@@ -24,6 +25,9 @@ import {
 import type { CombatEvent, CombatItemGrant, CombatState, CombatUnit } from '../src/simulation/combat-types';
 import type { Unit } from '../src/simulation/unit-types';
 import { itemMatch } from './fixtures/m8-b4-match';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const CHEST = 'TFT_Item_UnstableTreasureChest';
 type Place = readonly [id: string, definitionId: string, col: number, row: number];
@@ -38,8 +42,16 @@ function combatOf(player: readonly Place[], enemy: readonly Place[], held: reado
 /** The chest holder stands next to one active enemy with 1 HP; every ally waits, at the health ratio given. */
 const ALLIES: Place[] = [['p1', 'lux', 0, 7], ['p2', 'ezreal', 1, 7], ['p3', 'heimerdinger', 2, 7], ['p4', 'garen', 4, 7], ['p5', 'lux', 5, 7], ['p6', 'vi', 6, 7]];
 const RATIO_BPS: Record<string, number> = { p1: 7000, p2: 9000, p3: 8000, p4: 3000, p5: 7000, p6: 10000 };
+const chestInputs = new Map<string, CombatState>();
+afterAll(() => { chestInputs.clear(); });
 function chestFight(rngState?: number, held: readonly (readonly [string, string])[] = []): CombatState {
-  const combat = combatOf([['holder', 'leona', 3, 4], ...ALLIES], [['foe', 'garen', 3, 3]], [['holder', CHEST], ...held]);
+  const key = JSON.stringify(held);
+  let input = chestInputs.get(key);
+  if (!input) {
+    input = prepareInput(combatOf([['holder', 'leona', 3, 4], ...ALLIES], [['foe', 'garen', 3, 3]], [['holder', CHEST], ...held]));
+    chestInputs.set(key, input);
+  }
+  const combat = copyInput(input);
   return { ...combat, ...(rngState === undefined ? {} : { rngState }), units: combat.units.map(u =>
     u.id === 'holder' ? { ...u, hp: 1, cooldownTicks: 100000, moveCooldownTicks: 100000 }
     : u.team === 'player' ? { ...u, hp: Math.floor(u.maxHp * RATIO_BPS[u.id] / 10000), cooldownTicks: 100000, moveCooldownTicks: 100000 } : u) };
@@ -350,11 +362,17 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expect(seen.size).toBe(G24_CHEST_POOL.length);
   });
 
-  it('receivers that attack and cast after the grant keep every mid-combat save valid', { timeout: 180000 }, () => {
+  let receiverInput: CombatState | undefined;
+  beforeAll(() => {
     const casters: Place[] = [['c1', 'lux', 0, 7], ['c2', 'irelia', 2, 6], ['c3', 'vander', 4, 6], ['c4', 'lux', 6, 7]];
+    receiverInput = prepareInput(combatOf([['holder', 'leona', 3, 4], ...casters], [['foe', 'garen', 3, 3], ['foe2', 'vi', 1, 1]], [['holder', CHEST]]));
+  });
+  afterAll(() => { receiverInput = undefined; });
+
+  it('receivers that attack and cast after the grant keep every mid-combat save valid', { timeout: 180000 }, () => {
     let magic = 0, physical = 0;
     for (let seed = 1; seed <= 12; seed++) {
-      const combat = combatOf([['holder', 'leona', 3, 4], ...casters], [['foe', 'garen', 3, 3], ['foe2', 'vi', 1, 1]], [['holder', CHEST]]);
+      const combat = copyInput(receiverInput!);
       const start: CombatState = { ...combat, rngState: seed * 104729, units: combat.units.map(u => u.id === 'holder' ? { ...u, hp: 1, cooldownTicks: 100000, moveCooldownTicks: 100000 }
         : u.team === 'player' ? { ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 } : u) };
       const { after } = untilGranted(start);
@@ -380,6 +398,7 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
 });
 
 describe('G2-4b chest restore rejects forged grants', () => {
+  beforeAll(() => { itemMatch('warmog'); });
   const opened = untilGranted(chestFight(5)).after;
   type Writable<T> = { -readonly [K in keyof T]: T[K] };
   type ForgedGrant = Writable<CombatItemGrant> & { extra?: number };

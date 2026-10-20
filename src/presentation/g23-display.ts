@@ -16,8 +16,11 @@
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
+import { G23_ANOMALY_SOURCE } from '../simulation/content/g2-3-anomaly-source';
+import { D11_FILL_SOURCE } from '../simulation/content/d11-fill-source';
+import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));
@@ -72,8 +75,9 @@ const CHAMPION_BY_ID = bridge(G23_CHAMPIONS, row => apiForms(row.apiName));
 const CHAMPION_BY_EN = new Map(G23_CHAMPIONS.map(row => [row.en, row]));
 const TRAIT_BY_ID = bridge(G23_TRAITS, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
 const TRAIT_BY_EN = new Map(G23_TRAITS.map(row => [row.en, row]));
-const ANOMALY_BY_ID = bridge(G23_ANOMALIES, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
-const ANOMALY_BY_ZH = new Map(G23_ANOMALIES.map(row => [row.zh, row]));
+const ALL_ANOMALIES = [...G23_ANOMALIES, ...S13_EXTRA_ANOMALIES];
+const ANOMALY_BY_ID = bridge(ALL_ANOMALIES, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
+const ANOMALY_BY_ZH = new Map(ALL_ANOMALIES.map(row => [row.zh, row]));
 const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
 const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
 const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_ITEMS].map(row => [row.apiName, row]));
@@ -95,7 +99,11 @@ export function g23AnomalyApiName(id: string): string | undefined {
   const row = ANOMALY_BY_ID.get(id) ?? ANOMALY_BY_ID.get(lower(id));
   if (row) return row.apiName;
   const name = Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined;
-  return name ? ANOMALY_BY_ZH.get(name)?.apiName : undefined;
+  const zh = name ? ANOMALY_BY_ZH.get(name)?.apiName : undefined;
+  if (zh) return zh;
+  // v15 D11 anomalies (贪财化身, 猎头者) keep their client api name in the D11 source table.
+  const d11 = (D11_FILL_SOURCE as Readonly<Record<string, { readonly kind: string; readonly apiName: string }>>)[id];
+  return d11?.kind === 'anomaly' ? d11.apiName : undefined;
 }
 
 /** zh_CN client name of a G2-3 hero/summon content id; undefined when not a G2-3 unit or the client has no string. */
@@ -117,8 +125,22 @@ export const g23HeroStyle = (id: string): { short: string; color: string } | und
 /** Anomaly label: client name, else the content name. */
 export function anomalyDisplayName(id: string): string {
   const api = g23AnomalyApiName(id);
-  return (api ? G23_ANOMALIES.find(row => row.apiName === api)?.zh : undefined)
+  return (api ? ALL_ANOMALIES.find(row => row.apiName === api)?.zh : undefined)
     ?? (Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].name : undefined) ?? '未知异常';
+}
+/**
+ * Anomaly player text: the 14.24 zh_cn client description with the source values filled in (`@Key*100@` is the source
+ * fraction shown as a percent, as the client does), else the content description. The content `description` of G2-3
+ * anomalies is the English client string and stays as it is (it is part of the content digest).
+ */
+export function anomalyPlayerDescription(id: string): string {
+  const sources: Readonly<Record<string, { readonly zhDescription: string; readonly values: Readonly<Record<string, number>> }>> = G23_ANOMALY_SOURCE;
+  const source = Object.hasOwn(sources, id) ? sources[id] : undefined;
+  if (!source) return Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].description : '';
+  const values: Record<string, number> = {};
+  for (const [key, value] of Object.entries(source.values)) { values[key] = value; values[`${key}*100`] = value * 100; }
+  // `%i:scale…%` are inline stat icons next to the stat's own word; dropped so the word is not repeated.
+  return fillAbilityTemplate(source.zhDescription.replace(/%i:[A-Za-z]+%/g, ''), values).text;
 }
 /** The client shows every anomaly with the one shared anomaly icon (no per-anomaly icon exists in 14.24). */
 export const anomalyIconUrl = (): string | null => assetUrl('anomalies', 'TFT13_GoopItem_Icon');

@@ -355,8 +355,48 @@ initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构
 
 ### 动作和报告
 
-unit-map.json 新增保留键 `$animationRules`，其余键仍是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；先按公共图别名，再按文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段显式选择仍须在图中找到；其余单位不增加硬编码。
+unit-map.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
 
-批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用 v1。
+批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用现有转换实现，本轮不改粒子语义。
 
 真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。
+
+## 动作覆盖补齐与正式合并清单（2026-10-20）
+
+源图完整附录见 [ANIMATION-SOURCE-APPENDIX.md](ANIMATION-SOURCE-APPENDIX.md)，本轮结果及运行限制见 [ANIMATION-COVERAGE-REPORT.md](ANIMATION-COVERAGE-REPORT.md)。只读重查命令：
+
+```powershell
+node scripts/assets3d/audit-animations.mjs --markdown
+# 不加 --markdown 输出机器可读 JSON（before/after、每单位映射、决定、源哈希、全部 clips）。
+```
+
+`tokens` 和 `excludeTokens` 为不区分大小写的正则片段，外部自动加下划线/首尾边界；片段末尾 `$` 表示完整动作后缀。cast 优先完整 spell/spell1、施法进入/开始/intro/activate/first 段，再到有编号 spell、spell_3、spellup、brace、cast/ability/channel/ult 命名，最后保留旧通用匹配。编号进入/activate 按 1、无编号、2、3、4 排序。out/toidle/idle/run/loop/end/finish 被排除，防止拿技能退出或持续姿势当起手。通用规则只选择单段展示候选，不重建多段技能或切换形态。
+
+hit 接受 hit/hurt/flinch/knockup；排除攻击/施法命中段和 death/die。排除规则对图别名、文件名、显式覆盖均生效。真实数据中 57 个 Knockup 图键引用 Death ANM，所以不能计入 hit 覆盖。无映射时保留原 reason，并增加 `sourceStatus: no-source-action | undetermined`（源图无对应动作 / 无法判定）；存在非 Atomic 动作图键或仅有持续姿势时不误报源数据不存在。此结论限于当前绑定皮肤图的可识别动作，不断言其他皮肤或整个游戏不存在对应动画。PROP 键是 hash，未知名字仍标未知。
+
+新结果必须使用独立根目录，保护其他任务使用的原 batch 和 all：
+
+```powershell
+node scripts/assets3d/build-all.mjs --units all --cost 1,2 --out assets3d-local/out-anim/batch-cost12 --force
+node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-local/out-anim/batch-cost345 --force
+node scripts/assets3d/verify-animation-rebuild.mjs
+node scripts/assets3d/merge-manifests.mjs --from assets3d-local/out-anim/batch-cost12 assets3d-local/out-anim/batch-cost345 --out assets3d-local/all-anim/
+```
+
+`verify-animation-rebuild.mjs` 只读比较两对默认 batch：全部非动画 JSON、非动画 bufferView 的 SHA-256（包括网格、骨骼、嵌入图片）以及旧动画完整 sampler/channel 数据；动作映射未变的单位还必须整份 GLB 字节相同。Jinx/Vi 属于整份相同检查范围。输出逐单位哈希与比较结果，失败退出 1，不写源目录。
+
+`merge-manifests.mjs` 正式替代手工 `node -e` 合并。`--from` 可给多个 batch 根，也可重复该参数；`--out` 必填。它读取各根下 `units/<id>/manifest.json`，保留 `schemaVersion`、模型的动作映射和 `effects`，将 `models/<id>/model.glb`、特效 JSON，以及特效引用的 texture/mesh/distortion.normalMap 按原相对路径复制到新根；GLB 内嵌贴图无需额外复制。v1/v2 特效均经运行时 parser 校验。
+
+所有写入通过 safe-path，限定在实际仓库的 `assets3d-local/`；输入和引用路径拒绝 `..`、绝对/URL/编码路径及链接逃逸，输出不能与输入 batch 重叠。模型/effect ID 冲突报错；不同内容占用同一相对路径也报错。相同内容的共享依赖合并一份。重跑 SHA-256 一致则跳过（不改 payload mtime）；已有输出内容不同则拒绝覆盖，应选另一个新根或人工处理冲突。复制前先检查整批输入和目标；缺文件时只写 `ready:false` 的合并报告，不发布部分 manifest。
+
+新根包含 `manifest.json` 和 `merge-report.json`。报告 `models/effects` 是清单计数，`modelBytes` 是 GLB 总字节，`bytes/files` 是去重后的运行时文件总字节/数量（不含 manifest/report），`manifestBytes` 单列；`written/skipped/writtenBytes/missing` 说明本次复制、跳过和缺项。全部成功退出 0，缺项或冲突退出 1。
+
+**当前 LF clone 的 assets3d-local 是指向兄弟工作区的联接，safe-path 会主动拒绝写入，单纯在沙箱外重试同一 clone 仍会拒绝。** 调度方须在实际持有非联接 assets3d-local 的 `../assets3d` 仓库运行本轮更新后的脚本（先同步脚本与 unit-map）；不要放宽 safe-path、改链接或覆盖原 batch/all。本轮在隔离副本完成的构建/合并不代表共享目标已发布。
+
+调度方生成共享 `all-anim` 后，已有开发服务器查看地址参数为：
+
+```text
+?render=3d&assets3d=/assets3d-local/all-anim/
+```
+
+现有 `src/rendering3d/animation-state.ts` 已消费 packetDamage → hit，无需修改。若要改多形态技能选择或外壳切换流程，由 Claude 接 `src/rendering/`；本轮没有外壳改动。
