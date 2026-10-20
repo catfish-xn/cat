@@ -20,7 +20,8 @@ export function legal(state: MatchState, action: ClientCommand): boolean {
     case 'shopLock': return setShopLock(state, action.locked, action.generation).ok;
     case 'choose': return selectChoice(state, action.choiceId, action.generation, action.definitionId).ok;
     case 'anomalyTarget': return selectAnomalyTarget(state, action.choiceId, action.generation, action.unitId).ok;
-    case 'rerollAugment': return rerollAugment(state, action.choiceId, action.generation).ok;
+    case 'rerollAugment': return rerollAugment(state, action.choiceId, action.generation,
+      (action as ClientCommand & { readonly optionIndex?: number }).optionIndex).ok;
     case 'anomalyReroll': return rerollAnomaly(state, action.choiceId, action.generation).ok;
   }
 }

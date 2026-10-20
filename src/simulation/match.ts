@@ -60,7 +60,7 @@ import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { generateChoices } from './choices';
-import { deriveAugmentTier, augmentCandidates, augmentRerollLimit } from './augment-offers';
+import { deriveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
 export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
 import type { ScheduleReceipt } from './strategy-types';
 import { isSellableUnit } from './seat-mechanics/forms';
@@ -137,15 +137,15 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
-      const drawn = generateChoices(augmentCandidates(deriveAugmentTier(state.augmentTierSeed, event.id), state.augments), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(deriveAugmentTier(state.augmentTierSeed, event.id), state.augments, state.removedAugmentIds), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
-      ...(event.kind === 'augment' ? {augmentTier: deriveAugmentTier(state.augmentTierSeed, event.id), rerollsRemaining: augmentRerollLimit(state.augments)} : {}),
+      ...(event.kind === 'augment' ? {augmentTier: deriveAugmentTier(state.augmentTierSeed, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
     state = { ...state, augmentOffers: event.kind === 'augment'
-      ? [...state.augmentOffers, {choiceId:event.id,tier:deriveAugmentTier(state.augmentTierSeed,event.id),rerollCount:0}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+      ? [...state.augmentOffers, {choiceId:event.id,tier:deriveAugmentTier(state.augmentTierSeed,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -173,7 +173,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
-    augmentTierSeed: seed, augmentOffers: [],
+    augmentTierSeed: seed, augmentOffers: [], removedAugmentIds: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
@@ -512,22 +512,28 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
-/** One free whole-offer reroll per node; validation precedes every draw and mutation. */
-export function rerollAugment(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
+/** One free reroll per slot; missing legacy slot arguments fail closed until UI/server wiring. */
+export function rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number): MatchCommandResult {
   const choice = state.pendingChoice;
-  if (state.phase !== 'choice' || choice?.kind !== 'augment' || choice.step !== 'offer') return fail(state, 'wrong-phase');
+  if (state.phase !== 'choice' || choice?.kind !== 'augment' || choice.step !== 'offer'
+    || isCombatRosterLocked(state) || state.multiplayer?.status === 'eliminated') return fail(state, 'wrong-phase');
   if (choice.choiceId !== choiceId || choice.generation !== generation) return fail(state, 'stale-choice');
-  const limit = augmentRerollLimit(state.augments);
-  if (choice.rerollCount >= limit) return fail(state, 'augment-rerolls-exhausted');
+  if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
+  if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
   const tier = deriveAugmentTier(state.augmentTierSeed, choiceId);
-  const candidates = augmentCandidates(tier, state.augments, choice.offers);
-  if (candidates.length < 3) return fail(state, 'augment-pool-too-small');
-  const draw = generateChoices(candidates, state.choiceRngState);
+  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  if (!candidates.length) return fail(state, 'augment-pool-too-small');
+  const draw = drawAugmentCard(candidates, state.choiceRngState);
   const rerollCount = choice.rerollCount + 1;
-  const pendingChoice = {...choice, offers:draw.offers, augmentTier:tier, generation:generation+1,
-    rerollCount, rerollsRemaining:limit-rerollCount};
+  const offers = [...choice.offers], rerolledSlots = [...choice.rerolledSlots!];
+  const removedId = offers[optionIndex];
+  offers[optionIndex] = draw.definitionId; rerolledSlots[optionIndex] = true;
+  const pendingChoice = {...choice, offers, augmentTier:tier, generation:generation+1,
+    rerollCount, rerollsRemaining:3-rerollCount, rerolledSlots};
   return accept({...state, choiceRngState:draw.choiceRngState, pendingChoice,
-    augmentOffers:state.augmentOffers.map(record => record.choiceId === choiceId ? {...record,rerollCount} : record)},
+    removedAugmentIds:[...state.removedAugmentIds,removedId],
+    augmentOffers:state.augmentOffers.map(record => record.choiceId === choiceId
+      ? {...record,rerollCount,rerolledIndices:[...record.rerolledIndices,optionIndex]} : record)},
     [{type:'choiceOpened',choice:pendingChoice}]);
 }
 export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {

@@ -1,14 +1,30 @@
 # Set13 八人联机合同草案
 
-## 强化同轮同级与整组刷新：v14（用户约定 2026-10-19）
+## 强化同轮同级与按卡刷新：待 v15 收口（2026-10-20）
 
-等级、来源、派生公式、刷新语义和读档以 [Match 合同“强化等级与刷新”](MATCH_CONTRACT.md) 为准。三等级等权是缺少概率/权重资料时的项目默认、待用户确认。initializeSharedSeat 将 SharedPoolState.seed（即房间 options.seed）绑定到 augmentTierSeed；nextSharedRound/advanceMultiplayerRound 与单人共用 deriveAugmentTier，每个强化节点八席同级，各席候选仍从自己的 choiceRngState 抽取，服务器不计算规则。
+等级派生不变，详见 [Match 合同“强化等级与按卡刷新”](MATCH_CONTRACT.md)。initializeSharedSeat 将 pool.seed 绑定到 augmentTierSeed；每节点八席同级，候选与刷新仍用各席独立 choiceRngState。单机/联机共用每槽免费一次与永久移出规则；移出集合只属于本局本席，不从其他席候选中移除，不改变英雄共享库存。
 
-新增 SeatCommand/ClientCommand/WireCommand：{type:'rerollAugment',choiceId:string,generation:number}。net/messages.validateClientCommand 只接受这三个字段，校验非空 ID 和非负整数 generation。room.ROOM_COMMAND_GATE 仅 preparation/choice 允许，applySeatCommand 原样调用 simulation.rerollAugment；其余房间阶段拒绝，沿用身份、round/seatRevision、去重和回执机制。成功改变席位状态，共享卡池不变；失败保留原 room/pool/seat 引用。领域失败枚举：wrong-phase、stale-choice、augment-rerolls-exhausted、augment-pool-too-small；外层身份/轮次/席位错误沿用原协议。
+领域已增加 `SharedMatchCommand` 分支及 `runSharedMatchCommand` 转发：
 
-owner 私有视图 pendingChoice 透传 augmentTier、rerollsRemaining，保留 rerollCount（已用）、generation、offers。toPrivateSeatView 按白名单复制，toSeatPrivateView 直接透传，不公开其他席候选、seed 或未来节点等级。本次不增加界面按钮。NET3 维持现有部署线：新增命令须由新服务端处理，旧服务端会拒绝未知命令，前后端需同批部署；旧客户端仍可选择，缺少刷新入口。
+```ts
+{ type: 'rerollAugment', choiceId: string, generation: number, optionIndex: number }
+// 例：第 2 张卡
+runSharedMatchCommand(pool, state, {
+  type: 'rerollAugment', choiceId: 'round:2-1:augment', generation: 0, optionIndex: 1
+})
+```
 
-公共签名：rerollAugment(state:MatchState,choiceId:string,generation:number):MatchCommandResult；deriveAugmentTier(seed:number,choiceId:string):AugmentTier；augmentRerollLimit(augments:readonly OwnedAugment[]):number，均从 server-entry 导出。每节点默认免费整组刷新一次，锁级、排除当前和已持有，不足三项原子拒绝；额度扩展只读取此前已获取的准入强化定义 augmentRerolls.extraRolls，不接受服务器自行传入额度。
+公共签名 `rerollAugment(state,choiceId,generation,optionIndex?:number):MatchCommandResult`，有效命令必须有 0..2 安全整数下标；可选类型仅为禁改旧接线的编译过渡，缺参返回 invalid-slot。失败按顺序为 wrong-phase、stale-choice、invalid-slot、augment-rerolls-exhausted、augment-pool-too-small（零候选）。共享包装另沿用 invalid-pool/invalid-seat-state/stale-seat/seat-eliminated 等原事务错误，先验证 pool/seat；失败保留原 pool/state 引用、无事件或 RNG 消耗。
+
+成功由共享事务原子提交 pool+state：可用库存、预留和 holdings 不变，但 pool.revision、该席 revision 按既有事务各 +1，不能把“库存不变”误解成“pool 对象/revision 不变”。成功发一个 choiceOpened，完整候选/槽位状态与正常 eventSeq；每卡刷新恰一字，初次三卡发牌仍三字。
+
+**Claude 待接线，本轮未改 src/server：** SeatCommand/ClientCommand/WireCommand 与 net/messages 的字段白名单增加必填 optionIndex（0..2 安全整数）；原网络 envelope 的身份、round、seatRevision、去重及回执字段保持。ROOM_COMMAND_GATE 沿用 preparation/choice，领域仍要求真实 augment offer；applySeatCommand 改走上面的 runSharedMatchCommand，原样转交下标并原子接收 pool+state。旧三字段消息不得默认槽位，也不得重发为整组刷新；现在无下标的旧调用会失败。前后端在 v15 同批接线发布，NET3 等版本号本轮不动。
+
+私有投影 `pendingChoice.augmentOptions: readonly {optionIndex:number,definitionId:string,rerollAvailable:boolean}[]` 与 `rerolledSlots` 已由 toPrivateSeatView 提供，toSeatPrivateView/网络应原样透传；保留 offers、augmentTier、generation、rerollCount、rerollsRemaining（尚未用过的槽位总数）。只按每卡 rerollAvailable 接按钮，候选耗尽也置 false。不公开 removedAugmentIds/augmentOffers/seed/其他席候选。
+
+basic bot 与超时代选仍选第一个合法项，不主动刷新强化，无需增加刷新策略；bot preflight 已读取可选下标，缺参不会被判为合法。若未来扩展策略，应复用同一 SharedMatchCommand，不能另算候选或计次。
+
+权威 MatchState 的 removedAugmentIds、augmentOffers[].rerolledIndices、pendingChoice.rerolledSlots 必须随席位持久化/恢复，断线重连不能清空。既有 serializeMatch/restoreMatch 不接纳联机完整 Match；本轮共享测试验证 JSON 往返后续刷，未新增服务器磁盘恢复入口。版本与待重录清单见 [v15 交付说明](AUGMENT_CARD_REROLL_V15.md)。
 
 
 ## G2-3 当前实现与接入合同（2026-10-16）

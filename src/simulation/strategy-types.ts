@@ -27,9 +27,10 @@ export interface PendingChoice {
   readonly returnPhase?: 'preparation' | 'settlement';
   /** Present exactly for mechanic kinds (forge/blackMarket/armory); see seat-mechanics/choices.ts. */
   readonly payload?: import('./seat-mechanics/types').MechanicChoicePayload;
-  /** Present for augment offers only; rerollCount remains the consumed count. */
+  /** Present for augment offers only; rerollCount is the total consumed across slots. */
   readonly augmentTier?: import('./augment-offers').AugmentTier;
   readonly rerollsRemaining?: number;
+  readonly rerolledSlots?: readonly boolean[];
   readonly generation: number; readonly offers: readonly string[]; readonly targetId: string | null;
   readonly rerollCount: number; readonly eventId: string;
 }

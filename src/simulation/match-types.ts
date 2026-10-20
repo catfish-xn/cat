@@ -58,6 +58,8 @@ export interface MatchBase {
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];
   readonly augmentTierSeed: number;
   readonly augmentOffers: readonly import('./augment-offers').AugmentOfferRecord[];
+  /** Ordered unique IDs permanently excluded for this player in this match. */
+  readonly removedAugmentIds: readonly string[];
   readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;

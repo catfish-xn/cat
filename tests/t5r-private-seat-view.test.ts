@@ -27,7 +27,8 @@ function richSeat():MatchState {
   let state=accepted(advanceMultiplayerRound(finalSettlement(),38));const id=state.preparation.units[0].id;
   state=accepted(equipItem({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'inventory'}}]},'item-1',id,0));
   return {...state,phase:'choice',combat:null,pendingChoice:{kind:'augment',step:'offer',choiceId:'shown',eventId:'secret-event',
-    generation:3,offers:['placebo'],targetId:null,rerollCount:0,returnPhase:'preparation'},
+    generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
+    augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],returnPhase:'preparation'},
     shop:{generation:17,locked:true,slots:[{status:'available',definitionId:'maddie'},{status:'purchased',empty:true},{status:'purchased'}]},
     augments:[{definitionId:'pumping-up-i',choiceId:'known',acquiredRound:4}],
     anomalyBinding:{definitionId:'mage-armor',unitId:id,choiceId:'known-anomaly',boundRound:20},
@@ -84,7 +85,12 @@ describe('T5R private own-seat whitelist',()=>{
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'shown',
-      generation:3,offers:['placebo'],targetId:null,rerollCount:0});
+      generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
+      augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],augmentOptions:[
+        {optionIndex:0,definitionId:'placebo',rerollAvailable:false},
+        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:true},
+        {optionIndex:2,definitionId:'backup',rerollAvailable:true},
+      ]});
     expect(view.temporaryEquipment).toEqual(state.temporaryEquipment);expect(view.augments).toEqual(state.augments);
     expect(view.anomalyBinding).toEqual(state.anomalyBinding);expect(view.roundResults).toHaveLength(38);
     expect(view.m8.round).toMatchObject({roundId:'overtime-1',kind:'pvp'});

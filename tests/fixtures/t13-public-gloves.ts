@@ -28,7 +28,8 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
         : ['manaflow-i', 'pumping-up-i', 'backup', 'bulky-buddies-i'].find(id => choice.offers.includes(id))
           ?? choice.offers.find(id => !(id in S13_P2_SOURCE) && !extraItemChoices.has(id))
           ?? choice.offers.find(id => !(id in P2_ITEM_GRANTS) && !extraItemChoices.has(id));
-      if (!id) { state = accepted(rerollAugment(state, choice.choiceId, choice.generation)); continue; }
+      if (!id) { state = accepted(rerollAugment(state, choice.choiceId, choice.generation,
+        choice.rerolledSlots?.findIndex(used => !used))); continue; }
       state = accepted(selectChoice(state, choice.choiceId, choice.generation, id));
     }
     if (state.roundDefinitionId === '2-1') {

@@ -2,6 +2,18 @@
 
 按 AGENTS 约定记录界面缺少的数据、命令或接线。每条写明关联任务、优先级、交付阶段、缺少的字段与含义、界面当前替代路径、交付后需要复核的内容和验收条件。界面不自行计算规则；后端交付前，界面只读已有权威字段，并在无法确定含义时使用中性文案。
 
+## AUGMENT-CARD-REROLL（Codex → Claude，v15，2026-10-20）
+
+- 状态：领域、共享命令与私有投影已交付；服务器和界面待 Claude 接线，本轮禁改这些目录。旧“刷新强化 · 同一等级（剩余 1 次）”整组入口不再适用。
+- 用户已确认每张卡下面单独刷新、只换该卡且锁级；每槽每次选择各免费一次。被刷掉的 ID 对本局该玩家永久移出，后续任何强化节点都排除，不影响其他玩家。轮次保持 2-1/3-2/4-2。
+- 数据：`toPrivateSeatView(state).pendingChoice.augmentOptions[] = {optionIndex,definitionId,rerollAvailable}`，与 offers 同序，optionIndex 为 0..2；每卡按钮只读取 rerollAvailable。`rerolledSlots` 表示各槽是否用过；`rerollsRemaining` 改为尚未使用的槽位总数 0..3，不能用于判断某一张是否可刷。池耗尽时未用槽位按钮同样不可用。单机也可用此投影，不在界面另算候选。
+- 单机命令：`rerollAugment(state,choiceId,generation,optionIndex)`；联机消息：`{type:'rerollAugment',choiceId,generation,optionIndex}`，服务器白名单/类型加必填整数下标，按 [联机合同](MULTIPLAYER_CONTRACT.md) 经 runSharedMatchCommand 事务。旧缺参调用明确 invalid-slot，不能默认刷第 0 张。
+- 所有卡共用最新 choiceId/generation。任一卡成功都会 generation+1；收到返回/投影后更新全部按钮的命令代次，不连续发送缓存的旧代次。刷新失败保留当前画面并展示回执 reason，不能乐观换卡或消耗按钮。
+- 失败：wrong-phase、stale-choice、invalid-slot、augment-rerolls-exhausted（仅该槽）、augment-pool-too-small（同级候选零项）。服务器原身份、revision、轮次失败继续沿用。成功仅目标槽卡改变，其他两张原位保留。
+- 持久化：服务器需随权威席位 state 保存 removedAugmentIds、augmentOffers[].rerolledIndices、pendingChoice.rerolledSlots；重连直接恢复投影，不 createMatch 或重置刷新状态。移出账本不对客户端下发。现有联机完整 Match 用户读档仍不支持，本轮没有新增服务器磁盘恢复能力。
+- 验收：三槽各刷一次且各按钮独立禁用；新卡不与其余卡/已拥有/永久移出重复；刷新、断线重连、下一节点后均正确；旧代次失败无扣费/RNG；联机保存 pool+state 的 revision 一起提交。basic bot/超时仍首选，不增加刷新行为。
+- 发布：与法球、#231 接线统一 v15；本轮版本、digest 和录制指纹不动，见 [收口清单](AUGMENT_CARD_REROLL_V15.md)。
+
 ## G23-SERVER-FACTS（Codex → Claude，G2-3配套P1）
 
 - 领域PR基于multiplayer #134 /19aa9f1；不修改src/server/、src/rendering/、src/server-entry/。

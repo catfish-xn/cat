@@ -47,9 +47,15 @@ function augmentDraw(rng,tier,owned,excluded=[]){
  for(let i=0;i<3;i++){rng=word(rng);const j=i+rng%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
  return {offers:pool.slice(0,3),rng};
 }
-// No admitted definition grants ExtraRolls; future content must extend this literal expectation.
-const AUGMENT_EXTRA_ROLLS={};
-function augmentLimit(owned){return 1+owned.reduce((n,a)=>n+(AUGMENT_EXTRA_ROLLS[a.definitionId]??0),0);}
+// User-approved card reroll: exactly one use per slot, permanently remove discarded IDs.
+function augmentCardDraw(before,index){
+ const c=before.pendingChoice,tier=augmentTier(augmentSeed(before),c.choiceId);
+ const pool=augmentPool(tier,before.augments,[...before.removedAugmentIds,...c.offers]);
+ assert(pool.length>0,'independent card pool nonempty');
+ const rng=word(before.choiceRngState),offers=[...c.offers],rerolledSlots=[...c.rerolledSlots];
+ offers[index]=pool[rng%pool.length];rerolledSlots[index]=true;
+ return {rng,offers,rerolledSlots};
+}
 function augmentSeed(state){
  if(!state.multiplayer)assert.equal(state.augmentTierSeed,state.seed,'independent solo tier seed binding');
  return state.augmentTierSeed;
@@ -57,16 +63,18 @@ function augmentSeed(state){
 function validateAugmentReroll(before,result,command){
  assert.equal(command.type,'rerollAugment');const c=before.pendingChoice;
  let reason=null,tier;
- if(before.phase!=='choice'||c?.kind!=='augment'||c.step!=='offer')reason='wrong-phase';
+ if(before.phase!=='choice'||c?.kind!=='augment'||c.step!=='offer'||before.multiplayer?.combatRosterLocked||before.multiplayer?.status==='eliminated')reason='wrong-phase';
  else if(command.choiceId!==c.choiceId||command.generation!==c.generation)reason='stale-choice';
- else if(c.rerollCount>=augmentLimit(before.augments))reason='augment-rerolls-exhausted';
- else {tier=augmentTier(augmentSeed(before),c.choiceId);if(augmentPool(tier,before.augments,c.offers).length<3)reason='augment-pool-too-small';}
+ else if(!Number.isSafeInteger(command.optionIndex)||command.optionIndex<0||command.optionIndex>=c.offers.length)reason='invalid-slot';
+ else if(c.rerolledSlots[command.optionIndex])reason='augment-rerolls-exhausted';
+ else {tier=augmentTier(augmentSeed(before),c.choiceId);if(!augmentPool(tier,before.augments,[...before.removedAugmentIds,...c.offers]).length)reason='augment-pool-too-small';}
  if(reason){assert.deepEqual(result,{ok:false,state:before,reason},'independent reroll rejection');assert.equal(result.state,before,'failed reroll preserves state reference');return;}
- assert.equal(result.ok,true);const after=result.state,draw=augmentDraw(before.choiceRngState,tier,before.augments,c.offers);
- const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:augmentLimit(before.augments)-c.rerollCount-1};
+ assert.equal(result.ok,true);const after=result.state,draw=augmentCardDraw(before,command.optionIndex);
+ const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:3-c.rerollCount-1,rerolledSlots:draw.rerolledSlots};
  assert.equal(c.augmentTier,tier,'reroll locks node tier');
  assert.deepEqual(after,{...before,choiceRngState:draw.rng,pendingChoice:next,nextMatchEventSeq:before.nextMatchEventSeq+1,
-  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount}:r)},'independent free atomic reroll state');
+  removedAugmentIds:[...before.removedAugmentIds,c.offers[command.optionIndex]],
+  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount,rerolledIndices:[...r.rerolledIndices,command.optionIndex]}:r)},'independent free atomic reroll state');
  assert.deepEqual(result.events,[{domain:'match',eventSeq:before.nextMatchEventSeq,type:'choiceOpened',choice:next}],'independent reroll event');
 }
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
@@ -256,13 +264,13 @@ class Ledger {
    if(event.type==='choiceOpened'&&event.choice.kind==='augment'){
     const c=event.choice,tier=augmentTier(augmentSeed(after),c.choiceId),rerolled=command?.type==='rerollAugment';
     assert.equal(c.choiceId,`round:${after.roundDefinitionId}:augment`,'independent scheduled augment node identity');
-    const draw=augmentDraw(choice,tier,after.augments,rerolled?before.pendingChoice.offers:[]);choice=draw.rng;
+    const draw=rerolled?augmentCardDraw(before,command.optionIndex):augmentDraw(choice,tier,after.augments,after.removedAugmentIds);choice=draw.rng;
     assert.deepEqual(c.offers,draw.offers,'independent augment offers');
     const used=rerolled?before.pendingChoice.rerollCount+1:0;
     assert.deepEqual(c,{kind:'augment',step:'offer',choiceId:c.choiceId,eventId:c.choiceId,generation:used,offers:draw.offers,targetId:null,
-     rerollCount:used,augmentTier:tier,rerollsRemaining:augmentLimit(after.augments)-used,returnPhase:'preparation'},'independent augment node/reset metadata');
+     rerollCount:used,augmentTier:tier,rerollsRemaining:3-used,rerolledSlots:rerolled?draw.rerolledSlots:[false,false,false],returnPhase:'preparation'},'independent augment node/reset metadata');
     assert.deepEqual(after.pendingChoice,c,'augment event equals pending state');
-    const record={choiceId:c.choiceId,tier,rerollCount:used};
+    const record={choiceId:c.choiceId,tier,rerollCount:used,rerolledIndices:rerolled?[...before.augmentOffers.find(r=>r.choiceId===c.choiceId).rerolledIndices,command.optionIndex]:[]};
     assert.deepEqual(after.augmentOffers,rerolled?before.augmentOffers.map(r=>r.choiceId===c.choiceId?record:r):[...before.augmentOffers,record],'independent augment history');
    }
    if(event.type==='rewardGranted'){reward=word(reward);assert.equal(event.receipt.itemIds.length,1);assert.equal(after.items.find(i=>i.id===event.receipt.itemIds[0]).definitionId,COMPONENTS[reward%8],'independent random component');}
