@@ -22,10 +22,12 @@ const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
- * League models are scaled by their full bbox height alone (D7 build-report: jinx 234, vi 213 source units), so every
- * champion stands this tall; capping width as well shrank wide silhouettes (hair, props) well below a hex.
+ * League models are scaled to their full bbox height (D7 build-report: jinx 234, vi 213 source units), so every
+ * champion stands this tall. Width is capped at 110 (just under a hex, √3 × 68 ≈ 118, and fits a bench slot), so
+ * short wide models (Urgot, Corki) stay in their own cell; tested locally on the 60 real models, slim ones (Jinx, Vi)
+ * are unchanged by the cap.
  */
-const MODEL_HEIGHT = 92;
+const MODEL_HEIGHT = 92, MODEL_WIDTH = 110;
 /** Seconds a dying piece stays up when its model has no death clip (or is a pawn). */
 const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
@@ -166,7 +168,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     void models.cache.load(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       view.lease = lease;
-      view.body = fit(lease.scene, MODEL_HEIGHT); view.root.add(lease.scene);
+      // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
+      view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
