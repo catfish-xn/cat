@@ -17,6 +17,7 @@ import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { createGameClient, isOnlineMode } from './online/mode';
+import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
 import { OnlineApplication, mergeNotice } from './online/online-application';
 import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
@@ -827,7 +828,7 @@ export class BoardScene extends Phaser.Scene {
       // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
       const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
       const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
-      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS);
+      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS, displayStarLevel(this.session.state, unit));
     }
   }
   /**
@@ -943,8 +944,10 @@ export class BoardScene extends Phaser.Scene {
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
-      const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
+      const definition = getDefinition(displayed), star = displayStarLevel(this.session.state, displayed);
+      // v16 Ultimate Hero: the rules' certified 4★ base (physically 3★, so the sell price stays the rules' 3★ price).
+      const stats = (star === 4 ? fourStarBaseStats(displayed.definitionId) : null) ?? getUnitStats(displayed.definitionId, displayed.starLevel);
+      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
@@ -1042,8 +1045,10 @@ export class BoardScene extends Phaser.Scene {
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
     const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}:${gear}`,
-      () => unitCardBody(unit.definitionId, unit.starLevel, battle, gear)!);
+    // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
+    const star = displayStarLevel(this.session.state, unit), notes = unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [];
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes)!);
     this.unitCardOpen = true;
   }
   private unitCardOpen = false;
