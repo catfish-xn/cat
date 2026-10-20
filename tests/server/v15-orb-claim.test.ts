@@ -111,6 +111,34 @@ describe('v15 room: orb claims through the gate', () => {
   }, 20_000);
 });
 
+describe('v15 room: a claim while the round is frozen', () => {
+  it('is held without touching the frozen inputs and queued by the rules at battle entry', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 10 });
+    disposers.push(() => room.dispose());
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    clock.fireNext(); // the preparation deadline freezes the round; the first slice is only scheduled
+    expect(room.state.phase).toBe('frozen');
+    const before = seat(room.state, 's0');
+    const orb = unclaimed(before.match).find(o => !o.queued)!;
+    const published = room.state;
+    expect(room.handle('s0', { type: 'claimOrb', round: before.match.round, orbId: orb.orbId })).toMatchObject({ ok: true, seatRevision: before.seatRevision });
+    // Held only: nothing is published while the round is frozen.
+    expect(room.state).toBe(published);
+    expect(room.handle('s0', { type: 'claimOrb', round: before.match.round, orbId: orb.orbId })).toMatchObject({ ok: false, reason: 'already-claimed' });
+    expect(room.handle('s0', { type: 'claimOrb', round: before.match.round, orbId: 'no-such-orb' })).toMatchObject({ ok: false, reason: 'unknown-orb' });
+    expect(room.handle('s0', { type: 'claimOrb', round: before.match.round + 1, orbId: orb.orbId })).toMatchObject({ ok: false, reason: 'stale-round' });
+    expect(room.state).toBe(published);
+    while (room.state.phase === 'frozen') expect(clock.fireNext()).toBe(true);
+    expect(room.state.fault).toBeNull();
+    const entered = seat(room.state, 's0').match;
+    if (room.state.phase === 'battle') {
+      expect(unclaimed(entered).find(o => o.orbId === orb.orbId)?.queued).toBe(true);
+      expect(receipts(entered)).toEqual(receipts(before.match));
+    } else expect(unclaimed(entered).map(o => o.orbId)).not.toContain(orb.orbId);
+  }, 20_000);
+});
+
 describe('v15 bot preparation entry', () => {
   it('every bot seat claims all of its orbs at each preparation entry, outside its policy budget', () => {
     const clock = new ManualClock();

@@ -9,7 +9,7 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
@@ -219,6 +219,13 @@ export class Room {
   /** Deadline deployments staged during `frozen`, published with the locks at battle entry. */
   private deployed: ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }> = new Map();
   private lockedSeats: ReadonlyMap<string, MatchState> = new Map();
+  /**
+   * v15: orb claims accepted while the round is `frozen` (the client already shows the battle; user rule: an orb may be
+   * clicked any time during it). The seats are still in preparation there, where the rules would claim at once and change
+   * the frozen inputs, so the room holds the claims in arrival order and hands each to the rules right after battle entry,
+   * where they are queued like any claim during the battle (or claimed at once if the round settled immediately).
+   */
+  private frozenClaims: { readonly seatId: string; readonly command: Extract<SeatCommand, { type: 'claimOrb' }> }[] = [];
   private disposed = false;
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
@@ -349,7 +356,7 @@ export class Room {
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
-    if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
+    if (!allowed) return phase === 'frozen' && command.type === 'claimOrb' && !this.disposed ? this.holdFrozenClaim(seat, command) : { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
     const applied = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
@@ -361,6 +368,30 @@ export class Room {
     this.commitSeat(seatId, result.state, result.pool);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
+  }
+
+  /**
+   * v15: a claim during `frozen` is held (see `frozenClaims`) and publishes nothing yet; the seat's private view shows it as
+   * queued from battle entry on. Refused here only for what the seat's own loot view already answers: another round
+   * (`stale-round`), an orb it does not hold unclaimed (`unknown-orb`) and one already queued or held (`already-claimed`).
+   * Every other check is the rules' own when the claim is handed over; a refusal then leaves the seat as it was.
+   */
+  private holdFrozenClaim(seat: SeatState, command: Extract<SeatCommand, { type: 'claimOrb' }>): RoomCommandResult {
+    if (command.round !== seat.match.round) return { ok: false, reason: 'stale-round', state: seat.match };
+    const orb = (readLootView(seat.match).unclaimedOrbs ?? []).find(candidate => candidate.orbId === command.orbId);
+    if (!orb) return { ok: false, reason: 'unknown-orb', state: seat.match };
+    if (orb.queued || this.frozenClaims.some(held => held.seatId === seat.seatId && held.command.orbId === command.orbId)) return { ok: false, reason: 'already-claimed', state: seat.match };
+    this.frozenClaims.push({ seatId: seat.seatId, command });
+    return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+  }
+  /** Hands the claims held during `frozen` to the rules through the normal gate, in arrival order (battle or settlement phase). */
+  private flushFrozenClaims(): void {
+    const held = this.frozenClaims;
+    this.frozenClaims = [];
+    for (const { seatId, command } of held) {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+      if (seat && seat.controller !== 'takeover') this.apply(seat, command);
+    }
   }
 
   /**
@@ -917,9 +948,10 @@ export class Room {
     // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
     const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
     const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
-    if (longest === 0) return this.commitPending();
+    if (longest === 0) { this.commitPending(); return this.flushFrozenClaims(); }
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
+    this.flushFrozenClaims();
   }
 
   private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {
@@ -1033,7 +1065,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
