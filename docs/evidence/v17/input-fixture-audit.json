@@ -8,7 +8,7 @@
     "scripts/compare-v16-digests.cjs": "251fb7ee8127981c740f9cef4759038956fc12e67aac0a7927cc2bafa7320135",
     "scripts/compare-v17-digests.cjs": "115a0d658c79197bf136d4681023cdc83af7d46fb53e5feb7ac41320c9f9c252",
     "scripts/g2-4b-fixture-audit.cjs": "d450e2434e6a707afafea87e968dbf466cfd707f3e337eec69211cd0414367ae",
-    "scripts/generate-m5-route.cjs": "8782949b4fbb814014b04478a293ba668c68c348380a76dbf941621d4f4c0c50",
+    "scripts/generate-m5-route.cjs": "9126481ce446678eb77db68c2816a0f572f10dfaa8b7619dcee54303821e774d",
     "scripts/m4-evidence.cjs": "6577e857f1bd23944f862e46104706c02b4efe8afbb7259a9016fb7b71714973",
     "scripts/measure-g2-4b-restore.cjs": "7197c30995abcab508d482169259791d29f79d020fd8354a53743249eda9dd5a",
     "scripts/record-g2-4b-inputs.cjs": "e8ca736c7db5ee0db5b55f1db9e09b073bc2233e4e26637417166fbfcbfeb6c5",
@@ -26,7 +26,7 @@
     "scripts/v15-fixture-audit.cjs": "4f2651f37d7a27020155bbcc03230cab62af5d4e08413f7ee10f4bf282beb4f5",
     "scripts/v16-fixture-audit.cjs": "0e466bf8c2ea235c64fa64f61da27566967faa4aa00551c1d1bb6a250e3830ef",
     "scripts/v17-fixture-audit.cjs": "13075fa4df545981a069ccaab99a15358a362a86ce6324673654a7bc9d2161ec",
-    "scripts/v17-rageblade-route.cjs": "24e562bf4f992d049d7baa1b4a7d85f9f41104f44cfe5e30d4ca1b55a821e07b",
+    "scripts/v17-rageblade-route.cjs": "5fbef3baf281be66d4946930cd1dd5d7770ff0a383177419f3a40d4a9cdd6c6c",
     "scripts/verify-m8-herald-fixtures.cjs": "56ca3ad7561d30be1afff2e2f8639ad067baf2390e6ab12683a96007d66d3e01",
     "scripts/verify-v17-epoch.cjs": "16a27ea7c264c3481c5d5f2ec88a6df88104452043bb5efefbb161af4ed4a7c9",
     "src/server-entry/index.ts": "926fccf622190c7ee338ecb273c7d6dcebb6486103de97f40309c1ee130ff562",
@@ -427,7 +427,7 @@
       "previousBytes": 37828,
       "currentBytes": 37926,
       "previousSha256": "9ea81bc5b9cf76d20abad333df736d10479089a0e52d3b824e45b6bc8676dc8a",
-      "currentSha256": "1edb3d189f4ae5a16a6d6e86102ac561664014df9f8e158d4c794bf18a99f82e",
+      "currentSha256": "85e0bfd5b27fe3f506b844560dd4a55b956c90432e3ce8b8090ad5dab61875ca",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v17-herald-raw/trajectory.json": {
