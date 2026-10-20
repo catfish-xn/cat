@@ -1,0 +1,1771 @@
+{
+  "provenance": "Synthetic unit aliases and paths; only system/effect IDs and verified bone lists retained for binding validation.",
+  "manifest": {
+    "schemaVersion": 1,
+    "models": {
+      "synthetic-unit-0": {
+        "path": "synthetic/models/model-0.glb"
+      },
+      "synthetic-unit-1": {
+        "path": "synthetic/models/model-1.glb"
+      },
+      "synthetic-unit-2": {
+        "path": "synthetic/models/model-2.glb"
+      },
+      "synthetic-unit-3": {
+        "path": "synthetic/models/model-3.glb"
+      },
+      "synthetic-unit-4": {
+        "path": "synthetic/models/model-4.glb"
+      },
+      "synthetic-unit-5": {
+        "path": "synthetic/models/model-5.glb"
+      },
+      "synthetic-unit-6": {
+        "path": "synthetic/models/model-6.glb"
+      },
+      "synthetic-unit-7": {
+        "path": "synthetic/models/model-7.glb"
+      },
+      "synthetic-unit-8": {
+        "path": "synthetic/models/model-8.glb"
+      },
+      "synthetic-unit-9": {
+        "path": "synthetic/models/model-9.glb"
+      }
+    },
+    "effects": {
+      "global_tft_global_ba_hit": {
+        "path": "synthetic/shared.json"
+      },
+      "ambessa_tft13_ambessa_base_q_chainswipe": {
+        "path": "synthetic/effects/effect-0.json"
+      },
+      "ambessa_tft13_ambessa_base_r_hurl_swipe": {
+        "path": "synthetic/effects/effect-1.json"
+      },
+      "ambessa_tft13_ambessa_base_r_energy_windup": {
+        "path": "synthetic/effects/effect-2.json"
+      },
+      "ambessa_tft13_ambessa_base_q_swipe_tar": {
+        "path": "synthetic/effects/effect-3.json"
+      },
+      "ambessa_tft13_ambessa_base_p_specialattack_swipe_r": {
+        "path": "synthetic/effects/effect-4.json"
+      },
+      "ambessa_tft13_ambessa_base_r_cas_dust": {
+        "path": "synthetic/effects/effect-5.json"
+      },
+      "ambessa_tft13_ambessa_base_p_specialattack_swipe": {
+        "path": "synthetic/effects/effect-6.json"
+      },
+      "ambessa_tft13_ambessa_base_r_hurl_impact": {
+        "path": "synthetic/effects/effect-7.json"
+      },
+      "cassiopeia_tft13_cassiopeia_base_ba_mis": {
+        "path": "synthetic/effects/effect-8.json"
+      },
+      "cassiopeia_tft13_cassiopeia_base_q_splash_mis": {
+        "path": "synthetic/effects/effect-9.json"
+      },
+      "cassiopeia_tft13_cassiopeia_base_q_miasma": {
+        "path": "synthetic/effects/effect-10.json"
+      },
+      "cassiopeia_tft13_cassiopeia_base_q_proc": {
+        "path": "synthetic/effects/effect-11.json"
+      },
+      "corki_tft13_corki_base_r_mis_big": {
+        "path": "synthetic/effects/effect-12.json"
+      },
+      "corki_tft13_corki_base_r_tar_big": {
+        "path": "synthetic/effects/effect-13.json"
+      },
+      "corki_tft13_corki_base_r_tar": {
+        "path": "synthetic/effects/effect-14.json"
+      },
+      "corki_tft13_corki_base_r_armor_shred": {
+        "path": "synthetic/effects/effect-15.json"
+      },
+      "corki_tft13_corki_base_ba_mis": {
+        "path": "synthetic/effects/effect-16.json"
+      },
+      "corki_tft13_corki_base_r_mis": {
+        "path": "synthetic/effects/effect-17.json"
+      },
+      "elise_tft13_elise_base_ranged_detonate": {
+        "path": "synthetic/effects/effect-18.json"
+      },
+      "elise_tft13_elise_base_ranged_detonate_tar": {
+        "path": "synthetic/effects/effect-19.json"
+      },
+      "elise_tft13_elise_base_cocoon_tar": {
+        "path": "synthetic/effects/effect-20.json"
+      },
+      "elise_tft13_elise_base_cocoon_mis": {
+        "path": "synthetic/effects/effect-21.json"
+      },
+      "elise_tft13_elise_base_cas_spider": {
+        "path": "synthetic/effects/effect-22.json"
+      },
+      "elise_tft13_elise_base_cocoon_heal_tar": {
+        "path": "synthetic/effects/effect-23.json"
+      },
+      "elise_tft13_elise_base_ranged_buf": {
+        "path": "synthetic/effects/effect-24.json"
+      },
+      "ezreal_tft13_ezreal_base_w_cas": {
+        "path": "synthetic/effects/effect-25.json"
+      },
+      "ezreal_tft13_ezreal_base_w_tar": {
+        "path": "synthetic/effects/effect-26.json"
+      },
+      "ezreal_tft13_ezreal_base_w_mis": {
+        "path": "synthetic/effects/effect-27.json"
+      },
+      "ezreal_tft13_ezreal_base_q_cas": {
+        "path": "synthetic/effects/effect-28.json"
+      },
+      "ezreal_tft13_ezreal_base_ba_mis": {
+        "path": "synthetic/effects/effect-29.json"
+      },
+      "ezreal_tft13_ezreal_base_q_mis": {
+        "path": "synthetic/effects/effect-30.json"
+      },
+      "ezreal_tft13_ezreal_base_w_aoe": {
+        "path": "synthetic/effects/effect-31.json"
+      },
+      "ezreal_tft13_ezreal_base_q_tar": {
+        "path": "synthetic/effects/effect-32.json"
+      },
+      "gangplank_tft13_gangplank_base_e_ranged_fuze": {
+        "path": "synthetic/effects/effect-33.json"
+      },
+      "gangplank_tft13_gangplank_base_w_groundfire_mis": {
+        "path": "synthetic/effects/effect-34.json"
+      },
+      "gangplank_tft13_gangplank_base_r_ranged_bomb": {
+        "path": "synthetic/effects/effect-35.json"
+      },
+      "gangplank_tft13_gangplank_base_p_tar": {
+        "path": "synthetic/effects/effect-36.json"
+      },
+      "gangplank_tft13_gangplank_base_e_ranged_mis_crit": {
+        "path": "synthetic/effects/effect-37.json"
+      },
+      "gangplank_tft13_gangplank_base_w_ground_tar": {
+        "path": "synthetic/effects/effect-38.json"
+      },
+      "gangplank_tft13_gangplank_base_ba_mis_ranged": {
+        "path": "synthetic/effects/effect-39.json"
+      },
+      "gangplank_tft13_gangplank_base_e_ranged_tar": {
+        "path": "synthetic/effects/effect-40.json"
+      },
+      "gangplank_tft13_gangplank_base_w_melee_heal": {
+        "path": "synthetic/effects/effect-41.json"
+      },
+      "garen_tft13_garen_base_r_indicator": {
+        "path": "synthetic/effects/effect-42.json"
+      },
+      "garen_tft13_garen_base_r_aoe_impact": {
+        "path": "synthetic/effects/effect-43.json"
+      },
+      "garen_tft13_garen_base_r_shield": {
+        "path": "synthetic/effects/effect-44.json"
+      },
+      "illaoi_tft13_illaoi_base_e_linkbeam": {
+        "path": "synthetic/effects/effect-45.json"
+      },
+      "illaoi_tft13_illaoi_base_r_relicflash": {
+        "path": "synthetic/effects/effect-46.json"
+      },
+      "illaoi_tft13_illaoi_base_r_impact": {
+        "path": "synthetic/effects/effect-47.json"
+      },
+      "illaoi_tft13_illaoi_base_r_cas_dust": {
+        "path": "synthetic/effects/effect-48.json"
+      },
+      "illaoi_tft13_illaoi_base_r_tar": {
+        "path": "synthetic/effects/effect-49.json"
+      },
+      "jayce_tft13_jayce_base_r_ranged_explosion": {
+        "path": "synthetic/effects/effect-50.json"
+      },
+      "jayce_tft13_jayce_base_r_cast_dust": {
+        "path": "synthetic/effects/effect-51.json"
+      },
+      "jayce_tft13_jayce_base_r_crystal_2": {
+        "path": "synthetic/effects/effect-52.json"
+      },
+      "jayce_tft13_jayce_base_e_thunderingblow_hit": {
+        "path": "synthetic/effects/effect-53.json"
+      },
+      "jayce_tft13_jayce_base_r_ranged_recall_buildup": {
+        "path": "synthetic/effects/effect-54.json"
+      },
+      "jayce_tft13_jayce_base_ba_range": {
+        "path": "synthetic/effects/effect-55.json"
+      },
+      "jayce_tft13_jayce_base_r_melee_lightningcall": {
+        "path": "synthetic/effects/effect-56.json"
+      },
+      "jayce_tft13_jayce_base_r_ranged_crystaldestroymissile": {
+        "path": "synthetic/effects/effect-57.json"
+      },
+      "jayce_tft13_jayce_base_r_ranged_jump": {
+        "path": "synthetic/effects/effect-58.json"
+      },
+      "jayce_tft13_jayce_base_w_hexgate_asbuff": {
+        "path": "synthetic/effects/effect-59.json"
+      },
+      "jayce_tft13_jayce_base_p_hexgate_spitenemy": {
+        "path": "synthetic/effects/effect-60.json"
+      },
+      "jayce_tft13_jayce_base_r_melee_portal_child": {
+        "path": "synthetic/effects/effect-61.json"
+      },
+      "jayce_tft13_jayce_base_e_thunderingblow_tar": {
+        "path": "synthetic/effects/effect-62.json"
+      },
+      "jayce_tft13_jayce_base_e_knockback_wave": {
+        "path": "synthetic/effects/effect-63.json"
+      },
+      "jayce_tft13_jayce_base_r_ranged_recall_blast_cast": {
+        "path": "synthetic/effects/effect-64.json"
+      },
+      "jayce_tft13_jayce_base_r_crystal": {
+        "path": "synthetic/effects/effect-65.json"
+      },
+      "jayce_tft13_jayce_base_r_shards_child": {
+        "path": "synthetic/effects/effect-66.json"
+      },
+      "jayce_tft13_jayce_base_w_hexgate_asbuff_body": {
+        "path": "synthetic/effects/effect-67.json"
+      },
+      "kogmaw_tft13_kogmaw_base_q_tar": {
+        "path": "synthetic/effects/effect-68.json"
+      },
+      "kogmaw_tft13_kogmaw_base_w_buff_mouth": {
+        "path": "synthetic/effects/effect-69.json"
+      },
+      "kogmaw_tft13_kogmaw_base_w_eyeglow": {
+        "path": "synthetic/effects/effect-70.json"
+      },
+      "kogmaw_tft13_kogmaw_base_w_buf": {
+        "path": "synthetic/effects/effect-71.json"
+      },
+      "kogmaw_tft13_kogmaw_base_q_mis": {
+        "path": "synthetic/effects/effect-72.json"
+      },
+      "kogmaw_tft13_kogmaw_base_ba_mis": {
+        "path": "synthetic/effects/effect-73.json"
+      }
+    }
+  },
+  "rows": {
+    "global": [
+      {
+        "effectId": "global_tft_global_ba_hit",
+        "sourcePath": "synthetic/TFT_Global_BA_Hit",
+        "path": "synthetic/shared.json"
+      }
+    ],
+    "synthetic-unit-0": [
+      {
+        "effectId": "ambessa_tft13_ambessa_base_q_chainswipe",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_Q_ChainSwipe",
+        "path": "synthetic/effects/effect-0.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_r_hurl_swipe",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_R_Hurl_Swipe",
+        "path": "synthetic/effects/effect-1.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_r_energy_windup",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_R_Energy_Windup",
+        "path": "synthetic/effects/effect-2.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_q_swipe_tar",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_Q_Swipe_Tar",
+        "path": "synthetic/effects/effect-3.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_p_specialattack_swipe_r",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_P_SpecialAttack_Swipe_R",
+        "path": "synthetic/effects/effect-4.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_r_cas_dust",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_R_Cas_Dust",
+        "path": "synthetic/effects/effect-5.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_p_specialattack_swipe",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_P_SpecialAttack_Swipe",
+        "path": "synthetic/effects/effect-6.json"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_r_energy_avatar",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_R_Energy_Avatar",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "ambessa_tft13_ambessa_base_r_hurl_impact",
+        "sourcePath": "synthetic/systems/TFT13_Ambessa_Base_R_Hurl_Impact",
+        "path": "synthetic/effects/effect-7.json"
+      }
+    ],
+    "synthetic-unit-1": [
+      {
+        "effectId": "cassiopeia_tft13_cassiopeia_base_q_tar",
+        "sourcePath": "synthetic/systems/TFT13_Cassiopeia_Base_Q_Tar",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "cassiopeia_tft13_cassiopeia_base_ba_mis",
+        "sourcePath": "synthetic/systems/TFT13_Cassiopeia_Base_BA_mis",
+        "path": "synthetic/effects/effect-8.json"
+      },
+      {
+        "effectId": "cassiopeia_tft13_cassiopeia_base_q_splash_mis",
+        "sourcePath": "synthetic/systems/TFT13_Cassiopeia_Base_Q_splash_mis",
+        "path": "synthetic/effects/effect-9.json"
+      },
+      {
+        "effectId": "cassiopeia_tft13_cassiopeia_base_q_miasma",
+        "sourcePath": "synthetic/systems/TFT13_Cassiopeia_Base_Q_Miasma",
+        "path": "synthetic/effects/effect-10.json"
+      },
+      {
+        "effectId": "cassiopeia_tft13_cassiopeia_base_q_proc",
+        "sourcePath": "synthetic/systems/TFT13_Cassiopeia_Base_Q_Proc",
+        "path": "synthetic/effects/effect-11.json"
+      }
+    ],
+    "synthetic-unit-2": [
+      {
+        "effectId": "corki_tft13_corki_base_r_mis_big",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_R_mis_big",
+        "path": "synthetic/effects/effect-12.json"
+      },
+      {
+        "effectId": "corki_tft13_corki_base_r_tar_big",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_R_tar_big",
+        "path": "synthetic/effects/effect-13.json"
+      },
+      {
+        "effectId": "corki_tft13_corki_base_r_tar",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_R_tar",
+        "path": "synthetic/effects/effect-14.json"
+      },
+      {
+        "effectId": "corki_tft13_corki_base_r_armor_shred",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_R_Armor_Shred",
+        "path": "synthetic/effects/effect-15.json"
+      },
+      {
+        "effectId": "corki_tft13_corki_base_ba_mis",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_BA_mis",
+        "path": "synthetic/effects/effect-16.json"
+      },
+      {
+        "effectId": "corki_tft13_corki_base_r_mis",
+        "sourcePath": "synthetic/systems/TFT13_Corki_Base_R_mis",
+        "path": "synthetic/effects/effect-17.json"
+      }
+    ],
+    "synthetic-unit-3": [
+      {
+        "effectId": "elise_tft13_elise_base_ranged_detonate",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Ranged_detonate",
+        "path": "synthetic/effects/effect-18.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_ranged_detonate_tar",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Ranged_detonate_tar",
+        "path": "synthetic/effects/effect-19.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_cocoon_tar",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Cocoon_tar",
+        "path": "synthetic/effects/effect-20.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_cocoon_mis",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Cocoon_mis",
+        "path": "synthetic/effects/effect-21.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_ranged_base_q_cas",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Ranged_Base_Q_cas",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_ba_mis",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_BA_mis",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_cas_spider",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_cas_spider",
+        "path": "synthetic/effects/effect-22.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_cocoon_heal_tar",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Cocoon_Heal_tar",
+        "path": "synthetic/effects/effect-23.json"
+      },
+      {
+        "effectId": "elise_tft13_elise_base_ranged_buf",
+        "sourcePath": "synthetic/systems/TFT13_Elise_Base_Ranged_buf",
+        "path": "synthetic/effects/effect-24.json"
+      }
+    ],
+    "synthetic-unit-4": [
+      {
+        "effectId": "ezreal_tft13_ezreal_base_w_cas",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_W_Cas",
+        "path": "synthetic/effects/effect-25.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_w_tar",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_W_tar",
+        "path": "synthetic/effects/effect-26.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_w_mis",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_W_mis",
+        "path": "synthetic/effects/effect-27.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_q_cas",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_Q_cas",
+        "path": "synthetic/effects/effect-28.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_ba_mis",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_BA_mis",
+        "path": "synthetic/effects/effect-29.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_q_mis",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_Q_mis",
+        "path": "synthetic/effects/effect-30.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_w_aoe",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_W_AOE",
+        "path": "synthetic/effects/effect-31.json"
+      },
+      {
+        "effectId": "ezreal_tft13_ezreal_base_q_tar",
+        "sourcePath": "synthetic/systems/TFT13_Ezreal_Base_Q_tar",
+        "path": "synthetic/effects/effect-32.json"
+      }
+    ],
+    "synthetic-unit-5": [
+      {
+        "effectId": "gangplank_tft13_gangplank_base_e_ranged_fuze",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_E_Ranged_Fuze",
+        "path": "synthetic/effects/effect-33.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_e_ranged_explosion",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_E_Ranged_Explosion",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_w_groundfire_mis",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_W_GroundFire_Mis",
+        "path": "synthetic/effects/effect-34.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_r_ranged_bomb",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_R_Ranged_Bomb",
+        "path": "synthetic/effects/effect-35.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_p_tar",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_P_Tar",
+        "path": "synthetic/effects/effect-36.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_e_ranged_mis_crit",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_E_Ranged_Mis_Crit",
+        "path": "synthetic/effects/effect-37.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_w_ground_tar",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_W_ground_tar",
+        "path": "synthetic/effects/effect-38.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_ba_mis_ranged",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_BA_Mis_Ranged",
+        "path": "synthetic/effects/effect-39.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_e_ranged_tar",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_E_Ranged_Tar",
+        "path": "synthetic/effects/effect-40.json"
+      },
+      {
+        "effectId": "gangplank_tft13_gangplank_base_w_melee_heal",
+        "sourcePath": "synthetic/systems/TFT13_Gangplank_Base_W_Melee_Heal",
+        "path": "synthetic/effects/effect-41.json"
+      }
+    ],
+    "synthetic-unit-6": [
+      {
+        "effectId": "garen_tft13_garen_base_r_indicator",
+        "sourcePath": "synthetic/systems/TFT13_Garen_Base_R_Indicator",
+        "path": "synthetic/effects/effect-42.json"
+      },
+      {
+        "effectId": "garen_tft13_garen_base_r_aoe_impact",
+        "sourcePath": "synthetic/systems/TFT13_Garen_Base_R_AoE_Impact",
+        "path": "synthetic/effects/effect-43.json"
+      },
+      {
+        "effectId": "garen_tft13_garen_base_r_sword_tar",
+        "sourcePath": "synthetic/systems/TFT13_Garen_Base_R_Sword_Tar",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "garen_tft13_garen_base_r_cas",
+        "sourcePath": "synthetic/systems/TFT13_Garen_Base_R_Cas",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "garen_tft13_garen_base_r_shield",
+        "sourcePath": "synthetic/systems/TFT13_Garen_Base_R_Shield",
+        "path": "synthetic/effects/effect-44.json"
+      }
+    ],
+    "synthetic-unit-7": [
+      {
+        "effectId": "illaoi_tft13_illaoi_base_e_linkbeam",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_E_LinkBeam",
+        "path": "synthetic/effects/effect-45.json"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_e_shrink_hit",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_E_Shrink_Hit",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_r_relicflash",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_R_RelicFlash",
+        "path": "synthetic/effects/effect-46.json"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_r_impact",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_R_impact",
+        "path": "synthetic/effects/effect-47.json"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_r_cas_dust",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_R_Cas_Dust",
+        "path": "synthetic/effects/effect-48.json"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_r_tar",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_R_tar",
+        "path": "synthetic/effects/effect-49.json"
+      },
+      {
+        "effectId": "illaoi_tft13_illaoi_base_z_cast_avatar",
+        "sourcePath": "synthetic/systems/TFT13_Illaoi_Base_Z_Cast_Avatar",
+        "reason": "no-writable-emitters"
+      }
+    ],
+    "synthetic-unit-8": [
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_explosion",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_Explosion",
+        "path": "synthetic/effects/effect-50.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_cast_dust",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Cast_Dust",
+        "path": "synthetic/effects/effect-51.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_crystal_2",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Crystal_2",
+        "path": "synthetic/effects/effect-52.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_e_thunderingblow_hit",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_E_ThunderingBlow_Hit",
+        "path": "synthetic/effects/effect-53.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_recall_buildup",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_Recall_BuildUp",
+        "path": "synthetic/effects/effect-54.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_ba_range",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_BA_Range",
+        "path": "synthetic/effects/effect-55.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_melee_lightningcall",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Melee_LightningCall",
+        "path": "synthetic/effects/effect-56.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_w_ally_as_beam",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_W_Ally_AS_Beam",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_passexplosion",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_PassExplosion",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_crystaldestroymissile",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_CrystalDestroyMissile",
+        "path": "synthetic/effects/effect-57.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_swipe_right",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_Swipe_Right",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_jump",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_Jump",
+        "path": "synthetic/effects/effect-58.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_w_hexgate_asbuff",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_W_Hexgate_ASBuff",
+        "path": "synthetic/effects/effect-59.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_p_hexgate_spitenemy",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_P_Hexgate_SpitEnemy",
+        "path": "synthetic/effects/effect-60.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_melee_portal_child",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Melee_Portal_Child",
+        "path": "synthetic/effects/effect-61.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_e_thunderingblow_tar",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_E_ThunderingBlow_tar",
+        "path": "synthetic/effects/effect-62.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_e_knockback_wave",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_E_Knockback_Wave",
+        "path": "synthetic/effects/effect-63.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_ranged_recall_blast_cast",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Ranged_Recall_Blast_Cast",
+        "path": "synthetic/effects/effect-64.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_shield",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Shield",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_crystal",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Crystal",
+        "path": "synthetic/effects/effect-65.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_shards_child",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Shards_Child",
+        "path": "synthetic/effects/effect-66.json"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_r_melee_portal",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_R_Melee_Portal",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "jayce_tft13_jayce_base_w_hexgate_asbuff_body",
+        "sourcePath": "synthetic/systems/TFT13_Jayce_Base_W_Hexgate_ASBuff_Body",
+        "path": "synthetic/effects/effect-67.json"
+      }
+    ],
+    "synthetic-unit-9": [
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_q_tar",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_Q_tar",
+        "path": "synthetic/effects/effect-68.json"
+      },
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_w_buff_mouth",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_W_buff_mouth",
+        "path": "synthetic/effects/effect-69.json"
+      },
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_w_eyeglow",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_W_EyeGlow",
+        "path": "synthetic/effects/effect-70.json"
+      },
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_w_buf",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_W_buf",
+        "path": "synthetic/effects/effect-71.json"
+      },
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_q_mis",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_Q_mis",
+        "path": "synthetic/effects/effect-72.json"
+      },
+      {
+        "effectId": "kogmaw_tft13_kogmaw_base_ba_mis",
+        "sourcePath": "synthetic/systems/TFT13_KogMaw_Base_BA_mis",
+        "path": "synthetic/effects/effect-73.json"
+      }
+    ]
+  },
+  "bones": {
+    "synthetic-unit-0": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Chest",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Neck",
+      "Head",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_ElbowUpper",
+      "L_ElbowLower",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "L_Buffbone_Glb_Ability_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Index1",
+      "L_Index2",
+      "L_Index3",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Middle3",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Ring3",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Pinky3",
+      "L_Weapon",
+      "L_Hand_Twist_B",
+      "L_Hand_Twist",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_ElbowUpper",
+      "R_ElbowLower",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "R_Buffbone_Glb_Ability_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Index1",
+      "R_Index2",
+      "R_Index3",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Middle3",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Ring3",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Pinky3",
+      "R_Weapon",
+      "R_Hand_Twist_B",
+      "R_Hand_Twist",
+      "Buffbone_Glb_Weapon_1",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "R_Buffbone_Glb_Foot_Loc",
+      "L_Foot",
+      "L_Toe",
+      "L_Buffbone_Glb_Foot_Loc",
+      "Ult_Attach",
+      "R_ChainLink_1",
+      "R_ChainLink_2",
+      "R_ChainLink_3",
+      "R_ChainLink_4",
+      "R_ChainLink_5",
+      "R_ChainLink_6",
+      "R_ChainLink_7",
+      "R_ChainLink_8",
+      "R_ChainLink_9",
+      "R_ChainLink_10",
+      "R_ChainLink_11",
+      "R_ChainLink_12",
+      "R_ChainLink_13",
+      "R_ChainLink_14",
+      "R_ChainLink_15",
+      "R_ChainLink_16",
+      "R_ChainLink_17",
+      "R_ChainLink_18",
+      "R_ChainLink_19",
+      "R_ChainLink_20",
+      "L_ChainLink_1",
+      "L_ChainLink_2",
+      "L_ChainLink_3",
+      "L_ChainLink_4",
+      "L_ChainLink_5",
+      "L_ChainLink_6",
+      "L_ChainLink_7",
+      "L_ChainLink_8",
+      "L_ChainLink_9",
+      "L_ChainLink_10",
+      "L_ChainLink_11",
+      "L_ChainLink_12",
+      "L_ChainLink_13",
+      "L_ChainLink_14",
+      "L_ChainLink_15",
+      "L_ChainLink_16",
+      "L_ChainLink_17",
+      "L_ChainLink_18",
+      "L_ChainLink_19",
+      "L_ChainLink_20",
+      "Cape_1",
+      "Cape_2",
+      "Cape_3",
+      "Cape_4",
+      "Cape_5",
+      "Breathe",
+      "L_Gauntlet_Mid",
+      "L_Gauntlet_Lower",
+      "L_Gauntlet_Front",
+      "R_Gauntlet_Mid",
+      "R_Gauntlet_Lower",
+      "R_Gauntlet_Front",
+      "Hair",
+      "Buffbone_Glb_Ground_Loc",
+      "Jaw",
+      "C_Lo_Lip",
+      "C_Up_Lip",
+      "L_Up_Lip",
+      "L_Lo_Lip",
+      "R_Up_Lip",
+      "R_Lo_Lip",
+      "R_MouthCrnr",
+      "L_MouthCrnr",
+      "L_Weapon_Snap",
+      "R_Weapon_Snap",
+      "L_Eye",
+      "R_Eye",
+      "L_Up_Eyelid",
+      "L_Lo_Eyelid",
+      "R_Up_Eyelid",
+      "R_Lo_Eyelid",
+      "L_Brow",
+      "R_Brow",
+      "L_Gauntlet",
+      "R_Gauntlet",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "L_Collar1",
+      "R_CollarFront1",
+      "R_Collar1",
+      "R_Collar2",
+      "C_Collar1"
+    ],
+    "synthetic-unit-1": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "Hair1",
+      "Hair2",
+      "Hair3",
+      "Jaw",
+      "L_Hair1",
+      "L_Hair2",
+      "R_Hair1",
+      "R_Hair2",
+      "L_Breast",
+      "R_Breast",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "Pelvis",
+      "Tail_Base1",
+      "Tail_Base2",
+      "Tail_Base3",
+      "R_Hip",
+      "L_Hip",
+      "Tail1_Grnd",
+      "Tail2_Grnd",
+      "Tail3_Grnd",
+      "Tail4_Grnd",
+      "Tail5_Grnd",
+      "Tail6_Grnd",
+      "Tail7_Grnd",
+      "Tail8_Grnd",
+      "Tail9_Grnd",
+      "Tail10_Grnd",
+      "Tail11_Grnd",
+      "Tail12_Grnd",
+      "Tail13_Grnd",
+      "Tail13_SKN",
+      "Tail12_SKN",
+      "Tail11_SKN",
+      "Tail10_SKN",
+      "Tail9_SKN",
+      "Tail8_SKN",
+      "Tail7_SKN",
+      "Tail6_SKN",
+      "Tail5_SKN",
+      "Tail4_SKN",
+      "Tail3_SKN",
+      "Tail2_SKN",
+      "Tail1_SKN",
+      "BUFFBONE_CSTM_EYE_R",
+      "BUFFBONE_CSTM_EYE_L",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "C_BUFFBONE_CSTM_HEAD_GEM",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "L_PARENTING_HAND_LOC",
+      "R_PARENTING_HAND_LOC",
+      "BUFFBONE_GLB_WEAPON_1",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "Buffbone_Cstm_Healthbar",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "L_Headdress1",
+      "L_Headdress2",
+      "L_Headdress3",
+      "L_Headdress4",
+      "L_Headdress5",
+      "L_Headdress6",
+      "R_Headdress1",
+      "R_Headdress2",
+      "R_Headdress3",
+      "R_Headdress4",
+      "R_Headdress5",
+      "R_Headdress6",
+      "Tongue1",
+      "Tongue2",
+      "Tongue3",
+      "Tongue4",
+      "Tongue5",
+      "L_sleeve1",
+      "R_sleeve1",
+      "R_sleeve2",
+      "R_sleeve3",
+      "R_sleeve4",
+      "R_sleeve5",
+      "R_sleeve6",
+      "L_sleeve2",
+      "L_sleeve3",
+      "L_sleeve4",
+      "L_sleeve5",
+      "L_sleeve6",
+      "R_HeadWing",
+      "L_HeadWing"
+    ],
+    "synthetic-unit-2": [
+      "root",
+      "pelvis",
+      "spine",
+      "neck",
+      "head",
+      "R_beard",
+      "R_beard_b",
+      "R_beard_c",
+      "L_beard",
+      "L_beard_b",
+      "L_beard_c",
+      "cloth",
+      "cloth_b",
+      "cloth_c",
+      "R_shoulder",
+      "R_uparm",
+      "R_forearm",
+      "R_hand",
+      "R_finger",
+      "R_finger_b",
+      "R_thumb",
+      "R_thumb_b",
+      "L_shoulder",
+      "L_uparm",
+      "L_forearm",
+      "L_hand",
+      "L_finger",
+      "L_finger_b",
+      "L_thumb",
+      "L_thumb_b",
+      "R_propeller",
+      "R_propeller_b",
+      "R_project",
+      "mouth",
+      "R_missile",
+      "gun",
+      "L_propeller",
+      "L_propeller_b",
+      "L_missile",
+      "L_project",
+      "R_missile_b",
+      "L_missile_b",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "BUFFBONE_GLB_WEAPON_1",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "R_PARENTING_HAND_LOC",
+      "L_PARENTING_HAND_LOC",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "Cstm_Buffbone_Gatling_Gun_Origin",
+      "C_BUFFBONE_BOMB"
+    ],
+    "synthetic-unit-3": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Spine3",
+      "Neck",
+      "Head",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_HeadDress",
+      "L_SpUpperLeg1",
+      "L_SpUpperLeg2",
+      "L_SpUpperLeg3",
+      "C_HeadDress",
+      "R_SpUpperLeg1",
+      "R_SpUpperLeg2",
+      "R_SpUpperLeg3",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_HeadDress",
+      "L_SpLowerLeg4",
+      "L_SpLowerLeg5",
+      "L_SpLowerLeg6",
+      "R_SpLowerLeg4",
+      "R_SpLowerLeg5",
+      "R_SpLowerLeg6",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Foot_end",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Foot_end",
+      "L_Skirt1",
+      "L_Skirt2",
+      "L_Skirt3",
+      "L_Skirt4",
+      "R_Skirt1",
+      "R_Skirt2",
+      "R_Skirt3",
+      "R_Skirt4",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "Buffbone_Cstm_L_LowerLeg",
+      "Buffbone_Cstm_L_UpperLeg",
+      "Buffbone_Cstm_R_LowerLeg",
+      "Buffbone_Cstm_R_UpperLeg",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "L_Buffbone_Cstm_Hand_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_CSTM_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "C_Buffbone_Glb_Overhead_Loc"
+    ],
+    "synthetic-unit-4": [
+      "Root",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "Spine1",
+      "Spine2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "Neck",
+      "Head",
+      "L_MidLeg",
+      "R_MidLeg",
+      "R_MidShin",
+      "L_MidShin",
+      "L_UpArm_Mid",
+      "R_UpArm_Mid",
+      "R_Forearm_Mid",
+      "L_Elbow_Noodle_Up",
+      "R_Elbow_Noodle_Up",
+      "R_Elbow_Noodle_Lo",
+      "Jaw",
+      "L_Brow",
+      "L_Brow_Inner",
+      "R_Brow",
+      "R_Brow_Inner",
+      "L_MouthCrnr",
+      "R_MouthCrnr",
+      "C_MidFace",
+      "L_Eyelid_All",
+      "L_Up_Eyelid",
+      "C_Up_Lip",
+      "C_Lo_Lip",
+      "L_Elbow",
+      "L_Lo_Eyelid",
+      "R_Eyelid_All",
+      "R_Lo_Eyelid",
+      "R_Up_Eyelid",
+      "L_Up_Lip",
+      "L_Lo_Lip",
+      "R_Up_Lip",
+      "R_Lo_Lip",
+      "L_Jacket1",
+      "L_Jacket2",
+      "L_Jacket3",
+      "R_Jacket1",
+      "R_Jacket2",
+      "R_Jacket3",
+      "R_Jacket_Side1",
+      "R_Jacket_Side2",
+      "R_Jacket_Side3",
+      "L_Jacket_Side1",
+      "L_Jacket_Side2",
+      "L_Jacket_Side3",
+      "L_Eye",
+      "R_Eye",
+      "C_Bot_Teeth",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Ablility_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Ablility_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "True_World",
+      "L_Cannon",
+      "C_Top_Teeth",
+      "Ponytail1",
+      "Ponytail2",
+      "C2_Hair1",
+      "C2_Hair2",
+      "C1_Hair1",
+      "C1_Hair2",
+      "R_Hair1",
+      "R_Hair2",
+      "L_Hair1",
+      "L_Hair2",
+      "Cstm_Buffbone_Cast_FX",
+      "Tongue1",
+      "Tongue2",
+      "Gauntlet_Loc",
+      "Cstm_Buffbone_Bow_FX",
+      "R_Collar",
+      "C_Collar",
+      "L_Collar",
+      "L_B_Strap1",
+      "L_B_Strap2",
+      "L_B_Strap_End",
+      "L_F_Strap1",
+      "L_F_Strap2",
+      "L_F_Strap_End",
+      "L_C_Strap_Mid",
+      "R_B_Strap1",
+      "R_B_Strap2",
+      "R_F_Strap1",
+      "R_F_Strap2",
+      "R_C_Strap_Mid",
+      "Gauntlet",
+      "R_Gauntlet_Front",
+      "R_Gauntlet_Base",
+      "R_Gauntlet_Shell",
+      "L_Gauntlet_Front",
+      "L_Gauntlet_Base",
+      "L_Gauntlet_Shell",
+      "Slide"
+    ],
+    "synthetic-unit-5": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "R_Clavicle",
+      "L_Clavicle",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "Jaw",
+      "R_Toe",
+      "L_Toe",
+      "Feather1",
+      "Feather2",
+      "Beard1",
+      "Beard2",
+      "R_Inner_Shoulder",
+      "L_Inner_Shoulder",
+      "L_Pauldron",
+      "L_Pauldron_jaw",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Skirt1",
+      "L_Skirt2",
+      "L_Skirt3",
+      "R_Skirt1",
+      "R_Skirt2",
+      "R_Skirt3",
+      "RF_Skirt1",
+      "LF_Skirt1",
+      "C_Cloak1",
+      "Sword",
+      "Weapon",
+      "Orange1",
+      "Orange2",
+      "Orange3",
+      "R_Pauldron",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Snap_Sword2World",
+      "Snap_Weapon2World",
+      "L_Buffbone_Glb_Hand_Loc",
+      "Buffbone_Glb_Weapon_2",
+      "L_Middle1",
+      "L_Middle2",
+      "Beard3",
+      "Crank",
+      "R_Foot_end",
+      "R_HeelRoll_end",
+      "R_Toe_end",
+      "R_ToeRoll_end",
+      "R_OuterRoll_end",
+      "R_InnerRoll_end",
+      "R_SwivelRoll_end",
+      "L_Foot_end",
+      "L_HeelRoll_end",
+      "L_Toe_end",
+      "L_ToeRoll_end",
+      "L_OuterRoll_end",
+      "L_InnerRoll_end",
+      "L_SwivelRoll_end",
+      "R_Skirt4",
+      "L_Skirt4",
+      "C_Cloak2"
+    ],
+    "synthetic-unit-6": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Spine3",
+      "Neck",
+      "Head",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "Weapon",
+      "R_Shoulde_Pad",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Shoulde_Pad",
+      "Scarf1",
+      "Scarf2",
+      "Scarf3",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "Cloth_Front1",
+      "Cloth_Front2",
+      "Cloth_Back1",
+      "Cloth_Back2",
+      "Cloth_Back3",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Weapon_access1",
+      "Weapon_access2",
+      "Weapon_access_end",
+      "Scarf4",
+      "Buffbone_Cstm_Healthbar"
+    ],
+    "synthetic-unit-7": [
+      "Root",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "Front_Skirt1",
+      "Front_Skirt2",
+      "Front_Skirt3",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "R_Clavicle",
+      "L_Ear",
+      "R_Ear",
+      "Rear_Skirt1",
+      "Rear_Skirt2",
+      "Rear_Skirt3",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Relic",
+      "Relic_Center",
+      "Buffbone_glb_weapon_1",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Snap_Weapon2World",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Ring1",
+      "L_Ring2",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Index1",
+      "L_Index2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "L_Buffbone_Glb_Hand_Loc",
+      "Buffbone_Cstm_Healthbar",
+      "C_Buffbone_Glb_Center_Loc",
+      "BackHair1",
+      "BackHair2",
+      "BackHair3",
+      "BackHair4"
+    ],
+    "synthetic-unit-8": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Spine3",
+      "R_Clavicle",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Middle3",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "Pelvis",
+      "Neck",
+      "Head",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Middle3",
+      "R_ShoudlerPad",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "Weapon",
+      "Weapon_Handle_Spin",
+      "Weapon_Handle",
+      "R_Foot",
+      "R_Toe",
+      "L_Collar_1",
+      "L_Collar_2",
+      "B_Collar_1",
+      "B_Collar_2",
+      "R_Collar_1",
+      "R_Collar_2",
+      "JacketCoatTailBase",
+      "L_JacketCoatTail_1",
+      "L_JacketCoatTail_2",
+      "L_JacketCoatTail_3",
+      "R_JacketCoatTail_1",
+      "L_Index1",
+      "L_Index2",
+      "L_Index3",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Ring3",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Pinky3",
+      "R_Index1",
+      "R_Index2",
+      "R_Index3",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Ring3",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Pinky3",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "L_PARENTING_HAND_LOC",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "R_PARENTING_HAND_LOC",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "BUFFBONE_CSTM_SHOULDER",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "C_BUFFBONE_GLB_HEALTHBAR_LOC",
+      "Buffbone_Cstm_Healthbar",
+      "Weapon_DL_1",
+      "Weapon_DR_1",
+      "Weapon_UL_1",
+      "Weapon_UR_1",
+      "Weapon_Spike_1",
+      "Weapon_StaffPump",
+      "BUFFBONE_CSTM_EXHAUST_1",
+      "BUFFBONE_CSTM_EXHAUST_2",
+      "BUFFBONE_CSTM_EXHAUST_3",
+      "BUFFBONE_CSTM_EXHAUST_4",
+      "BUFFBONE_CSTM_EXHAUST_5",
+      "BUFFBONE_CSTM_EXHAUST_6",
+      "BUFFBONE_GLB_WEAPON_1",
+      "BUFFBONE_CSTM_WEAPON_1",
+      "BUFFBONE_CSTM_WEAPON_GAP_1",
+      "BUFFBONE_CSTM_WEAPON_GAP_2",
+      "BUFFBONE_CSTM_WEAPON_GAP_3",
+      "BUFFBONE_CSTM_WEAPON_GAP_4",
+      "BUFFBONE_CSTM_WEAPON_GAP_5",
+      "BUFFBONE_CSTM_WEAPON_GAP_6",
+      "BUFFBONE_CSTM_WEAPON_GAP_7",
+      "BUFFBONE_CSTM_WEAPON_GAP_8",
+      "BUFFBONE_CSTM_WEAPON_GAP_9",
+      "BUFFBONE_CSTM_WEAPON_GAP_10",
+      "BUFFBONE_CSTM_WEAPONA",
+      "Weapon_UR_2",
+      "Weapon_UR_3",
+      "Weapon_DL_2",
+      "Weapon_DL_3",
+      "Weapon_DR_3",
+      "Weapon_DR_2",
+      "Weapon_UL_2",
+      "Weapon_UL_3"
+    ],
+    "synthetic-unit-9": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Head",
+      "Up_Head",
+      "L_HairA1",
+      "R_HairA1",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "L_ToeB1",
+      "L_ToeB2",
+      "L_ToeC1",
+      "L_ToeC2",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "R_ToeB1",
+      "R_ToeB2",
+      "R_ToeC1",
+      "R_ToeC2",
+      "L_HairB1",
+      "L_HairB2",
+      "L_HairA2",
+      "L_Eye1",
+      "L_Eye2",
+      "R_Eye1",
+      "R_Eye2",
+      "R_HairA2",
+      "R_HairB1",
+      "R_HairB2",
+      "Jaw",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Middle1",
+      "L_Index1",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Middle1",
+      "R_Index1",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "BUFFBONE_GLB_WEAPON_LOC",
+      "BUFFBONE_CSTM_ANGLER",
+      "BUFFBONE_CSTM_nose",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "Tail1",
+      "Tail2",
+      "Tail3",
+      "Tail4",
+      "Tail5",
+      "Tongue1",
+      "Tongue2",
+      "Tongue3",
+      "Outside_Spin",
+      "Inside_Spin",
+      "Cristal",
+      "Tail3_Spin",
+      "Tail5_Spin",
+      "Buffbone_Cstm_L_Ear_LOC",
+      "Buffbone_Cstm_R_Ear_LOC"
+    ]
+  }
+}

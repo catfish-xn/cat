@@ -44,6 +44,22 @@ export function approximateEmitter(input, system = {}, options = {}) {
   for (const field of ['childParticleSetDefinition', 'fieldCollectionDefinition', 'fieldCollection']) {
     if (Object.hasOwn(source, field)) return { status: 'skipped', reason: `unexpressible-emitter:${field}` };
   }
+  // A rotated emission frame affects BOTH position and velocity. Collapsing it
+  // to a mean point/velocity stacks a continuous stream into a saturated slab.
+  // V2 has no emission-frame distribution; omit rather than invent its motion.
+  const shape = source.SpawnShape;
+  if (options.textureAlpha?.(source.texture) === false
+      && (source.textureMult || source.alphaErosionDefinition)) {
+    return { status: 'skipped', reason: 'unexpressible-emitter:opaque-base-requires-secondary-mask' };
+  }
+  const nonzero = value => typeof value === 'number' ? value !== 0
+    : Array.isArray(value) ? value.some(nonzero)
+    : value && typeof value === 'object' ? Object.entries(value).some(([key, v]) =>
+      ['constantValue', 'values', 'keyValues', 'dynamics', 'probabilityTables'].includes(key) && nonzero(v)) : false;
+  if (!source.isSingleParticle && shape?.emitRotationAxes?.some(nonzero)
+      && shape.emitRotationAngles?.some(nonzero) && nonzero(source.birthVelocity)) {
+    return { status: 'skipped', reason: 'unexpressible-emitter:rotated-directional-emission' };
+  }
   const sample = (value, field, animated = false) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = structuredClone(value), d = v.dynamics;
@@ -127,14 +143,18 @@ export function approximateEmitter(input, system = {}, options = {}) {
   // V2 has a scalar lifetime size curve. For nonuniform XY planes retain the
   // authored longest edge, rather than multiplying Y by X's unrelated curve.
   // Aspect ratio animation remains approximated; strict conversion is unchanged.
-  const plane = ['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveCameraQuad'].includes(source.primitive?.__type);
-  const birth = source.birthScale0?.constantValue;
-  if (plane && !source.isUniformScale && vector(birth) && birth[0] >= 0 && birth[1] >= 0 && Math.max(...birth.slice(0, 2)) > 0 && source.scale0) {
+  const primitiveType = source.primitive?.__type ?? 'VfxPrimitiveCameraQuad';
+  const plane = ['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveCameraQuad', 'VfxPrimitiveRay'].includes(primitiveType);
+  const meshBounds = primitiveType === 'VfxPrimitiveMesh' ? options.meshBounds?.(source.primitive.mMesh?.mSimpleMeshName) : undefined;
+  const axes = plane ? [0, 1] : [0, 1, 2];
+  const birth = source.birthScale0?.constantValue ?? [1, 1, 1];
+  const weights = plane ? birth : vector(meshBounds) ? birth.map((n, i) => n * meshBounds[i]) : undefined;
+  if (weights && !source.isUniformScale && vector(birth) && Math.max(...axes.map(i => Math.abs(weights[i]))) > 0 && source.scale0) {
     const curve = source.scale0, values = curve.dynamics?.values ?? [curve.constantValue];
-    if (values.every(vector) && values.some(v => v[0] !== v[1])) {
-      note('scale0', input.scale0, 'scalar-v2-XY-long-edge-envelope-static-aspect-ratio');
-      const width = Math.max(birth[0], birth[1]);
-      const edge = v => Math.max(Math.abs(birth[0] * v[0]), Math.abs(birth[1] * v[1])) / width;
+    if (values.every(vector) && values.some(v => axes.some(i => v[i] !== v[0]))) {
+      note('scale0', input.scale0, plane ? 'scalar-v2-XY-long-edge-envelope-static-aspect-ratio' : 'scalar-v2-mesh-bounds-long-edge-envelope-static-aspect-ratio');
+      const width = Math.max(...axes.map(i => Math.abs(weights[i])));
+      const edge = v => Math.max(...axes.map(i => Math.abs(weights[i] * v[i]))) / width;
       if (!curve.dynamics) source.scale0 = defaultCurve(Array(3).fill(edge(values[0])));
       else {
         const times = curve.dynamics.times, keys = new Map();
@@ -142,9 +162,9 @@ export function approximateEmitter(input, system = {}, options = {}) {
           keys.set(times[i], edge(values[i]));
           if (!i || times[i] <= times[i - 1]) continue;
           const a = values[i - 1], b = values[i];
-          // Max of four signed linear functions; insert every crossing so the
+          // Max of signed axis-linear functions; insert every crossing so the
           // interpolated scalar preserves the long edge between source keys.
-          const lines = [0, 1].flatMap(axis => [1, -1].map(sign => [birth[axis] * a[axis] * sign, birth[axis] * b[axis] * sign]));
+          const lines = axes.flatMap(axis => [1, -1].map(sign => [weights[axis] * a[axis] * sign, weights[axis] * b[axis] * sign]));
           for (let j = 0; j < lines.length; j++) for (let k = j + 1; k < lines.length; k++) {
             const [a0, a1] = lines[j], [b0, b1] = lines[k];
             const den = (a1 - a0) - (b1 - b0), f = (b0 - a0) / den;
