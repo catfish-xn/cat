@@ -77,31 +77,3 @@ describe('3D mount keeps assets when IndexedDB is unusable', () => {
   });
 });
 
-describe('3D host particle mesh wiring', () => {
-  afterEach(() => { vi.restoreAllMocks(); vi.resetModules(); });
-  it('skips only an unusable mesh emitter and keeps the rest of the effect', async () => {
-    const three = await import('three');
-    const { loadParticleEffect } = await import('../src/rendering3d');
-    const { particleMeshOrEmpty } = await import('../src/rendering/three-mode/asset-reader');
-    const manifest = { schemaVersion: 1 as const, models: {}, effects: { sample: { path: 'effects/sample.json' } } };
-    const doc = { schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 10 }, emitters: [
-      { kind: 'quad', emission: { mode: 'burst', count: 1 }, lifetime: 1 },
-      { kind: 'mesh', mesh: 'meshes/sample.glb', emission: { mode: 'burst', count: 1 }, lifetime: 1 },
-    ] };
-    // Two meshes: readParticleMesh refuses it.
-    const twoMeshes = async () => {
-      const scene = new three.Group();
-      scene.add(new three.Mesh(new three.BoxGeometry(), new three.MeshBasicMaterial()), new three.Mesh(new three.BoxGeometry(), new three.MeshBasicMaterial()));
-      return { scene, animations: [] };
-    };
-    const options = { root: '/synthetic/', readJson: async () => doc };
-    await expect(loadParticleEffect(manifest, 'sample', { ...options, readMesh: url => import('../src/rendering3d').then(m => m.readParticleMesh(url, twoMeshes)) }))
-      .rejects.toThrow('particle-mesh-requires-single-static-mesh');
-    const effect = await loadParticleEffect(manifest, 'sample', { ...options, readMesh: particleMeshOrEmpty(twoMeshes) });
-    effect.update(0.01);
-    expect(effect.particleCount).toBe(2); // the quad still plays; the mesh particle has an empty geometry
-    const meshParticle = effect.object.children.find(child => (child as import('three').Mesh).geometry?.attributes.position === undefined);
-    expect(meshParticle).toBeDefined();
-    effect.dispose();
-  });
-});

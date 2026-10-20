@@ -14,14 +14,14 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick, readParticleMesh,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
-import { createAssetReader, particleMeshOrEmpty, type AssetReader } from './asset-reader';
+import { createAssetReader, type AssetReader } from './asset-reader';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
@@ -292,7 +292,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration, readTexture: models.reader.readTexture,
       readJson: models.reader.readJson,
-      readMesh: particleMeshOrEmpty(models.reader.readModel) }).then(fx => {
+      // Each call parses a fresh template from the cached bytes, as readParticleMesh requires (it disposes it).
+      readMesh: url => readParticleMesh(url, models.reader.readModel) }).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
