@@ -1,6 +1,6 @@
 # D13: prepare slow-test inputs before each suite
 
-Final scope: **10 changed test files /154 cases**, with both shuffled orders154/154 and typecheck passing. The entire prior29-file CI candidate list is audited below. Eight files extend the valid phase1 B5/Bracer work; actual restore/validation/clock-budget operations remain inside the cases. Full per-case data and exact tested source fingerprints are in `results.json`.
+Published scope at07af: **10 changed test files /154 cases**, with both shuffled orders154/154 and typecheck passing. The entire prior29-file CI candidate list is audited below. Eight files extend the valid phase1 B5/Bracer work; actual restore/validation/clock-budget operations remain inside the cases. Full per-case data and exact tested source fingerprints are in `results.json`.
 
 The original phase1 evidence below is preserved for head6940. Its CI was cancelled at04:52 UTC, with the required aggregator failing on cancelled dependencies; this is not reported as a green run. The expanded revision needs its own actual-head CI. External239/253 coordination and exclusions are recorded near the end.
 
@@ -109,7 +109,7 @@ All files in that prior list plus the supplied Bracer case were statically audit
 | m8-b5-grant-upgrade.test.ts | returns full ordinary conflicts and preserves permanent IDs across the complete command | 65.252 | 57.799 |
 | m8-b5-grant-upgrade.test.ts | failed purchase preserves roll ledger, children, resources and event serials | 35.759 | 38.5 |
 
-## Expanded implementation and validation
+## Published expanded implementation at07af
 
 Follow-up starts from the clean phase1 head `6940b097f2968c8a7cb1963c2c7136ba70dc266a`, tree `3b47bccbcd3e5573bd0b61e91377598b6a2cc7f5`; the original full baseline remains `a0d42c592cbd48fb075175e5f61818dabfe1b320`. The remote head was checked repeatedly and remained6940 before publication. Earlier valid B5/Bracer changes are retained.
 
@@ -250,3 +250,7 @@ Same host and lockfile toolchain as phase1. Each baseline/after timing command s
 | server/lifecycle.test.ts | refuses commands while the round is frozen and resolves one slice per clock turn | 1727.648 | 195.346 |
 | server/lifecycle.test.ts | ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round | 3160.919 | 444.034 |
 | server/lifecycle.test.ts | stops resolving and publishes nothing once disposed in the middle of a frozen round | 1402.726 | 11.881 |
+
+## Further local work while CI is paused
+
+Four additional files from D12's explicitly supplied overlap candidates were optimized and locally verified:116/116 before/after and116/116 under each shuffled seed42/20261020. These local changes are not pushed and have no CI result. M6 Caitlyn and shared-pool-room remain live tested work. See [the local follow-up report](overlap-candidates/REPORT.md), [all116 case timings](overlap-candidates/results.json) and [six-file audit](overlap-candidates/audit.json). The original ten-file154-case evidence above remains a separately verified published revision; no combined270-case shuffled check is claimed. No push or CI rerun follows the user's pause notice until further instruction.

@@ -34,7 +34,8 @@ function inspect(source) {
       const callback = node.arguments.find(arg => ts.isArrowFunction(arg) || ts.isFunctionExpression(arg));
       if (callback) {
         const last = node.arguments.at(-1);
-        cases.push({ assertions: assertions(callback.body), timeout: ts.isNumericLiteral(last) ? last.text : 'default' });
+        const options = node.arguments.find(arg => ts.isObjectLiteralExpression(arg));
+        cases.push({ assertions: assertions(callback.body), timeout: ts.isNumericLiteral(last) ? last.text : 'default', options: options ? canonical(options) : null });
       }
     }
     ts.forEachChild(node, visit);

@@ -1,0 +1,45 @@
+[
+  {
+    "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+    "ci_file_ms": 167710,
+    "old_list": "Only mage was named; the common helper was audited. Caitlyn is a new explicit candidate.",
+    "disposition": "unchanged: actual integration work",
+    "reason": "CI141412ms is per-battle recording/validation/playback and26293ms is full envelope validation. Each build already generates one route. Do not cache these tested results or move validation outside the cases. The helper is shared by cannon/sniper/Caitlyn/mage and remains untouched.",
+    "small_unimplemented_candidate": "The middle-check oracle starts the same immutable record.context a second time after independentlyStarted already exists. Reusing that case-local independent start, with all later live steps/assertions unchanged, is a separate small preparation candidate requiring measurement across all helper consumers. No claim that it explains the167s or yields240s."
+  },
+  {
+    "file": "tests/g2-4b-unstable-chest.test.ts",
+    "ci_file_ms": 49726,
+    "old_list": "New explicit candidate; fits original test-input preparation scope.",
+    "disposition": "local optimized",
+    "reason": "Cache only deterministic chestFight start inputs by held-item vector and clone for every seed; create one receiver-start input instead of recompiling it12times; warm the legal Warmog Match input in its negative-test suite. Actual chest opening, RNG samples, every tick and every validation still run. Existing content/compiler tests still call combatOf directly."
+  },
+  {
+    "file": "tests/task-mechanism-restore.test.ts",
+    "ci_file_ms": 25719,
+    "old_list": "New explicit candidate; same public route preparation family as Bracer.",
+    "disposition": "local optimized",
+    "reason": "Warm only five exact public acquisition routes in separate default-budget hooks. Existing builders give each case detached copies; all grants, deployment, start, curse/Sion/buddy behavior, checkpoint traversal, restore and replay-cache assertions remain in cases."
+  },
+  {
+    "file": "tests/t12-combat-equip.test.ts",
+    "ci_file_ms": 24298,
+    "old_list": "New explicit candidate; existing round fixtures already warmed.",
+    "disposition": "local optimized",
+    "reason": "Prepare the previously unwarmed seed9 glove route up to the original unresolved4-4 component choice. Clone raw acquired/state input per case; all equip, restore and continuation remain. Scope and release the large input after its one case."
+  },
+  {
+    "file": "tests/server/projection-wire.test.ts",
+    "ci_file_ms": 41395,
+    "old_list": "New explicit candidate; same plain replay-input preparation family as replay-client.",
+    "disposition": "local optimized",
+    "reason": "Prepare only plain first-PvP state/battle inputs, dispose the producing Room, clone for the case and release the stored input after it. All projection/mirroring/replay/cache identity/size operations stay in the case. The30413ms overtime whole-match scenario remains live."
+  },
+  {
+    "file": "tests/server/shared-pool-room.test.ts",
+    "ci_file_ms": 56623,
+    "old_list": "New explicit candidate; fits tests but main cost is the operation under test.",
+    "disposition": "unchanged: actual pool integration work",
+    "reason": "The29777/23471ms cases run full two-sided/placeholder matches, assert conservation on every publication, check every revision and elimination and final ranking. Caching the run, suppressing publications or hoisting its results would weaken tested work. The small scarce-room preparation cases are1036/1155ms in the source CI and are not the main reported cost."
+  }
+]
