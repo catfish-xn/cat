@@ -280,6 +280,23 @@ function validateLootTransition(before,after,command,events){
  return receipts;
 }
 function investment(before,record){return {pumpingRounds:before.augmentProgress.pumpingRounds+(before.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),investmentHp:before.augmentProgress.investmentHp+((before.augments.some(a=>a.definitionId==='investment-strategy-i')?8:0)+(before.augments.some(a=>a.definitionId==='investment-strategy-ii')?9:0))*record.incomeBreakdown.interest};}
+// Into the Unknown (D14 contract): departure retains ownership of the exact
+// hero and equipped items. These remain in conservation totals while absent.
+// No production ownership/projector helper is imported here.
+function heldResources(state){
+ const d=state.d14;
+ if(d?.anomalyId!=='into-the-unknown'||d.phase!=='absent'){assert(!d?.held,'D14 only absent hero may be held');return {units:[],items:[]};}
+ assert(d.held,'D14 absent hero retains ownership');
+ assert.deepEqual(d.held.unit,d.originalUnit,'D14 held original hero');
+ const selected=state.resourceProvenance.entries.filter(e=>e.kind==='d14-selected'&&e.choiceId===d.choiceId);
+ assert.equal(selected.length,1,'D14 unique departure');assert.equal(selected[0].unitId,d.unitId);
+ assert.deepEqual(d.held.items,selected[0].heldItems,'D14 held original equipment');
+ assert(!state.preparation.units.some(u=>u.id===d.unitId),'D14 absent hero cannot also be active');
+ assert(d.held.items.every(i=>!state.items.some(a=>a.id===i.id)),'D14 held items cannot also be active');
+ return {units:[d.held.unit],items:d.held.items};
+}
+const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'),...heldResources(state).units];
+const ownedItems=state=>[...state.items,...heldResources(state).items];
 class Ledger {
  constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
@@ -307,7 +324,7 @@ class Ledger {
   }
   assert.equal(after.choiceRngState,choice,'choice RNG conservation');assert.equal(after.rewardRngState,reward,'reward RNG conservation');assert.equal(after.battleSeedRngState,battle,'battle seed RNG conservation');
   const domain=events.filter(e=>e.domain==='match');assert.deepEqual(domain.map(e=>e.eventSeq),domain.map((_,i)=>before.nextMatchEventSeq+i),'match event sequence');assert.equal(after.nextMatchEventSeq,before.nextMatchEventSeq+domain.length);
-  const costs=this.costs,units=new Map(before.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}]));
+  const costs=this.costs,units=new Map(ownedUnits(before).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}]));
   let serial=before.nextUnitSerial;
   if(command?.type==='buy'){const definitionId=before.shop.slots[command.slot].definitionId,cost=COST[definitionId];this.gold-=cost;costs.purchases+=cost;this.cards++;units.set(`unit-${serial++}`,{definitionId,starLevel:1});}
   if(command?.type==='sell'){const unit=before.preparation.units.find(u=>u.id===command.id),cost=COST[unit.definitionId],copies=3**(unit.starLevel-1),value=SELL[cost][unit.starLevel-1];this.gold+=value;costs.sales+=value;costs.saleLoss+=cost*copies-value;this.cards-=copies;units.delete(unit.id);}
@@ -324,7 +341,7 @@ class Ledger {
    if(receipt.kind==='unit'){if(receipt.resolution==='gold'){assert.equal(receipt.gold,COST[receipt.definitionId]);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}else{assert.equal(receipt.unitId,`unit-${serial}`);units.set(`unit-${serial++}`,{definitionId:receipt.definitionId,starLevel:1});this.cards++;}}}
   assert.equal(after.nextUnitSerial,serial,'unit serial accounting');
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
-  assert.deepEqual(new Map(after.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
+  assert.deepEqual(new Map(ownedUnits(after).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
   const schedule=appended(before.scheduleReceipts,after.scheduleReceipts,'eventId','schedule receipts');
   for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,AUGMENT_GOLD[command.definitionId]??0,'independent once-only augment acquisition gold');const item=AUGMENT_ITEMS[command.definitionId];assert.deepEqual(receipt.itemIds,item?[`item-${before.nextItemSerial}`]:[],'independent exact augment item grant');if(item)assert.equal(after.items.find(i=>i.id===receipt.itemIds[0])?.definitionId,item,'independent augment item identity');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
   let itemSerial=before.nextItemSerial;
@@ -342,8 +359,8 @@ class Ledger {
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);
  }
- check(state,lootChecked=false){if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger');assert.equal(state.preparation.units.filter(u=>u.team==='player').reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(state.items.map(i=>i.id)).size,state.items.length,'unique item IDs');
+ check(state,lootChecked=false){if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger');const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
-  assert.equal(state.items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
+  assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
 module.exports={ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

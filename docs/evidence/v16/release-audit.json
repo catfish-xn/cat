@@ -349,7 +349,7 @@
     "tests/fixtures/b8-live-reveal-routes.ts": "44d201198dccf8618ca3491dccafcc3aedfd4ce09dfcd449f0db859a97219e69",
     "tests/fixtures/epic-loot-oracle.cjs": "c61626c6800b9ff842103e7ad4522713a6401f0223936ee3e8331afc8cb315e0",
     "tests/fixtures/epic-loot-oracle.d.cts": "cc9d0dc40dbfffa670251bb3f368896148c2fc0fb01a61df9c722e4948884546",
-    "tests/fixtures/m5/oracle.g2.cjs": "4d0eabdc806e3a70690694cd7c9a79549f85d718ba2b1d394855544afb35692b",
+    "tests/fixtures/m5/oracle.g2.cjs": "fc8ecefac5c3ae56e0bffb89306bd7f3caa3693820a8c5bf53c55c213150aa65",
     "tests/fixtures/m8-golden-states.cjs": "606ae912c8f86e8725b94bf49aa3e3862ca7cf708e5ad18ce80dbaaa0d9cbc08",
     "tests/fixtures/record-g2-4b-herald.cjs": "873371f3572b960bd564f67face0d65bc57f48d9d38608121895462527806654",
     "tests/fixtures/record-v15-herald.cjs": "5bb32a91b3a7e33f26d04fa4408029abd7c58f2bd27fc50f50c4a9c5c1892474",
@@ -384,7 +384,7 @@
   },
   "previousGoldenSha256": "4651d5d42aa56500850c7e786998032f2379e17a5d576755d26a34f10f09e8f8",
   "driverSha256": "aceb3f9fafa3730100a4a94b0e17bbd4b9e8fb6b3775922e08cb3cd386dcb120",
-  "oracleSha256": "4d0eabdc806e3a70690694cd7c9a79549f85d718ba2b1d394855544afb35692b",
+  "oracleSha256": "fc8ecefac5c3ae56e0bffb89306bd7f3caa3693820a8c5bf53c55c213150aa65",
   "builds": {
     "cannon": {
       "summary": {

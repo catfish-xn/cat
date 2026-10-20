@@ -46,9 +46,31 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
  it.each([{name:'two source deaths',keep:'loris',row:6,earned:true},{name:'only orb carrier',keep:'loris',row:7,earned:true},{name:'no carrier',keep:null,row:7,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,row,earned})=>{
-  const s=battle(await terminalPreparation(keep,1,row)).ended,v=view(s);expect(s.phase).toBe('gameOver');
+  const terminal=battle(await terminalPreparation(keep,1,row)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(earned?['granted','granted','retained-terminal','granted','granted']:[]);
+  if(earned){
+   // Scheme A: seed 38 gray orb slot 1 independently rolls 99. Only entry 2
+   // is new; the first four rows retain their v15 payloads and identities.
+   expect(v.revealedDrops.map(d=>d.payload)).toEqual([
+    {kind:'item',definitionId:'tear',quantity:1},{kind:'item',definitionId:'belt',quantity:1},
+    {kind:'unit',definitionId:'ezreal',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1},
+    {kind:'consumable',definitionId:'TFT_Consumable_ChampionDuplicator_III',quantity:1},
+   ]);
+   const bonus=v.revealedDrops[4];expect(bonus.entryOrdinal).toBe(2);
+   const receipts=s.m8.loot.receipts.filter(r=>r.dropId===bonus.dropId);
+   expect(receipts).toHaveLength(1);expect(bonus.receiptId).toBe(receipts[0].receiptId);
+   expect(receipts[0].grantedConsumableIds).toHaveLength(1);
+   expect(s.consumables.filter(c=>c.consumableId===receipts[0].grantedConsumableIds![0])).toEqual([
+    {consumableId:receipts[0].grantedConsumableIds![0],definitionId:'TFT_Consumable_ChampionDuplicator_III'},
+   ]);
+   expect(terminal.events.filter(e=>e.type==='lootGranted'&&e.receipt.dropId===bonus.dropId)).toHaveLength(1);
+   const restored=restoreMatch(serializeMatch(s));
+   expect(api.stepMatch(restored)).toEqual({state:restored,events:[]});
+   expect(api.nextRound(restored,restored.round)).toEqual({ok:false,state:restored,reason:'wrong-phase'});
+   const corrupted=JSON.parse(serializeMatch(s));corrupted.m8.loot.receipts.push(receipts[0]);
+   expect(()=>restoreMatch(corrupted)).toThrow();
+  }
   expect(v.revealedDrops.every(d=>d.allowedActions.length===0)).toBe(true);
   if(earned)expect(v.revealedDrops.find(d=>d.payload.kind==='unit')).toMatchObject({status:'retained-terminal',receiptId:null,reason:'terminal-bench-full'});
   else hiddenIndependent(s,raw=>{for(const d of raw.m8.loot.frozen.rounds.at(-1).encounterPlan.drops)d.payload={kind:'gold',quantity:99};});

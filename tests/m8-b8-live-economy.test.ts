@@ -38,7 +38,8 @@ describe('B8 live gold before interest, randomized direct loot',()=>{
   expect(s.gold).toBe(v.after);expect(s.augmentProgress.investmentHp).toBe(v.hp);
   expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp+8*v.interest);
   const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
-  expect(drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'rod',quantity:1},{kind:'item',definitionId:'gloves',quantity:1},{kind:'gold',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
+  // Exact v15 vector: scheme A must not shift the original component stream.
+  expect(drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'bow',quantity:1},{kind:'item',definitionId:'sword',quantity:1},{kind:'gold',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
   const receipts=s.m8.loot.receipts.filter(r=>ids.has(r.dropId));expect(receipts.map(r=>r.payload)).toEqual(drops.map(d=>d.payload));
   expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([[`item-${before.nextItemSerial}`],[`item-${before.nextItemSerial+1}`]]);
   expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(before.nextItemSerial+2);
