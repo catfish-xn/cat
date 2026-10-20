@@ -6,12 +6,11 @@ import { HexLayout } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
-import { THEME, costColor } from '../presentation/theme';
+import { THEME, costColor, starColor } from '../presentation/theme';
 import { canvasPen, drawStatusIcons, statusIconY, statusIcons } from '../presentation/status-icons';
 import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
-const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'];
 const SCALE = 2;
 /** Shared, bounded (one per hero) portrait cache; images load once per page. */
 const portraits = new Map<string, HTMLImageElement>();
@@ -97,7 +96,7 @@ export class ReplayView {
       ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = '#0b151fd9';
       const stars = '★'.repeat(unit.starLevel), width = ctx.measureText(stars).width + 6;
       ctx.fillRect(p.x - width / 2, p.y - radius - 6, width, 13);
-      ctx.fillStyle = STAR_COLORS[unit.starLevel - 1]; ctx.fillText(stars, p.x, p.y - radius + 1);
+      ctx.fillStyle = starColor(unit.starLevel); ctx.fillText(stars, p.x, p.y - radius + 1);
       ctx.lineWidth = 2; ctx.strokeStyle = '#0b151f'; ctx.font = 'bold 11px system-ui, sans-serif';
       if (!identity.neutral) {
         ctx.beginPath(); ctx.arc(p.x - 20, p.y + 18, 8, 0, Math.PI * 2); ctx.fillStyle = costColor(identity.cost); ctx.fill(); ctx.stroke();
