@@ -87,7 +87,8 @@ describe('R4 public tools, four phases and restored source history',()=>{
 
 
 it('a real dropped Thief parent retains its roll after removal/re-equip; reforging removes live children while frozen combat restores',()=>{
- let state=publicConsumables(72);
+ // Restore the v15 public recipe seed; scheme A leaves its original drops unchanged.
+ let state=publicConsumables(162);
  const parent=state.items.find(i=>i.definitionId==='thiefs-gloves')!,holder=state.preparation.units.find(u=>u.team==='player')!;
  expect(parent).toBeDefined();state=accepted(equipItem(state,parent.id,holder.id,2));
  const roll=state.equipmentState.rolls,draws=state.equipmentState.equipment;
