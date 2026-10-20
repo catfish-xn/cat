@@ -6,6 +6,9 @@ import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mec
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { accepted, reachRound, purchasedThreeHeroMatch, resolveM5Choices, battle } from './match-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const crest = 'TFT_Item_Artifact_LightshieldCrest';
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
@@ -14,7 +17,7 @@ function publicStart(dynamic = false, deathHolder = false, bracer = false): Matc
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
   if (deathHolder) {
     state = accepted(deployMatchUnit(state, 'unit-1', {kind: 'board', cell: {col: 1, row: 7}}));
-    state = accepted(deployMatchUnit(state, 'unit-2', {kind: 'board', cell: {col: 1, row: 4}}));
+    state = accepted(deployMatchUnit(state, 'unit-2', {kind: 'board', cell: {col: 2, row: 4}}));
   }
   for (const [slot, definitionId] of (dynamic && !deathHolder ? [crest, 'gargoyle', ...(bracer ? ['TFT_Item_Artifact_SeekersArmguard'] : [])] : [crest]).entries()) {
     const granted = grantMechanicItem(state, { receiptId: `resists-${slot}`, source: 'resists-restore-test', definitionId });
@@ -194,9 +197,9 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
 }, 20000);
 
 it('restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
-  // Public commands only: crest is equipped at combat start; v14 seed 26 naturally
-  // grants Gargoyle at tick 172, before the next crest pulse at tick 180.
-  let state = reachRound('2-1', true, 26);
+  // Public commands only: crest is equipped at combat start; v15 seed 27 naturally
+  // grants Gargoyle at tick 169, before the next crest pulse at tick 180.
+  let state = reachRound('2-1', true, 27);
   state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
   const players = state.preparation.units.filter(u => u.team === 'player');
   const receiver = players[0].id, chestHolder = players[1].id;
@@ -213,7 +216,7 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   while (state.phase === 'combat' && state.combat!.tick < 180) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(180);
   const holder = state.combat!.units.find(u => u.id === receiver)!;
-  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 172 }]);
+  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 169 }]);
   expect(active(state).layer.source.ownerId).toBe(receiver);
   expect(active(state).layer.m8State.startsAtTick).toBe(180);
   for (const input of [structuredClone(state), serializeMatch(state)]) expect(restoreMatch(input)).toEqual(state);

@@ -6,6 +6,7 @@ import type { SourcedEffect } from '../strategy-types';
 import type { S13ResolvedAbility } from '../ability-types';
 import type { D14State } from './types';
 import { D14_FOURTH_ABILITY } from './fourth-ability';
+import { D14_POLICY } from '../content/d14-anomalies';
 
 /** Provisional D14-only convention: extend the existing 100/180/324% HP/AD sequence
  * once to 583.2%, floor from 1-star base. Not claimed as recovered original scaling.
@@ -27,8 +28,8 @@ export function projectD14Unit(state: D14State, seatId: string, unitId: string,
   const sources = [...otherSources];
   const {base,ability}=d14UnitBase(unit,promoted);
   if (record?.phase === 'returned') sources.push(...makeSourcedEffects(unitId, 'anomaly', 'into-the-unknown', record.selection.choiceId, [
-    { kind: 'statPercentBps', stat: 'attackDamage', bps: 5000 },
-    { kind: 'statFlat', stat: 'abilityPower', amount: 50 },
+    { kind: 'statPercentBps', stat: 'attackDamage', bps: D14_POLICY.gainedADBps },
+    { kind: 'statFlat', stat: 'abilityPower', amount: D14_POLICY.gainedAP },
   ]));
   return { ...resolveEffects(base, ability, sources), effectiveStarLevel: promoted ? 4 as const : unit.starLevel,
     physicalStarLevel: unit.starLevel, unitId, location: unit.location };

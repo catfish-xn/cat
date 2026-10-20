@@ -9,14 +9,14 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAugment, rerollAnomaly, selectAnomalyTarget,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
@@ -112,10 +112,12 @@ const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', '
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
+/** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
+const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
-  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...CHOICES, ...PREPARATION_ONLY]),
+  waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -147,7 +149,10 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
-    case 'rerollAugment': return plain(rerollAugment(state, command.choiceId, command.generation));
+    // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
+    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex });
+    // v15: forwarded as is; the rules claim at once or queue it during the battle (settled with the round), and refuse the rest.
+    case 'claimOrb': return runSharedMatchCommand(pool, state, { type: 'claimOrb', round: command.round, orbId: command.orbId });
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
     // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
     case 'useConsumable': return useSeatConsumable(pool, state, command);
@@ -214,6 +219,13 @@ export class Room {
   /** Deadline deployments staged during `frozen`, published with the locks at battle entry. */
   private deployed: ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }> = new Map();
   private lockedSeats: ReadonlyMap<string, MatchState> = new Map();
+  /**
+   * v15: orb claims accepted while the round is `frozen` (the client already shows the battle; user rule: an orb may be
+   * clicked any time during it). The seats are still in preparation there, where the rules would claim at once and change
+   * the frozen inputs, so the room holds the claims in arrival order and hands each to the rules right after battle entry,
+   * where they are queued like any claim during the battle (or claimed at once if the round settled immediately).
+   */
+  private frozenClaims: { readonly seatId: string; readonly command: Extract<SeatCommand, { type: 'claimOrb' }> }[] = [];
   private disposed = false;
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
@@ -318,12 +330,33 @@ export class Room {
     return this.apply(seat, command);
   }
 
+  /**
+   * v15 (MULTIPLAYER_CONTRACT, bot preparation entry): a bot-controlled seat claims every unclaimed orb through the rules'
+   * `claimBotPreparationOrbs` (orbId order, rewards a claim unlocks included, no bot RNG), as one seat transaction before
+   * its policy steps. Same control check as handleBot; only in the room's preparation with the seat itself preparing.
+   * Nothing to claim, or a refusal, publishes nothing (a refusal returns the rules' reason, the seat stays as it was).
+   */
+  claimBotOrbs(seatId: string, controlEpoch: number): RoomCommandResult {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
+    if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
+    if (this.disposed || this.current.phase !== 'preparation' || seat.match.phase !== 'preparation') return { ok: false, reason: 'wrong-phase', state: seat.match };
+    const claimed = claimBotPreparationOrbs(this.current.pool, seat.match);
+    if (!claimed.ok) return { ok: false, reason: claimed.reason, state: seat.match };
+    if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+    const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
+    const seatRevision = seat.seatRevision + 1;
+    this.commitSeat(seatId, result.state, result.pool);
+    return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
+  }
+
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
     const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
-    if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
+    if (!allowed) return phase === 'frozen' && command.type === 'claimOrb' && !this.disposed ? this.holdFrozenClaim(seat, command) : { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
     const applied = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
@@ -335,6 +368,30 @@ export class Room {
     this.commitSeat(seatId, result.state, result.pool);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
+  }
+
+  /**
+   * v15: a claim during `frozen` is held (see `frozenClaims`) and publishes nothing yet; the seat's private view shows it as
+   * queued from battle entry on. Refused here only for what the seat's own loot view already answers: another round
+   * (`stale-round`), an orb it does not hold unclaimed (`unknown-orb`) and one already queued or held (`already-claimed`).
+   * Every other check is the rules' own when the claim is handed over; a refusal then leaves the seat as it was.
+   */
+  private holdFrozenClaim(seat: SeatState, command: Extract<SeatCommand, { type: 'claimOrb' }>): RoomCommandResult {
+    if (command.round !== seat.match.round) return { ok: false, reason: 'stale-round', state: seat.match };
+    const orb = (readLootView(seat.match).unclaimedOrbs ?? []).find(candidate => candidate.orbId === command.orbId);
+    if (!orb) return { ok: false, reason: 'unknown-orb', state: seat.match };
+    if (orb.queued || this.frozenClaims.some(held => held.seatId === seat.seatId && held.command.orbId === command.orbId)) return { ok: false, reason: 'already-claimed', state: seat.match };
+    this.frozenClaims.push({ seatId: seat.seatId, command });
+    return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
+  }
+  /** Hands the claims held during `frozen` to the rules through the normal gate, in arrival order (battle or settlement phase). */
+  private flushFrozenClaims(): void {
+    const held = this.frozenClaims;
+    this.frozenClaims = [];
+    for (const { seatId, command } of held) {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+      if (seat && seat.controller !== 'takeover') this.apply(seat, command);
+    }
   }
 
   /**
@@ -891,9 +948,10 @@ export class Room {
     // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
     const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
     const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
-    if (longest === 0) return this.commitPending();
+    if (longest === 0) { this.commitPending(); return this.flushFrozenClaims(); }
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
+    this.flushFrozenClaims();
   }
 
   private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {
@@ -1007,7 +1065,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */

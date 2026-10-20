@@ -84,8 +84,9 @@ if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
     expect(new Set(log.map(record => record.seatId)).size).toBe(7);
     for (const record of log) expect(['preparation', 'choice']).toContain(record.phase);
     budgetsHold(log, BOT_MAX_STEPS);
-    expectWallClockBelow('bot-driver idle human and seven bots whole match', performance.now() - started, 60_000);
-  }, 60_000); }
+    // 临时、用户 10-20 批准：v15 起 bot 在准备阶段领取法球、阵容更大，本机实测约 62 秒（原限 60 秒），按约 2 倍放宽到 120 秒；断言不变。
+    expectWallClockBelow('bot-driver idle human and seven bots whole match', performance.now() - started, 120_000);
+  }, 120_000); }
 });
 
 if (mode === 'fast') describe('BotDriver: scheduling', () => {

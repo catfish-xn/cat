@@ -15,6 +15,8 @@ import {REFORGE_POOLS} from '../src/simulation/content/consumables';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 import {publicConsumables} from './fixtures/r3r4-public';
 import {accepted,forgeStates,restoreDomain} from './helpers/g24-forge-states';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Independent expected admission list, not derived from the runtime registry under test.
 const supportIds=[

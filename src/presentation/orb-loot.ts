@@ -15,7 +15,7 @@ import { heroEmblemSvg } from './hero-identity';
 import { itemMarkHtml } from './item-codex';
 import type { LootLabels } from './loot-view';
 import { NEXT_BATTLE_TEXT, takesEffectNextBattle } from './equipment-feedback';
-import { itemDisplayName } from './g23-display';
+import { itemDisplayName, lootEntry } from './g23-display';
 import { lootPayloadDescription } from './loot-payload-text';
 
 /** The orb part of a LootView, or of the private view's revealedLoot (§18.4): the same three fields. */
@@ -41,10 +41,22 @@ const FORFEIT_TEXT: Readonly<Record<'timeout-forfeited' | 'eliminated-forfeited'
   'eliminated-forfeited': '本席已淘汰，未入库的奖励已放弃',
 };
 
-/** A one-glyph mark per tool kind (presentation only; the name and description are the content table's). */
-const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, string>> = { 'magnetic-remover': '拆', reforger: '铸', TFT_Consumable_ChampionDuplicator_III: '复', TFT_Consumable_NeekosHelp: '复' };
+/**
+ * Tool icon: the 14.24 client icon of the matching consumable (both reforgers use the one Reforger icon), with a
+ * one-glyph mark as fallback (presentation only; the name and description are the content table's).
+ */
+const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: string; readonly apiName: string }>> = {
+  'magnetic-remover': { glyph: '拆', apiName: 'TFT_Consumable_ItemRemover' },
+  reforger: { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
+  TFT_Consumable_ChampionDuplicator_III: { glyph: '复', apiName: 'TFT_Consumable_ChampionDuplicator_III' },
+  TFT_Consumable_NeekosHelp: { glyph: '复', apiName: 'TFT_Consumable_NeekosHelp' },
+};
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
-const toolMark = (id: string) => `<span class="consumable-mark" aria-hidden="true">${TOOL_MARK[id as ConsumableDefinitionId] ?? '?'}</span>`;
+export function toolMark(id: string): string {
+  const mark = TOOL_MARK[id as ConsumableDefinitionId], url = mark ? lootEntry(mark.apiName)?.iconUrl : null;
+  return url ? `<img class="consumable-mark consumable-icon" data-glyph="${mark!.glyph}" src="${url}" alt="" draggable="false" loading="lazy" decoding="async">`
+    : `<span class="consumable-mark" aria-hidden="true">${mark?.glyph ?? '?'}</span>`;
+}
 
 /** §18.8 03 wording for the seven ConsumableFailure codes. */
 export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>> = {
@@ -58,7 +70,8 @@ export const CONSUMABLE_FAILURE_TEXT: Readonly<Record<ConsumableFailure, string>
   'bench-full': '备战席已满，腾出空位后再使用',
 };
 
-function payloadLabel(payload: RevealedDropView['payload']): { icon: string; text: string } {
+/** Icon markup and name of one loot payload (also used by the v15 orb dock's hover card). */
+export function payloadLabel(payload: RevealedDropView['payload']): { icon: string; text: string } {
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
@@ -74,11 +87,14 @@ function orbEntryRow(drop: RevealedDropView): HTMLElement {
   if ('reason' in drop && drop.reason) row.dataset.reason = drop.reason;
   if (drop.receiptId) row.dataset.receipt = drop.receiptId;
   row.insertAdjacentHTML('afterbegin', payload.icon);
-  row.append(node('span', payload.text, 'orb-entry-name'), node('span', status.label, 'loot-badge'));
+  const awaiting = 'reason' in drop && drop.reason === 'awaiting-claim';
+  row.append(node('span', payload.text, 'orb-entry-name'), node('span', awaiting ? '待领取' : status.label, 'loot-badge'));
   // v16: tools and epic forges say what they do (the content's text); an item's effects stay in the tooltip only.
   const description = lootPayloadDescription(drop.payload);
   if (description && (drop.payload.kind === 'consumable' || drop.payload.kind === 'forge')) row.append(node('span', description, 'orb-entry-desc'));
-  const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note : status.note;
+  // v15 online: a revealed entry waits in its orb on the board's right edge until the player clicks it.
+  const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note
+    : awaiting ? '法球留在棋盘右侧，点击法球领取' : status.note;
   const title = [description, note].filter(Boolean).join('\n');
   if (title) row.title = title;
   return row;

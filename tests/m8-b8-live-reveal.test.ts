@@ -5,6 +5,9 @@ import { revealMatchLoot } from '../src/simulation/loot-runtime';
 import { accepted } from './match-helpers';
 import {simultaneousB8Preparation,partialB8Preparation} from './fixtures/g2-3-b8-public';
 import { simultaneousPrefix, barePartialPrefix, PARTIAL_REVEAL_SEEDS } from './fixtures/b8-live-reveal-routes';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const prefix=await simultaneousPrefix();
 const zyraPrefix=await barePartialPrefix('zyra',PARTIAL_REVEAL_SEEDS.zyra,['blistering-strikes','pumping-up-ii','bronze-for-life-ii']);

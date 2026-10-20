@@ -1,4 +1,5 @@
-import { d14PrivateDisplay } from './d14-runtime';
+import { getUnitSellPrice } from './unit-stats';
+import { D14_POLICY } from './content/d14-anomalies';
 import type { MatchState } from './match-types';
 import { d11PrivateDisplay } from './d11-display';
 import type { RevealedDropView } from './m8/ui-contracts';
@@ -18,6 +19,25 @@ function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
     location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
       : { kind: 'board' as const, cell: cellView(unit.location.cell) }, ...(form ? { form } : {}) };
+}
+
+function itemView(item: MatchState['items'][number]) {
+  return { ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
+    ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) };
+}
+
+function heldUnitView(unit: MatchState['preparation']['units'][number]) {
+  // Held units keep the original Unit field set; form is a live preparation hint.
+  const {form:_form,...view}=preparationUnitView(unit);
+  return view;
+}
+
+function d14PrivateDisplay(state:MatchState){
+  const d=state.d14;if(!d)return undefined;
+  return {anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+D14_POLICY.numRounds,
+    remainingSettlements:Math.max(0,d.atOrdinal+D14_POLICY.numRounds-state.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel),
+    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:getUnitSellPrice({definitionId:d.originalUnit.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{}),
+    ...(d.held?{heldUnit:heldUnitView(d.held.unit),heldItems:d.held.items.map(itemView)}:{})};
 }
 
 /** Current-round display summary, deliberately separate from the private m8.loot authority. */
@@ -89,9 +109,8 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
-      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:9,poolCopies:9}:{})})) },
-    items: items.map(item => ({ ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
-      ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) })),
+      units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(state.d14?.unitId===u.id&&state.d14.phase==='promoted'?{effectiveStarLevel:4 as const,sellGold:getUnitSellPrice({definitionId:u.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{})})) },
+    items: items.map(itemView),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId
       && item.expiresAfterRoundId === state.roundDefinitionId && ids.has(item.holderId)
       && items.some(parent => parent.id === item.parentItemInstanceId && parent.location.kind === 'unit'

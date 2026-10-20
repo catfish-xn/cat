@@ -26,9 +26,9 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
  const archived=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/s13-p1-dual-commands.json.gz',import.meta.url))).toString());
  expect(archived.seed).toBe(23);expect(archived.contentDigest).toBe(historicalIdentity.contentDigest);
  expect(archived.contentDigest).not.toBe(CONTENT_DIGEST);
- // The archived command tape remains historical. Generate the current v15
+ // The archived command tape remains historical. Generate the current v16
  // tape from genuine paid commands and the independent route ledger.
- const trace:{seed:number;commands:unknown[]}={seed:23,commands:[]},stop=new Error('v15 dual offer');
+ const trace:{seed:number;commands:unknown[]}={seed:23,commands:[]},stop=new Error('v16 dual offer');
  let captured=false;
  try{await run(api,{build:'cannon',seed:trace.seed,goldReserveByRound:{'4-5':80},anomalyDefinitionId:'dual-wielding',onStep(_before:MatchState,result:{state:MatchState},command:unknown){
   trace.commands.push(command??{type:'step'});
@@ -55,4 +55,7 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
  expect(other).toBeDefined();Object.assign(swapped.scheduleReceipts.find(r=>r.eventId===c.choiceId)!,{unitId:other!.id});expect(()=>restoreMatch(swapped)).toThrow();
  const forged=structuredClone(s),r=forged.seatMechanics!.receipts.find(r=>r.source==='s13-anomaly-acquisition')!;Object.assign(r,{definitionId:'deathblade'});expect(()=>restoreMatch(forged)).toThrow();
  s=resolveM5Choices(s);s=accepted(sellUnit(s,target.id));expect(s.anomalyBinding).toBe(null);expect(restoreMatch(serializeMatch(s))).toEqual(s);
-},20_000);
+// Temporary, user-approved (04:22, #265): isolated full workload measured 12.66 s;
+// 30 s rounds about twice that up to allow worker contention. Assertions and
+// public command generation/replay/strict restore workloads remain unchanged.
+},30_000);

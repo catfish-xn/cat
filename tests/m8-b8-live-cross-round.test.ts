@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function accepted(result: api.MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Cross-round loot fixture: ${result.reason}`);

@@ -6,6 +6,9 @@ import {EMPTY_RUNTIME} from '../src/simulation/combat-s13-state';
 import type {Effect} from '../src/simulation/m8/contracts';
 import {trigger,source,modifier} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const roll={parentItemInstanceId:'parent',roundId:'r',playerLevelSnapshot:7,poolVersion:'tg-01-v1' as const,children:['x','y'] as const,rngDrawStart:0,rngDrawEnd:2};
 const dummy=(id:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,team,col,row,{ability:resolveAbility('neutral-attack',1),unitKind:'neutral',baseAttackSpeedBps:8000,attackIntervalTicks:25,baseCritChanceBps:0,baseCritMultiplierBps:14000,hp:1000,maxHp:1000,armor:0,magicResist:0,attackDamage:10,attackRange:6,cooldownTicks:1000,moveCooldownTicks:1000,mana:0,maxMana:0,runtime:{...EMPTY_RUNTIME},...patch});
 function definitions(effect:Effect){

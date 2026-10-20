@@ -84,10 +84,13 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
+  return { ok: true, ...stampMatchEvents(state, events) };
+};
+function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
-  return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
-};
+  return { state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+}
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
   // Choice-phase trading can consume/sell the currently selected anomaly target.
   // Follow an upgrade survivor, or ask for a new target without offering a free reroll.
@@ -358,6 +361,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
+      ...(combat?.bankSamples ? {bankSamples:combat.bankSamples} : {}),
       income: plan.income, incomeBreakdown: plan.incomeBreakdown, interestBasis: plan.interestBasis,
       streakBefore: state.streak, streakAfter: plan.streakAfter, mechanicReceiptPrefixLength:state.seatMechanics?.receipts.length??0,goldBefore: state.gold, goldAfter: plan.goldAfter,
       xpRequested: plan.progression.xpRequested, xpAwarded: plan.progression.xpApplied,
@@ -418,7 +422,9 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
-  const live=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
+  const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
+  const live=sampled===state.combat?sampled:{...sampled,bankSamples:[...(state.combat.bankSamples??[]),
+    {tick:state.combat.tick,team:'player' as const,liveGold:state.gold}]};
   const next = stepCombat(live), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
@@ -612,6 +618,13 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
     const marked=accept(selected.state,[{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'first-offer'}]);
     return marked.ok ? {...marked,events:[...events,...selected.events,...marked.events]} : fail(state,marked.reason);
   } catch { return multiplayerFail(state,'invalid-choice'); }
+}
+
+/** Trusted match-finalization hook: the room may end while surviving seats are
+ * still in preparation/combat/settlement. Do not run acquisition/choice hooks. */
+export function forfeitTerminalOrbs(state: MatchState): MatchStep {
+  const result = forfeitUnclaimedOrbs(state);
+  return result.events.length ? stampMatchEvents(result.state, result.events) : result;
 }
 
 export function claimOrb(state: MatchState, orbId: string, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { grantShieldState, maintainShield, absorbShields, endShield, survivalSamples, consumeSurvivalTriggers } from '../src/simulation/m8/shield';
 import { amount, key, selector, source, trigger } from './fixtures/m8-contract-cases';
 import type { Effect, EffectRuntime } from '../src/simulation/m8/contracts';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const s = source('irelia'); const identity = { key: key(s), source: s, targetId: 'u1' };
 const effect: Extract<Effect, { kind: 'grant-shield' }> = { kind: 'grant-shield', amount: amount(600), durationTicks: 60, decay: { kind: 'linear-initial-grant' }, onEnd: ['depleted', 'expired'], endTiming: 'next-action-planning', endTargeting: { kind: 'fixed', targetIds: ['u1'], ifMissing: 'skip' }, endEffects: [] };
 describe('G07 frozen independent shield and post-damage survival vectors', () => {

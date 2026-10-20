@@ -11,8 +11,9 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
 import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-assets';
-import { statusBadges } from './combat-status';
+import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
+import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -42,9 +43,10 @@ export class UnitView {
   readonly shield: Phaser.GameObjects.Graphics;
   readonly shieldLabel: Phaser.GameObjects.Text;
   readonly star: Phaser.GameObjects.Text;
-  /** Compact current-status strip (harmful left of centre, beneficial right); full names live in the panels. */
-  private readonly harmfulBadges: Phaser.GameObjects.Text;
-  private readonly beneficialBadges: Phaser.GameObjects.Text;
+  /** I3: current statuses as small icons above the HP bar; full names live in the panels. */
+  private readonly statusIcons: Phaser.GameObjects.Graphics;
+  private statusKey = '';
+  private strip = { harmful: '', beneficial: '' };
   private readonly emblem: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
   private readonly costBadge: Phaser.GameObjects.Arc;
@@ -59,6 +61,8 @@ export class UnitView {
   equipped: readonly string[] = [];
   /** Item definition ids worn for the next battle only (C18 tag; debug/acceptance read). */
   pendingEquipped: readonly string[] = [];
+  /** Reserved slots and temporary items drawn after the worn pips (debug/acceptance read). */
+  extras: GearExtras = NO_GEAR_EXTRAS;
   ring: RingState = 'normal';
 
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
@@ -76,10 +80,9 @@ export class UnitView {
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
-    this.harmfulBadges = add.text(-1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#ffb0a0', backgroundColor: '#3a1218e6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(1, 0.5).setVisible(false);
-    this.beneficialBadges = add.text(1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#9ff0e4', backgroundColor: '#0f2e2ae6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(0, 0.5).setVisible(false);
+    this.statusIcons = add.graphics().setVisible(false);
     this.shieldLabel = add.text(0, 48, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges, this.pendingTag];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
@@ -102,8 +105,8 @@ export class UnitView {
    * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
    * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
-  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], star: number = unit.starLevel): void {
-    const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}`;
+  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel): void {
+    const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     this.identity = getHeroIdentity(unit.definitionId);
@@ -123,32 +126,41 @@ export class UnitView {
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
-    this.equipped = [...equipped]; this.drawItems();
+    this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost });
     this.applyRing(unit.team);
   }
 
-  /** Icon row of the worn items; a framed tile stands in until (or unless) the bundled icon is loaded. */
+  /**
+   * Icon row of the worn items, then slots a 3-slot item reserves (empty dim tiles) and temporary items (teal frame);
+   * a framed tile stands in until (or unless) the bundled icon is loaded.
+   */
   private drawItems(): void {
     this.items.clear();
-    const step = ITEM_ICON + 2, left = -((this.equipped.length - 1) * step) / 2;
-    this.equipped.forEach((definitionId, index) => {
-      const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
-      this.items.fillStyle(completed ? 0x6b5432 : 0x3a5266).lineStyle(1.5, completed ? toNumber(C.gold) : 0x9fb4c2)
+    const tiles: { definitionId: string | null; temporary: boolean }[] = [...this.equipped.map(definitionId => ({ definitionId, temporary: false })),
+      ...Array.from({ length: this.extras.reserved }, () => ({ definitionId: null, temporary: false })),
+      ...this.extras.temporary.map(definitionId => ({ definitionId, temporary: true }))];
+    const step = ITEM_ICON + 2, left = -((tiles.length - 1) * step) / 2;
+    let icons = 0;
+    tiles.forEach(({ definitionId, temporary }, index) => {
+      const completed = Boolean(definitionId && ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
+      this.items.fillStyle(definitionId ? completed ? 0x6b5432 : 0x3a5266 : 0x16222c, definitionId ? 1 : 0.85)
+        .lineStyle(1.5, temporary ? 0x68ddd0 : !definitionId ? 0x5c6d79 : completed ? toNumber(C.gold) : 0x9fb4c2)
         .fillRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2).strokeRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2);
-      const key = itemTextureKey(definitionId);
+      if (!definitionId) { this.items.lineBetween(x - half + 2, ITEM_Y + half - 2, x + half - 2, ITEM_Y - half + 2); return; }
+      const slot = icons++, key = itemTextureKey(definitionId);
       if (!this.scene.textures.exists(key)) {
-        this.itemIcons[index]?.setVisible(false);
+        this.itemIcons[slot]?.setVisible(false);
         requestItemTexture(this.scene, definitionId, () => { if (this.token.active) this.drawItems(); });
         return;
       }
-      let icon = this.itemIcons[index];
-      if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[index] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
-      icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setVisible(true);
+      let icon = this.itemIcons[slot];
+      if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[slot] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
+      icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setAlpha(temporary ? 0.8 : 1).setVisible(true);
     });
-    for (let index = this.equipped.length; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
+    for (let index = icons; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
   }
 
   /** Attack: a short lunge toward the target (board units, presentation only). */
@@ -189,13 +201,13 @@ export class UnitView {
   resetMeters(): void {
     for (const meter of [this.hp, this.mana, this.shield]) meter.clear().setVisible(false).setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
     this.shieldLabel.setVisible(false).setText('');
-    this.harmfulBadges.setVisible(false).setText(''); this.beneficialBadges.setVisible(false).setText('');
+    this.statusIcons.clear().setVisible(false); this.statusKey = ''; this.strip = { harmful: '', beneficial: '' };
     this.disc.setAlpha(1); this.flash.setAlpha(0); this.hitAt = this.lungeAt = -Infinity;
   }
 
   /**
-   * Combat meters: HP (team colored) with shield segment, mana below, from the displayed values only. The status
-   * strip needs the local engine state (`runtime`, offline); the online view carries no statuses and shows none.
+   * Combat meters: HP (team colored) with shield segment, mana below, from the displayed values only. Status icons
+   * need the local engine state (`runtime`, offline); the online view carries no statuses and shows only the shield icon.
    */
   drawCombat(unit: DisplayUnit, runtime: CombatState | null): void {
     const alive = unit.alive, width = 52, left = -26;
@@ -217,13 +229,23 @@ export class UnitView {
     const start = Math.min(width, width * hpRatio), segment = Math.min(width - start, width * shieldRatio);
     this.shield.fillStyle(toNumber(C.shield)).fillRect(left + start, -44, Math.max(segment, unit.shield > 0 ? 2 : 0), 6);
     this.shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: width * shieldRatio });
-    this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(alive && unit.shield > 0);
-    const badges = alive && runtime ? statusBadges(runtime, unit.id) : { harmful: '', beneficial: '' };
-    this.harmfulBadges.setText(badges.harmful).setVisible(badges.harmful.length > 0);
-    this.beneficialBadges.setText(badges.beneficial).setVisible(badges.beneficial.length > 0);
+    // I3: the amount stays readable for debug/acceptance; on the board the shield is the ring, bar segment and icon.
+    this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(false);
+    // Row 0 pieces sit too close to the canvas top for the row above the HP bar: draw it below them instead.
+    const icons = statusIcons(runtime, unit), y = statusIconY(this.token.y);
+    const key = icons.map(icon => `${icon.harmful ? '-' : '+'}${icon.kind}`).join(',') + (icons.length ? `@${y}` : '');
+    if (key !== this.statusKey) {
+      this.statusKey = key;
+      this.statusIcons.clear().setVisible(icons.length > 0);
+      drawStatusIcons(graphicsPen(this.statusIcons), icons, 0, y);
+      const glyphs = (harmful: boolean) => icons.filter(icon => icon.harmful === harmful && icon.badge).map(icon => icon.badge).join('');
+      this.strip = { harmful: glyphs(true), beneficial: glyphs(false) };
+    }
   }
-  /** Debug/acceptance read of the status strip. */
-  get statusStrip(): { harmful: string; beneficial: string } { return { harmful: this.harmfulBadges.visible ? this.harmfulBadges.text : '', beneficial: this.beneficialBadges.visible ? this.beneficialBadges.text : '' }; }
+  /** Debug/acceptance read of the status row: the panels' one-glyph names of the icons drawn (shield excluded). */
+  get statusStrip(): { harmful: string; beneficial: string } { return { ...this.strip }; }
+  /** Debug/acceptance read of the drawn icon kinds, in order. */
+  get statusIconKinds(): string { return this.statusKey; }
 
   meter(kind: 'hp' | 'mana' | 'shield'): MeterData {
     const object = kind === 'hp' ? this.hp : kind === 'mana' ? this.mana : this.shield;
@@ -234,4 +256,24 @@ export class UnitView {
     this.scene.tweens.killTweensOf(this.token); this.scene.tweens.killTweensOf(this.disc);
     this.token.destroy();
   }
+}
+
+/** Phaser Graphics backend for the status icons. */
+function graphicsPen(graphics: Phaser.GameObjects.Graphics): IconPen {
+  const finish = (fill: number | null, stroke: number | null, width: number) => {
+    if (fill !== null) graphics.fillStyle(fill).fillPath();
+    if (stroke !== null) graphics.lineStyle(width, stroke).strokePath();
+  };
+  return {
+    path(points, closed, fill, stroke, width) {
+      graphics.beginPath(); graphics.moveTo(points[0], points[1]);
+      for (let i = 2; i < points.length; i += 2) graphics.lineTo(points[i], points[i + 1]);
+      if (closed) graphics.closePath();
+      finish(fill, stroke, width);
+    },
+    circle(x, y, r, fill, stroke, width) {
+      if (fill !== null) graphics.fillStyle(fill).fillCircle(x, y, r);
+      if (stroke !== null) graphics.lineStyle(width, stroke).strokeCircle(x, y, r);
+    },
+  };
 }

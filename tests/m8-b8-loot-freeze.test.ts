@@ -13,6 +13,9 @@ import { advanceFrozenLootLedger, drawLootIndex, freezeLootThroughRound, LOOT_FR
 import { compareLootChoices, compareLootFreezeSlots, lootChoiceId, lootDropId, lootReceiptId, lootOrbId, lootEntryId } from '../src/simulation/loot-identity';
 import type { FrozenLootLedger, LootChoiceDescriptor, LootChoiceEligibility, LootChoiceResolution } from '../src/simulation/loot-types';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 /**
  * Checkpoint ① only: immutable preparation data, pure choice ordering/projection and

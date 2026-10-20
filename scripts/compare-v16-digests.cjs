@@ -1,6 +1,6 @@
 /* Recompute both digest roots from immutable Git source and current source, offline. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
-const BASE='46454b77',directory=path.resolve('artifacts/v16-recording/v15-source');
+const BASE='1642beaabee7df800c15250bb07ec6cf2e6bbed0',directory=path.resolve('artifacts/v16-recording/v15-source');
 const archive=execFileSync('git',['archive','--format=tar',BASE,'src/simulation'],{maxBuffer:64*1024*1024});
 for(let offset=0;offset+512<=archive.length;){const header=archive.subarray(offset,offset+512),name=header.subarray(0,100).toString().replace(/\0.*$/s,''),size=parseInt(header.subarray(124,136).toString().replace(/\0.*$/s,'').trim()||'0',8);if(!name)break;assert(Number.isSafeInteger(size)&&size>=0);const target=path.resolve(directory,name);if(header[156]===48||header[156]===0){assert(target.startsWith(directory+path.sep)&&name.startsWith('src/simulation/'));fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,archive.subarray(offset+512,offset+512+size));}offset+=512+Math.ceil(size/512)*512;}
 fs.writeFileSync(path.join(directory,'package.json'),'{"type":"module"}\n');

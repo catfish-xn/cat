@@ -2,6 +2,9 @@ import { expect, it } from 'vitest';
 import { createItemRandomStreams } from '../src/simulation/g2-4b-item-kernel';
 import { recordItemGold, validateItemGoldLedger, itemGoldPayouts,
   type ItemGoldLedger, type ItemGoldOpportunity } from '../src/simulation/g2-4b-item-gold';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const opportunity = (ordinal: number, kind: ItemGoldOpportunity['kind'] = 'gamblers-blade'): ItemGoldOpportunity =>
   ({battleId: 'battle-1', ownerId: 'holder', itemInstanceId: 'item-1', kind, tick: ordinal + 1, ordinal});

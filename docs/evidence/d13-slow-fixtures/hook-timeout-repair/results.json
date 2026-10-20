@@ -1,0 +1,1173 @@
+{
+  "baseline": "a0d42c592cbd48fb075175e5f61818dabfe1b320",
+  "before_local_head": "cff3ced9102cd901717026ebb68ccdc9ef144e12",
+  "failed_ci_head": "07af2bfbde736685ba88c23d55623c4aa4f93dee",
+  "failed_ci": {
+    "failed_suites": 2,
+    "passed_files": 85,
+    "passed_tests_other_suites": 1056,
+    "tests_not_executed_due_to_failed_hooks": 36
+  },
+  "failure_raw_log_sha256": "96e2a181e9d02d74e2466c8831b13f48817bb8d795f304b80384090b835c1fd2",
+  "machine": {
+    "os": "Debian13.6 Linux6.18.55",
+    "cpu": "AMD EPYC9V74",
+    "available_cpus": 5,
+    "memory_mib": 18007,
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "vite": "7.3.6"
+  },
+  "source_sha256": {
+    "tests/m4-ledger-bound.test.ts": "c08ad5a52dd5fd65f2671d16b766ce7eefddcfb015823e1ffeaaf83a06fd0a79",
+    "tests/restore-audit/cd-replay-facts.test.ts": "efb16e0965ef3b51d4cdb56f79c29242bf1b796ab91659c468aa6f0b682927c6"
+  },
+  "m4_byte_identical_to_baseline": true,
+  "runs": {
+    "before-0": {
+      "success": true,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "878ade785b1df7f88055db067970f6ab889d5cb36edfe2e4c020310ed900fdad",
+      "cases": [
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+          "status": "passed",
+          "duration_ms": 428.4245890000002
+        },
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains actual tick-zero combat events returned from Start commands",
+          "status": "passed",
+          "duration_ms": 4.98686699999962
+        }
+      ]
+    },
+    "before-1": {
+      "success": true,
+      "passed": 34,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "ecbd758a23fb131d450ef9299e137ef0209a5777cb3d7c0a5335aff7a2a0584f",
+      "cases": [
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented processed keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 57.99262400000225
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 25.716419000000315
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 25.176805999999488
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 23.710315000000264
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: victim",
+          "status": "passed",
+          "duration_ms": 23.191272000000026
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: holder",
+          "status": "passed",
+          "duration_ms": 23.95798900000227
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+          "status": "passed",
+          "duration_ms": 21.15922000000137
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngState",
+          "status": "passed",
+          "duration_ms": 35.01740599999903
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngDraws",
+          "status": "passed",
+          "duration_ms": 29.523638999999093
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextActionSeq",
+          "status": "passed",
+          "duration_ms": 29.97712799999863
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextEventSeq",
+          "status": "passed",
+          "duration_ms": 27.081552999999985
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+          "status": "passed",
+          "duration_ms": 120.47840500000166
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+          "status": "passed",
+          "duration_ms": 203.79000900000028
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates a live periodic fractional account",
+          "status": "passed",
+          "duration_ms": 105.01728100000037
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates burn phase even when the group and task agree",
+          "status": "passed",
+          "duration_ms": 99.44873599999846
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+          "status": "passed",
+          "duration_ms": 219.75039000000106
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+          "status": "passed",
+          "duration_ms": 93.01309899999978
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity duration even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 57.808068999998795
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity share even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 48.715753000000404
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+          "status": "passed",
+          "duration_ms": 20.597681999999622
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+          "status": "passed",
+          "duration_ms": 17.039498000001913
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+          "status": "passed",
+          "duration_ms": 18.07679199999984
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+          "status": "passed",
+          "duration_ms": 19.2606569999989
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+          "status": "passed",
+          "duration_ms": 16.647165999998833
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+          "status": "passed",
+          "duration_ms": 21.345901000000595
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+          "status": "passed",
+          "duration_ms": 14.269262000001618
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+          "status": "passed",
+          "duration_ms": 40.03383400000166
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+          "status": "passed",
+          "duration_ms": 55.80291800000123
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+          "status": "passed",
+          "duration_ms": 52.42037799999889
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real one-thousand-cuts history",
+          "status": "passed",
+          "duration_ms": 143.36058599999888
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real eagle-eye history",
+          "status": "passed",
+          "duration_ms": 128.50886699999683
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Swain ascension timing",
+          "status": "passed",
+          "duration_ms": 68.09869400000025
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Conqueror receipts after an actual takedown",
+          "status": "passed",
+          "duration_ms": 297.43027999999686
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+          "status": "passed",
+          "duration_ms": 71.03122300000177
+        }
+      ]
+    },
+    "after-0": {
+      "success": true,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "38ce26e763af29545f78405156a7eeb54e5e474058366024ef32c7bbad7901d3",
+      "cases": [
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+          "status": "passed",
+          "duration_ms": 7676.807088
+        },
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains actual tick-zero combat events returned from Start commands",
+          "status": "passed",
+          "duration_ms": 6.570786000000226
+        }
+      ]
+    },
+    "after-1": {
+      "success": true,
+      "passed": 34,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "1847953ef1b007c35e0c322ddeaa21aae8e7c0af8956100e6148ae95a74edd0f",
+      "cases": [
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented processed keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 54.86524899999995
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 33.091531999999916
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 27.360169999999925
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 22.478872000000138
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: victim",
+          "status": "passed",
+          "duration_ms": 26.918915000000197
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: holder",
+          "status": "passed",
+          "duration_ms": 29.437191999999868
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+          "status": "passed",
+          "duration_ms": 33.05733000000009
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngState",
+          "status": "passed",
+          "duration_ms": 45.3810010000002
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngDraws",
+          "status": "passed",
+          "duration_ms": 37.07617900000014
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextActionSeq",
+          "status": "passed",
+          "duration_ms": 30.487569999999778
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextEventSeq",
+          "status": "passed",
+          "duration_ms": 24.51655299999993
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+          "status": "passed",
+          "duration_ms": 114.32838099999981
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+          "status": "passed",
+          "duration_ms": 5513.009787000001
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates a live periodic fractional account",
+          "status": "passed",
+          "duration_ms": 204.51581899999837
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates burn phase even when the group and task agree",
+          "status": "passed",
+          "duration_ms": 145.0208300000013
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+          "status": "passed",
+          "duration_ms": 281.70032600000013
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+          "status": "passed",
+          "duration_ms": 110.82093400000122
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity duration even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 76.76415300000008
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity share even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 47.73817299999973
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+          "status": "passed",
+          "duration_ms": 26.06547800000044
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+          "status": "passed",
+          "duration_ms": 23.730677999999898
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+          "status": "passed",
+          "duration_ms": 23.6559840000009
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+          "status": "passed",
+          "duration_ms": 21.575808999999936
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+          "status": "passed",
+          "duration_ms": 19.15397800000028
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+          "status": "passed",
+          "duration_ms": 29.11066799999935
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+          "status": "passed",
+          "duration_ms": 21.629369000000224
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+          "status": "passed",
+          "duration_ms": 47.06771200000003
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+          "status": "passed",
+          "duration_ms": 59.65373700000055
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+          "status": "passed",
+          "duration_ms": 62.82083100000091
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real one-thousand-cuts history",
+          "status": "passed",
+          "duration_ms": 6347.474156999999
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real eagle-eye history",
+          "status": "passed",
+          "duration_ms": 5203.8238770000025
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Swain ascension timing",
+          "status": "passed",
+          "duration_ms": 74.95240399999966
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Conqueror receipts after an actual takedown",
+          "status": "passed",
+          "duration_ms": 234.35160600000017
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+          "status": "passed",
+          "duration_ms": 67.85529099999985
+        }
+      ]
+    },
+    "shuffle-42": {
+      "success": true,
+      "passed": 36,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "d2494bbddf954978dec56ecdcd21cae6bcf195cccfcac826212a05de63ee093e",
+      "cases": [
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+          "status": "passed",
+          "duration_ms": 7729.739093
+        },
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains actual tick-zero combat events returned from Start commands",
+          "status": "passed",
+          "duration_ms": 4.8351499999989755
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented processed keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 23.913504000000103
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 20.837938000000577
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 18.44910600000003
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 22.886397000000215
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: victim",
+          "status": "passed",
+          "duration_ms": 23.83078899999964
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: holder",
+          "status": "passed",
+          "duration_ms": 16.981301999998323
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+          "status": "passed",
+          "duration_ms": 17.860688000000664
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngState",
+          "status": "passed",
+          "duration_ms": 24.342752000000473
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngDraws",
+          "status": "passed",
+          "duration_ms": 30.683210999999574
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextActionSeq",
+          "status": "passed",
+          "duration_ms": 23.04190000000017
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextEventSeq",
+          "status": "passed",
+          "duration_ms": 38.84126500000002
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+          "status": "passed",
+          "duration_ms": 140.55336800000077
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+          "status": "passed",
+          "duration_ms": 3630.515652
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates a live periodic fractional account",
+          "status": "passed",
+          "duration_ms": 96.99950700000045
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates burn phase even when the group and task agree",
+          "status": "passed",
+          "duration_ms": 117.92735500000163
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+          "status": "passed",
+          "duration_ms": 228.02560099999937
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+          "status": "passed",
+          "duration_ms": 106.62591599999996
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity duration even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 61.95996300000024
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity share even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 56.80219000000034
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+          "status": "passed",
+          "duration_ms": 49.030477999999675
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+          "status": "passed",
+          "duration_ms": 24.329560999998648
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+          "status": "passed",
+          "duration_ms": 21.431351999999606
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+          "status": "passed",
+          "duration_ms": 24.459757000000536
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+          "status": "passed",
+          "duration_ms": 21.435629000001427
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+          "status": "passed",
+          "duration_ms": 28.380474999999933
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+          "status": "passed",
+          "duration_ms": 13.284920000000056
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+          "status": "passed",
+          "duration_ms": 43.70082799999727
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+          "status": "passed",
+          "duration_ms": 53.27057099999911
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+          "status": "passed",
+          "duration_ms": 60.0111880000004
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real one-thousand-cuts history",
+          "status": "passed",
+          "duration_ms": 5153.845055
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real eagle-eye history",
+          "status": "passed",
+          "duration_ms": 4975.848736
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Swain ascension timing",
+          "status": "passed",
+          "duration_ms": 80.0098039999998
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Conqueror receipts after an actual takedown",
+          "status": "passed",
+          "duration_ms": 240.01119999999992
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+          "status": "passed",
+          "duration_ms": 72.78737099999853
+        }
+      ]
+    },
+    "shuffle-20261020": {
+      "success": true,
+      "passed": 36,
+      "failed": 0,
+      "pending": 0,
+      "report_sha256": "5d9c6c7103885a2382adcf3b5fe9791f5ba481a1b952ef864f748972f8547ad6",
+      "cases": [
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+          "status": "passed",
+          "duration_ms": 7102.376638999998
+        },
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "name": "M4 observer safety retained under M5 finite-content capacity retains actual tick-zero combat events returned from Start commands",
+          "status": "passed",
+          "duration_ms": 4.408737000001565
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented processed keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 22.411699999999655
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+          "status": "passed",
+          "duration_ms": 26.755919000001086
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 25.533948000000237
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+          "status": "passed",
+          "duration_ms": 22.240481000000727
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: victim",
+          "status": "passed",
+          "duration_ms": 27.275669000000562
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: holder",
+          "status": "passed",
+          "duration_ms": 17.944133999999394
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+          "status": "passed",
+          "duration_ms": 35.984453999999914
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngState",
+          "status": "passed",
+          "duration_ms": 35.73901300000034
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: rngDraws",
+          "status": "passed",
+          "duration_ms": 37.41003300000011
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextActionSeq",
+          "status": "passed",
+          "duration_ms": 33.256786999999804
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C04 binds the combat cursor: nextEventSeq",
+          "status": "passed",
+          "duration_ms": 64.0985810000002
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+          "status": "passed",
+          "duration_ms": 142.207895
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+          "status": "passed",
+          "duration_ms": 3822.474407999998
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates a live periodic fractional account",
+          "status": "passed",
+          "duration_ms": 80.82175400000051
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C07 authenticates burn phase even when the group and task agree",
+          "status": "passed",
+          "duration_ms": 128.23803399999997
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+          "status": "passed",
+          "duration_ms": 208.20072900000014
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+          "status": "passed",
+          "duration_ms": 88.7429259999999
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity duration even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 56.58227899999838
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C09 binds the activity share even with a matching legacy status",
+          "status": "passed",
+          "duration_ms": 57.07781700000123
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+          "status": "passed",
+          "duration_ms": 28.311004999999568
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+          "status": "passed",
+          "duration_ms": 19.240769
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+          "status": "passed",
+          "duration_ms": 26.557240000000093
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+          "status": "passed",
+          "duration_ms": 19.27033300000039
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+          "status": "passed",
+          "duration_ms": 22.673925000000054
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+          "status": "passed",
+          "duration_ms": 19.789286000000175
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+          "status": "passed",
+          "duration_ms": 18.645612000000256
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+          "status": "passed",
+          "duration_ms": 46.4744699999992
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+          "status": "passed",
+          "duration_ms": 82.76720800000021
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+          "status": "passed",
+          "duration_ms": 61.087101000000985
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real one-thousand-cuts history",
+          "status": "passed",
+          "duration_ms": 5205.500223000001
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds real eagle-eye history",
+          "status": "passed",
+          "duration_ms": 5109.294754
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Swain ascension timing",
+          "status": "passed",
+          "duration_ms": 74.74317000000156
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "G-C08 binds Conqueror receipts after an actual takedown",
+          "status": "passed",
+          "duration_ms": 300.5291959999995
+        },
+        {
+          "file": "tests/restore-audit/cd-replay-facts.test.ts",
+          "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+          "status": "passed",
+          "duration_ms": 76.093155999999
+        }
+      ]
+    }
+  },
+  "per_case_before_after": [
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "name": "M4 observer safety retained under M5 finite-content capacity retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+      "before_ms": 428.4245890000002,
+      "after_ms": 7676.807088
+    },
+    {
+      "file": "tests/m4-ledger-bound.test.ts",
+      "name": "M4 observer safety retained under M5 finite-content capacity retains actual tick-zero combat events returned from Start commands",
+      "before_ms": 4.98686699999962,
+      "after_ms": 6.570786000000226
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C02 rejects invented processed keys on a holder without triggers",
+      "before_ms": 57.99262400000225,
+      "after_ms": 54.86524899999995
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C02 rejects invented actionCounts keys on a holder without triggers",
+      "before_ms": 25.716419000000315,
+      "after_ms": 33.091531999999916
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 authenticates every unit attackCount even within the one-tick bound",
+      "before_ms": 25.176805999999488,
+      "after_ms": 27.360169999999925
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 authenticates every unit castCount even within the one-tick bound",
+      "before_ms": 23.710315000000264,
+      "after_ms": 22.478872000000138
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: victim",
+      "before_ms": 23.191272000000026,
+      "after_ms": 26.918915000000197
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: holder",
+      "before_ms": 23.95798900000227,
+      "after_ms": 29.437191999999868
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the contribution map and trigger sequence: sequence",
+      "before_ms": 21.15922000000137,
+      "after_ms": 33.05733000000009
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: rngState",
+      "before_ms": 35.01740599999903,
+      "after_ms": 45.3810010000002
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: rngDraws",
+      "before_ms": 29.523638999999093,
+      "after_ms": 37.07617900000014
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: nextActionSeq",
+      "before_ms": 29.97712799999863,
+      "after_ms": 30.487569999999778
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C04 binds the combat cursor: nextEventSeq",
+      "before_ms": 27.081552999999985,
+      "after_ms": 24.51655299999993
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C05 binds a genuinely damaged ordinary shield even when both projections conserve the grant",
+      "before_ms": 120.47840500000166,
+      "after_ms": 114.32838099999981
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C06 binds the real absorption value even when its status is forged coherently",
+      "before_ms": 203.79000900000028,
+      "after_ms": 5513.009787000001
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C07 authenticates a live periodic fractional account",
+      "before_ms": 105.01728100000037,
+      "after_ms": 204.51581899999837
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C07 authenticates burn phase even when the group and task agree",
+      "before_ms": 99.44873599999846,
+      "after_ms": 145.0208300000013
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 rejects invented Experiment takedowns plus matching maximum health",
+      "before_ms": 219.75039000000106,
+      "after_ms": 281.70032600000013
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Sevika high-roller mod rather than only its enum",
+      "before_ms": 93.01309899999978,
+      "after_ms": 110.82093400000122
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C09 binds the activity duration even with a matching legacy status",
+      "before_ms": 57.808068999998795,
+      "after_ms": 76.76415300000008
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C09 binds the activity share even with a matching legacy status",
+      "before_ms": 48.715753000000404,
+      "after_ms": 47.73817299999973
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureBps at tick zero",
+      "before_ms": 20.597681999999622,
+      "after_ms": 26.06547800000044
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureFromTick at tick zero",
+      "before_ms": 17.039498000001913,
+      "after_ms": 23.730677999999898
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P1-BOUNDS-01 binds exposureUntilTick at tick zero",
+      "before_ms": 18.07679199999984,
+      "after_ms": 23.6559840000009
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds damageDealt at tick zero",
+      "before_ms": 19.2606569999989,
+      "after_ms": 21.575808999999936
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds damageTaken at tick zero",
+      "before_ms": 16.647165999998833,
+      "after_ms": 19.15397800000028
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "P2-BOUNDS-02 binds crystalDamage at tick zero",
+      "before_ms": 21.345901000000595,
+      "after_ms": 29.11066799999935
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "shares one replay between all consumers and detaches the expanded facts on cache hits",
+      "before_ms": 14.269262000001618,
+      "after_ms": 21.629369000000224
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects changing a real first-tick attack from one to zero",
+      "before_ms": 40.03383400000166,
+      "after_ms": 47.06771200000003
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects coherent Kogmaw cast/speed/range changes",
+      "before_ms": 55.80291800000123,
+      "after_ms": 59.65373700000055
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C03 rejects Tristana growth that remains within the cast-count upper bound",
+      "before_ms": 52.42037799999889,
+      "after_ms": 62.82083100000091
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds real one-thousand-cuts history",
+      "before_ms": 143.36058599999888,
+      "after_ms": 6347.474156999999
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds real eagle-eye history",
+      "before_ms": 128.50886699999683,
+      "after_ms": 5203.8238770000025
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Swain ascension timing",
+      "before_ms": 68.09869400000025,
+      "after_ms": 74.95240399999966
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "G-C08 binds Conqueror receipts after an actual takedown",
+      "before_ms": 297.43027999999686,
+      "after_ms": 234.35160600000017
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "name": "resists shields, sampled holders and ordinary facts share the same cached trajectory",
+      "before_ms": 71.03122300000177,
+      "after_ms": 67.85529099999985
+    }
+  ],
+  "typecheck_exit": 0,
+  "ci_repaired_revision": "not run; user paused pushes and CI",
+  "assertions": {
+    "files": 14,
+    "callbacks": 156,
+    "expect_deepStrictEqual_call_expressions": 1810
+  }
+}

@@ -11,6 +11,9 @@ import { applyStatusContribution } from '../src/simulation/m8/status';
 import { effectIdentity } from '../src/simulation/m8/identity';
 import type { Source, StatusKind } from '../src/simulation/m8/contracts';
 import { battle, unit } from './combat-helpers';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const idle = (u: CombatUnit): CombatUnit => ({ ...u, cooldownTicks: 1000, moveCooldownTicks: 1000 });
 const target = (id: string, col: number, row: number, hp = 500): CombatUnit => idle(unit(id, 'player', col, row, {

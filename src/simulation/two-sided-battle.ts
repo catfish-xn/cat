@@ -1,5 +1,6 @@
-import { createCombatReplayRecorder, type CombatReplay } from './combat-replay-view';
+import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
+import { readsLiveGold } from './live-gold-readers';
 import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
@@ -120,6 +121,21 @@ export function startTwoSidedCombatWithEvents(input: BattleInput): CombatStep {
 export function startTwoSidedCombat(input: BattleInput): CombatState {
   return startTwoSidedCombatWithEvents(input).state;
 }
+
+export interface BattleLiveGoldReader {
+  readonly seatId: string;
+  readonly team: Team;
+  readonly readsLiveGold: boolean;
+}
+/** Trusted snapshots or a compiled input. B is always frozen in a mirror battle. */
+export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>): readonly BattleLiveGoldReader[] {
+  const reads = (side: PlayerBattleSnapshot) => readsLiveGold(side.anomalyBinding, side.units
+    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id));
+  return [
+    { seatId: input.a.seatId, team: 'player', readsLiveGold: reads(input.a) },
+    { seatId: input.b.seatId, team: 'enemy', readsLiveGold: input.mirrorOfSeatId === null && reads(input.b) },
+  ];
+}
 function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, initial: CombatState, isMirror = false): BattleSideResult {
   const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId).map(entry=>{
     const origin=initial.units.find(unit=>unit.id===entry.combatId);
@@ -141,7 +157,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
 function validateDynamicResult(result:BattleResult):void {
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
   const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
-  if(result.bankSamples?.some(s=>!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
+  if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
     return;
@@ -155,7 +171,9 @@ function validateDynamicResult(result:BattleResult):void {
   const events=[];
   while(expected.tick<result.terminal.tick&&expected.status==='running'){
     while(result.bankSamples?.[bankCursor]?.tick===expected.tick){
-      const sample=result.bankSamples[bankCursor++];expected=sampleD11CombatGold(expected,sample.team,sample.liveGold);
+      const sample=result.bankSamples[bankCursor++],sampled=sampleD11CombatGold(expected,sample.team,sample.liveGold);
+      if(sampled===expected)throw new BattleValidationError('invalid-result');
+      expected=sampled;
     }
     const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
   }
@@ -164,13 +182,21 @@ function validateDynamicResult(result:BattleResult):void {
 }
 
 export interface BattleReplayOptions { readonly captureReplay?: boolean; }
+export interface BattleReplayStep {
+  readonly frame: CombatReplayTick | null;
+  readonly result: BattleResult | null;
+}
 export interface BattleReplayTask extends BattleTask {
+  readonly initial: CombatViewState;
+  readonly initialFrame: CombatReplayTick;
+  /** Exactly one new tick; null frame after completion (including tick-zero finish). */
+  advanceTick(): BattleReplayStep;
   replay(): CombatReplay | null;
 }
 
 export interface BattleTask {
   /** Server-owned economy only. Samples apply before the next tick, never to a completed result. */
-  sampleBankGold(seatId:string,liveGold:number):void;
+  sampleBankGold(seatId:string,liveGold:number):boolean;
   advance(maxTicks: number): BattleResult | null;
 }
 
@@ -201,14 +227,18 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
   let replay: CombatReplay | null = null;
   let terminal = start.state;
   const bankSamples:CombatBankSample[]=[];
+  const readers = readBattleLiveGoldReaders(checked);
+  let latestFrame: CombatReplayTick | null = null;
   let result: BattleResult | null = null;
   const task: BattleTask = { sampleBankGold(seatId,liveGold){
     if(result||terminal.status!=='running')throw new BattleValidationError('wrong-phase');
     if(!Number.isSafeInteger(liveGold)||liveGold<0||bankSamples.length>=100000||seatId!==checked.a.seatId&&seatId!==checked.b.seatId)throw new BattleValidationError('invalid-bank-sample');
+    if(!readers.find(reader=>reader.seatId===seatId)!.readsLiveGold)return false;
     const team=seatId===checked.a.seatId?'player':'enemy';
     const sampled=sampleD11CombatGold(terminal,team,liveGold);
-    if(sampled===terminal)return;
+    if(sampled===terminal)return false;
     bankSamples.push({tick:terminal.tick,team,liveGold});terminal=sampled;
+    return true;
   },advance(maxTicks) {
     if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new BattleValidationError('invalid-budget');
     if (result) return result;
@@ -216,7 +246,7 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     if (recorder) {
       while (terminal.status === 'running' && steps < maxTicks) {
         const next = stepCombat(terminal);
-        recorder.record(terminal, next);
+        latestFrame = recorder.record(terminal, next);
         terminal = next.state; appendEvents(next); steps++;
       }
     } else {
@@ -242,7 +272,15 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     checkedResults.set(result, freezeBattle);
     return result;
   } };
-  return recorder ? Object.assign(task, { replay: () => replay }) : task;
+  return recorder ? Object.assign(task, {
+    initial: recorder.initial, initialFrame: recorder.initialFrame,
+    advanceTick() {
+      latestFrame = null;
+      const completed = task.advance(1);
+      return { frame: latestFrame, result: completed };
+    },
+    replay: () => replay,
+  }) : task;
 }
 
 /** Compatibility: exhausting the total budget remains a fault, never a draw. */

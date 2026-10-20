@@ -2,7 +2,7 @@ import {canonicalContent} from './content';
 import {freezeContent} from './content/freeze';
 import {G23_POLICY,G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward} from './content/g2-3-policy';
 import {G24_FORGE_POLICY,resolveG24ForgePool} from './content/g2-4-forges';
-import {G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './content/g2-3-special-item-source';
+import {G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './content/g2-3-special-item-runtime';
 import {ITEM_DEFINITIONS} from './content/g2-3-item-registry';
 import {M5_UNIT_DEFINITIONS} from './units';
 import {SHOP_CATALOG_BY_COST} from './match-rules';

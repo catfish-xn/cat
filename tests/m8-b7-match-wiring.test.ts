@@ -13,6 +13,9 @@ import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Every prefix comes from the complete public command-only acquisition route.
 const prepared=publicNeutralPreparation;

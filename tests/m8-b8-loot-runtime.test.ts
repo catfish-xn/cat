@@ -8,6 +8,9 @@ import { createRoundEnemies } from '../src/simulation/round-enemies';
 import { getCatalogRoundByOrdinal } from '../src/simulation/round-selectors';
 import { appendResourceProvenance, RESOURCE_PROVENANCE_VERSION } from '../src/simulation/resource-provenance';
 import type { Unit } from '../src/simulation/unit-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // Pure runtime vectors intentionally isolate the award transaction from Match phase/settlement.
 // The integration suite separately exercises real ticks, commands, economy and restoration.
@@ -113,7 +116,8 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
   });
 
   it('uses two real purchase upgrades including a changed survivor, carrying stock, equipment and anomaly', () => {
-    const original = fixture(17, 0);
+    // Both independent loot oracles pin a real Tristana drop at seed48, 3-7.
+    const original = fixture(17, 48);
     const players: Unit[] = [
       { id: 'unit-1', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 4 } } },
       { id: 'unit-2', definitionId: 'tristana', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } },

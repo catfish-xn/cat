@@ -1,4 +1,4 @@
-import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';

@@ -1,5 +1,7 @@
 # 项目说明与维护指南
 
+> **状态提示（2026-10-20）**：本指南的产品描述和分支状态停在 2026-10-07 的单人 M7 阶段，之后项目已转为以八人联机为主（`src/server/`、`multiplayer` 分支、`release/vN` 上线流程）。现状请先看根目录 [README](../README.md) 和 [文档导航](README.md)；本文的文件职责表与验收命令仍可参考，但以当前源码和 CI 工作流为准。
+
 ## 1. 本说明的范围与阅读顺序
 
 - 仓库：`catfish-xn/cat`；项目名：HEX 自动战棋；npm 包名：`hex-autobattler`（`private: true`）。
@@ -56,16 +58,9 @@ main 当前包含：
 .
 ├── AGENTS.md                  协作边界、报告格式、常用入口
 ├── README.md                  玩家操作、架构概览、主要验证入口
-├── M1_PLAN.md                 M1 最小自动战斗历史计划
-├── M2_PLAN.md / M2_GOAL.txt    M2 连续对局循环计划与目标
-├── M3_PLAN.md                 M3 成长循环历史计划
-├── M4_PLAN.md                 M4 策略切片计划
-├── M4_RULES.md                M4 历史规则
-├── M4_ACCEPTANCE.md           M4 验收要求
-├── M5_PLAN.md                 M5 范围、依赖与冻结点
 ├── M5_RULES.md                当前 S13 切片详细规则与审计修订
-├── M5_ACCEPTANCE.md           M5 验收矩阵和证据门禁
-├── M6_PLAN.md / M6_GOAL.md     M6 历史计划与已冻结产品契约
+├── (M1–M6 旧计划)             2026-10-20 移到 docs/archive/（M1–M4、M5_PLAN、M5_ACCEPTANCE、M6_PLAN）
+├── M6_GOAL.md                 M6 已冻结产品契约
 ├── M7_PLAN.md                 已合并 M7 的历史计划
 ├── M8_PLAN.md                 已确认的装备/PvE 规划，尚未实施
 ├── package.json               npm scripts、依赖声明
@@ -128,7 +123,8 @@ main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`
 
 - `abilities.ts`：19 英雄历史技能变量和说明；`traits.ts`：5 个启用职业；`items.ts`：7 组件/9 成装；`augments.ts`：6 强化；`anomalies.ts`：3 异常。
 - `source/s13-14.24.json`：固定版本客户端数据的项目归档切片；`source-manifest.ts`：原始来源、hash、补丁覆盖与明确简化的记录。运行和 CI 不在线拉取最新赛季数据。
-- `freeze.ts`：递归冻结内容定义；`index.ts`：内容规范化与 `CONTENT_DIGEST`，覆盖内容、日程、经济和有限战斗语义等。
+- `freeze.ts`：递归冻结内容定义；`index.ts`：内容规范化与 `CONTENT_DIGEST` 公共导出，覆盖内容、日程、经济和有限战斗语义等。`identity-constants.ts` 保存完整内容根与掉落重放根的生成常量；根表达式分别在 `scripts/content-digest.ts`、`scripts/loot-replay-digest.ts`，用 `node scripts/update-content-identities.cjs --check` 校验、`--write` 重算。CI fast 的 `content-identity-constants.test.ts` 从完整表重算并对比常量，失败会提示重算命令。
+- G2-3 special-item/trait 与 G2-4 artifact/support-item 四张归档表：`*-runtime.ts` 只存实际运行列，所有运行入口共用；`*-source.ts` 保存说明来源列并与运行列重组完整表，仅供离线 digest/来源测试。说明列仍在完整 digest 覆盖范围内，不进入浏览器或服务器运行依赖；不依赖生产构建转换。
 - `legacy-items.ts`、`legacy-traits.ts`、`legacy-augments.ts`、`legacy-anomalies.ts`：保留历史内容与测试兼容，不是当前可获取内容。新增内容不能绕过 `validateContent` 和目录隔离。
 
 ### 4.4 显示与交互：只读理解边界
@@ -179,7 +175,7 @@ main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`
 - `docs/SAVE_CONTRACT.md`、`docs/REPLAY_CONTRACT.md`、`M6_GOAL.md`：已合入 M6 的存档、回放和性能契约。
 - `docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md`：当前公共 API、阶段、原子性、事件、tick 与恢复契约。
 - `docs/M1_VALIDATION.md` 至 `docs/M5_VALIDATION.md`：各阶段真实执行记录，包含失败、中间状态和历史限制，阅读时核对日期/SHA。
-- `docs/M3_RULES.md`、根目录 `M4_RULES.md`：历史规则，不能覆盖 M5 的新内容/数值。
+- `docs/M3_RULES.md`、`docs/archive/M4_RULES.md`：历史规则，不能覆盖 M5 的新内容/数值。
 - `docs/M5_FIX_REVIEW.md`：M5 六项审计问题、修复依据、版本与验证边界。
 - `docs/M5_TEST_MIGRATION.md`、`docs/M5_HISTORICAL_TESTS.md`：测试迁移、替代覆盖与历史保留依据。
 - `docs/evidence/M5_CI_BUDGET.json`、`M5_CI_PROFILE_PERFORMANCE.json`：已入库的实测预算/性能证据，不是任意可重新生成的临时输出。
@@ -322,7 +318,7 @@ M7 既有预算要求 JS gzip 不超过该 M6 基线的 1.10 倍、交互就绪�
 
 重要的状态差异：
 
-- `M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5、M6、M7 均已合并；保留历史证据，但不要复述为当前仓库阻塞。
+- `docs/archive/M5_PLAN.md`、`docs/archive/M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5、M6、M7 均已合并；保留历史证据，但不要复述为当前仓库阻塞。
 - 当前 CI 使用 `docs/evidence/M5_CI_BUDGET.json` 和 `src/m6/limits.ts` 的预算；旧阶段“预算尚缺”不代表当前预算可以任意修改。
 - M7 历史 CI `37540777240` 在 `77600c8` 的 11 个验收作业全部成功（2 个诊断按条件跳过），包括 M7 表现、资源、视口和预算。`6120e86` 又调整 Vite 构建模式，不能用该旧 run 冒充 `15313a7`、`44541f0` 或后续文档合并提交的完整验收；当前工作流快照、日期和证据链接见 [M7_STATUS.md](M7_STATUS.md)。
 - 分支验证报告、用户签收、Git 合并和 Pages 部署是不同状态，必须分别汇报。

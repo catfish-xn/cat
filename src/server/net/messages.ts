@@ -30,8 +30,12 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * first message with `unsupported-protocol` ("protocolVersion must be 3").
  * P7-1 stays at 3: the 1-1 carousel is gone (the match opens on 1-2 preparation with the free unit) and the seat view's
  * `pendingCarouselUnits` became `heldCarouselUnits`; no client message or receipt changed, a held unit is sold with `sell`.
+ * 4 since v15: the client may send `claimOrb` {round, orbId} (rewards are no longer granted on their own), and `rerollAugment`
+ * requires `optionIndex` (one card at a time). A protocol 3 client could neither claim its orbs nor reroll a card, so it is
+ * refused at its first message with `unsupported-protocol`, whose detail names both versions. It equals the rules'
+ * MULTIPLAYER_NET_PROTOCOL_VERSION (tests/server/v15-orb-claim.test.ts holds them together; net/ imports no rules value).
  */
-export const NET_PROTOCOL_VERSION = 3;
+export const NET_PROTOCOL_VERSION: number = 4;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -206,8 +210,10 @@ export function validateClientCommand(value: unknown): WireCommand {
       return { type: 'choose', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), definitionId: str(value.definitionId, `${w}.definitionId`) };
     case 'anomalyTarget': onlyKeys(value, ['type', 'choiceId', 'generation', 'unitId'], w);
       return { type: 'anomalyTarget', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), unitId: str(value.unitId, `${w}.unitId`, LIMITS.idChars, true) };
-    case 'rerollAugment': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
-      return { type: 'rerollAugment', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
+    case 'rerollAugment': onlyKeys(value, ['type', 'choiceId', 'generation', 'optionIndex'], w);
+      return { type: 'rerollAugment', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), optionIndex: int(value.optionIndex, `${w}.optionIndex`, 0) };
+    case 'claimOrb': onlyKeys(value, ['type', 'round', 'orbId'], w);
+      return { type: 'claimOrb', round: int(value.round, `${w}.round`, 0), orbId: str(value.orbId, `${w}.orbId`) };
     case 'anomalyReroll': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
       return { type: 'anomalyReroll', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
     case 'carousel-pick': onlyKeys(value, ['type', 'carouselId', 'revision', 'slot'], w);
@@ -241,7 +247,7 @@ export function parseClientMessage(raw: string): ParseResult {
   const commandId = isValidCommandId(value.commandId) ? value.commandId : null;
   if (commandId === null) return { ok: false, code: 'invalid-message', detail: 'commandId must be a positive integer', commandId: null };
   if (value.protocolVersion !== NET_PROTOCOL_VERSION) {
-    return { ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION}`, commandId };
+    return { ok: false, code: 'unsupported-protocol', detail: `protocolVersion must be ${NET_PROTOCOL_VERSION} (got ${JSON.stringify(value.protocolVersion) ?? 'none'}): client and server versions differ, reload the page`, commandId };
   }
   try { return { ok: true, message: validateEnvelopeBody(value, commandId) }; }
   catch (error) {

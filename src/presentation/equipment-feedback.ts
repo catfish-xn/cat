@@ -121,6 +121,21 @@ export function temporaryItemText(item: TemporaryEquipment, name: (definitionId:
   return `临时 · ${name(item.definitionId)}：来自 ${parentName} · 槽 ${item.slot + 1} · ${temporaryLifetime(item)} · 不可操作`;
 }
 
+/** What a piece carries beyond its worn items: slots a 3-slot item reserves, then temporary items (piece tiles, hover card). */
+export interface GearExtras { readonly reserved: number; readonly temporary: readonly string[] }
+export const NO_GEAR_EXTRAS: GearExtras = { reserved: 0, temporary: [] };
+export function gearExtras(view: UnitEquipmentView | null): GearExtras {
+  if (!view) return NO_GEAR_EXTRAS;
+  return { reserved: view.slots.filter(slot => slot.reservedByItemInstanceId !== null && slot.itemInstanceId === null).length,
+    temporary: view.temporaryItems.map(item => item.definitionId) };
+}
+/** "A、临时 B、2 槽被占用" for the hover card; empty when the piece carries nothing. */
+export function gearText(worn: readonly string[], extras: GearExtras, name: (definitionId: string) => string): string {
+  const parts = [...worn.map(name), ...extras.temporary.map(id => `临时 ${name(id)}`)];
+  if (extras.reserved) parts.push(`${extras.reserved} 槽被占用`);
+  return parts.join('、');
+}
+
 /** Per-slot display state for one unit, straight from readUnitEquipment(). */
 export interface SlotView {
   readonly slot: 0 | 1 | 2;

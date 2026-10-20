@@ -39,7 +39,7 @@ runSharedMatchCommand(pool, state, {type:'claimOrb', round: state.round, orbId})
 - PvE 法球跨轮留在冻结计划中；机制法球追加在 `m8.loot.rewardOrbs`，与冻结计划互不复制。强化 P2、征服者、黑市英雄先写 `MechanicReceipt.resolution='orb'`（orbId/starLevel、gold=0、unitId=null），后续不再容量托管重试。
 - 黑市 Champions_2Star/3Star 与 TwoStarUnit 在联机归一为一条完整星级奖励；单机仍使用原 3/9 个一星路径。
 - 复制器无合法已拥有目标时仍待选择；目标确定后产生奖励法球。领取英雄后会 drain 原机制奖励，使刚获得的合法目标能解锁待决复制器。
-- 淘汰/终局由 `forfeitUnclaimedOrbs` 将每个已赚未领条目写一次 forfeited 收据。未杀死载体仍按原 forfeited 处理，无资源收据；断线不作废。
+- 淘汰由内部 `forfeitUnclaimedOrbs`、整局终局由公共 `forfeitTerminalOrbs` 将每个已赚未领条目写一次 forfeited 收据。未杀死载体仍按原 forfeited 处理，无资源收据；断线不作废。
 
 ## 投影、恢复与服务器接线
 
@@ -59,7 +59,7 @@ Claude 必须完成以下接线，本交付未修改 src/server/ 或界面目录
 2. `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION` 从 3 升到 4；领域导出 `MULTIPLAYER_NET_PROTOCOL_VERSION=4`。旧协议必须显式拒绝。该服务器常量处于用户禁改目录，当前工作区仍为 3，未宣称已端到端升级。
 3. 私有发送 unclaimedOrbs（含 queued）/ orbClaimReceipts；公共只转 count / tiers。battle/awaiting-settlement 也允许转发 claimOrb；排队 ACK 仅表示已受理，战后收到实际收据才展示 resolution/gold。断线重连读取 queued，不重提或提前发奖。
 4. 每次 bot 准备阶段入口、普通操作预算之前调用 `claimBotPreparationOrbs(pool,state)` 并提交整个成功结果；函数按 orbId 代码点排序，包含领取后新解锁的奖励法球，不消费 bot RNG。
-5. 终局统一调用 `forfeitUnclaimedOrbs` 并按原 Match 事件规则分配序号；淘汰结算和 releaseSeatOnElimination 已接入领域清理。
+5. 整局终局逐席调用 `forfeitTerminalOrbs(state: MatchState): MatchStep`（server-entry 导出，含赢家及其他 active 存活席位），提交 `{state, events}`。领域已统一按 Match 的 nextMatchEventSeq 连续编号，服务器不得重复编号；无失败枚举，重复调用/快照恢复后不重复发事件或收据。调用者负责终局判断，不要求席位已转 gameOver/eliminated，也不在普通轮次截止调用。不发资源、不扣池、不消耗 RNG、不运行获取/选择钩子；淘汰结算和 releaseSeatOnElimination 的内部清理保留。完整语义见 MATCH_CONTRACT 的 #260 / #262 终局入口。
 
 ## 约定值
 

@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import { G23_LOOT_SOURCE } from './g2-3-loot-source';
 import { G24_FORGE_POLICY } from './g2-4-forges';
-import { G23_SPECIAL_ITEM_SOURCE } from './g2-3-special-item-source';
+import { G23_SPECIAL_ITEM_SOURCE } from './g2-3-special-item-runtime';
 
 type LootObject = { readonly pointer: string; readonly values: Readonly<Record<string, unknown>> };
 const objects: Readonly<Record<string, LootObject>> = G23_LOOT_SOURCE;

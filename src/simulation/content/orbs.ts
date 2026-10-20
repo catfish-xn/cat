@@ -5,6 +5,7 @@ export const ORB_RULES = freezeContent({
   layoutSeedXor:0x4f524253, lootSeedXor:0xdeadbeef, equipmentWeights:[90,9,1], openingWeights:[50,50],
   grayToolWeights:[80,20], goldBonus:4, prismaticGold:8, openingGold:3,
   duplicatorBonus:{gray:[99,1],blueEarly:[97,2,1],blueLate:[99,1],goldEarly:[94,3,3],goldLate:[95,5],prismatic:[100]},
+  duplicatorStream:{namespace:'orb-duplicator-v16',seed:'fnv1a32-utf16(JSON([namespace,seatSeed,orbId]))',sampling:'lcg32-v1/uint32-rejection-modulo-100',order:'after-all-original-orb-payloads',advancesLegacyLoot:false},
   componentEquivalent:{component:1,completed:2,gold:0,unit:0,consumable:0},
   order:'sourceUnitId-codepoint/slotOrdinal-numeric/entryOrdinal-numeric',
   orbId:'JSON([orb,roundId,encounterId,sourceUnitId,slotOrdinal])', dropId:'JSON([orbId,entryOrdinal])',

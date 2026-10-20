@@ -8,6 +8,9 @@ import {
 } from '../src/simulation/resource-provenance';
 import type { ScheduleReceipt } from '../src/simulation/strategy-types';
 import type { UnitUpgradedEvent } from '../src/simulation/unit-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const empty = (): ResourceProvenance => ({ version: RESOURCE_PROVENANCE_VERSION, equipmentHistory: 'ordered', entries: [] });

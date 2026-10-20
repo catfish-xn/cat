@@ -65,7 +65,9 @@
 
 # 项目概况
 
-浏览器本地运行的单人六角棋盘自动战棋（HEX 自动战棋），复刻 TFT S13（14.24b）的有限内容切片。无后端服务、数据库或联网，"后端"指纯 TypeScript 领域规则。
+六角棋盘自动战棋（HEX 自动战棋），复刻 TFT S13，规则、数值和图标版本锁定 **14.24b**。以**八人联机**为主：`src/server/` 是单局 WebSocket 服务器（匹配队列、机器人补位、服务器权威结算、断线重连），规则仍只在 `src/simulation/`（纯 TypeScript），服务器只编排调用；原单人模式保留。只面向桌面 Chromium，没有数据库和账号系统。
+
+3D 是单独加载的显示模式（`?render=3d`，集成分支 `3d`），只换表现层、不改规则；模型等素材只放本地 gitignore 目录，公开站点不带 3D 素材。日常开发在 `multiplayer`，上线走 `release/vN` → `main`。
 
 技术栈：TypeScript + Vite + Phaser 3，测试用 Vitest 和 Playwright。Node 22.12+。没有 ESLint/Prettier，也没有 `lint`、`start` 脚本。
 

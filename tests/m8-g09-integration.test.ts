@@ -8,6 +8,9 @@ import {effectIdentity} from '../src/simulation/m8/identity';
 import {source,trigger,selector,amount} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
 import {packets,heals} from './helpers/replay2-views';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 const dummy=(id:string,team:'player'|'enemy',col:number,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,team,col,3,{ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,armor:0,magicResist:0,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,attackRange:6,mana:0,maxMana:1000,runtime:{...EMPTY_RUNTIME},...patch});
 const defs=(eventTriggers:readonly ReturnType<typeof trigger>[])=>({periodicTasks:[],survivalTriggers:[],vamp:[],eventTriggers});
 describe('G09 S13 event consumers',()=>{

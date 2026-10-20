@@ -7,7 +7,7 @@
  * As in g2-4a-forge-timeout.test.ts, the tier bundles (exactly as `advanceG23Economy` records them, gold stripped) are
  * placed in the seat's live G2-3 progress while its round-4 battle plays, so the room's own commit is what opens them.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { Room } from '../../src/server/room/room';
 import { seatPushEvents, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
@@ -55,9 +55,17 @@ const atomOptions = (match: MatchState, tier: number, index: number) => {
 };
 
 describe('G2-4b: the artifact anvil in an online room', () => {
+  const prepared = new Map<number, ReturnType<typeof makeRoom>>();
+  for (let index = 0; index < 4; index++) beforeAll(() => {
+    const own = makeRoom(new TwoSidedBattleResolver());
+    own.room.start();
+    runUntil(own.room, own.clock, state => state.round === 4 && state.phase === 'battle');
+    prepared.set(index, own);
+  });
+  afterAll(() => { for (const own of prepared.values()) own.room.dispose(); });
+
   it('tier 10 opens 神器锻造器 with four distinct artifacts and the deadline grants the first offer once', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(0)!;
     toForgeWindow(room, () => clock.runNext(), 's0', 10);
     const state = room.state, s0 = seatOf(state, 's0'), choice = s0.match.pendingChoice!;
     expect(state.phase).toBe('choice');
@@ -88,8 +96,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
   }, 30_000);
 
   it('a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(1)!;
     toForgeWindow(room, () => clock.runNext(), 's0', 10);
     const before = seatOf(room.state, 's0').match, choice = before.pendingChoice!, stateBefore = room.state;
     expect(room.handle('s0', { type: 'choose', choiceId: TIER10, generation: choice.generation + 1, definitionId: choice.offers[2]! }).ok).toBe(false);
@@ -108,8 +115,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
   }, 30_000);
 
   it('tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(2)!;
     toForgeWindow(room, () => clock.runNext(), 's0', 9, 10, 14);
     const first = seatOf(room.state, 's0').match, opened = first.pendingChoice!;
     expect(opened).toMatchObject({ kind: 'forge', choiceId: 'g23:conqueror:9:atom:0:copy:0' });
@@ -136,8 +142,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
   }, 30_000);
 
   it('never shows the artifact offers to another seat, in its view or its pushes', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(3)!;
     toForgeWindow(room, () => clock.runNext(), 's0', 10);
     const state = room.state, choice = seatOf(state, 's0').match.pendingChoice!;
     for (const other of state.seats.filter(seat => seat.seatId !== 's0')) {

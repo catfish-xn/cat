@@ -72,7 +72,7 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
 }
 export async function transferPreparation() {
   // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
-  let s=await configuredPrefix('4-7',{seed:18668,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
+  let s=await configuredPrefix('4-7',{seed:18619,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
     goldReserveByRound:{'4-5':40}});

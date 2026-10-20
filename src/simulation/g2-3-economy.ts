@@ -1,6 +1,6 @@
 import { DEFAULT_BOARD } from './board';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward } from './content/g2-3-policy';
-import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-progress';
 import type { G23MatchProgress } from './g2-3-match-progress';
 import {validateItemGoldPayouts,type ItemGoldPayout} from './g2-4b-item-gold';

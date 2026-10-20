@@ -1,14 +1,14 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
-// v16 independent-oracle seed search preserves the original exact partial-death assertions.
-export const PARTIAL_REVEAL_SEEDS = {loris:56152,zyra:3464} as const;
+// #265 independent bonus stream restores the original v15 public acquisition vectors.
+export const PARTIAL_REVEAL_SEEDS = {loris:139464,zyra:3464} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command, preserving the exact tick/eventSeq assertions below.
-export const SIMULTANEOUS_REVEAL_SEED=63878;
+export const SIMULTANEOUS_REVEAL_SEED=242874;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[
@@ -19,7 +19,7 @@ export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<
  ];
  let state=await configuredPrefix('4-7',{build:'mage',seed,goldReserves:{'4-7':0},goldReserveByRound:{'4-3':100,'4-5':100,'4-7':100},
   augmentPriorities:['bronze-for-life-ii','pumping-up-iii','item-collector-ii'],anomalyDefinitionId:'protective-shielding',anomalyTargetDefinitionId:'zoe',
-  equipmentTargets,reservedComponents:['sword','vest','belt','rod','cloak','bow','gloves','tear'],supplyChoices:['belt','cloak','tear']});
+  equipmentTargets,reservedComponents:['sword','vest','belt','rod','cloak','bow','gloves','tear'],supplyChoices:['sword','rod','sword']});
  while(state.level<8){const r=api.buyXp(state);if(!r.ok)break;state=r.state;}
  const wanted=new Set(board.map(u=>u.definitionId));
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!wanted.has(u.definitionId)))state=accepted(api.sellUnit(state,unit.id));

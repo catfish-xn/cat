@@ -3,6 +3,9 @@ import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match-types';
 import { run } from '../scripts/generate-m5-route.cjs';
 import { Ledger, COMPONENTS, investment, lootIndex, lootPlan, settlement, validateLoot, validateLootTransition } from './fixtures/m5/oracle.g2.cjs';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 type Command = { type: string; [key: string]: unknown } | undefined;
 type Transition = { before: MatchState; after: MatchState; command: Command; events: readonly MatchEvent[] };

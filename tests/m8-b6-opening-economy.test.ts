@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { OPENING_INITIAL_STATE, planOpeningEconomy, type OpeningEconomyInput } from '../src/simulation/opening-economy';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { MATCH_RULES } from '../src/simulation/match-rules';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 // All numeric answers handwritten from OPENING §§2, 3.1, 3.2, 5 before running implementation.
 // provisional: round ID literals follow B6-Q1 pending user approval.

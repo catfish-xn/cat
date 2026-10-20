@@ -1,6 +1,6 @@
 import { freezeContent } from './freeze';
 import { ITEM_DEFINITIONS as ORDINARY } from './items';
-import { G23_SPECIAL_ITEM_POOLS } from './g2-3-special-item-source';
+import { G23_SPECIAL_ITEM_POOLS } from './g2-3-special-item-runtime';
 import { G24_ARTIFACT_ITEMS } from './g2-4-artifacts';
 import { G24_SUPPORT_ITEMS } from './g2-4-support-items';
 import { G24_MECHANISM_ITEMS } from './g2-4b-mechanism-items';

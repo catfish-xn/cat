@@ -1,37 +1,25 @@
-import { sampleOrbDuplicatorBonus } from './orb-bonuses';
+import { sampleOrbDuplicatorBonus, orbDuplicatorIndex } from './orb-bonuses';
 import { EPIC_LOOT } from './content/loot';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { ConsumableDefinitionId } from './consumable-types';
 import { isImmutableJson, shareGeneratedJson } from './immutable-json';
-import { RULES_GAP_MANIFEST } from './content/rules-manifest';
-import { canonicalContent, digestContent, equalValidatedContent } from './content';
+import { canonicalContent, equalValidatedContent } from './content';
 import { freezeContent } from './content/freeze';
-import { LOOT_FREEZE_ALGORITHM, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION } from './content/loot';
-import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
+import { LOOT_CATEGORIES, LOOT_HERO_POOLS } from './content/loot';
+import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { COMPONENT_POOL, COMPONENT_POOL_VERSION, validateComponentPool } from './component-pool';
+import { COMPONENT_POOL, validateComponentPool } from './component-pool';
 import { ORB_RULES, ORB_SLOTS, EPIC_SOURCES } from './content/orbs';
-import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './content/consumables';
-import { EQUIPMENT_RULES_VERSION } from './equipment-policy';
+import { REFORGE_POOLS } from './content/consumables';
 import type { LootPayload, RngStream } from './m8/contracts';
 import { lootOrbId, lootEntryId } from './loot-identity';
 import type { FrozenDirectDrop, FrozenLootLedger, FrozenLootRound, OrbPlan } from './loot-types';
 import { createOrbLayout, freezeOrbLayoutThroughRound, restoreOrbLayout, drawIndex, type OrbLayoutLedger } from './orb-layout';
 import { validateSeed } from './rng';
-import { OPENING_ECONOMY_RULES } from './match-rules';
+import { LOOT_REPLAY_DIGEST } from './content/identity-constants';
 export const LOOT_FREEZE_VERSION = 's13-orb-freeze-v16';
 export { LOOT_FREEZE_ALGORITHM } from './content/loot';
-export const LOOT_REPLAY_DIGEST = digestContent({
-  rulesManifest: RULES_GAP_MANIFEST,
-  version:LOOT_FREEZE_VERSION, algorithm:LOOT_FREEZE_ALGORITHM,
-  policy:NEUTRAL_ENCOUNTER_POLICY_VERSION, openingPolicy:OPENING_ECONOMY_RULES.version, lootPolicy:LOOT_POLICY_VERSION,
-  equipment:EQUIPMENT_RULES_VERSION, orbs:{rules:ORB_RULES,slots:ORB_SLOTS,epicSources:EPIC_SOURCES,epic:EPIC_LOOT},
-  consumables:{rules:CONSUMABLE_RULES,definitions:CONSUMABLE_DEFINITIONS,pools:REFORGE_POOLS},
-  componentPool:{version:COMPONENT_POOL_VERSION,entries:COMPONENT_POOL},
-  epicHeroPools:{2:SHOP_CATALOG_BY_COST[2],3:SHOP_CATALOG_BY_COST[3],4:SHOP_CATALOG_BY_COST[4]},
-  heroPools:{version:LOOT_HERO_POOL_VERSION,entries:LOOT_HERO_POOLS}, categories:LOOT_CATEGORIES,schedule:ROUND_CATALOG,
-  encounters:{version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,entries:NEUTRAL_ENCOUNTERS},
-});
+export { LOOT_REPLAY_DIGEST };
 export const drawLootIndex=drawIndex;
 // Pair by layout identity as well as seat seed/boundary. Replacing either side
 // (including JSON restore or structuredClone) always takes the full check.
@@ -106,9 +94,9 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
       default:throw new RangeError('Invalid box');
     }
   };
-  const duplicateBonus=(tier:import('./orb-layout').OrbTier,stage:number):LootPayload[]=>{
+  const duplicateBonus=(tier:import('./orb-layout').OrbTier,stage:number,orbId:string):LootPayload[]=>{
     if(stage>4||tier==='prismatic')return [];
-    return sampleOrbDuplicatorBonus(tier,stage,draw(100)).map(tool);
+    return sampleOrbDuplicatorBonus(tier,stage,orbDuplicatorIndex(seed,orbId)).map(tool);
   };
   for(const round of ROUND_CATALOG) {
     if(round.ordinal>throughRoundOrdinal)break;if(round.kind!=='pve')continue;
@@ -158,7 +146,7 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
           const extra=draw(100);if(extra>=ORB_RULES.grayToolWeights[0])payloads.push(tool('reforger'));
         }
       }
-      payloads.push(...duplicateBonus(orb.tier,round.stage));
+      payloads.push(...duplicateBonus(orb.tier,round.stage,lootOrbId(round.roundId,round.encounterId!,orb.sourceUnitId,orb.slotOrdinal)));
       add(orb,payloads);
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});

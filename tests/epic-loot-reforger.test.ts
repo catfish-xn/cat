@@ -77,7 +77,8 @@ describe('v16 epic rewards and unified consumables',()=>{
   for(const o of paid.m8.loot.frozen.rounds.at(-1)!.orbs)if(o.templateId==='epic-copper'||o.templateId==='epic-silver')expect(o.tier).toBe(o.templateId==='epic-copper'?'gray':'blue');
  });
  it('uses existing four-choice forge pools with unique choice receipts, deterministic timeout and terminal fallback',()=>{
-  const {state,dead}=late(),earned=revealMatchLoot(state,dead).state;
+  const seed=Array.from({length:100},(_,s)=>s).find(s=>lootPlan(s).rolls[0].variant==='artifact')!;
+  const {state,dead}=late(seed),earned=revealMatchLoot(state,dead).state;
   let paid:MatchState={...grantDirectLoot({...earned,phase:'settlement',combat:dead},false).state,phase:'settlement',combat:dead};
   const original=paid.m8.loot.receipts.filter(r=>r.payload.kind==='forge');expect(original).toHaveLength(2);
   for(const r of original){

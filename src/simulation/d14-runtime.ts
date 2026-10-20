@@ -76,13 +76,6 @@ export function reconcileD14(state:MatchState,events:MatchEvent[]=[]):MatchState
 }
 export function d14OwnedUnits(state:Pick<MatchBase,'preparation'|'d14'>):readonly Unit[]{return [...state.preparation.units,...state.d14?.held?[state.d14.held.unit]:[]];}
 export function d14OwnedItems(state:Pick<MatchBase,'items'|'d14'>):readonly ItemInstance[]{return [...state.items,...state.d14?.held?.items??[]];}
-export function d14PrivateDisplay(state:MatchState){
-  const d=state.d14;if(!d)return undefined;
-  return {anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+3,
-    remainingSettlements:Math.max(0,d.atOrdinal+3-state.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel),
-    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:9,poolCopies:9}:{}),
-    ...(d.held?{heldUnit:structuredClone(d.held.unit),heldItems:structuredClone(d.held.items)}:{})};
-}
 function check(v:unknown):asserts v{if(!v)throw new RangeError('Invalid D14 production certificate');}
 /** Authenticate against schedule, resource prefix, ordered transition facts and real settlement history.
  * Same trust boundary as restoreMatch's other choices; candidate fields never authorize births/stars. */
@@ -103,16 +96,16 @@ export function validateD14(state:MatchState,context:ResourceProvenanceContext):
   check(d.unitId===(id??retiredId));
   const returned=facts.filter(e=>e.kind==='d14-returned');
   check(facts.filter(e=>e.kind==='d14-selected').length===1&&returned.length<=1);
-  const phase=id===null?'retired':d.anomalyId==='ultimate-hero'?(state.roundResults.length>=d.atOrdinal+3?'promoted':'waiting'):returned.length?'returned':'absent';
+  const phase=id===null?'retired':d.anomalyId==='ultimate-hero'?(state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds?'promoted':'waiting'):returned.length?'returned':'absent';
   check(d.phase===phase);
   check(phase==='retired'?state.anomalyBinding===null:state.anomalyBinding?.unitId===id&&state.anomalyBinding.choiceId===d.choiceId);
   if(phase==='absent'){
     check(d.held&&canonicalContent(d.held.unit)===canonicalContent(d.originalUnit)&&!state.preparation.units.some(u=>u.id===id));
     check(Object.keys(d.held).length===2&&start.kind==='d14-selected'&&canonicalContent(d.held.items)===canonicalContent(start.heldItems));
-    if(state.roundResults.length>=d.atOrdinal+3&&state.phase!=='combat'&&!state.multiplayer?.combatRosterLocked)check(returnLocation(state)===null);
+    if(state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds&&state.phase!=='combat'&&!state.multiplayer?.combatRosterLocked)check(returnLocation(state)===null);
     check(d.held.items.every(i=>i.location.kind==='unit'&&i.location.unitId===id));
   }else check(d.held===null);
-  for(const e of returned){check(e.kind==='d14-returned'&&d.anomalyId==='into-the-unknown'&&e.choiceId===d.choiceId&&e.unitId===d.originalUnit.id&&e.settledOrdinal>=d.atOrdinal+3&&e.settledOrdinal<=state.roundResults.length);}
+  for(const e of returned){check(e.kind==='d14-returned'&&d.anomalyId==='into-the-unknown'&&e.choiceId===d.choiceId&&e.unitId===d.originalUnit.id&&e.settledOrdinal>=d.atOrdinal+D14_POLICY.numRounds&&e.settledOrdinal<=state.roundResults.length);}
   const clean:D14Progress={choiceId:d.choiceId,anomalyId:d.anomalyId,originalUnit:d.originalUnit,unitId:d.unitId,atOrdinal:d.atOrdinal,selectionPrefixLength:d.selectionPrefixLength,phase:d.phase,held:d.held};check(canonicalContent(clean)===canonicalContent(d));
 }
 
@@ -128,6 +121,6 @@ export function d14CertificateAtCombat(state:MatchState):D14CombatCertificate|un
   const before=state.roundResults.filter(r=>r.round<state.round).length;
   const unitId=traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,state.combatInputBasis!.provenancePrefixLength));
   if(!unitId)return undefined;
-  if(d.anomalyId==='ultimate-hero')return {unitId,anomalyId:d.anomalyId,phase:before>=d.atOrdinal+3?'promoted':'waiting'};
+  if(d.anomalyId==='ultimate-hero')return {unitId,anomalyId:d.anomalyId,phase:before>=d.atOrdinal+D14_POLICY.numRounds?'promoted':'waiting'};
   return state.resourceProvenance.entries.slice(0,state.combatInputBasis!.provenancePrefixLength).some(e=>e.kind==='d14-returned')?{unitId,anomalyId:d.anomalyId,phase:'returned'}:undefined;
 }

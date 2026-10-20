@@ -1,20 +1,24 @@
 /**
  * v16 anomalies 终极英雄 / 进入未知 for display. Everything comes from the rules' own private display block: the seat
- * view's `d14Display` online (plus each promoted unit's `effectiveStarLevel`), `d14PrivateDisplay` offline. Phase,
+ * view's `d14Display` online (plus each promoted unit's `effectiveStarLevel`), the same seat view of the state offline. Phase,
  * remaining settlements, star levels, sell gold and pool copies are the rules' numbers; nothing is counted here.
  */
-import { d14PrivateDisplay } from '../simulation/d14-runtime';
+import { toPrivateSeatView, type PrivateSeatView } from '../simulation/private-seat-view';
 import { d14UnitBase } from '../simulation/d14-anomalies/projection';
 import type { MatchState } from '../simulation/match-types';
 import { displayUnitName } from '../rendering/display-names';
 
-export type D14Display = NonNullable<ReturnType<typeof d14PrivateDisplay>>;
+export type D14Display = NonNullable<PrivateSeatView['d14Display']>;
+/** Offline: the rules' own seat view of the state, built once per state object (only after a D14 anomaly is chosen). */
+const offline = new WeakMap<MatchState, D14Display | null>();
 
 /** The rules' D14 block of my seat, or null when I have neither anomaly. */
 export function readD14Display(state: MatchState): D14Display | null {
   const sent = (state as { readonly d14Display?: D14Display }).d14Display;
   if (sent && typeof sent.unitId === 'string') return sent;
-  return state.d14 ? d14PrivateDisplay(state) ?? null : null;
+  if (!state.d14) return null;
+  if (!offline.has(state)) offline.set(state, toPrivateSeatView(state).d14Display ?? null);
+  return offline.get(state)!;
 }
 
 /** Star level to draw: 4 for a promoted Ultimate Hero (physically still 3★), else the unit's own. */

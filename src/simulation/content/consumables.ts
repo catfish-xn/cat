@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import { ITEM_DEFINITIONS } from './items';
 import { G24_FORGE_POOLS } from './g2-4-forges';
-import { G23_RADIANT_MAPPING } from './g2-3-special-item-source';
+import { G23_RADIANT_MAPPING } from './g2-3-special-item-runtime';
 export const CONSUMABLE_DEFINITIONS = freezeContent({
   'magnetic-remover':{id:'magnetic-remover',apiName:'TFT_Consumable_ItemRemover',effect:'remove-all',target:'unit',targetKind:'unit',name:'装备拆卸器',description:'拆下己方单位的全部永久装备，保留原物品并放回库存；战斗中使用下场生效。'},
   reforger:{id:'reforger',apiName:'TFT_Consumable_ItemReroller',effect:'reforge-all',target:'unit',targetKind:'unit',name:'装备重铸器',description:'拆下己方单位全部永久装备，每件随机重铸为同类别的另一件并放入库存；无其他候选则原样退回。'},

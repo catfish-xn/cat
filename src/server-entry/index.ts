@@ -4,7 +4,7 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
-  forfeitPendingChoice, claimOrDiscardLoot, claimOrb, advanceMultiplayerRound,
+  forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
   readItemSummons, moveItemSummon,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
@@ -24,8 +24,11 @@ export type {
 export { snapshotForBattle, restorePlayerBattleSnapshot } from '../simulation/two-sided-snapshot';
 export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-history';
 export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
-  startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement } from '../simulation/two-sided-battle';
-export type { BattleTask, BattleReplayTask, BattleReplayOptions } from '../simulation/two-sided-battle';
+  startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement, readBattleLiveGoldReaders } from '../simulation/two-sided-battle';
+export type { BattleTask, BattleReplayTask, BattleReplayStep, BattleReplayOptions, BattleLiveGoldReader } from '../simulation/two-sided-battle';
+export { sampleD11CombatGold } from '../simulation/d11-fill';
+export { readMatchLiveGoldReaders } from '../simulation/live-gold-readers';
+export type { CombatBankSample } from '../simulation/combat-types';
 export { stepCombat } from '../simulation/combat';
 export type { CombatStep } from '../simulation/combat';
 export { PLAYER_BATTLE_SNAPSHOT_VERSION, TWO_SIDED_BATTLE_VERSION, BattleValidationError } from '../simulation/two-sided-types';

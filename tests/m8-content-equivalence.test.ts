@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { goldenStates } from './fixtures/m8-golden-states.cjs';
 import { assertParsedContent, canonicalContent } from '../src/simulation/content';
 import { restoreMatch } from '../src/simulation/serialization';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const outcome = (f: () => unknown) => { try { f(); return 'accepted'; } catch (error) { return `${(error as Error).name}:${(error as Error).message}`; } };
 function lcg(seed: number) { let s = seed >>> 0; return () => (s = Math.imul(s, 1664525) + 1013904223 >>> 0) / 2 ** 32; }
