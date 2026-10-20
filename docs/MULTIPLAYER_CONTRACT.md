@@ -1417,7 +1417,7 @@ interface OrbRoundLayout {
   }[];
 }
 interface OrbLayoutLedger {
-  readonly version:'s13-orb-layout-v1';
+    readonly version:'s13-orb-layout-v2';
   readonly seed:number;
   readonly throughRoundOrdinal:number;
   readonly rng:{readonly state:number;readonly draws:number};

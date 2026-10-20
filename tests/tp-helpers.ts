@@ -55,7 +55,7 @@ export function syntheticSharedRound(pool: SharedPoolState, states: readonly Mat
   const nextPool={...pool,orbLayout:result.layout};
   const nextStates=states.map(state=>{
     const deferred=prepareMatchLoot(state.seed,0,undefined,undefined,{mode:'shared-deferred'});
-    const previous={...deferred,layoutBinding:{mode:'shared' as const,poolId:pool.poolId,version:'s13-orb-layout-v1' as const,throughRoundOrdinal:0}};
+    const previous={...deferred,layoutBinding:{mode:'shared' as const,poolId:pool.poolId,version:'s13-orb-layout-v2' as const,throughRoundOrdinal:0}};
     return {...state,round,m8:{...state.m8,loot:prepareMatchLoot(state.seed,ordinal,previous,result.layout)}};
   });
   return {pool:nextPool,states:nextStates};

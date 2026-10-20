@@ -1,3 +1,4 @@
+import { ROUND_CATALOG } from './content/round-catalog';
 import { validateD14,d14OwnedUnits,d14OwnedItems,d14HeldAtPrefix,d14CertificateAtCombat } from './d14-runtime';
 import {validateAnomalyAcquisition} from './anomaly-acquisition';
 import {readItemSummonPositions} from './g2-4b-voidspawn';
@@ -10,8 +11,7 @@ import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
-import { EPIC_SOURCES } from './content/orbs';
-import { LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
+import { LOOT_POLICY_VERSION } from './content/loot';
 import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
 import { makeLootPendingChoice, orderedUnresolvedLootChoices } from './loot-choice';
@@ -252,7 +252,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     if (slot.roundId !== state.roundDefinitionId || state.phase === 'gameOver') check(eligibility.status !== 'revealed' || resolution, 'unresolved completed choice');
     if (state.combat?.status === 'running' && slot.roundId === state.roundDefinitionId) check(!resolution, 'combat choice grant');
   }
-  const counters = Object.fromEntries([...Object.keys(LOOT_SLOTS),...Object.keys(EPIC_SOURCES)].map(roundId => [JSON.stringify([LOOT_POLICY_VERSION,roundId,'components-granted']),0]));
+  const counters = Object.fromEntries(ROUND_CATALOG.filter(r=>r.kind==='pve').map(r=>r.roundId).map(roundId => [JSON.stringify([LOOT_POLICY_VERSION,roundId,'components-granted']),0]));
   for (const receipt of loot.receipts) if (receipt.payload.kind === 'item') counters[JSON.stringify([LOOT_POLICY_VERSION,slots.get(receipt.dropId)!.roundId,'components-granted'])]+=ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1;
   check(equal(counters,loot.guaranteeCounters), 'actual guarantee counters');
   const unresolved = orderedUnresolvedLootChoices(choices,loot.choiceEligibility,loot.choiceResolutions);

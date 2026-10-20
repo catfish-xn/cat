@@ -7,6 +7,7 @@ import {createSharedPool,initializeSharedSeat,runSharedMatchCommand} from '../sr
 import {previewUseConsumable} from '../src/simulation/consumables';
 import {readLootView,readComponentEquivalent} from '../src/simulation/loot-view';
 import {toPrivateSeatView} from '../src/simulation/private-seat-view';
+import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import type {MatchState,MatchCommandResult} from '../src/simulation/match-types';
 const accepted=(r:MatchCommandResult)=>{if(!r.ok)throw new Error(r.reason);return r.state;};
 function finish(state:MatchState) {
@@ -27,12 +28,8 @@ function opening(seed=42) {
 describe('R3/R4 catalog and live entry accounting',()=>{
   it('all eight PvE rounds have the signed orb counts and no PvE choice/fallback',()=>{
     const plan=freezeLootThroughRound(42,38);
-    expect(plan.rounds.map(r=>[r.encounterPlan.roundId,r.orbs.length,r.choices.length])).toEqual([
-      ['1-2',1,0],['1-3',2,0],['1-4',3,0],['2-7',2,0],['3-7',2,0],['4-7',2,0],['5-7',3,0],['6-7',3,0],
-    ]);
-    // Seed 42: both independent v16 oracles select standard, not artifact,
-    // at 5-7: one completed forge + copper + silver, hence three orbs.
-    expect(plan.rounds.flatMap(r=>r.orbs)).toHaveLength(18);
+    expect(plan.rounds).toEqual(lootPlan(42,38).rounds);
+    expect(plan.rounds.every(r=>r.choices.length===0)).toBe(true);
     for(const round of plan.rounds)for(const orb of round.orbs)for(const [i,entry] of orb.entries.entries()) {
       expect(entry.dropId).toBe(JSON.stringify([orb.orbId,i]));expect(entry.entryOrdinal).toBe(i);
     }
@@ -46,7 +43,7 @@ describe('R3/R4 catalog and live entry accounting',()=>{
   });
   it('layout retry, stale/invalid failure preserve identity and draws',()=>{
     const initial=createOrbLayout(1),r=freezeOrbLayoutThroughRound(initial,3);if(!r.ok)throw Error(r.reason);
-    expect(r.layout.rng.draws).toBe(1);
+    expect(r.layout.rng).toEqual(initial.rng);
     expect(freezeOrbLayoutThroughRound(r.layout,3)).toEqual({ok:true,layout:r.layout});
     expect(freezeOrbLayoutThroughRound(r.layout,2)).toEqual({ok:false,layout:r.layout,reason:'stale-orb-layout'});
     expect(freezeOrbLayoutThroughRound(r.layout,39)).toEqual({ok:false,layout:r.layout,reason:'invalid-orb-round'});
@@ -64,12 +61,12 @@ describe('R3/R4 catalog and live entry accounting',()=>{
       expect(()=>serializeMatch(state)).toThrow();
       const r=initializeSharedSeat(pool,state,String(i),i);if(!r.ok)throw Error(r.reason);
       pool=r.pool;expect(pool.revision).toBe(i+1);expect(pool.orbLayout.throughRoundOrdinal).toBe(1);
-      expect(r.state.m8.loot.layoutBinding).toEqual({mode:'shared',poolId:'orbs',version:'s13-orb-layout-v1',throughRoundOrdinal:1});
+      expect(r.state.m8.loot.layoutBinding).toEqual({mode:'shared',poolId:'orbs',version:'s13-orb-layout-v2',throughRoundOrdinal:1});
       const bad=runSharedMatchCommand(pool,r.state,{type:'useConsumable',consumableId:'missing',target:{kind:'unit',unitId:'unit-1'}});
       expect(bad).toEqual({ok:false,pool,state:r.state,reason:'unknown-consumable'});
     }
   });
-  it('real opening grants 2–3 value, three tools, unique receipts and round-trips every stage',()=>{
+  it('real opening grants its frozen component value and unique receipts and round-trips every stage',()=>{
     let state=createMatch(42);
     for(let n=0;n<3;n++){
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -81,11 +78,12 @@ describe('R3/R4 catalog and live entry accounting',()=>{
       expect(view.revealedOrbs.every(o=>o.status==='claimed')).toBe(true);
       if(n<2)state=accepted(nextRound(state,state.round));
     }
-    expect([2,3]).toContain(readComponentEquivalent(state));expect(state.consumables).toHaveLength(3);
+    expect(readComponentEquivalent(state)).toBe(2);expect(state.consumables).toHaveLength(0);
     expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
   });
   it('earned remover returns original IDs, consumes once, and restores without another grant',()=>{
-    let state=opening();const tool=state.consumables[0],item=state.items[0];
+    // Seed with a real box-row remover (no guaranteed opening tool in v17).
+    let state=opening(17);const tool=state.consumables.find(c=>c.definitionId==='magnetic-remover')!,item=state.items[0];
     state=accepted(equipItem(state,item.id,'unit-1',2));
     const preview=previewUseConsumable(state,tool.consumableId,{kind:'unit',unitId:'unit-1'});
     expect(preview).toEqual({ok:true,effect:'remove-all',affectedItemIds:[item.id],destination:'inventory',affectsCurrentBattle:false});

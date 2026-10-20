@@ -1,11 +1,12 @@
-import { EPIC_SOURCES } from '../src/simulation/content/orbs';
+import { ORB_STAGE_PLAN } from '../src/simulation/content/orbs';
+import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import archivedHeroes from '../src/simulation/content/source/s13-14.24.json';
 import archivedItems from '../src/simulation/content/source/s13-14.24b/normalized/items.json';
 import { COMPONENT_POOL } from '../src/simulation/component-pool';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
-import { LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION, LOOT_SLOTS } from '../src/simulation/content/loot';
+import { ORB_BOXES, LOOT_POLICY_VERSION } from '../src/simulation/content/loot';
 import { NEUTRAL_ENCOUNTERS } from '../src/simulation/content/neutral-encounters';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { makeLootPendingChoice, orderedUnresolvedLootChoices, validateLootPendingChoice } from '../src/simulation/loot-choice';
@@ -32,21 +33,6 @@ const COMPONENTS = [
   ['TFT_Item_NegatronCloak', 'cloak'], ['TFT_Item_RecurveBow', 'bow'],
   ['TFT_Item_SparringGloves', 'gloves'], ['TFT_Item_TearOfTheGoddess', 'tear'],
 ] as const;
-const HEROES = {
-  1: [['TFT13_Darius', 'darius'], ['TFT13_Irelia', 'irelia'], ['TFT13_Lux', 'lux'], ['TFT13_Shooter', 'maddie'], ['TFT13_Zyra', 'zyra']],
-  2: [['TFT13_Leona', 'leona'], ['TFT13_Prime', 'vander'], ['TFT13_Rell', 'rell'], ['TFT13_Tristana', 'tristana'], ['TFT13_Urgot', 'urgot']],
-  3: [['TFT13_Beardy', 'loris'], ['TFT13_Ezreal', 'ezreal'], ['TFT13_FlyGuy', 'scar'], ['TFT13_KogMaw', 'kogmaw'], ['TFT13_Nami', 'nami']],
-  4: [['TFT13_Corki', 'corki'], ['TFT13_Garen', 'garen'], ['TFT13_Zoe', 'zoe']],
-} as const;
-const slot = (sourceSlotId:string,slotOrdinal:number,tier:string,templateId:string)=>({sourceSlotId,slotOrdinal,tier,templateId});
-const EXPECTED_SLOTS:Readonly<Record<string,readonly ReturnType<typeof slot>[]>> = {
- '1-2':[slot('m01',0,'gray','opening-unit')],
- '1-3':[slot('m01',0,'gray','opening-unit'),slot('r01',0,'blue','component')],
- '1-4':[slot('m01',0,'gray','remover'),slot('r01',0,'blue','component'),slot('r02',0,'blue','opening-bonus')],
- '2-7':[slot('k01',0,'blue','equipment'),slot('k01',1,'gray','gray-1')],
- '3-7':[slot('w00',0,'blue','equipment'),slot('w00',1,'gray','gray-2')],
- '4-7':[slot('r00',0,'blue','equipment'),slot('r00',1,'gray','gray-3')],
-};
 // Retained pure legacy helper contracts use an explicit synthetic descriptor.
 // Current frozen PvE plans must never generate these descriptors.
 const legacyChoice:LootChoiceDescriptor={roundId:'1-3',encounterId:'minions-b-v1',sourceUnitId:'r01',slotOrdinal:0,
@@ -60,47 +46,20 @@ const ENCOUNTERS = [
 const jsonCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const round = (ledger: FrozenLootLedger, id: string) => ledger.rounds.find(r => r.encounterPlan.roundId === id)!;
 
-describe('B8 checkpoint ① approved, bounded loot content', () => {
-  it('pins all eight source/slot tables and explicitly excludes every no-loot monster', () => {
-    expect(LOOT_POLICY_VERSION).toBe('s13-orbs-project-v16');
-    expect(LOOT_HERO_POOL_VERSION).toBe('m8b-heroes-1to4-v1');
-    expect(LOOT_SLOTS).toEqual(EXPECTED_SLOTS);
-    expect(ROUND_CATALOG.filter(r => r.kind === 'pve').map(r => [r.roundId, r.encounterId, r.ordinal])).toEqual(ENCOUNTERS);
-    expect(NEUTRAL_ENCOUNTERS.map(e => [e.roundId, e.slots.filter(s => !(LOOT_SLOTS[e.roundId]??[{sourceSlotId:EPIC_SOURCES[e.roundId as keyof typeof EPIC_SOURCES]}]).some(d => d.sourceSlotId === s.slotId)).map(s => s.slotId)])).toEqual([
-      ['1-2', ['m02']], ['1-3', ['m02']], ['1-4', ['m02']], ['2-7', ['k02','k03']],
-      ['3-7', ['w01','w02', 'w03', 'w04']], ['4-7', ['r01','r02', 'r03', 'r04', 'r05']], ['5-7', []], ['6-7', []],
-    ]);
-    expect(() => validateLootContent()).not.toThrow();
-  });
-
-  it('pins all category weights, including the distinct 10% five-gold substitute', () => {
-    expect(LOOT_CATEGORIES).toEqual({
-      1: [{ id: 'gold_1', weight: 75, payload: { kind: 'gold', quantity: 1 } }, { id: 'unit_1', weight: 25, payload: { kind: 'hero-pool', cost: 1 } }],
-      2: [{ id: 'gold_2', weight: 75, payload: { kind: 'gold', quantity: 2 } }, { id: 'unit_2', weight: 25, payload: { kind: 'hero-pool', cost: 2 } }],
-      3: [{ id: 'gold_3', weight: 75, payload: { kind: 'gold', quantity: 3 } }, { id: 'unit_3', weight: 25, payload: { kind: 'hero-pool', cost: 3 } }],
-      4: [{ id: 'gold_4', weight: 70, payload: { kind: 'gold', quantity: 4 } }, { id: 'gold_5_substitute', weight: 10, payload: { kind: 'gold', quantity: 5 } }, { id: 'unit_4', weight: 20, payload: { kind: 'hero-pool', cost: 4 } }],
-    });
-    for (const entries of Object.values(LOOT_CATEGORIES)) expect(entries.reduce((n, x) => n + x.weight, 0)).toBe(100);
-    expect(Object.keys(LOOT_HERO_POOLS)).toEqual(['1', '2', '3', '4']);
-  });
-
-  it('verifies all eight components and all 18 eligible heroes against the independent archive identities', () => {
-    expect(COMPONENT_POOL).toEqual(COMPONENTS.map(([apiName, definitionId]) => ({ apiName, definitionId })));
-    expect(archivedItems.items.filter(i => i.kind === 'component').map(i => i.apiName).sort()).toEqual(COMPONENTS.map(([api]) => api));
-    for (const [apiName, id] of COMPONENTS) expect(ITEM_DEFINITIONS[id]).toMatchObject({ apiName, kind: 'component' });
-    expect(LOOT_HERO_POOLS).toEqual(HEROES);
-    const archive: Record<string, { apiName: string; cost: number }> = archivedHeroes.champions;
-    for (const [cost, entries] of Object.entries(HEROES)) {
-      for (const [apiName, id] of entries) {
-        expect(archive[id]).toMatchObject({ apiName, cost: Number(cost) });
-        expect(M5_UNIT_DEFINITIONS[id].cost).toBe(Number(cost));
-      }
-    }
-    expect(archive.caitlyn).toMatchObject({ apiName: 'TFT13_Caitlyn', cost: 5 });
-    expect(Object.values(LOOT_HERO_POOLS).flat().map(([, id]) => id)).not.toContain('caitlyn');
-    // Source API order matters: local ID sorting would put loris after ezreal/kogmaw.
-    expect(LOOT_HERO_POOLS[3].map(([, id]) => id)).toEqual(['loris', 'ezreal', 'scar', 'kogmaw', 'nami']);
-  });
+describe('B8 v17 bounded content',()=>{
+ it('covers all eight encounters and every positive box row',()=>{
+  expect(LOOT_POLICY_VERSION).toBe('s13-orbs-project-v17');
+  expect(ROUND_CATALOG.filter(r=>r.kind==='pve').map(r=>[r.roundId,r.encounterId,r.ordinal])).toEqual(ENCOUNTERS);
+  expect(NEUTRAL_ENCOUNTERS).toHaveLength(8);expect(()=>validateLootContent()).not.toThrow();
+  for(const rows of Object.values(ORB_BOXES)){expect(rows.reduce((n,r)=>n+r.weight,0)).toBe(100);rows.forEach(r=>expect(r.weight).toBeGreaterThan(0));}
+ });
+ it('verifies components and all live heroes against the independent archive',()=>{
+  expect(COMPONENT_POOL).toEqual(COMPONENTS.map(([apiName,definitionId])=>({apiName,definitionId})));
+  expect(archivedItems.items.filter(i=>i.kind==='component').map(i=>i.apiName).sort()).toEqual(COMPONENTS.map(([api])=>api));
+  for(const [apiName,id] of COMPONENTS)expect(ITEM_DEFINITIONS[id]).toMatchObject({apiName,kind:'component'});
+  const archive:Record<string,{cost:number}>=archivedHeroes.champions;
+  for(const cost of [1,2,3,4,5] as const)for(const id of SHOP_CATALOG_BY_COST[cost]){if(archive[id])expect(archive[id].cost).toBe(cost);expect(M5_UNIT_DEFINITIONS[id].cost).toBe(cost);}
+ });
 });
 
 describe('T13 independent full-route RNG vectors', () => {
@@ -174,8 +133,8 @@ describe('B8 checkpoint ① identities, isolated descriptors and pure ordering',
     for (const [roundId, encounterId] of ENCOUNTERS) {
       const r = round(ledger, roundId);
       expect(r.encounterPlan).toMatchObject({ roundId, encounterId, policyVersion: 'm8b-pve-project-v2' });
-      for (const expected of EXPECTED_SLOTS[roundId]??lootPlan(0,38).rounds.find(r=>r.encounterPlan.roundId===roundId)!.orbs.map(o=>({sourceSlotId:EPIC_SOURCES[roundId as keyof typeof EPIC_SOURCES],slotOrdinal:o.slotOrdinal}))) {
-        const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,expected.sourceSlotId]);
+      for (const expected of lootPlan(0,38).rounds.find(r=>r.encounterPlan.roundId===roundId)!.orbs) {
+        const sourceUnitId=expected.sourceUnitId;
         const orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,expected.slotOrdinal]);
         expect(lootOrbId(roundId,encounterId,sourceUnitId,expected.slotOrdinal)).toBe(orbId);
         const orb=r.orbs.find(o=>o.orbId===orbId)!;expect(orb).toBeDefined();
@@ -267,9 +226,9 @@ describe('B8 checkpoint ① strict restore and immutable query boundaries', () =
         Object.values(value).forEach(checkFrozen);
       }
     };
-    for (const value of [ledger, LOOT_SLOTS, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_FREEZE_ALGORITHM]) checkFrozen(value);
-    expect(LOOT_FREEZE_VERSION).toBe('s13-orb-freeze-v16');
-    expect(ledger).toMatchObject({ version: 's13-orb-freeze-v16', seed: 0, replayDigest: LOOT_REPLAY_DIGEST, throughRoundOrdinal: 38 });
+    for (const value of [ledger, ORB_STAGE_PLAN, ORB_BOXES, LOOT_FREEZE_ALGORITHM]) checkFrozen(value);
+    expect(LOOT_FREEZE_VERSION).toBe('s13-orb-freeze-v17');
+    expect(ledger).toMatchObject({ version: 's13-orb-freeze-v17', seed: 0, replayDigest: LOOT_REPLAY_DIGEST, throughRoundOrdinal: 38 });
     expect(LOOT_REPLAY_DIGEST).toMatch(/^fnv1a32-utf16:[0-9a-f]{8}$/);
     const serialized = jsonCopy(ledger), restored = restoreFrozenLootLedger(serialized, { seed: 0, throughRoundOrdinal: 38 });
     expect(restored).toEqual(ledger);
@@ -310,7 +269,7 @@ describe('B8 checkpoint ① strict restore and immutable query boundaries', () =
     ['removed PvE choice injected',s=>{s.rounds[1].choices=[legacyChoice];}],
     ['orb tier',s=>{s.rounds[0].orbs[0].tier='prismatic';}],
     ['orb template',s=>{s.rounds[0].orbs[0].templateId='terminal';}],
-    ['orb entry mismatch',s=>{s.rounds[0].orbs[0].entries.reverse();}],
+    ['orb entry mismatch',s=>{s.rounds[0].orbs[0].entries[0].dropId+=' '; }],
     ['entry ordinal',s=>{s.rounds[1].encounterPlan.drops[0].entryOrdinal=99;}],
     ['extra nested authority',s=>{s.rounds[0].orbs[0].offers=['sword'];}],
     ['extra root authority', s => { s.inventory = []; }],

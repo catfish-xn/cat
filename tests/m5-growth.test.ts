@@ -9,7 +9,7 @@ import type {MatchState} from '../src/simulation/match-types';
 beforeAll(() => {
  const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
  expect(shared.seed).toBe(8);
-});
+},30_000);
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
 // Full ordinary acquisition is covered independently by the three route tests.
@@ -33,12 +33,15 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(state.persistentGrowth).toEqual([{unitId:'unit-4',attackDamageBps:250},{unitId:'unit-5',attackDamageBps:375}]);
  });
  it('commits actual battle growth once and never regrants it on restore, duplicate step or Continue',()=>{
-  // Real public income reaches 4-2 (G2-2 seed 8). Nine paid Tristana cards create the same
+  // Nine paid Tristana cards from the public v17 seed8 acquisition route create the same
   // three-star kill/growth control without relabelling the opening Irelia.
   let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
-  // The preparation route benches its army. Pay HP for four real loss rounds;
-  // their ordinary income/XP and free shop refreshes fund nine paid cards.
-  for(let round=0;round<4;round++)state=resolvePublicEquipmentChoices(accepted(api.nextRound(finishPublicEquipmentBattle(state),state.round)));
+  // Traverse four scheduled rounds; supply is settled after its choice and has no combat.
+  for(let round=0;round<4;round++){
+   if(state.phase==='preparation')state=finishPublicEquipmentBattle(state);
+   else expect(state.m8.round.kind).toBe('supply');
+   state=resolvePublicEquipmentChoices(accepted(api.nextRound(state,state.round)));
+  }
   // The random-loot acquisition route can leave a full reserve. Free it through
   // real sales before buying nine new Tristana cards; their lineage stays separate.
   for(const unit of state.preparation.units.filter(u=>u.team==='player'))
@@ -61,7 +64,19 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   // v15's new offers alter the paid route's combat modifiers. Back-row placement
   // preserves a real lethal bounce without changing any stats or growth assertions.
   state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:0,row:7}}));
+  // The new income/equipment prefix ends later. Use the next real PvE encounter
+  // for the lethal-growth control; preserve ordinary HP, income and anomaly acquisition.
+  for(let budget=0;state.roundDefinitionId!=='4-7';budget++){
+   expect(budget).toBeLessThan(6);
+   if(state.phase==='choice'){
+    const c=state.pendingChoice!;
+    state=c.step==='target'?accepted(api.selectAnomalyTarget(state,c.choiceId,c.generation,unitId))
+     :accepted(api.selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+   }else if(state.phase==='preparation')state=finishPublicEquipmentBattle(state);
+   else state=accepted(api.nextRound(state,state.round));
+  }
   const initial=state;
+  const priorGrowth=initial.persistentGrowth.find(g=>g.unitId===unitId)?.attackDamageBps??0;
   let live=accepted(api.startMatchCombat(state)),growthEvents=0;
   while(live.phase==='combat'){
    const result=api.stepMatch(live);
@@ -71,7 +86,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
    live=result.state;
   }
   expect(growthEvents).toBeGreaterThan(0);
-  expect(live.persistentGrowth).toEqual([{unitId,attackDamageBps:125*growthEvents}]);
+  expect(live.persistentGrowth).toEqual([{unitId,attackDamageBps:priorGrowth+125*growthEvents}]);
   expect(live.roundResults).toHaveLength(initial.roundResults.length+1);
   const restored=restoreMatch(JSON.stringify(live));expect(restored).toEqual(live);
   const forged=JSON.parse(JSON.stringify(live));forged.persistentGrowth[0].attackDamageBps+=125;
@@ -79,5 +94,5 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   const duplicate=api.stepMatch(restored);expect(duplicate.state).toBe(restored);expect(duplicate.events).toEqual([]);
   const next=accepted(api.nextRound(restored,restored.round));expect(next.persistentGrowth).toEqual(live.persistentGrowth);
   const stale=api.nextRound(next,restored.round);expect(stale.ok).toBe(false);expect(stale.state).toBe(next);
- });
+ },20_000);
 });

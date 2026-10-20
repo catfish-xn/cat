@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest';
-import {sampleOrbTemplate,drawIndex} from '../src/simulation/orb-layout';
-import {ORB_RULES} from '../src/simulation/content/orbs';
-it('P5 frozen cumulative weights match every legacy index, including all requested boundaries',()=>{
- expect(ORB_RULES.openingWeights).toEqual([50,50]);expect(ORB_RULES.equipmentWeights).toEqual([90,9,1]);
- for(const index of [0,49,50,89,90,98,99,...Array.from({length:100},(_,i)=>i)]) {
-  expect(sampleOrbTemplate('opening-bonus',index)).toEqual(index<50?{templateId:'component',tier:'blue'}:{templateId:'opening-gold',tier:'gray'});
-  expect(sampleOrbTemplate('equipment',index)).toEqual(index<90?{templateId:'blue-pair',tier:'blue'}:index<99?{templateId:'gold-pair',tier:'gold'}:{templateId:'prismatic-standard',tier:'prismatic'});
- }
- expect(()=>sampleOrbTemplate('equipment',100)).toThrow();expect(()=>sampleOrbTemplate('opening-bonus',-1)).toThrow();
+import {drawIndex} from '../src/simulation/orb-layout';
+import {ORB_STAGE_PLAN,orbBoxId} from '../src/simulation/content/orbs';
+it('v17 uses exact original stage weights and Plus boundaries',()=>{
+ expect(ORB_STAGE_PLAN.highOdds).toEqual([630,300,58,10,2]);
+ expect(ORB_STAGE_PLAN.stages[0].high.reduce((n,r)=>n+r.weight,0)).toBe(110);
+ expect(orbBoxId('gray',2)).toBe('copper');expect(orbBoxId('gray',3)).toBe('copperPlus');
+ expect(orbBoxId('blue',3)).toBe('silver');expect(orbBoxId('blue',4)).toBe('silverPlus');
+ expect(orbBoxId('gold',3)).toBe('gold');expect(orbBoxId('gold',4)).toBe('goldPlus');
+ for(let stage=1;stage<=4;stage++)expect(orbBoxId('prismatic',stage)).toBe('ultraPlus');
 });
 it('P5 rejection draw consumes the rejected word and keeps the legacy modulo cursor',()=>{
  // Inverse LCG seed: first word 0xffffffff, rejected for size 100.

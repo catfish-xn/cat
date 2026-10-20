@@ -1,7 +1,10 @@
 import { canonicalContent, equalValidatedContent } from './content';
 import { shareGeneratedJson } from './immutable-json';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { ORB_SLOTS, ORB_RULES, EPIC_SOURCES } from './content/orbs';
+import { ORB_RULES, EPIC_SOURCES, orbBoxId } from './content/orbs';
+import { NEUTRAL_ENCOUNTERS } from './content/neutral-encounters';
+import { sampleOrbStagePlan } from './orb-stage-plan';
+export { sampleOrbStagePlan } from './orb-stage-plan';
 import { nextRandom, validateSeed } from './rng';
 import type { RngStream } from './m8/contracts';
 
@@ -13,7 +16,7 @@ export interface OrbRoundLayout {
     readonly tier: OrbTier; readonly templateId: string }[];
 }
 export interface OrbLayoutLedger {
-  readonly version: 's13-orb-layout-v1'; readonly seed: number; readonly throughRoundOrdinal: number;
+  readonly version: 's13-orb-layout-v2'; readonly seed: number; readonly throughRoundOrdinal: number;
   readonly rng: RngStream; readonly rounds: readonly OrbRoundLayout[];
 }
 export type OrbLayoutFailure = 'invalid-orb-layout' | 'stale-orb-layout' | 'invalid-orb-round';
@@ -22,7 +25,7 @@ export type OrbLayoutResult = { readonly ok: true; readonly layout: OrbLayoutLed
 export type LootInitialization = { readonly mode: 'solo' } | { readonly mode: 'shared-deferred' };
 export type LootLayoutBinding = { readonly mode: 'solo'; readonly layout: OrbLayoutLedger }
   | { readonly mode: 'shared-deferred' }
-  | { readonly mode: 'shared'; readonly poolId: string; readonly version: 's13-orb-layout-v1'; readonly throughRoundOrdinal: number };
+  | { readonly mode: 'shared'; readonly poolId: string; readonly version: 's13-orb-layout-v2'; readonly throughRoundOrdinal: number };
 
 // Membership is granted only by the deterministic constructors below, never by
 // deserialization or by observing a frozen wrapper supplied by a caller.
@@ -53,22 +56,8 @@ export function drawIndex(rng: RngStream, size: number): { readonly index: numbe
 }
 export function createOrbLayout(seed: number): OrbLayoutLedger {
   validateSeed(seed);
-  return generated({version: 's13-orb-layout-v1', seed, throughRoundOrdinal: 0,
+  return generated({version: 's13-orb-layout-v2', seed, throughRoundOrdinal: 0,
     rng: { state: (seed ^ ORB_RULES.layoutSeedXor) >>> 0, draws: 0 }, rounds: []});
-}
-/** Index is drawn over the sum of the frozen weights; order is part of the release identity. */
-export function sampleOrbTemplate(kind: 'opening-bonus' | 'equipment', index: number): { templateId: string; tier: OrbTier } {
-  const weights = kind === 'opening-bonus' ? ORB_RULES.openingWeights : ORB_RULES.equipmentWeights;
-  const choices: readonly {templateId: string; tier: OrbTier}[] = kind === 'opening-bonus'
-    ? [{templateId:'component',tier:'blue'}, {templateId:'opening-gold',tier:'gray'}]
-    : [{templateId:'blue-pair',tier:'blue'}, {templateId:'gold-pair',tier:'gold'}, {templateId:'prismatic-standard',tier:'prismatic'}];
-  if (!Number.isSafeInteger(index) || index < 0) throw new RangeError('Invalid orb weight index');
-  let boundary = 0;
-  for (let i = 0; i < weights.length; i++) {
-    boundary += weights[i];
-    if (index < boundary) return choices[i];
-  }
-  throw new RangeError('Invalid orb weight index');
 }
 const replayedLayouts = new Map<string, OrbLayoutLedger>();
 function replay(seed: number, ordinal: number): OrbLayoutLedger {
@@ -81,26 +70,32 @@ function replay(seed: number, ordinal: number): OrbLayoutLedger {
   return layout;
 }
 function replayUncached(seed: number, ordinal: number): OrbLayoutLedger {
-  let layout = createOrbLayout(seed), rng = layout.rng;
+  const layout = createOrbLayout(seed);
+  // Compute once for all entered rounds; only the entered prefix is serialized.
+  const plan = ordinal > 0 ? sampleOrbStagePlan(seed) : null;
   const rounds: OrbRoundLayout[] = [];
   for (const round of ROUND_CATALOG) {
     if (round.ordinal > ordinal) break;
     if (round.kind !== 'pve') continue;
-    const slots = ORB_SLOTS[round.roundId] ?? [{sourceSlotId:EPIC_SOURCES[round.roundId as keyof typeof EPIC_SOURCES],slotOrdinal:0,tier:'gold' as const,templateId:'epic-reward'}];
+    const encounter = NEUTRAL_ENCOUNTERS.find(e=>e.roundId===round.roundId)!;
+    const carriers = encounter.slots.map(s=>s.slotId).sort();
+    const slots:{sourceSlotId:string;slotOrdinal:number;tier:OrbTier;templateId:string}[]=[];
+    if(round.stage<=4) {
+      const row=plan!.stages[round.stage-1];
+      const sequence:{tier:OrbTier;templateId:string}[]=[];
+      for(const kind of ['components','gray','blue','gold','prismatic'] as const)
+        for(let i=0;i<row[kind];i++)sequence.push(kind==='components'?{tier:'blue',templateId:'component'}:{tier:kind,templateId:orbBoxId(kind,round.stage)});
+      const selected=round.stage===1?sequence.filter((_,i)=>i%3===round.ordinal-1):sequence;
+      selected.forEach((s,i)=>slots.push({...s,sourceSlotId:carriers[i%carriers.length],slotOrdinal:Math.floor(i/carriers.length)}));
+    } else slots.push({sourceSlotId:EPIC_SOURCES[round.roundId as keyof typeof EPIC_SOURCES],slotOrdinal:0,tier:'gold',templateId:'epic-reward'});
     const orbs = slots.map(slot => {
-      let templateId = slot.templateId, tier: OrbTier = slot.tier;
-      if (templateId === 'opening-bonus' || templateId === 'equipment') {
-        const weights = templateId === 'opening-bonus' ? ORB_RULES.openingWeights : ORB_RULES.equipmentWeights;
-        const draw = drawIndex(rng, weights.reduce((sum, weight) => sum + weight, 0)); rng = draw.rng;
-        const selected = sampleOrbTemplate(templateId, draw.index);
-        templateId = selected.templateId; tier = selected.tier;
-      }
+      const {templateId,tier}=slot;
       return {sourceUnitId: JSON.stringify(['pve', round.roundId, round.encounterId, slot.sourceSlotId]),
         slotOrdinal: slot.slotOrdinal, tier, templateId};
     }).sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : a.sourceUnitId > b.sourceUnitId ? 1 : a.slotOrdinal-b.slotOrdinal);
     rounds.push({roundId:round.roundId, encounterId:round.encounterId!, orbs});
   }
-  return generated({...layout, throughRoundOrdinal:ordinal, rng, rounds});
+  return generated({...layout, throughRoundOrdinal:ordinal, rounds});
 }
 export function restoreOrbLayout(value: unknown, parsedJsonInput = false): OrbLayoutLedger {
   if (!value || typeof value !== 'object') throw new RangeError('Invalid orb layout');

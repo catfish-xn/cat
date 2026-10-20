@@ -1,23 +1,21 @@
-import { sampleOrbDuplicatorBonus, orbDuplicatorIndex } from './orb-bonuses';
+import { sampleOrbBox } from './orb-box';
 import { EPIC_LOOT } from './content/loot';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { ConsumableDefinitionId } from './consumable-types';
 import { isImmutableJson, shareGeneratedJson } from './immutable-json';
 import { canonicalContent, equalValidatedContent } from './content';
 import { freezeContent } from './content/freeze';
-import { LOOT_CATEGORIES, LOOT_HERO_POOLS } from './content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { COMPONENT_POOL, validateComponentPool } from './component-pool';
-import { ORB_RULES, ORB_SLOTS, EPIC_SOURCES } from './content/orbs';
-import { REFORGE_POOLS } from './content/consumables';
+import { validateComponentPool } from './component-pool';
+import { ORB_RULES, EPIC_SOURCES } from './content/orbs';
 import type { LootPayload, RngStream } from './m8/contracts';
 import { lootOrbId, lootEntryId } from './loot-identity';
 import type { FrozenDirectDrop, FrozenLootLedger, FrozenLootRound, OrbPlan } from './loot-types';
 import { createOrbLayout, freezeOrbLayoutThroughRound, restoreOrbLayout, drawIndex, type OrbLayoutLedger } from './orb-layout';
 import { validateSeed } from './rng';
 import { LOOT_REPLAY_DIGEST } from './content/identity-constants';
-export const LOOT_FREEZE_VERSION = 's13-orb-freeze-v16';
+export const LOOT_FREEZE_VERSION = 's13-orb-freeze-v17';
 export { LOOT_FREEZE_ALGORITHM } from './content/loot';
 export { LOOT_REPLAY_DIGEST };
 export const drawLootIndex=drawIndex;
@@ -48,11 +46,11 @@ function validateOrdinal(ordinal:number):void {
 }
 export function validateLootContent():void {
   validateComponentPool();
-  if (Object.keys(ORB_SLOTS).length+Object.keys(EPIC_SOURCES).length!==NEUTRAL_ENCOUNTERS.length)throw new RangeError('Invalid orb round set');
+  if (NEUTRAL_ENCOUNTERS.length!==8)throw new RangeError('Invalid orb round set');
   for(const encounter of NEUTRAL_ENCOUNTERS) {
-    const slots=ORB_SLOTS[encounter.roundId]??[{sourceSlotId:EPIC_SOURCES[encounter.roundId as keyof typeof EPIC_SOURCES],slotOrdinal:0}];
-    if (!slots||slots.some(s=>!encounter.slots.some(u=>u.slotId===s.sourceSlotId))
-      ||new Set(slots.map(s=>JSON.stringify([s.sourceSlotId,s.slotOrdinal]))).size!==slots.length)throw new RangeError('Invalid orb sources');
+    const epic=EPIC_SOURCES[encounter.roundId as keyof typeof EPIC_SOURCES];
+    if (!encounter.slots.length||new Set(encounter.slots.map(s=>s.slotId)).size!==encounter.slots.length
+      ||(epic&&!encounter.slots.some(s=>s.slotId===epic)))throw new RangeError('Invalid orb sources');
   }
 }
 validateLootContent();
@@ -74,10 +72,8 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
   let rng:RngStream={state:(seed^ORB_RULES.lootSeedXor)>>>0,draws:0};
   const rounds:FrozenLootRound[]=[];
   const draw=(n:number)=>{const r=drawIndex(rng,n);rng=r.rng;return r.index;};
-  const component=():LootPayload=>({kind:'item',definitionId:COMPONENT_POOL[draw(8)].definitionId,quantity:1});
   const gold=(quantity:number):LootPayload=>({kind:'gold',quantity});
   const tool=(definitionId:ConsumableDefinitionId):LootPayload=>({kind:'consumable',definitionId,quantity:1});
-  const hero=(cost:1|2|3|4):LootPayload=>{const pool=LOOT_HERO_POOLS[cost];return {kind:'unit',definitionId:pool[draw(pool.length)][1],quantity:1};};
   const epicHero=(cost:2|3|4):LootPayload=>({kind:'unit',definitionId:SHOP_CATALOG_BY_COST[cost][draw(SHOP_CATALOG_BY_COST[cost].length)],quantity:1});
   const select=<T extends {readonly weight:number}>(rows:readonly T[],size:number):T=>{let index=draw(size);for(const row of rows){if(index<row.weight)return row;index-=row.weight;}throw new RangeError('Invalid reward weights');};
   const box=(id:string):LootPayload[]=>{
@@ -93,10 +89,6 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
       case 'duplicator':return [gold(3),tool('TFT_Consumable_NeekosHelp')];
       default:throw new RangeError('Invalid box');
     }
-  };
-  const duplicateBonus=(tier:import('./orb-layout').OrbTier,stage:number,orbId:string):LootPayload[]=>{
-    if(stage>4||tier==='prismatic')return [];
-    return sampleOrbDuplicatorBonus(tier,stage,orbDuplicatorIndex(seed,orbId)).map(tool);
   };
   for(const round of ROUND_CATALOG) {
     if(round.ordinal>throughRoundOrdinal)break;if(round.kind!=='pve')continue;
@@ -127,27 +119,8 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
         for(const silver of silvers)group('blue','epic-silver',box(silver==='reforger'?'silver-reforger':silver));
         continue;
       }
-      let payloads:LootPayload[];
-      switch(orb.templateId) {
-        case 'opening-unit':payloads=[hero(1),tool('magnetic-remover')];break;
-        case 'component':payloads=[component()];break;
-        case 'remover':payloads=[tool('magnetic-remover')];break;
-        case 'opening-gold':payloads=[gold(3)];break;
-        case 'blue-pair':payloads=[component(),component()];break;
-        case 'gold-pair':payloads=[component(),component(),gold(4)];break;
-        case 'prismatic-standard':payloads=[{kind:'item',definitionId:REFORGE_POOLS.completed[draw(36)].definitionId,quantity:1},
-          gold(8),tool('reforger'),tool('reforger')];break;
-
-        default:{
-          if(!/^gray-[1-4]$/.test(orb.templateId))throw new RangeError('Invalid orb template');
-          const cost=Number(orb.templateId.slice(-1)) as 1|2|3|4;let index=draw(100);
-          const category=LOOT_CATEGORIES[cost].find(c=>{if(index<c.weight)return true;index-=c.weight;return false;})!;
-          payloads=[category.payload.kind==='gold'?gold(category.payload.quantity):hero(category.payload.cost),tool('magnetic-remover')];
-          const extra=draw(100);if(extra>=ORB_RULES.grayToolWeights[0])payloads.push(tool('reforger'));
-        }
-      }
-      payloads.push(...duplicateBonus(orb.tier,round.stage,lootOrbId(round.roundId,round.encounterId!,orb.sourceUnitId,orb.slotOrdinal)));
-      add(orb,payloads);
+      const orbId=lootOrbId(round.roundId,round.encounterId!,orb.sourceUnitId,orb.slotOrdinal);
+      add(orb,sampleOrbBox(seed,orbId,orb.templateId).payloads);
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});
   }

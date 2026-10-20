@@ -1,0 +1,888 @@
+{
+  "date": "2026-10-21",
+  "head": "3a786fa8f8c7217ec3e1518313b4e1ff0afebd77",
+  "command": "npx vitest run --configLoader runner --project fast --maxWorkers 4",
+  "identities": {
+    "contentBefore": "fnv1a32-utf16:8a955c10",
+    "contentAfter": "fnv1a32-utf16:05439fc4",
+    "lootBefore": "fnv1a32-utf16:62c76cb9",
+    "lootAfter": "fnv1a32-utf16:132ae758",
+    "schema": 8,
+    "save": 4,
+    "replay": 3,
+    "command": 4
+  },
+  "size": {
+    "baseline": 424763,
+    "current": 627432,
+    "ratio": 1.477134307837547,
+    "limit": 1.49,
+    "preloads3d": false,
+    "passed": true
+  },
+  "targeted": {
+    "files": 17,
+    "passed": 244,
+    "failed": 0,
+    "pending": 0
+  },
+  "fast": {
+    "files": 418,
+    "passedFiles": 354,
+    "failedFiles": 64,
+    "total": 5462,
+    "passed": 4884,
+    "failed": 448,
+    "pending": 130,
+    "durationSeconds": 716.53
+  },
+  "streamProof": {
+    "seeds": 6,
+    "shopVectors": 78,
+    "reforgeVectors": 30,
+    "byteIdentical": true
+  },
+  "forbiddenChanges": [],
+  "epochRerecorded": false,
+  "failures": [
+    {
+      "file": "tests/bracer-multikill-stacks.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "bench-full",
+      "examples": []
+    },
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "SR-C19-01 same-tick burn attachment reduced seed-9 compiled input finishes with one pulse per live 20-tick interval",
+          "message": "BattleValidationError: content-digest"
+        }
+      ]
+    },
+    {
+      "file": "tests/d11-wiring-bank.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "a resumable online task consumes live bank samples, replays the exact same ledger and keeps bank values private",
+          "message": "AssertionError: expected 'fnv1a32-utf16:05439fc4' to be 'fnv1a32-utf16:8a955c10' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/d14-anomalies-source.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "registers the two D14 anomalies in v17 without overwriting retained intentional values",
+          "message": "AssertionError: expected 'fnv1a32-utf16:05439fc4' to be 'fnv1a32-utf16:8a955c10' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/d14-wiring-match.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "R17 {\"type\":\"continue\",\"round\":17} unsettled-round",
+      "examples": []
+    },
+    {
+      "file": "tests/epic-loot-reforger.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "v17 epic rewards and unified consumables a real 5-7 command path restores new forge receipts and never repeats the rewards",
+          "message": "Error: Invalid Match save: unsupported-version"
+        },
+        {
+          "test": "v17 epic rewards and unified consumables authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP",
+          "message": "Error: Invalid Match save: unsupported-version"
+        }
+      ]
+    },
+    {
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+          "message": "Error: Build failed with 2 errors:"
+        },
+        {
+          "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+          "message": "Error: Build failed with 2 errors:"
+        }
+      ]
+    },
+    {
+      "file": "tests/explorer-bracer-restore.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "bench-full",
+      "examples": []
+    },
+    {
+      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "rejects moving the earning settlement and prefix past the forged singed birth",
+          "message": "AssertionError: expected 'unit-39' to be 'unit-40' // Object.is equality"
+        },
+        {
+          "test": "rejects moving the earning settlement and prefix past the forged renni birth",
+          "message": "AssertionError: expected 'unit-39' to be 'unit-40' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4a-crown-history.test.ts",
+      "failed": 20,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M2 equipment binding continuity rejects seed 7 cross-round crown transfer despite self-consistent production replay and rewards",
+          "message": "TypeError: Cannot read properties of undefined (reading 'id')"
+        },
+        {
+          "test": "M2 equipment binding continuity accepts legal sale and subsequent re-equipping",
+          "message": "TypeError: Cannot read properties of undefined (reading 'id')"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "pins all 29 executable IDs against the intact 29 source identities and hashes the acquisition policy",
+          "message": "AssertionError: expected 'fnv1a32-utf16:2b97ea5f' not to be 'fnv1a32-utf16:2b97ea5f' // Object.is equality"
+        },
+        {
+          "test": "completed reforger refuses artifacts in inventory or equipped without consuming tool/RNG; ordinary reforge still restores",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "source records cover the 29-artifact pool across declarative and new-mechanism registries",
+          "message": "AssertionError: expected 'g2-4b-orb-combo-v17' to be 'g2-4b-epic-loot-reforger-v16' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-mirror-forge-restore.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "public Match Mirror Jayce row 4 restores its independent forge at opening, midcombat and terminal",
+          "message": "AssertionError: expected [ { id: 'item-1', …(2) }, …(1) ] to deeply equal [ { id: 'item-1', …(2) } ]"
+        },
+        {
+          "test": "public Match Mirror Jayce row 6 restores its independent forge at opening, midcombat and terminal",
+          "message": "AssertionError: expected [ { id: 'item-1', …(2) }, …(1) ] to deeply equal [ { id: 'item-1', …(2) } ]"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-pr161-restore.test.ts",
+      "failed": 10,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "restores the copied hero across battles and an equip/remove cycle with full history and identical next-battle ticks",
+          "message": "Error: Fixture command refused"
+        },
+        {
+          "test": "restores the award-round duplicator copying the hero just granted by the same tier4 chest",
+          "message": "Error: Fixture command refused"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-support-forge.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "completed reforger rejects every support in inventory and on a holder without tool, receipt or RNG changes",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        }
+      ]
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "preserves preparation, items and deterministic compact replay across both seats",
+          "message": "AssertionError: expected [ { id: 'item-1', …(2) }, …(1) ] to deeply equal [ { id: 'item-1', …(2) } ]"
+        }
+      ]
+    },
+    {
+      "file": "tests/m5-route.test.ts",
+      "failed": 7,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M5 ordinary three-build routes and independent resource ledger normally buys five-cost Caitlyn and fields her for at least two real battles",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        },
+        {
+          "test": "M5 ordinary three-build routes and independent resource ledger cannon: ordinary purchases/rewards to 6-7 with a complete build",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        }
+      ]
+    },
+    {
+      "file": "tests/m6-integration-mage.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M6 independent route/history/playback/session integration mage: every completed battle has exact original state/events and isolated playback",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        },
+        {
+          "test": "M6 independent route/history/playback/session integration mage: full catalog-capacity envelope acceptance (B9)",
+          "message": "CompatibilityError: 存档无效：文件数据损坏或校验未通过"
+        }
+      ]
+    },
+    {
+      "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M6 independent route/history/playback/session integration sniper-caitlyn: every completed battle has exact original state/events and isolated playback",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        },
+        {
+          "test": "M6 independent route/history/playback/session integration sniper-caitlyn: full catalog-capacity envelope acceptance (B9)",
+          "message": "CompatibilityError: 存档无效：文件数据损坏或校验未通过"
+        }
+      ]
+    },
+    {
+      "file": "tests/m6-integration-sniper.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M6 independent route/history/playback/session integration sniper: every completed battle has exact original state/events and isolated playback",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        },
+        {
+          "test": "M6 independent route/history/playback/session integration sniper: full catalog-capacity envelope acceptance (B9)",
+          "message": "CompatibilityError: 存档无效：文件数据损坏或校验未通过"
+        }
+      ]
+    },
+    {
+      "file": "tests/m6-integration.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M6 independent route/history/playback/session integration cannon: every completed battle has exact original state/events and isolated playback",
+          "message": "AssertionError [ERR_ASSERTION]: golden schemaVersion: review explicit rule/version change"
+        },
+        {
+          "test": "M6 independent route/history/playback/session integration [B8] cannon: completed history retains sold opening transition units",
+          "message": "TypeError: Cannot destructure property 'route' of 'cannonTransition' as it is undefined."
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b10-encounter-outcomes.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B10 eight encounters: actual public Match outcomes 6-7: normal public army wins and every defeated-source reward is earned once",
+          "message": "AssertionError: expected [ { …(3) }, …(5) ] to deeply equal [ { kind: 'forge', …(2) }, …(4) ]"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B10 temporary equipment replay rebuild records the temporary children in the battle context and rebuilds the identical terminal",
+          "message": "AssertionError: expected [ { …(3) }, { …(3) } ] to deeply equal [ { …(3) }, { …(3) } ]"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b4-audit-regressions.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B4 audit R1: qualified packets and counter projections 5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage",
+          "message": "AssertionError: expected { kind: 'inventory' } to match object { kind: 'unit', unitId: 'unit-1' }"
+        },
+        {
+          "test": "B4 audit R3: projection semantics and active-effect receipt references R3b rejects deletion of the entire Bloodthirster receipt while its granted shield is active",
+          "message": "AssertionError: expected +0 to be 175 // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b4-integration.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B4 composed consumers and restore rejection Lux HoJ samples360×130%=468; crossing below50% keeps charged468 for the next attack; a genuine charge survives Match save",
+          "message": "AssertionError: expected +0 to be 468 // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B4 R3b: compiled consumption partition survives the complete shield lifecycle untriggered legal object/JSON saves retain first use; missing/duplicate unconsumed identities are rejected",
+          "message": "AssertionError: expected 460 to be +0 // Object.is equality"
+        },
+        {
+          "test": "B4 R3b: compiled consumption partition survives the complete shield lifecycle consumed source with an active shield rejects deletion of its receipt in both restore entries",
+          "message": "AssertionError: expected 460 to be +0 // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": null,
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": null,
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "Public B8 equipment fixture did not finish 4-6: gameOver",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B7 audit: Match save/restore of real encounters 6-7: restoring at every opening and mechanism tick reproduces the continuous run",
+          "message": "Error: Invalid Match save: unsupported-version"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "failed": 7,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+          "message": "Error: Invalid Match save: unsupported-version"
+        },
+        {
+          "test": "B7 installed encounters and trusted Match restore restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+          "message": "Error: Invalid Match save: unsupported-version"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-equipment-fixture.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B8 public equipment fixture provenance wins the real opening, receives both heroes and combines random cloak with the 2-4 selected sword",
+          "message": "AssertionError: expected '2-1' to be '2-5' // Object.is equality"
+        },
+        {
+          "test": "B8 public equipment fixture provenance equips the actual dropped Lux while preserving the original Irelia on the bench",
+          "message": "AssertionError: expected { id: 'unit-3', …(4) } to match object { definitionId: 'lux', …(1) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-input-evidence.test.mjs",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "Cannot read properties of undefined (reading 'grantedItemIds')",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-live-capacity.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "T13 public fixture: wrong-phase",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-live-cross-round.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "Cannot read properties of undefined (reading 'grantedItemIds')",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-live-economy.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "T13 public fixture: invalid-location",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "failed": 14,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B8 live growth plus immediate randomized loot merge pins real v16 seed74 prior stock and original-source current delta independently",
+          "message": "AssertionError: expected [ { unitId: 'unit-17', …(1) }, …(1) ] to deeply equal [ { unitId: 'unit-17', …(1) } ]"
+        },
+        {
+          "test": "B8 live growth plus immediate randomized loot merge keeps the consumed reward birth, original stars and frozen combat basis",
+          "message": "AssertionError: expected { kind: 'unit', …(2) } to deeply equal { kind: 'unit', …(2) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "Cannot read properties of undefined (reading 'consumableId')",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "T13 public fixture: unknown-unit",
+      "examples": []
+    },
+    {
+      "file": "tests/m8-b8-loot-view.test.ts",
+      "failed": 4,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B8 readLootView over real randomized public routes after PvE grants item/tool entries and withholds the full-bench hero, with no obsolete choice",
+          "message": "AssertionError: expected 'choice' to be 'settlement' // Object.is equality"
+        },
+        {
+          "test": "B8 readLootView over real randomized public routes one real sale grants the hero and unblocks Continue, while the next round clears the view",
+          "message": "Error: T13 public fixture: wrong-phase"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-oracle.test.ts",
+      "failed": 5,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "independent B8 oracle arithmetic and frozen reference pins randomized orb source/order, all eight components and terminal gold/tool",
+          "message": "AssertionError: expected [ [ 'tear', 'cloak' ], …(2) ] to deeply equal [ [ 'sword', 'tear' ], …(2) ]"
+        },
+        {
+          "test": "independent B8 oracle checks authentic command transitions counts Into the Unknown held ownership through real departure and return, rejecting missing or duplicated resources",
+          "message": "AssertionError [ERR_ASSERTION]: R25 {\"type\":\"equip\",\"itemId\":\"item-19\",\"unitId\":\"unit-20\",\"slot\":0} unknown-unit"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-restore.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B8 default Match own restore rejects frozen plan, receipt, birth, evidence, counter and source-delta corruption",
+          "message": "AssertionError: expected [] to deeply equal [ 'unit-2' ]"
+        },
+        {
+          "test": "B8 default Match own restore keeps receipt schema rejection through the shared lineage validator",
+          "message": "AssertionError: expected [] to deeply equal [ 'unit-2' ]"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-token-lifecycle.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "B8 real BoardScene reward-token lifecycle (display mocks, no browser claim) creates the actual seed-6240 Maddie before final-frame syncCombat and keeps one selectable, non-draggable bench token",
+          "message": "AssertionError: expected { …(5) } to match object { …(2) }"
+        },
+        {
+          "test": "B8 real BoardScene reward-token lifecycle (display mocks, no browser claim) retains an actually consumed Combat Lux through automatic reward settlement, then destroys every cached reference on Continue",
+          "message": "AssertionError: expected false to be true // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "failed": 134,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "restoreMatch text fast path is exact recorded cannon state 0: restore from text equals restore from the parsed object",
+          "message": "Error: Invalid Match save: unsupported-version"
+        },
+        {
+          "test": "restoreMatch text fast path is exact recorded cannon state 1: restore from text equals restore from the parsed object",
+          "message": "Error: Invalid Match save: unsupported-version"
+        }
+      ]
+    },
+    {
+      "file": "tests/match-lifecycle.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "M5 lifecycle retains unique settlement and isolated snapshots a nonempty starting roster naturally loses without HP/result injection",
+          "message": "AssertionError: expected false to be true // Object.is equality"
+        },
+        {
+          "test": "M5 lifecycle retains unique settlement and isolated snapshots preserves every frozen preparation/economic snapshot until terminal commit",
+          "message": "AssertionError: expected { board: { columns: 7, …(2) }, …(2) } to deeply equal { board: { columns: 7, …(2) }, …(2) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "failed": 136,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "binds v17 to fresh public rules and preserved v16 byte evidence",
+          "message": "AssertionError: expected 'fnv1a32-utf16:05439fc4' to be 'fnv1a32-utf16:8a955c10' // Object.is equality"
+        },
+        {
+          "test": "cannon: checkpoint 0 survives strict text/object restore",
+          "message": "Error: Invalid Match save: unsupported-version"
+        }
+      ]
+    },
+    {
+      "file": "tests/r3r4-consumable-targets.test.ts",
+      "failed": 4,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "SR-C18 authority-projected consumable targets preparation: exact authority reasons, ownership and detached read-only output",
+          "message": "TypeError: Cannot read properties of undefined (reading 'id')"
+        },
+        {
+          "test": "SR-C18 authority-projected consumable targets combat: exact authority reasons, ownership and detached read-only output",
+          "message": "TypeError: Cannot read properties of undefined (reading 'id')"
+        }
+      ]
+    },
+    {
+      "file": "tests/r3r4-consumables.test.ts",
+      "failed": 15,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "R4 public tools, four phases and restored source history magnetic-remover/component in preparation: real loot, once-only use, frozen battle and B8 restore",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        },
+        {
+          "test": "R4 public tools, four phases and restored source history reforger/component in preparation: real loot, once-only use, frozen battle and B8 restore",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        }
+      ]
+    },
+    {
+      "file": "tests/r3r4-shared.test.ts",
+      "failed": 5,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "D6 shared layout, transactions and D7 projections shared remover in preparation bumps revisions once without changing stock or the frozen battle",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        },
+        {
+          "test": "D6 shared layout, transactions and D7 projections shared remover in combat bumps revisions once without changing stock or the frozen battle",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        }
+      ]
+    },
+    {
+      "file": "tests/t11-opening-xp.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "T11 signed opening economy seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 13 gold (T13 opening bonus), exactly once",
+          "message": "AssertionError: expected { anomalyBinding: null, …(46) } to match object { roundDefinitionId: '2-1', …(4) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/t12-combat-equip.test.ts",
+      "failed": 0,
+      "pending": 0,
+      "suiteError": "Public B8 equipment fixture did not finish 4-3: gameOver",
+      "examples": []
+    },
+    {
+      "file": "tests/t12-offline-transfer.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item",
+          "message": "TypeError: Cannot read properties of undefined (reading 'consumableId')"
+        }
+      ]
+    },
+    {
+      "file": "tests/t3-timeout-loot.test.ts",
+      "failed": 4,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "T3 earned loot timeout transaction grants the earned hero once, with original lineage and zero gold spent",
+          "message": "AssertionError: expected [ { …(8) }, { …(8) }, { …(8) } ] to have a length of 2 but got 3"
+        },
+        {
+          "test": "T3 earned loot timeout transaction keeps a capacity-blocked orb at deadline and sells its hero only on explicit claim",
+          "message": "AssertionError: expected { …(8) } to match object { resolution: 'capacity-sold', …(2) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/t5r-loot-view.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "SR-C7-02 revealed loot whitelist shows real shared-pool shortage compensation from the paid receipt, not the frozen hero plan",
+          "message": "AssertionError: expected { kind: 'item', …(2) } to deeply equal { kind: 'unit', …(2) }"
+        },
+        {
+          "test": "SR-C7-02 revealed loot whitelist shows an unclaimed full-bench orb at deadline and its explicit capacity sale",
+          "message": "AssertionError: expected { …(8) } to match object { Object (resolution, gold) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/t7-integration.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "T7 public-command traversal twenty consecutive real rounds from seed 1 accept every intention, with no synthetic gold, HP or choices",
+          "message": "Error: unsettled-round"
+        }
+      ]
+    },
+    {
+      "file": "tests/task-mechanism-restore.test.ts",
+      "failed": 14,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "saves Morgana curse without a summon or bracer, restores object/JSON, and continues every tick",
+          "message": "Error: bench-full"
+        },
+        {
+          "test": "rejects altered or invented target reave facts beside the legal seed 3151248 curse",
+          "message": "Error: bench-full"
+        }
+      ]
+    },
+    {
+      "file": "tests/tp-rewards-and-rounds.test.ts",
+      "failed": 5,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "TP opening and earned reward sources frozen future rewards reserve nothing; earned hero competes for one last copy then compensates gold once",
+          "message": "AssertionError: expected 1 to be +0 // Object.is equality"
+        },
+        {
+          "test": "TP opening and earned reward sources full bench reserves nothing at reveal or deadline; explicit claim sells once",
+          "message": "AssertionError: expected undefined to match object { Object (resolution, gold) }"
+        }
+      ]
+    },
+    {
+      "file": "tests/ur-i3-combat-statuses.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "UR-I3-01 current combat status kinds preserves the pre-view-change battle, ledger and RNG and binds the current epoch identity",
+          "message": "AssertionError: expected 'fnv1a32-utf16:05439fc4' to be 'fnv1a32-utf16:8a955c10' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/restore-audit/bounds-preflight.test.ts",
+      "failed": 2,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "bounds sampled kill triggerCount by trusted roster/lives before the fact replay",
+          "message": "Error: bench-full"
+        },
+        {
+          "test": "preserves a real long fight with growing trigger counts and resumes every tick",
+          "message": "Error: bench-full"
+        }
+      ]
+    },
+    {
+      "file": "tests/restore-audit/cd-replay-facts.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "G-C06 binds the real absorption value even when its status is forged coherently",
+          "message": "AssertionError: missing real checkpoint at tick 135: expected false to be true // Object.is equality"
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-consumable-preview.test.ts",
+      "failed": 3,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "C18-B consumable target answers the fixture holds tools of every kind (precondition)",
+          "message": "AssertionError: expected 0 to be greater than 0"
+        },
+        {
+          "test": "C18-B consumable target answers online: the seat view answer equals the authority for every candidate, without reading the authority",
+          "message": "AssertionError: expected 0 to be greater than 0"
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-use-consumable.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "C18-B useConsumable success through the room (§18.6) a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched",
+          "message": "Error: room never reached the expected state (phase ended, round 36, fault null)"
+        }
+      ]
+    },
+    {
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "failed": 4,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+          "message": "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'"
+        },
+        {
+          "test": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+          "message": "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'"
+        }
+      ]
+    },
+    {
+      "file": "tests/server/t10-combat-ops.test.ts",
+      "failed": 1,
+      "pending": 0,
+      "suiteError": null,
+      "examples": [
+        {
+          "test": "T10 deadline auto-deployment (contract §15.4) fills human boards to the cap from the bench, left slot first, front row centre-out 3/2/4/1/5/0/6; bots are left alone",
+          "message": "AssertionError: expected [ [ 'unit-5', '3,4' ], …(2) ] to deeply equal [ [ 'unit-4', '2,4' ], …(2) ]"
+        }
+      ]
+    }
+  ]
+}
