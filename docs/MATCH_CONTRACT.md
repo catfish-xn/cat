@@ -1,5 +1,24 @@
 # M5 Match contract v5
 
+## 强化等级与刷新：v14 用户约定（2026-10-19）
+
+本节覆盖历史“精选混合池”和强化不可刷新描述。来源为用户 2026-10-19 08:15 原话：“海克斯每次提供的必须是同一等级比如所有人都是银色，所有人都是金色或者彩色，必须等级一致，海克斯默认可以刷新一次。”不声称这是已核实的原版 14.24b 同轮或锁级规则。
+
+- 每个节点（2-1、3-2、4-2）确定一次 silver/gold/prismatic，同次三个候选同级，联机同轮八席同级。AUGMENT_TIERS 只有等级身份，没有概率/权重；三等级等权是项目约定、待用户确认，不还原历史等级组合分布。
+- deriveAugmentTier(seed, choiceId)：choiceId 按 UTF-16 code unit 计算 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32）；lcg32-v1 输入为 (seed xor 0x61756774 xor nodeHash) >>> 0，只取一个词，按 word % 3 对应 [silver,gold,prismatic]。单人用 Match.seed，联机用 SharedPoolState.seed（房间 options.seed），由 initializeSharedSeat 绑定到 augmentTierSeed；派生不读写席位 RNG。
+- 发放按等级过滤并排除已持有 ID，generateChoices 仍按 ID 排序、等权无放回抽三项，只消耗 choiceRngState 的三个词。商店、奖励、战斗等流不变。augmentOffers 保存各已打开节点 {choiceId,tier,rerollCount}，选择后保留。
+- 每次新提供额度为 augmentRerollLimit(此前已持有强化)，默认免费 1 次。rerollCount 表示已用次数，generation 从 0 开始，成功刷新均加 1；rerollsRemaining 为额度减已用次数。额度不跨节点积存，下一节点重置。
+- 刷新免费、整组三项重抽、锁级，同时排除当前三项和已持有 ID。仅排除当前一代；以后获得额外额度时，隔代可再出现。过滤后不足三项则 augment-pool-too-small，原子拒绝，不跨级、降级或保留旧项回退。现有各等级池即使排除两项已持有及三项当前候选仍足够。
+- 原始 map22 的 Maps/Shipping/Map22/Sets/TFTSet13.ScriptData.NumAugmentRerollsPerPlayer.mValue=1；en_us 的 TFT_Augment_BeggarsCanBeChoosers 为其余提供额外 ExtraRolls=3。该强化未注册，本次不新增内容。额度扩展接口为定义效果 mechanic:'augmentRerolls',values:{extraRolls:非负整数}；augmentRerollLimit 将此前已获取的效果逐项叠加，只增加其余节点额度，不补当前提供；新增定义仍需正常内容准入、版本与验证。
+- 未找到能证明 S13 逐槽（per-slot）刷新的原版证据。raw 其他赛季的 NumRerollsPerAugmentSlot 不能作为 S13 证明；本项目明确按整组刷新实现。
+
+公开命令：rerollAugment(state: MatchState, choiceId: string, generation: number): MatchCommandResult，由 match.ts 与 server-entry 导出。失败顺序：wrong-phase（非强化 offer）、stale-choice（ID/代次不符）、augment-rerolls-exhausted（额度用尽）、augment-pool-too-small（不足三项）。失败保持原 state 引用，返回 reason，无 events、资源或 RNG 变化。成功发 choiceOpened，含最新完整提供和正常 eventSeq。deriveAugmentTier(seed:number,choiceId:string):AugmentTier 与 augmentRerollLimit(augments:readonly OwnedAugment[]):number 也由 server-entry 导出。
+
+私有席位视图 pendingChoice 增加 augmentTier?:'silver'|'gold'|'prismatic' 与 rerollsRemaining?:number，强化提供时存在；保留 offers/generation/rerollCount。视图不公布其他席候选、seed、未来节点等级或重推账本。
+
+读档：仅支持 v14 身份。augmentTierSeed 必须等于单人 seed。validateAugmentOfferHistory 从 seed 初始 choice 流重放各强化节点，核对节点顺序、等级、额度、所有代次抽取、当前候选和已选 ID；异常尚未抽取前还核对 choiceRngState。篡改等级、候选、计数、代次、剩余额度、节点记录或随机流均拒绝，不以保存的候选/RNG 检查点作重推依据。当前日程全部强化先于异常；联机完整 Match 存档仍不支持。schema7/save3/replay3/command3 不变；规则/内容升为 s13-g2-3-v14 / s13-14.24b-g2-3-v14，digest 从 manifest 自然重算，旧身份拒绝，不迁移。
+
+
 ## G2-3 当前实现与接入合同（2026-10-16）
 
 本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。
@@ -560,3 +579,31 @@ position disagreement. UI/server command dispatch adapters are not implemented.
 - 普通36件成装重铸器继续拒绝辅助装输入，失败保持原state、资源、事件、RNG。复用G24-FORGE-01…08；界面约定名“辅助装锻造器”，联机和界面仍由Claude接。
 
 详见 [预演记录](evidence/g2-4/G2-4B-SUPPORT-FORGE-TRIAL.md)。
+
+## S13 P1 增补（部分交付，版本在集成时统一升）
+
+本分支只增加六个强化和双刀流；余项未完成且不进入候选池，见
+[evidence/s13-p1/RECONCILIATION.md](evidence/s13-p1/RECONCILIATION.md)。
+
+- `readAugmentIncome(augments)` 纯查询返回 `{interestCap,roundXp,healthPerInterest}`；无利息优先于提高上限，提高上限取最大。遥遥领先选择一次15G，下一轮开始4XP，结算仍只发原自然XP，终局不提前支付未来轮次。
+- `investmentGrowth(augments,roundResults)` 只累计获取后已结算的利息乘对应生命系数。I与II共用一份真实累计生命，不重复编译两次。
+- `grantAugmentAcquisition(state,ownedAugment)` 返回状态与真实授予事件；重复调用固定收据不重复授予。便携4选1、光明5选1，经现有真实forge选择路由。未解决forge阻塞开战，G23既有待选优先，解决后再开forge。
+- `augmentForgeOffers(seed,ownedAugment)` 使用独立显式派生LCG，不消费原三字强化选择流。池和抽样为项目既定有限目录约定，无新增官方分层概率。
+- `grantAnomalyAcquisition(state)` 对双刀流授予两个真实成装；按原始目标角色固定候选、独立拒绝采样且无放回。项目约定：物品入库存、不改原装备。完整来源、额外legacy/召唤物角色约定及恢复边界见对账表。
+- `traceBoundUnitIdentity(originalId,verifiedFacts)` 返回最终幸存者id或售出后的null。调用方必须先认证全部事实；它不独立证明击杀或增长，也不增加跨调用缓存。
+- 失败命令保留原对象、ID、事件、金币与RNG；获取收据和资源出生同事务。新目录改变CONTENT digest，规则/内容版本仍按用户要求由Claude集成时统一升级。
+## S13 强化 P2（14.24，B 补丁 raw 数值）
+
+当前强化目录新增 14 项、异常目录新增 3 项；官方 API 身份与中文名对照见 [S13 P2 报告](evidence/s13-augments-p2/REPORT.md)。共 44 强化／33 异常，仍沿用现有三词强化抽样和单词异常抽样。此次不升版本，合并时统一升版；内容 digest 自动包含新增归一化源与赠品声明。
+
+无新增客户端命令。`selectChoice(state, choiceId, generation, definitionId, unitLootPolicy?)` 的成功事务经现有来源账本发放赠品；`unitLootPolicy` 必须与同事务共享池策略相同。赠送物品到库存；赠送英雄正常合星，满席托管、池空按费用折金。后续卖出、领取与既有奖励重试复用同一确定计划，不重抽、不重发。失败命令沿用原对象／无副作用合同，新增内部赠品校验不改变失败枚举。
+
+规则内部导出 `p2GiftPlan(state: Pick<MatchState,'seed'|'augments'|'multiplayer'>): Gift[]`、`drainP2Gifts(state: MatchState, policy?: UnitLootPolicy): MatchState`、`validateP2Gifts(state: MatchState): void`。赠品收据 `source='s13-augments-p2'`，ID 为 `[source,choiceId,'item'|'unit',index]` 的 JSON 编码；校验失败抛出 `Invalid/Missing S13 P2 ... gift ...`。这些不是新的客户端授权入口。
+
+精心赋能、三项赛 II 与分享你的能量只修改战斗副本。联机冻结前的准备棋盘是双方羁绊和结算档位的共同依据；征服者／化学男爵收据仍逐项匹配当前棋盘档位，错误档位仍返回 `invalid-receipt`。服务器继续原样转发已有 `g23Facts`。
+
+P2 赠品重试补充：`drainP2Gifts(state, policy?)` 按固定赠品计划循环，直到一整轮没有新增收据，因而后续赠品合星释放容量后会回头补发先前满席的赠品。单机成功部署后立即重试；成功购买后（包括购买合星）立即重试，`buyUnit(state, slotIndex, expectedGeneration, unitLootPolicy?: UnitLootPolicy): MatchCommandResult` 新增可选事务策略，`buySharedUnit` 透传同一次事务的策略。失败命令不重试、不写入。共享池部署目前没有策略入口，因此继续保留待领，不绕过卡池发英雄；需要服务器改为事务入口后才能即时重试。恢复不要求“有空位就必须收据齐全”。赠品恢复校验本次保持原样（M5 暂停）。
+
+本包承诺数值与主要效果对齐；原版互斥（一费奉献 II ↔ 一对4、冕已有卫 ↔ 不是今天）不在本 PR 范围。
+
+购买触发的 P2 重试与卖出入口沿用同一冻结边界：`phase === 'combat'` 或 `isCombatRosterLocked(state)` 时不重试；这些阶段释放的备战席容量不会触发可能合并棋盘英雄的赠品。下一次合法准备操作仍按原计划重试。

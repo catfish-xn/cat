@@ -1,3 +1,4 @@
+import { isPresent, isSelectable } from './anomalies/availability';
 import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
@@ -14,7 +15,8 @@ const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'm
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
-    ...(unit.itemBanish?{banished:state.tick<unit.itemBanish.untilTick}:{}),
+    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
+    ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
 function combatViewState(state: CombatState) {
@@ -97,6 +99,55 @@ function equalViewField(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+export interface CombatReplayRecorder {
+  record(previousState: CombatState, step: import('./combat').CombatStep): CombatReplayTick;
+  finish(terminalState: CombatState): CombatReplay;
+}
+
+/** Trusted first-pass states/events only; no combat stepping or ledger authentication. */
+export function createCombatReplayRecorder(initialState: CombatState,
+  initialEvents: readonly LedgerCombatEvent[]): CombatReplayRecorder {
+  if (initialState.tick !== 0) throw new RangeError('invalid-replay-input');
+  const freezeReplay = createScopedContentFreezer();
+  const initial = freezeReplay(combatViewState(initialState));
+  const firstStepEventSeq = initialState.nextEventSeq ?? 0;
+  const ticks: CombatReplayTick[] = [freezeReplay({ tick: 0,
+    events: toCombatViewEvents(initialEvents.filter(event => event.eventSeq < firstStepEventSeq)) })];
+  let previous = initial, result: CombatReplay | null = null;
+  return {
+    record(previousState, next) {
+      if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
+        || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
+        || next.state.tick !== previous.tick + 1 || next.state.tick > 1200) throw new RangeError('replay-divergence');
+      // Whitelists detach nested mutable fields before freezing this tick.
+      const view = freezeReplay(combatViewState(next.state));
+      const events: CombatViewEvent[] = toCombatViewEvents(toLedgerEvents(next.events));
+      const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
+      // Align by identity; a keyframe below carries the exact order when the membership events cannot.
+      const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
+      const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
+      for (let i = 0; i < view.units.length; i++) {
+        const unit = view.units[i], prior = before[i];
+        if (!prior) continue;
+        const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
+          && !equalViewField(value, prior[key as keyof CombatViewUnit])));
+        if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
+      }
+      ticks.push(freezeReplay({ tick: next.state.tick, events,
+        ...(!ordered || next.state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || next.state.status === 'finished' ? { keyframe: view } : {}) }));
+      previous = view;
+      return ticks[ticks.length - 1];
+    },
+    finish(terminalState) {
+      if (terminalState.status !== 'finished' || terminalState.tick < 0 || terminalState.tick > 1200)
+        throw new RangeError('invalid-replay-input');
+      const terminal = freezeReplay(combatViewState(terminalState));
+      if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+      return result ??= freezeReplay({ initial, ticks, terminal });
+    },
+  };
+}
+
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const freezeReplay = createScopedContentFreezer();
@@ -104,12 +155,10 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
-  const initial = freezeReplay(combatViewState(battle.initial)), terminal = freezeReplay(combatViewState(battle.terminal));
-  // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
-  // The initial state's ledger cursor, not the event tick, marks applied start effects.
+  const terminal = freezeReplay(combatViewState(battle.terminal));
+  const recorder = createCombatReplayRecorder(battle.initial, battle.events);
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
-  const ticks: CombatReplayTick[] = [freezeReplay({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
-  let state = battle.initial, previous = initial;
+  let state = battle.initial;
   // Compare the same ordered animation whitelist incrementally. Comparing each
   // canonical element is equivalent to comparing the complete canonical arrays,
   // but leaves no whole-battle serialization work in the final scheduling slice.
@@ -133,10 +182,9 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     let steps = 0;
     while (steps < maxTicks && state.status === 'running' && state.tick < battle.terminal.tick) {
       const next = stepCombat(state);
-      if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
+      const frame = recorder.record(state, next);
       state = next.state;
-      const ledger = toLedgerEvents(next.events);
-      const view = freezeReplay(combatViewState(state)), events: CombatViewEvent[] = toCombatViewEvents(ledger);
+      const events = frame.events.filter((event): event is CombatAnimationEvent => 'eventSeq' in event);
       for (const event of events) {
         try {
           const expected = nextExpected();
@@ -146,29 +194,15 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
           comparisonFailed = true;
         }
       }
-      const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
-      // Align by identity; a keyframe below carries the exact order when the membership events cannot.
-      const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
-      const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
-      for (let i = 0; i < view.units.length; i++) {
-        const unit = view.units[i], prior = before[i];
-        if (!prior) continue;
-        const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-          && !equalViewField(value, prior[key as keyof CombatViewUnit])));
-        if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
-      }
-      ticks.push(freezeReplay({ tick: state.tick, events,
-        ...(!ordered || state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
-      previous = view;
       steps++;
     }
     if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
-    if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+    if (canonicalContent(toCombatViewState(state)) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
     if (comparisonFailed) throw comparisonError;
     if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');
     }
-    result = freezeReplay({ initial, ticks, terminal });
+    result = recorder.finish(state);
     return result;
   } };
 }

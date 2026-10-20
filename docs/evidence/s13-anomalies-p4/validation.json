@@ -1,0 +1,351 @@
+{
+  "branch": "codex/s13-anomalies-p4",
+  "baseCommit": "b9c17f9a804ffb77162847ace28c9470b02e0e2e",
+  "implementationCommits": {
+    "B": "5144701",
+    "C": "91fac0a",
+    "D": "15b1351",
+    "followup": "9704d73"
+  },
+  "total": {
+    "files": 23,
+    "tests": 508,
+    "passed": 508,
+    "failed": 0,
+    "skipped": 0,
+    "serialWallSeconds": 101.068
+  },
+  "tests": [
+    {
+      "file": "tests/s13-anomalies-b.test.ts",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.807,
+      "testMilliseconds": 193.54,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-d.test.ts",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.02,
+      "testMilliseconds": 71.92,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-source.test.ts",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.316,
+      "testMilliseconds": 5.6,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-settlement.test.ts",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.554,
+      "testMilliseconds": 326.57,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/m5-content.test.ts",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.114,
+      "testMilliseconds": 35.8,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-3-integration.test.ts",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.988,
+      "testMilliseconds": 869.87,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-mirror.test.ts",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 3.508,
+      "testMilliseconds": 1048.73,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-trench.test.ts",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.598,
+      "testMilliseconds": 712.06,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-support-items.test.ts",
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 3.257,
+      "testMilliseconds": 720.29,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.539,
+      "testMilliseconds": 845.97,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/combat-mana.test.ts",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.69,
+      "testMilliseconds": 7.57,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/t3-round-settlement.test.ts",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 4.158,
+      "testMilliseconds": 1811.73,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/t5r-combat-replay.test.ts",
+      "tests": 46,
+      "passed": 46,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 9.452,
+      "testMilliseconds": 6606.66,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/server/g2-3-replay-mirror.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.209,
+      "testMilliseconds": 4.16,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-zephyr.test.ts",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 3.333,
+      "testMilliseconds": 484.65,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 3.719,
+      "testMilliseconds": 1586.0,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-redirect.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.931,
+      "testMilliseconds": 31.84,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-replay.test.ts",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 3.552,
+      "testMilliseconds": 1387.57,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-c.test.ts",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 1.973,
+      "testMilliseconds": 135.04,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/s13-anomalies-restore.test.ts",
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.837,
+      "testMilliseconds": 960.48,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/g2-3-anomalies.test.ts",
+      "tests": 39,
+      "passed": 39,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 2.362,
+      "testMilliseconds": 274.39,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "tests": 140,
+      "passed": 140,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 22.112,
+      "testMilliseconds": 19732.86,
+      "exitCode": 0
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "tests": 138,
+      "passed": 138,
+      "failed": 0,
+      "skipped": 0,
+      "wallSeconds": 18.039,
+      "testMilliseconds": 15823.37,
+      "exitCode": 0
+    }
+  ],
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0
+  },
+  "fingerprints": {
+    "commands": [
+      "node tests/fixtures/record-g2-4b-herald.cjs --write",
+      "node tests/fixtures/record-g2-4b-herald.cjs",
+      "node scripts/record-g2-4b-inputs.cjs --baseline-commit=b9c17f9a804ffb77162847ace28c9470b02e0e2e",
+      "node scripts/record-g2-4b-inputs.cjs --baseline-commit=b9c17f9a804ffb77162847ace28c9470b02e0e2e --check",
+      "node scripts/record-g2-4b-release.cjs --baseline-commit=b9c17f9a804ffb77162847ace28c9470b02e0e2e",
+      "node scripts/record-g2-4b-release.cjs --baseline-commit=b9c17f9a804ffb77162847ace28c9470b02e0e2e --check"
+    ],
+    "allExitCodes": 0,
+    "herald": {
+      "phase": "complete",
+      "mode": "verify",
+      "files": 7,
+      "cases": [
+        {
+          "name": "ionic-spark",
+          "rawStateEqualsRestored": true,
+          "startAndFifteenTicksRoundTrip": true
+        },
+        {
+          "name": "evenshroud",
+          "rawStateEqualsRestored": true,
+          "startAndFifteenTicksRoundTrip": true
+        },
+        {
+          "name": "ionic-spark--evenshroud",
+          "rawStateEqualsRestored": true,
+          "startAndFifteenTicksRoundTrip": true
+        },
+        {
+          "name": "quicksilver",
+          "rawStateEqualsRestored": true,
+          "startAndFifteenTicksRoundTrip": true
+        },
+        {
+          "name": "edge-of-night",
+          "rawStateEqualsRestored": true,
+          "startAndFifteenTicksRoundTrip": true
+        }
+      ],
+      "sourceSha256": "668c0e4e1359aeefce6e7abf4130369a58cf5daaff2e5e2835220dde59584cb8",
+      "allRawExportedBeforeRestoreImport": true,
+      "elapsedMs": 45698.679226
+    },
+    "inputs": {
+      "contentDigest": "fnv1a32-utf16:bef09e1d",
+      "cases": 9
+    },
+    "release": {
+      "contentDigest": "fnv1a32-utf16:bef09e1d",
+      "lootReplayDigest": "fnv1a32-utf16:d5da64e8",
+      "rulesVersion": "s13-g2-3-v11",
+      "contentVersion": "s13-14.24b-g2-3-v11",
+      "schemaVersion": 7,
+      "previousContentDigest": "fnv1a32-utf16:4bf7fe15",
+      "previousLootReplayDigest": "fnv1a32-utf16:c11d2d0c",
+      "traceHashes": {
+        "state": "fb190a25b672920c2a3a7c79eb6a1ec0b06af568ea200d62cd78988ca49bcc2c",
+        "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+        "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
+      },
+      "firstBattle": {
+        "seed": 42,
+        "ticks": 164,
+        "events": 106,
+        "result": "playerWin",
+        "stateHash": "fnv1a32-utf16:1db5b9e9",
+        "eventHash": "fnv1a32-utf16:cf452d32"
+      },
+      "reason": "G2-4b support anvil release v11: tiers 11/13 granted as sourced, artifact/support anvil pools complete at 29/17."
+    }
+  },
+  "constraints": {
+    "testTimeoutsUnchanged": true,
+    "noTestsRemovedOrSkipped": true,
+    "versionsUnchanged": true,
+    "protectedPathsUnchanged": [
+      "src/server/",
+      "src/rendering/",
+      "tests/fixtures/g2-3-herald-raw/",
+      "tests/fixtures/g2-augments-herald-raw/",
+      "src/simulation/m8/version.ts",
+      "package.json",
+      "package-lock.json",
+      "vitest.config.ts"
+    ],
+    "historicalRawDirectoriesWritten": false
+  },
+  "runtime": {
+    "node": "v24.19.0"
+  },
+  "notes": [
+    "未修改既有平衡常量；扩池使公开路径触发千刀斩分担包重复计数，修正计数产生侧并保留原严格校验。",
+    "Herald 原5场景、14战斗分支通过公开付费刷新保留超高速，未补资源或改棋子装备数值。",
+    "D类轨道/减甲时长与狼代理、无攻击螃蟹体等项目约定逐条见 docs/S13_ANOMALIES_P4.md。"
+  ]
+}

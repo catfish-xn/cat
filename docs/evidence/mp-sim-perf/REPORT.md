@@ -19,6 +19,36 @@ node scripts/loadtest-room.cjs --seats 8 --rounds 3
 node --expose-gc scripts/loadtest-room.cjs --seats 8 --rounds 3
 ```
 
+### 后续复现：内存分项与两版本对照
+
+`sampleMemory()` 在原字段之外记录 `heapTotalBytes`（V8 已分配堆）、
+`externalBytes`（JS 对象关联的外部内存）、`arrayBuffersBytes`（ArrayBuffer/SharedArrayBuffer，
+含 Node Buffer；已包含在 external 中，不可重复相加），均来自 `process.memoryUsage()`。
+`rssAnonBytes` 在 Linux 同步读取 `/proc/self/status` 的 `RssAnon`，将 kB 乘以 1024；
+其他平台、读取失败、缺失或无效格式均为 null。原采样时机不变，启用 GC 时仍先 GC 再采样。
+`memoryTrend` 另附 `postMatchHeapTotalBytes`、`postMatchRssAnonBytes` 序列；不可用值保留 null。
+RSS、heapTotal、external 和 RssAnon 反映不同范围，不能简单相减后认定为泄漏。
+
+采用独立 `scripts/loadtest-compare.cjs`，避免将跨目录进程编排混入单版本压测入口。
+两个目录须已 checkout 并安装依赖；脚本不会安装依赖或修改源码。
+为比较新内存字段，两边的 `loadtest-room.cjs` 都需带相同采样补丁；旧入口缺失字段时显示 null。
+在同一机器先完整跑 before，再完整跑 after，固定八席，同一 Node 可执行文件并强制 `--expose-gc`。
+默认每边 1 局预热、6 局测量；同一组参数转发给两边，可覆盖局数、预热及其他本地压测参数。
+
+```sh
+node scripts/loadtest-compare.cjs /path/to/before /path/to/after --out artifacts/compare-six
+node scripts/loadtest-compare.cjs /path/to/before /path/to/after --rounds 8 --warmup 2 --seed 42 --out artifacts/compare-eight
+```
+
+输出目录必须不存在，避免覆盖证据；生成 `before.json`、`after.json` 原始报告，以及
+`comparison.json`、`comparison.md`。对照含每局终局轮次、GC 标记、局末 RSS、GC 后 heapUsed、
+heapTotal、RssAnon、最差 RTT p99、最长完整服务器切片及各项均值/最差值（最大值）。
+RTT 取每局准备/选择命令 p99 和各轮准备命令 p99 的最大值，不是合并全部样本重算的 p99。
+JSON 内存单位为字节，时间为 ms；Markdown 同单位。缺失值和未实际 GC 的 heapUsed 为 null，
+均值排除 null 并列出有效样本数；预热和失败局不纳入汇总。
+不设性能门槛、不作通过/失败判定；运行错误仍以非零退出，并保留已生成的原始报告。
+RealClock 下终局轮次与操作负载仍可能不同，均值及最差值仅供观察，不单凭这些值归因。
+
 内存单位均为 MiB，时间为 ms。**普通组没有强制 GC，heapUsed 不能称为 GC 后活堆；GC 组每局 `gcApplied` 均为 true。** 峰值是每局观察到的 RSS 峰值，不是进程终生高水位。RTT p99 为准备命令的 nearest-rank p99；最长切片为完整 `Room.resolveSlice`，包括回放、结算及发布。
 
 | 组别 | 局 | 终局轮次 | 结束 RSS | heapUsed | 峰值 RSS | RTT p99 | 最长切片 |

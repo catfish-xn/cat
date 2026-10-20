@@ -21,7 +21,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   // W4 public-route accounting: 23 births + 20 growth + 10 item births + 5 upgrades + 3 combines + 2 sales + 4 placements = 67.
   expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([23,20,10,5,3,2,4]);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
-  expect(prepared.anomalyBinding).toEqual({definitionId:'mage-armor',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
+  expect(prepared.anomalyBinding).toEqual({definitionId:'slime-time',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(10);
   expect(prepared.resourceProvenance.entries).toHaveLength(67);
   expect(prepared.nextUnitSerial).toBe(24);

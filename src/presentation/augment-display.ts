@@ -42,3 +42,8 @@ export function augmentIconHtml(id: string, size: number, className = 'augment-i
  */
 const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i', 'pumping-up-i', 'investment-strategy-i', 'bulky-buddies-i']);
 export const augmentPlayerDescription = (id: string): string | null => AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null;
+
+/** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */
+export const AUGMENT_TIER_TEXT: Readonly<Record<import('../simulation/augment-offers').AugmentTier, string>> = {
+  silver: '银色', gold: '金色', prismatic: '彩色',
+};

@@ -1,0 +1,103 @@
+{
+  "codeSha": "2d13b31cc4e45c48f87759a460f5ec074bd430ef",
+  "baseSha": "075e9a494758b13620c8ae36e55364cc214fd364",
+  "node": "24.19.0",
+  "npm": "11.9.0",
+  "mode": "Related files serial, no full suite. Earlier unaffected results reused; bound identity, G2 multiplayer, historical identity, Dual Wielding and final typecheck rerun at fixed code SHA.",
+  "files": [
+    {
+      "file": "tests/g2-3-anomalies.test.ts",
+      "result": "40 passed (40)",
+      "duration": "2.84s (transform 70%, tests 17%, import 12%)",
+      "log": "logs/g2-3-anomalies.test.ts.txt"
+    },
+    {
+      "file": "tests/g2-augments-choice.test.ts",
+      "result": "41 passed (41)",
+      "duration": "8.45s (tests 70%, transform 26%, import 5%)",
+      "log": "logs/g2-augments-choice.test.ts.txt"
+    },
+    {
+      "file": "tests/g2-augments-combat.test.ts",
+      "result": "16 passed (16)",
+      "duration": "5.04s (tests 62%, transform 32%, import 6%)",
+      "log": "logs/g2-augments-combat.test.ts.txt"
+    },
+    {
+      "file": "tests/g2-augments-identity.test.ts",
+      "result": "1 passed (1)",
+      "duration": "2.74s (transform 72%, import 18%, tests 7%, setup 1%)",
+      "log": "logs/g2-augments-identity.test.ts.txt"
+    },
+    {
+      "file": "tests/g2-augments-multiplayer.test.ts",
+      "result": "4 passed (4)",
+      "duration": "2.08s (transform 78%, import 17%, tests 4%, setup 1%)",
+      "log": "logs/g2-augments-multiplayer.test.ts.txt"
+    },
+    {
+      "file": "tests/g2-augments-static.test.ts",
+      "result": "66 passed (66)",
+      "duration": "2.55s (transform 68%, tests 17%, import 15%)",
+      "log": "logs/g2-augments-static.test.ts.txt"
+    },
+    {
+      "file": "tests/g5-economy-preview.test.ts",
+      "result": "66 passed (66)",
+      "duration": "4.48s (tests 53%, transform 39%, import 7%)",
+      "log": "logs/g5-economy-preview.test.ts.txt"
+    },
+    {
+      "file": "tests/match-economy.test.ts",
+      "result": "83 passed (83)",
+      "duration": "2.57s (transform 60%, tests 27%, import 12%)",
+      "log": "logs/match-economy.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-acquisition.test.ts",
+      "result": "3 passed (3)",
+      "duration": "3.74s (transform 70%, tests 15%, import 14%)",
+      "log": "logs/s13-p1-acquisition.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-avarice.test.ts",
+      "result": "1 passed (1)",
+      "duration": "304ms (transform 69%, setup 9%, import 9%, tests 6%, worker 6%)",
+      "log": "logs/s13-p1-avarice.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-bound-identity.test.ts",
+      "result": "2 passed (2)",
+      "duration": "243ms (transform 58%, setup 18%, tests 10%, worker 7%, import 6%)",
+      "log": "logs/s13-p1-bound-identity.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-dual-wielding.test.ts",
+      "result": "1 failed | 1 passed (2)",
+      "duration": "7.91s (tests 74%, transform 21%, import 4%)",
+      "log": "logs/s13-p1-dual-wielding.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-income.test.ts",
+      "result": "8 passed (8)",
+      "duration": "2.66s (transform 67%, tests 20%, import 12%)",
+      "log": "logs/s13-p1-income.test.ts.txt"
+    },
+    {
+      "file": "tests/s13-p1-multiplayer-income.test.ts",
+      "result": "2 passed (2)",
+      "duration": "6.81s (tests 72%, transform 23%, import 5%)",
+      "log": "logs/s13-p1-multiplayer-income.test.ts.txt"
+    },
+    {
+      "file": "tests/t3-round-settlement.test.ts",
+      "result": "10 passed (10)",
+      "duration": "4.90s (tests 53%, transform 39%, import 7%)",
+      "log": "logs/t3-round-settlement.test.ts.txt"
+    }
+  ],
+  "totalPassed": 344,
+  "totalFailed": 1,
+  "typecheck": "passed",
+  "fingerprints": "g2-4b inputs --check passed; 9 evidence files"
+}

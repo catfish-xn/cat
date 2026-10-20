@@ -1,4 +1,6 @@
+import { validateAugmentAcquisition } from './augment-acquisition';
 import type {MatchState} from './match-types';
+import {validateP2Gifts} from './s13-augments-p2-grants';
 import {canonicalContent,equalValidatedContent} from './content';
 import {openG23Choice} from './g2-3-runtime';
 import {readG23Progress,validateG23MechanicLinks,validateG23RewardSources} from './g2-3-state';
@@ -9,9 +11,11 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 /** Shared restore checks for G23 escrow, pending offers, receipts and settlement history.
  * Runs no grant hooks and consumes no live RNG; callers still validate the surrounding seat/save. */
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
+ validateP2Gifts(state);
  const equal=parsedJsonInput?equalValidatedContent:(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
  const check=(value:unknown,message:string)=>{if(!value)throw new RangeError('Invalid G23 restore: '+message);};
   validateG23RewardSources(state);
+  validateAugmentAcquisition(state);
   check(!!state.seatMechanics?.hidden.progress&&!!readG23Progress(state), 'G23 progress required');
   validateG23MechanicLinks(state);
   if(state.phase==='choice'){

@@ -11,6 +11,8 @@ import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
+import { LeftPanelToggle } from './left-panel-toggle';
+import { OnlineSound, type SoundCue } from './sound';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
@@ -67,6 +69,8 @@ export class OnlineApplication implements SceneApplication {
   /** G5: battle ranking (right column) and the preparation economy hint. */
   private summary: BattleSummaryPanel;
   private economy: EconomyHint;
+  private leftToggle: LeftPanelToggle;
+  private sound = new OnlineSound();
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
   private ranking: RankingOverlay;
@@ -89,9 +93,11 @@ export class OnlineApplication implements SceneApplication {
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
+    this.leftToggle = new LeftPanelToggle();
+    const topbar = this.sidebar.root.querySelector('.online-topbar'); topbar?.insertBefore(this.sound.createToggle(), topbar.querySelector('.online-connection'));
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
-    this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); });
+    this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); this.commandSound(change); });
     document.addEventListener('visibilitychange', this.visibility);
     this.unlisten = client.listen({
       lobby: view => this.onLobby(view),
@@ -159,7 +165,38 @@ export class OnlineApplication implements SceneApplication {
     }
     else if (status.kind === 'online' && before !== null) this.hooks.status('已重新连接 · 画面已恢复');
   }
+  /** UI cue for my own shop/level changes; reads only the before/after the page already shows. */
+  private commandSound(change: SessionChange) {
+    if (change.reason !== 'command' || this.mode !== 'active' || this.spectating) return;
+    const { before, after } = change;
+    if (before.round !== after.round || before.phase !== after.phase) return;
+    const upgraded = (change.events as readonly { readonly type?: string }[]).some(event => event.type === 'unitUpgraded');
+    let cue: SoundCue | null = null;
+    if (after.level > before.level) cue = 'levelUp';
+    else if (after.xp > before.xp && after.gold < before.gold) cue = 'xp';
+    else if (after.shop.generation !== before.shop.generation && after.gold < before.gold) cue = 'reroll';
+    else if (after.gold < before.gold) cue = 'buy';
+    // Only a real sale: gold up and one of my units gone (a loot orb's gold keeps every unit).
+    else if (after.gold > before.gold) {
+      const kept = new Set(after.preparation.units.map(unit => unit.id));
+      if (before.preparation.units.some(unit => unit.team === 'player' && !kept.has(unit.id))) cue = 'sell';
+    }
+    if (upgraded) cue = 'starUp';
+    if (cue) this.sound.play(cue);
+  }
+  /** Phase, my HP and match-end cues from the room view. */
+  private viewSound(view: PlayerView) {
+    const previous = this.view, me = view.seats.find(seat => seat.seatId === view.mySeatId);
+    const before = previous?.seats.find(seat => seat.seatId === view.mySeatId);
+    if (me && before && me.hp < before.hp) this.sound.play('hpLoss');
+    if (!previous || previous.phase.kind === view.phase.kind) return;
+    if (view.phase.kind === 'preparation') this.sound.play('prep');
+    else if (view.phase.kind === 'combat') this.sound.play('combat');
+    else if (view.phase.kind === 'ended' && me?.rank != null) this.sound.play(me.rank <= 4 ? 'win' : 'lose');
+  }
+  private lastTick: number | null = null;
   private onView(view: PlayerView) {
+    if (this.mode !== 'online-lobby') this.viewSound(view);
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     this.syncSpectating(view);
     this.syncCarousel(view);
@@ -260,6 +297,9 @@ export class OnlineApplication implements SceneApplication {
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
     this.sidebar.tick(); this.carousel.tick(); this.syncSummary();
+    // Last three seconds of a preparation: one tick per second.
+    const seconds = this.mode === 'active' && !this.spectating && this.view?.phase.kind === 'preparation' ? this.sidebar.secondsLeft() : null;
+    if (seconds !== this.lastTick) { this.lastTick = seconds; if (seconds !== null && seconds >= 1 && seconds <= 3) this.sound.play('tick'); }
     if (this.ignoreNextDelta) { this.ignoreNextDelta = false; return false; }
     if (delta > 1000) return false; // a long stall: let the next frame continue from the current state
     return this.isActive;
@@ -284,7 +324,7 @@ export class OnlineApplication implements SceneApplication {
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
-  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
+  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, leftCollapsed: this.leftToggle.isCollapsed, sound: { muted: this.sound.isMuted, played: [...this.sound.played] }, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
     battleSummary: this.summary.debug(), economy: this.economy.debug(),
     opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselSide: this.carousel.showing, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
@@ -293,7 +333,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

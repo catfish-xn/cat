@@ -1,3 +1,5 @@
+import type {TraitProjectionContext} from './traits/effective-membership';
+import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
 import {commitG23Settlement} from './g2-3-settlement';
@@ -58,7 +60,7 @@ export function enableMultiplayerSettlement(state: MatchState, seatId: string): 
 }
 
 /** One seat's atomic commit. The room stages all successful results before publishing any seat. */
-export function applyRoundSettlement(state: MatchState, input: unknown,unitLootPolicy?:UnitLootPolicy): MultiplayerCommandResult {
+export function applyRoundSettlement(state: MatchState, input: unknown,unitLootPolicy?:UnitLootPolicy,traitContext?:TraitProjectionContext): MultiplayerCommandResult {
   if (!state.multiplayer || state.multiplayer.version !== ROUND_SETTLEMENT_VERSION) return fail(state,'multiplayer-required');
   const multiplayer = state.multiplayer;
   try {
@@ -85,8 +87,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
         && !multiplayer.forfeitedChoices.includes(event.id))) return fail(state,'wrong-phase');
     const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
+    if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
     if(r.g23Facts){
-      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player');
+      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext);
       if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result||facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0)
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
@@ -98,7 +101,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
     const economyInput = {result,gold:state.gold,streak:state.streak,
       level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
-    const plan = resolveRoundEconomy({roundId:r.roundId,...economyInput});
+    const plan = resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput});
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));
@@ -129,7 +132,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     };
     const augmentProgress = {
       pumpingRounds:state.augmentProgress.pumpingRounds+(state.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),
-      investmentHp:state.augmentProgress.investmentHp+(state.augments.some(a=>a.definitionId==='investment-strategy-i')?8*plan.incomeBreakdown.interest:0),
+      investmentHp:state.augmentProgress.investmentHp+readAugmentIncome(state.augments).healthPerInterest*plan.incomeBreakdown.interest,
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
     const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;

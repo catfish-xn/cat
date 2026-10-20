@@ -9,6 +9,7 @@ import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mec
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
+import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 
@@ -60,7 +61,9 @@ it.each([
   { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 190, targetId: 'enemy-r4-1' },
   { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  let state = publicEquipmentPreparation(['rod']);
+  // Seed 3151248's v14 fallback gifts an unequipped Spark; seed 77 offers Manaflow I
+  // for the back-row contribution=false board.
+  let state = contribution ? acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] }) : acquireEquipment(['rod'],{seed:77});
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
@@ -265,7 +268,8 @@ it('rejects an appended fake bleed while retaining every genuine Morgana curse p
 
 it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  let state = prepare(['rod'], { seed: 26 });
+  // Seed 112 offers Bulky Buddies I at 2-1 under the v14 same-tier pool.
+  let state = prepare(['rod'], { seed: 112 });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

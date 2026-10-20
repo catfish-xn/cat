@@ -4,6 +4,7 @@ import {readG23Progress,writeG23Progress} from '../../src/simulation/g2-3-state'
 import {createG23Progress} from '../../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../../src/simulation/g2-3-economy';
 import {g23BattlePayouts} from '../../src/simulation/g2-3-settlement';
+import {P2_ITEM_GRANTS} from '../../src/simulation/content/s13-augments-p2';
 
 export const accepted=<T extends {ok:boolean;state:MatchState}>(result:T):MatchState=>{
  if(!result.ok)throw Error('Fixture command refused');return result.state;
@@ -24,7 +25,10 @@ export function naturalForgeStates():Map<number,MatchState>{
    if(c.kind==='anomaly'&&c.step==='target'){
     state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));c=state.pendingChoice!;
    }
-   state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));continue;
+   // Prefer Going Long over Radiant Relics at seed42's v14 4-2 node to keep the forge item serials.
+   const augmentPriorities=['going-long'];
+   const id=c.kind==='augment'?augmentPriorities.find(id=>c.offers.includes(id))??c.offers.find(id=>!(id in P2_ITEM_GRANTS))??c.offers[0]:c.offers[0];
+   state=accepted(selectChoice(state,c.choiceId,c.generation,id));continue;
   }
   if(state.phase==='combat'){
    state=stepMatch(state).state;

@@ -56,6 +56,8 @@ export type Condition =
   | { readonly kind: 'target-magic-resist'; readonly op: 'gt' | 'lte'; readonly value: number }
   /** G2-4b: the triggering facts contain a critical basic-attack hit. */
   | { readonly kind: 'critical-attack' }
+  | { readonly kind: 'critical-hit' }
+  | { readonly kind: 'damage-delivery'; readonly deliveries: readonly DamageDelivery[] }
   | { readonly kind: 'all'; readonly conditions: readonly Condition[] };
 /** A08: evaluate applicable contributions before selecting strongest reduction. */
 export interface DamageFilter {
@@ -479,8 +481,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v12';
-  readonly contentVersion: 's13-14.24b-g2-3-v12';
+  readonly rulesVersion: 's13-g2-3-v14';
+  readonly contentVersion: 's13-14.24b-g2-3-v14';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

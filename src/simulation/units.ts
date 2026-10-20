@@ -1,4 +1,5 @@
 import {G24_VOIDSPAWN_UNITS} from './content/g2-4b-voidspawn';
+import { S13_ANOMALY_SUMMON_UNITS } from './content/s13-anomaly-summons';
 import { G23_SUMMON_UNITS } from './content/g2-3-summons';
 import { G23_UNITS, G23_MEMBERSHIP } from './content/g2-3-units';
 import { G22_UNITS, G22_MEMBERSHIP } from './content/g2-2-units';
@@ -606,7 +607,7 @@ export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition
     baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
   }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...G23_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...S13_ANOMALY_SUMMON_UNITS,...G23_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;

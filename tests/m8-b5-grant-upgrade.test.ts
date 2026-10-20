@@ -112,10 +112,10 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
 describe('B5 real purchase recursive upgrades and equipment returns', () => {
   // Match #98's public-fixture setup: warm the exact paid acquisition routes,
   // while every upgrade/restore assertion and its original timeout stays in the case.
-  for (const definitions of [
-    ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'],
-    ['sword', 'thiefs-gloves'], ['sword', 'rod', 'vest', 'cloak'],
-  ]) beforeAll(() => { publicInventory(definitions, true); });
+  for (const [definitions, seed] of [
+    [['blue-buff', 'blue-buff'], 11], [['thiefs-gloves', 'sword']],
+    [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak']],
+  ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;
@@ -155,12 +155,13 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(() => restoreMatch(serializeMatch(forgedNext))).toThrow('Invalid resource provenance: unit serial');
   });
   it.each([
-    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1]],
-    ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1]],
-    ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1]],
-    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1]],
-  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned) => {
-    const inventory = publicInventory(definitions, true), chain = publicRecursivePurchase(inventory.state);
+    // Seed 11 funds all nine purchases at 4-5; seed 1 now reaches the anomaly first.
+    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 11],
+    ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1], undefined],
+    ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1], undefined],
+    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], undefined],
+  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned, seed) => {
+    const inventory = publicInventory(definitions, true, seed), chain = publicRecursivePurchase(inventory.state);
     let equipped = chain.state;
     for (const [index, id] of inventory.itemIds.entries()) equipped = accepted(equipItem(equipped, id, [chain.survivorId, chain.secondId, chain.incomingId, chain.purchaseIds[7]][holders[index]], slots[index]));
     const state = freeze(equipped), result = buyUnit(state, chain.slot, state.shop.generation), next = accepted(result);

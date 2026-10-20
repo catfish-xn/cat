@@ -1,3 +1,4 @@
+import { p2Bonus } from '../s13-augments-p2-combat';
 import type { TargetLimitedTrigger } from './triggers';
 import {scaleItemSummonHp} from '../g2-4b-summons';
 import { augmentCombatEffects } from '../combat-augment-effects';
@@ -137,7 +138,9 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
   }
  }
  // G2-4b: a grant after `at` was not yet in the basis; one on that very tick may or may not precede the sample.
- const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat,bps:basis.bps-all.bps}];
+ // Tick-zero shield declarations execute before P2. Its authenticated flat HP
+ // cannot be used retroactively; later samples include the completed opening.
+ const all=grantedMaxHpBasis(unit);let bases=[{flat:basis.flat-all.flat-(at===0?p2Bonus(unit,'health'):0),bps:basis.bps-all.bps}];
  for(const g of unit.combatItemGrants??[]){if(g.grantedAtTick>at)continue;const p=grantedMaxHpBasis({combatItemGrants:[g]});const added=bases.map(b=>({flat:b.flat+p.flat,bps:b.bps+p.bps}));bases=g.grantedAtTick<at?added:[...bases,...added];}
  const hits=unit.itemMogulHits??[],healthPerStack=unit.mechanics?.find(m=>m.mechanic==='g24Mogul')?.values.healthPerStack??0;
  const before=hits.filter(h=>h.tick<at).length,through=hits.filter(h=>h.tick<=at).length;
@@ -203,11 +206,11 @@ function settledSampledStatCount(unit:CombatUnit,d:TargetLimitedTrigger,combatId
 /** HP at an earlier grant is not retained in schema5. Validate the finite set
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
- const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
+ const base=stat==='abilityPower'?p2Bonus(unit,'abilityPower')+(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
- if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.combatItemGrants?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ if(!p2Bonus(unit,'attackDamageFlat')&&!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.combatItemGrants?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+p2Bonus(unit,'attackDamageBps')+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
  const compiled=compileMechanismDefinitions(unit,combatId);
- let values=[{fixed:0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
+ let values=[{fixed:stat==='attackDamage'?p2Bonus(unit,'attackDamageFlat'):0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+p2Bonus(unit,'attackDamageBps')+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
   const grant=grantOfSource(unit,d.source);

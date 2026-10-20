@@ -1,4 +1,8 @@
+import {grantAnomalyAcquisition} from './anomaly-acquisition';
+import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
+import { readAugmentIncome } from './augment-income';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
+import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
 import { deploymentCapFor } from './deployment-cap';
@@ -40,6 +44,7 @@ import { COMPONENT_IDS } from './content/g2-3-item-registry';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
+import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { planUnitAcquisition } from './unit-acquisition';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
@@ -55,6 +60,8 @@ import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { generateChoices } from './choices';
+import { deriveAugmentTier, augmentCandidates, augmentRerollLimit } from './augment-offers';
+export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
 import type { ScheduleReceipt } from './strategy-types';
 import { isSellableUnit } from './seat-mechanics/forms';
 import { isMechanicChoice, isMechanicChoiceKind, resolveMechanicChoice, choiceTimeoutOption } from './seat-mechanics/choices';
@@ -70,6 +77,7 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
+  const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
@@ -129,13 +137,15 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
-      const drawn = generateChoices(Object.keys(AUGMENT_DEFINITIONS).filter(id => !state.augments.some(a => a.definitionId === id)), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(deriveAugmentTier(state.augmentTierSeed, event.id), state.augments), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
+      ...(event.kind === 'augment' ? {augmentTier: deriveAugmentTier(state.augmentTierSeed, event.id), rerollsRemaining: augmentRerollLimit(state.augments)} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
-    state = { ...state, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+    state = { ...state, augmentOffers: event.kind === 'augment'
+      ? [...state.augmentOffers, {choiceId:event.id,tier:deriveAugmentTier(state.augmentTierSeed,event.id),rerollCount:0}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -163,6 +173,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
+    augmentTierSeed: seed, augmentOffers: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
@@ -202,7 +213,9 @@ export function deployMatchUnit(state: MatchState, unitId: string, target: UnitL
       : from.kind === 'bench' && to.kind === 'bench' && from.slot === to.slot) return [];
     return [{ type: 'unitDeployed' as const, unitId: unit.id, from: structuredClone(from), to: structuredClone(unit.location) }];
   }) : [];
-  return accept({ ...state, preparation: result.state }, events);
+  const deployed={ ...state, preparation: result.state };
+  const gifted=state.sharedPool?deployed:drainP2Gifts(deployed);
+  return acceptEquipment(gifted,[...events,...mechanicGrantEvents(deployed,gifted)]);
 }
 /** After PvP snapshots are frozen, protect the live roster while keeping the T3 state shape. */
 export function lockMatchCombatRoster(state: MatchState): MatchCommandResult {
@@ -237,7 +250,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   }
   return { ok: true, state: next, events };
 }
-export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
+export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -254,7 +267,8 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
-  return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
+  const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
+  return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
@@ -316,7 +330,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
-  const plan = resolveRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
+  const plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const delta of pendingDelta) growth.set(delta.unitId,(growth.get(delta.unitId)??0)+delta.attackDamageBps);
@@ -334,7 +348,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
     persistentGrowth: [...growth].map(([unitId,attackDamageBps]) => ({unitId,attackDamageBps})).sort((a,b)=>a.unitId.localeCompare(b.unitId)),
     augmentProgress: {
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
-      investmentHp: state.augmentProgress.investmentHp + (state.augments.some(a => a.definitionId === 'investment-strategy-i') ? 8 * plan.incomeBreakdown.interest : 0),
+      investmentHp: state.augmentProgress.investmentHp + readAugmentIncome(state.augments).healthPerInterest * plan.incomeBreakdown.interest,
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
@@ -364,7 +378,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
   const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
-  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
+  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&countsG23SurvivorDamage(unit)).length}).hpAfter===0;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
@@ -413,6 +427,9 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  // Round-start XP is granted only after the previous round has settled; retries fail above.
+  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+  state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
@@ -424,6 +441,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
 export function advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MultiplayerCommandResult {
+  const initial=state;
   if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
   if (state.sharedPool) return multiplayerFail(state, 'shared-pool-required');
@@ -440,12 +458,14 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+    state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
       : generateShop(state.rngState, state.shop.generation + 1, state.level);
     return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);
-  } catch { return multiplayerFail(state, 'invalid-round'); }
+  } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
@@ -491,6 +511,24 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
     : generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
+}
+/** One free whole-offer reroll per node; validation precedes every draw and mutation. */
+export function rerollAugment(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
+  const choice = state.pendingChoice;
+  if (state.phase !== 'choice' || choice?.kind !== 'augment' || choice.step !== 'offer') return fail(state, 'wrong-phase');
+  if (choice.choiceId !== choiceId || choice.generation !== generation) return fail(state, 'stale-choice');
+  const limit = augmentRerollLimit(state.augments);
+  if (choice.rerollCount >= limit) return fail(state, 'augment-rerolls-exhausted');
+  const tier = deriveAugmentTier(state.augmentTierSeed, choiceId);
+  const candidates = augmentCandidates(tier, state.augments, choice.offers);
+  if (candidates.length < 3) return fail(state, 'augment-pool-too-small');
+  const draw = generateChoices(candidates, state.choiceRngState);
+  const rerollCount = choice.rerollCount + 1;
+  const pendingChoice = {...choice, offers:draw.offers, augmentTier:tier, generation:generation+1,
+    rerollCount, rerollsRemaining:limit-rerollCount};
+  return accept({...state, choiceRngState:draw.choiceRngState, pendingChoice,
+    augmentOffers:state.augmentOffers.map(record => record.choiceId === choiceId ? {...record,rerollCount} : record)},
+    [{type:'choiceOpened',choice:pendingChoice}]);
 }
 export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
@@ -619,10 +657,11 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
-  const granted = choice.kind === 'component' ? planPermanentItemGrant(state, { definitionId, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
+  const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
+  const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
-  const acquisitionGold = choice.kind === 'augment' ? AUGMENT_DEFINITIONS[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
+  const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? (choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
@@ -633,12 +672,19 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
+  if(choice.kind==='augment'){
+    const gifted=drainP2Gifts(selected,unitLootPolicy);
+    events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
+  }
   if (choice.kind === 'component' && getRoundKind(state.round) === 'supply') {
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
+  if(choice.kind==='anomaly'){const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
+  if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
-  return accept(entered.state, [...events, ...entered.events]);
+  const forge=openAugmentForge(entered.state);
+  return acceptEquipment(forge.state, [...events, ...entered.events,...forge.events]);
 }
 
 /** Compatibility domain entrypoints use the same pending choices and generic receipts. */

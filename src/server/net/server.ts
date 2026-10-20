@@ -16,12 +16,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
-import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
+import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
-import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
+import { consumableReceiptEvents, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
@@ -60,6 +60,8 @@ export interface GameServerOptions {
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
+  /** First-pass replay spot check cadence in rounds that captured a battle; SPOT_CHECK_EVERY_ROUNDS by default. */
+  readonly spotCheckEveryRounds?: number;
   /** Wall budget of one resolution slice in ms (RoomOptions.sliceMs); default DEFAULT_SLICE_MS, `null` slices by ticks only. */
   readonly sliceMs?: number | null;
   /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
@@ -129,6 +131,8 @@ export interface ServerRetained {
 }
 /** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
 export const DEFAULT_SLICE_TICKS = 100;
+/** First-pass replay spot check: one captured battle every this many rounds that captured one (user choice 2026-10-19). */
+export const SPOT_CHECK_EVERY_ROUNDS = 4;
 /**
  * Default wall budget of one slice: late-round ticks cost several milliseconds each, so 100 of them could hold the
  * single writer for hundreds of milliseconds and every command queued behind them waited as long.
@@ -138,7 +142,9 @@ export const DEFAULT_SLICE_MS = 20;
 /**
  * Resolver wrapper (B8, §19): once a battle's job finished, the following slices build the replays its attended seats
  * will be pushed, as resumable replay tasks advanced by the same tick budget, so the re-execution behind a replay never
- * runs inside the push of the whole round nor in one long slice. The result is unchanged.
+ * runs inside the push of the whole round nor in one long slice. The result is unchanged. A replay the rules already
+ * recorded during the first pass is in the cache, so the warm-up skips it; only uncaptured battles (an injected
+ * resolver, a seat that connected after its battle started) are still re-run here.
  */
 function withReplayWarmup(inner: BattleResolver, seats: () => Iterable<string>): BattleResolver {
   return {
@@ -200,9 +206,18 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     schedule: (at, fn) => clock.schedule(at, () => queue.push(fn)),
     cancel: handle => clock.cancel(handle),
   };
-  const resolver = options.resolver ?? new TwoSidedBattleResolver();
+  // First-pass capture (MULTIPLAYER_CONTRACT): a battle with a human or connected seat records its replay frames while it
+  // is computed, so no push re-runs it. Bot-only battles are never pushed and record nothing. An injected resolver
+  // (tests, fault injection) captures nothing; its replays are still built by the warm-up below, as before.
+  const captureReplay: ReplayCapture = seatIds => {
+    const attended = attendedSeats();
+    return seatIds.some(seatId => attended.has(seatId) || room?.state.seats.some(seat => seat.seatId === seatId && seat.kind === 'human'));
+  };
+  const resolver = options.resolver ?? new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
+  const sliceTicks = options.sliceTicks ?? DEFAULT_SLICE_TICKS;
+  const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
-    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS,
+    clock: roomClock, sliceTicks,
     ...(options.sliceMs === null ? {} : { sliceMs: options.sliceMs ?? DEFAULT_SLICE_MS }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
@@ -287,7 +302,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
     };
-    unsubscribeRoom = opened.subscribe(state => { logPhase(state); queue.push(() => pushAll(state)); });
+    unsubscribeRoom = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
@@ -298,6 +313,36 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     queue.push(() => { pushAll(opened.state); broadcastLobby(); });
     log('info', 'room.started', { roomId, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
     logPhase(opened.state);
+  }
+
+  /**
+   * Background spot check of first-pass replays (user decisions 2026-10-19): once a round's battles are published, every
+   * SPOT_CHECK_EVERY_ROUNDS-th round that captured a battle has one of them re-run by the rules (`startCombatReplay`) in
+   * write-queue slices and compared with the frames the seats were pushed. A mismatch never touches the round or its settlement: it is logged with the room, round, battle,
+   * seed, seats and first differing frame, and every later round of that room is then checked in full.
+   */
+  let audit = { room: null as Room | null, round: -1, all: false, eligible: 0 };
+  function scheduleSpotCheck(owner: Room, state: RoomState): void {
+    if (audit.room !== owner) audit = { room: owner, round: -1, all: false, eligible: 0 };
+    if (state.phase !== 'battle' || audit.round === state.round) return;
+    audit.round = state.round;
+    const check = startReplaySpotCheck(state.battles, state.round, audit.all, state.battleSeeds);
+    if (!check) return;
+    // Rounds that captured a battle count; the 1st, 5th, 9th … of them are checked (all of them after a mismatch).
+    if (audit.eligible++ % spotCheckEvery !== 0 && !audit.all) return;
+    const slice = () => {
+      // A replaced room or a closing server drops the check; an ended room still finishes its last round's check.
+      if (room !== owner || closing) return;
+      const results = check.advance(sliceTicks);
+      if (!results) { roomClock.schedule(clock.now(), slice); return; }
+      for (const result of results) {
+        if (result.firstDifference === null) { log('debug', 'replay.spot-check', { roomId: state.roomId, round: state.round, battleId: result.battleId }); continue; }
+        audit.all = true;
+        log('error', 'replay.spot-check-failed', { roomId: state.roomId, round: state.round, roundName: state.roundName, battleId: result.battleId,
+          battleSeed: result.battleSeed, seats: result.seatIds.join(','), firstDifference: result.firstDifference });
+      }
+    };
+    roomClock.schedule(clock.now(), slice);
   }
 
   /**

@@ -1,3 +1,4 @@
+import { isAttackProxy } from './anomalies/availability';
 /** G2-2 finite skill execution. All counters, zones and marks live in Combat JSON. */
 import { hexDistance, type HexCell } from './board';
 import type { CombatTask, G22State, CombatOrigin } from './combat-types';
@@ -50,7 +51,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'steb':heal(mag('Heal'));strike(t,mag('Damage'));break;
     case 'vex':strike(t,mag('Damage'));schedule(u,'g22Vex',ctx.tick+Math.round(v('DOTDuration')*20),t,mag('SecondaryDamage'),seq,0,1,t.cell);break;
     case 'twistedfate': {
-      const ally=ctx.units.filter(x=>x.alive&&x.hp>0&&x.team===u.team).sort((a,b)=>a.hp-b.hp||(a.id<b.id?-1:1))[0];
+      const ally=ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team).sort((a,b)=>a.hp-b.hp||(a.id<b.id?-1:1))[0];
       if(ally)ctx.heals.push({source:origin(u),targetId:ally.id,amount:mag('BlueHeal')});
       const targets=foes(),center=[...targets].sort((a,b)=>targets.filter(x=>hexDistance(b.cell,x.cell)<=1).length-targets.filter(x=>hexDistance(a.cell,x.cell)<=1).length||(a.id<b.id?-1:1))[0];
       for(const x of targets.filter(x=>hexDistance(center.cell,x.cell)<=1))strike(x,mag('RedDamage'),'magic',true);
@@ -106,7 +107,7 @@ export function recordG22Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:nu
 }
 export function shareStebHeal(ctx:AbilityContext,entry:S13Heal,target:S13Unit|undefined,actual:number):void {
   if(!target||champion(target)!=='steb'||entry.g22Shared||actual<=0)return;
-  for(const ally of byDistance(target,ctx.units.filter(u=>u.id!==target.id&&u.team===target.team&&u.alive&&u.hp>0)).slice(0,variable(target,'NumAlliesToShare')))
+  for(const ally of byDistance(target,ctx.units.filter(u=>u.id!==target.id&&u.team===target.team&&!isAttackProxy(u)&&u.alive&&u.hp>0)).slice(0,variable(target,'NumAlliesToShare')))
     ctx.heals.push({source:origin(target),targetId:ally.id,amount:Math.floor(actual*variable(target,'PercentAlliedHealShare')),g22Shared:true});
 }
 export function startG22Traits(ctx:AbilityContext):void {
@@ -125,7 +126,7 @@ export function advanceG22Traits(ctx:AbilityContext):void {
       if(count>state.wantedDeaths){change(ctx,u,u,m.source,'attackSpeed',count*m.values.attackSpeedBps,'bps');state.wantedDeaths=count;}
     }
     if(m.mechanic==='rebel'&&!g22(u).rebelTriggered){
-      const team=ctx.units.filter(x=>x.team===u.team),max=team.reduce((n,x)=>n+x.maxHp,0),hp=team.reduce((n,x)=>n+x.hp,0);
+      const team=ctx.units.filter(x=>x.team===u.team&&!isAttackProxy(x)),max=team.reduce((n,x)=>n+x.maxHp,0),hp=team.reduce((n,x)=>n+x.hp,0);
       if((max-hp)*10000<max*m.values.thresholdBps)continue;
       // Mark every member before any max-HP effect changes the shared trigger sample.
       const members=team.filter(x=>x.alive&&x.hp>0&&x.mechanics?.some(y=>y.mechanic==='rebel'));

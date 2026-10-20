@@ -10,7 +10,8 @@
  */
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
-import { runSharedMatchCommand, type SharedPoolState } from '../../server-entry';
+import { createCombatReplayRecorder, runSharedMatchCommand, type CombatReplayRecorder, type SharedPoolState } from '../../server-entry';
+import { primeCombatReplay } from './projection';
 import type { BattleInput, BattleResult, BattleSeatOutcome, PlaceholderBattleResult } from './types';
 
 /**
@@ -54,12 +55,19 @@ export function startBattleJob(resolver: BattleResolver, input: BattleInput, poo
   return { advance: () => resolver.resolveBattle(input, pool) };
 }
 
+/**
+ * Which battles record their replay frames while they are first computed (MULTIPLAYER_CONTRACT first-pass capture):
+ * given a battle's participants, true when one of them may be pushed its replay. A captured replay goes straight into the
+ * projection cache, so no push re-runs that battle. Omitted: nothing is captured and a push builds the replay as before.
+ */
+export type ReplayCapture = (seatIds: readonly string[]) => boolean;
+
 /** A rules refusal is an orchestration fault for the room (half a round never commits). */
 export class BattleResolveError extends Error {
   constructor(readonly seatId: string, readonly reason: string) { super(`seat ${seatId}: ${reason}`); this.name = 'BattleResolveError'; }
 }
 
-function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolState): Generator<void, { readonly outcome: BattleSeatOutcome; readonly pool: SharedPoolState }, void> {
+function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolState, capture: ReplayCapture | null): Generator<void, { readonly outcome: BattleSeatOutcome; readonly pool: SharedPoolState }, void> {
   // A supply round (or any state the rules already settled) has no combat to run.
   if (state.phase !== 'preparation') {
     if (state.phase === 'settlement' || state.phase === 'gameOver') return { outcome: { seatId, state, result: lastResult(state), damage: lastDamage(state), combat: null }, pool };
@@ -69,16 +77,22 @@ function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolStat
   if (!started.ok) throw new BattleResolveError(seatId, started.reason);
   const initial = combatOf(seatId, started.state);
   const events: LedgerCombatEvent[] = ledger(started.events);
+  // First-pass capture: the opening combat ledger, then each rules step exactly once (one match step is one combat tick).
+  const recorder: CombatReplayRecorder | null = capture?.([seatId]) ? createCombatReplayRecorder(initial, events) : null;
   let current = started.state, latest = started.pool;
   while (current.phase === 'combat') {
     yield;
     const step = runSharedMatchCommand(latest, current, { type: 'step' });
     if (!step.ok) throw new BattleResolveError(seatId, step.reason);
+    const stepEvents = ledger(step.events);
+    recorder?.record(combatOf(seatId, current), { state: combatOf(seatId, step.state), events: stepEvents });
     current = step.state; latest = step.pool;
-    events.push(...ledger(step.events));
+    events.push(...stepEvents);
   }
   const combat = { initial, terminal: combatOf(seatId, current), events };
-  return { outcome: { seatId, state: current, result: lastResult(current), damage: lastDamage(current), combat }, pool: latest };
+  const outcome: BattleSeatOutcome = { seatId, state: current, result: lastResult(current), damage: lastDamage(current), combat };
+  if (recorder) primeCombatReplay(outcome, recorder.finish(combat.terminal));
+  return { outcome, pool: latest };
 }
 /** Battle view data only: the combat the rules ran; the MatchState itself stays in the outcome. */
 function combatOf(seatId: string, state: MatchState) {
@@ -96,14 +110,15 @@ function lastDamage(state: MatchState): number {
   return record && record.round === state.round ? record.playerDamage : 0;
 }
 
-function* placeholderSteps(input: BattleInput, pool: SharedPoolState): BattleSteps<PlaceholderBattleResult> {
+function* placeholderSteps(input: BattleInput, pool: SharedPoolState, capture: ReplayCapture | null): BattleSteps<PlaceholderBattleResult> {
   const outcomes: BattleSeatOutcome[] = [];
   let latest = pool;
-  for (const seat of input.seats) { const ran = yield* ownCombatSteps(seat.seatId, seat.state, latest); outcomes.push(ran.outcome); latest = ran.pool; }
+  for (const seat of input.seats) { const ran = yield* ownCombatSteps(seat.seatId, seat.state, latest, capture); outcomes.push(ran.outcome); latest = ran.pool; }
   return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes, pool: latest };
 }
 
 export class PlaceholderBattleResolver implements BattleResolver {
-  resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult { return runSteps(placeholderSteps(input, pool)); }
-  startBattle(input: BattleInput, pool: SharedPoolState): BattleJob { return jobOf(placeholderSteps(input, pool)); }
+  constructor(private readonly options: { readonly captureReplay?: ReplayCapture } = {}) {}
+  resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult { return runSteps(placeholderSteps(input, pool, this.options.captureReplay ?? null)); }
+  startBattle(input: BattleInput, pool: SharedPoolState): BattleJob { return jobOf(placeholderSteps(input, pool, this.options.captureReplay ?? null)); }
 }

@@ -15,7 +15,7 @@ import { makeRoom, runUntil } from './helpers';
 import { readLootView } from '../../src/simulation/match';
 
 const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
-const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll'];
+const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** Gold the rules granted from this round's revealed orbs (granted receipts only; 0 for PvP). */
 const lootGold = (match: MatchState, round: number) => match.round !== round ? 0 : readLootView(match).revealedDrops
   .reduce((sum, drop) => sum + (drop.status === 'granted' && drop.payload.kind === 'gold' ? drop.payload.quantity : 0), 0);
@@ -173,16 +173,16 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
 
 describe('T10 deferred merge after the battle (contract §15.3)', () => {
   it('board A + bench A + a third A bought during the battle merges only after the settlement, onto the board copy', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), {seed:23});
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), {seed:1});
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
     // A bot seat (no auto-deployment) with a unit on the board and two offers of it in its shop. Which seat that is
-    // follows the seed's random openings (T13-B), so it is read from the state (G2-2 seed 23: s4).
+    // follows the seed's random openings (T13-B), so it is read from the state (seed 1 since the v13 augment pool).
     const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
       .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
     const botIds = ['s4', 's5', 's6', 's7'];
     // Seek the required pair through paid public rerolls; random openings no longer
-    // guarantee that seed 23's original board hero appears twice in its first shop.
+    // guarantee that the seed's board hero appears twice in its first shop.
     for(const id of botIds) {
       while(!onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2)&&seat(room.state,id).match.gold>=2) {
         const result=room.handle(id,{type:'reroll'});if(!result.ok)break;

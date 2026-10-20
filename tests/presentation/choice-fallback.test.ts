@@ -4,6 +4,10 @@ import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
 import { G24_ARTIFACT_ITEMS } from '../../src/simulation/content/g2-4-artifacts';
+import { augmentDisplayName, augmentIconHtml, augmentIconUrl, augmentPlayerDescription } from '../../src/presentation/augment-display';
+import { describeEffect } from '../../src/presentation/effect-text';
+import { AUGMENT_DEFINITIONS } from '../../src/simulation/content/augments';
+import { ANOMALY_DEFINITIONS } from '../../src/simulation/content/anomalies';
 
 describe('generic mechanic choice display', () => {
   it('titles a completed-item forge popup with its 14.24 name and offer count and names ordinary completed items in Chinese', () => {
@@ -62,5 +66,46 @@ describe('generic mechanic choice display', () => {
     expect(genericOffer('spare-parts', extras)).toMatchObject({ name: '备用零件！', price: 0 });
     expect(genericOffer('flamethrower', extras)).toMatchObject({ name: '喷火器', price: 5 });
     expect(timeoutOption({ kind: 'blackMarket', payload: { timeoutOption: '@skip' } })).toBe(SKIP_OPTION);
+  });
+});
+
+describe('generic augment choice fallback', () => {
+  // Two English W4 names plus an authored description exercise both text sources.
+  const augmentIds = ['manaflow-ii', 'pumping-up-ii', 'pumping-up-i'] as const;
+
+  it.each(augmentIds)('shows the Chinese name and player effect text for %s without inventing a price', id => {
+    const definition = AUGMENT_DEFINITIONS[id]!;
+    expect(definition.effects.length).toBeGreaterThan(0);
+    const playerDescription = augmentPlayerDescription(id);
+    const effectText = definition.effects.map(effect => describeEffect(effect)).join('；');
+    const expectedDescription = playerDescription ? `${playerDescription} ${effectText}` : effectText;
+    const offer = genericOffer(id, readChoiceExtras({ kind: 'augment', offers: [id] }));
+
+    expect(offer.name).toBe(augmentDisplayName(id));
+    expect(offer.name).toMatch(/[一-鿿]/);
+    expect(offer.name).not.toBe(definition.name);
+    expect(offer.description).toBe(expectedDescription);
+    expect(offer.description).not.toBe('');
+    expect(offer.description).toMatch(/[一-鿿]/);
+    expect(offer).not.toHaveProperty('price');
+  });
+
+  it.each(augmentIds)('provides an icon for %s through the same helper used by strategy-panel', id => {
+    const url = augmentIconUrl(id);
+    expect(url).toEqual(expect.stringMatching(/assets\/s13\/augments\/.+\.png$/));
+    // strategy-panel's generic offer button calls augmentIconHtml(offer.id, 40).
+    const html = augmentIconHtml(id, 40);
+    expect(html).toContain(`src="${url}"`);
+    expect(html).toContain(`data-augment="${id}"`);
+    expect(html).toContain('width="40" height="40"');
+  });
+
+  it('keeps the anomaly definition name and description without a price', () => {
+    const id = 'titanic-strikes';
+    const definition = ANOMALY_DEFINITIONS[id]!;
+    const offer = genericOffer(id, readChoiceExtras({ kind: 'anomaly', offers: [id] }));
+    expect(offer.name).toBe(definition.name);
+    expect(offer.description).toBe(definition.description);
+    expect(offer).not.toHaveProperty('price');
   });
 });
