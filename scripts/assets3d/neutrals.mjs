@@ -45,6 +45,41 @@ export function neutralManifest(rows, validate) {
   validate(manifest); return manifest;
 }
 
+/** Shared BIN-bound model conversion for non-champions; unavailable actions stay absent. */
+export async function buildNonChampionModel(config, { load, assertManifest, initial,
+  rules = NEUTRAL_ACTION_RULES, requiredActions = Object.keys(rules) }) {
+  const docs = await animationGraphClosure(initial, async p => parseBin(await load(p)));
+  const preliminary = skinBindings(docs, []), mesh = await load(preliminary.mesh);
+  const binding = skinBindings(docs, inspectSkn(mesh).submeshes.map(s => s.name));
+  const graphs = docs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
+  if (graphs.length !== 1) throw new Error('missing-or-ambiguous-animation-graph');
+  const clips = animationClips([{ entries: graphs, patches: [] }]);
+  const animation = selectAnimations(clips, rules, config.animations);
+  for (const action of requiredActions) if (!animation.mapped[action]) throw new Error(`missing-neutral-action:${config.sourceName}:${action}`);
+  // Keep all atomic graph clips, including spawn/secondary attack/shared dragon clips.
+  const files = { ...animation.files };
+  for (const clip of clips.filter(c => c.atomic && c.path)) {
+    const name = canonicalAsset(clip.path).split('/').at(-1).replace(/\.anm$/, '');
+    if (files[name] && canonicalAsset(files[name]) !== canonicalAsset(clip.path)) throw new Error('animation-name-collision');
+    files[name] = clip.path;
+  }
+  const materialTextures = {}, textureReports = [];
+  for (const [material, path] of Object.entries(binding.textures)) {
+    if (binding.hidden.includes(material)) continue;
+    const decoded = decodeTexture(await load(path));
+    materialTextures[material] = encodePng(decoded);
+    textureReports.push({ material, path, width: decoded.width, height: decoded.height, format: decoded.format });
+  }
+  const animations = [];
+  for (const [name, path] of Object.entries(files)) animations.push({ name, bytes: await load(path) });
+  const result = makeModel(mesh, await load(binding.skeleton), animations, materialTextures,
+    { hiddenSubmeshes: binding.hidden, solidMaterials: binding.solidMaterials });
+  const structure = validateModel(result.glb);
+  if (!structure.passed) throw new Error('invalid-neutral-glb');
+  const manifest = neutralManifest([{ config, animations: animation.mapped }], assertManifest);
+  return { result, structure, binding, textureReports, animation, files, manifest };
+}
+
 /** Offline only. Read linked cache roots; every write is below the real neutrals root. */
 export async function buildNeutrals({ source = 'assets3d-local/trial/local', out = 'assets3d-local/neutrals', force = false } = {}) {
   const root = resolve(source), output = await safeOutputPath(out, { directory: true });
@@ -75,35 +110,8 @@ export async function buildNeutrals({ source = 'assets3d-local/trial/local', out
   const { assertManifest } = await contracts(), rows = [], reports = [];
   for (const config of parseNeutralConfig(NEUTRAL_CONFIG)) {
     const prefix = `data/characters/${config.sourceName}`;
-    const docs = await animationGraphClosure([`${prefix}/skins/skin0.bin`, `${prefix}/skins/root.bin`], async p => parseBin(await load(p)));
-    const preliminary = skinBindings(docs, []), mesh = await load(preliminary.mesh);
-    const binding = skinBindings(docs, inspectSkn(mesh).submeshes.map(s => s.name));
-    const graphs = docs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
-    if (graphs.length !== 1) throw new Error('missing-or-ambiguous-animation-graph');
-    const clips = animationClips([{ entries: graphs, patches: [] }]);
-    const animation = selectAnimations(clips, NEUTRAL_ACTION_RULES, config.animations);
-    for (const action of Object.keys(NEUTRAL_ACTION_RULES)) if (!animation.mapped[action]) throw new Error(`missing-neutral-action:${config.sourceName}:${action}`);
-    // Keep all atomic graph clips, including spawn/secondary attack/shared dragon clips.
-    const files = { ...animation.files };
-    for (const clip of clips.filter(c => c.atomic && c.path)) {
-      const name = canonicalAsset(clip.path).split('/').at(-1).replace(/\.anm$/, '');
-      if (files[name] && canonicalAsset(files[name]) !== canonicalAsset(clip.path)) throw new Error('animation-name-collision');
-      files[name] = clip.path;
-    }
-    const materialTextures = {}, textureReports = [];
-    for (const [material, path] of Object.entries(binding.textures)) {
-      if (binding.hidden.includes(material)) continue;
-      const decoded = decodeTexture(await load(path));
-      materialTextures[material] = encodePng(decoded);
-      textureReports.push({ material, path, width: decoded.width, height: decoded.height, format: decoded.format });
-    }
-    const animations = [];
-    for (const [name, path] of Object.entries(files)) animations.push({ name, bytes: await load(path) });
-    const result = makeModel(mesh, await load(binding.skeleton), animations, materialTextures,
-      { hiddenSubmeshes: binding.hidden, solidMaterials: binding.solidMaterials });
-    const structure = validateModel(result.glb);
-    if (!structure.passed) throw new Error('invalid-neutral-glb');
-    const manifest = neutralManifest([{ config, animations: animation.mapped }], assertManifest);
+    const { result, structure, binding, textureReports, animation, files, manifest } = await buildNonChampionModel(config,
+      { load, assertManifest, initial: [`${prefix}/skins/skin0.bin`, `${prefix}/skins/root.bin`] });
     const unitRoot = `build/units/${config.ids[0]}`;
     for (const model of Object.values(manifest.models)) await write(`${unitRoot}/${model.path}`, result.glb);
     await write(`${unitRoot}/manifest.json`, json(manifest));
