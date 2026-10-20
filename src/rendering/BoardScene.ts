@@ -48,6 +48,8 @@ import { OrbDock, readUnclaimedOrbs } from './online/orb-dock';
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
 /** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
 const SUMMON_BOARD_ONLY = '虚空生物只能在我方棋盘区域移动，不能放入备战席';
+/** v15: success line of a per-card augment reroll; stays shown during the choice window. */
+const AUGMENT_REROLL_SUCCESS = '这张强化已刷新 · 等级不变，刷掉的强化本局不再出现';
 /** v15 claimOrb refusals (MULTIPLAYER_CONTRACT: already-claimed covers a second click on a queued orb). */
 const ORB_FAILURE_TEXT: Readonly<Partial<Record<string, string>>> = {
   'already-claimed': '这个法球已领取或已排队', 'unknown-orb': '这个法球已不存在', 'seat-eliminated': '已淘汰，不能领取法球',
@@ -210,12 +212,7 @@ export class BoardScene extends Phaser.Scene {
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
-      rerollAugment: (choice, generation, slot) => {
-        const result = this.session.augmentReroll(choice, generation, slot), success = '这张强化已刷新 · 等级不变，刷掉的强化本局不再出现';
-        this.command(result, success);
-        // command() keeps "完成当前三选一" during a choice; a confirmed reroll names itself instead.
-        if (result.ok) this.setStatus(success);
-      },
+      rerollAugment: (choice, generation, slot) => this.command(this.session.augmentReroll(choice, generation, slot), AUGMENT_REROLL_SUCCESS),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
       control: name => this.panelControl(name),
@@ -575,7 +572,8 @@ export class BoardScene extends Phaser.Scene {
     const upgrades = this.showUpgrades(result.events);
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
     if (this.session.phase === 'gameOver') this.setStatus(this.endText());
-    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
+    // A confirmed per-card reroll (offline at once, online on its receipt) names itself; anything else points back at the choice.
+    else if (this.session.phase === 'choice' && success !== AUGMENT_REROLL_SUCCESS) this.setStatus('完成当前三选一后继续运营');
     // P1: online, an operation confirmed during the settlement (shop, bench, items, tools) keeps its own success text;
     // offline the settlement line still says how to continue.
     else if (this.session.phase === 'settlement' && !this.online) this.setStatus(this.settledText());
