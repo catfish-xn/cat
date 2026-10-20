@@ -15,6 +15,9 @@
  *   After a dropped connection the client reconnects with 1s/2s/4s/8s/10s backoff and `resume{token}`; the
  *   server's snapshot (view → state → replay) restores the screen. A queued seat is lost with its connection
  *   (B2 rule), so it returns to matchmaking.
+ * - Heartbeat: once the server has sent a `heartbeat` on this socket, a silence of HEARTBEAT_MISSED intervals counts as a
+ *   dead connection (a network that drops without a close never fires onclose); the socket is dropped and the usual
+ *   reconnect and resume follow. A server without heartbeat never arms this.
  *
  * No DOM dependency besides the injectable WebSocket/storage/timers, so tests drive it under Node.
  */
@@ -44,6 +47,10 @@ export interface WsClientOptions {
   readonly log?: (line: string) => void;
 }
 export const RECONNECT_BACKOFF_MS: readonly number[] = [1_000, 2_000, 4_000, 8_000, 10_000];
+/** Heartbeat intervals without any message before the client gives the socket up. */
+export const HEARTBEAT_MISSED = 3;
+/** Close code the client uses for a socket it gave up on (4xxx: application range). */
+export const HEARTBEAT_TIMEOUT_CLOSE = 4000;
 export const TOKEN_STORAGE_KEY = 'hex-online-seat';
 /** One stored seat per game server: `hex-online-seat:<ws url>`. */
 export function tokenStorageKey(url: string): string { return `${TOKEN_STORAGE_KEY}:${url}`; }
@@ -83,6 +90,9 @@ export class WsGameClient implements GameClient {
   private listeners: ClientListeners | null = null;
   private socket: WebSocket | null = null;
   private reconnectTimer: unknown = null;
+  /** Liveness deadline of the current socket; armed only after its first heartbeat. */
+  private livenessTimer: unknown = null;
+  private livenessMs: number | null = null;
   private attempt = 0;
   private disposed = false;
   private superseded = false;
@@ -154,7 +164,7 @@ export class WsGameClient implements GameClient {
   }
   dispose(): void {
     if (this.disposed) return; this.disposed = true;
-    this.cancelReconnect();
+    this.cancelReconnect(); this.cancelLiveness();
     const socket = this.socket; this.socket = null;
     if (socket) { this.detachSocket(socket); socket.close(1000, 'client closed'); }
     this.listeners = null;
@@ -186,20 +196,21 @@ export class WsGameClient implements GameClient {
     try { socket = this.createSocket(this.options.url); }
     catch (error) { this.log(`connect failed: ${String(error)}`); this.scheduleReconnect(); return; }
     this.socket = socket; this.bound = false;
+    this.cancelLiveness(); this.livenessMs = null;
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.attempt = 0;
       if (this.token) this.post({ type: 'resume', token: this.token });
       else this.setStatus({ kind: 'online' });
     };
-    socket.onmessage = event => { if (this.socket === socket) this.receive(String(event.data)); };
+    socket.onmessage = event => { if (this.socket === socket) { this.armLiveness(socket); this.receive(String(event.data)); } };
     socket.onclose = event => { if (this.socket === socket) this.closed(event.code); };
     socket.onerror = () => { /* followed by close */ };
   }
   private detachSocket(socket: WebSocket): void { socket.onopen = null; socket.onmessage = null; socket.onclose = null; socket.onerror = null; }
   /** Drops the current socket (if any) without the reconnect bookkeeping and opens a new one at once. */
   private restart(): void {
-    this.cancelReconnect();
+    this.cancelReconnect(); this.cancelLiveness();
     const socket = this.socket; this.socket = null;
     if (socket) { this.detachSocket(socket); socket.close(1000, 'reset'); }
     this.clearInflight();
@@ -207,6 +218,7 @@ export class WsGameClient implements GameClient {
   }
   private closed(code: number): void {
     this.socket = null;
+    this.cancelLiveness();
     this.clearInflight();
     if (this.disposed || this.superseded) return;
     this.log(`connection closed (${code})`);
@@ -225,6 +237,20 @@ export class WsGameClient implements GameClient {
     this.attempt += 1;
     this.setStatus({ kind: 'reconnecting', attempt: this.attempt, delayMs });
     this.reconnectTimer = this.timers.set(() => { this.reconnectTimer = null; this.connect(); }, delayMs);
+  }
+  /** Any message proves the socket alive; the deadline restarts from it. */
+  private armLiveness(socket: WebSocket): void {
+    if (this.livenessMs === null) return;
+    this.cancelLiveness();
+    this.livenessTimer = this.timers.set(() => { this.livenessTimer = null; this.livenessLost(socket); }, this.livenessMs);
+  }
+  private cancelLiveness(): void { if (this.livenessTimer !== null) { this.timers.clear(this.livenessTimer); this.livenessTimer = null; } }
+  private livenessLost(socket: WebSocket): void {
+    if (this.socket !== socket || this.disposed || this.superseded) return;
+    this.log(`no message for ${this.livenessMs} ms; dropping the connection`);
+    this.detachSocket(socket);
+    try { socket.close(HEARTBEAT_TIMEOUT_CLOSE, 'heartbeat timeout'); } catch { /* already closing */ }
+    this.closed(HEARTBEAT_TIMEOUT_CLOSE);
   }
   private cancelReconnect(): void { if (this.reconnectTimer !== null) { this.timers.clear(this.reconnectTimer); this.reconnectTimer = null; } }
   private clearInflight(): void { this.inflight.clear(); this.confirmed = []; this.deferredRetries = []; }
@@ -245,7 +271,15 @@ export class WsGameClient implements GameClient {
       case 'replay': return this.onReplay(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
+      case 'heartbeat': return this.onHeartbeat(message.intervalMs);
     }
+  }
+  /** The first beat arms the liveness deadline (armLiveness already ran for this message, so arm it now). */
+  private onHeartbeat(intervalMs: unknown): void {
+    if (typeof intervalMs !== 'number' || !Number.isFinite(intervalMs) || intervalMs <= 0) return;
+    const first = this.livenessMs === null;
+    this.livenessMs = intervalMs * HEARTBEAT_MISSED;
+    if (first && this.socket) this.armLiveness(this.socket);
   }
   private onView(roomId: string, view: PlayerView): void {
     this.roomId = roomId;
