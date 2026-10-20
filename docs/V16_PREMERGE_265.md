@@ -1,4 +1,63 @@
-# #265 v16 体积方案替换（2026-10-20）
+# #265 v16 CI 红项修复（2026-10-20，起点 c0ef8ddd）
+
+本轮起点：`codex/epic-loot-reforger@c0ef8ddd99be41623a5bf10266fc1cd28e93069c`，工作区干净。只读 Git、全程离线、不安装依赖、不写 `.git`；未修改任何 `src/` 文件（含禁止的服务器和渲染目录）。以下为本轮记录；原文保留为历史。
+
+## 逐项结论与修复依据
+
+| 项目 | 结论、根因与改动 |
+| --- | --- |
+| m8-b8-oracle | 本地复现2项失败，均为共享追加流时代遗留的字面向量，并非当前生产流偏移。恢复基线seed230的2-7/3-7/4-7组件sword/tear、cloak/rod、sword/tear，以及1/2/3金币、原开局Darius/Irelia。5-7/6-7使用已批准v16史诗表，两份独立字面表BigInt oracle得到Swain×3、Camille、Vi及loot游标22/27；修复早期流隔离后漏同步的测试向量。商店断言和规则未改。 |
+| r3r4-consumable-targets | 本地4项因找不到窃贼手套失败；此前把基线配方seed162错换成共享流时代seed72。恢复162：真实公开命令得到两只手套并合成；重铸器与目标拒绝断言保留。72原奖励含光明装备而非手套，不改生产掉落迎合它。 |
+| r3r4-loot | 本地1项失败；seed42的5-7为standard变体，独立表得到“成装锻造器+铜箱+银箱”3球，旧4球是遗留artifact向量。6-7仍3球，总数18；1–4阶段计数不变。此为既有v16史诗表的测试实现修复，不新增玩法。 |
+| m8-b8-live-economy | 本地3项失败；组件期望曾从基线bow/sword错改为rod/gloves。恢复Git基线原字面值；9/49/50金币、1金币先入账、16/60/61结算、投资成长、restore/Continue只发一次均未改。 |
+| readLootView | 单独运行m8-b8-loot-view 7项、t5r-loot-view 24项原本通过。投影实现无误；补充seed38精确5条payload、追加项entryOrdinal=2、唯一收据/工具/事件、restore后step不重发、重复收据拒绝，覆盖U6同一领域路线。 |
+| m8-b8-live-cross-round | 扩展readLootView检查发现suite加载即失败：仍读取不存在的cloak并合成飓风。将整个原奖励/羊刀/战斗攻速/出售来源链恢复为指定v15提交字节，再仅增加方案A新增的1-4末尾次级复制器期望；独立oracle给seed14349、r02蓝球追加抽签98。其余原数值及篡改拒绝不变。 |
+| m8-u6-loot 4-7 | 预期新增，非重复奖励：seed38，razorbeaks-v1的r00载体、灰球slotOrdinal=1，在Ezreal/remover原内容抽完后，以独立FNV/LCG抽得99，命中灰球1%次级复制器，追加到entryOrdinal=2。收据为JSON.stringify([JSON.stringify([orbId,2]),'grant'])；orbId=JSON.stringify(['orb','4-7','razorbeaks-v1',JSON.stringify(['pve','4-7','razorbeaks-v1','r00']),1])。脚本精确检查原4条+末尾复制器5条、唯一收据及grantedConsumableIds，不截断掉落或宽松匹配。 |
+| headless | 已原样复现到第16条路线cannon/4096：选择进入未知时旧M5 oracle把暂离的Corki当作丢失。按已批准D14托管合同，独立核算活动+托管英雄/装备，校验原出生/离场资源事实和不得同时活动；保留卡份额/金币/物品/序号核算。新增真实离场→三次结算回归及丢失英雄、重复英雄、丢失装备、回归丢失的拒绝反例。生产D14无改动。 |
+
+## 方案A与原流证据
+
+从指定基线提交只读 `git archive` 导出真实源码，归档SHA256为 `d5972cb0e44781efd438a4938cb700417024e9d049f550656d7cb26ec28df4ea`。4,102种子（0–4095及6160/6240/7216/18619/3374947733/0xffffffff）逐项比较至4-7：只剔除追加复制器、只把两旧重铸器名称归一为已批准reforger后，原payload、orb/drop身份、顺序和loot RNG全部与v15相同；相同种子在等级1/4/7/9共16,408次商店比较与基线及独立BigInt算术一致。两份互不调用的v16 oracle与生产完整8轮奖励也全部一致。
+
+没有发现当前生产实现漏用独立流，因此没有修改生产代码，也没有用新掉落结果覆盖原掉落期望。本轮恢复的是此前被共享流偏移改错的v15测试种子/字面值；晚期史诗向量按已批准v16表重新独立计算，不归因于方案A增加原奖励。
+
+原始日志/完整向量在 `artifacts/v16-ci-fix/`（不提交生成目录）；最终机器摘要见 [ci-fix-265-verification.json](evidence/v16/ci-fix-265-verification.json)。
+
+## 本轮验证与交付状态
+
+最终按文件去重为 **31文件、506项通过、0失败、0待执行**。包括原失败文件、全部直接调用readLootView的测试、match-session、opening-random-*、m5-growth、epic-loot-reforger、d14-*、content-identity-constants及tests/presentation；未改测试时限、未缩小原数值/来源链/拒绝断言。`node node_modules/typescript/bin/tsc --noEmit`、`npm.cmd run build -- --configLoader runner`均退出0；`VITE_CONFIG_LOADER=runner node scripts/verify-m5-headless.cjs --multi-seed`全部24条路线通过（含原失败4096，三种build，原种子列表不变）。没有重跑完整四分片CI或性能重复采样，不把本机结果说成远端CI全绿。
+
+虽然未改simulation，oracle是录制器受校验源码，仍按EPIC_LOOT_V16规定顺序重跑9步以刷新源码指纹，基线参数始终为 `1642beaabee7df800c15250bb07ec6cf2e6bbed0`：
+
+| 步骤 | 命令（参数同EPIC_LOOT_V16的9步流水线） | 退出码 |
+| --- | --- | ---: |
+| release | node scripts/record-v16-release.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| herald-write | node tests/fixtures/record-v16-herald.cjs --write | 0 |
+| inputs | node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| live-reveal | node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| inputs-check | node scripts/record-v16-inputs.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check | 0 |
+| herald-verify | node scripts/verify-m8-herald-fixtures.cjs | 0 |
+| history | node scripts/v16-fixture-audit.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 | 0 |
+| live-reveal-check | node scripts/record-v16-live-reveal.cjs --baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0 --check | 0 |
+| digests | node scripts/compare-v16-digests.cjs | 0 |
+
+所有v16状态、完整golden、输入、Herald raw载荷与起点HEAD逐字节相同；仅四份录制审计/manifest中的oracle源码指纹及其关联摘要变化。历史G2-3/G2-4b的86文件、v15的23文件和历史身份断言经Git真实字节核验不变。
+
+| digest（均有fnv1a32-utf16前缀） | 本轮前 | 本轮后 | v15基线复算 |
+| --- | --- | --- | --- |
+| CONTENT_DIGEST | de829c8a | de829c8a | 70dbb056 |
+| LOOT_REPLAY_DIGEST | 62c76cb9 | 62c76cb9 | 61568ec0 |
+| RULES_GAP_MANIFEST | 31950a0f | 31950a0f | 97c14bf3 |
+
+体积仍使用m7-budget的全部 `dist/assets/*.js` 分文件gzip level9求和，含Phaser：**619,825 B / 424,763 B = 1.4592254975 ≤ 1.49**。分母沿用已记录的本地15313a7构建，本轮未重建历史产物；分子每个文件的SHA256与gzip字节数在机器摘要中。未修改预算配置或阈值。
+
+**未完成：U6浏览器端复验。** 原脚本在本机默认Vite配置加载器下先遇esbuild目录权限拒绝；为headless/U6接入可选 `VITE_CONFIG_LOADER=runner`，U6另支持工作区缓存目录 `U6_CACHE_DIR`，默认CI行为不变。随后U6仍在启动服务时被沙箱拒绝 `listen EACCES: permission denied 127.0.0.1:5173`，浏览器断言尚未执行。没有绕过权限、联网或把领域测试冒充DOM验证。可在具备本地监听权限的环境运行 `VITE_CONFIG_LOADER=runner U6_CACHE_DIR=artifacts/v16-ci-fix/u6-cache node scripts/verify-m8-u6-loot.cjs`（本机Chrome可设置CHROMIUM_PATH），或由现有m8-ui-dynamic CI复验；领域路线已验证5条精确掉落、唯一收据/工具/事件和恢复不重发。
+
+建议提交信息：`fix(v16): restore scheme A loot vectors and account for D14 held ownership`。无待拍板玩法问题；未暂存、提交或执行其他Git写操作。最终边界检查确认 `src/` 无改动，`git diff --check`通过。
+
+---
+
+# #265 v16 体积方案替换（2026-10-20，历史）
 
 本次起点：`codex/epic-loot-reforger@4406686b7bc95541fd0ca66d751b7008d74d36c6`，工作区干净。历史基线仍为 `1642beaabee7df800c15250bb07ec6cf2e6bbed0`。遵循协调者 `amend-265-bundle.md`：只读 Git、不联网、不写 `.git`，不改 `src/server/`、`src/rendering/`，不重录任何 v16 fixture 或既有证据。下文旧轮次结果仅作历史记录。
 

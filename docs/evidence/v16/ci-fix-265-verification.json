@@ -1,0 +1,658 @@
+{
+  "startingHead": "c0ef8ddd99be41623a5bf10266fc1cd28e93069c",
+  "baseline": "1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+  "sourceTreeUnchanged": true,
+  "networkUsed": false,
+  "gitWrites": false,
+  "legacyStreams": {
+    "archiveSha256": "d5972cb0e44781efd438a4938cb700417024e9d049f550656d7cb26ec28df4ea",
+    "seeds": 4102,
+    "originalLootThrough4_7AndRngUnchanged": true,
+    "shopComparisons": 16408,
+    "twoIndependentFullV16OraclesAgree": true,
+    "consumableRecipeVectors": {
+      "72": {
+        "items": [
+          "cloak",
+          "rod",
+          "gloves",
+          "TFT5_Item_TrapClawRadiant",
+          "sword",
+          "bow",
+          "sword"
+        ],
+        "consumables": [
+          "magnetic-remover",
+          "magnetic-remover",
+          "magnetic-remover",
+          "TFT_Consumable_NeekosHelp",
+          "magnetic-remover",
+          "magnetic-remover"
+        ]
+      },
+      "162": {
+        "items": [
+          "belt",
+          "vest",
+          "sword",
+          "thiefs-gloves"
+        ],
+        "consumables": [
+          "magnetic-remover",
+          "magnetic-remover",
+          "magnetic-remover",
+          "reforger",
+          "reforger",
+          "magnetic-remover"
+        ]
+      }
+    }
+  },
+  "terminalBonus": {
+    "seed": 38,
+    "orbId": "[\"orb\",\"4-7\",\"razorbeaks-v1\",\"[\\\"pve\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"r00\\\"]\",1]",
+    "sourceUnitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+    "slotOrdinal": 1,
+    "entryOrdinal": 2,
+    "independentRoll": 99,
+    "payload": {
+      "kind": "consumable",
+      "definitionId": "TFT_Consumable_ChampionDuplicator_III",
+      "quantity": 1
+    },
+    "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",1]\",2]",
+    "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"4-7\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"razorbeaks-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r00\\\\\\\\\\\\\\\"]\\\\\\\",1]\\\",2]\",\"grant\"]",
+    "evidence": "tests/m8-b8-loot-view.test.ts: authentic terminal routes verify one receipt, tool and grant event; reject duplicate receipt after restore"
+  },
+  "identities": {
+    "startingV16": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "v15": {
+      "contentDigest": "fnv1a32-utf16:70dbb056",
+      "lootReplayDigest": "fnv1a32-utf16:61568ec0",
+      "rulesManifestDigest": "fnv1a32-utf16:97c14bf3"
+    },
+    "finalV16": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    }
+  },
+  "budget": {
+    "method": "m7-budget jsGzip: all dist/assets/*.js separately gzip level9 including Phaser",
+    "baselineBytes": 424763,
+    "baselineProvenance": "existing documented local 15313a7 build; not rebuilt this turn",
+    "files": [
+      {
+        "file": "index-DMrJUfGK.js",
+        "gzip": 444173,
+        "sha256": "ee984dc2429ab02f3281edc2f6da0d5fad1e6042b1fefb1e25a2ab743f7c73a2"
+      },
+      {
+        "file": "phaser-ax-wMCa1.js",
+        "gzip": 175652,
+        "sha256": "54af098131ba3056731ae3bf76c15d639ffa0f86d6118e93e626dda3449599e3"
+      }
+    ],
+    "currentBytes": 619825,
+    "ratio": 1.4592254975127306,
+    "ceiling": 1.49
+  },
+  "tests": {
+    "files": 31,
+    "passed": 506,
+    "failed": 0,
+    "pending": 0,
+    "results": [
+      {
+        "file": "tests/content-identity-constants.test.ts",
+        "status": "passed",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-ability-display.test.ts",
+        "status": "passed",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-anomalies-source.test.ts",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-anomalies.test.ts",
+        "status": "passed",
+        "passed": 42,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-sale-price.test.ts",
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/d14-wiring-match.test.ts",
+        "status": "passed",
+        "passed": 39,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/epic-loot-reforger.test.ts",
+        "status": "passed",
+        "passed": 29,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/loot-orb-claim.test.ts",
+        "status": "passed",
+        "passed": 27,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m5-growth.test.ts",
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m8-b8-live-cross-round.test.ts",
+        "status": "passed",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m8-b8-live-economy.test.ts",
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m8-b8-loot-view.test.ts",
+        "status": "passed",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/m8-b8-oracle.test.ts",
+        "status": "passed",
+        "passed": 25,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/match-session.test.ts",
+        "status": "passed",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/opening-random-1cost.test.ts",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "status": "passed",
+        "passed": 142,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/choice-fallback.test.ts",
+        "status": "passed",
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/g2-3-display.test.ts",
+        "status": "passed",
+        "passed": 16,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/g2-4a-crown-display.test.ts",
+        "status": "passed",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/presentation/unit-revived-display.test.ts",
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/r3r4-consumable-targets.test.ts",
+        "status": "passed",
+        "passed": 5,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/r3r4-loot.test.ts",
+        "status": "passed",
+        "passed": 6,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/r3r4-shared.test.ts",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/s13-augments-p2-multiplayer.test.ts",
+        "status": "passed",
+        "passed": 18,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/server/t10-combat-ops.test.ts",
+        "status": "passed",
+        "passed": 10,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/server/v15-orb-claim.test.ts",
+        "status": "passed",
+        "passed": 7,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/shared-pool-cache.test.ts",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/t5r-b7-integration.test.ts",
+        "status": "passed",
+        "passed": 1,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/t5r-loot-view.test.ts",
+        "status": "passed",
+        "passed": 24,
+        "failed": 0,
+        "pending": 0
+      },
+      {
+        "file": "tests/tp-rewards-and-rounds.test.ts",
+        "status": "passed",
+        "passed": 9,
+        "failed": 0,
+        "pending": 0
+      }
+    ]
+  },
+  "typecheckExitCode": 0,
+  "buildExitCode": 0,
+  "recording": [
+    {
+      "args": [
+        "scripts/record-v16-release.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0"
+      ],
+      "exitCode": 0,
+      "name": "release"
+    },
+    {
+      "args": [
+        "tests/fixtures/record-v16-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "name": "herald-write"
+    },
+    {
+      "args": [
+        "scripts/record-v16-inputs.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0"
+      ],
+      "exitCode": 0,
+      "name": "inputs"
+    },
+    {
+      "args": [
+        "scripts/record-v16-live-reveal.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0"
+      ],
+      "exitCode": 0,
+      "name": "live-reveal"
+    },
+    {
+      "args": [
+        "scripts/record-v16-inputs.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+        "--check"
+      ],
+      "exitCode": 0,
+      "name": "inputs-check"
+    },
+    {
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "name": "herald-verify"
+    },
+    {
+      "args": [
+        "scripts/v16-fixture-audit.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0"
+      ],
+      "exitCode": 0,
+      "name": "history"
+    },
+    {
+      "args": [
+        "scripts/record-v16-live-reveal.cjs",
+        "--baseline-commit=1642beaabee7df800c15250bb07ec6cf2e6bbed0",
+        "--check"
+      ],
+      "exitCode": 0,
+      "name": "live-reveal-check"
+    },
+    {
+      "args": [
+        "scripts/compare-v16-digests.cjs"
+      ],
+      "exitCode": 0,
+      "name": "digests"
+    }
+  ],
+  "recordedPayloads": [
+    {
+      "file": "tests/fixtures/m5/full-match-golden.v16.json",
+      "sha256": "dc6dbfa047f0148df6f27352a84889c3e9d3196f64a88ab9bb26522f250a3c24",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-b8-fingerprints.json",
+      "sha256": "43cd7dcfe570331e3ef4d0ff380c2289486f36e30c254d4648f6ad983501294c",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-c19-seed-9-minimal.json",
+      "sha256": "f8cc8f598cd0a262dd8105a65ca15527c783e8bc4a9c911ae1095b6f7e18eb50",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/edge-of-night.json",
+      "sha256": "90d398dc8cb228eb0416c92a63cfc9adf65338e3a7dd86ce202102d055d5aba8",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/evenshroud.json",
+      "sha256": "642d05f10815777dafd301a3420f89090b62ab7f74a9ff1e3196e19f8622d67a",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/ionic-spark--evenshroud.json",
+      "sha256": "8121c010cb0b41347dee62dadfc75fcf486d7c834535d6019d3b94bf00ba1733",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/ionic-spark.json",
+      "sha256": "ad71e41cc465d4cbeb58a1eb65938d1e94efcdd2d7cdd40c2ab69febd1cc9f0e",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/manifest.json",
+      "sha256": "d95e38f92eab8bbb49def25592096653b68d23cad1ff523cb2fc507e877fa902",
+      "byteIdenticalToStartingHead": false
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/quicksilver.json",
+      "sha256": "276e1cfc0971f9add79191e48c237954a2a780c4aa56edf9791b8097079d89ec",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-raw/trajectory.json",
+      "sha256": "d403bde560f6164c62f18d02caf1e2ce75ff9bb584693dc0595f563b98f70a20",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-herald-support/generate.ts",
+      "sha256": "1433aa02c3d74a08a005662418a98e0cdf309ed72c976d1ece7d304c45a692d1",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-recorded-states/cannon.json.gz",
+      "sha256": "25815a4cd83d1b43a2e7403f0278ac5afdcb66ca2da41ad3d440139dfb97be7c",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/fixtures/v16-recorded-states/sniper.json.gz",
+      "sha256": "6a4a325aa03c35c921b277b7d52b6522f4f77b38ad81baaba7bf9dc091a2e496",
+      "byteIdenticalToStartingHead": true
+    },
+    {
+      "file": "tests/v16-content-baseline.json",
+      "sha256": "8aec08ef1876cc1f6d7f4dbc10a8481f081719406101d472ae6caa7d380921b9",
+      "byteIdenticalToStartingHead": true
+    }
+  ],
+  "headless": {
+    "passed": true,
+    "routes": [
+      {
+        "seed": 0,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "29f062abe06f090ac049159e1d3afcbd916d072dab482297bdf0d01bbac71f29"
+      },
+      {
+        "seed": 1,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "126a5b4d7da1262d0ca7893a36b820e5dbdd7922b6b21f3fbdcfd98e102e5995"
+      },
+      {
+        "seed": 42,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "e1fcad087438c798f7abdc6f08e11b6f776082ae26d12f7eb02877c0078105da"
+      },
+      {
+        "seed": 4294967295,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "08fefdef70c9d05ae1432aced811d13b2e01bfab4c1bca91613b704b69cba9b1"
+      },
+      {
+        "seed": 7,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "9b152423d7c98ca7448b76ee7778623e4d7debcc13a3f125dce85c1a9dd68d4b"
+      },
+      {
+        "seed": 13,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "d0e3fa4ba5b23fcf5946d5339295050f5cb5b639ab978af853a74718f9796799"
+      },
+      {
+        "seed": 23,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "c9c4086c9fab5817dc42f5aca955db16f021c2b9d7b8012d0ada1800b0d3599f"
+      },
+      {
+        "seed": 31,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "1c5df6ec728776549bbb4dabb2b202d80d46f1f97e95cd860d4b105f4bb83c52"
+      },
+      {
+        "seed": 64,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "cde6ef270e650992fcd18aead2c62de45e73159d6a367efb517bda7e666b98c8"
+      },
+      {
+        "seed": 99,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "53330dbe956249210aff532d10d3e3a105211b8ed065c3b1e1226ada263e0288"
+      },
+      {
+        "seed": 123,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "f757279f1075823425b6fc08e3c954b6f671ea42b7a9788af2bdde78926dc218"
+      },
+      {
+        "seed": 256,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "8dd94aca3f994415645aebe4ebfd46c9fd418ec6975241f66c3855e84871cc82"
+      },
+      {
+        "seed": 777,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "889f41af1747595e8e9b67cfb3b0335ee2f0d61ea27a9b6bd4b3025046ce7f3b"
+      },
+      {
+        "seed": 1024,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "a5e60b4706fc3b8d9d34f67ec746b18f0cf424704de6f3fa86a5707feec1144e"
+      },
+      {
+        "seed": 2048,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "6781b77b96aaa3e77cb0e71703ac55427f1c6c28837c23eeddbdc8d9f907bb35"
+      },
+      {
+        "seed": 4096,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "6966d9b8ff56cd6aa894343411b938664d0a23746e547140b7ba6d07f6459e4c"
+      },
+      {
+        "seed": 8192,
+        "build": "sniper",
+        "outcome": "defeat",
+        "round": 34,
+        "finalHash": "824edb264f985714dcfeaccfcd67ca7abb20a13d5996a3a3c07e0ef8daccbb9d"
+      },
+      {
+        "seed": 12345,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "9e0addf27e3fd556eeeebbd7856704e748061c24854625c13356d3fbc13b2352"
+      },
+      {
+        "seed": 32768,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "bde9cf1da9f144517b90fbeb04c56f7cfc96495a79a120eb23a9be5aa2e61f92"
+      },
+      {
+        "seed": 65535,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "daaedd5265d7e1fe54fde43b30feae6251834aea39293daf45d84c849d17e5f7"
+      },
+      {
+        "seed": 424242,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "cdc5490fc0bbeae15ca86dda4fef3162dec0f25c6c7e867ba2d53c552fdb0f90"
+      },
+      {
+        "seed": 3735928559,
+        "build": "cannon",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "8db39c44fcd00bf6d5ec7c38100a49811b236b5f0100412ab43d50e643215f31"
+      },
+      {
+        "seed": 2147483648,
+        "build": "sniper",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "f80c8f4584a31b9eb89775ad9244bf7a4b0318c0ef356966482eff2af9095645"
+      },
+      {
+        "seed": 2654435769,
+        "build": "mage",
+        "outcome": "victory",
+        "round": 38,
+        "finalHash": "dbdcf912ec9f1db7afffd64d10b997652bfe10be0a3c7be37a23b6bf6e8b6c7c"
+      }
+    ],
+    "sourceFingerprint": "bb99403a24db28d75a022ab7110760357bf7ba32db79542775c13afc4abef0a7",
+    "finalSourceFingerprint": "bb99403a24db28d75a022ab7110760357bf7ba32db79542775c13afc4abef0a7"
+  },
+  "browser": {
+    "passed": false,
+    "blocker": "listen EACCES: permission denied 127.0.0.1:5173; no browser assertions executed",
+    "command": "VITE_CONFIG_LOADER=runner U6_CACHE_DIR=artifacts/v16-ci-fix/u6-cache node scripts/verify-m8-u6-loot.cjs",
+    "domainCoverage": "m8-b8-loot-view exact terminal receipt and payload assertions passed"
+  }
+}

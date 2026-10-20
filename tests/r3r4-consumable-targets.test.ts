@@ -11,7 +11,9 @@ import type { MatchState } from '../src/simulation/match-types';
 import { publicConsumables, accepted, finish } from './fixtures/r3r4-public';
 
 function prepared(phase: MatchState['phase']) {
-  let state = publicConsumables(72);
+  // Restore the v15 public recipe seed: independent bonus draws preserve its
+  // original gloves; seed 72 was selected while bonuses still shifted loot RNG.
+  let state = publicConsumables(162);
   const parent = state.items.find(item => item.definitionId === 'thiefs-gloves')!;
   const holder = state.preparation.units.find(unit => unit.team === 'player')!;
   state = accepted(equipItem(state, parent.id, holder.id, 0));

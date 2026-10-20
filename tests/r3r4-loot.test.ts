@@ -28,9 +28,11 @@ describe('R3/R4 catalog and live entry accounting',()=>{
   it('all eight PvE rounds have the signed orb counts and no PvE choice/fallback',()=>{
     const plan=freezeLootThroughRound(42,38);
     expect(plan.rounds.map(r=>[r.encounterPlan.roundId,r.orbs.length,r.choices.length])).toEqual([
-      ['1-2',1,0],['1-3',2,0],['1-4',3,0],['2-7',2,0],['3-7',2,0],['4-7',2,0],['5-7',4,0],['6-7',3,0],
+      ['1-2',1,0],['1-3',2,0],['1-4',3,0],['2-7',2,0],['3-7',2,0],['4-7',2,0],['5-7',3,0],['6-7',3,0],
     ]);
-    expect(plan.rounds.flatMap(r=>r.orbs)).toHaveLength(19);
+    // Seed 42: both independent v16 oracles select standard, not artifact,
+    // at 5-7: one completed forge + copper + silver, hence three orbs.
+    expect(plan.rounds.flatMap(r=>r.orbs)).toHaveLength(18);
     for(const round of plan.rounds)for(const orb of round.orbs)for(const [i,entry] of orb.entries.entries()) {
       expect(entry.dropId).toBe(JSON.stringify([orb.orbId,i]));expect(entry.entryOrdinal).toBe(i);
     }
