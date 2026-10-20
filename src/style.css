@@ -905,3 +905,41 @@ body:has(.item-card.dragging, .consumable-card.dragging) :is(.hover-card, .item-
 .anomaly-d14, .unit-d14-note { color: var(--star-4, #a6f2e6); }
 .d14-away-chip { position: absolute; left: 8px; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); z-index: 80; max-width: min(360px, calc(100% - 16px)); margin: 0; padding: 6px 10px; border: 1px solid #a6f2e688; border-radius: 8px; background: #16303acc; color: var(--star-4, #a6f2e6); font-size: 12px; line-height: 1.4; pointer-events: none; }
 body[data-m6-mode="startup"] .d14-away-chip, body[data-m6-mode="import"] .d14-away-chip, body[data-m6-mode="replay"] .d14-away-chip, body[data-online-mode="online-ended"] .d14-away-chip { display: none !important; }
+
+/* 2D 面板美化 · 商店（online）：按云顶商店卡还原——费用色边框、立绘左下羁绊图标+名字、底部深色名条，右下金币图标+费用；
+   D/F/E/锁店按钮用金边深蓝底。只改外观，文字和数据不变。 */
+body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-dark: #785a28; --lol-navy: #091428; --lol-navy-2: #0a1d2e; }
+.shop-dock { grid-template-columns: 168px 140px minmax(0, 1fr); background: linear-gradient(180deg, #0f1c29, #08121c); box-shadow: inset 0 1px 0 #c8aa6e33, inset 0 0 0 1px #1d2f3d; }
+.shop-dock .shop-card[data-cost] { border: 2px solid var(--card-cost); border-radius: 4px; grid-template-rows: minmax(0, 1fr) 22px;
+  background: #050b12; box-shadow: inset 0 0 0 1px #000a; }
+.shop-dock .shop-card[data-cost="4"], .shop-dock .shop-card[data-cost="5"] { box-shadow: inset 0 0 0 1px #000a, 0 0 8px color-mix(in srgb, var(--card-cost) 45%, transparent); }
+.shop-dock .shop-card[data-cost]:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.12);
+  box-shadow: 0 0 0 1px var(--card-cost), 0 6px 16px color-mix(in srgb, var(--card-cost) 50%, transparent); }
+.shop-dock .shop-card .shop-emblem { inset: 0 0 22px; }
+.shop-dock .shop-card .shop-emblem::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, #050b12d9 100%), linear-gradient(90deg, #050b1299, transparent 55%); }
+.shop-dock .shop-card .shop-name { grid-row: 2; align-self: stretch; display: block; line-height: 21px; padding: 0 24px 0 5px; font-size: 12.5px; letter-spacing: 0;
+  color: var(--lol-gold-light); background: linear-gradient(180deg, #0d1822, #050b12); border-top: 1px solid color-mix(in srgb, var(--card-cost) 55%, #000); text-shadow: none; }
+.shop-dock .shop-card .shop-trait { align-self: end; margin: 0 0 4px 4px; gap: 2px; font-size: 11px; color: #e8edf0; }
+.shop-dock .shop-card .shop-trait > span { display: flex; align-items: center; gap: 3px; line-height: 15px; }
+.shop-dock .shop-card .shop-trait .trait-icon { flex: none; margin: 0; padding: 1px; border-radius: 3px; background: #000a; vertical-align: 0; }
+.shop-dock .shop-card .shop-trait .trait-letter { flex: none; font-size: 9px; }
+.shop-dock .shop-card .shop-trait .trait-closed { opacity: .6; }
+.shop-dock .shop-card .shop-cost { right: 6px; bottom: 4px; display: flex; align-items: center; gap: 3px; color: var(--lol-gold-light); font-size: 13px; text-shadow: none; }
+.shop-dock .shop-card .shop-cost::before { width: 11px; height: 11px; margin: 0; vertical-align: 0;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0 18%, #f2c24f 40%, #b07d1c 78%, #6d4a0e 100%); box-shadow: inset 0 0 0 1px #6d4a0e; }
+.shop-dock .shop-card.unaffordable { filter: grayscale(.75) brightness(.8); }
+.shop-dock .shop-card:not([data-cost]) { border: 2px solid #1d2f3d; border-radius: 4px; background: repeating-linear-gradient(135deg, #0a141d 0 8px, #0c1822 8px 16px); }
+.shop-dock .shop-card.upgrade[data-cost] .shop-upgrade { top: 4px; right: 4px; color: #ffd34d; background: #050b12d9; }
+@container (max-width: 66px) {
+  .shop-dock .shop-card .shop-name { padding: 0 2px; font-size: 11px; }
+  .shop-dock .shop-card .shop-cost { top: 3px; bottom: auto; right: 3px; padding: 1px 3px; border-radius: 3px; background: #050b12cc; font-size: 12px; }
+  .shop-dock .shop-card .shop-trait .trait-icon { display: none; }
+}
+.shop-dock .mobile-controls button { position: relative; border: 1px solid var(--lol-gold-dark); border-radius: 3px; color: var(--lol-gold-light); font-weight: 600;
+  background: linear-gradient(180deg, #1e2d3c, var(--lol-navy-2)); box-shadow: inset 0 1px 0 #ffffff12; }
+.shop-dock .mobile-controls button:not(:disabled):hover { border-color: var(--lol-gold); background: linear-gradient(180deg, #27394b, #0f2436); }
+.shop-dock .mobile-controls button:not(:disabled):active { transform: translateY(1px); }
+.shop-dock .mobile-controls button:disabled { color: #6c7a84; border-color: #2a3640; }
+.shop-dock .mobile-controls [data-debug="shop-lock"][aria-pressed="true"] { border-color: var(--lol-gold); color: #ffd782; background: linear-gradient(180deg, #3a2f18, #1d170b); }
+.shop-dock .hud-chip { border: 1px solid #1d2f3d; background: #08121c; }
+.shop-dock .hud-gold strong { color: #f2c24f; }
