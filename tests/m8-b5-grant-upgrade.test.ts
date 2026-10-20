@@ -47,7 +47,7 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
     const duplicate = planPermanentItemGrant(plan.state, { definitionId, receiptId: 'reward-1' }, ['reward-1']);
     expect(duplicate).toEqual({ ok: false, state: plan.state, reason: 'duplicate-grant' });
     expect(duplicate.state).toBe(plan.state);
-  }, 10000); // 临时，经用户 10-20 批准：CI 并发负载下 blue-buff 用例超过默认 5 秒（本地约 1.4 秒），断言不变
+  });
   it('rejects bad definitions, grant identities and serials without any partial state', () => {
     const state = freeze(readyMatch());
     for (const definitionId of ['absent', '__proto__', 'constructor', JSON.stringify(['item-20', '2-1', 1])]) {

@@ -66,9 +66,9 @@ describe('game server: visibility', () => {
       expect((message as { type: string }).type).not.toBe('combat');
       expect(hasKey(message, 'shop'), `${message.type} leaked a shop`).toBe(false);
       if (message.type === 'view') for (const seat of message.view.seats) {
-        // C5: every seat's public board travels in the view, and only deployed units with item definitions.
+        // C5 + 2026-10-20 scouting: every seat's public build travels in the view: units, items and augments by definition only.
         expect(seat.publicBoard, `${seat.seatId} has no public board`).toBeDefined();
-        for (const key of ['gold', 'bench', 'slot', 'xp', 'seed', 'id', 'location']) expect(hasKey(seat.publicBoard, key), `publicBoard of ${seat.seatId} has ${key}`).toBe(false);
+        for (const key of ['gold', 'streak', 'xp', 'seed', 'id', 'location', 'choiceId', 'shop']) expect(hasKey(seat.publicBoard, key), `publicBoard of ${seat.seatId} has ${key}`).toBe(false);
       }
       expect(hasKey(message, 'rngState'), `${message.type} leaked an rng state`).toBe(false);
     }
