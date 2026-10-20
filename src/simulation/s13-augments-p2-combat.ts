@@ -91,6 +91,6 @@ export function p2PacketCrit(u:S13Unit|undefined,targetId:string,units:readonly 
 export function validateP2Opening(combat:CombatState,replay:RestoreCombatReplay):void {
   const enabled=combat.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13P2Augment'||m.mechanic==='s13P2Anomaly'));
   if(!enabled){if(combat.units.some(u=>u.s13P2Opening!==undefined))throw new RangeError('Unexpected S13 P2 opening');return;}
-  const opening=replay.opening();
-  for(const unit of combat.units)if(canonicalContent(unit.s13P2Opening??null)!==canonicalContent(opening.units.find(u=>u.id===unit.id)?.s13P2Opening??null))throw new RangeError('Invalid S13 P2 opening');
+  const opening=replay.p2Opening();
+  for(const unit of combat.units)if(canonicalContent(unit.s13P2Opening??null)!==canonicalContent(opening.find(u=>u.id===unit.id)?.s13P2Opening??null))throw new RangeError('Invalid S13 P2 opening');
 }

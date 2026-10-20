@@ -19,7 +19,7 @@
 读档：仅支持 v14 身份。augmentTierSeed 必须等于单人 seed。validateAugmentOfferHistory 从 seed 初始 choice 流重放各强化节点，核对节点顺序、等级、额度、所有代次抽取、当前候选和已选 ID；异常尚未抽取前还核对 choiceRngState。篡改等级、候选、计数、代次、剩余额度、节点记录或随机流均拒绝，不以保存的候选/RNG 检查点作重推依据。当前日程全部强化先于异常；联机完整 Match 存档仍不支持。schema7/save3/replay3/command3 不变；规则/内容升为 s13-g2-3-v14 / s13-14.24b-g2-3-v14，digest 从 manifest 自然重算，旧身份拒绝，不迁移。
 
 
-状态：实施中的冻结契约；验收结果另见 docs/M5_VALIDATION.md。范围及分工见 [M5_PLAN](M5_PLAN.md)，验收见 [M5_ACCEPTANCE](M5_ACCEPTANCE.md)。固定历史数值、单人简化与实现约定分别注明，不把尚未核验的行为宣称为 Riot 内部实现。
+状态：实施中的冻结契约；验收结果另见 docs/M5_VALIDATION.md。范围及分工见 [M5_PLAN](docs/archive/M5_PLAN.md)，验收见 [M5_ACCEPTANCE](docs/archive/M5_ACCEPTANCE.md)。固定历史数值、单人简化与实现约定分别注明，不把尚未核验的行为宣称为 Riot 内部实现。
 
 ## R1. 参考版本、来源和数据冻结
 
