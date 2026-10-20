@@ -343,7 +343,9 @@ describe('v2 lazy resource loading', () => {
     });
     try {
       expect(effect.skipped.mesh).toBe(1);
-      expect(effect.skippedReasons).toContainEqual({ emitterIndex: 0, kind: 'mesh', reason: 'mesh-resource-unavailable' });
+      const code = { 'missing position': 'missing-position', 'empty position': 'empty-geometry', 'invalid result': 'not-buffer-geometry',
+        rejection: 'synthetic-mesh-failed', throw: 'synthetic-mesh-failed', 'no reader': 'no-mesh-reader' }[failure];
+      expect(effect.skippedReasons).toContainEqual({ emitterIndex: 0, kind: 'mesh', reason: `mesh-resource-unavailable:${code}` });
       expect(effect.particleCount).toBe(1); expect(effect.droppedParticles).toBe(0);
       expect(mesh(effect).visible).toBe(true); expect(mesh(effect).position.x).toBe(7);
       expect(mesh(effect).geometry.getAttribute('position').count).toBeGreaterThan(0);
