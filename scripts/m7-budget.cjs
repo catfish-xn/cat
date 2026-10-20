@@ -35,7 +35,7 @@ function jsGzip(dir, sub = 'assets') {
 // The 3D chunk is optional (base builds predate it); the 2D assets/ folder must exist and still throws ENOENT.
 const js3dGzip = dir => (fs.existsSync(path.join(dir, 'assets', '3d')) ? jsGzip(dir, path.join('assets', '3d')) : 0);
 // Excluding assets/3d/ from the 2D ratio is only valid while index.html never preloads it (a preload would ship it on 2D first load).
-const preloads3d = dir => fs.existsSync(path.join(dir, 'index.html')) && /assets\/3d\//.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'));
+const preloads3d = dir => fs.existsSync(path.join(dir, 'index.html')) && /<(?:link|script)\b[^>]*\b(?:href|src)=["'][^"']*assets\/3d\//i.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'));
 function serve(dir) {
   const server = http.createServer((req, res) => {
     const file = path.join(dir, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html');
