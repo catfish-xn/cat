@@ -254,7 +254,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return true;
   };
   /** Local scale that gives an effect FX_SCALE in world space under `parent`. */
-  const effectScale = (parent: Object3D): number => FX_SCALE / (parent.getWorldScale(new Vector3()).x || 1);
+  // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
+  const effectScale = (parent: Object3D): number => FX_SCALE / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
