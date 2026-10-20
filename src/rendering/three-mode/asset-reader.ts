@@ -17,6 +17,7 @@ export type ReadBlob = (url: string) => Promise<Blob>;
 export interface AssetReader {
   readModel(url: string): Promise<ModelTemplate>;
   readTexture(url: string): Promise<Texture>;
+  readJson(url: string): Promise<unknown>;
   dispose(): void;
 }
 
@@ -46,6 +47,7 @@ export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob): Asse
       const objectUrl = URL.createObjectURL(blob);
       try { return await new TextureLoader().loadAsync(objectUrl); } finally { URL.revokeObjectURL(objectUrl); }
     },
+    async readJson(url) { return JSON.parse(await (await read(url)).text()); },
     dispose() { ktx2.dispose(); },
   };
 }

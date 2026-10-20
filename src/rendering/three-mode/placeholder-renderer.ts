@@ -14,7 +14,7 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick, readParticleMesh,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -290,7 +290,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration, readTexture: models.reader.readTexture }).then(fx => {
+    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration, readTexture: models.reader.readTexture,
+      readJson: models.reader.readJson,
+      // Each call parses a fresh template from the cached bytes, as readParticleMesh requires (it disposes it).
+      readMesh: url => readParticleMesh(url, models.reader.readModel) }).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
