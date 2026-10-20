@@ -28,7 +28,8 @@
  *            unit (on the bench, the board or the holding slot) and its item arrive in my state; no component choice opens
  *            at an x-4 round. With C19_CAROUSEL=0 (the pre-P7 x-4 supply): every supply pick: the dialog is the supply
  *            dialog with exactly the offered components; the picked one lands in my inventory.
- *   tools    a magnetic remover and a reforger (component or completed) each used once by whichever human holds one:
+ *   tools    a magnetic remover and a reforger (v16: reforges everything a unit wears) each used once by whichever human
+ *            holds one, and a champion duplicator when one drops (its hero comes as an orb to claim):
  *            one useConsumable to a target the server's consumableTargets allows, receipt consumable-used, and the
  *            inventory cards and the tool shelf show the pushed state.
  *   income   every settlement: the income receipt summary shows the round record's interest and XP.
@@ -361,12 +362,12 @@ async function play(human, tables, kindOf, role) {
       return false;
     }
 
-    /* tools: a remover on a unit wearing items, a reforger on an allowed item (any phase the server allows) */
+    /* tools: a remover or a reforger on a unit wearing items, a duplicator on any allowed unit (any phase the server allows) */
     const tools = s.state.consumables ?? [];
     // A target the server allows; never the unit or item a pending C18-A check still follows.
-    const usable = (task, state, target) => target.allowed && (task === 'reforger' || wornBy(state, target.target.unitId).length > 0)
+    const usable = (task, state, target) => target.allowed && task !== 'other' && (task === 'duplicator' || wornBy(state, target.target.unitId).length > 0)
       && !(pending && (target.target.unitId === pending.unitId || target.target.itemId === pending.itemId));
-    const toolTask = tools.map(tool => ({ tool, task: tool.definitionId === 'magnetic-remover' ? 'remover' : 'reforger' })).find(entry => !claimed.has(entry.task)
+    const toolTask = tools.map(tool => ({ tool, task: TOOL_TASKS[tool.definitionId] ?? 'other' })).find(entry => !claimed.has(entry.task)
       && (s.state.consumableTargets ?? []).find(row => row.consumableId === entry.tool.consumableId)?.targets.some(target => usable(entry.task, s.state, target)));
     if (toolTask && !s.replay?.playingBack && ['preparation', 'settlement'].includes(s.state.phase) && await secondsLeft(page) >= 4) {
       await items();
@@ -379,6 +380,9 @@ async function play(human, tables, kindOf, role) {
       if (target && from && claim(toolTask.task)) {
         const sourceKey = `consumable:${tool.consumableId}`;
         const targetKey = target.target.kind === 'unit' ? `equipment:${target.target.unitId}:0` : itemBoundsKey(now.state, target.target.itemId);
+        // Docked, the unit slots fold into 单位装备 (#264); a player unfolds it before dragging a tool onto a slot or a worn item.
+        await page.evaluate(() => { const fold = document.querySelector('details.equip-details'); if (fold && !fold.open) fold.querySelector('summary')?.click(); });
+        await page.waitForTimeout(120);
         await showDragEndpoints(page, sourceKey, targetKey);
         const positioned = await read(page);
         const from = positioned.strategy.bounds[sourceKey], to = positioned.strategy.bounds[targetKey];
@@ -401,7 +405,10 @@ async function play(human, tables, kindOf, role) {
         check(same(shownInventory(shown), inventoryOf(state)) && same(shownTools(shown), toolsOf(state)), `${name} ${tool.definitionId}: inventory cards and tool shelf equal the projection (${shownInventory(shown).join(', ')} | ${shownTools(shown).join(', ') || 'no tools'})`);
         if (toolTask.task === 'remover') check(affected.every(id => state.items.some(item => item.id === id && item.location.kind === 'inventory')) && affected.every(id => shown.inventory.some(item => item.id === id)),
           `${name} remover: the unit's items ${affected.join(', ')} are back in the inventory, projected and shown`);
-        else check(!state.items.some(item => item.id === target.target.itemId) && !shown.inventory.some(item => item.id === target.target.itemId), `${name} reforger: ${target.target.itemId} is gone from the projection and the cards`);
+        // v16 reforge-all: every worn item comes off, each reforged (or, with no other candidate, returned) into the inventory.
+        else if (toolTask.task === 'reforger') check(wornBy(state, target.target.unitId).length === 0 && inventoryOf(state).length === inventoryOf(now.state).length + affected.length,
+          `${name} reforger: ${target.target.unitId} wears nothing and its ${affected.length} item(s) came back reforged into the inventory (${inventoryOf(now.state).length} → ${inventoryOf(state).length})`);
+        else check((state.unclaimedOrbs ?? []).length > (now.state.unclaimedOrbs ?? []).length, `${name} duplicator: a hero orb to claim appeared (${(now.state.unclaimedOrbs ?? []).length} → ${(state.unclaimedOrbs ?? []).length})`);
         return false;
       }
     }
@@ -490,6 +497,9 @@ async function play(human, tables, kindOf, role) {
     return false;
   }
 }
+
+/** Which tool check a consumable feeds (v16: one unified reforger, two champion duplicators). */
+const TOOL_TASKS = { 'magnetic-remover': 'remover', reforger: 'reforger', TFT_Consumable_NeekosHelp: 'duplicator', TFT_Consumable_ChampionDuplicator_III: 'duplicator' };
 
 /** Clicks the orb dock's button for one orb (orb ids hold quotes, so it is matched by dataset, not a selector). */
 const clickOrb = (page, orbId) => page.evaluate(id => {
