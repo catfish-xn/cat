@@ -17,6 +17,9 @@ import {healView,packets} from './helpers/replay2-views';
 import {hexDistance} from '../src/simulation/board';
 import {getCatalogRoundByOrdinal} from '../src/simulation/round-selectors';
 import {getMultiplayerRoundById} from '../src/simulation/multiplayer-round';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 const IMPLEMENTED=['TFT4_Item_OrnnAnimaVisage','TFT4_Item_OrnnInfinityForce','TFT4_Item_OrnnZhonyasParadox','TFT9_Item_OrnnDeathfireGrasp','TFT_Item_Artifact_Mittens','TFT_Item_Artifact_TalismanOfAscension',
  'TFT_Item_Artifact_RapidFirecannon','TFT_Item_Artifact_SeekersArmguard','TFT_Item_Artifact_SilvermereDawn',

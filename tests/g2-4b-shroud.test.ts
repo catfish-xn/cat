@@ -6,6 +6,9 @@ import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {initializeShroud} from '../src/simulation/combat-g2-4b';
 import {unit} from './combat-helpers';
 import type {MatchState} from '../src/simulation/match-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function seat(shroud:boolean,col=3):MatchState {
   const base=createMatch(42),round=getCatalogRoundById('2-1');
