@@ -60,6 +60,7 @@ export interface LootView {
   readonly pendingChoice: (DropIdentity & { readonly choiceId: string; readonly generation: number }) | null;
 }
 export interface UnclaimedOrbView {
+  readonly queued:boolean;
   readonly orbId:string;
   readonly roundId:string;
   readonly tier:import('../orb-layout').OrbTier;

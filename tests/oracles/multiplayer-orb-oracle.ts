@@ -6,6 +6,12 @@ export const CAPACITY_VECTORS = [
   {cost:1,starLevel:2,gold:3,copies:3},
 ] as const;
 export const CLAIM_EXPECTATIONS = {
+  queued: {
+    capacitySale:{gold:5,copies:0,resolution:'capacity-sold'},
+    held:{gold:0,copies:3,resolution:'held'},
+    competition:{gold:2,copies:3,resolutions:['held','gold']},
+    forfeited:{gold:0,copies:0,resolution:'forfeited'},
+  },
   carriedRound: '3-1', sourceRound:'2-7',
   soldBeforeClaim: {born:1,goldFromClaim:0,resolution:'held'},
   mergesAtCapacity: {rosterDelta:-1,starLevel:2,copies:3,goldFromClaim:0,resolution:'held'},

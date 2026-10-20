@@ -4,9 +4,12 @@ import type { MultiplayerCommandResult } from './round-settlement';
 import { commitReceipt, grantDirectLoot, type UnitLootPolicy } from './loot-runtime';
 import { lootOrbId, lootEntryId, lootReceiptId } from './loot-identity';
 import { getMultiplayerRoundById } from './multiplayer-round';
+import { isCombatRosterLocked } from './operation-policy';
+import { drainG23Rewards, mechanicGrantEvents } from './g2-3-runtime';
+import { planTemporaryEquipment } from './temporary-equipment';
 
-/** Provisional 2026-10-20: change only this list if combat claims are approved. */
-export const ORB_CLAIM_PHASES: readonly MatchState['phase'][] = ['preparation', 'settlement', 'choice'];
+/** Combat accepts intent only; the authoritative settlement drains the FIFO. */
+export const ORB_CLAIM_PHASES: readonly MatchState['phase'][] = ['preparation', 'combat', 'settlement', 'choice'];
 export const REWARD_ORB_TIER = 'gray' as const;
 export function allClaimableOrbPlans(state: MatchState) {
   return [...state.m8.loot.frozen.rounds.flatMap(r=>r.orbs.map(o=>({...o,source:'pve' as const}))),
@@ -36,21 +39,46 @@ export function planOrbClaim(state: MatchState, orbId: string, expectedRound: nu
   if (!state.multiplayer) return fail('multiplayer-required');
   if (state.multiplayer.status==='eliminated') return fail('seat-eliminated');
   if (state.round!==expectedRound) return fail('stale-round');
-  if (!ORB_CLAIM_PHASES.includes(state.phase) || state.multiplayer.combatRosterLocked) return fail('wrong-phase');
+  if (!ORB_CLAIM_PHASES.includes(state.phase)) return fail('wrong-phase');
   const orb=allClaimableOrbPlans(state).find(o=>o.orbId===orbId);
   if (!orb) return fail('unknown-orb');
+  if (state.m8.loot.queuedOrbClaims?.includes(orbId)) return fail('already-claimed');
   if (orb.entries.every(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='granted'))) return fail('already-claimed');
   if (!unclaimedOrbPlans(state).some(o=>o.orbId===orbId)) return fail('unknown-orb');
   // A shared seat must be executed by runSharedMatchCommand to consume its pool.
   if (state.sharedPool && !policy) return fail('shared-pool-required');
+  if (isCombatRosterLocked(state)) return {ok:true,events:[],state:{...state,m8:{...state.m8,loot:{...state.m8.loot,
+    queuedOrbClaims:[...state.m8.loot.queuedOrbClaims??[],orbId]}}}};
   const result=grantDirectLoot(state,false,policy,[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal));
   return {ok:true,state:result.state,events:result.events};
+}
+
+/** After economy/HP/mechanic hooks/deferred upgrades, before any post-battle choice.
+ * Caller owns atomic pool commit and event stamping. No client or saved callbacks. */
+export function settleQueuedOrbClaims(initial: MatchState, policy?: UnitLootPolicy): {state:MatchState;events:MatchEvent[]} {
+  if (!initial.m8.loot.queuedOrbClaims?.length) return {state:initial,events:[]};
+  if (initial.multiplayer?.status==='eliminated' || initial.phase==='gameOver') return forfeitUnclaimedOrbs(initial);
+  let state=initial; const events:MatchEvent[]=[];
+  for (const orbId of initial.m8.loot.queuedOrbClaims) {
+    // Remove only the current head so the normal planner can execute it once.
+    state={...state,m8:{...state.m8,loot:{...state.m8.loot,queuedOrbClaims:state.m8.loot.queuedOrbClaims!.slice(1)}}};
+    const claimed=planOrbClaim(state,orbId,state.round,policy);
+    if (!claimed.ok) throw new RangeError(`Invalid queued orb claim: ${claimed.reason}`);
+    events.push(...claimed.events);
+    const drained=drainG23Rewards(claimed.state,policy,events);
+    events.push(...mechanicGrantEvents(claimed.state,drained));
+    const equipment=planTemporaryEquipment(drained);
+    state=equipment.state;events.push(...equipment.events);
+  }
+  return {state,events};
 }
 
 /** Once per pending entry, on elimination or terminal match finalization. */
 export function forfeitUnclaimedOrbs(initial: MatchState): {state:MatchState;events:MatchEvent[]} {
   if (!initial.multiplayer) return {state:initial,events:[]};
-  let state=initial; const events:MatchEvent[]=[];
+  let state=initial.m8.loot.queuedOrbClaims?.length
+    ? {...initial,m8:{...initial.m8,loot:{...initial.m8.loot,queuedOrbClaims:[]}}} : initial;
+  const events:MatchEvent[]=[];
   for (const orb of allClaimableOrbPlans(state)) for (const drop of orb.entries) {
     if (!state.m8.loot.direct.some(d=>d.dropId===drop.dropId&&d.status==='revealed')) continue;
     const receipt={receiptId:lootReceiptId(drop.dropId),dropId:drop.dropId,payload:drop.payload,

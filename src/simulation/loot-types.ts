@@ -51,6 +51,8 @@ export interface LootEarnedEvidence {
   readonly death: { readonly combatId: string; readonly tick: number; readonly eventSeq: number };
 }
 export interface MatchLootState {
+  /** Multiplayer seat-private FIFO; revealed entries stay unallocated until settlement. */
+  readonly queuedOrbClaims?: readonly string[];
   /** Multiplayer only. PvE payloads remain in the sole frozen plan. */
   readonly rewardOrbs?: readonly RewardOrb[];
   readonly layoutBinding: import('./orb-layout').LootLayoutBinding;

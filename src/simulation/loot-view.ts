@@ -60,7 +60,8 @@ export function readLootView(state: Readonly<MatchState>): LootView {
     return [{orbId:orb.orbId,tier:orb.tier,status,entryDropIds:visible.map(d=>d.dropId)}];
   });
   const unclaimedOrbs=unclaimedOrbPlans(state as MatchState).map(orb=>({orbId:orb.orbId,roundId:orb.roundId,tier:orb.tier,
-    entries:[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal).map(e=>payloadView(e.payload)),source:orb.source}));
+    entries:[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal).map(e=>payloadView(e.payload)),source:orb.source,
+    queued:loot.queuedOrbClaims?.includes(orb.orbId)??false}));
   const claimReceipts=loot.receipts.filter(r=>r.resolution).map(r=>({receiptId:r.receiptId,dropId:r.dropId,payload:payloadView(r.payload),
     resolution:r.resolution!,gold:r.gold!,claimedRoundId:r.claimedRoundId!,grantedItemIds:[...r.grantedItemIds],grantedUnitIds:[...r.grantedUnitIds],
     ...(r.grantedConsumableIds?{grantedConsumableIds:[...r.grantedConsumableIds]}:{})}));

@@ -43,6 +43,7 @@ export function prepareMatchLoot(seed: number, round: number, previous?: MatchLo
     choiceEligibility: [...previous?.choiceEligibility ?? [], ...added.flatMap(value => value.choices.map(choice => ({ dropId: choice.dropId, status: 'planned' as const })))],
     choiceResolutions: previous?.choiceResolutions ?? [], earnedEvidence: previous?.earnedEvidence ?? [], receipts: previous?.receipts ?? [],
     ...(previous?.rewardOrbs ? { rewardOrbs: previous.rewardOrbs } : {}),
+    ...(previous?.queuedOrbClaims ? { queuedOrbClaims: previous.queuedOrbClaims } : {}),
     guaranteeCounters: previous?.guaranteeCounters ?? Object.fromEntries(ROUND_CATALOG.filter(value => value.kind === 'pve').map(value => [counterKey(value.roundId), 0])),
   };
 }

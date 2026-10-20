@@ -2,11 +2,17 @@
 
 ## 联机法球领取：v15（用户批准 2026-10-20 02:20）
 
-只在 state.multiplayer 存在时替换自动发奖/满席托管。`claimOrb(state:MatchState,orbId:string,expectedRound:number,unitLootPolicy?:UnitLootPolicy):MultiplayerCommandResult`；共享席位经 `runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId})`，客户端不提供 policy。允许 preparation/settlement/choice；combat 与冻结战斗阵容阶段暂拒 wrong-phase，判断集中在 ORB_CLAIM_PHASES/planOrbClaim。expectedRound 是当前操作轮，法球来源 roundId 可为历史轮。
+只在 state.multiplayer 存在时替换自动发奖/满席托管。`claimOrb(state:MatchState,orbId:string,expectedRound:number,unitLootPolicy?:UnitLootPolicy):MultiplayerCommandResult`；共享席位经 `runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId})`，客户端不提供 policy。允许 preparation/combat/settlement/choice，判断集中在 ORB_CLAIM_PHASES/planOrbClaim。用户 2026-10-20 02:26 已定：combat 或 PvP combatRosterLocked 时接受领取并排队，其他允许阶段即时领取。expectedRound 是当前操作轮，法球来源 roundId 可为历史轮。
+
+席位私有 `m8.loot.queuedOrbClaims?:readonly string[]` 按权威提交顺序保存 orbId（缺省为空），不存 payload 或回调；排队保持 direct=revealed，无领取事件/收据，不改备战席、金币、卡池库存、预留或任何 RNG。共享包装仅更新池/席位 revision 以提交新状态。重复排队沿用 already-claimed，原 state/pool 引用、无事件。私有 unclaimedOrbs 每颗增加 queued:boolean；公共仍仅 count/tiers，不暴露 queued 或队列。
+
+确定性结算位置：PvE `withCombat`、PvP `applyRoundSettlement` 在本轮收入/利息、XP、HP、成长、G23 结算钩子及延迟升星完成后，打开任何战后选择之前，执行 `settleQueuedOrbClaims`。先判淘汰：淘汰者清空队列并由 forfeitUnclaimedOrbs 作废所有已赚未领条目（forfeited/gold=0，无扣池）；存活者逐颗 FIFO、颗内 entryOrdinal 执行同一 planOrbClaim/grantDirectLoot，按此时容量/库存合成、入库、满席折金或缺货补偿，产生同样的唯一收据。每颗之后 drain 原机制奖励并同步临时装备；新解锁法球不自动排队。队列与收据/池在同一事务提交，任一异常整体回滚；不会把领取金额计入本轮 interestBasis/goldAfter。
+
+RNG：排队、出队、领取、折金、缺货与扣池本身各消耗 0 词，不重抽冻结 payload；仍保留原 G23/装备钩子规则。临时装备如需新 roll，按法球 FIFO、每颗后父装备 ID/roundId 代码点顺序，仅消费 equipment 流（两个 uniformIndex 抽取，含原拒绝采样），记录 equipmentRolled；战斗流和商店流不因领取改变。跨席竞争沿服务器原子结算提交顺序，无全局点击时间优先保证。JSON 快照/重连保留队列原序；validateMultiplayerOrbLedger 拒绝重复/未知/未赚/已领取队列项、非战斗生命周期和已结算/淘汰残留，恢复后只处理一次。完整签名与约定值见 [v15 交接](LOOT_ORB_CLAIM_V15.md)。
 
 失败：multiplayer-required / seat-eliminated / stale-round / wrong-phase / unknown-orb / already-claimed / shared-pool-required / invalid-loot；包装另保留原卡池校验失败。失败原 state/pool 引用、无事件、资源、RNG 变化。成功按 entryOrdinal 一次领取完整法球；英雄完整星级走 planUnitAcquisition，满席按 getUnitSellPrice 自动出售（2 费 1/2/3 星 +2/+5/+17、1 费 2 星 +3），卡池份额视为未取出。有货且入库才扣 1/3/9 份；不足完整份数暂按整条一次费用折金，优先于容量出售，不叠加。
 
-P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolution=orb，含 orbId/starLevel、unitId=null、gold=0；最终领取记 LootReceipt resolution=held/gold/capacity-sold/forfeited、gold、claimedRoundId，原 payload 保留星级。私有 LootView/PrivateSeatView 加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic'}[]`，领取回执位于 claimReceipts / orbClaimReceipts；公共只给 count/tiers。claimLoot 截止不丢弃法球，nextRound 不阻塞；淘汰/终局作废一次，断线保留。bot 准备入口函数 claimBotPreparationOrbs 按 orbId 代码点顺序领取。单机、冻结表、售价公式及 5-7/6-7 不变。完整恢复边界、服务器协议 4 接线与暂定值见 [实现交接](LOOT_ORB_CLAIM_V15.md)。
+P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolution=orb，含 orbId/starLevel、unitId=null、gold=0；最终领取记 LootReceipt resolution=held/gold/capacity-sold/forfeited、gold、claimedRoundId，原 payload 保留星级。私有 LootView/PrivateSeatView 加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic',queued:boolean}[]`，领取回执位于 claimReceipts / orbClaimReceipts；公共只给 count/tiers。claimLoot 截止不丢弃法球，nextRound 不阻塞；淘汰/终局作废一次，断线保留。bot 准备入口函数 claimBotPreparationOrbs 按 orbId 代码点顺序领取。单机、冻结表、售价公式及 5-7/6-7 不变。完整恢复边界、服务器协议 4 接线与约定值见 [实现交接](LOOT_ORB_CLAIM_V15.md)。
 
 ## 强化等级与刷新：v14 用户约定（2026-10-19）
 

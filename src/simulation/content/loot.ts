@@ -25,4 +25,4 @@ export const LOOT_FREEZE_ALGORITHM = freezeContent({
   seedXor:0xdeadbeef, sampling:'uint32-rejection-modulo', order:'sourceUnitId-codepoint/slotOrdinal-numeric',
   choiceOrder:'dropId-codepoint', choices:'supply-only/no-pve-fallback',
 });
-export const LOOT_RUNTIME_REVISION = 'multiplayer-orb-claim-v2';
+export const LOOT_RUNTIME_REVISION = 'multiplayer-orb-claim-v3';

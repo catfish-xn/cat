@@ -6,6 +6,7 @@ import { validateResourceReceipts } from './resource-provenance';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { LOOT_POLICY_VERSION } from './content/loot';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { isCombatRosterLocked } from './operation-policy';
 
 const check=(value:unknown,message:string)=>{if(!value)throw new RangeError(`Invalid multiplayer orb ledger: ${message}`);};
 /** Complements the authoritative shared pool snapshot validator; never admits a solo save as online. */
@@ -13,6 +14,18 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
   check(state.multiplayer,'multiplayer required');
   const loot=state.m8.loot;
   const plans=allClaimableOrbPlans(state),drops=plans.flatMap(o=>o.entries);
+  const queue=loot.queuedOrbClaims===undefined?[]:loot.queuedOrbClaims;
+  check(Array.isArray(queue)&&new Set(queue).size===queue.length,'claim queue shape/duplicates');
+  check(!queue.length || state.multiplayer?.status==='active' && isCombatRosterLocked(state)
+    && (state.phase==='combat' && state.combat?.status==='running'
+      || state.phase==='preparation' && state.m8.round.kind==='pvp')
+    && !state.roundResults.some(r=>r.round===state.round),'claim queue lifecycle');
+  for (const orbId of queue) {
+    const orb=plans.find(o=>o.orbId===orbId);
+    check(typeof orbId==='string' && orb && getMultiplayerRoundById(orb.roundId).ordinal<=state.round
+      && orb.entries.length && orb.entries.every(e=>loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')
+        && (orb.source==='mechanic'||loot.earnedEvidence.some(v=>v.dropId===e.dropId))),'queued orb eligibility');
+  }
   check(new Set(plans.map(o=>o.orbId)).size===plans.length,'duplicate orb');
   check(new Set(drops.map(e=>e.dropId)).size===drops.length,'duplicate entry');
   const actual=loot.direct.map(d=>d.dropId),pve=loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops.map(e=>e.dropId));

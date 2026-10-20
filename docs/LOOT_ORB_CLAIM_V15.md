@@ -2,6 +2,8 @@
 
 基线 `origin/multiplayer a0d42c592cbd48fb075175e5f61818dabfe1b320`，分支 `codex/loot-orb-claim`。用户于 2026-10-20 02:20 批准规则；工作区交付，不 add/commit，不安装依赖。只有 `state.multiplayer` 存在时启用；单机自动发放、满席托管、售价公式、冻结权重、ORB_RULES、5-7/6-7 节点均保持。
 
+第二轮以第一轮提交 `b1c841e6` 为基线。用户 2026-10-20 02:26 已定“战斗中也能点、排队、战后结算”；本轮覆盖下文所有第一轮 combat 拒绝语义。改动仅留工作区，不写 .git、不联网、不运行 exe、不 npm ci。按卡刷新与 #231 接线并入后才用新的 v15 epoch 统一重录，本轮未重录/改写任何指纹。
+
 ## 命令与回执
 
 ```ts
@@ -14,7 +16,17 @@ runSharedMatchCommand(pool, state, {type:'claimOrb', round: state.round, orbId})
 
 失败枚举：`multiplayer-required`、`seat-eliminated`、`stale-round`、`wrong-phase`、`unknown-orb`、`already-claimed`、`shared-pool-required`、`invalid-loot`；共享事务另保留原有池校验失败枚举。失败返回原 state/pool 引用，无事件、RNG 或卡池变更。未知、未揭示、未杀死载体的法球均 `unknown-orb`。
 
-允许 preparation / settlement / choice。combat 和冻结 PvP 阵容阶段拒绝 `wrong-phase`，集中在 `ORB_CLAIM_PHASES` / `planOrbClaim`。一次领取完整法球，按 entryOrdinal 执行，任何条目失败整体回滚。金币/物品/消耗品在领取时入账；英雄先运行完整星级的 `planUnitAcquisition`，能合成腾格则合成，否则自动出售。
+允许 preparation / combat / settlement / choice，集中在 `ORB_CLAIM_PHASES` / `planOrbClaim`。combat 或冻结 PvP 阵容阶段（preparation + combatRosterLocked）接受并排队；其他允许阶段即时领取。一次领取完整法球，按 entryOrdinal 执行，任何条目失败整体回滚。金币/物品/消耗品在实际执行领取时入账；英雄先运行完整星级的 `planUnitAcquisition`，能合成腾格则合成，否则自动出售。
+
+## 第二轮：排队与确定性结算
+
+- 新持久字段 `MatchLootState.queuedOrbClaims?:readonly string[]`：仅席位私有，缺省为空，按权威提交顺序保存 orbId；不复制 payload，不保存 policy/回调。接受时 direct 仍为 revealed，不改军队、金币、库存、预留、任何 RNG 或事件序号，无领取事件/收据；共享包装仍更新 pool/seat revision。重复排队返回 `already-claimed`，保持原 state/pool 引用，无事件；不新增失败枚举。
+- PvE `withCombat` 和 PvP `applyRoundSettlement` 的唯一结算位置：本轮收入/利息、XP、HP、成长、G23 结算钩子及延迟升星完成之后，战后选择打开之前。先判淘汰；淘汰清空队列并对所有已赚未领条目写 forfeited/gold=0，不取卡、不补金。存活调用 `settleQueuedOrbClaims`，逐颗 FIFO、颗内 entryOrdinal 调用同一 planOrbClaim/grantDirectLoot，以执行时的容量和池库存判定入库、满席折金或缺货补偿，生成相同的 dropId 唯一收据。领取金额不回算本轮利息或修改 RoundResult.goldAfter。
+- 每颗后按原领取路径 drainG23Rewards、同步临时装备；新解锁的机制法球仍待显式点击，不自动入队。队列清空、收据、资源与本轮结算在同一权威事务原子提交，任何失败回滚，不能发布半个队列。
+- 排队/出队/领取/折金/扣池本身各消耗 0 RNG，不重抽冻结载荷。原装备钩子若需新 roll，按 FIFO、每颗后父装备 ID/roundId 代码点顺序只消费 equipment 流：两个 uniformIndex（含原拒绝采样），记 equipmentRolled。战斗和商店 RNG 不因领取改变。跨席竞争沿服务器结算原子提交顺序；不建立全局点击时间优先规则。
+- `validateMultiplayerOrbLedger` 校验队列为无重复字符串数组、已赚已揭示且未领的已进入法球、活动战斗/冻结 PvP 生命周期，拒绝已结算/淘汰残留。完整星级入库/折金收据仍用原账本验证。JSON 快照保留 FIFO 原序；结算后空队列和唯一收据共同防重，重连读取 queued 投影、不重新提交领取。`prepareMatchLoot` 保留字段，不另建队列来源。
+- 私有 `unclaimedOrbs.queued:boolean` 标记排队；队列中法球仍可见，重复提交失败。公共投影仅 count/tiers，不带 queued、队列、orbId 或内容。服务器必须保存 latest seat 和池的原子结果，不能用战前 battle/resolver 副本覆盖最新队列。
+- 版本：仍处于 v15 epoch，schema7/save3/replay3/command3 不变；联机法球合同升到 `multiplayer-orb-claim-v2`，LOOT_RUNTIME_REVISION 升到 `multiplayer-orb-claim-v3`（CONTENT_DIGEST 自然重算）。网络目标仍 4，服务器接线未做；冻结算法/权重/ORB_RULES 不变，LOOT_REPLAY_DIGEST 相对第一轮不变。
 
 领取收据仍以 dropId / lootReceiptId 唯一，增加 `resolution: held | gold | capacity-sold | forfeited`、`gold`、`claimedRoundId`。payload 保留原英雄及 starLevel，`grantedUnitIds` 只在真实入库时存在元素；满席显示“自动出售 +NG”，缺货显示“缺货补偿 +NG”，二者不叠加。普通金币收据 resolution=held，gold 是实际到账金额。领取不改已经完成的收入、利息或成长结算。
 
@@ -34,7 +46,7 @@ runSharedMatchCommand(pool, state, {type:'claimOrb', round: state.round, orbId})
 私有 `readLootView().unclaimedOrbs` 和 `toPrivateSeatView().unclaimedOrbs` 始终在线上提供：
 
 ```ts
-{orbId, roundId, tier, entries:[{kind, definitionId?, quantity, starLevel?}], source:'pve'|'mechanic'}[]
+{orbId, roundId, tier, entries:[{kind, definitionId?, quantity, starLevel?}], source:'pve'|'mechanic', queued:boolean}[]
 ```
 
 仅揭示且已赚内容，跨轮提供；单机/旧预览省略该字段。`readLootView().claimReceipts` 与 private `orbClaimReceipts` 提供领取结果；public 只调用 `readPublicOrbSummary`，得到 `{count, tiers}`，不得发 orbId、来源轮、内容或收据。机制法球暂用 gray 档位，仅为分类默认。
@@ -45,36 +57,62 @@ Claude 必须完成以下接线，本交付未修改 src/server/ 或界面目录
 
 1. 在 ClientCommand / 消息白名单加入 `{type:'claimOrb', round:number, orbId:string}`；通过席位凭证选取真实 state，原样转给 `runSharedMatchCommand`。沿用现有命令请求关联 ID / ACK 包装，不能信任客户端席位或重算金币。
 2. `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION` 从 3 升到 4；领域导出 `MULTIPLAYER_NET_PROTOCOL_VERSION=4`。旧协议必须显式拒绝。该服务器常量处于用户禁改目录，当前工作区仍为 3，未宣称已端到端升级。
-3. 私有发送 unclaimedOrbs / orbClaimReceipts；公共只转 count / tiers。点击一个 orbId 发送一次上述命令，ACK 展示实际 resolution/gold。
+3. 私有发送 unclaimedOrbs（含 queued）/ orbClaimReceipts；公共只转 count / tiers。battle/awaiting-settlement 也允许转发 claimOrb；排队 ACK 仅表示已受理，战后收到实际收据才展示 resolution/gold。断线重连读取 queued，不重提或提前发奖。
 4. 每次 bot 准备阶段入口、普通操作预算之前调用 `claimBotPreparationOrbs(pool,state)` 并提交整个成功结果；函数按 orbId 代码点排序，包含领取后新解锁的奖励法球，不消费 bot RNG。
 5. 终局统一调用 `forfeitUnclaimedOrbs` 并按原 Match 事件规则分配序号；淘汰结算和 releaseSeatOnElimination 已接入领域清理。
 
-## 暂定值
+## 约定值
 
-combat 暂拒绝（用户仍在决定）；完整星级库存不足整条按一次费用补金；奖励法球 tier=gray。上述取值不代表已核实的原版 TFT 规则。卡池满席采用“不取出”是本次实现选择，保证守恒。
+combat 可点、排队、战后结算已由用户确定，不再列为暂定。保留的暂定值：完整星级库存不足整条按一次费用补金；奖励法球 tier=gray。实现约定：满席采用“不取出”；队列缺省为空、重复排队沿用 already-claimed；本轮经济/伤害/机制钩子/延迟升星之后、战后选择之前出队，跨席竞争沿原结算提交顺序，新解锁法球不自动入队。上述项目约定不代表已核实的原版 TFT 规则。
 
 ## PR draft
 
-**Title:** `feat(simulation): add explicit multiplayer orb claims and capacity sale receipts`
+**Title:** `feat(simulation): queue combat orb claims until round settlement`
 
-**Before:** Online PvE rewards were automatically granted after combat. Full benches reserved scarce pool copies and deadline processing could discard the rewards. Mechanic hero gifts retried capacity grants; two/three-star market rewards were split into base copies.
+**Before:** Explicit multiplayer orb claims rejected combat and locked PvP rosters with wrong-phase.
 
-**After:** Earned online orbs remain claimable across rounds. A claim commits the complete orb in entry order, consumes pool copies only for successful unit acquisitions, and sells capacity overflow at the existing star-level sale price. Shortage compensation and capacity sales are mutually exclusive. P2, Conqueror and market hero rewards use the same orb list and command; offline behavior is retained.
+**After:** Combat claims persist as a seat-private FIFO without allocating resources or consuming RNG. PvE and PvP settlement drains it after economy, damage, mechanic hooks and deferred upgrades, before post-battle choices. Capacity and pool shortage are evaluated at settlement; eliminated seats forfeit. Duplicate submissions and restored settlement retries cannot pay twice. Private projections expose queued; public projections retain count and tiers only.
 
-**How:** Reuse unit acquisition/upgrade planners with an optional initial star level, preserve original payloads in exactly-once resolution receipts, and validate restored orb ledgers against an authoritative shared pool snapshot. Provide private pending-orb/receipt projections, a public count/tier projection, and a preparation-entry bot claim transaction.
+**Validation:** Run tsc and each related Vitest file individually with --configLoader runner. Independent oracle vectors cover delayed sale amounts, FIFO stock competition and conservation, plus snapshot/reconnect idempotence and elimination. Exact second-round results are recorded below.
 
-**Integration required:** Claude must wire the server/client claim message, bump the server net protocol to 4, invoke the bot preparation helper and forward the projections. Combat claims remain provisionally disabled. This PR is a domain handoff, not an end-to-end online release.
+**Integration required:** Claude must wire the server/client claim message in battle and awaiting-settlement, preserve the latest seat queue, bump the server net protocol to 4, invoke the bot preparation helper and forward queued/receipt projections. Fingerprints stay deferred until per-card rerolls and #231 integration land, then regenerate together in a new v15 epoch. This PR is a domain handoff, not an end-to-end online release.
 
-中文对账：卡池未领不扣；满席不取出；缺货优先且不叠加；完整星级 1/3/9 份；单机不改数值；LOOT_REPLAY_DIGEST 应保持；服务器协议常量与 bot 入口尚需 Claude 对齐。测试与指纹状态见本文件后续验收记录。
+**Convention values:** Incomplete full-star stock compensates the champion cost once for the entire entry; reward orbs use gray. Capacity sales do not withdraw copies. FIFO is per seat, and cross-seat allocation follows the existing settlement commit order.
 
-建议提交：
+中文对账：战斗排队不扣池；战后按当时容量/库存结算；满席不取出；缺货优先且不叠加；完整星级 1/3/9 份；先淘汰则作废；单机不改数值。服务器协议常量与 bot 入口尚需 Claude 对齐。测试与指纹状态见下文。
+
+第二轮建议提交：`feat(simulation): queue combat orb claims until round settlement`。
+
+第一轮建议提交（历史）：
 
 1. `feat(simulation): persist and claim multiplayer reward orbs`
 2. `test(simulation): cover orb claims with independent capacity and replay oracles`
 3. `docs(multiplayer): specify orb claim protocol and v15 reconciliation`
 4. `test(fixtures): regenerate v15 rule fingerprints`（仅在完整重录和校验通过后）
 
-## 本工作区验收记录
+## 第二轮验收记录（2026-10-20）
+
+`npx.cmd tsc --noEmit` 通过；`git diff --check` 通过。以下 11 个文件均逐个运行 `npx.cmd vitest run <file> --configLoader runner`，最终共 122 项通过，未跑全套，未改测试超时/放宽断言。
+
+| 文件 | 通过项 |
+| --- | ---: |
+| loot-orb-claim.test.ts | 20 |
+| t3-round-settlement.test.ts | 10 |
+| tp-rewards-and-rounds.test.ts | 9 |
+| t5r-loot-view.test.ts | 24 |
+| tp-shared-pool.test.ts | 14 |
+| t3-timeout-loot.test.ts | 6 |
+| shared-pool-cache.test.ts | 4 |
+| t10-deferred-upgrades.test.ts | 10 |
+| m8-b8-loot-view.test.ts | 7 |
+| match-contract.test.ts | 12 |
+| m8-contracts.test.ts | 6 |
+
+原“combat 拒绝”用例已改成战斗接受、仅排队、重复排队不变、战后才到账；补充满席直接 +5 与战斗中出售腾格后完整二星入库、反 orbId 顺序 FIFO 竞争三份库存后补 +2、排队/结算前后 JSON 恢复及重连投影、重复 step/结算不再支付、非法/重复队列拒绝、PvE 实际伤害淘汰和锁定 PvP 淘汰作废。独立 oracle 无生产导入，手写 0/+5/+2 与 0/3 份变化，并独立加总初始库存=可用+商店+持有来源+预留。
+
+差异仅在 src/simulation/、tests/、上述五份 docs；禁改目录及指纹/golden/CURRENT 无差异。未 add/commit、未联网、未安装依赖。领域排队交付完成；服务器/界面接线及新 v15 epoch 指纹重录仍待后续任务，不宣称端到端重连或上线验收完成。下方保留第一轮原始验证/失败记录供追溯；其中旧 digest、旧合同号和当时“待选择”的迁移状态均为历史信息，本轮以本文开头的版本和延后重录安排为准。
+
+## 第一轮验收记录（b1c841e6 历史，不代表本轮重新执行）
 
 当前为**领域实现完成、指纹迁移未完成的工作区交付**，不能据此宣称可合并或可上线。未写 .git、未安装依赖、未联网；禁改目录及 getUnitSellPrice、loot-freeze.ts、content/orbs.ts 均无差异。共享依赖实际路径来自 assets3d，Vite 7.3.6 / Vitest 5.0.3；typecheck 与针对性测试可用。
 

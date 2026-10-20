@@ -2,7 +2,7 @@ import type { M8Version } from './contracts';
 
 /** Server transport must import/align this value when wiring claimOrb. */
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 4;
-export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v1';
+export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
 /** B9 formal switch (M8_RULES §10): the one runtime source for the frozen M8 identifiers.
  * contentDigest stays computed from the canonical content (content/index.ts), never hand-written. */

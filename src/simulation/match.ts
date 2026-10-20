@@ -21,7 +21,7 @@ export { previewUseConsumable } from './consumables';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canOperateMatch, isCombatRosterLocked } from './operation-policy';
 import type { UnitLootPolicy } from './loot-runtime';
-import { planOrbClaim, forfeitUnclaimedOrbs } from './orb-claim';
+import { planOrbClaim, forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
 import type { MultiplayerCommandResult, MultiplayerFailure } from './round-settlement';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { FINAL_ROUND } from './round-schedule';
@@ -389,11 +389,12 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
-  const settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
+  let settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
   }
+  const queued=settleQueuedOrbClaims(settled,unitLootPolicy);settled=queued.state;events.push(...queued.events);
   const choice=enterLootChoice(settled);
   if (choice.state.phase==='choice') return {state:choice.state,events:[...events,...choice.events]};
   const entered=enterScheduledEvents(settled,'after');
@@ -601,6 +602,8 @@ export function claimOrb(state: MatchState, orbId: string, expectedRound: number
   try {
     const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
     if(!result.ok)return result;
+    // Queue acceptance must not run resource/equipment/choice hooks during combat.
+    if(isCombatRosterLocked(state))return result;
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);
