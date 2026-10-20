@@ -3,12 +3,16 @@
  * fields Sevika through the shop (her High Roller coin/jackpot casts earn gold during the combat), then trades in battle.
  * The room hands the rules only the seat's bank (Match.gold), never bank plus earnings; the rules add the team's
  * unsettled earnings once, so the avarice unit's bank is the last sample plus what the team earned; the earnings are
- * paid once, by the existing settlement. PvP (s2 is side B against s1) and PvE (4-7) both.
+ * paid once, by the existing settlement. PvP (s2 is side B against s1) and PvE (4-7) both. The avarice unit also holds
+ * the three gold items (Mogul's Mail, the Collector, Gambler's Blade), granted through the legal test entry
+ * (tests/helpers/grant-test-items.ts, docs/TEST_GOLD_ITEMS.md), so item gold and High Roller gold stack with avarice.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Room } from '../../src/server/room/room';
+import type { RoomState } from '../../src/server/room/types';
 import type { CombatState } from '../../src/simulation/combat-types';
-import { runUntil } from './helpers';
+import { grantTestItems, TEST_GOLD_ITEMS } from '../helpers/grant-test-items';
+import { claimAllOrbs, runUntil } from './helpers';
 import { avariceRoom, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
 
 const disposers: (() => void)[] = [];
@@ -26,54 +30,101 @@ function fieldSevika(room: Room, seatId: string): void {
   const sevika = seatOf(room.state, seatId).match.preparation.units.find(unit => unit.definitionId === 'sevika')!;
   expect(room.handle(seatId, { type: 'deploy', unitId: sevika.id, target: { kind: 'board', cell: { col: 3, row: 5 } } })).toMatchObject({ ok: true });
 }
+/** Gives the seat's avarice unit the three gold items through the legal test entry, written back as the seat's state. */
+function grantGoldItems(room: Room, seatId: string): void {
+  const holder = room as unknown as { current: RoomState };
+  holder.current = { ...holder.current, seats: holder.current.seats.map(seat => {
+    if (seat.seatId !== seatId) return seat;
+    const match = grantTestItems(seat.match, { unitId: seat.match.anomalyBinding!.unitId,
+      itemIds: [TEST_GOLD_ITEMS.mogulsMail, TEST_GOLD_ITEMS.collector, TEST_GOLD_ITEMS.gamblersBlade] });
+    return { ...seat, seatRevision: seat.seatRevision + 1, match };
+  }) };
+}
 /** The team's in-combat earnings the rules have not settled yet: item gold receipts and High Roller gold. */
 function earned(combat: CombatState, team: 'player' | 'enemy'): number {
   const allies = new Set(combat.units.filter(unit => unit.team === team).map(unit => unit.id));
   return (combat.itemGoldReceipts ?? []).filter(receipt => allies.has(receipt.ownerId) && receipt.gold).length
     + combat.units.filter(unit => unit.team === team).reduce((sum, unit) => sum + (unit.g23?.highRoller ?? []).reduce((total, roll) => total + roll.gold, 0), 0);
 }
-const avariceBank = (combat: CombatState, team: 'player' | 'enemy') =>
-  combat.units.find(unit => unit.team === team && unit.mechanics?.some(mechanic => mechanic.mechanic === 'd11Anomaly' && mechanic.source.definitionId === 'avarice-incarnate'))!.currentItemBankGold;
+const avariceUnit = (combat: CombatState, team: 'player' | 'enemy') =>
+  combat.units.find(unit => unit.team === team && unit.mechanics?.some(mechanic => mechanic.mechanic === 'd11Anomaly' && mechanic.source.definitionId === 'avarice-incarnate'))!;
+const avariceBank = (combat: CombatState, team: 'player' | 'enemy') => avariceUnit(combat, team).currentItemBankGold;
 /** The settlement of `roundId` paid the High Roller gold the combat earned in exactly one receipt (none when it earned none). */
 function expectPaidOnce(room: Room, roundId: string, amount: number): void {
   const paid = (seatOf(room.state, 's2').match.seatMechanics?.receipts ?? []).filter(receipt => receipt.source === 'high-roller' && receipt.roundId === roundId);
   expect(paid.map(receipt => receipt.kind === 'gold' ? receipt.amount : NaN)).toEqual(amount ? [amount] : []);
 }
+/** The team's paying item gold receipts in `combat`. */
+function itemGold(combat: CombatState, team: 'player' | 'enemy'): string[] {
+  const allies = new Set(combat.units.filter(unit => unit.team === team).map(unit => unit.id));
+  return (combat.itemGoldReceipts ?? []).filter(receipt => allies.has(receipt.ownerId) && receipt.gold).map(receipt => receipt.id);
+}
+/** Each paying item gold receipt of the combat was paid as exactly one 1-gold settlement receipt, and nothing else was. */
+function expectItemGoldPaidOnce(room: Room, roundId: string, receiptIds: readonly string[]): void {
+  const paid = (seatOf(room.state, 's2').match.seatMechanics?.receipts ?? []).filter(receipt => receipt.source === 'g24-item-gold' && receipt.roundId === roundId);
+  expect(paid.map(receipt => receipt.receiptId).sort()).toEqual([...receiptIds].sort());
+  expect(paid.every(receipt => receipt.kind === 'gold' && receipt.amount === 1)).toBe(true);
+}
+/** High Roller gold alone (without the item receipts). */
+const highRoller = (combat: CombatState, team: 'player' | 'enemy') =>
+  combat.units.filter(unit => unit.team === team).reduce((sum, unit) => sum + (unit.g23?.highRoller ?? []).reduce((total, roll) => total + roll.gold, 0), 0);
 
 describe('v17 avarice: in-combat earnings on its team', () => {
   it('the room samples only the bank; the rules add the team\'s earnings once; the settlement pays them once', () => {
-    const { room, clock } = avariceRoom(dispose => disposers.push(dispose), opened => fieldSevika(opened, 's2'));
-    // PvP 4-6: s2 is side B (enemy) against s1.
-    nextBattle(room, clock, '4-6');
-    expect(pvpBattleOf(room.state, 's2')!.battle.b.seatId).toBe('s2');
-    clock.advance(400);
-    const pvpGold = spendGold(room, 's2');
-    runUntil(room, clock, state => state.roundName === '4-6' && state.phase !== 'battle');
-    expect(room.state.fault).toBeNull();
-    const pvp = pvpBattleOf(room.state, 's2')!.battle;
-    expect(pvp.bankSamples!.filter(sample => sample.team === 'enemy').map(sample => sample.liveGold)).toEqual([pvpGold]);
-    const pvpEarned = earned(pvp.terminal, 'enemy');
-    expect(avariceBank(pvp.terminal, 'enemy')).toBe(pvpGold + pvpEarned);
-    expectPaidOnce(room, '4-6', pvpEarned);
-    // PvE 4-7: the seat's own combat, stepped live by the room.
-    nextBattle(room, clock, '4-7');
-    clock.advance(400);
-    const pveGold = spendGold(room, 's2');
-    runUntil(room, clock, state => state.roundName === '4-7' && state.phase !== 'battle');
-    expect(room.state.fault).toBeNull();
-    const outcome = room.state.battles.flatMap(battle => battle.kind === 'placeholder' ? battle.outcomes : []).find(entry => entry.seatId === 's2')!;
-    const record = seatOf(room.state, 's2').match.roundResults.at(-1)!;
-    expect(record.roundId).toBe('4-7');
-    expect(record.bankSamples!.map(sample => sample.liveGold)).toEqual([pveGold]);
-    const terminal = outcome.combat!.terminal;
-    const pveEarned = earned(terminal, 'player');
-    expect(avariceBank(terminal, 'player')).toBe(pveGold + pveEarned);
-    expectPaidOnce(room, '4-7', pveEarned);
-    // Sevika's coin/jackpot casts are random: over these two combats (seed 42) at least one earned gold.
-    expect(pvpEarned + pveEarned).toBeGreaterThan(0);
-    // The next round pays nothing again.
-    runUntil(room, clock, state => state.roundName === '5-1' && state.phase === 'preparation');
-    expectPaidOnce(room, '4-6', pvpEarned);
-    expectPaidOnce(room, '4-7', pveEarned);
+    const { room, clock } = avariceRoom(dispose => disposers.push(dispose), opened => { fieldSevika(opened, 's2'); grantGoldItems(opened, 's2'); });
+    const holder = seatOf(room.state, 's2').match.preparation.units.find(unit => unit.id === seatOf(room.state, 's2').match.anomalyBinding!.unitId)!;
+    expect(holder.location.kind).toBe('board');
+    expect(seatOf(room.state, 's2').match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === holder.id).map(item => item.definitionId).sort())
+      .toEqual(Object.values(TEST_GOLD_ITEMS).sort());
+    // PvP 4-6 (s2 is side B, enemy, against s1), PvE 4-7, then on through the seat's battles until both earnings paid.
+    const paid = { highRoller: 0, items: 0 };
+    const checked: { roundId: string; highRoller: number; items: string[] }[] = [];
+    const kinds = new Set<string>();
+    let mogulStacks = 0;
+    for (let roundName = '4-6'; checked.length < 2 || paid.highRoller === 0 || !kinds.has('gamblers') || !kinds.has('collector');) {
+      expect(checked.length).toBeLessThan(20);
+      if (checked.length) roundName = runUntil(room, clock, state => { claimAllOrbs(room); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; }).roundName;
+      else nextBattle(room, clock, roundName);
+      if (roundName === '4-6') expect(pvpBattleOf(room.state, 's2')!.battle.b.seatId).toBe('s2');
+      clock.advance(400);
+      const gold = spendGold(room, 's2');
+      runUntil(room, clock, state => state.roundName === roundName && state.phase !== 'battle');
+      expect(room.state.fault).toBeNull();
+      const record = seatOf(room.state, 's2').match.roundResults.at(-1)!;
+      expect(record.roundId).toBe(roundName);
+      const pvp = pvpBattleOf(room.state, 's2');
+      let terminal: CombatState, team: 'player' | 'enemy';
+      if (pvp) {
+        team = pvp.battle.b.seatId === 's2' ? 'enemy' : 'player';
+        terminal = pvp.battle.terminal;
+        expect(pvp.battle.bankSamples!.filter(sample => sample.team === team).map(sample => sample.liveGold)).toEqual([gold]);
+      } else {
+        team = 'player';
+        terminal = room.state.battles.flatMap(battle => battle.kind === 'placeholder' ? battle.outcomes : []).find(entry => entry.seatId === 's2')!.combat!.terminal;
+        expect(record.bankSamples!.map(sample => sample.liveGold)).toEqual([gold]);
+      }
+      // The rules added the team's unsettled earnings (item gold + High Roller) to the sampled bank, once.
+      const items = itemGold(terminal, team), roller = highRoller(terminal, team);
+      expect(earned(terminal, team)).toBe(items.length + roller);
+      expect(avariceBank(terminal, team)).toBe(gold + items.length + roller);
+      // The settlement paid each once.
+      expectPaidOnce(room, roundName, roller);
+      expectItemGoldPaidOnce(room, roundName, items);
+      checked.push({ roundId: roundName, highRoller: roller, items });
+      for (const receipt of terminal.itemGoldReceipts ?? []) if (items.includes(receipt.id)) kinds.add(receipt.kind.split('-')[0]);
+      mogulStacks = Math.max(mogulStacks, avariceUnit(terminal, team).itemMogulHits?.length ?? 0);
+      paid.highRoller += roller; paid.items += items.length;
+    }
+    expect(checked.map(entry => entry.roundId).slice(0, 2)).toEqual(['4-6', '4-7']);
+    // Both earnings are random (Sevika's casts, the items' rolls); with seed 42 each kind paid within these battles.
+    expect(paid.highRoller).toBeGreaterThan(0);
+    expect(paid.items).toBeGreaterThan(0);
+    // Mogul's Mail stacks in these fights, but none lasts the 35 hits plus 160 ticks its gold needs (its payout is
+    // covered by the rules' own tests); its unpaid stacks must not reach the bank, which the per-battle check shows.
+    expect(mogulStacks).toBeGreaterThan(0);
+    // A later round pays none of them again.
+    clock.advance(1);
+    runUntil(room, clock, state => state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId);
+    for (const entry of checked) { expectPaidOnce(room, entry.roundId, entry.highRoller); expectItemGoldPaidOnce(room, entry.roundId, entry.items); }
   }, 180_000);
 });
