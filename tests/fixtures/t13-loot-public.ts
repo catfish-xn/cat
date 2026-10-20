@@ -72,7 +72,7 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
 }
 export async function transferPreparation() {
   // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
-  let s=await configuredPrefix('4-7',{seed:18619,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
+  let s=await configuredPrefix('4-7',{seed:303,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
     goldReserveByRound:{'4-5':40}});
@@ -97,7 +97,7 @@ export async function terminalPreparation(keep:string|null,col=1,row=7) {
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-10','unit-15']});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }

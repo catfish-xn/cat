@@ -13,7 +13,7 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-const SURVIVOR = 'unit-24', DONOR = 'unit-20', TG = 'item-10';
+const SURVIVOR = 'unit-30', DONOR = 'unit-22', TG = 'item-12';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
   const history = new BattleHistory('b10-temporary'), ticks = new Map<number, MatchState>();

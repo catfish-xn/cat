@@ -63,7 +63,7 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   let state=readyMatch(),defeats=0;
   while(state.phase!=='gameOver'){
    if(state.phase==='choice'){state=resolveM5Choices(state);continue;}
-   if(state.phase==='settlement'){state=accepted(nextRound(state,state.round));continue;}
+   if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=players(state).find(u=>u.location.kind==='bench')!;state=accepted(sellUnit(state,reserve.id));}state=accepted(nextRound(state,state.round));continue;}
    const before=state,end=finish(accepted(startMatchCombat(state)));if(end.combat?.result==='enemyWin')defeats++;
    expect(end.roundResults.at(-1)).toEqual(settlement(before,end.combat));state=end;
   }
@@ -79,10 +79,11 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   const prep=freeze(deployed()),copy=structuredClone(prep),started=startMatchCombat(prep);let state=accepted(started);
   if(!started.ok)throw Error(started.reason);
   const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
-  const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),orbId=JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),dropId=JSON.stringify([orbId,0]),toolDropId=JSON.stringify([orbId,1]);
-  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'darius',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
-  const toolReceiptId=JSON.stringify([toolDropId,'grant']),toolReceipt={receiptId:toolReceiptId,dropId:toolDropId,payload:{kind:'consumable',definitionId:'magnetic-remover',quantity:1},grantedItemIds:[],grantedUnitIds:[],grantedConsumableIds:['consumable-1']};
-  const maddie={id:'unit-2',definitionId:'darius',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
+  const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),heroSource=JSON.stringify(['pve','1-2','minions-a-v1','m02']);
+  const dropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),0]),heroDropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',heroSource,0]),0]);
+  const itemReceipt={receiptId:JSON.stringify([dropId,'grant']),dropId,payload:{kind:'item',definitionId:'belt',quantity:1},grantedItemIds:['item-1'],grantedUnitIds:[]};
+  const receiptId=JSON.stringify([heroDropId,'grant']),receipt={receiptId,dropId:heroDropId,payload:{kind:'unit',definitionId:'tristana',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
+  const maddie={id:'unit-2',definitionId:'tristana',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
   while(state.phase==='combat'){
    const prior=freeze(state),saved=structuredClone(prior),step=stepMatch(prior);state=step.state;events.push(...step.events);
    expect(prior).toEqual(saved);expect(state.shop).toBe(prep.shop);
@@ -95,31 +96,33 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
    }else{
     // B8: terminal preparation admits only the random Darius birth and tool receipt, never live combat changes.
     expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
-    expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual(prep.items);expect(state.nextItemSerial).toBe(prep.nextItemSerial);
-    expect(state.m8.loot.receipts).toEqual([receipt,toolReceipt]);expect(state.consumables).toHaveLength(1);expect(step.events.filter(e=>e.domain==='match')).toEqual([
-     {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq},
-     {type:'lootGranted',receipt:toolReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
-     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
+    expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual([...prep.items,{id:'item-1',definitionId:'belt',location:{kind:'inventory'}}]);expect(state.nextItemSerial).toBe(prep.nextItemSerial+1);
+    expect(state.m8.loot.receipts).toEqual([itemReceipt,receipt]);expect(state.consumables).toHaveLength(0);expect(step.events.filter(e=>e.domain==='match')).toEqual([
+     {type:'lootRevealed',dropId:heroDropId,death:{combatId:'round-1',tick:state.combat!.tick,eventSeq:step.events.find(e=>e.type==='death'&&e.unitId===heroSource)!.eventSeq},domain:'match',eventSeq:prior.nextMatchEventSeq},
+     {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
+     {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+3},
     ]);
     expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
-     {sequence:1,roundId:'1-2',kind:'unit-acquired',unitId:'unit-2',source:{kind:'loot',receiptId}},
-     {sequence:2,roundId:'1-2',kind:'combat-growth-committed',combatId:'round-1',settlementId:'round-1-settled',combatStartProvenancePrefixLength:1,sourceDeltas:[]},
+     {sequence:1,roundId:'1-2',kind:'item-acquired',itemId:'item-1',source:{kind:'loot',receiptId:itemReceipt.receiptId}},
+     {sequence:2,roundId:'1-2',kind:'unit-acquired',unitId:'unit-2',source:{kind:'loot',receiptId}},
+     {sequence:3,roundId:'1-2',kind:'combat-growth-committed',combatId:'round-1',settlementId:'round-1-settled',combatStartProvenancePrefixLength:1,sourceDeltas:[]},
     ]});
    }
   }
-  const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===sourceUnitId);expect(deaths).toHaveLength(1);
-  expect(state.m8.loot.earnedEvidence).toEqual([dropId,toolDropId].map(id=>({dropId:id,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}})));
+  const drops=[{dropId,sourceUnitId},{dropId:heroDropId,sourceUnitId:heroSource}];
+  const evidence=drops.map(d=>{const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===d.sourceUnitId);expect(deaths).toHaveLength(1);return {dropId:d.dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}};});
+  expect(state.m8.loot.earnedEvidence).toEqual(evidence);
   expect(events.filter(e=>e.domain==='match')).toEqual([
-   {type:'lootRevealed',dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},domain:'match',eventSeq:prep.nextMatchEventSeq},
-   {type:'lootRevealed',dropId:toolDropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},domain:'match',eventSeq:prep.nextMatchEventSeq+1},
-   {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
-   {type:'lootGranted',receipt:toolReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
+   ...evidence.map((e,i)=>({type:'lootRevealed',...e,domain:'match',eventSeq:prep.nextMatchEventSeq+i})),
+   {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
+   {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
    {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+4},
   ]);
   expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
-  expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId},{dropId:toolDropId,status:'granted',receiptId:toolReceiptId}]);
+  expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId:itemReceipt.receiptId},{dropId:heroDropId,status:'granted',receiptId}]);
   expect(state.m8.loot.choiceResolutions).toEqual([]);expect(state.m8.loot.choiceEligibility).toEqual([]);
-  expect(state.m8.loot.guaranteeCounters).toEqual(prep.m8.loot.guaranteeCounters);
+  expect(state.m8.loot.guaranteeCounters).toEqual(Object.fromEntries(ROUND_CATALOG.filter(r=>r.kind==='pve').map(r=>[JSON.stringify(['s13-orbs-project-v17',r.roundId,'components-granted']),r.roundId==='1-2'?1:0])));
   const combatEvents=events.filter(e=>e.domain==='combat');expect(combatEvents.map(e=>e.eventSeq)).toEqual(combatEvents.map((_,i)=>i));
   expect(state.roundResults).toEqual([settlement(prep,state.combat)]);expect(state.roundResults[0].combatEventCount).toBe(combatEvents.length);
   expect(prep).toEqual(copy);

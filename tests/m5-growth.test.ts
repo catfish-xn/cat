@@ -4,11 +4,12 @@ import {restoreMatch} from '../src/simulation/serialization';
 import {accepted,readyMatch} from './match-helpers';
 import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';
+import {shop as independentShop} from './fixtures/m5/oracle.g2.cjs';
 
 // Warm the same public acquisition route used below, once, outside the test body.
 beforeAll(() => {
- const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
- expect(shared.seed).toBe(8);
+ const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:22});
+ expect(shared.seed).toBe(22);
 },30_000);
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
@@ -33,19 +34,57 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(state.persistentGrowth).toEqual([{unitId:'unit-4',attackDamageBps:250},{unitId:'unit-5',attackDamageBps:375}]);
  });
  it('commits actual battle growth once and never regrants it on restore, duplicate step or Continue',()=>{
-  // Nine paid Tristana cards from the public v17 seed8 acquisition route create the same
+  // Nine paid Tristana cards from the public v17 seed22 acquisition route create the same
   // three-star kill/growth control without relabelling the opening Irelia.
-  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
-  // Traverse four scheduled rounds; supply is settled after its choice and has no combat.
-  for(let round=0;round<4;round++){
-   if(state.phase==='preparation')state=finishPublicEquipmentBattle(state);
+  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:22});
+  // Keep the naturally acquired army alive while earning purchase income. The
+  // same two recipe items return with their IDs when their original holder sells.
+  const equipment:string[]=[];
+  const fundingCarry=state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>b.starLevel-a.starLevel||Number(b.definitionId==='maddie')-Number(a.definitionId==='maddie'))[0];
+  expect(fundingCarry).toBeDefined();
+  for(const [slot,pair] of [['sword','rod'],['sword','sword']].entries()){
+   const a=state.items.find(item=>item.definitionId===pair[0])!;
+   const b=state.items.find(item=>item.definitionId===pair[1]&&item.id!==a.id)!;
+   const id=`item-${state.nextItemSerial}`;
+   state=accepted(api.combineItems(state,a.id,b.id));state=accepted(api.equipItem(state,id,fundingCarry.id,slot));equipment.push(id);
+  }
+  // The independent shop oracle prices all nine purchases, including paid
+  // rerolls. Earn ordinary income with the real army until that route is funded.
+  let requiredCost=0;
+  for(let rounds=0;;rounds++){
+   expect(rounds).toBeLessThan(16);
+   if(state.phase==='preparation'){
+    let funded:MatchState=state;
+    for(const unit of funded.preparation.units.filter(u=>u.team==='player'))funded=accepted(api.sellUnit(funded,unit.id));
+    let shop=funded.shop,rng=funded.rngState,cost=0,copies=0;
+    for(let rolls=0;rolls<100&&copies<9;rolls++){
+     for(const offer of shop.slots)if(offer.status==='available'&&offer.definitionId==='tristana'&&copies<9){copies++;cost+=2;}
+     if(copies<9){const next=independentShop(rng,shop.generation+1,funded.level);shop=next.shop;rng=next.rngState;cost+=2;}
+    }
+    if(copies===9&&cost<=funded.gold){state=funded;requiredCost=cost;break;}
+   }
+   if(state.phase==='preparation'){
+    // Acquisition returns the real roster to the bench. Field it while earning
+    // ordinary income; four empty-board losses can now kill this v17 route.
+    for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').sort((a,b)=>Number(b.id===fundingCarry.id)-Number(a.id===fundingCarry.id)||b.starLevel-a.starLevel)){
+     const board=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');
+     if(board.length>=state.level)break;
+     const row=['irelia','vander','rell','darius'].includes(unit.definitionId)?4:7;
+     const col=[3,2,4,1,5,0,6].find(col=>!board.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===row))!;
+     state=accepted(api.deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row}}));
+    }
+    state=finishPublicEquipmentBattle(state);
+   }
    else expect(state.m8.round.kind).toBe('supply');
+   while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){
+    const reserve=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!==fundingCarry.id).sort((a,b)=>a.starLevel-b.starLevel)[0];
+    expect(reserve).toBeDefined();state=accepted(api.sellUnit(state,reserve.id));
+   }
    state=resolvePublicEquipmentChoices(accepted(api.nextRound(state,state.round)));
   }
   // The random-loot acquisition route can leave a full reserve. Free it through
   // real sales before buying nine new Tristana cards; their lineage stays separate.
-  for(const unit of state.preparation.units.filter(u=>u.team==='player'))
-   state=accepted(api.sellUnit(state,unit.id));
+  const purchaseGold=state.gold;
   const unitId=`unit-${state.nextUnitSerial}`;
   for(let bought=0,rolls=0;bought<9;) {
    const slot=state.shop.slots.findIndex(offer=>offer.status==='available'&&offer.definitionId==='tristana');
@@ -53,12 +92,8 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
    state=accepted(api.buyUnit(state,slot,state.shop.generation));
    if(bought++===0)state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:4,row:4}}));
   }
-  for(const [slot,pair] of [['sword','rod'],['sword','sword']].entries()) {
-   const a=state.items.find(item=>item.definitionId===pair[0])!;
-   const b=state.items.find(item=>item.definitionId===pair[1]&&item.id!==a.id)!;
-   const id=`item-${state.nextItemSerial}`;
-   state=accepted(api.combineItems(state,a.id,b.id));state=accepted(api.equipItem(state,id,unitId,slot));
-  }
+  expect(state.gold).toBe(purchaseGold-requiredCost);
+  for(const [slot,id] of equipment.entries())state=accepted(api.equipItem(state,id,unitId,slot));
   expect(state.preparation.units.find(unit=>unit.id===unitId)).toMatchObject({definitionId:'tristana',starLevel:3});
   expect(restoreMatch(JSON.stringify(state))).toEqual(state);
   // v15's new offers alter the paid route's combat modifiers. Back-row placement
@@ -67,7 +102,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   // The new income/equipment prefix ends later. Use the next real PvE encounter
   // for the lethal-growth control; preserve ordinary HP, income and anomaly acquisition.
   for(let budget=0;state.roundDefinitionId!=='4-7';budget++){
-   expect(budget).toBeLessThan(6);
+   expect(budget).toBeLessThan(16);
    if(state.phase==='choice'){
     const c=state.pendingChoice!;
     state=c.step==='target'?accepted(api.selectAnomalyTarget(state,c.choiceId,c.generation,unitId))

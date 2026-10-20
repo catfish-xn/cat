@@ -29,5 +29,6 @@ it.each([4,6])('public Match Mirror Jayce row %s restores its independent forge 
  expect(()=>restoreMatch(forged)).toThrow('Mirror forge');
  while(state.phase==='combat')state=stepMatch(state).state;
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
- expect(state.items).toEqual(start.state.items);
+ expect(state.items.filter(i=>start.state.items.some(old=>old.id===i.id))).toEqual(start.state.items);
+ expect(state.items.filter(i=>!start.state.items.some(old=>old.id===i.id)).map(i=>i.definitionId)).toEqual(['belt']);
 });

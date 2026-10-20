@@ -42,7 +42,7 @@ it('pins all 29 executable IDs against the intact 29 source identities and hashe
  const changed=structuredClone(RULES_GAP_MANIFEST);
  // The full admission boundary and algorithm choices are digest inputs, not an unhashed UI list.
  expect(JSON.stringify(changed)).toContain(JSON.stringify(G24_FORGE_POLICY));
- expect(digestContent(changed)).not.toBe(digestContent(JSON.parse(JSON.stringify(changed).replace('g24-forge-v1','g24-forge-v2'))));
+ expect(digestContent(changed)).not.toBe(digestContent(JSON.parse(JSON.stringify(changed).replace('g24-forge-v2','g24-forge-v3'))));
  for(const api of ['unknown','toString']){
   expect(()=>resolveG24ForgePool(api)).toThrow('Unadmitted');
   expect(()=>g23RewardAtoms({...bundle(10),reward:{MeepTypeUnit:[api]}},42)).toThrow('frozen reward descriptor');

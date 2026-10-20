@@ -1,4 +1,4 @@
-import {createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,type MatchState} from '../../src/simulation/match';
+import {sellUnit,createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,type MatchState} from '../../src/simulation/match';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {readG23Progress,writeG23Progress} from '../../src/simulation/g2-3-state';
 import {createG23Progress} from '../../src/simulation/g2-3-match-progress';
@@ -7,7 +7,7 @@ import {g23BattlePayouts} from '../../src/simulation/g2-3-settlement';
 import {P2_ITEM_GRANTS} from '../../src/simulation/content/s13-augments-p2';
 
 export const accepted=<T extends {ok:boolean;state:MatchState}>(result:T):MatchState=>{
- if(!result.ok)throw Error('Fixture command refused');return result.state;
+ if(!result.ok)throw Error('Fixture command refused: '+('reason' in result?result.reason:'unknown')+' at '+result.state.roundDefinitionId+'/'+result.state.phase);return result.state;
 };
 let cached:Map<number,MatchState>|undefined;
 let tier4Preparation:MatchState|undefined;
@@ -35,7 +35,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    if(!states.has(4)&&readG23Progress(state)!.conquest.chestsOpened>=4)states.set(4,state);
    continue;
   }
-  if(state.phase==='settlement'){state=accepted(nextRound(state,state.round));continue;}
+  if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));continue;}
   if(state.phase!=='preparation')throw Error(`Unexpected solo fixture phase ${state.phase} at ${state.round}, stacks ${readG23Progress(state)!.conquest.stacks}`);
   if(state.round===1&&!recruited){
    state=accepted(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:150}));
@@ -48,6 +48,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    recruited=true;
   }
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'))state=accepted(sellUnit(state,u.id));
   if(state.round===6)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }

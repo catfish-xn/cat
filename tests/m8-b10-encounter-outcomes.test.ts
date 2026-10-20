@@ -1,3 +1,4 @@
+import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -65,9 +66,7 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
       expect(state.phase).toBe('gameOver');
       // Seed42 after the independent additive bonus stream: both literal-table
       // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
-      expect(receipts.map(r => r.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},
-        {kind:'unit',definitionId:'leona',quantity:1},{kind:'gold',quantity:1},
-        {kind:'unit',definitionId:'ekko',quantity:1},{kind:'gold',quantity:4}]);
+      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(42,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
     }
   });
 });

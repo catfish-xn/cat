@@ -98,14 +98,14 @@ it('G-C05 binds a genuinely damaged ordinary shield even when both projections c
 it('G-C06 binds the real absorption value even when its status is forged coherently', async () => {
   // The expanded anomaly pool exhausts seed 4's paid rerolls. Seed 1 and the
   // normal 4-5 gold reserve acquire the same anomaly through public commands.
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 1, goldReserveByRound: { '4-5': 40 }, anomalyDefinitionId: 'power-absorption' });
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 1, goldReserveByRound: { '4-5': 40 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia' });
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
   // Public bench sales leave room to move the seeded roster off the board.
   for (const unit of prep.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench' && u.id !== ownerId))
     prep = accepted(sellUnit(prep, unit.id));
   prep = emptyBoard(prep);
-  prep = accepted(deployMatchUnit(prep, ownerId, { kind: 'board', cell: { col: 3, row: 7 } }));
+  prep = accepted(deployMatchUnit(prep, ownerId, { kind: 'board', cell: { col: 0, row: 7 } }));
   prep = accepted(grantMechanicUnit(prep, { receiptId: 'cd-absorb-ally', source: 'test', definitionId: 'zyra' }));
   const allyId = prep.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!.id;
   prep = accepted(deployMatchUnit(prep, allyId, { kind: 'board', cell: { col: 3, row: 4 } }));

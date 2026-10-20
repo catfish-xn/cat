@@ -14,7 +14,7 @@ function roundTrip(state: MatchState): MatchState {
 }
 function openingChoice(): MatchState {
   let state = finish(accepted(startMatchCombat(createMatch(42))));
-  expect(state.m8.loot.receipts[0].grantedUnitIds).toEqual(['unit-2']);
+  expect(state.m8.loot.receipts.find(r=>r.payload.kind==='unit')!.grantedUnitIds).toEqual(['unit-2']);
   state = accepted(nextRound(state,state.round));
   state = accepted(deployMatchUnit(state,'unit-2',{kind:'board',cell:{col:3,row:4}}));
   state = finish(accepted(startMatchCombat(state)));

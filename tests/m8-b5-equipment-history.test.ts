@@ -1,3 +1,4 @@
+import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
@@ -16,9 +17,9 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 20_000 });
 
 function start(equipped = true, history?: BattleHistory): MatchState {
-  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history });
+  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15 });
   if(history){
-    const shared=publicEquipmentPreparation(['gloves','gloves']);
+    const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15});
     expect(shared).toEqual(state); expect(shared).not.toBe(state);
   }
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
@@ -53,6 +54,24 @@ function settle(state: MatchState, history?: BattleHistory): MatchState {
     const cell=cells.find(c=>!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===c.col&&u.location.cell.row===c.row))!;
     state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell}));
   }
+  // New v17 drops are real surplus components. Spend them on the paid army,
+  // retaining the original TG parent and every natural XP/roll boundary.
+  for(const id of ['warmog','dragons-claw','shojin','gunblade','deathcap','rageblade','gargoyle','giant-slayer','infinity-edge','last-whisper','hand-of-justice']){
+    const available=state.items.filter(i=>i.location.kind==='inventory'),chosen:string[]=[];
+    for(const part of ITEM_DEFINITIONS[id].recipe!){const item=available.find(i=>i.definitionId===part&&!chosen.includes(i.id));if(item)chosen.push(item.id);}
+    if(chosen.length===2)state=accepted(combineItems(state,chosen[0],chosen[1]));
+  }
+  for(const item of state.items.filter(i=>i.location.kind==='inventory')){
+    if(item.definitionId==='thiefs-gloves')continue;
+    let placed=false;
+    for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'&&u.location.kind==='board').sort((a,b)=>b.starLevel-a.starLevel)){
+      for(let slot=0;slot<3;slot++){
+        if(state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&i.location.slot===slot))continue;
+        const result=equipItem(state,item.id,unit.id,slot);if(result.ok){state=result.state;placed=true;break;}
+      }
+      if(placed)break;
+    }
+  }
   const done=choices(finishPublicEquipmentBattle(state, history));
   return done;
 }
@@ -63,6 +82,7 @@ function historicalProgression(equipped = true, history?: BattleHistory): MatchS
   while (state.round < getCatalogRoundById('4-5').ordinal) {
     if (state.phase === 'preparation') state = settle(state, history);
     expect(state.phase).toBe('settlement');
+    while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1')!;state=accepted(sellUnit(state,extra.id));}
     state = choices(accepted(nextRound(state, state.round)));
     while(state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
       const excess=state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1')

@@ -60,7 +60,7 @@ it('preserves preparation, items and deterministic compact replay across both se
  const seat=()=>{const s=equipped();return {...s,round:round.ordinal,roundDefinitionId:round.roundId,m8:{...s.m8,round},preparation:{...s.preparation,units:s.preparation.units.filter(u=>u.team==='player')}}};
  const state=equipped(),started=startMatchCombat(state);if(!started.ok)throw Error(started.reason);
  let current=started.state;while(current.phase==='combat')current=stepMatch(current).state;
- expect(current.items).toEqual(state.items);expect(current.preparation.units.some(u=>u.id.startsWith('["g24-summon"'))).toBe(false);expect(current.preparation.units.find(u=>u.id==='unit-1')).toEqual(state.preparation.units.find(u=>u.id==='unit-1'));
+ expect(current.items.filter(i=>state.items.some(old=>old.id===i.id))).toEqual(state.items);expect(current.items.filter(i=>!state.items.some(old=>old.id===i.id)).map(i=>i.definitionId)).toEqual(['belt']);expect(current.preparation.units.some(u=>u.id.startsWith('["g24-summon"'))).toBe(false);expect(current.preparation.units.find(u=>u.id==='unit-1')).toEqual(state.preparation.units.find(u=>u.id==='unit-1'));
  const result=resolveTwoSidedBattle(compileBattle(snapshotForBattle(seat(),'A'),snapshotForBattle(seat(),'B'),42),1201),replay=toCombatReplay(result);
  expect(result.terminal.trenchSplits!.length).toBeGreaterThan(0);
  let actual=result.initial,view=replay.initial;

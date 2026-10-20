@@ -9,7 +9,7 @@ import {accepted} from './fixtures/r3r4-public';
 import type {MatchState} from '../src/simulation/match-types';
 function claimAll(result:ReturnType<typeof fight>){for(const orb of readLootView(result.state).unclaimedOrbs!)result=accept(runSharedMatchCommand(result.pool,result.state,{type:'claimOrb',round:result.state.round,orbId:orb.orbId}));return result;}
 function secondSettlement(){
- const initial=room(undefined,1),start=batch(refreshSharedShops(initial.pool,initial.states,1));
+ const initial=room(undefined,1,56),start=batch(refreshSharedShops(initial.pool,initial.states,1));
  const first=claimAll(fight(start.pool,start.states[0])),next=batch(nextSharedRound(first.pool,[first.state],1));
  let state=next.states[0];const unit=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;
  state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col:3,row:7}}));
@@ -44,12 +44,12 @@ describe('D6 shared layout, transactions and D7 projections',()=>{
  });
  it('full bench keeps the complete orb through timeout and explicitly sells its hero with its tool',()=>{
   const initial=fullBench(),result=fight(initial.pool,initial.state);
-  const view=readLootView(result.state);expect(view.revealedDrops.map(d=>d.status)).toEqual(['revealed','revealed']);
+  const view=readLootView(result.state);expect(view.revealedDrops.map(d=>d.status)).toEqual(['revealed','revealed','revealed']);
   expect(view.revealedOrbs[0].status).toBe('revealed');expect(result.state.consumables).toHaveLength(0);
   expect(result.pool.pending).toHaveLength(0);
   const next=accept(runSharedMatchCommand(result.pool,result.state,{type:'claimLoot',round:1}));
   expect(next.pool.pending).toHaveLength(0);expect(readLootView(next.state).revealedDrops[0]).toMatchObject({status:'revealed',reason:'awaiting-claim'});
-  const paid=claimAll(next);expect(paid.state.consumables).toHaveLength(1);expect(readLootView(paid.state).claimReceipts![0]).toMatchObject({resolution:'capacity-sold',gold:1});conserved(paid.pool,[paid.state]);
+  const paid=claimAll(next);expect(paid.state.consumables).toHaveLength(0);expect(readLootView(paid.state).claimReceipts!.filter(r=>r.payload.kind==='unit')).toMatchObject([{resolution:'capacity-sold',gold:1},{resolution:'capacity-sold',gold:1}]);conserved(paid.pool,[paid.state]);
   expect(toPrivateSeatView(next.state).revealedLoot).toEqual({roundId:'1-2',revealedDrops:readLootView(next.state).revealedDrops,revealedOrbs:readLootView(next.state).revealedOrbs});
   const retry=accept(runSharedMatchCommand(next.pool,next.state,{type:'claimLoot',round:1}));expect(retry.pool).toBe(next.pool);expect(retry.state).toBe(next.state);conserved(next.pool,[next.state]);
  });

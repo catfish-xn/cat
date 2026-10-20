@@ -137,7 +137,7 @@ it.each(cases)('$id applies certified combat values and retires the same physica
     expect(api.sellUnit(acquisition,target.id)).toMatchObject({ok:false,state:acquisition});
     const absentSnapshot=snapshotForBattle(acquisition,'owner');expect(absentSnapshot.units.some(u=>u.id===target.id)).toBe(false);expect(absentSnapshot.anomalyBinding).toBeNull();
     const current=s.preparation.units.find(u=>u.id===target.id)!;
-    expect(current.location).toEqual({kind:'bench',slot:0});
+    expect(current.location).toEqual({kind:'bench',slot:3});
     expect(s.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===target.id)).toEqual(heldItems);
     const open=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;s=accepted(api.deployMatchUnit(s,current.id,open.location));
     const normal=getUnitStats(target.definitionId,target.starLevel),compiled=buildStrategySnapshot(s).units.find(u=>u.unitId===target.id)!;

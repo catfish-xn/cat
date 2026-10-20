@@ -9,7 +9,7 @@ import type { Unit } from '../src/simulation/unit-types';
 import { freeze } from './combat-helpers';
 const accept=(r:MultiplayerCommandResult)=>{if(!r.ok)throw new Error(r.reason);return r.state;};
 // Earned-loot vectors isolate timeout commits; normal command traversal is in t3-round-settlement.
-function fixture(roundId='1-2',seed=5):MatchState {
+function fixture(roundId='1-2',seed=roundId==='2-7'?26:5):MatchState {
   const base=accept(enableMultiplayerSettlement(createMatch(seed),'A')),round=getCatalogRoundById(roundId),enemies=createRoundEnemies(round.ordinal);
   const state:MatchState={...base,round:round.ordinal,roundDefinitionId:roundId,
     m8:{...base.m8,round,loot:prepareMatchLoot(seed,round.ordinal),preparation:{...base.m8.preparation,roundId,encounterId:round.encounterId,enemies}},
@@ -38,17 +38,17 @@ describe('T3 earned loot timeout transaction',()=>{
     const state=fixture(),deadline=accept(claimOrDiscardLoot(freeze(state),state.round));
     expect(deadline).toBe(state);expect(deadline.m8.loot.receipts).toEqual([]);
     const next=claimAll(deadline);
-    expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(2);expect(next.consumables).toHaveLength(1);
-    expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
-    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'darius',location:{kind:'bench',slot:0}});
+    expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(3);expect(next.consumables).toHaveLength(0);
+    expect(next.m8.loot.receipts[1].payload).toEqual({kind:'unit',definitionId:'maddie',quantity:1});
+    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'maddie',location:{kind:'bench',slot:0}});
     retry(next);
   });
   it('keeps a capacity-blocked orb at deadline and sells its hero only on explicit claim',()=>{
     const state=fullBench(fixture()),deadline=accept(claimOrDiscardLoot(freeze(state),state.round));
     expect(deadline).toBe(state);expect(deadline.m8.loot.direct[0].status).toBe('revealed');
     const next=claimAll(deadline);
-    expect(next.m8.loot.direct[0].status).toBe('granted');expect(next.m8.loot.receipts[0]).toMatchObject({resolution:'capacity-sold',gold:1,grantedUnitIds:[]});expect(next.gold).toBe(state.gold+1);expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['unit','consumable']);expect(next.consumables).toHaveLength(1);
-    expect(next.preparation).toEqual(state.preparation);expect(next.nextUnitSerial).toBe(20);retry(next);
+    expect(next.m8.loot.direct[0].status).toBe('granted');expect(next.m8.loot.receipts[1]).toMatchObject({resolution:'capacity-sold',gold:1,grantedUnitIds:[]});expect(next.gold).toBe(state.gold+2);expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['item','unit','unit']);expect(next.consumables).toHaveLength(0);
+    expect(next.preparation).toEqual(state.preparation);expect(next.items.map(i=>i.definitionId)).toEqual(['tear']);expect(next.nextUnitSerial).toBe(20);retry(next);
     // A real public settlement has the same blocker and can now advance.
     let live=accept(startMatchCombat(fullBench(accept(enableMultiplayerSettlement(createMatch(5),'A')))));
     while(live.phase==='combat') live=stepMatch(live).state;
@@ -74,6 +74,12 @@ describe('T3 earned loot timeout transaction',()=>{
     const orb=state.m8.loot.frozen.rounds.at(-1)!.orbs.find(o=>o.entries.some(e=>e.payload.kind==='gold'))!;
     expect(claimOrb(freeze(state),orb.orbId,state.round)).toEqual({ok:false,state,reason:'invalid-loot'});
     expect(JSON.stringify(state)).toBe(before);
+  });
+  it('claims the independently planned v17 tool once, from its own 2-7 carrier',()=>{
+    const before=fixture('2-7',27566),next=claimAll(before);
+    expect(next.consumables.map(c=>c.definitionId)).toEqual(['magnetic-remover']);
+    expect(next.m8.loot.receipts.filter(r=>r.payload.kind==='consumable').map(r=>r.grantedConsumableIds)).toEqual([['consumable-1']]);
+    retry(next);expect(next.nextConsumableSerial).toBe(2);
   });
   it('online PvE HP zero eliminates without single-player gameOver; offline remains gameOver',()=>{
     for(const online of [false,true]) {

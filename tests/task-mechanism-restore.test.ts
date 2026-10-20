@@ -3,15 +3,15 @@ import * as replayCombat from '../src/simulation/combat';
 import * as content from '../src/simulation/content';
 import { BattleHistory } from '../src/replay/history';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
-import { purchasedThreeHeroMatch } from './match-helpers';
-import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { reachRound, purchasedThreeHeroMatch } from './match-helpers';
+import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 // Keep the original seed/2-1 combat and passive augment; its v16 opening
 // gloves are genuinely acquired, while the old unused rod now arrives later.
-const cursePreparation=()=>acquireEquipment(['gloves'],{seed:3151248,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
+const cursePreparation=()=>reachRound('2-1',true,3151248);
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 
@@ -194,6 +194,7 @@ async function blackRoseSave(): Promise<MatchState> {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
   let state = prepare(['rod'], { seed: 42 });
   expect(state.round).toBe(8);
+  for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,u.id));
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `cast-fact-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;

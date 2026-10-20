@@ -90,7 +90,7 @@ interface SceneBridge {
 const sessions: MatchSession[] = [];
 afterEach(() => { for (const session of sessions.splice(0)) session.dispose(); display.created.length = 0; vi.restoreAllMocks(); });
 
-function makeScene(initial: MatchState = createMatch(6240)) {
+function makeScene(initial: MatchState = createMatch(42)) {
   const scene = new BoardScene() as unknown as SceneBridge;
   scene.session.dispose();
   scene.session = new MatchSession(initial);
@@ -131,12 +131,12 @@ function token(scene: SceneBridge, id: string): Token {
 }
 function creations(id: string) { return display.created.filter(view => view.token.getData('unitId') === id); }
 function prepareConsumedCombatUnit() {
-  const scene = makeScene(createMatch(12));
+  const scene = makeScene(createMatch(1186));
   finish(scene);
   command(scene, scene.session.continue(1));
-  // Independent shop/loot tables pin seed12: Lux in slots 1 and 4, then a 1-3
+  // Independent shop/loot tables pin seed1186: Lux in slots 1 and 4, then a 1-3
   // Lux reward. The 1-2 win pays the full 2G; both copies are actual purchases.
-  for (const slot of [1, 4]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
+  for (const slot of [2, 3]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
   command(scene, scene.session.deploy('unit-1', { kind: 'bench', slot: 3 }));
   command(scene, scene.session.deploy('unit-3', { kind: 'board', cell: { col: 2, row: 4 } }));
   command(scene, scene.session.deploy('unit-4', { kind: 'board', cell: { col: 3, row: 4 } }));
@@ -152,7 +152,7 @@ function resolveRewardAndContinue(scene: SceneBridge, beforeContinue?: () => voi
 }
 
 describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser claim)', () => {
-  it('creates the actual seed-6240 Maddie before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
+  it('creates the actual seed-42 Tristana before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
     const scene = makeScene();
     const initialIds = [...scene.tokens.keys()];
     const calls: string[] = [];
@@ -177,15 +177,15 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
     expect(calls).toEqual(['reconcile', 'syncCombat']);
     expect(scene.session.state.roundResults[0].result).toBe('playerWin');
     expect(scene.session.state.m8.loot.receipts).toHaveLength(2);
-    expect(scene.session.state.m8.loot.receipts[0]).toMatchObject({
-      payload: { kind: 'unit', definitionId: 'maddie', quantity: 1 }, grantedUnitIds: ['unit-2'],
+    expect(scene.session.state.m8.loot.receipts.find(r=>r.payload.kind==='unit')).toMatchObject({
+      payload: { kind: 'unit', definitionId: 'tristana', quantity: 1 }, grantedUnitIds: ['unit-2'],
     });
-    expect(scene.session.preparation.units.find(unit => unit.id === 'unit-2')).toMatchObject({ definitionId: 'maddie', location: { kind: 'bench', slot: 0 } });
+    expect(scene.session.preparation.units.find(unit => unit.id === 'unit-2')).toMatchObject({ definitionId: 'tristana', location: { kind: 'bench', slot: 0 } });
     expect(scene.session.combat!.units.some(unit => unit.id === 'unit-2')).toBe(false);
     expect([...scene.tokens.keys()]).toEqual([...initialIds, 'unit-2']);
     const reward = token(scene, 'unit-2'), view = scene.views.get('unit-2')!;
     expect(reward).toMatchObject({ x: 27, y: 480, active: true, visible: true, alpha: 0.35, input: { enabled: true, draggable: false } });
-    expect(view.lastUnit.definitionId).toBe('maddie');
+    expect(view.lastUnit.definitionId).toBe('tristana');
     expect(view.lastCombatUnit).toBeUndefined();
     reward.click();
     expect(scene.selectedId).toBe('unit-2');
