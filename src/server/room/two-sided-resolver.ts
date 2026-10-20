@@ -15,6 +15,7 @@
 import {
   BattleValidationError, compileBattle, proposeSettlement, snapshotForBattle, startTwoSidedBattle,
   type BattleIdentity, type BattleReplayTask, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
+  type BattleInput as RulesBattleInput,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from './battle-resolver';
 import { primeCombatReplay } from './projection';
@@ -72,21 +73,39 @@ function twoSidedJob(envelope: BattleInput, capture: ReplayCapture | null): { ad
         if (used >= envelope.maxSteps) throw new BattleResolveError(envelope.battleId, 'battle-validation:step-limit-exceeded');
         return null;
       }
-      const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-      const result: TwoSidedBattleResult = {
-        kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-        participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
-      };
-      // The frames the rules recorded on this very run; side B's view is still mirrored from them at push time.
-      const finished = task;
-      const replay = 'replay' in finished ? finished.replay() : null;
-      if (replay) primeCombatReplay(result, replay);
-      return result;
+      return twoSidedResult(envelope, battle, task);
     },
   };
 }
 
+/** The room's result of a finished rules battle: the proposals, and the replay frames the task recorded (if it did) primed for the push. */
+export function twoSidedResult(envelope: BattleInput, battle: TwoSidedBattleResult['battle'], task: BattleTask | BattleReplayTask): TwoSidedBattleResult {
+  const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
+  const result: TwoSidedBattleResult = {
+    kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
+  };
+  // The frames the rules recorded on this very run; side B's view is still mirrored from them at push time.
+  const replay = 'replay' in task ? task.replay() : null;
+  if (replay) primeCombatReplay(result, replay);
+  return result;
+}
+
+/** A rules refusal from a live task's call (sample or advance) as the resolver fault the room reports. */
+export function guardedBattle<T>(battleId: string, run: () => T): T { return guarded(battleId, run); }
+
 function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
+  const frozen = compileEnvelope(envelope);
+  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen, { captureReplay }));
+}
+
+/** D11 live bank: the same compiled battle as a frame-by-frame replay task, with the rules' input (for its live-gold readers). */
+export function startLiveTask(envelope: BattleInput): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
+  const input = compileEnvelope(envelope);
+  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true })) };
+}
+
+function compileEnvelope(envelope: BattleInput): RulesBattleInput {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -102,6 +121,5 @@ function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | 
   const a: PlayerBattleSnapshot = guarded(first.seatId, () => snapshotForBattle(first.state, first.seatId));
   const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
-  const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
-  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen, { captureReplay }));
+  return guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
 }

@@ -12,7 +12,7 @@ import { ManualClock } from '../../src/server/room/clock';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import type { RoomState, SeatState } from '../../src/server/room/types';
+import type { RoomNotice, RoomState, SeatState } from '../../src/server/room/types';
 import { readPublicOrbSummary } from '../../src/server-entry';
 import { readLootView } from '../../src/simulation/match';
 import type { MatchState } from '../../src/simulation/match-types';
@@ -24,14 +24,17 @@ const receipts = (match: MatchState) => readLootView(match).claimReceipts ?? [];
 const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
 
-describe('v15 wire: protocol 4, claimOrb and per-card rerollAugment', () => {
-  it('runs on the rules\' protocol 4 and refuses a protocol 3 client with a message naming both versions', () => {
-    expect(NET_PROTOCOL_VERSION).toBe(4);
-    expect(NET_PROTOCOL_VERSION).toBe(MULTIPLAYER_NET_PROTOCOL_VERSION);
-    const old = parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: 3, commandId: 1, name: 'x' }));
-    expect(old).toMatchObject({ ok: false, code: 'unsupported-protocol', commandId: 1 });
-    if (!old.ok) { expect(old.detail).toContain('must be 4'); expect(old.detail).toContain('got 3'); }
-    expect(parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: 4, commandId: 1, name: 'x' }))).toMatchObject({ ok: true });
+describe('v15 wire: protocol 5, claimOrb and per-card rerollAugment', () => {
+  it('versions the rules and wire contracts independently (rules 4, wire 5) and refuses an older client with a message naming both versions', () => {
+    // These contracts are versioned independently; equality is not required. D11 replay-tail only bumped the wire version.
+    expect(MULTIPLAYER_NET_PROTOCOL_VERSION).toBe(4);
+    expect(NET_PROTOCOL_VERSION).toBe(5);
+    for (const version of [3, 4]) {
+      const old = parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: version, commandId: 1, name: 'x' }));
+      expect(old).toMatchObject({ ok: false, code: 'unsupported-protocol', commandId: 1 });
+      if (!old.ok) { expect(old.detail).toContain('must be 5'); expect(old.detail).toContain(`got ${version}`); }
+    }
+    expect(parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: 5, commandId: 1, name: 'x' }))).toMatchObject({ ok: true });
   });
 
   it('claimOrb carries exactly round and orbId; anything else is invalid', () => {
@@ -40,7 +43,7 @@ describe('v15 wire: protocol 4, claimOrb and per-card rerollAugment', () => {
     for (const value of [{ ...command, seatId: 's1' }, { ...command, gold: 9 }, { type: 'claimOrb', round: 3 }, { type: 'claimOrb', orbId: 'x' },
       { ...command, orbId: '' }, { ...command, round: -1 }, { ...command, round: 1.5 }, { ...command, orbId: 7 }])
       expect(() => validateClientCommand(value)).toThrow();
-    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 4, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
+    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 5, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
     expect(message).toMatchObject({ ok: true, message: { command } });
   });
 
@@ -136,6 +139,32 @@ describe('v15 room: a claim while the round is frozen', () => {
       expect(unclaimed(entered).find(o => o.orbId === orb.orbId)?.queued).toBe(true);
       expect(receipts(entered)).toEqual(receipts(before.match));
     } else expect(unclaimed(entered).map(o => o.orbId)).not.toContain(orb.orbId);
+  }, 20_000);
+});
+
+describe('v15 room: a held frozen claim the rules refuse at battle entry', () => {
+  it('leaves the seat as it was and tells only that seat, once, with the rules\' reason', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 10 });
+    disposers.push(() => room.dispose());
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    clock.fireNext();
+    expect(room.state.phase).toBe('frozen');
+    const before = seat(room.state, 's0');
+    const orb = unclaimed(before.match).find(o => !o.queued)!;
+    expect(room.handle('s0', { type: 'claimOrb', round: before.match.round, orbId: orb.orbId })).toMatchObject({ ok: true });
+    // The rules' refusal is forced here (none of the light checks the room makes while frozen can miss one today).
+    const inner = room as unknown as { apply(seat: SeatState, command: { type: string }): unknown };
+    const real = inner.apply.bind(room);
+    inner.apply = (target, command) => command.type === 'claimOrb' ? { ok: false, reason: 'wrong-phase', state: target.match } : real(target, command);
+    const notices: RoomNotice[] = [];
+    disposers.push(room.subscribeNotices(notice => notices.push(notice)));
+    while (room.state.phase === 'frozen') expect(clock.fireNext()).toBe(true);
+    expect(room.state.fault).toBeNull();
+    expect(notices).toEqual([{ type: 'orb-claim-refused', seatId: 's0', round: before.match.round, orbId: orb.orbId, reason: 'wrong-phase' }]);
+    const entered = seat(room.state, 's0').match;
+    expect(unclaimed(entered).find(o => o.orbId === orb.orbId)?.queued).toBeFalsy();
+    expect(receipts(entered)).toEqual(receipts(before.match));
   }, 20_000);
 });
 

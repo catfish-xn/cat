@@ -313,10 +313,13 @@ export function mirrorCombatReplay(replay: CombatReplay): CombatReplay {
   const rows = replay.initial.board.rows;
   return {
     initial: mirrorViewState(replay.initial, rows),
-    ticks: replay.ticks.map(frame => ({ tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)),
-      ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) })),
+    ticks: replay.ticks.map(frame => mirrorReplayTick(frame, rows)),
     terminal: mirrorViewState(replay.terminal, rows),
   };
+}
+/** One replay record of side A as side B sees it (the same flip as `mirrorCombatReplay`); `rows` from the replay's board. */
+export function mirrorReplayTick(frame: CombatReplay['ticks'][number], rows: number): CombatReplay['ticks'][number] {
+  return { tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)), ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) };
 }
 function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
   const { player, enemy } = view.board.deploymentZones;

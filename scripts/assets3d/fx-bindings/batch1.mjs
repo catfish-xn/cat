@@ -1,0 +1,11 @@
+import drmundo from './drmundo.mjs';
+import blitzcrank from './blitzcrank.mjs';
+import heimerdinger from './heimerdinger.mjs';
+import ziggs from './ziggs.mjs';
+import lux from './lux.mjs';
+import caitlyn from './caitlyn.mjs';
+import darius from './darius.mjs';
+import twistedfate from './twistedfate.mjs';
+import malzahar from './malzahar.mjs';
+import ekko from './ekko.mjs';
+export const batch1Tables = { drmundo, blitzcrank, heimerdinger, ziggs, lux, caitlyn, darius, twistedfate, malzahar, ekko };

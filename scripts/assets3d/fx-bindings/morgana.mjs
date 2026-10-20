@@ -1,0 +1,73 @@
+// TFT13 Base inventory + real all-anim joints; timing/placement approximated.
+export default {
+  "attack": [
+    {
+      "system": "BA_Mis",
+      "phase": "travel",
+      "anchor": "projectile",
+      "delay": 0,
+      "maxDuration": 0.35,
+      "status": "approximated",
+      "bone": "Buffbone_Glb_Weapon_1",
+      "note": "Estimated preview timing; verified all-anim skin joint."
+    },
+    {
+      "system": "@shared-hit",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.35,
+      "maxDuration": 0.5,
+      "status": "approximated",
+      "note": "Estimated preview timing; world anchor, target skeleton unknown."
+    }
+  ],
+  "cast": [
+    {
+      "system": "Q_Mis",
+      "phase": "travel",
+      "anchor": "projectile",
+      "delay": 0.2,
+      "maxDuration": 0.5,
+      "status": "approximated",
+      "bone": "Buffbone_Glb_Weapon_1",
+      "note": "Estimated preview timing; verified all-anim skin joint."
+    },
+    {
+      "system": "Q_Tar",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.55,
+      "maxDuration": 1,
+      "status": "approximated",
+      "note": "Estimated preview timing; world anchor, target skeleton unknown."
+    },
+    {
+      "system": "Q_DoT",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.6,
+      "maxDuration": 2,
+      "status": "approximated",
+      "note": "Estimated preview timing; world anchor, target skeleton unknown."
+    },
+    {
+      "system": "Q_DoT_Card",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.6,
+      "maxDuration": 2,
+      "status": "approximated",
+      "note": "Estimated preview timing; world anchor, target skeleton unknown."
+    }
+  ],
+  "unavailable": [
+    [
+      "BA_Cas/Q_Cas",
+      "No dedicated TFT13 Base launch system."
+    ],
+    [
+      "cast area",
+      "No separate Base area; target DoT used."
+    ]
+  ]
+};

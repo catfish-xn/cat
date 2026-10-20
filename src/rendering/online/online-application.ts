@@ -37,6 +37,8 @@ export interface OnlineHooks {
   refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
   /** The server's own events behind a state push (T10: deadline auto-deployment, post-battle merges), after it is shown. */
   serverEvents?(events: readonly MatchEvent[]): void;
+  /** v15: an orb claimed in the frozen moment before the battle was refused by the rules after its ok receipt. */
+  orbClaimRefused?(orbId: string, reason: string): void;
 }
 /** Status text of the post-battle merges among server events (T10 §15.3), or null when there are none. */
 export function mergeNotice(events: readonly MatchEvent[]): string | null {
@@ -121,7 +123,9 @@ export class OnlineApplication implements SceneApplication {
       view: view => this.onView(view),
       state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
       replay: (replay, unitIds) => { this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
+      replayRevised: replay => { this.session.reviseReplay(replay); this.hooks.refresh(); },
       refused: refusal => this.onRefused(refusal),
+      notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
     });
     this.syncMode();

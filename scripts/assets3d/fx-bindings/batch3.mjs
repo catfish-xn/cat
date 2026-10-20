@@ -1,0 +1,11 @@
+import ambessa from './ambessa.mjs';
+import cassiopeia from './cassiopeia.mjs';
+import corki from './corki.mjs';
+import elise from './elise.mjs';
+import ezreal from './ezreal.mjs';
+import gangplank from './gangplank.mjs';
+import garen from './garen.mjs';
+import illaoi from './illaoi.mjs';
+import jayce from './jayce.mjs';
+import kogmaw from './kogmaw.mjs';
+export const batch3Tables = { ambessa, cassiopeia, corki, elise, ezreal, gangplank, garen, illaoi, jayce, kogmaw };

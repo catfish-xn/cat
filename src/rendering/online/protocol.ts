@@ -5,7 +5,7 @@
  * computed on the client.
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
-import type { ReceiptFailure } from '../../server/net/messages';
+import type { ReceiptFailure, SeatNotice } from '../../server/net/messages';
 import type { WireCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 
@@ -44,7 +44,14 @@ export interface ClientListeners {
    * says which battle id is which of my units, so their equipment can be shown; empty for PvE or when the push had none.
    */
   replay(replay: CombatReplay, unitIds?: readonly ReplayUnitId[]): void;
+  /**
+   * D11 live bank: the battle of the last `replay` changed while it plays (a gold change fed a live run of it); this is
+   * the whole revised replay. Playback goes on from where it is.
+   */
+  replayRevised?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
+  /** v15: an orb claim held while the round was frozen was refused by the rules at battle entry (its receipt was ok). */
+  notice?(notice: SeatNotice): void;
   connection?(status: ConnectionStatus): void;
 }
 /** What the UI talks to: the real room run in-browser (local-room-client.ts) or the game server over a socket (ws-client.ts). */

@@ -1,0 +1,11 @@
+import draven from './draven.mjs';
+import maddie from './maddie.mjs';
+import powder from './powder.mjs';
+import rell from './rell.mjs';
+import renata from './renata.mjs';
+import singed from './singed.mjs';
+import steb from './steb.mjs';
+import trundle from './trundle.mjs';
+import urgot from './urgot.mjs';
+import vander from './vander.mjs';
+export const batch4Tables = { draven, maddie, powder, rell, renata, singed, steb, trundle, urgot, vander };

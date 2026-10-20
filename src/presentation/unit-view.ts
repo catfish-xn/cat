@@ -129,7 +129,7 @@ export class UnitView {
     this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
-    this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost });
+    this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost, team: unit.team });
     this.applyRing(unit.team);
   }
 

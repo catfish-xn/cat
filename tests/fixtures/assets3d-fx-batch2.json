@@ -1,0 +1,1581 @@
+{
+  "provenance": "Binding metadata only: source system/effect IDs and GLB joint names. All file paths are synthetic placeholders; no asset payloads or measured source values.",
+  "manifest": {
+    "schemaVersion": 1,
+    "models": {
+      "akali": {
+        "path": "synthetic/models/model-0.glb"
+      },
+      "amumu": {
+        "path": "synthetic/models/model-1.glb"
+      },
+      "camille": {
+        "path": "synthetic/models/model-2.glb"
+      },
+      "irelia": {
+        "path": "synthetic/models/model-3.glb"
+      },
+      "leona": {
+        "path": "synthetic/models/model-4.glb"
+      },
+      "morgana": {
+        "path": "synthetic/models/model-5.glb"
+      },
+      "nocturne": {
+        "path": "synthetic/models/model-6.glb"
+      },
+      "sett": {
+        "path": "synthetic/models/model-7.glb"
+      },
+      "tristana": {
+        "path": "synthetic/models/model-8.glb"
+      },
+      "zyra": {
+        "path": "synthetic/models/model-9.glb"
+      }
+    },
+    "effects": {
+      "akali_tft13_akali_base_e_dash_dust": {
+        "path": "synthetic/effects/effect-0.json"
+      },
+      "akali_tft13_akali_base_e_mis": {
+        "path": "synthetic/effects/effect-1.json"
+      },
+      "akali_tft13_akali_base_e_tar": {
+        "path": "synthetic/effects/effect-2.json"
+      },
+      "akali_tft13_akali_base_e_enemy_indicator": {
+        "path": "synthetic/effects/effect-3.json"
+      },
+      "akali_tft13_akali_base_w_tar": {
+        "path": "synthetic/effects/effect-4.json"
+      },
+      "akali_tft13_akali_base_e_run_dust": {
+        "path": "synthetic/effects/effect-5.json"
+      },
+      "amumu_tft13_amumu_base_w_tar": {
+        "path": "synthetic/effects/effect-6.json"
+      },
+      "amumu_tft13_amumu_base_w_buff": {
+        "path": "synthetic/effects/effect-7.json"
+      },
+      "amumu_tft13_amumu_base_w_spark_mis": {
+        "path": "synthetic/effects/effect-8.json"
+      },
+      "camille_tft13_camille_base_q_2_cas_child": {
+        "path": "synthetic/effects/effect-9.json"
+      },
+      "camille_tft13_camille_base_w_heal": {
+        "path": "synthetic/effects/effect-10.json"
+      },
+      "camille_tft13_camille_base_q_tar": {
+        "path": "synthetic/effects/effect-11.json"
+      },
+      "camille_tft13_camille_base_q_tar_magicdamage": {
+        "path": "synthetic/effects/effect-12.json"
+      },
+      "camille_tft13_camille_base_q_2_cas": {
+        "path": "synthetic/effects/effect-13.json"
+      },
+      "irelia_tft13_irelia_base_w_swipe": {
+        "path": "synthetic/effects/effect-14.json"
+      },
+      "irelia_tft13_irelia_base_w_dr": {
+        "path": "synthetic/effects/effect-15.json"
+      },
+      "leona_tft13_leona_base_w_tar": {
+        "path": "synthetic/effects/effect-16.json"
+      },
+      "leona_tft13_leona_base_w_buf": {
+        "path": "synthetic/effects/effect-17.json"
+      },
+      "leona_tft13_leona_base_w_cas_hit": {
+        "path": "synthetic/effects/effect-18.json"
+      },
+      "morgana_tft13_morgana_base_q_dot": {
+        "path": "synthetic/effects/effect-19.json"
+      },
+      "morgana_tft13_morgana_base_q_mis": {
+        "path": "synthetic/effects/effect-20.json"
+      },
+      "morgana_tft13_morgana_base_q_dot_card": {
+        "path": "synthetic/effects/effect-21.json"
+      },
+      "morgana_tft13_morgana_base_ba_mis": {
+        "path": "synthetic/effects/effect-22.json"
+      },
+      "nocturne_tft13_nocturne_idle_trail_eye_01": {
+        "path": "synthetic/effects/effect-23.json"
+      },
+      "nocturne_tft13_nocturne_base_p_cleave": {
+        "path": "synthetic/effects/effect-24.json"
+      },
+      "nocturne_tft13_nocturne_idle_trail": {
+        "path": "synthetic/effects/effect-25.json"
+      },
+      "nocturne_tft13_nocturne_base_p_tar": {
+        "path": "synthetic/effects/effect-26.json"
+      },
+      "nocturne_tft13_nocturne_base_p_buf": {
+        "path": "synthetic/effects/effect-27.json"
+      },
+      "nocturne_tft13_nocturne_idle_eye_right": {
+        "path": "synthetic/effects/effect-28.json"
+      },
+      "sett_tft13_sett_base_e_cas_child": {
+        "path": "synthetic/effects/effect-29.json"
+      },
+      "sett_tft13_sett_base_e_tar_child_middle": {
+        "path": "synthetic/effects/effect-30.json"
+      },
+      "sett_tft13_sett_base_e_tar_child_dust": {
+        "path": "synthetic/effects/effect-31.json"
+      },
+      "tristana_tft13_tristana_base_r_tar": {
+        "path": "synthetic/effects/effect-32.json"
+      },
+      "tristana_tft13_tristana_base_r_cas": {
+        "path": "synthetic/effects/effect-33.json"
+      },
+      "tristana_tft13_tristana_base_r_mis": {
+        "path": "synthetic/effects/effect-34.json"
+      },
+      "tristana_tft13_tristana_base_ba_mis": {
+        "path": "synthetic/effects/effect-35.json"
+      },
+      "tristana_tft13_tristana_base_r_tar_dust": {
+        "path": "synthetic/effects/effect-36.json"
+      },
+      "zyra_tft13_zyra_base_e_outer": {
+        "path": "synthetic/effects/effect-37.json"
+      },
+      "zyra_tft13_zyra_base_e_sequence_impact": {
+        "path": "synthetic/effects/effect-38.json"
+      },
+      "zyra_tft13_zyra_base_e_plant_tar": {
+        "path": "synthetic/effects/effect-39.json"
+      },
+      "zyra_tft13_zyra_base_ba_mis": {
+        "path": "synthetic/effects/effect-40.json"
+      },
+      "global_tft_global_ba_hit": {
+        "path": "synthetic/effects/effect-41.json"
+      }
+    },
+    "actionEffects": {
+      "akali": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "akali_tft13_akali_base_e_dash_dust",
+          "akali_tft13_akali_base_e_mis",
+          "akali_tft13_akali_base_e_tar",
+          "akali_tft13_akali_base_w_tar",
+          "akali_tft13_akali_base_e_enemy_indicator",
+          "akali_tft13_akali_base_e_run_dust"
+        ]
+      },
+      "amumu": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "amumu_tft13_amumu_base_w_buff",
+          "amumu_tft13_amumu_base_w_spark_mis",
+          "amumu_tft13_amumu_base_w_tar"
+        ]
+      },
+      "camille": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "camille_tft13_camille_base_q_2_cas",
+          "camille_tft13_camille_base_q_tar",
+          "camille_tft13_camille_base_w_heal",
+          "camille_tft13_camille_base_q_2_cas_child"
+        ]
+      },
+      "irelia": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "irelia_tft13_irelia_base_w_dr",
+          "irelia_tft13_irelia_base_w_swipe"
+        ]
+      },
+      "leona": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "leona_tft13_leona_base_w_buf",
+          "leona_tft13_leona_base_w_cas_hit",
+          "leona_tft13_leona_base_w_tar"
+        ]
+      },
+      "morgana": {
+        "attack": [
+          "morgana_tft13_morgana_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "morgana_tft13_morgana_base_q_mis",
+          "morgana_tft13_morgana_base_q_dot",
+          "morgana_tft13_morgana_base_q_dot_card"
+        ]
+      },
+      "nocturne": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "nocturne_tft13_nocturne_base_p_buf",
+          "nocturne_tft13_nocturne_base_p_cleave",
+          "nocturne_tft13_nocturne_base_p_tar"
+        ]
+      },
+      "sett": {
+        "attack": [
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "sett_tft13_sett_base_e_tar_child_middle",
+          "sett_tft13_sett_base_e_tar_child_dust",
+          "sett_tft13_sett_base_e_cas_child"
+        ]
+      },
+      "tristana": {
+        "attack": [
+          "tristana_tft13_tristana_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "tristana_tft13_tristana_base_r_cas",
+          "tristana_tft13_tristana_base_r_mis",
+          "tristana_tft13_tristana_base_r_tar",
+          "tristana_tft13_tristana_base_r_tar_dust"
+        ]
+      },
+      "zyra": {
+        "attack": [
+          "zyra_tft13_zyra_base_ba_mis",
+          "global_tft_global_ba_hit"
+        ],
+        "cast": [
+          "zyra_tft13_zyra_base_e_outer",
+          "zyra_tft13_zyra_base_e_sequence_impact",
+          "zyra_tft13_zyra_base_e_plant_tar"
+        ]
+      }
+    }
+  },
+  "rows": {
+    "akali": [
+      {
+        "effectId": "akali_tft13_akali_base_e_dash_dust",
+        "path": "synthetic/effects/effect-0.json",
+        "sourcePath": "binding/TFT13_Akali_Base_E_Dash_Dust"
+      },
+      {
+        "effectId": "akali_tft13_akali_base_e_mis",
+        "path": "synthetic/effects/effect-1.json",
+        "sourcePath": "binding/TFT13_Akali_Base_E_mis"
+      },
+      {
+        "effectId": "akali_tft13_akali_base_e_tar",
+        "path": "synthetic/effects/effect-2.json",
+        "sourcePath": "binding/TFT13_Akali_Base_E_Tar"
+      },
+      {
+        "effectId": "akali_tft13_akali_base_e_enemy_indicator",
+        "path": "synthetic/effects/effect-3.json",
+        "sourcePath": "binding/TFT13_Akali_Base_E_Enemy_Indicator"
+      },
+      {
+        "effectId": "akali_tft13_akali_base_w_tar",
+        "path": "synthetic/effects/effect-4.json",
+        "sourcePath": "binding/TFT13_Akali_Base_W_Tar"
+      },
+      {
+        "effectId": "akali_tft13_akali_base_e_run_dust",
+        "path": "synthetic/effects/effect-5.json",
+        "sourcePath": "binding/TFT13_Akali_Base_E_Run_Dust"
+      }
+    ],
+    "amumu": [
+      {
+        "effectId": "amumu_tft13_amumu_base_w_tar",
+        "path": "synthetic/effects/effect-6.json",
+        "sourcePath": "binding/TFT13_Amumu_Base_W_tar"
+      },
+      {
+        "effectId": "amumu_tft13_amumu_base_w_buff",
+        "path": "synthetic/effects/effect-7.json",
+        "sourcePath": "binding/TFT13_Amumu_Base_W_Buff"
+      },
+      {
+        "effectId": "amumu_tft13_amumu_base_w_spark_mis",
+        "path": "synthetic/effects/effect-8.json",
+        "sourcePath": "binding/TFT13_Amumu_Base_W_Spark_Mis"
+      }
+    ],
+    "camille": [
+      {
+        "effectId": "camille_tft13_camille_base_q_2_cas_child",
+        "path": "synthetic/effects/effect-9.json",
+        "sourcePath": "binding/TFT13_Camille_Base_Q_2_cas_child"
+      },
+      {
+        "effectId": "camille_tft13_camille_base_w_heal",
+        "path": "synthetic/effects/effect-10.json",
+        "sourcePath": "binding/TFT13_Camille_Base_W_heal"
+      },
+      {
+        "effectId": "camille_tft13_camille_base_q_2_cas_shin",
+        "sourcePath": "binding/TFT13_Camille_Base_Q_2_cas_shin",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "camille_tft13_camille_base_q_tar",
+        "path": "synthetic/effects/effect-11.json",
+        "sourcePath": "binding/TFT13_Camille_Base_Q_tar"
+      },
+      {
+        "effectId": "camille_tft13_camille_base_q_tar_magicdamage",
+        "path": "synthetic/effects/effect-12.json",
+        "sourcePath": "binding/TFT13_Camille_Base_Q_tar_MagicDamage"
+      },
+      {
+        "effectId": "camille_tft13_camille_base_q_2_cas",
+        "path": "synthetic/effects/effect-13.json",
+        "sourcePath": "binding/TFT13_Camille_Base_Q_2_cas"
+      }
+    ],
+    "irelia": [
+      {
+        "effectId": "irelia_tft13_irelia_base_w_swipe",
+        "path": "synthetic/effects/effect-14.json",
+        "sourcePath": "binding/TFT13_Irelia_Base_W_Swipe"
+      },
+      {
+        "effectId": "irelia_tft13_irelia_base_w_dr",
+        "path": "synthetic/effects/effect-15.json",
+        "sourcePath": "binding/TFT13_Irelia_Base_W_DR"
+      }
+    ],
+    "leona": [
+      {
+        "effectId": "leona_tft13_leona_base_w_tar",
+        "path": "synthetic/effects/effect-16.json",
+        "sourcePath": "binding/TFT13_Leona_Base_W_tar"
+      },
+      {
+        "effectId": "leona_tft13_leona_base_w_buf",
+        "path": "synthetic/effects/effect-17.json",
+        "sourcePath": "binding/TFT13_Leona_Base_W_buf"
+      },
+      {
+        "effectId": "leona_tft13_leona_base_w_cas_hit",
+        "path": "synthetic/effects/effect-18.json",
+        "sourcePath": "binding/TFT13_Leona_Base_W_cas_hit"
+      }
+    ],
+    "morgana": [
+      {
+        "effectId": "morgana_tft13_morgana_base_q_tar",
+        "sourcePath": "binding/TFT13_Morgana_Base_Q_Tar",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "morgana_tft13_morgana_base_q_dot",
+        "path": "synthetic/effects/effect-19.json",
+        "sourcePath": "binding/TFT13_Morgana_Base_Q_DoT"
+      },
+      {
+        "effectId": "morgana_tft13_morgana_base_q_mis",
+        "path": "synthetic/effects/effect-20.json",
+        "sourcePath": "binding/TFT13_Morgana_Base_Q_Mis"
+      },
+      {
+        "effectId": "morgana_tft13_morgana_base_q_dot_card",
+        "path": "synthetic/effects/effect-21.json",
+        "sourcePath": "binding/TFT13_Morgana_Base_Q_DoT_Card"
+      },
+      {
+        "effectId": "morgana_tft13_morgana_base_ba_mis",
+        "path": "synthetic/effects/effect-22.json",
+        "sourcePath": "binding/TFT13_Morgana_Base_BA_Mis"
+      }
+    ],
+    "nocturne": [
+      {
+        "effectId": "nocturne_tft13_nocturne_idle_ghost_cape",
+        "sourcePath": "binding/TFT13_Nocturne_Idle_Ghost_Cape",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_idle_trail_eye_01",
+        "path": "synthetic/effects/effect-23.json",
+        "sourcePath": "binding/TFT13_Nocturne_Idle_Trail_Eye_01"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_base_p_cleave",
+        "path": "synthetic/effects/effect-24.json",
+        "sourcePath": "binding/TFT13_Nocturne_Base_P_cleave"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_idle_trail",
+        "path": "synthetic/effects/effect-25.json",
+        "sourcePath": "binding/TFT13_Nocturne_Idle_Trail"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_base_p_tar",
+        "path": "synthetic/effects/effect-26.json",
+        "sourcePath": "binding/TFT13_Nocturne_Base_P_tar"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_base_p_buf",
+        "path": "synthetic/effects/effect-27.json",
+        "sourcePath": "binding/TFT13_Nocturne_Base_P_buf"
+      },
+      {
+        "effectId": "nocturne_tft13_nocturne_idle_eye_right",
+        "path": "synthetic/effects/effect-28.json",
+        "sourcePath": "binding/TFT13_Nocturne_Idle_Eye_Right"
+      }
+    ],
+    "sett": [
+      {
+        "effectId": "sett_tft13_sett_base_e_cas_child",
+        "path": "synthetic/effects/effect-29.json",
+        "sourcePath": "binding/TFT13_Sett_Base_E_cas_child"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_q_tar_child_miss",
+        "sourcePath": "binding/TFT13_Sett_Base_Q_tar_child_miss",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_e_tar_single_front",
+        "sourcePath": "binding/TFT13_Sett_Base_E_tar_single_front",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_e_tar_child_middle",
+        "path": "synthetic/effects/effect-30.json",
+        "sourcePath": "binding/TFT13_Sett_Base_E_tar_child_middle"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_e_tar_single_back",
+        "sourcePath": "binding/TFT13_Sett_Base_E_tar_single_back",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_e_tar_child_dust",
+        "path": "synthetic/effects/effect-31.json",
+        "sourcePath": "binding/TFT13_Sett_Base_E_tar_child_dust"
+      },
+      {
+        "effectId": "sett_tft13_sett_base_e_cas",
+        "sourcePath": "binding/TFT13_Sett_Base_E_cas",
+        "reason": "no-writable-emitters"
+      }
+    ],
+    "tristana": [
+      {
+        "effectId": "tristana_tft13_tristana_base_p_levelup_pulse",
+        "sourcePath": "binding/TFT13_Tristana_Base_P_LevelUp_Pulse",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "tristana_tft13_tristana_base_r_tar",
+        "path": "synthetic/effects/effect-32.json",
+        "sourcePath": "binding/TFT13_Tristana_Base_R_tar"
+      },
+      {
+        "effectId": "tristana_tft13_tristana_base_r_cas",
+        "path": "synthetic/effects/effect-33.json",
+        "sourcePath": "binding/TFT13_Tristana_Base_R_cas"
+      },
+      {
+        "effectId": "tristana_tft13_tristana_base_r_mis",
+        "path": "synthetic/effects/effect-34.json",
+        "sourcePath": "binding/TFT13_Tristana_Base_R_mis"
+      },
+      {
+        "effectId": "tristana_tft13_tristana_base_ba_mis",
+        "path": "synthetic/effects/effect-35.json",
+        "sourcePath": "binding/TFT13_Tristana_Base_BA_Mis"
+      },
+      {
+        "effectId": "tristana_tft13_tristana_base_r_tar_dust",
+        "path": "synthetic/effects/effect-36.json",
+        "sourcePath": "binding/TFT13_Tristana_Base_R_tar_dust"
+      }
+    ],
+    "zyra": [
+      {
+        "effectId": "zyra_tft13_zyra_base_e_sequence_unroot",
+        "sourcePath": "binding/TFT13_Zyra_Base_E_Sequence_Unroot",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "zyra_tft13_zyra_base_e_outer",
+        "path": "synthetic/effects/effect-37.json",
+        "sourcePath": "binding/TFT13_Zyra_Base_E_Outer"
+      },
+      {
+        "effectId": "zyra_tft13_zyra_base_e_sequence_impact",
+        "path": "synthetic/effects/effect-38.json",
+        "sourcePath": "binding/TFT13_Zyra_Base_E_Sequence_Impact"
+      },
+      {
+        "effectId": "zyra_tft13_zyra_base_e_plant_tar",
+        "path": "synthetic/effects/effect-39.json",
+        "sourcePath": "binding/TFT13_Zyra_Base_E_plant_tar"
+      },
+      {
+        "effectId": "zyra_tft13_zyra_base_e_sequence_root",
+        "sourcePath": "binding/TFT13_Zyra_Base_E_Sequence_Root",
+        "reason": "no-writable-emitters"
+      },
+      {
+        "effectId": "zyra_tft13_zyra_base_ba_mis",
+        "path": "synthetic/effects/effect-40.json",
+        "sourcePath": "binding/TFT13_Zyra_Base_BA_mis"
+      }
+    ],
+    "global": [
+      {
+        "effectId": "global_tft_global_ba_hit",
+        "path": "synthetic/effects/effect-41.json",
+        "sourcePath": "binding/TFT_Global_BA_Hit"
+      }
+    ]
+  },
+  "bones": {
+    "akali": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Middle1",
+      "R_Shoulder_helper",
+      "R_Pinky1",
+      "R_Thumb1",
+      "R_Middle2",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Index2",
+      "R_Pinky2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Pinky1",
+      "L_Ring2",
+      "L_Pinky2",
+      "L_Shoulder_helper",
+      "Kama_Knob_vfx",
+      "Kama_String",
+      "Kama_Knob",
+      "L_Kunai_Spawn_a",
+      "L_Kunai_Spawn_b",
+      "L_Kunai_Spawn_c",
+      "R_Kunai_Spawn_a",
+      "R_Kunai_Spawn_b",
+      "R_Kunai_Spawn_c",
+      "Neck",
+      "Head",
+      "Hair_Root",
+      "C_HairA_a",
+      "C_HairB_a",
+      "C_HairB_b",
+      "C_HairC_a",
+      "C_HairE_a",
+      "C_HairE_b",
+      "C_HairC_b",
+      "C_HairE_c",
+      "R_EyeLid",
+      "L_Eye",
+      "R_Eye",
+      "L_EyeLid",
+      "L_MouthCrnr",
+      "R_MouthCrnr",
+      "Jaw",
+      "C_HairD_a",
+      "C_HairD_b",
+      "C_HairD_c",
+      "C_HairC_c",
+      "C_HairA_b",
+      "Pelvis",
+      "R_Hip_helper",
+      "Mask_a",
+      "C_HairA_c",
+      "C_HairH_a",
+      "C_HairF_a",
+      "Mask_b",
+      "C_HairH_b",
+      "C_HairH_c",
+      "C_HairG_a",
+      "C_HairG_b",
+      "C_HairF_b",
+      "C_Breath",
+      "Hook_Short",
+      "Dagger",
+      "Bag",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "L_Hip_helper",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "HairStrap_a",
+      "HairStrap_b",
+      "HairFront_a",
+      "HairFront_b",
+      "Bag_Tassles",
+      "Kama_B",
+      "L_Skirt",
+      "L_Belt_Front",
+      "L_Belt_Side",
+      "L_Skirt_b",
+      "Snap_Kama2World",
+      "Snap_KamaGrip2World",
+      "Snap_Kunai2World",
+      "R_CheekPuff",
+      "L_CheekPuff",
+      "C_Mouth_All",
+      "Buffbone_Cstm_Healthbar",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Knee_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Knee_Loc"
+    ],
+    "amumu": [
+      "Root",
+      "pelvis",
+      "R_thigh",
+      "R_calf",
+      "R_foot",
+      "R_FootBandage1",
+      "R_FootBandage2",
+      "Buffbone_Cstm_Healthbar",
+      "R_toe",
+      "L_thigh",
+      "L_calf",
+      "L_foot",
+      "L_toe",
+      "spine",
+      "spine_b",
+      "L_shoulder",
+      "L_arm",
+      "L_forarm",
+      "L_hand",
+      "L_finger",
+      "R_shoulder",
+      "R_arm",
+      "R_forarm",
+      "R_hand",
+      "R_finger",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "C_BUFFBONE_GLB_CHEST_LOC",
+      "R_BUFFBONE_GLB_HAND_LOC",
+      "L_BUFFBONE_GLB_HAND_LOC",
+      "neck",
+      "head",
+      "C_BUFFBONE_GLB_HEAD_LOC",
+      "R_BUFFBONE_GLB_FOOT_LOC",
+      "L_BUFFBONE_GLB_FOOT_LOC",
+      "C_BUFFBONE_GLB_OVERHEAD_LOC",
+      "L_RoboFinger1",
+      "L_RoboFinger3",
+      "L_RoboFinger2",
+      "R_RoboFinger1",
+      "R_RoboFinger3",
+      "R_RoboFinger2",
+      "C_Buffbone_Cstm_Healthbar_Loc",
+      "Buffbone_Glb_weapon_1",
+      "L_MoveableJet",
+      "R_MoveableJet",
+      "MoveableMouth",
+      "KeyTurn"
+    ],
+    "camille": [
+      "Root",
+      "Pelvis",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "Spine1",
+      "Spine2",
+      "L_Clavicle",
+      "C_Rear_Skirt1",
+      "R_Rear_Skirt1",
+      "R_Rear_Skirt2",
+      "R_Rear_Skirt3",
+      "R_Rear_Skirt4",
+      "L_Rear_Skirt1",
+      "L_Rear_Skirt2",
+      "L_Rear_Skirt3",
+      "L_Rear_Skirt4",
+      "L_Rear_Skirt5",
+      "R_Clavicle",
+      "L_Hip",
+      "L_Thigh_Cylinder",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "Neck",
+      "Head",
+      "R_Up_Hair1",
+      "R_Up_Hair2",
+      "R_Rear_Skirt5",
+      "R_Thumb2",
+      "C_Hair1",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Hair1",
+      "L_Thumb1",
+      "L_Thumb2",
+      "R_Thigh_Cylinder",
+      "R_Ring1",
+      "R_Pinky1",
+      "R_Pinky2",
+      "L_Index1",
+      "L_Index2",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "R_Index1",
+      "R_Index2",
+      "R_Ring2",
+      "L_Middle1",
+      "R_Middle1",
+      "R_Middle2",
+      "C_Hair2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "R_Hair1",
+      "R_Hair2",
+      "L_Middle2",
+      "L_Up_Hair1",
+      "L_Up_Hair2",
+      "L_Hair2",
+      "Snap_Weapon2World",
+      "Buffbone_Cstm_Healthbar",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Knee_Loc",
+      "L_Buffbone_Thigh_Cylinder",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Knee_Loc",
+      "R_Buffbone_Thigh_Cylinder"
+    ],
+    "irelia": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "L_Eye",
+      "R_Eye",
+      "L_EyeLid",
+      "R_EyeLid",
+      "L_MouthCrnr",
+      "R_MouthCrnr",
+      "Jaw",
+      "Hair_Root",
+      "C_Hair_Root",
+      "C_Hair1",
+      "C_Hair2",
+      "C_Hair3",
+      "C_Hair4",
+      "L_Hair_Root",
+      "L_Hair1",
+      "L_Hair2",
+      "L_Hair3",
+      "L_Hair4",
+      "L_Hair_Tip_Root",
+      "L_Hair_Tip1",
+      "L_Hair_Tip2",
+      "R_Hair_Root",
+      "R_Hair1",
+      "R_Hair2",
+      "R_Hair3",
+      "R_Hair4",
+      "R_Hair_Tip_Root",
+      "R_Hair_Tip1",
+      "R_Hair_Tip2",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Front_Hair_Root",
+      "L_Front_Hair1",
+      "L_Front_Hair2",
+      "R_Front_Hair_Root",
+      "R_Front_Hair1",
+      "R_Front_Hair2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Tassle_Root",
+      "L_Tassle1",
+      "L_Tassle2",
+      "L_Tassle3",
+      "L_Tassle4",
+      "L_ShoulderPad",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Tassle_Root",
+      "R_Tassle1",
+      "R_Tassle2",
+      "R_Tassle3",
+      "R_Tassle4",
+      "R_ShoulderPad",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Toe",
+      "L_Toe_Stretch",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Toe",
+      "R_Toe_Stretch",
+      "L_HipArmor",
+      "R_HipArmor",
+      "L_Skirt_Front",
+      "L_Skirt_Front_B",
+      "R_Skirt_Front",
+      "R_Skirt_Front_B",
+      "Skirt_Back",
+      "Skirt_Back_B",
+      "Sword_Root",
+      "Sword_Ground_Root",
+      "Sword1_Ground0",
+      "Sword1_Ground1",
+      "Sword1_Skn",
+      "Sword6_Skn",
+      "Sword2_Ground0",
+      "Sword2_Ground1",
+      "Sword2_Skn",
+      "Sword5_Skn",
+      "Sword3_Ground0",
+      "Sword3_Ground1",
+      "Sword3_Skn",
+      "Sword4_Skn",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "L_Buffbone_Glb_Knee_Loc",
+      "R_Buffbone_Glb_Knee_Loc",
+      "Buffbone_Cstm_Healthbar",
+      "L_Hip_Helper",
+      "R_Hip_Helper",
+      "L_Hair_Tip3",
+      "L_Hair_Tip4",
+      "L_Hair5",
+      "L_Hair6",
+      "C_Hair5",
+      "R_Hair5",
+      "R_Hair6",
+      "R_Hair_Tip3",
+      "R_Hair_Tip4"
+    ],
+    "leona": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "R_Shoulder_Armor",
+      "B_Cloth",
+      "B_Cloth2",
+      "B_Cloth3",
+      "F_Cloth",
+      "F_Cloth_B",
+      "F_Cloth_C",
+      "Neck",
+      "Head",
+      "L_B_Cloth2",
+      "L_B_Cloth3",
+      "L_Clavicle",
+      "L_Cloth1",
+      "L_Cloth2",
+      "L_Cloth3",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Hand",
+      "L_Pinky1",
+      "L_Ring1",
+      "L_Shoulder_Armor",
+      "L_Thumb1",
+      "R_B_Cloth2",
+      "R_B_Cloth3",
+      "R_Clavicle",
+      "R_Cloth1",
+      "R_Cloth2",
+      "R_Cloth3",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Hand",
+      "R_Pinky1",
+      "R_Ring1",
+      "R_Thumb1",
+      "Hair1",
+      "Hair2",
+      "Hair3",
+      "Hair4",
+      "Hair5",
+      "Hair6",
+      "Jaw",
+      "L_Brow",
+      "L_Cheek",
+      "L_Eye",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_MouthCnr",
+      "L_Pinky2",
+      "L_Ring2",
+      "L_Thumb2",
+      "L_Toe",
+      "LowerLip",
+      "R_Brow",
+      "R_Cheek",
+      "R_Eye",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_MouthCnr",
+      "R_Pinky2",
+      "R_Ring2",
+      "R_Thumb2",
+      "R_Toe",
+      "Shield",
+      "UpperLip",
+      "Weapon",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "BUFFBONE_CSTM_SHIELD_TOP",
+      "BUFFBONE_CSTM_SHIELD_MID",
+      "Weapon_World",
+      "Buffbone_Cstm_Healthbar",
+      "L_Shield_Outer_Plate",
+      "R_Shield_Outer_Plate",
+      "L_Shield_Inner_Plate",
+      "R_Shield_Inner_Plate",
+      "SwordSegment1",
+      "SwordSegment2",
+      "SwordSegment3",
+      "SwordSegment4"
+    ],
+    "morgana": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Neck",
+      "Head",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Brow_Mid",
+      "L_Brow_Inner",
+      "L_Brow_Outer",
+      "R_Brow_Mid",
+      "R_Brow_Inner",
+      "R_Brow_Outer",
+      "L_Eye",
+      "L_Eyelid",
+      "R_Eye",
+      "R_Eyelid",
+      "C_Mouth",
+      "L_MouthCrnr",
+      "R_MouthCrnr",
+      "L_Lo_Lip",
+      "L_Up_Lip",
+      "R_Up_Lip",
+      "R_Lo_Lip",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Index1",
+      "L_Index2",
+      "L_Index3",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Middle3",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Ring3",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Pinky3",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Ablility_Loc",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Index1",
+      "R_Index2",
+      "R_Index3",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Middle3",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Ring3",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Pinky3",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Ablility_Loc",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "L_Wing_Up_Root",
+      "L_Wing_Up_Shoulder",
+      "L_Wing_Up_Closed_1",
+      "L_Wing_Up_Closed_2",
+      "R_Wing_Up_Root",
+      "R_Wing_Up_Shoulder",
+      "R_Wing_Up_Closed_1",
+      "R_Wing_Up_Closed_2",
+      "C_Buffbone_Glb_Chest_Loc",
+      "L_Wing_Mid_Root",
+      "L_Wing_Mid_Shoulder",
+      "L_Wing_Mid_Elbow",
+      "L_Wing_Mid_Hand",
+      "L_Wing_Mid_Palm",
+      "L_Wing_Mid_Finger1",
+      "L_Wing_Mid_Finger1_2",
+      "R_Wing_Mid_Root",
+      "R_Wing_Mid_Shoulder",
+      "R_Wing_Mid_Elbow",
+      "R_Wing_Mid_Hand",
+      "R_Wing_Mid_Palm",
+      "R_Wing_Mid_Finger1",
+      "R_Wing_Mid_Finger1_2",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Toe",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Toe",
+      "Skirt_Ground_1",
+      "R_Skirt_Front_1",
+      "R_Skirt_Front_2",
+      "R_Skirt_Front_3",
+      "R_Skirt_Side_1",
+      "R_Skirt_Side_2",
+      "R_Skirt_Side_3",
+      "L_Skirt_Side_1",
+      "L_Skirt_Side_2",
+      "L_Skirt_Side_3",
+      "L_Skirt_Split_1",
+      "L_Skirt_Split_2",
+      "L_Skirt_Split_3",
+      "R_Skirt_Split_1",
+      "R_Skirt_Split_2",
+      "R_Skirt_Split_3",
+      "Skirt_Back_1",
+      "Skirt_Back_2",
+      "Skirt_Back_3",
+      "Skirt_Back_4",
+      "Skirt_Back_5",
+      "Skirt_Back_6",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "Jaw",
+      "C_Lo_Lip",
+      "R_Wing_Bot_Root",
+      "Lo_Teeth",
+      "Up_Teeth",
+      "L_Sleeve",
+      "R_Sleeve",
+      "R_Skirt_Front_4",
+      "L_Skirt_Split_4",
+      "R_Skirt_Split_4",
+      "L_Skirt_Side_4",
+      "R_Skirt_Side_4",
+      "R_Wing_Mid_Finger3",
+      "R_Wing_Mid_Finger2",
+      "L_Wing_Mid_Finger2",
+      "L_Wing_Mid_Finger3"
+    ],
+    "nocturne": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Spine3",
+      "Neck",
+      "Head",
+      "Pelvis",
+      "L_Clavicle",
+      "L_Armor",
+      "L_Eye",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Middle1",
+      "L_Index1",
+      "L_Index2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Middle2",
+      "L_Thumb1",
+      "L_Thumb2",
+      "R_Clavicle",
+      "R_Armor",
+      "R_Eye",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Middle1",
+      "R_Index1",
+      "R_Index2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Middle2",
+      "R_Thumb1",
+      "R_Thumb2",
+      "Weapon",
+      "Weapon2",
+      "Weapon2_Def",
+      "Weapon2_Rot",
+      "Weapon2b",
+      "Weapon2b_Def",
+      "Weapon_Def",
+      "Weapon_Rot",
+      "Weaponb",
+      "Weaponb_Def",
+      "C_Buffbone_Glb_Center_Loc",
+      "L_Buffbone_Cstm_Eye_Loc",
+      "R_Buffbone_Cstm_Eye_Loc",
+      "Buffbone_Cstm_L_Palm",
+      "Buffbone_Glb_Weapon_1",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Head_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_PARENTING_HAND_LOC",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Parenting_Hand_Loc",
+      "BUFFBONE_CSTM_R_PALM",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "Spine",
+      "Buffbone_Cstm_Healthbar",
+      "Snap_Weapon",
+      "Snap_Weapon2"
+    ],
+    "sett": [
+      "Root",
+      "Spine1",
+      "Spine2",
+      "Chest",
+      "Neck",
+      "Head",
+      "Hair_Front1",
+      "Hair_Front2",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Thumb3",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_Buffbone_Glb_Hand_Loc",
+      "L_Buffbone_Glb_Ablility_Loc",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Thumb3",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Ablility_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Toe",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Toe",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Center_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "C_Buffbone_Glb_Head_Loc",
+      "L_Ear1",
+      "L_Ear2",
+      "L_Ear3",
+      "R_Ear1",
+      "R_Ear2",
+      "R_Ear3",
+      "Jaw",
+      "L_Brow",
+      "R_Brow",
+      "R_MouthCrnr",
+      "L_MouthCrnr",
+      "L_Knuckles",
+      "L_Knuckle_Index",
+      "L_Knuckle_Middle",
+      "L_Knuckle_Ring",
+      "L_Knuckle_Pinky",
+      "L_Fur1",
+      "L_Fur2",
+      "R_Knuckles",
+      "R_Knuckle_Middle",
+      "R_Knuckle_Pinky",
+      "R_Knuckle_Index",
+      "R_Knuckle_Ring",
+      "R_Fur1",
+      "R_Fur2",
+      "L_Fur_Tassle1",
+      "L_Fur_Tassle2",
+      "L_Fur_Tassle3",
+      "R_Fur_Tassle1",
+      "R_Fur_Tassle2",
+      "R_Fur_Tassle3",
+      "Fur",
+      "FurA1",
+      "FurA2",
+      "FurB1",
+      "FurB2",
+      "Coattails",
+      "L_Coattails_Root",
+      "L_Coattails1",
+      "L_Coattails2",
+      "L_Coattails3",
+      "R_Coattails_Root",
+      "R_Coattails1",
+      "R_Coattails2",
+      "R_Coattails3",
+      "R_Forearm_Fur",
+      "L_Forearm_Fur",
+      "L_Index3",
+      "L_Middle3",
+      "L_Ring3",
+      "L_Pinky3",
+      "R_Ring3",
+      "R_Index3",
+      "R_Middle3",
+      "R_Pinky3",
+      "L_Emblem",
+      "R_Emblem",
+      "BackHair",
+      "Photo",
+      "L_Jet",
+      "C_Lower_Jets",
+      "C_BackArmor",
+      "L_Upper_JetArmor",
+      "L_Side_JetArmor",
+      "R_Upper_JetArmor",
+      "R_Jet",
+      "R_Side_JetArmor"
+    ],
+    "tristana": [
+      "Root",
+      "Spine1",
+      "SpineMid",
+      "Spine2",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "Weapon_Base",
+      "WeaponTip_Scale",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "Neck",
+      "Head",
+      "R_Eye",
+      "L_Eye",
+      "Pelvis",
+      "R_Ear01",
+      "R_Ear02",
+      "Jaw",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_Foot",
+      "L_Toe",
+      "L_Ear01",
+      "L_Ear02",
+      "MouthShape",
+      "C_Hair_Offset",
+      "C_Hair",
+      "R_Eye_Lid",
+      "L_Eye_Lid",
+      "C_Buffbone_Glb_Head_Loc",
+      "Buffbone_Glb_Channel_Loc",
+      "Buffbone_Glb_Ground_Loc",
+      "Buffbone_Glb_Weapon_1",
+      "Buffbone_Cstm_Healthbar",
+      "C_Buffbone_Glb_Center_Loc",
+      "C_Buffbone_Glb_Chest_Loc",
+      "C_Buffbone_Glb_Layout_Loc",
+      "C_Buffbone_Glb_Overhead_Loc",
+      "L_Buffbone_Glb_Foot_Loc",
+      "L_Buffbone_Glb_Hand_Loc",
+      "R_Buffbone_Glb_Foot_Loc",
+      "R_Buffbone_Glb_Hand_Loc",
+      "Snap_Weapon2World",
+      "rocket"
+    ],
+    "zyra": [
+      "Root",
+      "Pelvis",
+      "L_Hip",
+      "L_KneeUpper",
+      "L_KneeLower",
+      "L_BuffBone_Glb_Foot_Loc",
+      "L_Foot",
+      "L_Toe",
+      "Spine1",
+      "Spine2",
+      "C_BuffBone_Glb_Chest_Loc",
+      "L_Clavicle",
+      "L_Shoulder",
+      "L_Elbow",
+      "L_Hand",
+      "L_Parenting_Hand_Loc",
+      "L_Thumb1",
+      "L_Thumb2",
+      "L_Index1",
+      "L_Index2",
+      "L_Middle1",
+      "L_Middle2",
+      "L_Ring1",
+      "L_Ring2",
+      "L_Pinky1",
+      "L_Pinky2",
+      "L_BuffBone_Glb_Hand_Loc",
+      "L_Vine2",
+      "L_Vine3",
+      "L_Vine4",
+      "L_Vine5",
+      "L_Vine6",
+      "L_Vine7",
+      "L_Vine8",
+      "L_Vine1",
+      "Neck",
+      "Head",
+      "C_BuffBone_Glb_Head_Loc",
+      "Jaw",
+      "Hair_M_1",
+      "Hair_M_2",
+      "Hair_M_3",
+      "Hair_M_4",
+      "Hair_M_5",
+      "L_BigBang1",
+      "L_BigBang2",
+      "L_SmallBang1",
+      "L_SmallBang2",
+      "R_Hip",
+      "R_KneeUpper",
+      "R_KneeLower",
+      "R_Foot",
+      "R_Toe",
+      "R_BuffBone_Glb_Foot_Loc",
+      "R_Clavicle",
+      "R_Shoulder",
+      "R_Elbow",
+      "R_Hand",
+      "R_Parenting_Hand_Loc",
+      "R_Thumb1",
+      "R_Thumb2",
+      "R_Index1",
+      "R_Index2",
+      "R_Middle1",
+      "R_Middle2",
+      "R_Ring1",
+      "R_Ring2",
+      "R_Pinky1",
+      "R_Pinky2",
+      "R_BuffBone_Glb_Hand_Loc",
+      "R_Vine2",
+      "R_Vine3",
+      "R_Vine4",
+      "R_Vine5",
+      "R_Vine6",
+      "R_Vine7",
+      "R_Vine8",
+      "R_Vine1",
+      "C_BuffBone_Glb_Overhead_Loc",
+      "C_BUFFBONE_GLB_CENTER_LOC",
+      "C_BUFFBONE_GLB_LAYOUT_LOC",
+      "BUFFBONE_GLB_GROUND_LOC",
+      "BUFFBONE_GLB_CHANNEL_LOC",
+      "Buffbone_Glb_Weapon_1",
+      "BuffBone_Cstm_Healthbar"
+    ]
+  }
+}
