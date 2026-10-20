@@ -278,9 +278,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
-  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. Monsters get none.
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get none.
   const syncStars = (view: PieceView, piece: BoardPiece) => {
-    if (monsterFit(view.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
+    if (piece.neutral) { view.stars?.dispose(); view.stars = null; return; }
     const level = piece.effectiveStarLevel ?? piece.starLevel;
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });

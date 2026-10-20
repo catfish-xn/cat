@@ -1172,6 +1172,7 @@ export class BoardScene extends Phaser.Scene {
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
+        ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
         x: token.x, y: token.y, alive: !fallen.has(id),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
