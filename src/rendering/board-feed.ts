@@ -28,8 +28,8 @@ export interface BoardFrame {
   readonly dragging: string | null;
   /** v15 (online): my unclaimed orbs as the private view lists them (oldest first); empty offline. Where they sit is the layer's own layout. */
   readonly orbs?: readonly BoardOrb[];
-  /** How many of my orb claim receipts granted something (not forfeited); an orb that leaves `orbs` as this grows was opened. */
-  readonly orbsGranted?: number;
+  /** Orbs (by orbId) with a claim receipt that granted something (not forfeited); an orb that leaves `orbs` and is named here was opened. */
+  readonly openedOrbs?: readonly string[];
   /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
   readonly hit?: BoardHit | null;
 }

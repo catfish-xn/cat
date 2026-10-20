@@ -25,6 +25,18 @@ export function readOrbClaimReceipts(state: MatchState): readonly LootReceipt[] 
   const receipts = (state as MatchState & OrbFields).orbClaimReceipts;
   return Array.isArray(receipts) ? receipts : [];
 }
+/**
+ * Orbs (by orbId) that at least one receipt granted something from; forfeited receipts count for nothing. An orb entry's
+ * dropId is `JSON([orbId, entryOrdinal])` (ORB_RULES.dropId in content/orbs.ts); any other dropId names no orb.
+ */
+export function grantedOrbIds(receipts: readonly LootReceipt[]): string[] {
+  const ids = new Set<string>();
+  for (const receipt of receipts) {
+    if (receipt.resolution === 'forfeited') continue;
+    try { const parsed: unknown = JSON.parse(receipt.dropId); if (Array.isArray(parsed) && typeof parsed[0] === 'string') ids.add(parsed[0]); } catch { /* not an orb entry */ }
+  }
+  return [...ids];
+}
 
 const stars = (payload: LootPayload) => payload.kind === 'unit' ? '★'.repeat(payload.starLevel ?? 1) : '';
 /** Display name of one orb entry, with its count and a unit's star level. */

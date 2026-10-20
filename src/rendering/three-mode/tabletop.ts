@@ -253,19 +253,19 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
 
   // --- frames ------------------------------------------------------------------------------------------------------
-  let seeded = false, granted = 0, seenHit: string | null = null, pvpLinger = 0, pvpShown = false;
+  let seeded = false, seenHit: string | null = null, pvpLinger = 0, pvpShown = false;
   const onFrame = (frame: BoardFrame) => {
     layout(frame);
     legend('me');
-    // A shown battle against another board (no PvE monsters among the enemies) has that board's legend on its side.
+    // A shown battle against another board (no neutral PvE monster among the enemies) has that board's legend on its side.
     const enemies = frame.pieces.filter(piece => piece.team === 'enemy');
-    if (frame.fighting && enemies.length) pvpShown = enemies.every(piece => !piece.definitionId.startsWith('pve-'));
+    if (frame.fighting && enemies.length) pvpShown = enemies.every(piece => !piece.neutral);
     if (frame.fighting && pvpShown) { legend('opponent'); pvpLinger = OPPONENT_LINGER_SECONDS; }
 
     const list = frame.orbs ?? [], present = new Set(list.map(orb => orb.orbId));
-    const grantedNow = frame.orbsGranted ?? 0, grew = seeded && grantedNow > granted;
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); removeOrb(view, grew); }
-    granted = grantedNow;
+    // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
+    const opened = new Set(frame.openedOrbs ?? []);
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); removeOrb(view, seeded && opened.has(id)); }
     list.slice(0, MAX_ORBS).forEach((orb, index) => {
       let view = orbs.get(orb.orbId);
       if (!view) { view = createOrb(orb, index); orbs.set(orb.orbId, view); }
