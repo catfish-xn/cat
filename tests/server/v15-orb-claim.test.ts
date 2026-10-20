@@ -79,7 +79,7 @@ describe('v15 room: orb claims through the gate', () => {
     const published = room.state;
     expect(room.handle('s0', { type: 'claimOrb', round: after.match.round, orbId: orb.orbId })).toMatchObject({ ok: false });
     expect(room.state).toBe(published);
-  }, 60_000);
+  }, 20_000);
 
   it('during my battle a claim is only queued (no resource moves) and the rules settle it with the round', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
@@ -108,7 +108,7 @@ describe('v15 room: orb claims through the gate', () => {
     const settled = seat(room.state, 's0').match;
     expect(unclaimed(settled).map(o => o.orbId)).not.toContain(orb.orbId);
     expect(receipts(settled).length).toBeGreaterThan(receipts(queued).length);
-  }, 60_000);
+  }, 20_000);
 });
 
 describe('v15 bot preparation entry', () => {
@@ -133,5 +133,5 @@ describe('v15 bot preparation entry', () => {
     }
     expect(checked).toBeGreaterThan(0);
     expect(room.state.fault).toBeNull();
-  }, 120_000);
+  }, 20_000);
 });
