@@ -688,4 +688,7 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .render3d-bar button { font: inherit; color: inherit; background: #23384a; border: 1px solid #3c5a72; border-radius: 4px; padding: 3px 10px; cursor: pointer; }
 .render3d-notice { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 12px; color: #f0c890; background: rgba(10, 16, 24, .85);
   padding: 3px 10px; border-radius: 4px; pointer-events: none; }
+/* ?render=3d: the 3D layer (z-index 5) covers the board; combat floats stay above it. 2D keeps the default stacking.
+   ~ not +: online inserts #shop-dock between #board-root and #feedback-root. */
+#board-root:has(> .render3d-layer) ~ #feedback-root { z-index: 6; }
 .loadout-tip-3d { position: fixed; z-index: 79; pointer-events: none; white-space: pre; padding: 3px 5px; border-radius: 4px; background: #0b151fe6; color: #9ff0e4; font-size: 12px; line-height: 1.35; }

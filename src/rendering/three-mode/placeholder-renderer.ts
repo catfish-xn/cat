@@ -243,8 +243,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
     }
   };
-  // Hover cards: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels. Only the hovered piece is
-  // measured, once per 2D frame; a skinned body's bounds are its cached bind-pose box, so the card stays still while it animates.
+  // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
+  // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
   const corner = new Vector3(), pieceBox = new Box3();
   const screenBox = (id: string): BoardScreenBox | undefined => {
     const view = pieces.get(id), area = viewport();
