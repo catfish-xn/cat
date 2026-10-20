@@ -228,6 +228,11 @@ export function openIndexedDbStore(name = 'cat-assets3d'): Promise<AssetStore> {
   });
 }
 
+/** IndexedDB when the browser allows it, otherwise a non-persistent store (files still download, every visit). */
+export function openAssetStore(open: () => Promise<AssetStore> = openIndexedDbStore): Promise<AssetStore> {
+  return open().catch(() => memoryStore());
+}
+
 /** Keeps nothing: used when IndexedDB is unavailable, so every read goes to the network. */
 export function memoryStore(): AssetStore {
   const files = new Map<string, StoredAsset>();

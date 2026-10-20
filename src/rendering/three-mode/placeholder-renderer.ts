@@ -20,7 +20,7 @@ import {
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
-import { AssetPreloader, describePreload, memoryStore, openIndexedDbStore, readPrecacheList } from './asset-preload';
+import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
 
 const MANIFEST_TIMEOUT_MS = 4000;
@@ -87,7 +87,7 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
     const list = readPrecacheList(await fetchJson(`${assetBase}precache.json`).catch(() => null), cache.manifest);
-    const store = await openIndexedDbStore().catch(() => memoryStore());
+    const store = await openAssetStore();
     preloader = new AssetPreloader(assetBase, list, store);
     if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
     void navigator.storage?.persist?.().catch(() => false);
