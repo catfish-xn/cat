@@ -522,6 +522,7 @@ export class BoardScene extends Phaser.Scene {
         if (!gesture) return false;
         this.gesture3d = gesture; this.draggingId = id; this.selectedId = id;
         this.tokens.get(id)!.setDepth(10).setScale(1.08); this.syncSelection();
+        if (!this.summonOf(id)) this.watchSellZone(unit);
         return true;
       },
       dragMove: point => {
@@ -532,9 +533,7 @@ export class BoardScene extends Phaser.Scene {
         const id = this.draggingId, dragged = id ? token(id) : undefined, gesture = this.gesture3d;
         this.gesture3d = null;
         if (!id || !dragged || !gesture || !this.dragPhase() || !this.inputRouter.release(gesture)) { this.clearDrag(); this.sync(); return; }
-        if (document.elementFromPoint(client.x, client.y)?.closest('.shop-panel, .shop-dock')) {
-          this.clearDrag(); this.sell(id); this.sync(); return;
-        }
+        if (!this.summonOf(id) && this.sellZoneAt(client)) { this.clearDrag(); this.sell(id); this.sync(); return; }
         this.dropAt(dragged, point);
         this.clearDrag(); this.sync();
       },
