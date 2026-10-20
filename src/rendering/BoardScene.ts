@@ -113,6 +113,8 @@ export class BoardScene extends Phaser.Scene {
   private startHint!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
+  /** While a unit is dragged: every board cell and bench slot the rules accept for it, tinted under the pointer outline. */
+  private dropZones!: Phaser.GameObjects.Graphics;
   /** G2-3 prep: special-cell layer (trial cells) drawn above the board fill, below units; empty until the rules supply cells. */
   private specialCellLayer!: Phaser.GameObjects.Graphics;
   private specialCells: readonly SpecialCell[] = [];
@@ -196,6 +198,7 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillStyle(toNumber(THEME.color.bench)).lineStyle(1, toNumber(THEME.color.boardLine)).fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10);
     }
     this.overlay = this.add.graphics().setDepth(5);
+    this.dropZones = this.add.graphics().setDepth(4);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.loadoutTip = this.add.text(0, 0, '', { fontSize: '12px', color: '#9ff0e4', backgroundColor: '#0b151fe6', padding: { x: 5, y: 3 }, resolution: 2 })
       .setOrigin(0.5, 1).setDepth(30).setVisible(false).setName('loadout-tip');
@@ -321,6 +324,9 @@ export class BoardScene extends Phaser.Scene {
       } else if (event.code === 'KeyF') {
         event.preventDefault();
         this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率');
+      } else if (event.code === 'KeyW') {
+        event.preventDefault();
+        if (!this.draggingId) this.benchBoardSwap(this.hoveredId() ?? this.selectedId);
       } else if (event.code === 'KeyE') {
         event.preventDefault();
         if (this.strategyPanel?.blocksSell) { this.setStatus('无出售单位目标 · 物品操作不会出售背景单位'); return; }
@@ -346,6 +352,50 @@ export class BoardScene extends Phaser.Scene {
     return this.input.sortGameObjects(candidates, this.input.activePointer)[0]?.getData('unitId');
   }
 
+  /** Every location of mine, board cells of my rows then bench slots, in reading order. */
+  private ownLocations(): UnitLocation[] {
+    const cells: UnitLocation[] = [];
+    for (let row = 0; row < this.state.board.rows; row++) for (let col = 0; col < this.state.board.columns; col++)
+      if (isDeploymentCell(this.state.board, 'player', { col, row })) cells.push({ kind: 'board', cell: { col, row } });
+    for (let slot = 0; slot < this.state.benchSize; slot++) cells.push({ kind: 'bench', slot });
+    return cells;
+  }
+  private occupied(target: UnitLocation, except: string): boolean {
+    return [...this.state.units.filter(unit => unit.team === 'player'), ...this.shownSummons().map(summon => summon.unit as Unit)].some(unit => unit.id !== except
+      && (unit.location.kind === 'board' && target.kind === 'board' ? unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row
+        : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
+  }
+  /**
+   * Drag hint (U4): tint each place the rules' validateMatchDeployment accepts for this unit; when the board is at the
+   * population cap a bench unit can only trade places, which the status says. Display only.
+   */
+  private showDropZones(unit: Unit) {
+    this.dropZones.clear();
+    const state = this.session.state;
+    for (const target of this.ownLocations()) {
+      if ((target.kind === 'board' ? unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row
+        : unit.location.kind === 'bench' && unit.location.slot === target.slot) || validateMatchDeployment(state, unit.id, target)) continue;
+      this.dropZones.fillStyle(0x68ddd0, 0.16);
+      if (target.kind === 'board') this.dropZones.fillPoints(this.layout.corners(target.cell), true);
+      else { const p = this.benchCenter(target.slot); this.dropZones.fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
+    }
+    const count = getPlayerDeploymentCount(this.state), cap = getDeploymentCap(state);
+    if (unit.location.kind === 'bench' && this.session.phase === 'preparation' && count >= cap) this.setStatus(`人口已满 ${count}/${cap} · 只能与场上单位互换，或升级提高人口`);
+  }
+  /**
+   * W (TFT): the hovered piece of mine moves board → first open bench slot, or bench → first open cell of my rows,
+   * whichever the rules' validateMatchDeployment accepts first; the deploy command itself decides.
+   */
+  private benchBoardSwap(id: string | null | undefined) {
+    const unit = id ? this.state.units.find(entry => entry.id === id && entry.team === 'player') : undefined;
+    if (!unit || this.summonOf(unit.id)) { this.setStatus('请悬停一个我方单位，再按 W 上下场'); return; }
+    const want = unit.location.kind === 'board' ? 'bench' : 'board', state = this.session.state;
+    const open = this.ownLocations().filter(target => target.kind === want && !this.occupied(target, unit.id));
+    const target = open.find(candidate => !validateMatchDeployment(state, unit.id, candidate));
+    if (target) { this.command(this.session.deploy(unit.id, target), want === 'bench' ? '已下场到备战席' : '已上场'); this.sync(); return; }
+    const reason = open.length ? validateMatchDeployment(state, unit.id, open[0]) : undefined;
+    this.setStatus(reason ? this.failureMessage(reason) : want === 'bench' ? '备战席已满' : '棋盘上没有空位');
+  }
   /** The shop under a page point: the online dock, else the offline shop panel. Display only. */
   private sellZoneAt(point: { x: number; y: number } | null): HTMLElement | null {
     const hit = point ? document.elementFromPoint(point.x, point.y) : null;
@@ -430,7 +480,7 @@ export class BoardScene extends Phaser.Scene {
       token.setData('gesture', gesture);
       this.draggingId = token.getData('unitId'); this.selectedId = this.draggingId;
       token.setDepth(10).setScale(1.08); this.syncSelection();
-      if (!this.summonOf(this.draggingId)) this.watchSellZone(unit);
+      if (!this.summonOf(this.draggingId)) { this.watchSellZone(unit); this.showDropZones(unit); }
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
@@ -881,7 +931,7 @@ export class BoardScene extends Phaser.Scene {
     this.draggingId = null;
     for (const pointer of this.input.manager.pointers) this.input.setDragState(pointer, 0);
     for (const token of this.tokens.values()) token.setScale(1).setDepth(0);
-    this.overlay.clear();
+    this.overlay.clear(); this.dropZones.clear();
   }
   private clearCombatEffects() {
     this.tweens.killAll();

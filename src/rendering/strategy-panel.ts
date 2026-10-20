@@ -857,7 +857,7 @@ export class StrategyPanel {
     const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验${generic ? '：收起弹窗即可操作' : '（D 刷新、F 购买经验）'}。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
@@ -891,10 +891,10 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
-      if (generic) {
-        // Extras slot: skip only when the choice declares it (disabled until a command is wired); fold always.
+      if (generic || isOnline()) {
+        // Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments can be hidden to view the board.
         const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-        if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+        if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
         row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
         card.append(row);
       }
