@@ -18,12 +18,14 @@ import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
 import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
+import { replayTail } from '../room/live-bank';
+import type { CombatReplay } from '../../server-entry';
 import type { Clock, ClockHandle } from '../room/clock';
 import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
 import { consumableReceiptEvents, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type RoomPhase, type RoomState } from '../room/types';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleResult, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
   NET_PROTOCOL_VERSION, commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
@@ -191,6 +193,8 @@ interface Connection {
   sentRoomRevision: number;
   sentSeatRevision: number;
   sentCombatKey: string;
+  /** The battle result and replay behind the last `replay` (or `replay-tail`) this connection was sent. */
+  sentCombat: { readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   closeHandle: ClockHandle | null;
   /** Clock time of the last pong or message from the peer (heartbeat). */
   lastSeen: number;
@@ -287,13 +291,22 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
     if (battle) {
       const key = `${state.round}:${battle.battleId}`;
-      if (conn.sentCombatKey !== key) {
+      const sent = conn.sentCombatKey === key ? conn.sentCombat : null;
+      // D11 live bank: a live run replaced the battle already sent; only the records that changed follow.
+      if (conn.sentCombatKey !== key || (sent && sent.battle !== battle)) {
         conn.sentCombatKey = key;
         // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
         let replay: ReturnType<typeof toCombatReplayFor> = null;
         try { replay = toCombatReplayFor(state, seat.seatId); }
         catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: seat.seatId, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
-        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
+        if (replay && sent) {
+          conn.sentCombat = { battle, replay: replay.replay };
+          const tail = replayTail(sent.replay, replay.replay);
+          if (tail) send(conn, { type: 'replay-tail', roomId: state.roomId, round: state.round, battleId: replay.battleId, ...tail });
+        } else if (replay) {
+          conn.sentCombat = { battle, replay: replay.replay };
+          send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
+        }
       }
     }
   }
@@ -322,7 +335,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
-      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = '';
+      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
       if (!conn.open) opened.setConnected(session.seatId, false);
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
@@ -528,7 +541,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     conn.session = session;
     conn.epoch = session.connectionEpoch;
     session.connection = conn;
-    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = '';
+    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
   }
 
   /** The connection loses its seat but may stay open: `superseded` tells it why and closes it after a grace period. */
@@ -564,7 +577,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', closeHandle: null, lastSeen: clock.now() };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', sentCombat: null, closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
     socket.on('pong', () => { conn.lastSeen = clock.now(); });

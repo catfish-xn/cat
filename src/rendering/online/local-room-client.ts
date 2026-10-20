@@ -68,6 +68,8 @@ export class LocalRoomClient implements GameClient {
   private emittedDisplay: MatchState | null = null;
   /** Round whose battle replay was already pushed. */
   private emittedBattleRound = 0;
+  /** My battle result behind the last replay emitted; a live run replacing it (D11 live bank) revises that replay. */
+  private emittedBattle: object | null = null;
   private flushQueued = false;
   private inCommand = false;
   private disposed = false;
@@ -115,7 +117,7 @@ export class LocalRoomClient implements GameClient {
   }
   reset(): void {
     this.detach();
-    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0;
+    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null;
     this.emitLobby(); this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase, serverNow: this.clock.now() } });
   }
   dispose(): void {
@@ -150,7 +152,7 @@ export class LocalRoomClient implements GameClient {
 
   private attach(room: Room): void {
     this.detach();
-    this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0;
+    this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0; this.emittedBattle = null;
     this.unsubscribeRoom = room.subscribe(() => this.queueFlush());
   }
   private detach(): void {
@@ -184,8 +186,19 @@ export class LocalRoomClient implements GameClient {
       try { replay = toCombatReplayFor(state, this.mySeatId); }
       catch (error) { console.error('[local-room] replay failed', error); }
       if (replay) listeners.replay(replay.replay, replay.unitIds);
+      this.emittedBattle = this.myBattle(state);
+    } else if (state.round === this.emittedBattleRound && this.emittedBattle !== null && this.myBattle(state) !== this.emittedBattle) {
+      this.emittedBattle = this.myBattle(state);
+      let replay: ReturnType<typeof toCombatReplayFor> = null;
+      try { replay = toCombatReplayFor(state, this.mySeatId); }
+      catch (error) { console.error('[local-room] replay failed', error); }
+      if (replay) listeners.replayRevised?.(replay.replay);
     }
     listeners.view(this.view(state));
+  }
+  private myBattle(state: RoomState): object | null {
+    const seatId = this.mySeatId;
+    return state.battles.find(battle => battle.kind === 'two-sided' ? battle.participants.includes(seatId!) : battle.outcomes.some(outcome => outcome.seatId === seatId)) ?? null;
   }
   private view(state: RoomState): PlayerView { return toPlayerView(state, this.mySeatId!, this.clock.now()); }
   private emitLobby(): void {

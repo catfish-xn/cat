@@ -72,21 +72,28 @@ function twoSidedJob(envelope: BattleInput, capture: ReplayCapture | null): { ad
         if (used >= envelope.maxSteps) throw new BattleResolveError(envelope.battleId, 'battle-validation:step-limit-exceeded');
         return null;
       }
-      const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-      const result: TwoSidedBattleResult = {
-        kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-        participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
-      };
-      // The frames the rules recorded on this very run; side B's view is still mirrored from them at push time.
-      const finished = task;
-      const replay = 'replay' in finished ? finished.replay() : null;
-      if (replay) primeCombatReplay(result, replay);
-      return result;
+      return twoSidedResult(envelope, battle, task);
     },
   };
 }
 
-function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
+/** The room's result of a finished rules battle: the proposals, and the replay frames the task recorded (if it did) primed for the push. */
+export function twoSidedResult(envelope: BattleInput, battle: TwoSidedBattleResult['battle'], task: BattleTask | BattleReplayTask): TwoSidedBattleResult {
+  const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
+  const result: TwoSidedBattleResult = {
+    kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
+  };
+  // The frames the rules recorded on this very run; side B's view is still mirrored from them at push time.
+  const replay = 'replay' in task ? task.replay() : null;
+  if (replay) primeCombatReplay(result, replay);
+  return result;
+}
+
+/** A rules refusal from a live task's call (sample or advance) as the resolver fault the room reports. */
+export function guardedBattle<T>(battleId: string, run: () => T): T { return guarded(battleId, run); }
+
+export function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | BattleReplayTask {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;

@@ -34,8 +34,12 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * requires `optionIndex` (one card at a time). A protocol 3 client could neither claim its orbs nor reroll a card, so it is
  * refused at its first message with `unsupported-protocol`, whose detail names both versions. It equals the rules'
  * MULTIPLAYER_NET_PROTOCOL_VERSION (tests/server/v15-orb-claim.test.ts holds them together; net/ imports no rules value).
+ * 5 since the D11 live bank (planning/live-gold-combat-2026-10-20.md): the replay of a battle already pushed may be revised
+ * during its playback (`replay-tail`), because a gold change can alter a combat that reads live gold. A protocol 4 client
+ * would ignore it and show a battle other than the one settled. The rules did not change, so the rules' constant stays 4:
+ * the wire is now one ahead of it (tests/server/v15-orb-claim.test.ts).
  */
-export const NET_PROTOCOL_VERSION: number = 4;
+export const NET_PROTOCOL_VERSION: number = 5;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -121,6 +125,12 @@ export type ServerMessage =
    * through `readReplayUnitIds` and never parses a battle id.
    */
   | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
+  /**
+   * D11 live bank: my battle of this round, already sent as `replay`, now differs from tick `fromTick` on (a gold change
+   * fed a live run of it). The client keeps the records before `fromTick`, replaces the rest with `ticks` and the terminal
+   * view with `terminal`, and keeps playing from where it is. Only ever for the battle of the last `replay` it was sent.
+   */
+  | { readonly type: 'replay-tail'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null }
   /**

@@ -44,6 +44,11 @@ export interface ClientListeners {
    * says which battle id is which of my units, so their equipment can be shown; empty for PvE or when the push had none.
    */
   replay(replay: CombatReplay, unitIds?: readonly ReplayUnitId[]): void;
+  /**
+   * D11 live bank: the battle of the last `replay` changed while it plays (a gold change fed a live run of it); this is
+   * the whole revised replay. Playback goes on from where it is.
+   */
+  replayRevised?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
   connection?(status: ConnectionStatus): void;
 }
