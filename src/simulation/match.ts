@@ -354,6 +354,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
+      ...(combat?.bankSamples ? {bankSamples:combat.bankSamples} : {}),
       income: plan.income, incomeBreakdown: plan.incomeBreakdown, interestBasis: plan.interestBasis,
       streakBefore: state.streak, streakAfter: plan.streakAfter, mechanicReceiptPrefixLength:state.seatMechanics?.receipts.length??0,goldBefore: state.gold, goldAfter: plan.goldAfter,
       xpRequested: plan.progression.xpRequested, xpAwarded: plan.progression.xpApplied,
@@ -413,7 +414,9 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
-  const live=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
+  const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
+  const live=sampled===state.combat?sampled:{...sampled,bankSamples:[...(state.combat.bankSamples??[]),
+    {tick:state.combat.tick,team:'player' as const,liveGold:state.gold}]};
   const next = stepCombat(live), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };

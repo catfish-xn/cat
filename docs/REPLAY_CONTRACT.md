@@ -1,5 +1,8 @@
 # M6 回放合同 v1（F1 已冻结）
 
+联机战斗实时金币的新增导出、私有样本结构、PvE 收据及逐 tick 帧接口见
+[LIVE_GOLD_EXPORTS](LIVE_GOLD_EXPORTS.md)。它补充服务器战斗录像输入，不改变本文件离线 BattleRecord / PlaybackSession 格式。
+
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 状态：F1已冻结，数值引用src/m6/limits.ts与M6_GOAL。使用完整战前Match上下文，不选择紧凑格式。

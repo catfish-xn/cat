@@ -36,7 +36,7 @@
 ## 接口、失败与恢复边界
 
 - `sampleD11CombatGold(combat: CombatState, team: 'player' | 'enemy', liveGold: number): CombatState`，位于 `simulation/d11-fill.ts`。仅接受服务器 / Match 权威银行；自动加上尚待结算的本战物品与 High Roller 收益，不重复加到资源账本。负数、非安全整数抛 RangeError；无变化返回原对象，无 RNG 消耗。
-- `BattleTask.sampleBankGold(seatId: string, liveGold: number): void`，从已有 `startTwoSidedBattle` 返回。样本在下一个 tick 前生效；非参与席、非法金币或超过 100000 条有效样本抛 `BattleValidationError('invalid-bank-sample')`；已结束抛 `wrong-phase`；相同数值无变化。不接受客户端自行报金币。
+- `BattleTask.sampleBankGold(seatId: string, liveGold: number): boolean`，从已有 `startTwoSidedBattle` 返回。样本在下一个 tick 前生效；非参与席、非法金币或超过 100000 条有效样本抛 `BattleValidationError('invalid-bank-sample')`；已结束抛 `wrong-phase`。实际改变返回 true，相同有效银行、未绑定席位与镜像 B 返回 false。不接受客户端自行报金币。实时取帧、PvE 样本收据及完整签名见 [LIVE_GOLD_EXPORTS](LIVE_GOLD_EXPORTS.md)。
 - 可选 `BattleResult.bankSamples: readonly {tick:number, team:'player'|'enemy', liveGold:number}[]` 为私有规则输入记录；tick 非递减且早于终战 tick。`proposeSettlement` 校验同一轨迹；`toCombatReplay` / `startCombatReplay` 输入必须保留该字段，公开输出不包含它。
 - `G23BattleFacts.d11Headhunter?: D11KillReceipt` 原样随 `SideProposal.g23Facts` → `RoundSettlementReceipt.g23Facts` → G23 economyReceipts 传递；目前服务器已有 g23Facts 整体转发，无需另算击杀。异常未绑定、holderId 不匹配或 eventSeq 超过战斗边界等均按 `invalid-receipt` 原子拒绝；重复仍是 `duplicate-settlement`，镜像仍是 `mirror-settlement`。
 - 单机使用 `serializeMatch(state, battles?)` / `restoreMatch(input, battles?)` 现有签名。只要历史中出现猎头者战斗事实（包括零击杀），就需要完整 battles；缺少证据拒绝，不能仅 JSON 往返自证。当前战斗还会从冻结输入逐 tick 重建。新增字段不提供旧档迁移。

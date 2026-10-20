@@ -15,7 +15,7 @@
 
 单机 `serializeMatch(state,battles?)` / `restoreMatch(input,battles?)` 签名不变；历史含猎头者事实（即使零击杀）必须提供完整可信 battles 重放。当前异常战斗逐 tick 重算，礼物与 +5 金校验来源及唯一收据，不从保存的自报计数恢复。联机完整 Match 读档仍不支持。私有视图可选 d11Display 和公开战斗 replay 单位可选 choiceEffects 提供当前条目名称、说明与等级，无新图标路径，也不公开银行或未来候选。
 
-双边任务新增 `sampleBankGold(seatId:string,liveGold:number):void`，私有 bankSamples 记录生效 tick，结果校验 / 回放重演同一经济输入。服务器仅可传权威 Match.gold。当前服务器先完整计算再播放，**尚未接战中买卖样本，联机 PvP 贪财化身的实时银行仍是发布阻塞项**；不能用开战冻结数替代完整实现。详细失败枚举及配套见 [UI_REQUESTS](UI_REQUESTS.md)。
+双边任务 `sampleBankGold(seatId:string,liveGold:number):boolean`，私有 bankSamples 记录生效 tick，结果校验 / 回放重演同一经济输入。实际改变返回 true；相同有效银行、未绑定席位与镜像 B 返回 false。服务器仅可传权威 Match.gold。原 D11 交接时服务器先完整计算再播放，**战中买卖样本接线仍需服务器验收**；不能用开战冻结数替代完整实现。新增读取席位、逐 tick 帧、PvE 样本收据和隐私边界见 [LIVE_GOLD_EXPORTS](LIVE_GOLD_EXPORTS.md)，服务器配套见 [UI_REQUESTS](UI_REQUESTS.md)。
 
 ## 联机法球领取：v15（用户批准 2026-10-20 02:20）
 
