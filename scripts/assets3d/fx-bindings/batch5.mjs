@@ -1,0 +1,10 @@
+import vex from './vex.mjs';
+import violet from './violet.mjs';
+import vladimir from './vladimir.mjs';
+import zeri from './zeri.mjs';
+import leblanc from './leblanc.mjs';
+import loris from './loris.mjs';
+import mordekaiser from './mordekaiser.mjs';
+import nami from './nami.mjs';
+import nunu from './nunu.mjs';
+export const batch5Tables = { vex, violet, vladimir, zeri, leblanc, loris, mordekaiser, nami, nunu };

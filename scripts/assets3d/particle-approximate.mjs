@@ -203,6 +203,22 @@ export function approximateEmitter(input, system = {}, options = {}) {
     note('primitive', p, 'arbitrary-quad-local-XY-preserve-birth-Euler'); source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
   } else if (type === 'VfxPrimitiveRay') {
     const velocity = source.birthVelocity?.constantValue;
+    const rotation = source.birthRotation0?.constantValue;
+    // V2 rays face the camera around their direction. A stationary source ray
+    // with authored pitch/yaw instead specifies a plane we cannot preserve.
+    // Do not replace that plane with a large upright local-Y strip. Moving
+    // rays retain the existing velocity-direction preview convention.
+    if ((velocity === undefined || (vector(velocity) && Math.hypot(...velocity) === 0)) && vector(rotation)
+        && rotation.slice(0, 2).some(n => Math.abs(n % 360) > 1e-6)) {
+      return { status: 'skipped', reason: 'unexpressible-emitter:rotated-stationary-ray-plane' };
+    }
+    // A ground-layer tag alone does not supply a ray direction or plane. With
+    // no motion/orientation evidence, local Y would invent an upright strip.
+    // Keep moving rays' existing convention; do not flatten arbitrary meshes.
+    if ((input.isGroundLayer === true || input.isGroundLayer === 1)
+        && (velocity === undefined || (vector(velocity) && Math.hypot(...velocity) === 0))) {
+      return { status: 'skipped', reason: 'unexpressible-emitter:ground-stationary-ray-plane' };
+    }
     additions.kind = 'ray'; additions.direction = vector(velocity) && Math.hypot(...velocity) > 0 ? [-velocity[0], velocity[1], velocity[2]] : [0, 1, 0];
     note('primitive', p, 'ray-strip-along-birth-velocity-zero-velocity-local-Y');
     source.primitive = { __type: 'VfxPrimitiveCameraQuad' };
