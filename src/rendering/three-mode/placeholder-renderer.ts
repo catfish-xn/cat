@@ -13,7 +13,10 @@ import {
   AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
-import { ModelCache, UnitActionState, UnitAnimationMixer, hexCenter, pick, type AnimationEvent, type HexGrid, type ModelLease } from '../../rendering3d';
+import {
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, hexCenter, loadParticleEffect, pick,
+  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect,
+} from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
@@ -39,6 +42,16 @@ const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
 const DRAG_LIFT = 10;
 const DROP_COLOR = { allowed: '#68ddd0', refused: '#f08080' } as const;
+/** Live action effects at most; later ones are dropped rather than queued. */
+const MAX_EFFECTS = 48;
+/** Effects without a playback entry play at the source this long. */
+const DEFAULT_EFFECT_SECONDS = 1;
+/** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
+ * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
+ * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
+const FX_SCALE = 0.44;
+/** Target-anchored effects sit this high on the target (board units), roughly its chest. */
+const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
@@ -59,6 +72,28 @@ async function openModels(assetBase: string | null): Promise<Models> {
   } catch {
     return { cache: null, status: 'placeholder', detail: '素材地址无法访问或清单格式不符，显示占位棋子' };
   } finally { clearTimeout(timer); }
+}
+
+/** Preview staging for one effect (assets3d action-bindings.json `playback`); approximate, not gameplay timing. */
+interface EffectPlayback { anchor: 'source' | 'target' | 'projectile'; bone?: string; delay: number; maxDuration: number }
+type ResolveEffects = (unit: string, action: 'attack' | 'cast') => readonly { id: string }[];
+interface ActionEffectPlan { resolve: ResolveEffects; playback: Record<string, EffectPlayback> }
+
+/** Optional: an asset root whose manifest names actionEffects plays them on attack/cast; anything unreadable plays none. */
+async function openActionEffects(models: Models, assetBase: string | null): Promise<ActionEffectPlan | null> {
+  if (!models.cache || !assetBase || !models.cache.manifest.actionEffects) return null;
+  try {
+    const resolve = createActionEffectResolver(models.cache.manifest);
+    const playback: Record<string, EffectPlayback> = {};
+    const response = await fetch(`${assetBase}action-bindings.json`).catch(() => null);
+    const entries = response?.ok ? (await response.json() as { playback?: unknown }).playback : null;
+    if (entries && typeof entries === 'object') for (const [id, raw] of Object.entries(entries as Record<string, Record<string, unknown>>)) {
+      const anchor = raw.anchor, delay = Number(raw.delay), maxDuration = Number(raw.maxDuration);
+      if ((anchor !== 'source' && anchor !== 'target' && anchor !== 'projectile') || !(delay >= 0) || !(maxDuration > 0)) continue;
+      playback[id] = { anchor, bone: typeof raw.bone === 'string' ? raw.bone : undefined, delay, maxDuration };
+    }
+    return { resolve, playback };
+  } catch { return null; }
 }
 
 interface PieceView {
@@ -89,6 +124,7 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer = new WebGLRenderer({ antialias: true });
   const models = await openModels(options.assetBase);
+  const actionEffects = await openActionEffects(models, options.assetBase);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
   host.append(renderer.domElement);
@@ -203,13 +239,84 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.root.removeFromParent();
   };
 
+  // Action effects (attack/cast): staged by render time, owned by a phase generation so a new combat, preparation or
+  // dispose drops everything still queued, loading or playing.
+  interface LiveEffect { fx: ParticleEffect; left: number; from?: Vector3; to?: Vector3; travel?: number; elapsed: number }
+  let clock = 0, generation = 0;
+  const queued: { at: number; generation: number; run: () => void }[] = [];
+  const live = new Set<LiveEffect>();
+  const clearEffects = () => {
+    generation++; queued.length = 0;
+    for (const effect of live) effect.fx.dispose();
+    live.clear();
+  };
+  const worldPoint = (view: PieceView, bone: string | undefined, out: Vector3): boolean => {
+    const node = bone ? view.body?.getObjectByName(bone) : undefined;
+    if (node) { node.getWorldPosition(out); return true; }
+    if (bone) return false;
+    view.root.getWorldPosition(out).setY(IMPACT_HEIGHT);
+    return true;
+  };
+  /** Local scale that gives an effect FX_SCALE in world space under `parent`. */
+  // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
+  const effectScale = (parent: Object3D): number => FX_SCALE / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
+  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
+    const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
+    if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
+    if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
+    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration }).then(fx => {
+      const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
+      if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
+      if (spec.anchor === 'source') {
+        const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
+        if (!node) { fx.dispose(); return; }
+        fx.object.scale.setScalar(effectScale(node));
+        node.add(fx.object);
+      } else {
+        const from = new Vector3();
+        if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
+        fx.object.scale.setScalar(FX_SCALE);
+        fx.object.position.copy(from);
+        scene.add(fx.object);
+        if (spec.anchor === 'projectile') {
+          effect.from = from; effect.to = target!.root.position.clone().setY(IMPACT_HEIGHT); effect.travel = spec.maxDuration;
+          fx.object.lookAt(effect.to);
+        }
+      }
+      live.add(effect);
+    }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
+  };
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId);
+    if (!actionEffects || !source?.alive) return;
+    const owner = generation;
+    for (const { id } of actionEffects.resolve(source.definitionId, action)) {
+      const spec = actionEffects.playback[id] ?? { anchor: 'source', delay: 0, maxDuration: DEFAULT_EFFECT_SECONDS };
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
+    }
+  };
+  const updateEffects = (seconds: number) => {
+    clock += seconds;
+    for (let i = queued.length - 1; i >= 0; i--) {
+      const job = queued[i];
+      if (job.generation !== generation) { queued.splice(i, 1); continue; }
+      if (job.at <= clock) { queued.splice(i, 1); job.run(); }
+    }
+    for (const effect of live) {
+      effect.elapsed += seconds; effect.left -= seconds;
+      if (effect.from && effect.to && effect.travel) effect.fx.object.position.lerpVectors(effect.from, effect.to, Math.min(1, effect.elapsed / effect.travel));
+      effect.fx.update(seconds, camera);
+      if (effect.left <= 0 || effect.fx.finished) { effect.fx.dispose(); live.delete(effect); }
+    }
+  };
+
   let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
-    if (fighting !== null && fighting !== frame.fighting) for (const [id, view] of pieces) resetAction(view, id);
+    if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     const seen = new Set<string>();
     for (const piece of frame.pieces) {
@@ -245,6 +352,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
+      if (event.type === 'attack') playAction('attack', event.attackerId, event.targetId);
+      else if (event.type === 'cast') playAction('cast', event.sourceId, event.targetIds[0]);
     }
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
@@ -384,11 +493,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
     }
+    updateEffects(seconds);
     if (width > 0) renderer.render(scene, camera);
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
 
+  // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
+  // Guarded: unit tests mount this renderer without a `location` global.
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -398,6 +511,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
+      clearEffects();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose();

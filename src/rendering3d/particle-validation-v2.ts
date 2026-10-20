@@ -47,7 +47,11 @@ export function parseParticleDocumentV2(value: unknown, validateV1: (v: unknown)
       arbitraryQuad: [], screenDistortion: ['distortion'] };
     if (typeof e.kind !== 'string' || !Object.hasOwn(specific, e.kind)) fail(`${p}.kind`);
     const common = ['texture', 'delay', 'velocity', 'drag', 'gravity', 'shape', 'color', 'opacity', 'size', 'frames', 'dissolve', 'blend'];
-    fields(e, ['kind', 'emission', 'lifetime', 'position', 'size0', 'rotation0', ...common, ...specific[e.kind]], p);
+    fields(e, ['kind', 'emission', 'lifetime', 'position', 'size0', 'rotation0', 'localTransform', ...common, ...specific[e.kind]], p);
+    if (e.localTransform !== undefined) {
+      const m = e.localTransform;
+      if (!Array.isArray(m) || m.length !== 16 || !Array.from(m).every(finite) || m[3] !== 0 || m[7] !== 0 || m[11] !== 0 || m[15] !== 1) fail(`${p}.localTransform`);
+    }
     const em = record(e.emission, `${p}.emission`);
     if (em.mode === 'burst') {
       fields(em, ['mode', 'count'], `${p}.emission`);
@@ -69,6 +73,12 @@ export function parseParticleDocumentV2(value: unknown, validateV1: (v: unknown)
     if (e.size0 !== undefined) birth(e.size0, `${p}.size0`, true);
     if (e.rotation0 !== undefined) birth(e.rotation0, `${p}.rotation0`, false);
     const shared = Object.fromEntries(common.filter(k => Object.hasOwn(e, k)).map(k => [k, e[k]]));
+    if (shared.shape && (shared.shape as Record<string, unknown>).kind === 'cylinder') {
+      const s = record(shared.shape, `${p}.shape`);
+      fields(s, ['kind', 'radius', 'height'], `${p}.shape`);
+      if (!finite(s.radius) || s.radius < 0 || !finite(s.height) || s.height < 0) fail(`${p}.shape`);
+      delete shared.shape;
+    }
     try { validateV1({ schemaVersion: 1, emitters: [{ ...shared, kind: 'sprite', count: 0, lifetime: 1 }] }); }
     catch (error) { throw new Error((error as Error).message.replace('$.emitters[0]', p)); }
     if (e.kind === 'mesh') resource(e.mesh, `${p}.mesh`, true);

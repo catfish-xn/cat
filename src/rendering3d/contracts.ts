@@ -1,9 +1,12 @@
 /** D7 -> D8 contract v1. Seconds, three world axes, normalized curve time [0,1]. */
 export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
+export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
   models: Record<string, { path: string; animations?: Partial<Record<ActionState, string>> }>;
   effects?: Record<string, { path: string }>;
+  /** Explicit playback selection; name-based build-report suggestions are separate. */
+  actionEffects?: ActionEffects;
 }
 export type Vec3 = readonly [number, number, number];
 export type Curve = readonly { time: number; value: number }[];
@@ -34,7 +37,11 @@ export type ParticleEmission = { mode: 'burst'; count: number }
   | ({ mode: 'continuous'; rate: number; burst?: number } &
     ({ duration: number; loop?: false } | { loop: true }));
 export interface ParticleLimits { maxParticles: number; maxDuration: number }
-export interface ParticleEmitterV2Base extends Omit<ParticleEmitter, 'kind' | 'count' | 'lifetime'> {
+export interface ParticleEmitterV2Base extends Omit<ParticleEmitter, 'kind' | 'count' | 'lifetime' | 'shape'> {
+  shape?: ParticleEmitter['shape'] | { kind: 'cylinder'; radius: number; height: number };
+  /** Column-major affine matrix in runtime coordinates. Applied to local
+   * positions/directions after shape sampling, before host/world transforms. */
+  localTransform?: readonly number[];
   emission: ParticleEmission;
   /** infinite lives until the document's hard maxDuration, only with loop:true. */
   lifetime: number | 'infinite';
@@ -84,4 +91,25 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
       assetUrl('', effect.path);
     }
   }
+  if (m.actionEffects !== undefined) parseActionEffects(m.actionEffects, m);
+}
+
+/** Also accepts build-report.actionEffects, but the host must deliberately select
+ * suggestions: it must not automatically play every name-matched system. */
+export function parseActionEffects(value: unknown, manifest: AssetManifest): ActionEffects {
+  const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  if (!record(value)) throw new Error('invalid-action-effects');
+  const result: ActionEffects = {};
+  for (const [unit, actions] of Object.entries(value)) {
+    if (!Object.hasOwn(manifest.models, unit) || !record(actions)) throw new Error('invalid-action-effects-unit');
+    const mapped: Partial<Record<ActionState, readonly string[]>> = {};
+    for (const [action, ids] of Object.entries(actions)) {
+      if (!['idle', 'move', 'attack', 'cast', 'hit', 'death'].includes(action)) throw new Error('invalid-action-effects-action');
+      if (!Array.isArray(ids) || ids.length > 64 || Array.from(ids).some(id => typeof id !== 'string'
+        || !Object.hasOwn(manifest.effects ?? {}, id)) || new Set(ids).size !== ids.length) throw new Error('invalid-action-effects-reference');
+      Object.defineProperty(mapped, action, { value: [...ids], enumerable: true });
+    }
+    Object.defineProperty(result, unit, { value: mapped, enumerable: true });
+  }
+  return result;
 }

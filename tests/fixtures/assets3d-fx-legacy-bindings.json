@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "status": "approximated",
+  "convention": "Medium-only-muzzle; default-Jinx-R-Vi-Q; explicit-child-substitution; stage-delays-are-preview-values-not-gameplay",
+  "actionEffects": {
+    "jinx": {
+      "attack": [
+        "jinx_tft13_jinx_base_ba_minigun_cas_medium",
+        "jinx_tft13_jinx_base_ba_minigun_mis"
+      ],
+      "cast": [
+        "jinx_tft13_jinx_base_r_muzzleflash",
+        "jinx_tft13_jinx_base_r_cast_mouth",
+        "jinx_tft13_jinx_base_r_rocket_child",
+        "jinx_tft13_jinx_base_r_tar"
+      ]
+    },
+    "vi": {
+      "attack": [
+        "global_tft_global_ba_hit"
+      ],
+      "cast": [
+        "vi_tft13_vi_base_q_activate_hands_r",
+        "vi_tft13_vi_base_q_jumping_dust",
+        "vi_tft13_vi_base_q_landing_mis",
+        "vi_tft13_vi_base_q_landing_aoe",
+        "vi_tft13_vi_base_q_landing_aoe_child",
+        "vi_tft13_vi_base_q_tar"
+      ]
+    }
+  },
+  "variants": {
+    "W": {
+      "jinx": {
+        "cast": [
+          "jinx_tft13_jinx_base_w_cas",
+          "jinx_tft13_jinx_base_w_mis",
+          "jinx_tft13_jinx_base_w_beam",
+          "jinx_tft13_jinx_base_w_tar"
+        ]
+      }
+    },
+    "E": {
+      "jinx": {
+        "cast": [
+          "jinx_tft13_jinx_base_e_mis",
+          "jinx_tft13_jinx_base_e_mine_explosion"
+        ]
+      }
+    },
+    "R": {
+      "jinx": {
+        "cast": [
+          "jinx_tft13_jinx_base_r_muzzleflash",
+          "jinx_tft13_jinx_base_r_cast_mouth",
+          "jinx_tft13_jinx_base_r_rocket_child",
+          "jinx_tft13_jinx_base_r_tar"
+        ]
+      }
+    },
+    "Q": {
+      "vi": {
+        "cast": [
+          "vi_tft13_vi_base_q_activate_hands_r",
+          "vi_tft13_vi_base_q_jumping_dust",
+          "vi_tft13_vi_base_q_landing_mis",
+          "vi_tft13_vi_base_q_landing_aoe",
+          "vi_tft13_vi_base_q_landing_aoe_child",
+          "vi_tft13_vi_base_q_tar"
+        ]
+      }
+    }
+  },
+  "playback": {
+    "jinx_tft13_jinx_base_ba_minigun_cas_medium": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Minigun_Barrel1",
+      "delay": 0,
+      "maxDuration": 0.3
+    },
+    "jinx_tft13_jinx_base_ba_minigun_mis": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "projectile",
+      "bone": "Minigun_Barrel1",
+      "delay": 0,
+      "maxDuration": 0.35
+    },
+    "jinx_tft13_jinx_base_w_cas": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Cstm_Buffbone_Pistol",
+      "delay": 0,
+      "maxDuration": 0.3
+    },
+    "jinx_tft13_jinx_base_w_mis": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "projectile",
+      "bone": "Cstm_Buffbone_Pistol",
+      "delay": 0.1,
+      "maxDuration": 0.4
+    },
+    "jinx_tft13_jinx_base_w_beam": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "projectile",
+      "bone": "Cstm_Buffbone_Pistol",
+      "delay": 0.1,
+      "maxDuration": 0.4
+    },
+    "jinx_tft13_jinx_base_w_tar": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.5,
+      "maxDuration": 0.5
+    },
+    "jinx_tft13_jinx_base_e_mis": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "projectile",
+      "bone": "L_Hand",
+      "delay": 0,
+      "maxDuration": 0.5
+    },
+    "jinx_tft13_jinx_base_e_mine_explosion": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.5,
+      "maxDuration": 1
+    },
+    "jinx_tft13_jinx_base_r_muzzleflash": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Rocket_Launcher_End",
+      "delay": 0,
+      "maxDuration": 0.3
+    },
+    "jinx_tft13_jinx_base_r_cast_mouth": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Rocket_Launcher_Mouth_Top",
+      "delay": 0,
+      "maxDuration": 0.4
+    },
+    "jinx_tft13_jinx_base_r_rocket_child": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "projectile",
+      "bone": "Rocket_Launcher_End",
+      "delay": 0.1,
+      "maxDuration": 0.7
+    },
+    "jinx_tft13_jinx_base_r_tar": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.8,
+      "maxDuration": 1.5
+    },
+    "vi_tft13_vi_base_q_activate_hands_r": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "R_GloveHand",
+      "delay": 0,
+      "maxDuration": 0.5
+    },
+    "vi_tft13_vi_base_q_jumping_dust": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Buffbone_Glb_Ground_Loc",
+      "delay": 0.1,
+      "maxDuration": 0.4
+    },
+    "vi_tft13_vi_base_q_landing_mis": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "travel",
+      "anchor": "source",
+      "bone": "C_Buffbone_Glb_Center_Loc",
+      "delay": 0.1,
+      "maxDuration": 0.35
+    },
+    "vi_tft13_vi_base_q_landing_aoe": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 1
+    },
+    "vi_tft13_vi_base_q_landing_aoe_child": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 1
+    },
+    "vi_tft13_vi_base_q_tar": {
+      "status": "approximated",
+      "convention": "explicit-preview-stage-timing-and-placement",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 0.8
+    },
+    "global_tft_global_ba_hit": {
+      "status": "approximated",
+      "convention": "shared-basic-attack-target-preview-delay",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.35,
+      "maxDuration": 0.5
+    }
+  },
+  "unavailable": [
+    {
+      "unit": "vi",
+      "system": "Q_activate_hands_L",
+      "phase": "start",
+      "reason": "no-writable-emitters"
+    }
+  ],
+  "missingShared": [],
+  "unboundShared": [
+    {
+      "unit": "vi",
+      "key": "TFT_Global_BA_Crit",
+      "effectId": "global_tft_global_ba_crit",
+      "reason": "action-state-has-no-crit-discriminator"
+    }
+  ]
+}

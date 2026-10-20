@@ -1,0 +1,2631 @@
+{
+  "head": "52688b3",
+  "rows": [
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "document": {
+              "schemaVersion": 2,
+              "limits": {
+                "maxParticles": 10000,
+                "maxDuration": 30
+              },
+              "emitters": [
+                {
+                  "kind": "quad",
+                  "emission": {
+                    "mode": "burst",
+                    "count": 1
+                  },
+                  "lifetime": 1
+                }
+              ]
+            },
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": true,
+                "status": "mapped",
+                "reason": "exact-v2-subset",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 1,
+          "skipped": 0,
+          "rejected": 0
+        },
+        "byReason": {},
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {}
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "document": {
+              "schemaVersion": 2,
+              "limits": {
+                "maxParticles": 10000,
+                "maxDuration": 30
+              },
+              "emitters": [
+                {
+                  "kind": "quad",
+                  "emission": {
+                    "mode": "burst",
+                    "count": 1
+                  },
+                  "lifetime": 1
+                }
+              ]
+            },
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": true,
+                "status": "mapped",
+                "reason": "exact-v2-subset",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 1,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 0
+        },
+        "byReason": {},
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {}
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "particleLinger": 0.25
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:particleLinger",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": 0.25
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": 0.25
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:particleLinger": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:particleLinger": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "particleLinger": 0.25
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "document": {
+              "schemaVersion": 2,
+              "limits": {
+                "maxParticles": 10000,
+                "maxDuration": 30
+              },
+              "emitters": [
+                {
+                  "kind": "quad",
+                  "emission": {
+                    "mode": "burst",
+                    "count": 1
+                  },
+                  "lifetime": 1
+                }
+              ]
+            },
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "approximated",
+                "reason": "omitted-linger-tail",
+                "approximations": [
+                  {
+                    "field": "particleLinger",
+                    "value": 0.25,
+                    "handling": "omit-tail",
+                    "reason": "preview-omits-post-lifetime-residue"
+                  }
+                ],
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": 0.25
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": 0.25
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 0,
+          "approximated": 1
+        },
+        "byReason": {
+          "omitted-linger-tail": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {
+            "omitted-linger-tail": 1
+          },
+          "skipped": {},
+          "rejected": {}
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "bindWeight": {
+                "constantValue": 1
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:bindWeight",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "bindWeight": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "bindWeight": {
+                    "constantValue": 1
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:bindWeight": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:bindWeight": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "bindWeight": {
+                "constantValue": 1
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:bindWeight",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "bindWeight": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "bindWeight": {
+                    "constantValue": 1
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-source-field:bindWeight": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:bindWeight": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveArbitraryQuad"
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveArbitraryQuad"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveArbitraryQuad"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveArbitraryQuad"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveArbitraryQuad"
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveArbitraryQuad"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveArbitraryQuad"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveArbitraryQuad"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveArbitraryQuad": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveRay"
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveRay",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveRay"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveRay"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveRay"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveRay": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveRay": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveRay"
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveRay",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveRay"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveRay"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveRay"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveRay": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveRay": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveCameraTrail",
+                "mTrail": {
+                  "mMode": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveCameraTrail",
+                "inventoryGaps": [
+                  "trail"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveCameraTrail",
+                    "mTrail": {
+                      "mMode": 1
+                    }
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveCameraTrail",
+                    "mTrail": {
+                      "mMode": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveCameraTrail": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveCameraTrail": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveCameraTrail",
+                "mTrail": {
+                  "mMode": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveCameraTrail",
+                "inventoryGaps": [
+                  "trail"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveCameraTrail",
+                    "mTrail": {
+                      "mMode": 1
+                    }
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveCameraTrail",
+                    "mTrail": {
+                      "mMode": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveCameraTrail": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveCameraTrail": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveBeam"
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveBeam",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveBeam"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveBeam"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveBeam"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveBeam": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveBeam": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "primitive": {
+                "__type": "VfxPrimitiveBeam"
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-primitive-semantics:VfxPrimitiveBeam",
+                "inventoryGaps": [
+                  "primitive:VfxPrimitiveBeam"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveBeam"
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "primitive": {
+                    "__type": "VfxPrimitiveBeam"
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unverified-primitive-semantics:VfxPrimitiveBeam": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-primitive-semantics:VfxPrimitiveBeam": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "blendMode": 4
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-source-blend:4",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "blendMode": 4
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "blendMode": 4
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unverified-source-blend:4": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-source-blend:4": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "blendMode": 4
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unverified-source-blend:4",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "blendMode": 4
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "blendMode": 4
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unverified-source-blend:4": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unverified-source-blend:4": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "SpawnShape": {
+                "__type": "VfxShapeBox",
+                "Size": [
+                  2,
+                  4,
+                  6
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:SpawnShape",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "SpawnShape": {
+                    "__type": "VfxShapeBox",
+                    "Size": [
+                      2,
+                      4,
+                      6
+                    ]
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "SpawnShape": {
+                    "__type": "VfxShapeBox",
+                    "Size": [
+                      2,
+                      4,
+                      6
+                    ]
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:SpawnShape": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:SpawnShape": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "SpawnShape": {
+                "__type": "VfxShapeBox",
+                "Size": [
+                  2,
+                  4,
+                  6
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:SpawnShape",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "SpawnShape": {
+                    "__type": "VfxShapeBox",
+                    "Size": [
+                      2,
+                      4,
+                      6
+                    ]
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "SpawnShape": {
+                    "__type": "VfxShapeBox",
+                    "Size": [
+                      2,
+                      4,
+                      6
+                    ]
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-source-field:SpawnShape": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:SpawnShape": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "isUniformScale": 1,
+              "birthScale0": {
+                "constantValue": [
+                  3,
+                  0,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:isUniformScale",
+                "inventoryGaps": [
+                  "vector-size"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "isUniformScale": 1,
+                  "birthScale0": {
+                    "constantValue": [
+                      3,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "isUniformScale": 1,
+                  "birthScale0": {
+                    "constantValue": [
+                      3,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:isUniformScale": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:isUniformScale": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "isUniformScale": 1,
+              "birthScale0": {
+                "constantValue": [
+                  3,
+                  0,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:isUniformScale",
+                "inventoryGaps": [
+                  "vector-size"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "isUniformScale": 1,
+                  "birthScale0": {
+                    "constantValue": [
+                      3,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "isUniformScale": 1,
+                  "birthScale0": {
+                    "constantValue": [
+                      3,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-source-field:isUniformScale": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:isUniformScale": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "color": {
+                "constantValue": [
+                  0.5,
+                  0.5,
+                  0.5,
+                  1
+                ],
+                "dynamics": {
+                  "times": [
+                    0,
+                    1
+                  ],
+                  "values": [
+                    [
+                      1,
+                      1,
+                      1,
+                      1
+                    ],
+                    [
+                      0,
+                      0,
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "ambiguous-curve:constantValue+dynamics",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "color": {
+                    "constantValue": [
+                      0.5,
+                      0.5,
+                      0.5,
+                      1
+                    ],
+                    "dynamics": {
+                      "times": [
+                        0,
+                        1
+                      ],
+                      "values": [
+                        [
+                          1,
+                          1,
+                          1,
+                          1
+                        ],
+                        [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "color": {
+                    "constantValue": [
+                      0.5,
+                      0.5,
+                      0.5,
+                      1
+                    ],
+                    "dynamics": {
+                      "times": [
+                        0,
+                        1
+                      ],
+                      "values": [
+                        [
+                          1,
+                          1,
+                          1,
+                          1
+                        ],
+                        [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "ambiguous-curve:constantValue+dynamics": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "ambiguous-curve:constantValue+dynamics": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "color": {
+                "constantValue": [
+                  0.5,
+                  0.5,
+                  0.5,
+                  1
+                ],
+                "dynamics": {
+                  "times": [
+                    0,
+                    1
+                  ],
+                  "values": [
+                    [
+                      1,
+                      1,
+                      1,
+                      1
+                    ],
+                    [
+                      0,
+                      0,
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "ambiguous-curve:constantValue+dynamics",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "color": {
+                    "constantValue": [
+                      0.5,
+                      0.5,
+                      0.5,
+                      1
+                    ],
+                    "dynamics": {
+                      "times": [
+                        0,
+                        1
+                      ],
+                      "values": [
+                        [
+                          1,
+                          1,
+                          1,
+                          1
+                        ],
+                        [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "color": {
+                    "constantValue": [
+                      0.5,
+                      0.5,
+                      0.5,
+                      1
+                    ],
+                    "dynamics": {
+                      "times": [
+                        0,
+                        1
+                      ],
+                      "values": [
+                        [
+                          1,
+                          1,
+                          1,
+                          1
+                        ],
+                        [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "ambiguous-curve:constantValue+dynamics": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "ambiguous-curve:constantValue+dynamics": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "miscRenderFlags": 1,
+              "alphaRef": 0,
+              "depthBiasFactors": [
+                0,
+                -20
+              ],
+              "pass": 4
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:miscRenderFlags",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "miscRenderFlags": 1,
+                  "alphaRef": 0,
+                  "depthBiasFactors": [
+                    0,
+                    -20
+                  ],
+                  "pass": 4
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "miscRenderFlags": 1,
+                  "alphaRef": 0,
+                  "depthBiasFactors": [
+                    0,
+                    -20
+                  ],
+                  "pass": 4
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:miscRenderFlags": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:miscRenderFlags": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "miscRenderFlags": 1,
+              "alphaRef": 0,
+              "depthBiasFactors": [
+                0,
+                -20
+              ],
+              "pass": 4
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:miscRenderFlags",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "miscRenderFlags": 1,
+                  "alphaRef": 0,
+                  "depthBiasFactors": [
+                    0,
+                    -20
+                  ],
+                  "pass": 4
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "miscRenderFlags": 1,
+                  "alphaRef": 0,
+                  "depthBiasFactors": [
+                    0,
+                    -20
+                  ],
+                  "pass": 4
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-source-field:miscRenderFlags": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:miscRenderFlags": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "childParticleSetDefinition": {}
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:childParticleSetDefinition",
+                "inventoryGaps": [
+                  "child-system"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "childParticleSetDefinition": {}
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "childParticleSetDefinition": {}
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:childParticleSetDefinition": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:childParticleSetDefinition": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "childParticleSetDefinition": {}
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:childParticleSetDefinition",
+                "inventoryGaps": [
+                  "child-system"
+                ],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "childParticleSetDefinition": {}
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "childParticleSetDefinition": {}
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-source-field:childParticleSetDefinition": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:childParticleSetDefinition": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "particleLinger": null
+            }
+          ]
+        }
+      },
+      "options": {},
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-source-field:particleLinger",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": null
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": null
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1
+        },
+        "byReason": {
+          "unmapped-source-field:particleLinger": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-source-field:particleLinger": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              },
+              "particleLinger": null
+            }
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "invalid-source-linger:particleLinger",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": null
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  },
+                  "particleLinger": null
+                }
+              ]
+            },
+            "systemGaps": []
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "invalid-source-linger:particleLinger": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "invalid-source-linger:particleLinger": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              }
+            }
+          ],
+          "flags": 2244
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-system-field:flags",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              ],
+              "flags": 2244
+            },
+            "systemGaps": [
+              "flags"
+            ]
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-system-field:flags": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-system-field:flags": 1
+          }
+        },
+        "emitters": 1
+      }
+    },
+    {
+      "source": {
+        "toy": {
+          "__type": "VfxSystemDefinitionData",
+          "complexEmitterDefinitionData": [
+            {
+              "isSingleParticle": true,
+              "particleLifetime": {
+                "constantValue": 1
+              }
+            }
+          ],
+          "transform": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              2,
+              3,
+              4,
+              1
+            ]
+          ]
+        }
+      },
+      "options": {
+        "approximateLinger": true
+      },
+      "expected": {
+        "systems": [
+          {
+            "sourcePath": "toy",
+            "reason": "no-writable-emitters",
+            "report": [
+              {
+                "sourcePath": "toy:complexEmitterDefinitionData:0",
+                "mapped": false,
+                "status": "rejected",
+                "reason": "unmapped-system-field:transform",
+                "inventoryGaps": [],
+                "originalFields": {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              }
+            ],
+            "originalFields": {
+              "__type": "VfxSystemDefinitionData",
+              "complexEmitterDefinitionData": [
+                {
+                  "isSingleParticle": true,
+                  "particleLifetime": {
+                    "constantValue": 1
+                  }
+                }
+              ],
+              "transform": [
+                [
+                  1,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  1,
+                  0
+                ],
+                [
+                  2,
+                  3,
+                  4,
+                  1
+                ]
+              ]
+            },
+            "systemGaps": [
+              "transform"
+            ]
+          }
+        ],
+        "counts": {
+          "mapped": 0,
+          "skipped": 0,
+          "rejected": 1,
+          "approximated": 0
+        },
+        "byReason": {
+          "unmapped-system-field:transform": 1
+        },
+        "reasonsByStatus": {
+          "approximated": {},
+          "skipped": {},
+          "rejected": {
+            "unmapped-system-field:transform": 1
+          }
+        },
+        "emitters": 1
+      }
+    }
+  ]
+}
