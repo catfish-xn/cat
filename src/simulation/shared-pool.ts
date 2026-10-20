@@ -12,7 +12,7 @@ import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
 import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, selectChoice,
-  forfeitPendingChoice, claimOrDiscardLoot } from './match';
+  forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
 import type { MatchEvent, MatchState, ShopSlot } from './match-types';
@@ -175,6 +175,7 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
+      case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex);
       case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
       case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);

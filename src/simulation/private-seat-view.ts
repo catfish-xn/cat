@@ -8,6 +8,7 @@ import { boardView, cellView, pick } from './view-fields';
 import { getUnitForm } from './seat-mechanics/forms';
 import { seatMechanicsView } from './seat-mechanics/state';
 import type { MechanicChoicePayload } from './seat-mechanics/types';
+import { augmentOptionViews } from './augment-offers';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
@@ -99,6 +100,9 @@ export function toPrivateSeatView(state: MatchState) {
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
       ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount', 'augmentTier', 'rerollsRemaining']),
       offers: [...state.pendingChoice.offers],
+      ...(state.pendingChoice.kind === 'augment' ? {
+        rerolledSlots: [...state.pendingChoice.rerolledSlots!], augmentOptions: augmentOptionViews(state),
+      } : {}),
       ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
