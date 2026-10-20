@@ -42,7 +42,10 @@ export interface BoardFeedListener {
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
   unitAt?(client: { x: number; y: number }): string | undefined;
+  /** CSS-pixel box of the drawn piece as the layer projects it; undefined when the piece is not drawn or off screen. */
+  screenBox?(id: string): BoardScreenBox | undefined;
 }
+export interface BoardScreenBox { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }
 
 let listener: BoardFeedListener | null = null, controls: BoardControls | null = null;
 
@@ -50,6 +53,10 @@ export const boardFeedActive = (): boolean => listener !== null;
 /** null when no layer answers (2D picks itself); otherwise the layer's piece under the point, if any. */
 export function boardFeedUnitAt(client: { x: number; y: number }): string | undefined | null {
   return listener?.unitAt ? listener.unitAt(client) : null;
+}
+/** null when no layer answers (2D places its own cards); otherwise where the layer drew the piece, if anywhere. */
+export function boardFeedScreenBox(id: string): BoardScreenBox | undefined | null {
+  return listener?.screenBox ? listener.screenBox(id) : null;
 }
 export function publishBoardFrame(build: () => BoardFrame): void { if (listener) listener.frame(build()); }
 export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]): void {

@@ -8,7 +8,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
+import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -27,7 +27,7 @@ import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../st
 import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
-import { unitHoverCard } from '../presentation/hover-card';
+import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
@@ -219,7 +219,7 @@ export class BoardScene extends Phaser.Scene {
     this.installDragHandlers();
     this.installKeyboardHandlers();
     const withdrawControls = provideBoardControls(this.boardControls());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.gesture3d = null; });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
     this.sync();
     this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
@@ -875,24 +875,48 @@ export class BoardScene extends Phaser.Scene {
       if (this.unitCardOpen) { this.unitCardOpen = false; unitHoverCard().hide(); }
       return;
     }
-    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width, half = 29 * scale;
-    const x = canvas.left + token.x * scale, y = canvas.top + token.y * scale;
+    const box = this.tokenScreenBox(id!, token);
+    if (!box) { if (this.unitCardOpen) { this.unitCardOpen = false; unitHoverCard().hide(); } return; }
     // G5 (online): the ranking's numbers of this unit; a battle still being played back is left out until it ends.
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
-    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}`,
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}`,
       () => unitCardBody(unit.definitionId, unit.starLevel, battle)!);
     this.unitCardOpen = true;
   }
   private unitCardOpen = false;
+  /**
+   * Where the hovered piece is on screen (CSS pixels): the 2D token's box, or under ?render=3d the box the 3D layer
+   * projects for its model (undefined when that piece is not drawn), since the 3D canvas covers this one.
+   */
+  private tokenScreenBox(id: string, token: Phaser.GameObjects.Container): HoverBox | undefined {
+    const projected = boardFeedScreenBox(id);
+    if (projected !== null) return projected;
+    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width, half = 29 * scale;
+    const x = canvas.left + token.x * scale, y = canvas.top + token.y * scale;
+    return { left: x - half, top: y - half, right: x + half, bottom: y + half };
+  }
+  /** ?render=3d only: the loadout tip as a DOM label above the projected model; the Phaser tip sits under the 3D layer. */
+  private loadoutTip3d: HTMLElement | null = null;
+  private placeLoadoutTip3d(text: string | null, box: HoverBox | undefined) {
+    if (!text || !box) { if (this.loadoutTip3d) this.loadoutTip3d.hidden = true; return; }
+    const tip = this.loadoutTip3d ??= Object.assign(document.body.appendChild(document.createElement('div')), { className: 'loadout-tip-3d' });
+    if (tip.textContent !== text) tip.textContent = text;
+    tip.hidden = false;
+    const width = tip.offsetWidth, height = tip.offsetHeight;
+    const left = Math.max(8, Math.min(window.innerWidth - width - 8, (box.left + box.right) / 2 - width / 2));
+    const top = Math.max(8, Math.min(window.innerHeight - height - 8, box.top - height - 6));
+    tip.style.left = `${left}px`; tip.style.top = `${top}px`;
+  }
   /** C18: hovering a fighting unit names the battle's loadout and the next one, when an equip changed it mid-battle. */
   private syncLoadoutTip() {
     const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
     const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
     const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
-    if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); return; }
+    if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); this.placeLoadoutTip3d(null, undefined); return; }
     const text = battleLoadoutText(loadout, definitionId => itemDisplayName(definitionId));
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
+    this.placeLoadoutTip3d(boardFeedActive() ? text : null, boardFeedActive() ? this.tokenScreenBox(id!, token) : undefined);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
