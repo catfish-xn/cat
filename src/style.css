@@ -619,6 +619,16 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
 body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 .carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
+/* ?render=3d: the 3D layer draws the carousel; the panel shrinks to a corner card with its countdown and release order. */
+.carousel-panel[data-ring-3d] { left: auto; right: 8px; transform: none; width: min(300px, calc(100% - 16px)); padding: 8px 10px; background: rgba(14, 24, 33, .86); }
+.carousel-panel[data-ring-3d] .carousel-head { flex-wrap: wrap; }
+.carousel-panel[data-ring-3d] .carousel-status { order: 3; flex-basis: 100%; }
+.carousel-panel[data-ring-3d] .carousel-body { grid-template-columns: 64px minmax(0, 1fr); }
+.carousel-panel[data-ring-3d] .carousel-ring { --size: 64px; width: 64px; height: 64px; background: none; animation: none; }
+.carousel-panel[data-ring-3d] .carousel-ring .carousel-slot { display: none; }
+.carousel-panel[data-ring-3d] .carousel-centre { width: 60px; height: 60px; }
+.carousel-panel[data-ring-3d] .carousel-timer { font-size: 24px; }
+.carousel-panel[data-ring-3d] .carousel-order { max-height: 200px; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
 .carousel-holding { position: absolute; z-index: 30; right: 2px; bottom: calc(var(--online-dock-h, 0px) + var(--online-gap, 8px) + 10px); width: 80px; display: grid; gap: 4px;
