@@ -24,9 +24,9 @@ env:
   # Wall-clock budgets (timing tests, M6 frozen performance gates, M7 first interactive) are
   # recorded but do not fail pull requests; .github/workflows/wallclock.yml enforces them nightly
   # and after every merge into multiplayer (docs/WORKFLOW_RULES_2026-10-19.md §4). Thresholds unchanged.
-  # Pushes to multiplayer and release/* are new full runs; wallclock.yml already enforces their
-  # budgets after each multiplayer merge, so they report here like pull requests do.
-  CI_WALLCLOCK_GATES: ${{ (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')) && 'report' || 'enforce' }}
+  # Pull requests record wall-clock budgets (wallclock.yml enforces them nightly and after each
+  # multiplayer merge); pull requests into release/* and every push or dispatch enforce them.
+  CI_WALLCLOCK_GATES: ${{ (github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) && 'report' || 'enforce' }}
   WALLCLOCK_REPORT_DIR: artifacts/wallclock
 permissions:
   contents: read
@@ -471,3 +471,25 @@ jobs:
           esac
           echo "$NEEDS" | jq -e --argjson optional "$optional" \
             'to_entries | all(.value.result == "success" or (.value.result == "skipped" and (.key as $k | $optional | any(.[]; . == $k))))' > /dev/null
+  # A red full run after a merge into multiplayer or release/* comments on the merged pull
+  # request, so the failure is seen even though nothing is waiting on this run.
+  post-merge-alert:
+    if: ${{ always() && github.event_name == 'push' && github.ref != 'refs/heads/main' && needs.ci-required.result != 'success' }}
+    needs: ci-required
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Comment on the merged pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="Full CI after this merge into \`${GITHUB_REF_NAME}\` is red (${GITHUB_SHA::7}): ${RUN_URL}"
+          prs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[].number')
+          if [ -z "$prs" ]; then echo "::error::$body (no pull request found for this commit)"; exit 1; fi
+          for pr in $prs; do gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body "$body"; done
+          echo "::error::$body"
+          exit 1
