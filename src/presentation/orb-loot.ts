@@ -5,6 +5,7 @@
  * is decided here; names and descriptions come from CONSUMABLE_DEFINITIONS.
  */
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+import { EPIC_REWARD_NAMES } from '../simulation/epic-forges';
 import type { ConsumableDefinitionId, ConsumableFailure, ConsumableInstance, ConsumablePreview } from '../simulation/consumable-types';
 import type { LootView, RevealedDropView, RevealedOrbView } from '../simulation/m8/ui-contracts';
 import type { OrbTier } from '../simulation/orb-layout';
@@ -60,7 +61,7 @@ function payloadLabel(payload: RevealedDropView['payload']): { icon: string; tex
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: toolMark(payload.definitionId), text: `${consumableName(payload.definitionId)}${count}` };
-  if (payload.kind === 'forge') return { icon: '', text: itemDisplayName(payload.definitionId) };
+  if (payload.kind === 'forge') return { icon: '', text: EPIC_REWARD_NAMES[payload.definitionId as keyof typeof EPIC_REWARD_NAMES] ?? itemDisplayName(payload.definitionId) };
   if (payload.kind === 'item') return { icon: itemMarkHtml(payload.definitionId, 22), text: `${itemDisplayName(payload.definitionId)}${count}` };
   return { icon: heroEmblemSvg(payload.definitionId, 22), text: `${displayUnitName(payload.definitionId)}${count}` };
 }

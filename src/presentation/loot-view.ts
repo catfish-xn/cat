@@ -7,6 +7,7 @@
  * (approved addendum 2026-10-10); the candidates still come from PendingChoice.offers.
  */
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+import { EPIC_REWARD_NAMES } from '../simulation/epic-forges';
 import type { LootView, RevealedDropView } from '../simulation/m8/ui-contracts';
 import type { PendingChoice } from '../simulation/strategy-types';
 import { displayUnitName } from '../rendering/display-names';
@@ -47,7 +48,7 @@ export function continueBlockText(reason: NonNullable<LootView['reason']>): stri
 function payloadLabel(payload: Payload): { icon: string; text: string } {
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   if (payload.kind === 'consumable') return { icon: '', text: CONSUMABLE_DEFINITIONS[payload.definitionId].name };
-  if (payload.kind === 'forge') return { icon: '', text: itemName(payload.definitionId) };
+  if (payload.kind === 'forge') return { icon: '', text: EPIC_REWARD_NAMES[payload.definitionId as keyof typeof EPIC_REWARD_NAMES] ?? itemName(payload.definitionId) };
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   return payload.kind === 'item'
     ? { icon: itemMarkHtml(payload.definitionId, 26), text: `${itemName(payload.definitionId)}${count}` }
