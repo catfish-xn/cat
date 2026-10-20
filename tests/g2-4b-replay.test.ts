@@ -5,6 +5,9 @@ import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {toCombatReplay,applyCombatReplayTick,toCombatViewState} from '../src/simulation/combat-replay-view';
 import {stepCombat} from '../src/simulation/combat';
 import type {MatchState} from '../src/simulation/match-types';
+import { vi } from 'vitest';
+// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
+vi.setConfig({ testTimeout: 20_000 });
 
 function seat(item?:string):MatchState {
   const base=createMatch(42),round=getCatalogRoundById('2-1');
