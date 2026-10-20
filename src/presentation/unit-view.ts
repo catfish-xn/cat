@@ -13,6 +13,7 @@ import { THEME, costColor, toNumber } from './theme';
 import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-assets';
 import { statusBadges } from './combat-status';
 import { reducedMotion } from './preferences';
+import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -59,6 +60,8 @@ export class UnitView {
   equipped: readonly string[] = [];
   /** Item definition ids worn for the next battle only (C18 tag; debug/acceptance read). */
   pendingEquipped: readonly string[] = [];
+  /** Reserved slots and temporary items drawn after the worn pips (debug/acceptance read). */
+  extras: GearExtras = NO_GEAR_EXTRAS;
   ring: RingState = 'normal';
 
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
@@ -101,8 +104,8 @@ export class UnitView {
    * Preparation identity: hero, star level, cost and equipped item pips. `pending` (C18): items worn now that enter the
    * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
    */
-  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = []): void {
-    const key = `${unit.definitionId}|${unit.starLevel}|${equipped.join(',')}|${pending.join(',')}|${unit.team}`;
+  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS): void {
+    const key = `${unit.definitionId}|${unit.starLevel}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     this.identity = getHeroIdentity(unit.definitionId);
@@ -122,32 +125,41 @@ export class UnitView {
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
-    this.equipped = [...equipped]; this.drawItems();
+    this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost });
     this.applyRing(unit.team);
   }
 
-  /** Icon row of the worn items; a framed tile stands in until (or unless) the bundled icon is loaded. */
+  /**
+   * Icon row of the worn items, then slots a 3-slot item reserves (empty dim tiles) and temporary items (teal frame);
+   * a framed tile stands in until (or unless) the bundled icon is loaded.
+   */
   private drawItems(): void {
     this.items.clear();
-    const step = ITEM_ICON + 2, left = -((this.equipped.length - 1) * step) / 2;
-    this.equipped.forEach((definitionId, index) => {
-      const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
-      this.items.fillStyle(completed ? 0x6b5432 : 0x3a5266).lineStyle(1.5, completed ? toNumber(C.gold) : 0x9fb4c2)
+    const tiles: { definitionId: string | null; temporary: boolean }[] = [...this.equipped.map(definitionId => ({ definitionId, temporary: false })),
+      ...Array.from({ length: this.extras.reserved }, () => ({ definitionId: null, temporary: false })),
+      ...this.extras.temporary.map(definitionId => ({ definitionId, temporary: true }))];
+    const step = ITEM_ICON + 2, left = -((tiles.length - 1) * step) / 2;
+    let icons = 0;
+    tiles.forEach(({ definitionId, temporary }, index) => {
+      const completed = Boolean(definitionId && ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
+      this.items.fillStyle(definitionId ? completed ? 0x6b5432 : 0x3a5266 : 0x16222c, definitionId ? 1 : 0.85)
+        .lineStyle(1.5, temporary ? 0x68ddd0 : !definitionId ? 0x5c6d79 : completed ? toNumber(C.gold) : 0x9fb4c2)
         .fillRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2).strokeRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2);
-      const key = itemTextureKey(definitionId);
+      if (!definitionId) { this.items.lineBetween(x - half + 2, ITEM_Y + half - 2, x + half - 2, ITEM_Y - half + 2); return; }
+      const slot = icons++, key = itemTextureKey(definitionId);
       if (!this.scene.textures.exists(key)) {
-        this.itemIcons[index]?.setVisible(false);
+        this.itemIcons[slot]?.setVisible(false);
         requestItemTexture(this.scene, definitionId, () => { if (this.token.active) this.drawItems(); });
         return;
       }
-      let icon = this.itemIcons[index];
-      if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[index] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
-      icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setVisible(true);
+      let icon = this.itemIcons[slot];
+      if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[slot] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
+      icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setAlpha(temporary ? 0.8 : 1).setVisible(true);
     });
-    for (let index = this.equipped.length; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
+    for (let index = icons; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
   }
 
   /** Attack: a short lunge toward the target (board units, presentation only). */

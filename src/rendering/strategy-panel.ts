@@ -193,7 +193,7 @@ export class StrategyPanel {
     private readonly itemDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     if (this.shopDock) this.shopDock.classList.add('shop-dock');
-    if (this.itemDock) { this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
+    if (this.itemDock) { this.tab = 'traits'; this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
@@ -538,15 +538,18 @@ export class StrategyPanel {
     // Online keeps an empty slot so the panel can appear once my battle has played out (updateCombat).
     this.lootSection = this.lootPanel(state) ?? (isOnline() ? Object.assign(element('section'), { hidden: true }) : null);
     if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? (this.itemDock ? '把装备栏的物品拖到棋子上装备；两件组件在棋子身上合成。' : '点物品选择；两件组件可合成；选物品后点空装备槽。') : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     // Online (docked) drops the battle-record tab: rounds move on by themselves and there is nothing to look back at.
     const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const;
-    if (this.itemDock && this.tab === 'events') this.tab = 'items';
+    if (this.itemDock && this.tab === 'events') this.tab = 'traits';
     for (const [tab, label] of tabList.filter(([tab]) => !this.itemDock || tab !== 'events')) {
       const button = this.button(`panel:${tab}`, label, () => { this.actions.cancelGesture(); this.tab = tab; this.render(); });
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
+      // Docked (online, TFT): items are dragged from the board's item bench onto a piece, so the click-to-equip tab is
+      // hidden; its markup stays until the scripted checks that drive it move to drags.
+      if (this.itemDock && tab === 'items') button.hidden = true;
     }
     this.root.append(tabs);
     this.combatText = element('section', '', 'combat-sources');
@@ -878,7 +881,7 @@ export class StrategyPanel {
     const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验${generic ? '：收起弹窗即可操作' : '（D 刷新、F 购买经验）'}。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
@@ -888,6 +891,7 @@ export class StrategyPanel {
       const targets = element('div', '', 'choice-targets');
       for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
+      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
       if (choice.kind === 'anomaly') {
         const target = state.preparation.units.find(unit => unit.id === choice.targetId);
@@ -912,13 +916,7 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
-      if (generic) {
-        // Extras slot: skip only when the choice declares it (disabled until a command is wired); fold always.
-        const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-        if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
-        row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
-        card.append(row);
-      }
+      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
       const rerollAugment = this.actions.rerollAugment;
       // Rules expose the remaining free rerolls on the offer; the button only forwards, the rules check count and generation again.
       if (choice.kind === 'augment' && rerollAugment && choice.rerollsRemaining !== undefined) {
@@ -947,6 +945,14 @@ export class StrategyPanel {
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
+  /** Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments and anomaly targets can be hidden to view the board. */
+  private choiceExtras(choice: MatchState['pendingChoice'] & object, title: string, generic: boolean, extras: ReturnType<typeof readChoiceExtras>): HTMLElement {
+    const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
+    if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+    row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
+    return row;
+  }
+
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
