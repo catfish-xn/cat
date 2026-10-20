@@ -58,7 +58,8 @@ function burst(host: MergeFxHost, merge: MergeFx) {
     scene.tweens.add({ targets: ring, scale: 2.2, duration: RING_MS, ease: 'Cubic.easeOut' });
     scene.tweens.add({ targets: glow, scale: 1.5, duration: RING_MS * 0.7, ease: 'Cubic.easeOut' });
     const survivor = merge.survivor;
-    if (survivor?.active) scene.tweens.add({ targets: survivor, scale: 1.18, duration: 110, yoyo: true, ease: 'Quad.easeOut',
+    // A token already lifted by a drag keeps its drag scale.
+    if (survivor?.active && survivor.scale === 1) scene.tweens.add({ targets: survivor, scale: 1.18, duration: 110, yoyo: true, ease: 'Quad.easeOut',
       onComplete: () => { if (survivor.active) survivor.setScale(1); } });
   }
 }

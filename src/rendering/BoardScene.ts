@@ -485,7 +485,8 @@ export class BoardScene extends Phaser.Scene {
       if (!gesture) return;
       token.setData('gesture', gesture);
       this.draggingId = token.getData('unitId'); this.selectedId = this.draggingId;
-      token.setDepth(10).setScale(1.08); this.syncSelection();
+      // A merge pop still running on this token would fight the lift scale (I6).
+      this.tweens.killTweensOf(token); token.setDepth(10).setScale(1.08); this.syncSelection();
       if (!this.summonOf(this.draggingId)) { this.watchSellZone(unit); this.showDropZones(unit); }
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
