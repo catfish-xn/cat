@@ -31,7 +31,7 @@ function revealedLootView(state: MatchState) {
       switch (drop.status) {
         case 'forfeited': return {...identity,status:drop.status,receiptId:null,allowedActions:[],reason:drop.reason};
         case 'granted': return { ...identity, status: drop.status, receiptId: drop.receiptId, allowedActions: [] };
-        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' };
+        case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: drop.reason };
         case 'pending-capacity': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'bench-full' };
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
@@ -69,6 +69,8 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
+      orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),

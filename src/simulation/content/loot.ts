@@ -25,4 +25,4 @@ export const LOOT_FREEZE_ALGORITHM = freezeContent({
   seedXor:0xdeadbeef, sampling:'uint32-rejection-modulo', order:'sourceUnitId-codepoint/slotOrdinal-numeric',
   choiceOrder:'dropId-codepoint', choices:'supply-only/no-pve-fallback',
 });
-export const LOOT_RUNTIME_REVISION = 'm8-b8-live-loot-basis-provenance-v1';
+export const LOOT_RUNTIME_REVISION = 'multiplayer-orb-claim-v2';

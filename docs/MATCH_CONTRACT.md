@@ -1,5 +1,13 @@
 # M5 Match contract v5
 
+## 联机法球领取：v15（用户批准 2026-10-20 02:20）
+
+只在 state.multiplayer 存在时替换自动发奖/满席托管。`claimOrb(state:MatchState,orbId:string,expectedRound:number,unitLootPolicy?:UnitLootPolicy):MultiplayerCommandResult`；共享席位经 `runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId})`，客户端不提供 policy。允许 preparation/settlement/choice；combat 与冻结战斗阵容阶段暂拒 wrong-phase，判断集中在 ORB_CLAIM_PHASES/planOrbClaim。expectedRound 是当前操作轮，法球来源 roundId 可为历史轮。
+
+失败：multiplayer-required / seat-eliminated / stale-round / wrong-phase / unknown-orb / already-claimed / shared-pool-required / invalid-loot；包装另保留原卡池校验失败。失败原 state/pool 引用、无事件、资源、RNG 变化。成功按 entryOrdinal 一次领取完整法球；英雄完整星级走 planUnitAcquisition，满席按 getUnitSellPrice 自动出售（2 费 1/2/3 星 +2/+5/+17、1 费 2 星 +3），卡池份额视为未取出。有货且入库才扣 1/3/9 份；不足完整份数暂按整条一次费用折金，优先于容量出售，不叠加。
+
+P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolution=orb，含 orbId/starLevel、unitId=null、gold=0；最终领取记 LootReceipt resolution=held/gold/capacity-sold/forfeited、gold、claimedRoundId，原 payload 保留星级。私有 LootView/PrivateSeatView 加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic'}[]`，领取回执位于 claimReceipts / orbClaimReceipts；公共只给 count/tiers。claimLoot 截止不丢弃法球，nextRound 不阻塞；淘汰/终局作废一次，断线保留。bot 准备入口函数 claimBotPreparationOrbs 按 orbId 代码点顺序领取。单机、冻结表、售价公式及 5-7/6-7 不变。完整恢复边界、服务器协议 4 接线与暂定值见 [实现交接](LOOT_ORB_CLAIM_V15.md)。
+
 ## 强化等级与刷新：v14 用户约定（2026-10-19）
 
 本节覆盖历史“精选混合池”和强化不可刷新描述。来源为用户 2026-10-19 08:15 原话：“海克斯每次提供的必须是同一等级比如所有人都是银色，所有人都是金色或者彩色，必须等级一致，海克斯默认可以刷新一次。”不声称这是已核实的原版 14.24b 同轮或锁级规则。

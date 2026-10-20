@@ -16,6 +16,7 @@ import type { MatchEvent, MatchState } from './match-types';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import type { UnitUpgradedEvent } from './unit-types';
 import { planUnitAcquisition } from './unit-acquisition';
+import { getUnitSellPrice } from './unit-stats';
 
 const counterKey = (roundId: string) => JSON.stringify([LOOT_POLICY_VERSION, roundId, 'components-granted']);
 const currentPlan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
@@ -41,6 +42,7 @@ export function prepareMatchLoot(seed: number, round: number, previous?: MatchLo
     direct: [...previous?.direct ?? [], ...added.flatMap(value => value.encounterPlan.drops.map(drop => ({ dropId: drop.dropId, status: 'planned' as const, receiptId: null })))],
     choiceEligibility: [...previous?.choiceEligibility ?? [], ...added.flatMap(value => value.choices.map(choice => ({ dropId: choice.dropId, status: 'planned' as const })))],
     choiceResolutions: previous?.choiceResolutions ?? [], earnedEvidence: previous?.earnedEvidence ?? [], receipts: previous?.receipts ?? [],
+    ...(previous?.rewardOrbs ? { rewardOrbs: previous.rewardOrbs } : {}),
     guaranteeCounters: previous?.guaranteeCounters ?? Object.fromEntries(ROUND_CATALOG.filter(value => value.kind === 'pve').map(value => [counterKey(value.roundId), 0])),
   };
 }
@@ -83,12 +85,12 @@ export function revealMatchLoot(state: MatchState, combat: CombatState): { state
   return { state: events.length ? withLoot(state, { ...loot, direct, choiceEligibility, earnedEvidence }) : state, events };
 }
 
-function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
+export function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
   const loot = state.m8.loot;
   if (loot.receipts.some(value => value.receiptId === receipt.receiptId || value.dropId === receipt.dropId)) throw new RangeError('Duplicate loot receipt');
   let guaranteeCounters = loot.guaranteeCounters;
-  if (receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]) {
-    const key = counterKey(state.roundDefinitionId);
+  if (receipt.resolution !== 'forfeited' && receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]) {
+    const key = counterKey(receipt.claimedRoundId ? JSON.parse(JSON.parse(receipt.dropId)[0])[1] : state.roundDefinitionId);
     const count = guaranteeCounters[key] + receipt.payload.quantity * (ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1);
     if (!Number.isSafeInteger(count) || count < 1) throw new RangeError('Invalid loot counter');
     guaranteeCounters = { ...guaranteeCounters, [key]: count };
@@ -97,30 +99,43 @@ function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
 }
 
 /** Transaction-local dependency; never stored in MatchState or used by offline callers. */
-export type UnitLootPolicy = (drop: FrozenDirectDrop) => LootPayload;
+export type UnitLootPolicy = (drop: FrozenDirectDrop, capacitySold?: boolean) => LootPayload & { readonly resolution?: 'gold' | 'capacity-sold' };
 
 /** No phase, economy or pending-delta changes. Match commits returned upgrades in its final transaction. */
-export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLootPolicy?: UnitLootPolicy): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
+export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLootPolicy?: UnitLootPolicy, claimedDrops?: readonly FrozenDirectDrop[]): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
   let state = initial;
   const events: MatchEvent[] = [], upgradeEvents: UnitUpgradedEvent[] = [];
-  for (const drop of [...currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
+  if (state.multiplayer && !claimedDrops) return {state, events, upgradeEvents};
+  for (const drop of [...claimedDrops ?? currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
     const progress = state.m8.loot.direct.find(value => value.dropId === drop.dropId);
     if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity') continue;
-    if (state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
-    const payload = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop) : drop.payload, receiptId = lootReceiptId(drop.dropId);
+    if (!claimedDrops && state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
+    const receiptId = lootReceiptId(drop.dropId);
+    const purchase = drop.payload.kind === 'unit' ? planUnitAcquisition(state, drop.payload.definitionId,
+      {kind:'loot',receiptId}, state.resourceProvenance.entries.length, false, drop.payload.starLevel ?? 1) : null;
+    const decision: ReturnType<UnitLootPolicy> = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop, !!state.multiplayer && !purchase?.ok) : drop.payload;
+    const payload: LootPayload = decision.kind === 'gold' ? {kind:'gold',quantity:decision.quantity} : decision;
+    const capacityGold = state.multiplayer && drop.payload.kind === 'unit' && !purchase?.ok && payload.kind === 'unit'
+      ? getUnitSellPrice({id:'orb',team:'player',location:{kind:'bench',slot:0},definitionId:payload.definitionId,starLevel:payload.starLevel??1}) : 0;
+    const resolution = drop.payload.kind === 'unit' ? (decision.resolution ?? (capacityGold ? 'capacity-sold' : 'held')) : 'held';
     let grantedItemIds: readonly string[] = [], grantedUnitIds: readonly string[] = [], grantedConsumableIds:readonly string[]|undefined;
     if (payload.kind === 'unit') {
-      const purchase = planUnitAcquisition(state, payload.definitionId, { kind: 'loot', receiptId }, state.resourceProvenance.entries.length);
-      if (!purchase.ok) {
+      if (capacityGold) {
+        if(!Number.isSafeInteger(state.gold+capacityGold))throw new RangeError('Loot gold overflow');
+        state = {...state,gold:state.gold+capacityGold};
+      }
+      else if (!purchase?.ok) {
         const status = terminal ? 'retained-terminal' : 'pending-capacity';
         if (progress.status !== status) state = withLoot(state, { ...state.m8.loot,
           direct: state.m8.loot.direct.map(value => value.dropId === drop.dropId ? { dropId: value.dropId, status, receiptId: null } : value) });
         continue;
       }
+      else {
       state = { ...state, preparation: purchase.preparation, nextUnitSerial: purchase.nextUnitSerial,
         items: purchase.items, anomalyBinding: purchase.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, purchase.upgradeEvents),
         resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, purchase.facts) };
       upgradeEvents.push(...purchase.upgradeEvents); events.push(...purchase.events); grantedUnitIds = [purchase.unitId];
+      }
     } else if (payload.kind === 'item') {
       const grant = grantItem(state, payload.definitionId, receiptId); state = grant.state; grantedItemIds = grant.grantedItemIds;
     } else if(payload.kind==='consumable') {
@@ -134,7 +149,9 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
       if (!Number.isSafeInteger(gold)) throw new RangeError('Loot gold overflow');
       state = { ...state, gold };
     }
-    const receipt = { receiptId, dropId: drop.dropId, payload, grantedItemIds, grantedUnitIds, ...(grantedConsumableIds?{grantedConsumableIds}:{}) };
+    const receipt: LootReceipt = { receiptId, dropId: drop.dropId, payload: state.multiplayer ? drop.payload : payload, grantedItemIds, grantedUnitIds,
+      ...(state.multiplayer ? {resolution:resolution!,gold:capacityGold || (payload.kind==='gold'?payload.quantity:0),claimedRoundId:state.roundDefinitionId} : {}),
+      ...(grantedConsumableIds?{grantedConsumableIds}:{}) };
     state = commitReceipt(state, receipt);
     state = withLoot(state, { ...state.m8.loot, direct: state.m8.loot.direct.map(value => value.dropId === drop.dropId
       ? { dropId: value.dropId, status: 'granted', receiptId } : value) });
@@ -154,7 +171,7 @@ export function unresolvedLootChoices(state: MatchState): readonly LootChoiceDes
   return orderedUnresolvedLootChoices(currentPlan(state)?.choices ?? [], state.m8.loot.choiceEligibility, state.m8.loot.choiceResolutions);
 }
 export function hasPendingLootCapacity(state: MatchState): boolean {
-  return state.m8.loot.direct.some(value => value.status === 'pending-capacity');
+  return !state.multiplayer && state.m8.loot.direct.some(value => value.status === 'pending-capacity');
 }
 export function grantLootChoice(state: MatchState, descriptor: LootChoiceDescriptor, definitionId: string,
   method: 'player-choice' | 'terminal-fallback'): { state: MatchState; events: MatchEvent[] } {

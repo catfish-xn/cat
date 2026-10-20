@@ -1,4 +1,5 @@
 import type {TraitProjectionContext} from './traits/effective-membership';
+import { forfeitUnclaimedOrbs } from './orb-claim';
 import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
@@ -15,7 +16,7 @@ import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResul
 
 export type MultiplayerFailure = MatchFailure | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
   | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled' | 'seat-eliminated'
-  | 'no-pending-choice' | 'invalid-loot' | 'shared-pool-required' | 'invalid-round';
+  | 'no-pending-choice' | 'invalid-loot' | 'shared-pool-required' | 'invalid-round' | 'already-claimed' | 'unknown-orb';
 export type MultiplayerCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MultiplayerFailure };
 
@@ -143,8 +144,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
-    const opened=openG23Choice(merged.state);
-    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...opened.events];
+    const forfeited=hpAfter===0?forfeitUnclaimedOrbs(merged.state):{state:merged.state,events:[]};
+    const opened=openG23Choice(forfeited.state);
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

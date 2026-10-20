@@ -733,11 +733,11 @@ B5 初始化流程：先 createSharedPool；对八份未发布的 `createMatch(s
 
 ### 12.4 获取来源、奖励与淘汰（SR-B1-05）
 
-来源键分别为 opening(seatId)、shop(seatId,generation,slot)、loot(seatId,receiptId)，使用 JSON 元组编码避免拼接碰撞。持有账本按**实际** resourceProvenance 的 unit-acquired/unit-upgraded/unit-sold 事实折叠；升星合并被消费单位的来源数组，不从当前 UI 数量倒推。二星三份、三星九份；出售只归还该持有记录中的来源份数并沿用既有售价。让位出售时先在私有事务归还被卖单位，再尝试自动领取待领棋子；之后任何校验失败整个事务回滚。
+来源键分别为 opening(seatId)、shop(seatId,generation,slot)、loot(seatId,receiptId)，使用 JSON 元组编码避免拼接碰撞。完整星级奖励为每份追加 copyOrdinal 来源键。持有账本按**实际** resourceProvenance 的 unit-acquired/unit-upgraded/unit-sold 事实折叠；二星三份、三星九份。出售只归还实际持有来源，沿用既有售价；出售不会自动领取联机法球。任何校验失败整个事务回滚。
 
-开场占池时点见 §12.2。野怪计划冻结/战斗揭示不占池；完成战斗、既有规则实际尝试发放已赚棋子时预留一份。未杀死来源而未赚到的奖励不预留、不补偿。有货但备战区满仍先预留，pending-capacity/retained-terminal 保留该份；以后领取转持有、不重复扣池。超时仍不可容纳则放弃归还；淘汰释放同样写一次 forfeited 收据。终局保留的奖励仍占池，直到该真实席位释放；断线不释放。
+开场占池时点见 §12.2。**v15（用户批准 2026-10-20 02:20）**：野怪计划冻结、战斗揭示和机制奖励法球均不占池。法球留在棋盘，跨轮待领，点法球才按 entryOrdinal 一次领取全部内容。英雄在领取时按完整星级取 1/3/9 份；先用 planUnitAcquisition 合成腾格，能入库才扣池。有货但无容量时按未修改的 getUnitSellPrice 自动出售，池份额视为未取出，resolution=capacity-sold 并记 gold。未杀死载体照旧 forfeited，无补偿；淘汰/终局将已赚未领条目记一次 forfeited 收据，断线不作废。
 
-**用户确认的缺货规则**：无可用份数时转为该英雄一星购买价的等额金币，写同 dropId/receiptId 的 Match 奖励收据与池 gold 收据；不占池，不改冻好的原奖励计划，也不替换成其他英雄。补偿进入原奖励事务、在原结算利息计算之前到账。满备战区遇缺货同样按此补金币。重复领取/step/选择不会再预留或补偿。`readLootView` 对共享池已发奖励显示实际收据 payload（金币），不会把原计划棋子误显示为已获得；单人分支保持原显示。
+**缺货规则**：领取时库存不足所需完整份数，则整条按费用补一次金币，resolution=gold；此处完整星级不足的处理为暂定扩展，不部分取货、不按份数倍增。缺货优先于容量出售，两者不叠加。补偿在领取命令到账，不回改既有利息。收据 payload 保留原英雄/starLevel，resolution/gold/grantedUnitIds 明确区别入库、缺货与自动出售；私有 claimReceipts 可显示“自动出售 +NG”。单人路径不变。
 
 所有可能发棋子奖励的 Match 路径必须使用以下统一包装，不得直接调用旧入口跳过池：
 
@@ -746,10 +746,13 @@ type SharedMatchCommand =
   | {type:'startCombat'} | {type:'step'}
   | {type:'choose'; choiceId:string; generation:number; definitionId:string}
   | {type:'timeoutChoice'; round:number; choiceId:string|null; generation:number|null}
-  | {type:'claimLoot'; round:number};
+  | {type:'claimLoot'; round:number}
+  | {type:'claimOrb'; round:number; orbId:string};
 ```
 
-对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 继续按项目规则默认选第一项，claimLoot 领取可容纳已赚奖励、放弃容量不足部分，均不重复发奖。移动/装备/买经验/异常目标等不转移棋子来源的旧公开命令仍可调用，须保留 sharedPool 绑定；T10 起共享 PvP 结算改走 §15.3 的 settleRound 包装以提交延迟升星来源；买/卖/刷/锁、奖励及推进必须用 TP 包装。PvP 继续走 T2→T3；startCombat/step 包装用于原非 PvP 战斗，不提供第二套 PvP 结算。整轮 PvE 必须在同一未发布提案内串接最新 pool 和各席 state：前一席发奖占用的池是后一席的输入，不得从同一旧池独立计算多份奖励后合并。任一席失败丢弃整个全轮提案，全部成功再发布（沿用 §11.3）。
+对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot/claimOrb，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 保留原选择默认值，claimLoot 仅处理原有组件自选等选择，不领取、不丢弃法球；nextRound 不因未领法球阻塞。`claimOrb(state,orbId,expectedRound)` 允许 preparation/settlement/choice，combat 暂拒 wrong-phase，集中于 ORB_CLAIM_PHASES。expectedRound 为当前操作轮；失败 already-claimed / unknown-orb / seat-eliminated，另保留 stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 及原池校验枚举；失败原 state/pool、无事件、无 RNG 或池变化。其他 TP 包装与 PvP/T2/T3 路径保持。服务器应将 `{type:'claimOrb',round,orbId}` 原样转发包装，网络协议目标 4（服务器禁改目录由 Claude 接线）。
+
+私有投影增加 `unclaimedOrbs:{orbId,roundId,tier,entries:[{kind,definitionId?,quantity,starLevel?}],source:'pve'|'mechanic'}[]`，提供所有已揭示、已赚且未领的跨轮法球；`claimReceipts` / private `orbClaimReceipts` 含 resolution、gold、claimedRoundId。公共只给 `{count,tiers}`。P2/征服者/黑市英雄先写 resolution=orb 的机制收据，再走同一领取命令；完整星级占一格并沿用升星。bot 准备入口调用 claimBotPreparationOrbs，按 orbId 代码点顺序领完；终局调用 forfeitUnclaimedOrbs。合同版本 `multiplayer-orb-claim-v1`，完整签名、恢复边界、暂定值及服务器交接见 [v15 实现说明](LOOT_ORB_CLAIM_V15.md)。
 
 `releaseSeatOnElimination` 只接受 multiplayer.status=eliminated 且 HP=0，在 **本轮排名已计算后、下一轮自然店生成前** 调用。归还所有店卡、持有来源和待领预留，清空店格，将 pending 标记为 forfeited 并产生一次 Match/pool 事件，不发出售金币。released=true 后第二次返回 duplicate-release，其他池命令返回 seat-eliminated。终态 preparation 军队保留为只读展示档案，已无真实所有权；不可再卖/获取/返还，镜像不能以此档案创建新实体。
 

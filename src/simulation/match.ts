@@ -21,6 +21,7 @@ export { previewUseConsumable } from './consumables';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canOperateMatch, isCombatRosterLocked } from './operation-policy';
 import type { UnitLootPolicy } from './loot-runtime';
+import { planOrbClaim, forfeitUnclaimedOrbs } from './orb-claim';
 import type { MultiplayerCommandResult, MultiplayerFailure } from './round-settlement';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { FINAL_ROUND } from './round-schedule';
@@ -390,7 +391,9 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
   const settled=settledPlan.state; events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
-  if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') return {state:settled,events};
+  if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
+    const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
+  }
   const choice=enterLootChoice(settled);
   if (choice.state.phase==='choice') return {state:choice.state,events:[...events,...choice.events]};
   const entered=enterScheduledEvents(settled,'after');
@@ -594,7 +597,16 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
   } catch { return multiplayerFail(state,'invalid-choice'); }
 }
 
-/** Claim only earned drops through existing grant functions, then discard capacity blockers. */
+export function claimOrb(state: MatchState, orbId: string, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
+  try {
+    const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
+    if(!result.ok)return result;
+    const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
+    events.push(...mechanicGrantEvents(result.state,drained));
+    return acceptEquipment(drained,events);
+  } catch { return multiplayerFail(state,'invalid-loot'); }
+}
+/** Deadline resolves original choices only; multiplayer orbs survive until explicitly claimed. */
 export function claimOrDiscardLoot(state: MatchState, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
   if (!state.multiplayer) return multiplayerFail(state,'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state,'seat-eliminated');
@@ -611,7 +623,7 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
     }
     const granted=grantDirectLoot(current,false,unitLootPolicy);
     current=granted.state; events.push(...granted.events);
-    const discarded=current.m8.loot.direct.filter(d=>d.status==='pending-capacity');
+    const discarded=current.multiplayer ? [] : current.m8.loot.direct.filter(d=>d.status==='pending-capacity');
     if (discarded.length) {
       const ids=new Set(discarded.map(d=>d.dropId));
       current={...current,m8:{...current.m8,loot:{...current.m8.loot,

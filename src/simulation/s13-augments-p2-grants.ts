@@ -1,4 +1,4 @@
-/** Acquisition gifts use existing exactly-once grants, pool policy and bench-full escrow. */
+/** Exactly-once acquisition gifts: online heroes enqueue reward orbs; offline heroes retain capacity escrow. */
 import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';

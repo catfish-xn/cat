@@ -427,7 +427,8 @@ export interface RoundDefinition {
 export type LootPayload =
   | { readonly kind: 'gold'; readonly quantity: number }
   | { readonly kind: 'consumable'; readonly definitionId: import('../consumable-types').ConsumableDefinitionId; readonly quantity: number }
-  | { readonly kind: 'item' | 'unit'; readonly definitionId: string; readonly quantity: number };
+  | { readonly kind: 'item'; readonly definitionId: string; readonly quantity: number }
+  | { readonly kind: 'unit'; readonly definitionId: string; readonly quantity: number; readonly starLevel?: 1 | 2 | 3 };
 export interface DropIdentity {
   readonly dropId: string;
   readonly encounterId: string;
@@ -441,6 +442,10 @@ export type DropState = DropIdentity & { readonly payload: LootPayload } & (
   | { readonly status: 'forfeited'; readonly receiptId: null }
 );
 export interface LootReceipt {
+  readonly resolution?: 'held' | 'gold' | 'capacity-sold' | 'forfeited';
+  readonly gold?: number;
+  /** Round of the actual transaction, distinct from the orb's source round. */
+  readonly claimedRoundId?: string;
   readonly grantedConsumableIds?: readonly string[];
   readonly receiptId: string;
   readonly dropId: string;
@@ -481,8 +486,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-g2-3-v14';
-  readonly contentVersion: 's13-14.24b-g2-3-v14';
+  readonly rulesVersion: 's13-g2-3-v15';
+  readonly contentVersion: 's13-14.24b-g2-3-v15';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;

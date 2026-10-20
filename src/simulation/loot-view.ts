@@ -4,16 +4,18 @@ import type { LootView, RevealedDropView } from './m8/ui-contracts';
 import { compareLootFreezeSlots, lootChoiceId } from './loot-identity';
 import { hasPendingLootCapacity, unresolvedLootChoices } from './loot-runtime';
 import { freezeContent } from './content/freeze';
+import { unclaimedOrbPlans } from './orb-claim';
 
 /** Payload is a display whitelist too: future nested fields must neither leak nor freeze input references. */
 export function payloadView(payload: LootPayload): LootPayload {
   return payload.kind === 'gold' ? { kind: payload.kind, quantity: payload.quantity }
     : payload.kind==='consumable' ? {kind:'consumable',definitionId:payload.definitionId,quantity:payload.quantity}
-    : { kind: payload.kind, definitionId: payload.definitionId, quantity: payload.quantity };
+    : { kind: payload.kind, definitionId: payload.definitionId, quantity: payload.quantity,
+      ...(payload.kind==='unit'&&payload.starLevel?{starLevel:payload.starLevel}:{}) };
 }
 
 /**
- * Public current-round loot projection (M8_UI_CONTRACT §5 plus the approved
+ * Owner-visible loot projection (M8_UI_CONTRACT §5 plus the approved
  * 2026-10-10 addendum). Planned drops and unrevealed forfeitures, unresolved choice fallbacks,
  * frozen future rounds and loot RNG never enter the view; a component choice
  * appears as a drop only once its receipt exists, and while it is the current
@@ -32,7 +34,7 @@ export function readLootView(state: Readonly<MatchState>): LootView {
     const paid = state.sharedPool && loot.receipts.find(receipt => receipt.dropId === drop.dropId);
     const identity = { orbId:drop.orbId, entryOrdinal:drop.entryOrdinal, dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: payloadView(paid ? paid.payload : drop.payload) };
     if (progress?.status === 'granted') drops.push({ ...identity, status: 'granted', receiptId: progress.receiptId, allowedActions: [] });
-    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' });
+    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer?'awaiting-claim':'auto-grant-in-domain' });
     else if (progress?.status === 'pending-capacity') drops.push({ ...identity, status: 'pending-capacity', receiptId: null, allowedActions: [], reason: 'bench-full' });
     else if (progress?.status === 'forfeited' && loot.earnedEvidence.some(e=>e.dropId===drop.dropId)) drops.push({...identity,status:'forfeited',receiptId:null,allowedActions:[],reason:state.multiplayer?.status==='eliminated'?'eliminated-forfeited':'timeout-forfeited'});
     else if (progress?.status === 'retained-terminal') drops.push({ ...identity, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' });
@@ -57,10 +59,21 @@ export function readLootView(state: Readonly<MatchState>): LootView {
       :visible.some(d=>d.status==='granted')?'partially-claimed' as const:'revealed' as const;
     return [{orbId:orb.orbId,tier:orb.tier,status,entryDropIds:visible.map(d=>d.dropId)}];
   });
-  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, pendingClaims, canContinue: reason === null, reason, pendingChoice });
+  const unclaimedOrbs=unclaimedOrbPlans(state as MatchState).map(orb=>({orbId:orb.orbId,roundId:orb.roundId,tier:orb.tier,
+    entries:[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal).map(e=>payloadView(e.payload)),source:orb.source}));
+  const claimReceipts=loot.receipts.filter(r=>r.resolution).map(r=>({receiptId:r.receiptId,dropId:r.dropId,payload:payloadView(r.payload),
+    resolution:r.resolution!,gold:r.gold!,claimedRoundId:r.claimedRoundId!,grantedItemIds:[...r.grantedItemIds],grantedUnitIds:[...r.grantedUnitIds],
+    ...(r.grantedConsumableIds?{grantedConsumableIds:[...r.grantedConsumableIds]}:{})}));
+  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(state.multiplayer?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
 }
 
 export function readComponentEquivalent(state:Readonly<MatchState>):number {
   return state.scheduleReceipts.filter(r=>r.kind==='component').reduce((n,r)=>n+r.itemIds.length,0)
     + Object.values(state.m8.loot.guaranteeCounters).reduce((a,b)=>a+b,0);
+}
+
+/** Opponents receive count/tier only; never identities or contents. */
+export function readPublicOrbSummary(state: Readonly<MatchState>) {
+  const orbs=unclaimedOrbPlans(state as MatchState);
+  return freezeContent({count:orbs.length,tiers:orbs.map(o=>o.tier)});
 }

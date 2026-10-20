@@ -51,6 +51,8 @@ export interface LootEarnedEvidence {
   readonly death: { readonly combatId: string; readonly tick: number; readonly eventSeq: number };
 }
 export interface MatchLootState {
+  /** Multiplayer only. PvE payloads remain in the sole frozen plan. */
+  readonly rewardOrbs?: readonly RewardOrb[];
   readonly layoutBinding: import('./orb-layout').LootLayoutBinding;
   readonly frozen: FrozenLootLedger;
   readonly direct: readonly DirectLootProgress[];
@@ -59,6 +61,13 @@ export interface MatchLootState {
   readonly earnedEvidence: readonly LootEarnedEvidence[];
   readonly receipts: readonly import('./m8/contracts').LootReceipt[];
   readonly guaranteeCounters: Readonly<Record<string, number>>;
+}
+export interface RewardOrb {
+  readonly orbId: string;
+  readonly roundId: string;
+  readonly tier: import('./orb-layout').OrbTier;
+  readonly source: 'mechanic';
+  readonly entries: readonly FrozenDirectDrop[];
 }
 export type LootMatchEvent =
   | { readonly type: 'lootRevealed'; readonly dropId: string; readonly death: LootEarnedEvidence['death'] }

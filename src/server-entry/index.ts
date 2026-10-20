@@ -4,7 +4,7 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
-  forfeitPendingChoice, claimOrDiscardLoot, advanceMultiplayerRound,
+  forfeitPendingChoice, claimOrDiscardLoot, claimOrb, advanceMultiplayerRound,
   readItemSummons, moveItemSummon,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
@@ -36,11 +36,11 @@ export type { RoundSettlementReceipt, MultiplayerProgress, MultiplayerCommandRes
 
 export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUnit, rerollSharedShop,
   setSharedShopLock, sellSharedUnit, releaseSeatOnElimination, refreshSharedShops, nextSharedRound,
-  runSharedMatchCommand, assertSharedPoolConservation, SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST } from '../simulation/shared-pool';
+  runSharedMatchCommand, restoreSharedOrbSnapshot, assertSharedPoolConservation, SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST } from '../simulation/shared-pool';
 export type { SharedPoolState, SharedPoolBinding, SharedPoolResult, SharedPoolBatchResult, SharedPoolFailure,
   SharedPoolEvent, SharedMatchCommand, PoolHolding, ShopReservation, RewardReservation, PoolRewardReceipt } from '../simulation/shared-pool-types';
 
-export { decideBotAction, BOT_POLICY_VERSION, BOT_MAX_STEPS } from '../simulation/bot';
+export { decideBotAction, claimBotPreparationOrbs, BOT_POLICY_VERSION, BOT_MAX_STEPS } from '../simulation/bot';
 export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
@@ -53,7 +53,9 @@ export type { OrbLayoutLedger, OrbRoundLayout, OrbTier, LootInitialization, OrbL
 export { freezeLootThroughRound } from '../simulation/loot-freeze';
 export type { ConsumableDefinitionId, ConsumableInstance, ConsumableTarget, ConsumablePreview, ConsumableFailure } from '../simulation/consumable-types';
 
-export { readComponentEquivalent } from '../simulation/loot-view';
+export { readComponentEquivalent, readPublicOrbSummary } from '../simulation/loot-view';
+export { forfeitUnclaimedOrbs, ORB_CLAIM_PHASES } from '../simulation/orb-claim';
+export { MULTIPLAYER_NET_PROTOCOL_VERSION, MULTIPLAYER_LOOT_CONTRACT_VERSION } from '../simulation/m8/version';
 
 export { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 

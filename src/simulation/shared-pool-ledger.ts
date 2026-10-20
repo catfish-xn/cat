@@ -10,6 +10,7 @@ import { lootReceiptId } from './loot-identity';
 import type { UnitLootPolicy } from './loot-runtime';
 import { validateSeed } from './rng';
 import { UNIT_DEFINITIONS } from './units';
+import { getUnitSellPrice } from './unit-stats';
 import { mechanicDropId } from './seat-mechanics/grants';
 import { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, type PoolHolding, type PoolSeat, type ShopReservation, type RewardReservation,
   type PoolRewardReceipt, type SharedPoolState, type SharedPoolFailure, type SharedPoolEvent } from './shared-pool-types';
@@ -22,6 +23,8 @@ export const safe = (n:number,min=0) => Number.isSafeInteger(n) && n>=min;
 export const sourceKey=(...parts:(string|number)[])=>JSON.stringify(parts);
 export const shopSource=(r:ShopReservation)=>sourceKey('shop',r.seatId,r.generation,r.slot);
 export const rewardSource=(r:RewardReservation)=>sourceKey('loot',r.seatId,r.receiptId);
+const rewardSources=(r:RewardReservation)=>Array.from({length:3**((r.starLevel??1)-1)},(_,i)=>r.starLevel?sourceKey('loot',r.seatId,r.receiptId,i):rewardSource(r));
+const rewardSalePrice=(definitionId:string,starLevel:1|2|3)=>getUnitSellPrice({id:'orb',team:'player',location:{kind:'bench',slot:0},definitionId,starLevel});
 export type PoolDraft = {-readonly [K in keyof SharedPoolState]:SharedPoolState[K]} & {
   available:Record<string,number>; seats:PoolSeat[]; shops:ShopReservation[];
   holdings:PoolHolding[]; pending:RewardReservation[]; rewards:PoolRewardReceipt[];
@@ -94,12 +97,12 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     count(h.seatId,h.definitionId,h.sources);
   }
   for(const p of pool.pending) {
-    requirePool(p.receiptId===lootReceiptId(p.dropId));count(p.seatId,p.definitionId,[rewardSource(p)]);
+    requirePool([1,2,3].includes(p.starLevel??1)&&p.receiptId===lootReceiptId(p.dropId));count(p.seatId,p.definitionId,rewardSources(p));
   }
   for(const r of pool.rewards) {
     const key=rewardSource(r);requirePool(!rewards.has(key)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)
-      &&r.receiptId===lootReceiptId(r.dropId)&&['held','gold','forfeited'].includes(r.resolution)
-      &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:0)
+      &&[1,2,3].includes(r.starLevel??1)&&r.receiptId===lootReceiptId(r.dropId)&&['held','gold','capacity-sold','forfeited'].includes(r.resolution)
+      &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:r.resolution==='capacity-sold'?rewardSalePrice(r.definitionId,r.starLevel??1):0)
       &&!pendingRewards.has(key));rewards.add(key);
   }
   const carouselKeys=new Set<string>();
@@ -151,7 +154,7 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
   requirePool(after.resourceProvenance.entries.length>=before.resourceProvenance.entries.length,'invalid-seat-state');
   for(const fact of after.resourceProvenance.entries.slice(before.resourceProvenance.entries.length)) {
     if(fact.kind==='unit-acquired') {
-      let definitionId:string,source:string;
+      let definitionId:string,source:string, sources:readonly string[]|undefined;
       if(fact.source.kind==='shop') {
         const origin=fact.source,r=pool.shops.find(r=>r.seatId===seatId&&r.generation===origin.generation&&r.slot===origin.slotIndex);
         requirePool(r&&r.definitionId===origin.definitionId,'invalid-seat-state');
@@ -161,17 +164,17 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const mechanicReceipt=findMechanicReceipt(after,fact.source.receiptId);
         if(mechanicReceipt?.kind==='unit'&&UNIT_DEFINITIONS[mechanicReceipt.definitionId]?.summon)continue;
         const dropId=mechanicDropId(fact.source.receiptId),p=pool.pending.find(p=>p.seatId===seatId&&p.dropId===dropId);
-        requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);
+        requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);sources=rewardSources(p);
         pool.pending=pool.pending.filter(r=>r!==p);
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       } else {
         requirePool(fact.source.kind==='loot','invalid-seat-state');
         const receiptId=fact.source.receiptId,p=pool.pending.find(p=>p.seatId===seatId&&p.receiptId===receiptId);
-        requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);
+        requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);sources=rewardSources(p);
         pool.pending=pool.pending.filter(r=>r!==p);
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       }
-      pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:[source]});
+      pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:sources??[source]});
     } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
       const e=fact.event;if(UNIT_DEFINITIONS[e.definitionId]?.summon)continue;const ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
@@ -184,23 +187,29 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
   }
   for(const p of pool.pending.filter(p=>p.seatId===seatId)) {
     if(after.m8.loot.direct.find(d=>d.dropId===p.dropId)?.status!=='forfeited') continue;
-    pool.available[p.definitionId]++;pool.pending=pool.pending.filter(r=>r!==p);
+    pool.available[p.definitionId]+=rewardSources(p).length;pool.pending=pool.pending.filter(r=>r!==p);
     const receipt:PoolRewardReceipt={...p,resolution:'forfeited',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
   }
 }
 export function rewardPolicy(pool:PoolDraft,state:MatchState,events:SharedPoolEvent[]):UnitLootPolicy {
-  return drop=>{
+  return (drop,capacitySold)=>{
     requirePool(drop.payload.kind==='unit'&&drop.payload.quantity===1,'invalid-loot');
     const seatId=state.sharedPool!.seatId,definitionId=drop.payload.definitionId;
-    const p:RewardReservation={seatId,definitionId,dropId:drop.dropId,receiptId:lootReceiptId(drop.dropId)};
+    const starLevel=drop.payload.starLevel??1,copies=3**(starLevel-1);
+    const p:RewardReservation={seatId,definitionId,dropId:drop.dropId,receiptId:lootReceiptId(drop.dropId),...(starLevel>1?{starLevel}:{})};
     requirePool(Object.hasOwn(pool.available,definitionId)&&!pool.rewards.some(r=>rewardSource(r)===rewardSource(p)),'invalid-loot');
     if(pool.pending.some(r=>rewardSource(r)===rewardSource(p))) return drop.payload;
-    if(pool.available[definitionId]>0) {
-      pool.available[definitionId]--;pool.pending.push(p);events.push({type:'sharedRewardReserved',seatId,dropId:drop.dropId});
+    if(pool.available[definitionId]>=copies) {
+      if(capacitySold) {
+        const gold=rewardSalePrice(definitionId,starLevel),receipt:PoolRewardReceipt={...p,resolution:'capacity-sold',gold};
+        pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
+        return {kind:'gold',quantity:gold,resolution:'capacity-sold'};
+      }
+      pool.available[definitionId]-=copies;pool.pending.push(p);events.push({type:'sharedRewardReserved',seatId,dropId:drop.dropId});
       return drop.payload;
     }
     const gold=UNIT_DEFINITIONS[definitionId].cost,receipt:PoolRewardReceipt={...p,resolution:'gold',gold};
     pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
-    return {kind:'gold',quantity:gold};
+    return {kind:'gold',quantity:gold,resolution:'gold'};
   };
 }

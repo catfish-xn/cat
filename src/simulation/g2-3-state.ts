@@ -11,7 +11,7 @@ import {emptySeatMechanics} from './seat-mechanics/state';
 import {g23Laboratories} from './g2-3-experiment';
 import {deriveTraits} from './trait-snapshot';
 /** The DTO is reconstructed from disjoint container fields; never persisted alongside them. */
-export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress}):G23MatchProgress|undefined{
+export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress;readonly multiplayer?:MatchState['multiplayer']}):G23MatchProgress|undefined{
  if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field
  const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return undefined;
  const h=(m.hidden.progress??{version:'g2-3-progress-v1',seed:0,rngState:0,rngDraws:0,economyReceipts:[]}) as Omit<G23MatchProgress,'conquest'|'sponsored'|'chem'|'junkerRounds'|'junkerPurchases'|'itemReceipts'|'rewardClaims'|'rewards'>;
@@ -19,7 +19,7 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
  const a=m.seat.academy as {sponsored:readonly string[]};
  const j=m.seat.junkerKing as {rounds:number;purchases:G23MatchProgress['junkerPurchases']};
  const rewardClaims:G23RewardClaim[]=[];
- const bundles=rewards.map(b=>({b,atoms:g23RewardAtoms(b,h.seed)}));
+ const bundles=rewards.map(b=>({b,atoms:g23RewardAtoms(b,h.seed,!!state.multiplayer)}));
  for(const r of m.receipts)for(const {b,atoms} of bundles){
   for(const atom of atoms){
    const prefix=atom.id+':copy:';
@@ -64,7 +64,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const claim of p.rewardClaims){
   const r=receipts.find(r=>r.receiptId===claim.id);check(r&&r.round===claim.round);
   if(!r)continue;
-  const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed).find(a=>a.id===claim.atomId)!;
+  const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed,!!state.multiplayer).find(a=>a.id===claim.atomId)!;
   check(r.source===bundle.source);
   if(claim.kind==='item'){
    if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId

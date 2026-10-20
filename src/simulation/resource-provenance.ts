@@ -165,7 +165,7 @@ export function mergeGrowthLedger(
     .map(([unitId, attackDamageBps]) => ({ unitId, attackDamageBps })).sort(compareGrowth);
 }
 
-interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string }
+interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string; readonly starLevel?:StarLevel }
 /** Births a mechanic receipt authorizes: a held unit, an item, or the item a forge/black-market choice granted. */
 function mechanicBirths(receipts: readonly import('./seat-mechanics/types').MechanicReceipt[]): (BirthReceipt & { readonly key: string })[] {
   return receipts.flatMap((receipt): (BirthReceipt & { readonly key: string })[] => {
@@ -216,23 +216,43 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
   }
   for (const receipt of context.lootReceipts) {
     plainJson(receipt);
-    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds',...(receipt.payload?.kind==='consumable'?['grantedConsumableIds']:[])]);
+    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds',
+      ...(receipt.resolution ? ['resolution','gold','claimedRoundId'] : []),
+      ...(receipt.payload?.kind==='consumable' && receipt.resolution!=='forfeited'?['grantedConsumableIds']:[])]);
     nonempty(receipt.dropId);
     const tuple: unknown = JSON.parse(receipt.dropId);
     requireValue(Array.isArray(tuple) && tuple.length === 2, 'loot drop identity');
     const orb:unknown=JSON.parse(tuple[0]);
     requireValue(Array.isArray(orb)&&orb.length===5&&orb[0]==='orb','loot orb identity');
-    const [,roundId, encounterId, sourceUnitId, slotOrdinal] = orb;
+    const [,sourceRoundId, encounterId, sourceUnitId, slotOrdinal] = orb;
+    const roundId=receipt.claimedRoundId??sourceRoundId;
     integer(tuple[1]);
     nonempty(roundId); nonempty(encounterId); nonempty(sourceUnitId); integer(slotOrdinal);
-    const round = getCatalogRoundById(roundId);
-    requireValue(round.ordinal <= context.throughRoundOrdinal && round.encounterId === encounterId
-      && receipt.dropId === lootEntryId(lootOrbId(roundId, encounterId, sourceUnitId, slotOrdinal),tuple[1])
+    const round = getMultiplayerRoundById(roundId), sourceRound=getMultiplayerRoundById(sourceRoundId);
+    const mechanic=encounterId==='mechanic' && context.mechanicReceipts?.some(r=>r.kind==='unit'&&r.resolution==='orb'&&r.receiptId===sourceUnitId&&r.orbId===tuple[0]);
+    requireValue(round.ordinal <= context.throughRoundOrdinal && round.ordinal>=sourceRound.ordinal
+      && (mechanic || sourceRound.encounterId === encounterId)
+      && receipt.dropId === lootEntryId(lootOrbId(sourceRoundId, encounterId, sourceUnitId, slotOrdinal),tuple[1])
       && receipt.receiptId === lootReceiptId(receipt.dropId), 'loot receipt identity');
     requireValue(!receiptIds.has(`loot:${receipt.receiptId}`), 'duplicate loot receipt');
     receiptIds.add(`loot:${receipt.receiptId}`);
     requireValue(Array.isArray(receipt.grantedItemIds) && Array.isArray(receipt.grantedUnitIds), 'loot granted IDs');
     record(receipt.payload);
+    if(receipt.resolution) {
+      integer(receipt.gold); nonempty(receipt.claimedRoundId);
+      requireValue(['held','gold','capacity-sold','forfeited'].includes(receipt.resolution),'orb resolution');
+      if(receipt.resolution==='forfeited'||receipt.resolution==='gold'||receipt.resolution==='capacity-sold') {
+        requireValue(!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length&&!receipt.grantedConsumableIds?.length,'resolved orb has no birth');
+        if(receipt.resolution==='forfeited') requireValue(receipt.gold===0,'forfeited gold');
+        else {
+          requireValue(receipt.payload.kind==='unit'&&SHOP_CATALOG.includes(receipt.payload.definitionId),'orb gold definition');
+          const unit={id:'orb',team:'player' as const,location:{kind:'bench' as const,slot:0},definitionId:receipt.payload.definitionId,starLevel:receipt.payload.starLevel??1};
+          requireValue([1,2,3].includes(unit.starLevel)&&receipt.gold===(receipt.resolution==='gold'?UNIT_DEFINITIONS[unit.definitionId].cost:getUnitSellPrice(unit)),'orb gold price');
+        }
+        continue;
+      }
+      requireValue(receipt.gold===(receipt.payload.kind==='gold'?receipt.payload.quantity:0),'held orb gold');
+    }
     if(receipt.payload.kind==='consumable') {
       requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');
       continue;
@@ -242,7 +262,7 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
       requireValue(!receipt.grantedItemIds.length && !receipt.grantedUnitIds.length, 'gold birth');
       continue;
     }
-    keys(receipt.payload, ['kind', 'definitionId', 'quantity']);
+    keys(receipt.payload, ['kind', 'definitionId', 'quantity',...(receipt.payload.kind==='unit'&&receipt.payload.starLevel?['starLevel']:[])]);
     const { kind, definitionId, quantity } = receipt.payload; nonempty(definitionId);
     requireValue((kind === 'unit' || kind === 'item') && quantity === 1, 'loot resource quantity');
     requireValue(kind === 'unit' ? SHOP_CATALOG.includes(definitionId)
@@ -250,7 +270,9 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     const granted = kind === 'unit' ? receipt.grantedUnitIds : receipt.grantedItemIds;
     requireValue(granted.length === 1 && (kind === 'unit' ? receipt.grantedItemIds : receipt.grantedUnitIds).length === 0, 'loot resource identity');
     nonempty(granted[0]);
-    add(`loot:${receipt.receiptId}`, { kind, id: granted[0], definitionId, roundId });
+    if(kind==='unit') requireValue([1,2,3].includes(receipt.payload.starLevel??1),'unit birth star');
+    add(`loot:${receipt.receiptId}`, { kind, id: granted[0], definitionId, roundId,
+      ...(receipt.payload.kind==='unit'?{starLevel:receipt.payload.starLevel??1}:{}) });
   }
   for (const birth of mechanicBirths(context.mechanicReceipts ?? [])) {
     requireValue(getCatalogRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
@@ -349,7 +371,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     if (starts.has(index)) unitPrefixes.set(index, new Map(units));
     if (entry.kind !== 'unit-upgraded') finishAcquisition();
     const common = ['kind', 'sequence', 'roundId'];
+    const lootSourceId=(entry.kind==='unit-acquired'||entry.kind==='item-acquired')&&entry.source?.kind==='loot'?entry.source.receiptId:null;
+    const explicitOrbReceipt=lootSourceId?context.lootReceipts.find(r=>r.receiptId===lootSourceId&&r.claimedRoundId===entry.roundId):undefined;
     if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'loot'
+      && !explicitOrbReceipt
       && !firstLootBirth.has(entry.roundId)) firstLootBirth.set(entry.roundId, index);
     if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'mechanic') {
       const boundary = rewardBoundaries.get(entry.source.receiptId);
@@ -363,7 +388,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     }
     if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
-      requireValue(round.kind !== 'supply'||entry.source.kind==='carousel', 'unit birth in supply');
+      requireValue(round.kind !== 'supply'||entry.source.kind==='carousel'||entry.source.kind==='loot'
+        &&explicitOrbReceipt?.resolution==='held', 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {
@@ -401,9 +427,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
-      units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel: 1 }); nextUnitSerial++;
+      const starLevel=entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:1;
+      units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel }); nextUnitSerial++;
       if(entry.source.kind==='carousel')deferredCarouselIds.add(entry.unitId);
-      acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: 1 };
+      acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: starLevel };
     } else if (entry.kind === 'unit-upgraded') {
       keys(entry, [...common, 'acquisitionSequence', 'event']); integer(entry.acquisitionSequence);
       validateUpgrade(entry.event);

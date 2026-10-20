@@ -3,9 +3,13 @@ import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
 import { FINAL_ROUND } from './round-schedule';
 import { prepareMatchLoot } from './loot-runtime';
+import { claimOrb } from './match';
+import { forfeitUnclaimedOrbs } from './orb-claim';
+import { validateMultiplayerOrbLedger } from './orb-restore';
 import { createMatch, createCarouselMatch, useConsumable,claimG23Reward } from './match';
 import { canOperateMatch } from './operation-policy';
-import { canonicalContent } from './content';
+import { canonicalContent, CONTENT_DIGEST } from './content';
+import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
 import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot } from './match';
@@ -23,6 +27,15 @@ import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, return
   assertSharedPoolConservation, reconcileHoldings, rewardPolicy, type PoolDraft } from './shared-pool-ledger';
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
+
+/** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
+export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):MatchState {
+  const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
+  requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
+    &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);
+  return state;
+}
 
 /** Omitted capacities use Riot sizes. Explicit partial capacities are isolated test/config fixtures;
  * unspecified heroes have zero copies, and no definition outside the 19-hero slice is allowed. */
@@ -151,7 +164,7 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
   return transact(pool,state,(draft,policy)=>{
     const unit=state.preparation.units.find(u=>u.id===unitId);
     requirePool(unit,'unknown-unit');requirePool(unit.team==='player','enemy-unit');
-    // Returning the sold copies precedes automatic pending claims in the same private transaction.
+    // Return sold copies before same-transaction mechanism hooks; orbs require an explicit later claim.
     // G2-3 summons never hold a pool copy.
     if(!UNIT_DEFINITIONS[unit.definitionId]?.summon) returnHolding(draft,state.sharedPool!.seatId,unitId);
     return sellUnit(state,unitId,policy);
@@ -169,6 +182,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);
       case 'timeoutChoice': return forfeitPendingChoice(state,command.round,command.choiceId,command.generation,policy);
       case 'claimLoot': return claimOrDiscardLoot(state,command.round,policy);
+      case 'claimOrb': return claimOrb(state,command.orbId,command.round,policy);
       default: throw new PoolError('invalid-command');
     }
   });
@@ -186,8 +200,11 @@ export function releaseSeatOnElimination(pool:SharedPoolState,state:MatchState):
     const pendingIds=new Set(pool.pending.filter(p=>p.seatId===seatId).map(p=>p.dropId));
     const events:MatchEvent[]=[...pendingIds].map((dropId,i)=>({type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq+i}));
     requirePool(safe(state.nextMatchEventSeq+events.length),'invalid-seat-state');
-    let next:MatchState={...state,nextMatchEventSeq:state.nextMatchEventSeq+events.length,shop:{...state.shop,locked:false,slots:state.shop.slots.map(()=>({status:'purchased' as const,empty:true as const}))},
-      m8:{...state.m8,loot:{...state.m8.loot,direct:state.m8.loot.direct.map(d=>pendingIds.has(d.dropId)?{dropId:d.dropId,status:'forfeited' as const,receiptId:null}:d)}}};
+    const forfeited=forfeitUnclaimedOrbs(state);
+    events.push(...forfeited.events.map((event,i)=>'tick' in event?event:({...event,domain:'match' as const,eventSeq:state.nextMatchEventSeq+events.length+i})));
+    requirePool(safe(state.nextMatchEventSeq+events.length),'invalid-seat-state');
+    let next:MatchState={...forfeited.state,nextMatchEventSeq:state.nextMatchEventSeq+events.length,shop:{...state.shop,locked:false,slots:state.shop.slots.map(()=>({status:'purchased' as const,empty:true as const}))},
+      m8:{...forfeited.state.m8,loot:{...forfeited.state.m8.loot,direct:forfeited.state.m8.loot.direct.map(d=>pendingIds.has(d.dropId)?{dropId:d.dropId,status:'forfeited' as const,receiptId:null}:d)}}};
     reconcileHoldings(draft,state,next,poolEvents);
     // Keep the terminal army only as an archived display snapshot, never as owned pool stock.
     draft.seats=draft.seats.map(s=>s.seatId===seatId?{...s,released:true}:s);
