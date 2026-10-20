@@ -128,11 +128,11 @@ describe('explicit visual preview adapter', () => {
     expect(e).toMatchObject({ kind: 'trail', trail: { width: [{ time: 0, value: 400 }], lifetime: .3, segments: 32 }, size0: [1, 1, 1] });
     expect(row.approximations[0].handling).toContain('v2-trail-width');
   });
-  it('multiplies constants and curves, samples birth parameters, and replaces probability distributions with mean multipliers', () => {
+  it('replaces fallback constants with curves, samples birth parameters, and applies probability means once', () => {
     const { e, row } = mapped({ color: { constantValue: [.5, .5, .5, .5], dynamics: { times: [0, 1], values: [[1, .5, 0, 1], [0, 0, 0, 0]] } },
-      birthVelocity: { constantValue: [2, 2, 2], dynamics: { times: [0], values: [[3, 3, 3]], probabilityTables: [{ keyValues: [0, 2] }, {}, {}] } } });
-    expect(e.color[0].value).toEqual([.5, .25, 0]); expect(e.opacity[0].value).toBe(.5); expect(e.velocity).toEqual([-6, 6, 6]);
-    expect(row.approximations.map((r: { handling: string }) => r.handling)).toContain('constant-times-curve');
+      birthVelocity: { constantValue: [2, 2, 2], dynamics: { times: [0], values: [[3, 3, 3]], probabilityTables: [{ keyValues: [1, 2] }, {}, {}] } } });
+    expect(e.color[0].value).toEqual([1, .5, 0]); expect(e.opacity[0].value).toBe(1); expect(e.velocity).toEqual([-4.5, 3, 3]);
+    expect(row.approximations.map((r: { handling: string }) => r.handling)).toContain('dynamics-replace-fallback-constant');
     expect(row.approximations.map((r: { handling: string }) => r.handling)).toContain('deterministic-mean-keyValue-multiplier-empty-table-one');
   });
   it.each([
@@ -155,7 +155,7 @@ describe('explicit visual preview adapter', () => {
       fx.update(.5);
       expect(fx.object.children[0].scale.toArray()).toEqual(expected);
       expect(fields).toEqual(original);
-      if ('dynamics' in birth) expect(row.approximations).toContainEqual(expect.objectContaining({ field: 'birthScale0', handling: 'size-dynamics-replace-fallback-constant' }));
+      if ('dynamics' in birth) expect(row.approximations).toContainEqual(expect.objectContaining({ field: 'birthScale0', handling: 'dynamics-replace-fallback-constant' }));
       expect(e.size).toBeDefined();
     } finally { fx.dispose(); }
   });

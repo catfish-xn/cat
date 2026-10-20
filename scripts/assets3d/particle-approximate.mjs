@@ -5,7 +5,6 @@ export function particleMode(mode = 'strict') {
   return mode;
 }
 const vector = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
-const multiply = (a, b) => Array.isArray(b) ? b.map((n, i) => n * (Array.isArray(a) ? a[i] : a)) : a * b;
 const defaultCurve = v => ({ constantValue: v });
 // Known presentation modifiers: a static, single-texture preview omits these.
 // Unknown fields are NOT discarded; the strict adapter will still reject them.
@@ -58,14 +57,9 @@ export function approximateEmitter(input, system = {}) {
       delete d.probabilityTables;
     }
     if (d && Object.hasOwn(v, 'constantValue')) {
-      // Size ValueVector3 curves already contain the authored value (including
-      // a repeated birth size or scale endpoint). They are not multipliers of
-      // constantValue. Apply probability factors once, above, then use the
-      // curve instead of the fallback constant. Keep other preview policies.
-      const sizeValue = field === 'birthScale0' || field === 'scale0';
-      note(field, { constantValue: v.constantValue, dynamics: d }, sizeValue
-        ? 'size-dynamics-replace-fallback-constant' : 'constant-times-curve');
-      if (!sizeValue && d.values) d.values = d.values.map(x => multiply(v.constantValue, x));
+      // Dynamics contain authored values for every field, not multipliers of
+      // the fallback constant. Probability factors have already been applied once.
+      note(field, { constantValue: v.constantValue, dynamics: d }, 'dynamics-replace-fallback-constant');
       delete v.constantValue;
     }
     if (!animated && d) {

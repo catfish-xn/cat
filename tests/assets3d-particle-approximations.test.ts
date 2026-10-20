@@ -5,6 +5,9 @@ import { convertParticles } from '../scripts/assets3d/particles.mjs';
 // @ts-expect-error Node writer.
 import { writeParticleEffects } from '../scripts/assets3d/build.mjs';
 
+// @ts-expect-error Node preview policy.
+import { approximateEmitter } from '../scripts/assets3d/particle-approximate.mjs';
+
 const emitter = (fields = {}) => ({ isSingleParticle: true, particleLifetime: { constantValue: 1 }, ...fields });
 const source = (emitters: unknown[], fields = {}) => ({ toy: { __type: 'VfxSystemDefinitionData', complexEmitterDefinitionData: emitters, ...fields } });
 const convert = (fields = {}, options = {}, system = {}) => convertParticles(source([emitter(fields)], system), () => undefined, parseParticleDocument, options);
@@ -59,5 +62,30 @@ describe('explicit linger approximation policy', () => {
     expect(written.actionEffects.cast).toEqual(['toy_toy']);
     expect(parseParticleDocument(JSON.parse(files.get('effects/toy/toy.json')!)).emitters).toHaveLength(1);
     expect(JSON.parse(files.get('effects/toy/toy.report.json')!).emitters[0].status).toBe('approximated');
+  });
+});
+
+describe('uniform dynamics replacement policy', () => {
+  it.each([
+    ['birthVelocity', [10, 20, 30], [[3, 4, 5], [6, 7, 8]], false],
+    ['rate', 10, [3, 4], false],
+    ['particleLifetime', 10, [3, 4], false],
+    ['color', [.5, .5, .5, .5], [[1, .5, 0, 1], [0, 0, 0, 0]], true],
+  ])('uses %s dynamics instead of multiplying the fallback', (field, constantValue, values, animated) => {
+    const input = emitter({ isSingleParticle: false, lifetime: 1, [field as string]: { constantValue, dynamics: { times: [0, 1], values } } });
+    const original = structuredClone(input);
+    const result = approximateEmitter(input);
+    const sampled = result.source[field as string];
+    expect(sampled).toEqual(animated ? { dynamics: { times: [0, 1], values } } : { constantValue: values[0] });
+    expect(result.approximations).toContainEqual(expect.objectContaining({
+      field, handling: 'dynamics-replace-fallback-constant',
+    }));
+    expect(input).toEqual(original);
+  });
+  it('keeps fallback constants when no dynamics exist', () => {
+    const input = emitter({ birthVelocity: { constantValue: [10, 20, 30] }, color: { constantValue: [.5, .5, .5, .5] } });
+    const result = approximateEmitter(input);
+    expect(result.source).toEqual(input);
+    expect(result.approximations).toEqual([]);
   });
 });
