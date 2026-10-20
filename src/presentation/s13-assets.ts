@@ -74,8 +74,8 @@ export function s13IconHtml(kind: 'trait' | 'item', id: string, size: number, cl
 
 /**
  * A bundled icon that fails to load at runtime (bad deploy, blocked file) falls back once:
- * hero portraits become the code-drawn emblem at the same size, item/trait icons are removed
- * so their text label remains. Image error events do not bubble, so listen in capture phase.
+ * hero portraits become the code-drawn emblem at the same size, tool icons their one-glyph mark,
+ * item/trait icons are removed so their text label remains. Image error events do not bubble, so listen in capture phase.
  */
 export function installImageFallback(root: Document = document): () => void {
   const onError = (event: Event) => {
@@ -86,6 +86,9 @@ export function installImageFallback(root: Document = document): () => void {
       const holder = root.createElement('span'); holder.className = 'hero-fallback';
       holder.innerHTML = heroEmblemSvg(image.dataset.hero, Number(image.getAttribute('width')) || 34);
       image.replaceWith(holder);
+    } else if (image.classList.contains('consumable-icon') && image.dataset.glyph) {
+      const mark = root.createElement('span'); mark.className = 'consumable-mark'; mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = image.dataset.glyph; image.replaceWith(mark);
     } else if (image.classList.contains('item-icon') || image.classList.contains('trait-icon') || image.classList.contains('augment-icon')) image.remove();
   };
   root.addEventListener('error', onError, true);

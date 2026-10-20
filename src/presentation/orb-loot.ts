@@ -51,7 +51,7 @@ const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: strin
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
 export function toolMark(id: string): string {
   const mark = TOOL_MARK[id as ConsumableDefinitionId], url = mark ? lootEntry(mark.apiName)?.iconUrl : null;
-  return url ? `<img class="consumable-mark consumable-icon" src="${url}" alt="" draggable="false" loading="lazy" decoding="async">`
+  return url ? `<img class="consumable-mark consumable-icon" data-glyph="${mark!.glyph}" src="${url}" alt="" draggable="false" loading="lazy" decoding="async">`
     : `<span class="consumable-mark" aria-hidden="true">${mark?.glyph ?? '?'}</span>`;
 }
 
