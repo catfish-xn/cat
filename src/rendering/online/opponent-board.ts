@@ -17,6 +17,7 @@ import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
 import { itemDisplayName } from '../../presentation/g23-display';
+import { publicOrbsElement, readPublicOrbs } from './orb-dock';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -90,6 +91,9 @@ export class OpponentBoardPanel {
     const head = element('header', '', 'opponent-head');
     head.append(element('strong', `${seat.name}${mine ? '（我）' : ''} 的阵容`, 'opponent-name'),
       element('span', seat.alive ? `生命 ${seat.hp} · Lv ${seat.level}` : `已淘汰 · 第 ${seat.rank ?? '?'} 名`, 'opponent-meta'));
+    // v15: the seat's unclaimed orbs, count and tiers only (SeatPublic.orbs).
+    const orbs = publicOrbsElement(readPublicOrbs(seat));
+    if (orbs) head.append(orbs);
     const close = element('button', '关闭', 'opponent-close'); close.type = 'button'; close.dataset.debug = 'online:opponent-close';
     close.setAttribute('aria-label', '关闭对方阵容（Esc）'); close.addEventListener('click', () => this.close()); head.append(close);
 
