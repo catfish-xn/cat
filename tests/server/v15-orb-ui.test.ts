@@ -8,7 +8,7 @@ import { createMatch } from '../../src/server-entry';
 import type { LootReceipt } from '../../src/simulation/m8/contracts';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient, WireCommand } from '../../src/rendering/online/protocol';
-import { orbReceiptText, readOrbClaimReceipts, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
+import { orbReceiptText, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
 
 function recordingClient() {
   const sent: unknown[] = [];
@@ -54,5 +54,10 @@ describe('v15 orb display fields', () => {
     expect(orbReceiptText(receipt({ payload: unit, resolution: 'held' }))).toMatch(/★★ 已进入备战席$/);
     expect(orbReceiptText(receipt({ payload: { kind: 'gold', quantity: 3 }, resolution: 'held' }))).toBe('+3 金币');
     expect(orbReceiptText(receipt({ payload: unit, resolution: 'forfeited', gold: 0 }))).toBeNull();
+  });
+  it('reads another seat\'s public orbs (count and tiers only); absent or malformed is none', () => {
+    expect(readPublicOrbs({ seatId: 's1', orbs: { count: 2, tiers: ['gray', 'gold'] } })).toEqual({ count: 2, tiers: ['gray', 'gold'] });
+    expect(readPublicOrbs({ seatId: 's1' })).toBeNull();
+    expect(readPublicOrbs({ seatId: 's1', orbs: { count: '2' } })).toBeNull();
   });
 });

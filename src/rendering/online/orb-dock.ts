@@ -48,6 +48,23 @@ export function orbReceiptText(receipt: LootReceipt): string | null {
   return `${name} 已放入物品栏`;
 }
 
+/** Another seat's orbs as everyone may see them (SeatPublic.orbs): only how many and which tiers, never the contents. */
+export type PublicOrbs = { readonly count: number; readonly tiers: readonly UnclaimedOrbView['tier'][] };
+export function readPublicOrbs(seat: object): PublicOrbs | null {
+  const orbs = (seat as { readonly orbs?: PublicOrbs }).orbs;
+  return orbs && Number.isInteger(orbs.count) && Array.isArray(orbs.tiers) ? orbs : null;
+}
+/** Small gems for a public board header; null when the seat has no orb waiting. */
+export function publicOrbsElement(orbs: PublicOrbs | null): HTMLElement | null {
+  if (!orbs?.count) return null;
+  const box = element('span', '', 'public-orbs'); box.dataset.debug = 'public-orbs';
+  box.setAttribute('aria-label', `未领取的法球 ${orbs.count} 个：${orbs.tiers.map(tier => ORB_TIER_TEXT[tier] ?? tier).join('、')}`);
+  box.title = box.getAttribute('aria-label')!;
+  for (const tier of orbs.tiers) box.append(element('span', '', `public-orb orb-${tier}`));
+  box.append(element('span', `法球 ${orbs.count}`, 'public-orbs-count'));
+  return box;
+}
+
 export interface OrbDockActions {
   /** Sends claimOrb for one orb (the scene shows the rules' answer). */
   readonly claim: (orbId: string) => void;
