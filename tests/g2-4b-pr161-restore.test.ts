@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
-import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync,existsSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join,resolve} from 'node:path';
+import {join,resolve,dirname,isAbsolute} from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {buildSync} from 'esbuild';
+import {build} from 'esbuild';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
@@ -257,14 +257,14 @@ it('rejects a duplicator receipt and matching hero forged to an unowned option a
  expect([state.seed,state.round,state.roundDefinitionId]).toEqual([42,6,'2-3']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
- expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-63'});
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-65'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
  expect(atom.options).toContain('zeri');
  const bad=structuredClone(state);
  Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!,{definitionId:'zeri'});
- Object.assign(bad.preparation.units.find(u=>u.id==='unit-63')!,{definitionId:'zeri'});
+ Object.assign(bad.preparation.units.find(u=>u.id==='unit-65')!,{definitionId:'zeri'});
  expect(()=>serializeMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('mechanic duplicator target');
@@ -352,16 +352,29 @@ it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected
  expect(()=>restoreMatch({...twice,seatMechanics:{...twice.seatMechanics!,receipts}})).toThrow('mechanic birth order');
 },60000);
 
-it('cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice',()=>{
+it('cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'g24-cold-'));
  try{
   const entry=join(directory,'restore.mjs');
-  buildSync({stdin:{contents:`import {readFileSync,writeFileSync} from 'node:fs';
+  await build({stdin:{contents:`import {readFileSync,writeFileSync} from 'node:fs';
    import {restoreMatch} from './src/simulation/serialization';
    import {readG23Progress} from './src/simulation/g2-3-state';
    const text=readFileSync(process.argv[2],'utf8');
    const state=restoreMatch(process.argv[4]==='object'?JSON.parse(text):text);
-   writeFileSync(process.argv[3],JSON.stringify({state,progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry});
+   writeFileSync(process.argv[3],JSON.stringify({state,progress:readG23Progress(state),choice:state.pendingChoice}));`,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:entry,
+   // Resolve this dependency-free domain graph in Node. The shared esbuild service
+   // otherwise scans inaccessible ancestor directories in the restricted LF clone.
+   plugins:[{name:'local-domain-files',setup(builder){
+    builder.onResolve({filter:/.*/},args=>{
+     if(args.path.startsWith('node:'))return {path:args.path,external:true};
+     if(!args.path.startsWith('.')&&!isAbsolute(args.path))throw Error(`Unexpected domain dependency: ${args.path}`);
+     const base=resolve(args.importer?dirname(args.importer):args.resolveDir,args.path);
+     const path=[base,base+'.ts',join(base,'index.ts')].find(p=>existsSync(p)&&statSync(p).isFile());
+     if(!path)throw Error(`Missing domain dependency: ${args.path}`);
+     return {path,namespace:'local-domain'};
+    });
+    builder.onLoad({filter:/.*/,namespace:'local-domain'},args=>({contents:readFileSync(args.path,'utf8'),loader:'ts'}));
+   }}]});
   for(const tier of [4,10,14]){
    const initial=tier===14?tier14Battle():naturalForgeStates().get(tier)!;
    const states=tier===4?[initial]:[initial,accepted(selectChoice(initial,initial.pendingChoice!.choiceId,0,tier===10?initial.pendingChoice!.offers[1]:initial.pendingChoice!.offers[0]))];

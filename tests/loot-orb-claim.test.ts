@@ -22,6 +22,7 @@ import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
 import {accept,room,fullBench,fight,batch,syntheticSharedRound} from './tp-helpers';
 import {CAPACITY_VECTORS,CLAIM_EXPECTATIONS,receiptTotals,independentConservation} from './oracles/multiplayer-orb-oracle';
+import {forfeitTerminalOrbs} from '../src/server-entry/index';
 
 function gift(state:MatchState,id:string,starLevel:1|2|3=1,receiptId='test-gift') {
   const r=grantMechanicUnit(state,{receiptId,source:'test',definitionId:id,starLevel});
@@ -73,6 +74,67 @@ function pvpReceipt(state:MatchState,loss=false):RoundSettlementReceipt {
 }
 
 describe('multiplayer explicit orb claims',()=>{
+  it.each(['survivor', 'queued survivor', 'gameOver', 'eliminated'] as const)('terminal finalization forfeits only unclaimed earned entries with Match sequence numbers: %s', mode=>{
+    const initial=room(undefined,1),done=mode==='queued survivor'?pvpSeat():fight(initial.pool,initial.states[0]);
+    const gifted=gift(done.state,'singed',1,'terminal-first');
+    let paid=claim(done.pool,gifted,ids(gifted).at(-1)!);
+    let state=gift(paid.state,'singed',2,'terminal-unclaimed');
+    const orbs=readLootView(state).unclaimedOrbs!;
+    expect(orbs.some(o=>o.source==='pve')).toBe(true);
+    expect(orbs.some(o=>o.source==='mechanic')).toBe(true);
+    const plans=[...state.m8.loot.frozen.rounds.flatMap(r=>r.orbs),...state.m8.loot.rewardOrbs??[]];
+    const dropIds=plans.flatMap(o=>o.entries).filter(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')).map(e=>e.dropId);
+    const planned=state.m8.loot.direct.filter(d=>d.status==='planned');
+    expect(dropIds.length).toBeGreaterThan(0);
+    if(mode==='queued survivor'){
+      const locked=lockMatchCombatRoster(state);if(!locked.ok)throw Error(locked.reason);
+      state=locked.state;
+      for(const orb of orbs){paid=claim(paid.pool,state,orb.orbId);state=paid.state;}
+      expect(state.m8.loot.queuedOrbClaims).toEqual(orbs.map(o=>o.orbId));
+      expect(restoreSharedOrbSnapshot(paid.pool,state)).toEqual(state);
+    }
+    if(mode==='gameOver'){
+      if(state.combat&&state.combat.status!=='finished')throw Error('Terminal fixture requires a finished battle');
+      state={...state,phase:'gameOver',pendingChoice:null,combat:state.combat};
+    }
+    if(mode==='eliminated')state={...state,multiplayer:{...state.multiplayer!,status:'eliminated'}};
+    const before=structuredClone(state),poolBefore=structuredClone(paid.pool);
+    const result=forfeitTerminalOrbs(state),receipts=result.state.m8.loot.receipts.slice(state.m8.loot.receipts.length);
+    expect(state).toEqual(before);
+    expect(receipts.map(r=>r.dropId)).toEqual(dropIds);
+    expect(receipts.every(r=>r.resolution==='forfeited'&&r.gold===0&&r.claimedRoundId===state.roundDefinitionId&&r.grantedUnitIds.length===0&&r.grantedItemIds.length===0)).toBe(true);
+    expect(result.state.m8.loot.receipts.slice(0,state.m8.loot.receipts.length)).toEqual(state.m8.loot.receipts);
+    expect(result.state.m8.loot.direct.filter(d=>d.status==='planned')).toEqual(planned);
+    expect(result.state.m8.loot.direct.filter(d=>d.status==='revealed')).toEqual([]);
+    expect(result.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    expect(result.events).toHaveLength(dropIds.length*2);
+    for(const [i,event] of result.events.entries()){
+      expect(event).toMatchObject({domain:'match',eventSeq:state.nextMatchEventSeq+i});
+      expect(event.type).toBe(i%2===0?'lootForfeited':'lootGranted');
+    }
+    expect(result.events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId)).toEqual(dropIds);
+    expect(result.events.filter(e=>e.type==='lootGranted').map(e=>e.receipt)).toEqual(receipts);
+    expect(result.state.nextMatchEventSeq).toBe(state.nextMatchEventSeq+result.events.length);
+    const {m8:oldM8,nextMatchEventSeq:_oldSeq,...oldRest}=state;
+    const {m8:newM8,nextMatchEventSeq:_newSeq,...newRest}=result.state;
+    expect(newRest).toEqual(oldRest);expect({...newM8,loot:oldM8.loot}).toEqual(oldM8);
+    const {direct:_oldDirect,receipts:_oldReceipts,queuedOrbClaims:_oldQueue,...oldLootRest}=oldM8.loot;
+    const {direct:_newDirect,receipts:_newReceipts,queuedOrbClaims:_newQueue,...newLootRest}=newM8.loot;
+    expect(newLootRest).toEqual(oldLootRest);
+    const restored=restoreSharedOrbSnapshot(paid.pool,JSON.stringify(result.state));
+    expect(restored).toEqual(result.state);
+    for(const finalized of [result.state,restored]){
+      const retry=forfeitTerminalOrbs(finalized);
+      expect(retry.state).toBe(finalized);expect(retry.events).toEqual([]);
+    }
+    expect(paid.pool).toEqual(poolBefore);assertSharedPoolConservation(paid.pool,[result.state]);
+  });
+  it('terminal finalization is an exact no-op for offline seats and empty online seats',()=>{
+    for(const state of [createMatch(5),room(undefined,1).states[0]]){
+      const result=forfeitTerminalOrbs(state);
+      expect(result.state).toBe(state);expect(result.events).toEqual([]);
+    }
+  });
   it('retains a revealed 2-7 orb into 3-1 and pays its entries once in entryOrdinal order',()=>{
     const initial=room(undefined,1),round=getCatalogRoundById('2-7');
     const layout=freezeOrbLayoutThroughRound(initial.pool.orbLayout,round.ordinal+1);if(!layout.ok)throw Error(layout.reason);

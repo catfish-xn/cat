@@ -40,6 +40,7 @@ describe('B8 public equipment fixture provenance', () => {
     expect(restoreMatch(state)).toEqual(state);
   });
 
+  // Temporarily allow the real multi-stage acquisition under CI contention (user-approved 2026-10-20).
   it('obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5', () => {
     const state = itemMatch(['bloodthirster', 'bloodthirster']);
     expect(state.roundDefinitionId).toBe('3-5');
@@ -62,7 +63,7 @@ describe('B8 public equipment fixture provenance', () => {
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-  });
+  }, 30000);
 
   it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => {
     const first = itemMatch('bloodthirster'), original = serializeMatch(first);

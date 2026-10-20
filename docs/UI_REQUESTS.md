@@ -8,7 +8,7 @@
 - preparation/settlement/choice 可即时领；combat 或冻结 PvP 阵容接受并排队，battle/awaiting-settlement 必须转发。重复排队沿用 already-claimed，失败枚举不新增；另有 unknown-orb / seat-eliminated / stale-round / wrong-phase / multiplayer-required / shared-pool-required / invalid-loot 和池校验；失败不改 state/pool/RNG。接受排队只写席位私有 m8.loot.queuedOrbClaims（string[] FIFO），不改备战席/金币/卡池库存/预留/RNG，无领取事件/收据；包装仅更新 revision。
 - 战后在本轮经济/HP/成长、G23 钩子、延迟升星完成之后、战后选择之前按 FIFO 结算（PvE withCombat / PvP applyRoundSettlement）。以此时容量和库存执行同一领取逻辑，每颗后 drain 原机制奖励并同步装备；淘汰先清队列并 forfeited，不补金、不扣池。领取本身 0 RNG；原装备钩子按 FIFO/父装备 ID 顺序消费 equipment 流并记 roll，详见 MATCH_CONTRACT。完整最新席位快照必须持久化队列；重连只投影 queued，不再次排队或自动发奖，不用战前副本覆盖最新状态。
 - 服务器 `src/server/net/messages.ts` 的 NET_PROTOCOL_VERSION 必须 3→4，目标值由 simulation/m8/version.ts 的 MULTIPLAYER_NET_PROTOCOL_VERSION 导出；本任务禁改服务器目录，当前该服务器常量仍为 3。
-- bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；终局调用 forfeitUnclaimedOrbs，按现有规则分配事件序号。淘汰清理已由领域接上。
+- bot 每次准备阶段入口先调用 claimBotPreparationOrbs，成功整体提交后再进入原操作预算；整局终局对赢家及其他存活席位调用 `forfeitTerminalOrbs(state: MatchState): MatchStep`（server-entry 公共导出），提交返回 state/events；领域已按 Match 规则编号，服务器不得重复编号。无失败枚举、重复调用无新事件或收据；调用者负责确认整局结束，不要求席位已淘汰。淘汰清理已由领域接上。详见 MATCH_CONTRACT 的 #260 / #262 终局入口。
 - 验收：战斗点击接受且 queued=true，当时资源不变；重复点击失败无变化；战后才入库/按最终容量折金，先淘汰则 forfeited；排队前后重连/恢复不丢不重发；公共不泄露内容或 queued；截止/跨轮不消失，bot 准备入口领完。约定值：完整星级缺货整条按费用补金一次，奖励法球 gray；跨席竞争沿原结算提交顺序。完整签名、恢复边界和 PR 草稿：[v15 交接](LOOT_ORB_CLAIM_V15.md)。
 
 ## D11-SERVER-LIVE-BANK（Codex → Claude，v15 发布阻塞）
