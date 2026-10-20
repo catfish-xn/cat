@@ -1,0 +1,83 @@
+﻿2026-10-20T04:52:04.5701267Z Current runner version: '2.337.0'
+2026-10-20T04:52:04.5728628Z ##[group]Runner Image Provisioner
+2026-10-20T04:52:04.5729547Z Hosted Compute Agent
+2026-10-20T04:52:04.5730203Z Version: 20261012.601
+2026-10-20T04:52:04.5730935Z Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+2026-10-20T04:52:04.5731738Z Build Date: 2026-10-12T17:48:21Z
+2026-10-20T04:52:04.5732509Z Worker ID: {5d5fba41-73fc-45ae-8424-36baa352bf4f}
+2026-10-20T04:52:04.5733323Z Region: westus
+2026-10-20T04:52:04.5734212Z Cloud: Azure
+2026-10-20T04:52:04.5734841Z ##[endgroup]
+2026-10-20T04:52:04.5736391Z ##[group]Operating System
+2026-10-20T04:52:04.5737075Z Ubuntu
+2026-10-20T04:52:04.5737737Z 24.04.5
+2026-10-20T04:52:04.5738314Z LTS
+2026-10-20T04:52:04.5738888Z ##[endgroup]
+2026-10-20T04:52:04.5739556Z ##[group]Runner Image
+2026-10-20T04:52:04.5740191Z Image: ubuntu-24.04
+2026-10-20T04:52:04.5740880Z Version: 20261012.334.1
+2026-10-20T04:52:04.5742150Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-20T04:52:04.5744140Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-20T04:52:04.5745143Z ##[endgroup]
+2026-10-20T04:52:04.5746401Z ##[group]GITHUB_TOKEN Permissions
+2026-10-20T04:52:04.5748461Z Contents: read
+2026-10-20T04:52:04.5749186Z Metadata: read
+2026-10-20T04:52:04.5749765Z ##[endgroup]
+2026-10-20T04:52:04.5752081Z Secret source: Actions
+2026-10-20T04:52:04.5753207Z Cache mode: write
+2026-10-20T04:52:04.5754325Z Prepare workflow directory
+2026-10-20T04:52:04.6380679Z Prepare all required actions
+2026-10-20T04:52:04.6447979Z Complete job name: ci-required
+2026-10-20T04:52:04.7316764Z ##[group]Run echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+2026-10-20T04:52:04.7318668Z [36;1mecho "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'[0m
+2026-10-20T04:52:04.7320444Z [36;1mecho "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null[0m
+2026-10-20T04:52:04.8576883Z shell: /usr/bin/bash -e {0}
+2026-10-20T04:52:04.8577814Z env:
+2026-10-20T04:52:04.8578393Z   M5_COMMIT_SHA: 6940b097f2968c8a7cb1963c2c7136ba70dc266a
+2026-10-20T04:52:04.8579096Z   CI_WALLCLOCK_GATES: report
+2026-10-20T04:52:04.8579689Z   WALLCLOCK_REPORT_DIR: artifacts/wallclock
+2026-10-20T04:52:04.8582531Z   NEEDS: {
+  "test-and-build": {
+    "result": "cancelled",
+    "outputs": {}
+  },
+  "chromium-match": {
+    "result": "cancelled",
+    "outputs": {}
+  },
+  "chromium-input": {
+    "result": "cancelled",
+    "outputs": {}
+  },
+  "m8-u3-dynamic": {
+    "result": "success",
+    "outputs": {}
+  },
+  "m8-u6-loot": {
+    "result": "success",
+    "outputs": {}
+  },
+  "m6-retention": {
+    "result": "success",
+    "outputs": {}
+  },
+  "m7-presentation": {
+    "result": "success",
+    "outputs": {}
+  },
+  "compare-evidence": {
+    "result": "cancelled",
+    "outputs": {}
+  }
+}
+2026-10-20T04:52:04.8585575Z ##[endgroup]
+2026-10-20T04:52:04.8841945Z test-and-build: cancelled
+2026-10-20T04:52:04.8842615Z chromium-match: cancelled
+2026-10-20T04:52:04.8844634Z chromium-input: cancelled
+2026-10-20T04:52:04.8845490Z m8-u3-dynamic: success
+2026-10-20T04:52:04.8846003Z m8-u6-loot: success
+2026-10-20T04:52:04.8846475Z m6-retention: success
+2026-10-20T04:52:04.8846968Z m7-presentation: success
+2026-10-20T04:52:04.8847500Z compare-evidence: cancelled
+2026-10-20T04:52:04.8877998Z ##[error]Process completed with exit code 1.
+2026-10-20T04:52:04.9045135Z Cleaning up orphan processes

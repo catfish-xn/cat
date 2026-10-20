@@ -1,0 +1,52 @@
+Source: https://github.com/catfish-xn/cat/actions/runs/39372322168/job/118462717843
+These are recorded file/case elapsed times. They do not establish CPU-contention causality.
+
+2026-10-20T04:58:51.9937334Z  ✓  fast  tests/g2-4b-unstable-chest.test.ts (39 tests) 49726ms
+2026-10-20T04:58:51.9947241Z      ✓ every pool item gained mid-combat applies its stats and start effects at once and passes restore validation for the rest of the fight 12082ms
+2026-10-20T04:58:51.9956296Z      ✓ a mid-combat JSON save continues to the identical terminal state and ledger 2008ms
+2026-10-20T04:58:51.9959885Z      ✓ M2: Lux dies after casting at two granted Archangel pulses; 972 magic restores and continues identically 979ms
+2026-10-20T04:58:51.9967103Z      ✓ M2: Lux shields Irelia after two granted Archangel pulses, then dies; the ally shield restores and continues identically 710ms
+2026-10-20T04:58:51.9969589Z      ✓ three Titans plus three granted Archangels restore after eight pulses without expanding 102 million histories 350ms
+2026-10-20T04:58:51.9971803Z      ✓ every AP and AD a receiver had since the grant is among the restore candidates for that sample 4226ms
+2026-10-20T04:58:51.9973759Z      ✓ receivers that attack and cast after the grant keep every mid-combat save valid 19382ms
+2026-10-20T04:58:51.9976972Z      ✓ a Match save whose unit claims an item it never received is rejected 3866ms
+2026-10-20T04:58:51.9999059Z      ✓ A holds the chest: grants go to the holder's own seat and every tick restores 2448ms
+2026-10-20T04:58:52.0000900Z      ✓ B holds the chest: grants go to the holder's own seat and every tick restores 2192ms
+2026-10-20T04:58:52.0003224Z      ✓ a mirror copy of the chest seat fights the identical battle 907ms
+2026-10-20T04:59:17.9099721Z  ✓  fast  tests/task-mechanism-restore.test.ts (20 tests) 25719ms
+2026-10-20T04:59:17.9118264Z    ✓ a holder-owned summon kills as itself; holder contribution=false controls only assists, with identical restored ticks 9637ms
+2026-10-20T04:59:17.9169437Z    ✓ a holder-owned summon kills as itself; holder contribution=true controls only assists, with identical restored ticks 9100ms
+2026-10-20T04:59:17.9196410Z    ✓ saves Morgana curse without a summon or bracer, restores object/JSON, and continues every tick 575ms
+2026-10-20T04:59:17.9198752Z    ✓ rejects forged Black Rose member cast counts, including redistribution with an unchanged team total 1288ms
+2026-10-20T04:59:17.9227011Z    ✓ restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge 2419ms
+2026-10-20T04:59:17.9257059Z    ✓ compares every restore for bracer and tasks while reusing only exact detached replay evidence 338ms
+2026-10-20T04:59:17.9286819Z    ✓ reuses verified hashes and incrementally hashes appended events against the full-ledger oracle 467ms
+2026-10-20T04:59:42.5027382Z  ✓  fast  tests/t12-combat-equip.test.ts (48 tests) 24298ms
+2026-10-20T04:59:42.5070450Z      ✓ 3-5 sword+rod: consumed frozen component survives restoration; every tick is unchanged 693ms
+2026-10-20T04:59:42.5072909Z      ✓ 3-5 gloves+gloves: consumed frozen component survives restoration; every tick is unchanged 898ms
+2026-10-20T04:59:42.5086597Z      ✓ 3-7 sword+rod: consumed frozen component survives restoration; every tick is unchanged 868ms
+2026-10-20T04:59:42.5088699Z      ✓ 3-7 gloves+gloves: consumed frozen component survives restoration; every tick is unchanged 808ms
+2026-10-20T04:59:42.5091968Z      ✓ locked live-seat in-place combination preserves both sides and mirror frozen result byte-for-byte 581ms
+2026-10-20T04:59:42.5094819Z      ✓ augment choice and supply choice retain offers while equipment saves resume 1620ms
+2026-10-20T04:59:42.5098046Z      ✓ a permanent unit killed in this combat can equip; next battle uses the new stats 1703ms
+2026-10-20T04:59:42.5099942Z      ✓ pvp: latest board/bench gear migrates after deferred merge, frozen rewards commit once 359ms
+2026-10-20T04:59:42.5101804Z    ✓ T12 supply choice permits fresh component transactions and single-save continuation 4383ms
+2026-10-20T04:59:42.5103616Z    ✓ T12 an existing frozen glove roll and a new parent roll remain independent 1094ms
+2026-10-20T04:59:42.5106415Z    ✓ T12 online PvE restores the frozen player descriptor and keeps every live-seat combat tick unchanged 348ms
+2026-10-20T05:00:24.5857154Z  ✓  fast  tests/server/projection-wire.test.ts (9 tests) 41395ms
+2026-10-20T05:00:24.5897523Z      ✓ sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot 322ms
+2026-10-20T05:00:24.5899524Z      ✓ keeps the fault snapshot projected 307ms
+2026-10-20T05:00:24.5902343Z      ✓ mirrors side B (cells, movement, cast cells, unitUpdated, teams, result) and plays to the terminal view 5829ms
+2026-10-20T05:00:24.5904535Z      ✓ builds PvE replays from the rules own combat (start, finish and ledger; no per-tick frames kept) 1451ms
+2026-10-20T05:00:24.5906780Z      ✓ sends each battle once as the room's own replay and never as combat frames (C6) 853ms
+2026-10-20T05:00:24.5909442Z      ✓ runs a match past 6-7 into overtime-N rounds and ends with a unique ranking 30413ms
+2026-10-20T05:00:24.5911446Z      ✓ ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP) 2146ms
+2026-10-20T05:00:49.8547070Z  ✓  fast  tests/m6-integration-sniper-caitlyn.test.ts (2 tests) 167710ms
+2026-10-20T05:00:49.8586802Z      ✓ sniper-caitlyn: every completed battle has exact original state/events and isolated playback 141412ms
+2026-10-20T05:00:49.8614211Z      ✓ sniper-caitlyn: full catalog-capacity envelope acceptance (B9) 26293ms
+2026-10-20T05:01:24.7317552Z  ✓  fast  tests/server/shared-pool-room.test.ts (9 tests) 56623ms
+2026-10-20T05:01:24.7446923Z      ✓ lets two seats compete for the last copy without overselling; an empty paid reroll fails for free 1036ms
+2026-10-20T05:01:24.7486765Z      ✓ keeps pool, poolRevision and the seat untouched on every refused command 1155ms
+2026-10-20T05:01:24.7576984Z      ✓ releases an eliminated seat once, after the ranking and before the next refresh, and advances the survivors only 869ms
+2026-10-20T05:01:24.7666099Z      ✓ pvpMode=two-sided 29777ms
+2026-10-20T05:01:24.7756265Z      ✓ pvpMode=placeholder 23471ms

@@ -1,5 +1,6 @@
+import { prepareInput, copyInput } from './fixtures/prepared-input';
 import {G24_MECHANISM_ITEMS} from '../src/simulation/content/g2-4b-mechanism-items';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
@@ -11,9 +12,24 @@ vi.setConfig({ testTimeout: 20_000 });
 const root = 'src/simulation/content/source/s13-14.24b/raw/';
 const archive = (name: string) => JSON.parse(gunzipSync(readFileSync(root + name)).toString());
 
-it('pins all eleven exact Set13 identities, bilingual descriptions and map22 values', () => {
+let sourceInput: { english: ReturnType<typeof archive>; map: ReturnType<typeof archive>; chinese: ReturnType<typeof archive> };
+beforeAll(() => {
   const english = archive('en_us.json.gz'), map = archive('map22.bin.json.gz');
   const chinese = archive('zh_cn.tft.stringtable.json.gz').entries;
+  const selectedItems = [] as typeof english.items;
+  for (const item of extracted.items) {
+    const index = Number(item.provenance.englishPointer.split('/').at(-1));
+    selectedItems[index] = english.items[index];
+  }
+  sourceInput = prepareInput({
+    english: { items: selectedItems, setData: english.setData.filter((s: { mutator: string }) => s.mutator === 'TFTSet13') },
+    map: Object.fromEntries(extracted.items.map(item => [item.provenance.mapKey, map[item.provenance.mapKey]])),
+    chinese: Object.fromEntries(extracted.items.flatMap(item => [item.provenance.nameKey, item.provenance.descriptionKey]).map(key => [key, chinese[key]])),
+  });
+});
+
+it('pins all eleven exact Set13 identities, bilingual descriptions and map22 values', () => {
+  const { english, map, chinese } = copyInput(sourceInput);
   const members = english.setData.find((s: {mutator: string}) => s.mutator === 'TFTSet13').items;
   expect(extracted.items).toHaveLength(11);
   expect(new Set(extracted.items.map(i => i.apiName)).size).toBe(11);
