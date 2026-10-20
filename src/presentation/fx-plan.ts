@@ -3,34 +3,22 @@
  * shared by the live board (combat-fx.ts) and the replay canvas (replay-view.ts).
  * Numeric floats (damage/shield/heal amounts) are owned by the DOM feedback renderer;
  * specs here are shapes and short labels only. Pure: no Phaser, DOM or clock.
+ * I3 (14.24 look): casts, effect triggers, growth and status changes draw no text; current statuses are icons on
+ * the piece (status-icons.ts). Only the revive keeps a label.
  */
 import type { HexCell } from '../simulation/board';
 import type { ResolvedAbility } from '../simulation/ability-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombatEvent } from './combat-display';
-import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
-import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
-import { augmentDisplayName } from './augment-display';
-import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from '../rendering/display-names';
-import { getHeroIdentity, traitDisplayName } from './hero-identity';
-import { anomalyDisplayName, itemDisplayName } from './g23-display';
+import { getHeroIdentity } from './hero-identity';
 import { THEME, toNumber } from './theme';
 
 const C = THEME.color;
-const SOURCE_KIND: Readonly<Record<string, string>> = { ability: '技能', trait: '羁绊', item: '装备', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
-const sourceName = (kind: string, id: string) => {
-  if (kind === 'augment' && AUGMENT_DEFINITIONS[id]) return augmentDisplayName(id);
-  if (kind === 'item' && ITEM_DEFINITIONS[id]) return itemDisplayName(id);
-  if (kind === 'trait' && TRAIT_DEFINITIONS[id]) return traitDisplayName(id);
-  if (kind === 'anomaly' && ANOMALY_DEFINITIONS[id]) return anomalyDisplayName(id);
-  const catalog = kind === 'item' ? ITEM_DEFINITIONS : kind === 'trait' ? TRAIT_DEFINITIONS : kind === 'augment' ? AUGMENT_DEFINITIONS : kind === 'anomaly' ? ANOMALY_DEFINITIONS : null;
-  return (catalog?.[id] as { name?: string } | undefined)?.name ?? displayUnitName(id);
-};
 
 export type FxSpec =
   | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number; sourceId: string }
   | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean; sourceId: string }
+  /** `label` names the cast for debug/acceptance reads; the board draws only the rings. */
   | { kind: 'cast'; at: HexCell; targets: readonly HexCell[]; color: number; duration: number; label: string }
   | { kind: 'ring'; at: HexCell; color: number; radius: number; duration: number }
   | { kind: 'death'; at: HexCell; duration: number; unitId: string }
@@ -76,11 +64,9 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
     } else if (event.type === 'shieldLayerChanged' && event.reason === 'granted') {
       const target = unit(event.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: toNumber(C.shield), radius: 33, duration: 450 });
-    } else if (event.type === 'growth' || event.type === 'statusChanged') {
-      const target = unit(event.type === 'growth' ? event.unitId : event.targetId);
-      if (!target) continue;
-      const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
-      specs.push({ kind: 'label', at: target.cell, text, dy: 46, color: C.shield, background: '#14212c', duration: 600 });
+    } else if (event.type === 'growth') {
+      const target = unit(event.unitId);
+      if (target) specs.push({ kind: 'ring', at: target.cell, color: 0xffe39b, radius: 30, duration: 450 });
     } else if (event.type === 'targetChanged') {
       const target = unit(event.after);
       if (target) specs.push({ kind: 'target', unitId: target.id, team: target.team });
@@ -97,10 +83,6 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
       if (!target) continue;
       specs.push({ kind: 'ring', at: target.cell, color: 0xffd56e, radius: 34, duration: 700 });
       specs.push({ kind: 'label', at: target.cell, text: `复活 · 生命 ${event.hp}`, dy: 46, color: '#fff2c4', background: '#3a2c10', duration: 900 });
-    } else if (event.type === 'effectTriggered') {
-      const owner = unit(event.ownerId);
-      if (owner) specs.push({ kind: 'label', at: owner.cell, text: `${SOURCE_KIND[event.sourceKind] ?? '效果'} · ${sourceName(event.sourceKind, event.sourceDefinitionId)}`,
-        dy: 46, color: '#ffe39b', background: '#1b2634', duration: 700 });
     }
   }
   return specs;

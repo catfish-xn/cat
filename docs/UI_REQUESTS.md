@@ -985,3 +985,9 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 - 双排待接：满席时选择事务须创建真实单位所有权、占共享池；腾位后的领取/升星需要shared command事务。当前room的plain deploy与PvP锁定不经过该事务，原型未注册。
 - 贪财化身待接：联机冻结战斗必须接纳战中合法买卖/刷新/买XP的真实经济事件，恢复须重演同一事件输入。当前仅开战余额快照不能表示原版实时持有金币效果，原型未注册。
 - 进入未知、终极英雄待接：需跨轮暂离持有者及4星单位完整投影/共享池/恢复，当前不提供半实现选择。
+
+## UR-I3-01：联机战斗帧带上单位当前状态种类（Claude → Codex，2026-10-20）
+
+- **字段**：`CombatViewUnit` 增加可选 `statuses?: readonly { kind: StatusKind | 'channel' | 'redirect'; harmful: boolean }[]`，按当前快照取"生效中"的状态（跳过未生效和被同类更强来源压制的贡献，与 `readUnitStatusRows` 的 state 判断一致），同种类同极性去重；变化时随 `unitUpdated` 下发。
+- **含义/用途**：I3 已把棋子状态改成头顶小图标（`src/presentation/status-icons.ts`）。单机读本地引擎状态能画全部图标；联机帧现在只有护盾数值，所以联机只能画护盾图标，眩晕、灼烧、重伤等看不到。界面不能从 `statusChanged` 事件顺序自己推算（合同禁止，且线上结束事件不带贡献明细）。
+- **验收**：联机一场含眩晕/灼烧的战斗，图标出现与消失的 tick 与单机同一场一致；关键帧/断线重连后图标正确；不改任何规则结果，按需升 netProtocol。
