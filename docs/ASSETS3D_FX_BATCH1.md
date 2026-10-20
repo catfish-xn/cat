@@ -117,3 +117,71 @@ Ziggs 爆炸、Caitlyn 轰炸、Ekko P_Proc 在此假设下超过 3 格；没有
 外壳不再按各英雄身体缩放换算特效，统一用 `FX_SCALE = 0.44`（`src/rendering/three-mode/placeholder-renderer.ts`，60 个模型 92/高度 的中位数 0.438）。上表格数按 ×0.44/身体缩放 换算：共享普攻命中统一约 0.5 格；blitzcrank q_cas ≈ 8.5、caitlyn 轰炸命中 ≈ 8.2、lux w_mis ≈ 4.9 格。三者都是原始数据本身就大的低透明度地面/背光辉光（见上节），ArbitraryQuad 朝向修复后平铺在地面；浏览器按 0.44 摆放复看，表现为淡的大范围光晕，不遮挡棋子，保留。
 
 #276 fixture ???`assets3d-fx-batch1.json` ?????????/manifest ???????`assets3d-fx-legacy-bindings.json` ???????????????????????????????
+
+## 新转换器尺寸复测与混合修正（2026-10-20）
+
+本节替代上文旧fit/身体缩放、0.1s采样及“统一换算”估算。调用实际ParticleEffectV2，固定FX_SCALE=0.44、一格62.4、50ms采样至各绑定maxDuration；表中为t>0单粒子非退化几何长边峰值，包含mesh与透明边，不是可见包围盒或伤害范围。t=0单列在本地size-report.json。
+
+重生成命令：
+
+```powershell
+node scripts/assets3d/fx-batch1.mjs --force
+node scripts/assets3d/fx-batch-sizes.mjs --out assets3d-local/fx-batch1
+```
+
+相对上文旧身体缩放浏览器表，主要项更新如下；差异混有统一缩放、50ms更密采样、mesh几何测量与当前通用曲线转换，不能归因为本轮混合修复，也不能只按身体缩放比例换算：
+
+| 英雄 | 旧文档格数 → 新口径格数 |
+| --- | --- |
+| drmundo | r_cas_01 2.48→2.12；r_buf 1.05→1.76 |
+| blitzcrank | q_cas 10.44→8.46；q_mis 3.48→2.82；q_tar2 1.91→1.55 |
+| heimerdinger | w_cas 无可见粒子→0.32几何上界；w_mis 0.75→1.42；w_tar 1.46→2.72 |
+| ziggs | q_explosion 3.98→2.56；ba_mis 0.03→0.14 |
+| lux | w_mis 7.55→4.94；w_shield 3.24→2.12 |
+| caitlyn | r_scope_hologram 2.12→2.82；r_bombardment_impact 8.20→8.74 |
+| darius | q_ring_windup 2.04→3.17；q_ring 2.19→3.42 |
+| twistedfate | w_red_mis 2.04→2.05；w_red_tar 2.10→2.12 |
+| malzahar | q_mis 2.20→2.12；e_buf 2.55→2.29 |
+| ekko | r_mark 0.16→0.15；p_proc 2.60→8.15 |
+
+共享普攻命中从旧报告随身体缩放的0.34–1.00格改为统一1.20格，修正上文统一换算约0.5格的估算。几何存在不保证某时刻alpha可见；没有重新做浏览器画面验收。尤其Ekko P_Proc新峰值来自Alpha_BackgroundThin_Green的ray几何长边；它不是mesh，当前测量包含整条面片及透明边，保留源尺寸，不为达到阈值改缩放。
+
+完整当前技能尺寸：
+
+| 英雄 | 系统 | 格数 |
+| --- | --- | ---: |
+| drmundo | r_cas_01 | 2.12 |
+| drmundo | r_buf | 1.76 |
+| blitzcrank | q_cas | 8.46 |
+| blitzcrank | q_mis | 2.82 |
+| blitzcrank | q_tar2 | 1.55 |
+| blitzcrank | q_mis_return | 1.32 |
+| heimerdinger | w_cas | 0.32 |
+| heimerdinger | w_mis | 1.42 |
+| heimerdinger | w_tar | 2.72 |
+| ziggs | q_explosion | 2.56 |
+| lux | w_mis | 4.94 |
+| lux | w_shield | 2.12 |
+| caitlyn | r_cas | 0.81 |
+| caitlyn | r_scope_hologram | 2.82 |
+| caitlyn | r_target | 0.72 |
+| caitlyn | r_bombardment_mis | 2.12 |
+| caitlyn | r_bombardment_impact | 8.74 |
+| darius | q_ring_windup | 3.17 |
+| darius | q_ring | 3.42 |
+| darius | q_tar | 1.19 |
+| darius | q_heal | 1.84 |
+| twistedfate | w_cas | 1.12 |
+| twistedfate | w_red_mis | 2.05 |
+| twistedfate | w_red_tar | 2.12 |
+| malzahar | q_cas_handtrail | 0.42 |
+| malzahar | malzahar_tft13_malzahar_q_mis | 2.12 |
+| malzahar | malzahar_tft13_malzahar_spell_tar | 2.51 |
+| malzahar | malzahar_tft13_malzahar_e_buf | 2.29 |
+| malzahar | malzahar_tft13_malzahar_e_damage | 1.83 |
+| ekko | r_mark | 0.15 |
+| ekko | r_mark_enemy | 0.21 |
+| ekko | p_proc | 8.15 |
+| ekko | p_tar_impact | 1.47 |
+
+本轮混合修复前后去除blend字段的效果文档逐项相同，尺寸变化不由blend引起。第一批23文档31发射器改用additive；praxis、Add_Glow1、Temp_GroundGlow完整emitter（含原additive）不变，地面朝向与尺寸回归通过。jinx/vi strict及旧绑定fixture不变。两批合成测试与指定8文件382项通过，tsc通过。统计、映射与约定见 [ASSETS3D_BLEND_MODES.md](ASSETS3D_BLEND_MODES.md)。

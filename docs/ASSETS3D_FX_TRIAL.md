@@ -32,7 +32,7 @@ node scripts/assets3d/fx-trial.mjs --particle-mode strict --out assets3d-local/f
 | ArbitraryQuad | CameraQuad；出生旋转只保留 Z roll，避免 X/Y 旋转把面片转成侧面；系统 transform 仍在最后作用。 |
 | Ray | 速度方向的定向长条 quad；零速度用局部 +Y；出生旋转由方向覆盖，尺寸沿用出生尺寸。 |
 | Beam | primitive.start/end 是局部起止点，长条从 start 到 end，长度为距离、宽取 birthScale0.X；缺端点或重合则整发射器 skipped。本地两英雄没有 Beam primitive；W_Beam 系统实际是 ArbitraryQuad。 |
-| 数字 blendMode | 采用所要求的社区常用预览表：1/3 → normal alpha，4 → additive；其他数字 → normal alpha，每次仍标 approximated。字符串 normal/additive/multiply 保持严格支持。 |
+| 数字 blendMode | 当前转换器采用明确预览约定：1/3 → normal，2/4 → additive；未知/缺失模式且PNG全255 → additive，其他保留normal。全部数字映射/回退标approximated，详见 [混合模式证据](ASSETS3D_BLEND_MODES.md)。此处旧产物未重生成；字符串normal/additive/multiply保持严格支持。 |
 | flags / pass / miscRenderFlags / alphaRef / depthBiasFactors | 忽略；本轮 pass 不映射 renderOrder，使用文档顺序及 Three 默认透明排序。 |
 | SpawnShape Box | Size 当全尺寸，半尺寸分别均匀采样；缺维度为 0。 |
 | SpawnShape Cylinder | Y 为轴，半径 r=sqrt(U)×radius，高度均匀采样 [-height/2,height/2]；缺尺寸为 0。 |
