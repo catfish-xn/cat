@@ -1049,6 +1049,8 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 ## V16-UI-250：终极英雄与进入未知
 
+对手在公共棋盘上看到的晋升单位按物理 3 星显示，有效 4 星只在战斗录像里体现（有意设计）。
+
 领域生产合同（Codex，2026-10-20）：同一 v16 注册两个异常，单机56/联机55；现有选择目标/选择/付费刷新命令签名不变，不另增界面规则计算。
 
 - `PrivateSeatView.d14Display?`：`anomalyId, choiceId, unitId, phase(waiting/promoted/absent/returned/retired), dueOrdinal, remainingSettlements, effectiveStarLevel, physicalStarLevel`。进入未知 absent 时另有仅本席可见的 `heldUnit, heldItems`；它们已从 `preparation.units/items` 移出，不提供出售/装备/复制控件。满席到期显示等待空位，不能当成已获得增益。

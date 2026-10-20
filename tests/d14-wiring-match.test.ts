@@ -70,6 +70,44 @@ const onlineCases=cases.map(c=>{
   const next=accepted(api.nextRound(resolveM5Choices(settled.state),settled.state.round));
   return {id:c.id,before:s,receipt,settled,next};
 });
+it.each(cases.flatMap(c=>c.checkpoints.map(p=>({id:c.id,...p}))))('$id preserves the D14 display fields at $label',({state:s})=>{
+  const d=s.d14!,unit=s.preparation.units.find(u=>u.id===d.unitId);
+  const legacy={anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+3,
+    remainingSettlements:Math.max(0,d.atOrdinal+3-s.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(unit?.starLevel??d.originalUnit.starLevel),
+    physicalStarLevel:unit?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:9,poolCopies:9}:{}),
+    ...(d.held?{heldUnit:structuredClone(d.held.unit),heldItems:structuredClone(d.held.items)}:{})};
+  const display=toPrivateSeatView(s).d14Display;
+  expect(display).toEqual(legacy);
+  if(!d.held)expect(JSON.stringify(display)).toBe(JSON.stringify(legacy));
+});
+
+it('whitelists held unit/item fields and locations without leaking future nested authority fields',()=>{
+  const s=cases.find(c=>c.id==='into-the-unknown')!.checkpoints[0].state;
+  const expected=toPrivateSeatView(s).d14Display!,injected=structuredClone(s),held=injected.d14!.held!;
+  for(const value of [held.unit,held.unit.location,...held.items.flatMap(item=>[item,item.location])])
+    Object.assign(value,{privateSentinel:'DO_NOT_SEND'});
+  if(held.unit.location.kind==='board')Object.assign(held.unit.location.cell,{privateSentinel:'DO_NOT_SEND'});
+  const before=JSON.stringify(injected),display=toPrivateSeatView(injected).d14Display!;
+  expect(display).toEqual(expected);
+  expect(JSON.stringify(display)).not.toContain('DO_NOT_SEND');
+  expect(JSON.stringify(injected)).toBe(before);
+  expect(display.heldUnit).not.toBe(held.unit);
+  expect(display.heldUnit!.location).not.toBe(held.unit.location);
+  if(display.heldUnit!.location.kind==='board'&&held.unit.location.kind==='board')
+    expect(display.heldUnit!.location.cell).not.toBe(held.unit.location.cell);
+  display.heldItems!.forEach((item,index)=>{
+    expect(item).not.toBe(held.items[index]);expect(item.location).not.toBe(held.items[index].location);
+  });
+});
+
+it('keeps the held Unit field set for a form swapper without adding a live preparation form',()=>{
+  const s=structuredClone(cases.find(c=>c.id==='into-the-unknown')!.checkpoints[0].state);
+  Object.assign(s.d14!.held!.unit,{definitionId:'jayce'});
+  const display=toPrivateSeatView(s).d14Display!;
+  expect(display.heldUnit).toEqual(s.d14!.held!.unit);
+  expect(display.heldUnit).not.toHaveProperty('form');
+});
+
 it.each(onlineCases)('$id crosses the third real PvP settlement once and preserves the restored public snapshot',({id,before,receipt,settled,next})=>{
   expect(before.d14!.phase).toBe(id==='ultimate-hero'?'waiting':'absent');
   expect(settled.state.d14!.phase).toBe(id==='ultimate-hero'?'promoted':'returned');
