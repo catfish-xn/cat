@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => ({
   build: { rollupOptions: { output: {
     manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : undefined),
     chunkFileNames: chunk => (chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
+    assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },
   server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true, rewrite: path => path.replace(/^\/ws/, '') } } },
 }));

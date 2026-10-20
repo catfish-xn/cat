@@ -1,4 +1,4 @@
-import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type Object3D } from 'three';
+import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type ActionState } from './contracts';
@@ -41,6 +41,23 @@ export async function readGlb(url: string): Promise<ModelTemplate> {
   if (!response.ok) throw new Error(`model-http-${response.status}`);
   const gltf = await new GLTFLoader().parseAsync(await response.arrayBuffer(), url.slice(0, url.lastIndexOf('/') + 1));
   return { scene: gltf.scene, animations: gltf.animations };
+}
+
+/** Default static particle-GLB adapter. Inject the host's cached/meshopt reader.
+ * The reader must return a fresh, owned template: it is disposed after extracting
+ * one geometry with its node transform baked in. The effect owns the result.
+ * Opt in with readMesh; omitting that hook still skips mesh emitters as before. */
+export async function readParticleMesh(url: string, readModel: ReadModel = readGlb): Promise<BufferGeometry> {
+  const model = await readModel(url);
+  try {
+    const meshes: Mesh[] = [];
+    model.scene.updateMatrixWorld(true);
+    model.scene.traverse(object => { if ((object as Mesh).isMesh) meshes.push(object as Mesh); });
+    if (meshes.length !== 1 || (meshes[0] as import('three').SkinnedMesh).isSkinnedMesh) {
+      throw new Error('particle-mesh-requires-single-static-mesh');
+    }
+    return meshes[0].geometry.clone().applyMatrix4(meshes[0].matrixWorld);
+  } finally { disposeModel(model); }
 }
 
 /** Templates share GPU resources; leases own independent transforms and skeletons.
