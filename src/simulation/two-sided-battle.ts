@@ -1,4 +1,6 @@
 import { createCombatReplayRecorder, type CombatReplay } from './combat-replay-view';
+import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
+import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
@@ -136,7 +138,9 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
  * every terminal field and event against that result's original tick-zero state;
  * the validated BattleInput boundary remains startTwoSidedBattle above. */
 function validateDynamicResult(result:BattleResult):void {
-  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'));
+  validateD11BankSamples(result.bankSamples,result.terminal.tick);
+  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  if(result.bankSamples?.some(s=>!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
     return;
@@ -144,10 +148,14 @@ function validateDynamicResult(result:BattleResult):void {
   if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench')
     ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>1200)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
+  let bankCursor=0;
   // Tick-zero events already belong to the trusted initial state; authenticate
   // all subsequently generated ledger events, including dynamic identities.
   const events=[];
   while(expected.tick<result.terminal.tick&&expected.status==='running'){
+    while(result.bankSamples?.[bankCursor]?.tick===expected.tick){
+      const sample=result.bankSamples[bankCursor++];expected=sampleD11CombatGold(expected,sample.team,sample.liveGold);
+    }
     const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
   }
   if(canonicalContent(expected)!==canonicalContent(result.terminal)
@@ -160,6 +168,8 @@ export interface BattleReplayTask extends BattleTask {
 }
 
 export interface BattleTask {
+  /** Server-owned economy only. Samples apply before the next tick, never to a completed result. */
+  sampleBankGold(seatId:string,liveGold:number):void;
   advance(maxTicks: number): BattleResult | null;
 }
 
@@ -189,8 +199,16 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
   const recorder = options?.captureReplay ? createCombatReplayRecorder(start.state, events) : undefined;
   let replay: CombatReplay | null = null;
   let terminal = start.state;
+  const bankSamples:CombatBankSample[]=[];
   let result: BattleResult | null = null;
-  const task: BattleTask = { advance(maxTicks) {
+  const task: BattleTask = { sampleBankGold(seatId,liveGold){
+    if(result||terminal.status!=='running')throw new BattleValidationError('wrong-phase');
+    if(!Number.isSafeInteger(liveGold)||liveGold<0||bankSamples.length>=100000||seatId!==checked.a.seatId&&seatId!==checked.b.seatId)throw new BattleValidationError('invalid-bank-sample');
+    const team=seatId===checked.a.seatId?'player':'enemy';
+    const sampled=sampleD11CombatGold(terminal,team,liveGold);
+    if(sampled===terminal)return;
+    bankSamples.push({tick:terminal.tick,team,liveGold});terminal=sampled;
+  },advance(maxTicks) {
     if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new BattleValidationError('invalid-budget');
     if (result) return result;
     let steps = 0;
@@ -211,7 +229,7 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     const candidate: BattleResult = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
       winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
       a:sideResult(checked.a.seatId,checked.mapping,terminal,start.state), b:sideResult(checked.b.seatId,checked.mapping,terminal,start.state,checked.mirrorOfSeatId !== null),
-      mapping:checked.mapping,initial:start.state,terminal,events});
+      mapping:checked.mapping,initial:start.state,terminal,events,...(bankSamples.length?{bankSamples}:{} )});
     // Initial and each ledger element were fully checked and frozen before
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.

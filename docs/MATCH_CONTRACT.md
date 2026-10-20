@@ -1,5 +1,15 @@
 # M5 Match contract v5
 
+## D11 领域接线，等待统一 v15（2026-10-20）
+
+运行目录为 60 强化 / 54 异常；新增一费奉献 I（银）、三项赛 I（金）、灵魂连接（金）、贪财化身与猎头者。具体数值、开战 / 赠送 RNG 约定、恢复证据与版本清单见 [D11_WIRING_V15](D11_WIRING_V15.md)。D11 单支交付保留 v14；本次合并沿用法球分支既有 v15 身份，不再升级版本、改变 digest 或重录指纹。目录 digest 输入仍有显式临时 preD11 边界，后续统一身份与指纹验收必须移除，不能据此声称与旧 v14 存档等价或直接发布。
+
+灵魂连接以开战玩家生命的完整十点缺失组计算治疗，每 100 tick 生效。一费奉献 / 三项赛的赠送经唯一 mechanic 收据：单机沿用满席托管，联机先产生奖励法球，再按下节法球合同领取（战斗排队、战后分配共享库存或折金）；不重发、不重抽、不消耗四条 Match 流。贪财化身获取 +5 金一次，伤害按实时金币取样；战斗收益只通过既有结算入账。猎头者当战击杀即时加攻速，永久成长以 g23Facts.d11Headhunter 的完整 kill eventSeq 事实结算，排除召唤物、野怪、助攻与友军。
+
+单机 `serializeMatch(state,battles?)` / `restoreMatch(input,battles?)` 签名不变；历史含猎头者事实（即使零击杀）必须提供完整可信 battles 重放。当前异常战斗逐 tick 重算，礼物与 +5 金校验来源及唯一收据，不从保存的自报计数恢复。联机完整 Match 读档仍不支持。私有视图可选 d11Display 和公开战斗 replay 单位可选 choiceEffects 提供当前条目名称、说明与等级，无新图标路径，也不公开银行或未来候选。
+
+双边任务新增 `sampleBankGold(seatId:string,liveGold:number):void`，私有 bankSamples 记录生效 tick，结果校验 / 回放重演同一经济输入。服务器仅可传权威 Match.gold。当前服务器先完整计算再播放，**尚未接战中买卖样本，联机 PvP 贪财化身的实时银行仍是发布阻塞项**；不能用开战冻结数替代完整实现。详细失败枚举及配套见 [UI_REQUESTS](UI_REQUESTS.md)。
+
 ## 联机法球领取：v15（用户批准 2026-10-20 02:20）
 
 只在 state.multiplayer 存在时替换自动发奖/满席托管。`claimOrb(state:MatchState,orbId:string,expectedRound:number,unitLootPolicy?:UnitLootPolicy):MultiplayerCommandResult`；共享席位经 `runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId})`，客户端不提供 policy。允许 preparation/combat/settlement/choice，判断集中在 ORB_CLAIM_PHASES/planOrbClaim。用户 2026-10-20 02:26 已定：combat 或 PvP combatRosterLocked 时接受领取并排队，其他允许阶段即时领取。expectedRound 是当前操作轮，法球来源 roundId 可为历史轮。

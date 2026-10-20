@@ -1,4 +1,5 @@
 import type { MatchState } from './match-types';
+import { d11PrivateDisplay } from './d11-display';
 import type { RevealedDropView } from './m8/ui-contracts';
 import { readLootView, payloadView } from './loot-view';
 import { previewUseConsumable } from './consumables';
@@ -55,6 +56,7 @@ export function toPrivateSeatView(state: MatchState) {
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
   const seatMechanics = seatMechanicsView(state);
+  const d11Display = d11PrivateDisplay(state);
   // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
   const candidates: ConsumableTarget[] = [
     ...units.map(unit => ({ kind: 'unit' as const, unitId: unit.id })),
@@ -72,6 +74,7 @@ export function toPrivateSeatView(state: MatchState) {
   return freezeContent({
     ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
       orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
+    ...(d11Display?{d11Display}:{}),
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),

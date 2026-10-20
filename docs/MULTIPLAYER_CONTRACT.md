@@ -1,5 +1,15 @@
 # Set13 八人联机合同草案
 
+## D11 接线与实时银行边界（2026-10-20）
+
+运行目录 60/54；新强化共用既有等级、候选和按卡刷新命令。一费奉献 / 三项赛赠送先经唯一 mechanic 收据产生奖励法球，不立即取卡或补金；显式领取时经过同事务 UnitLootPolicy，按法球合同处理战斗排队、战后库存、合星、满席折金和缺货补偿。双方 snapshot 编译新增内容，贪财化身开战携带 bankGold；猎头者基础 / 永久攻速及灵魂连接开战玩家生命均为本席权威输入。
+
+`G23BattleFacts.d11Headhunter?: {combatId:string,holderId:string,kills:readonly {eventSeq:number,victimId:string}[]}` 经已有 proposal.g23Facts 原样转入 settlement.g23Facts。服务器不统计击杀、不另算永久成长；镜像无 facts / 进度，重复拒绝。猎头者已部署时缺失事实、holderId 不是该席当前绑定的战斗命名空间 ID，或 eventSeq 超出账本，均按 invalid-receipt 保持原状态拒绝。
+
+现有 `startTwoSidedBattle` 返回任务新增 `sampleBankGold(seatId:string,liveGold:number):void`；非法席位 / 数值 / 样本上限为 `invalid-bank-sample`，完成后为 `wrong-phase`。样本在下一 tick 前应用，私有 `BattleResult.bankSamples?: readonly {tick:number,team:'player'|'enemy',liveGold:number}[]` 必须随完整结果传给 `proposeSettlement` 与 `toCombatReplay` / `startCombatReplay`，公开 replay 不发这些样本。原有采样缺省路径和旧结果字段不变，不加客户端“报金币”命令。
+
+**服务器配套未完成**：目前先算战斗、后播放的流程不能反映播放期间买卖。需要 Claude 调整规则推进 / 命令排序并在金币变动后向未完成任务传权威银行；仅冻结开战 gold 不满足贪财化身合同。联机 PvE stepMatch 已接实时 Match.gold。公开 replay 单位同时保留 statuses 与可选 choiceEffects，后者提供当前 D11 名称、说明、等级；私有视图同时保留法球字段与可选 d11Display，后者提供已拥有 / 当前候选定义和猎头者已结算击杀数；不扩大静态 PublicBoard 的原白名单。详见 [D11_WIRING_V15](D11_WIRING_V15.md) 与 [UI_REQUESTS](UI_REQUESTS.md)。合并沿用法球分支既有 v15 身份，版本、digest、旧指纹不再改动；后续统一身份与指纹验收完成后才能正式发布。
+
 ## 强化同轮同级与按卡刷新：待 v15 收口（2026-10-20）
 
 等级派生不变，详见 [Match 合同“强化等级与按卡刷新”](MATCH_CONTRACT.md)。initializeSharedSeat 将 pool.seed 绑定到 augmentTierSeed；每节点八席同级，候选与刷新仍用各席独立 choiceRngState。单机/联机共用每槽免费一次与永久移出规则；移出集合只属于本局本席，不从其他席候选中移除，不改变英雄共享库存。

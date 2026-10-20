@@ -55,6 +55,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       ...(resolved?.openingItemBankGold===undefined?{}:{openingItemBankGold:resolved.openingItemBankGold,currentItemBankGold:resolved.openingItemBankGold}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24Mogul')?{itemMogulHits:[]}:{}),
+      ...(resolved?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')?{d11Kills:[]}:{}),
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24DeathsDefiance')?{deferredItemDamage:[]}:{}),
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,

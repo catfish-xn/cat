@@ -1,4 +1,6 @@
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
+import { d11AvariceDamageAmpBps, d11HeadhunterAttackSpeedBps } from './d11-fill';
+import { UNIT_DEFINITIONS } from './units';
 import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3Mechanic, settleP3Deaths } from './s13-p3-combat';
 import { p3Values } from './s13-p3-programs';
 import {splitTrenchHolders} from './combat-g2-4b-trench';
@@ -109,6 +111,8 @@ function chargedCritBps(owner: S13Unit, packet: S13Packet): number {
 }
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
   const amplifiers: StatModifier[] = owner ? [...statusModifiers(owner, 'damageAmp', tick)] : [];
+  if(owner?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))
+    amplifiers.push(constantModifier('damageAmp',d11AvariceDamageAmpBps(owner.currentItemBankGold!),'bps'));
   if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
   if(owner&&g23Anomaly(owner,'bully')&&target.starLevel<owner.starLevel)amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
@@ -162,7 +166,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if(next.receipts.at(-1)!.gold)for(const holder of fullRoster){
       if(holder.openingItemBankGold===undefined||holder.team!==owner.team)continue;
       const limit=mechanic(holder,'g24Gambler','goldLimit');
-      holder.currentItemBankGold=Math.min(limit,holder.currentItemBankGold!+1);
+      holder.currentItemBankGold=holder.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate')
+        ?holder.currentItemBankGold!+1:Math.min(limit,holder.currentItemBankGold!+1);
     }
   };
   if(hasBanish)returnZephyrUnits(ctx);
@@ -212,6 +217,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const startHp = new Map(units.map(u => [u.id, u.hp]));
   const spent = new Map<string, number>(), attackMana = new Map<string, number>(), killMana = new Map<string, number>();
+  const hasD11Bank=fullRoster.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'));
+  const highRollerBefore=new Map(hasD11Bank?fullRoster.map(u=>[u.id,(u.g23?.highRoller??[]).reduce((n,r)=>n+r.gold,0)]):[]);
   const hookMana = new Map<string, number>();
   const hooks = (unit: S13Unit, hook: Hook, seq: number) => {
     const batch = collectTriggers(unit.triggers ?? [], unit.effectRuntime ?? [], hook, unit.id, unit.targetId);
@@ -353,6 +360,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     rollPlannedPackets();
   }
   scheduleAnomalyAttacks(ctx,()=>actionSeq++);
+  // Coin/Jackpot is earned by the cast before this tick's damage samples.
+  if(hasD11Bank)for(const team of ['player','enemy'] as const){
+    const gold=fullRoster.filter(u=>u.team===team).reduce((n,u)=>n+(u.g23?.highRoller??[]).reduce((m,r)=>m+r.gold,0)-(highRollerBefore.get(u.id)??0),0);
+    if(gold)for(const holder of fullRoster)if(holder.team===team&&holder.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))
+      holder.currentItemBankGold=holder.currentItemBankGold!+gold;
+  }
   // G2-4b: each stun applied (or refreshed) on an enemy is one stun-applied occurrence of its source owner.
   let stunScan = 0;
   const emitStuns = () => {
@@ -443,6 +456,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (outcome.killingPacket) {
       g23RumbleDeath(ctx,target,actionSeq++,defenses(target,true,tick,units)+defenses(target,false,tick,units));
       killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
+      if(owner?.d11Kills&&owner.team!==target.team&&!target.itemSummon&&!target.anomalySummon
+        &&UNIT_DEFINITIONS[target.definitionId]&&!UNIT_DEFINITIONS[target.definitionId].summon&&target.unitKind!=='neutral'){
+        const m=owner.mechanics!.find(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')!;
+        const before=d11HeadhunterAttackSpeedBps(m.values.priorKills+owner.d11Kills.length);
+        owner.d11Kills=[...owner.d11Kills,{eventSeq:(state.nextEventSeq??0)+events.length-1,victimId:target.id}];
+        events.push({type:'statChanged',tick,unitId:owner.id,source:asSource(m.source),stat:'attackSpeed',before,
+          after:d11HeadhunterAttackSpeedBps(m.values.priorKills+owner.d11Kills.length)});
+      }
       const ricochetKey = JSON.stringify([packet.source.ownerId, packet.actionSeq]);
       if (owner && !context.redirected && packet.bounce && !ricochetActions.has(ricochetKey) && outcome.overkill > 0) {
         const next = byDistance(target, enemies(owner, units).filter(u => u.id !== target.id && (virtualHp.get(u.id) ?? 0) > 0))[0];

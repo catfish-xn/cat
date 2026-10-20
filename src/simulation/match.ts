@@ -1,4 +1,5 @@
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
+import { sampleD11CombatGold } from './d11-fill';
 import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
 import { readAugmentIncome } from './augment-income';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
@@ -412,7 +413,8 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
-  const next = stepCombat(state.combat), settled = withCombat(state, next.state, unitLootPolicy);
+  const live=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
+  const next = stepCombat(live), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
 }

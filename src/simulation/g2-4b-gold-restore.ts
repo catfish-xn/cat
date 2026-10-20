@@ -24,7 +24,9 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
-  if(!zephyr&&!trench&&!mirrorForge&&!anomaly){
+  const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
+  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11){
+    if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
     if(candidate.units.some(u=>u.itemSummon?.kind==='trench'))throw new RangeError('Unexpected Trench copy');
