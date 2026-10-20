@@ -28,7 +28,7 @@ const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
 
 export async function batchOutputRoot(out) {
   const leaf = resolve(out).split(/[/\\]/).at(-1);
-  if (!/^fx-batch[a-z0-9-]+$/.test(leaf) || resolve(out) !== resolve('assets3d-local', leaf)) throw new Error('batch-output-only');
+  if (!(leaf === 'fx-pilot' || /^fx-batch[a-z0-9-]+$/.test(leaf)) || resolve(out) !== resolve('assets3d-local', leaf)) throw new Error('batch-output-only');
   for (const p of ['assets3d-local', out]) {
     try { if ((await lstat(p)).isSymbolicLink()) throw new Error('batch-root-must-be-real-directory'); }
     catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -38,11 +38,15 @@ export async function batchOutputRoot(out) {
 }
 
 export function batchActionBindings(manifest, rows, bones, tables) {
-  const actionEffects = {}, playback = {}, unavailable = [];
+  const actionEffects = {}, playback = {}, unavailable = [], variants = {};
   for (const [unit, table] of Object.entries(tables)) {
     actionEffects[unit] = { attack: [], cast: [] };
     for (const [system, reason] of table.unavailable) unavailable.push({ unit, system, reason });
-    for (const action of ['attack', 'cast']) for (const spec of table[action]) {
+    const selections = [[actionEffects[unit], table], ...Object.entries(table.variants ?? {}).map(([variant, actions]) => {
+      const units = variants[variant] ??= {};
+      return [units[unit] = Object.fromEntries(Object.keys(actions).map(action => [action, []])), actions];
+    })];
+    for (const [target, actions] of selections) for (const action of ['attack', 'cast']) for (const spec of actions[action] ?? []) {
       if (!['start', 'travel', 'impact'].includes(spec.phase)) throw new Error('invalid-binding-phase');
       if (spec.bone && !bones[unit].includes(spec.bone)) throw new Error(`missing-binding-bone:${unit}:${spec.bone}`);
       if (!['source', 'target', 'projectile'].includes(spec.anchor)) throw new Error('invalid-binding-anchor');
@@ -50,9 +54,13 @@ export function batchActionBindings(manifest, rows, bones, tables) {
       const exact = spec.system.startsWith('TFT13_') ? spec.system : null;
       const row = spec.system === '@shared-hit' ? rows.global.find(r => r.sourcePath.endsWith('/TFT_Global_BA_Hit'))
         : rows[unit].find(r => exact ? r.sourcePath.split('/').at(-1) === exact : r.sourcePath.endsWith(`_Base_${spec.system}`));
-      if (!row?.path) { unavailable.push({ unit, action, system: spec.system, phase: spec.phase, reason: row?.reason ?? 'missing-system' }); continue; }
+      if (!row?.path) {
+        const missing = { unit, action, system: spec.system, phase: spec.phase, reason: row?.reason ?? 'missing-system' };
+        if (!unavailable.some(r => JSON.stringify(r) === JSON.stringify(missing))) unavailable.push(missing);
+        continue;
+      }
       if (!manifest.effects[row.effectId]) throw new Error('dangling-batch-binding');
-      actionEffects[unit][action].push(row.effectId);
+      target[action].push(row.effectId);
       const { system, ...placement } = spec;
       const value = { status: 'approximated', convention: 'explicit-preview-stage-timing-and-placement', ...placement };
       if (playback[row.effectId] && JSON.stringify(playback[row.effectId]) !== JSON.stringify(value)) throw new Error('conflicting-effect-playback');
@@ -60,10 +68,10 @@ export function batchActionBindings(manifest, rows, bones, tables) {
     }
   }
   return { schemaVersion: 1, status: 'approximated', convention: 'explicit-preview-stage-timing-and-placement',
-    actionEffects, playback, unavailable, notes: Object.fromEntries(Object.entries(tables).filter(([, t]) => t.note).map(([u, t]) => [u, t.note])) };
+    actionEffects, ...(Object.keys(variants).length ? { variants } : {}), playback, unavailable, notes: Object.fromEntries(Object.entries(tables).filter(([, t]) => t.note).map(([u, t]) => [u, t.note])) };
 }
 
-export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-preview', force = false } = {}) {
+export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-preview', source: sourceCache = 'assets3d-local/trial/local', force = false } = {}) {
   const tables = await loadBindingTables();
   const selected = units.split(',');
   if (!selected.length || new Set(selected).size !== selected.length || selected.some(u => !Object.hasOwn(tables, u))) throw new Error('unsupported-batch-units');
@@ -73,7 +81,7 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
   const { assertManifest, parseParticleDocument } = await contracts();
   const manifest = { schemaVersion: 1, models: {}, effects: {} }, rows = {}, bones = {}, counts = {};
   const models = await read('assets3d-local/all-anim/manifest.json');
-  const extraction = await read('assets3d-local/trial/local/extraction.json');
+  const extraction = JSON.parse(await input(sourceCache, 'extraction.json'));
   const records = new Map(extraction.files.map(r => [canonical(r.path), r]));
   await write('batch-status.json', json({ ready: false }));
   for (const id of selected) {
@@ -93,7 +101,7 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
     for (const mesh of prior.meshes.filter(m => m.status === 'converted')) {
       const record = records.get(canonical(mesh.source));
       if (!record) throw new Error('missing-mesh-cache-record');
-      const bytes = await input('assets3d-local/trial/local/extracted', record.path);
+      const bytes = await input(join(sourceCache, 'extracted'), record.path);
       if (bytes.length !== record.bytes || createHash('sha256').update(bytes).digest('hex') !== record.sha256) throw new Error('source-hash-mismatch');
       const glb = readGlb(convertParticleMesh(bytes, record.path.slice(record.path.lastIndexOf('.'))).glb);
       const positions = glb.document.meshes.flatMap(m => m.primitives.flatMap(p => readAccessor(glb, p.attributes.POSITION)));
@@ -108,7 +116,7 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
       if (!mesh) { await write(path, await input(root, path.slice(prefix.length))); continue; }
       const r = records.get(canonical(mesh.source));
       if (!r) throw new Error('missing-mesh-cache-record');
-      const bytes = await input('assets3d-local/trial/local/extracted', r.path);
+      const bytes = await input(join(sourceCache, 'extracted'), r.path);
       if (bytes.length !== r.bytes || createHash('sha256').update(bytes).digest('hex') !== r.sha256) throw new Error('source-hash-mismatch');
       await write(path, convertParticleMesh(bytes, r.path.slice(r.path.lastIndexOf('.'))).glb);
     }
@@ -143,5 +151,5 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
   return { units: selected, counts, unavailable: bindings.unavailable };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  console.log(JSON.stringify(await fxBatch(argumentsFor(process.argv.slice(2), ['--units', '--out']))));
+  console.log(JSON.stringify(await fxBatch(argumentsFor(process.argv.slice(2), ['--units', '--out', '--source']))));
 }

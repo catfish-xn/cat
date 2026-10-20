@@ -1,14 +1,14 @@
 ﻿// Offline, isolated-emitter review. Read-only linked inputs may use a separate evidence directory.
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
-import { resolve, basename } from 'node:path';
+import { resolve, basename, dirname } from 'node:path';
 import { mkdir, readFile, realpath } from 'node:fs/promises';
 import { argumentsFor } from './plan-fetch.mjs';
 import { batchOutputRoot } from './fx-batch.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 
 const fixedRays = process.argv.includes('--fixed-rays');
-const args = argumentsFor(process.argv.slice(2).filter(a => a !== '--fixed-rays'), ['--out', '--effect', '--screenshots', '--view-cells', '--time']);
+const args = argumentsFor(process.argv.slice(2).filter(a => a !== '--fixed-rays'), ['--out', '--effect', '--screenshots', '--view-cells', '--time', '--sizes']);
 const fixedTime = args.time === undefined ? null : Number(args.time);
 if (fixedTime !== null && (!Number.isFinite(fixedTime) || fixedTime < 0 || fixedTime > 30)) throw new Error('invalid-review-time');
 const viewCells = Number(args['view-cells'] ?? 10);
@@ -17,7 +17,8 @@ const root = args.screenshots
  ? withinRoot(resolve('assets3d-local'), resolve(args.out ?? 'assets3d-local/fx-batch3'))
  : await batchOutputRoot(args.out ?? 'assets3d-local/fx-batch3');
 await safeInputPath(root, resolve(root, 'manifest.json'));
-const sizes = await readFile(await safeInputPath(root, resolve(root, 'size-report.json')), 'utf8').then(JSON.parse);
+const sizesPath = args.sizes ? withinRoot(resolve('assets3d-local'), resolve(args.sizes)) : resolve(root, 'size-report.json');
+const sizes = await readFile(await safeInputPath(args.sizes ? dirname(sizesPath) : root, sizesPath), 'utf8').then(JSON.parse);
 const fixedAudit = fixedRays ? await readFile(await safeInputPath(root, resolve(root, 'fixed-plane-rays-audit.json')), 'utf8').then(JSON.parse) : null;
 const evidence = [];
 const contactTiles = [];
@@ -51,6 +52,8 @@ try {
   const manifest = await (await fetch(base + '/manifest.json')).json();
   const id = Object.keys(manifest.effects).find(id => id === effect || (!effect && /garen.*aoe_impact/.test(id)));
   const doc = await (await fetch(base + '/' + manifest.effects[id].path)).json();
+  const bindings = await (await fetch(base + '/action-bindings.json')).json();
+  const maxDuration = bindings.playback?.[id]?.maxDuration;
   document.body.replaceChildren(); document.body.style.cssText = 'margin:0;background:#15202b;color:white;display:grid;grid-template-columns:repeat(4,300px)';
   const textures = new Map(), meshes = new Map(), errors = [];
   for (const e of doc.emitters) {
@@ -71,7 +74,7 @@ try {
    const scene = new T.Scene(); scene.background = new T.Color('#15202b');
    const camera = new T.PerspectiveCamera(45,300/220,1,10000); camera.position.set(0,500*viewCells/10,600*viewCells/10); camera.lookAt(0,0,0);
    const grid = new T.GridHelper(62.4*viewCells,Math.round(viewCells),0x667788,0x334455); scene.add(grid);
-   const fx = new ParticleEffectV2({ ...doc, emitters: [doc.emitters[i]] }, { scale: .44, texture: p => textures.get(p), mesh: p => meshes.get(p) });
+   const fx = new ParticleEffectV2({ ...doc, emitters: [doc.emitters[i]] }, { scale: .44, maxDuration, texture: p => textures.get(p), mesh: p => meshes.get(p) });
    scene.add(fx.object);
    // Match the size audit's 50ms integration, including the initial spawn.
    fx.update(0, camera);
@@ -89,7 +92,7 @@ try {
   }
   // Show the entire system at one time from two views. The top view separates
   // ground extension from vertical height; isolated peak frames cannot do so.
-  const overviewTime = fixedTime ?? .3;
+  const overviewTime = fixedTime ?? Math.min(.3, maxDuration === undefined ? .3 : Math.max(0, maxDuration - .05));
   for (const top of [false, true]) {
    const box = document.createElement('div'); box.style.gridColumn = 'span 2';
    box.textContent = `whole system ${top ? 'top' : 'oblique'} t=${overviewTime.toFixed(3)}`; document.body.append(box);
@@ -101,7 +104,7 @@ try {
    else camera.position.set(0, 500 * viewCells / 10, 600 * viewCells / 10);
    camera.lookAt(0, 0, 0);
    const grid = new T.GridHelper(62.4 * viewCells, Math.round(viewCells), 0x667788, 0x334455); scene.add(grid);
-   const fx = new ParticleEffectV2(doc, { scale: .44, texture: p => textures.get(p), mesh: p => meshes.get(p) });
+   const fx = new ParticleEffectV2(doc, { scale: .44, maxDuration, texture: p => textures.get(p), mesh: p => meshes.get(p) });
    scene.add(fx.object); fx.update(0, camera);
    for (let elapsed = 0; elapsed < overviewTime - 1e-8;) {
     const dt = Math.min(.05, overviewTime - elapsed); fx.update(dt, camera); elapsed += dt;
@@ -115,8 +118,8 @@ try {
   const reviewTiles = fixedRays ? [...document.querySelectorAll('[data-emitter-index]')].map(box => ({
    index: Number(box.dataset.emitterIndex), src: box.querySelector('img').src,
   })) : [];
-  return { id, emitters: doc.emitters.length, errors, viewCells, fixedTime, bounds, reviewTiles };
- }, { base: '/' + resolve(root).split(/[\\/]/).at(-2) + '/' + resolve(root).split(/[\\/]/).at(-1), effect, samples, viewCells, fixedTime, fixedRays });
+  return { id, emitters: doc.emitters.length, errors, viewCells, fixedTime, maxDuration, overviewTime, bounds, reviewTiles };
+ }, { base: '/' + resolve(root).split(/[\/]/).at(-2) + '/' + resolve(root).split(/[\/]/).at(-1), effect, samples, viewCells, fixedTime, fixedRays });
  await page.screenshot({ path: await safeOutputPath(resolve(screenshots, (args.screenshots ? basename(root) + '-' : '') + 'browser-review-' + result.id + '.png'), { force: true }), fullPage: true });
  const { reviewTiles, ...report } = result;
  contactTiles.push(...reviewTiles.map(tile => ({ ...tile, effect: result.id })));

@@ -137,6 +137,8 @@ function traitLine(definitionId: string): HTMLElement {
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
+/** The star string in its star color (four platinum-teal stars for an effective 4★). */
+const starMark = (star: number) => element('span', starText(star), `star-mark star-${Math.min(4, Math.max(1, Math.trunc(star)))}`);
 export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => itemDisplayName(id);
@@ -743,7 +745,8 @@ export class StrategyPanel {
     const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row'); row.dataset.unitId = unit.id;
-      const heading = element('strong', `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`);
+      const heading = element('strong', `${displayUnitName(unit.definitionId)} `);
+      heading.append(starMark(displayStarLevel(state, unit)), state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : '');
       // C18: during a shown battle, items worn now but not in that battle's snapshot are marked "下场生效".
       const loadout = battleLoadout(state.items, frozen, unit.id), loadoutText = loadout?.changed ? battleLoadoutText(loadout, itemDefinitionName) : '';
       if (loadoutText) { heading.title = loadoutText; row.classList.add('has-pending'); }
@@ -1052,7 +1055,8 @@ export class StrategyPanel {
       if (selected) {
         const definition = UNIT_DEFINITIONS[selected.definitionId], star = displayStarLevel(state, selected);
         const stats = (star === 4 ? fourStarBaseStats(selected.definitionId) : null) ?? getUnitStats(selected.definitionId, selected.starLevel);
-        node.append(element('h3', `${displayUnitName(selected.definitionId)} ${starText(star)}`), element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
+        const title = element('h3', `${displayUnitName(selected.definitionId)} `); title.append(starMark(star));
+        node.append(title, element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
         for (const note of d14UnitNotes(state, selected.id)) { const line = element('p', note, 'unit-d14-note'); line.dataset.debug = 'unit:d14-note'; node.append(line); }
         node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : `${id}（本版本未开放）`).join(' / ')}`));
         this.appendEquipmentDetail(node, state, selected.id);
