@@ -147,7 +147,7 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     // Independent expectation from the contract text: front row 4 first, columns 3,2,4,1,5,0,6.
     const cells = [4, 5, 6, 7].flatMap(row => [3, 2, 4, 1, 5, 0, 6].map(col => `${col},${row}`));
     const expected = reserves.slice(0, cap).map((unit, index) => [unit.id, cells[index]]);
-    expect(onBoard(after.match).map(unit => [unit.id, where(unit)]).sort()).toEqual(expected.sort());
+    expect(onBoard(after.match).map(unit => [unit.id, where(unit)]).sort()).toEqual([...expected].sort());
     expect(after.match.multiplayer?.combatRosterLocked).toBe(true);
     // One publication for deployment and lock; its events go out with that state push, one per moved unit, in order.
     expect(after.seatRevision).toBe(revision + 1);

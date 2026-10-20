@@ -81,14 +81,18 @@ describe('C18-B useConsumable room gate and dispatch', () => {
 
 describe('C18-B useConsumable success through the room (§18.6)', () => {
   it('a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    // v17 orbs are a random stage combination (room layout seed) with per-seat boxes (seat seed). The independent oracle
+    // (tests/fixtures/orb-combo-oracle.cjs lootPlan(seat seed, ordinal, room seed)) puts a gray orb's remover on s3's
+    // 1-2 carriers with room seed 3, so that room really drops one; the seat claims it after its source died.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
     room.start();
-    // After the 1-4 battle a seat holds the gray orb's remover (§18 ORB_SLOTS); find one with an inventory item too.
+    // Find the seat holding the remover with an inventory item too.
     const holder = () => room.state.seats.find(seat => seat.alive && seat.match.consumables.some(tool => tool.definitionId === 'magnetic-remover')
       && seat.match.items.some(item => item.location.kind === 'inventory'));
     // v15: the items (and the remover) arrive as orbs each seat claims in preparation.
     runUntilClaiming(room, clock, state => state.phase === 'preparation' && holder() !== undefined, 4_000);
     const seat = holder()!, seatId = seat.seatId;
+    expect(seatId).toBe('s3');
     const unit = seat.match.preparation.units.find(entry => entry.team === 'player' && entry.location.kind === 'board')!;
     const item = seat.match.items.find(entry => entry.location.kind === 'inventory')!;
     const equipped = room.handle(seatId, { type: 'equip', itemId: item.id, unitId: unit.id, slot: 0 });
