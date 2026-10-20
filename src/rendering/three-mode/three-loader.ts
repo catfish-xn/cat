@@ -7,6 +7,7 @@
 import { readAssetBase3d, readRenderMode, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
 import { boardFeed } from '../board-feed';
+import { starColor } from '../../presentation/theme';
 
 export interface ThreeModeHandle { dispose(): void }
 
@@ -49,6 +50,7 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
     .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => { if (!disposed) preload.textContent = text; });
+      module.useStarColor?.(starColor);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }

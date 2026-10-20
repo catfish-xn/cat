@@ -4,6 +4,7 @@
  * functions (`abilityDisplayName` / `abilityDisplayValues`). Nothing is computed beyond formatting.
  */
 import { getUnitStats } from '../simulation/unit-stats';
+import { fourStarBaseStats } from './d14-display';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { abilityText } from './ability-text';
 import type { RankTotals, UnitBattleStats } from './battle-ranking';
@@ -77,21 +78,25 @@ function battleLine(stats: UnitBattleStats): HTMLElement {
 /**
  * Card body for a unit definition at a star level; `null` when the definition is unknown to the content. `battle` (online)
  * adds the G5 battle stats line when the unit or its kind has fought this match; `gear` (board pieces) lists what it carries.
+ * Star 4 is a promoted Ultimate Hero (v16): the rules' 4★ base health/attack and 4★ ability values; `notes` are extra
+ * lines (d14-display) under the title.
  */
-export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = ''): HTMLElement | null {
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = []): HTMLElement | null {
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
+  const fourStar = Math.trunc(starLevel) >= 4 ? fourStarBaseStats(definitionId) : null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
   const identity = getHeroIdentity(definitionId);
   const neutral = definition.unitKind === 'neutral';
-  const body = el('div', '', 'unit-card'); body.dataset.unitDef = definitionId; body.dataset.star = String(star);
+  const body = el('div', '', 'unit-card'); body.dataset.unitDef = definitionId; body.dataset.star = String(fourStar ? 4 : star);
   const head = el('div', '', 'unit-card-head');
   const portrait = el('span', '', `unit-card-portrait cost-${definition.cost}`);
   portrait.innerHTML = heroPortraitHtml(definitionId, 40, heroEmblemSvg(definitionId, 40));
   const title = el('div', '', 'unit-card-title');
-  title.append(el('strong', identity.name, 'unit-card-name'), el('span', '★'.repeat(star), `unit-card-stars star-${star}`),
+  title.append(el('strong', identity.name, 'unit-card-name'), el('span', '★'.repeat(fourStar ? 4 : star), `unit-card-stars star-${fourStar ? 4 : star}`),
     el('span', neutral ? '野怪' : `${definition.cost} 费`, 'unit-card-cost'));
   head.append(portrait, title); body.append(head);
+  for (const note of notes) { const line = el('p', note, 'unit-card-note'); line.dataset.debug = 'unit-card:note'; body.append(line); }
   if (!neutral) {
     const traits = el('div', '', 'unit-card-traits'); traits.dataset.debug = 'unit-card:traits';
     for (const label of unitTraitLabels(definitionId)) { const tag = el('span', label.name, label.open ? 'trait-open' : 'trait-closed'); if (!label.open) tag.title = '本版本未开放'; traits.append(tag); }
@@ -99,10 +104,10 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     const role = roleSection(definitionId);
     if (role) body.append(role);
   }
-  const stats = getUnitStats(definitionId, neutral ? 1 : star);
-  const ability = abilityText(definitionId, star);
+  const stats = fourStar ?? getUnitStats(definitionId, neutral ? 1 : star);
+  const ability = abilityText(definitionId, fourStar ? 4 : star);
   const section = el('div', '', 'unit-card-ability'); section.dataset.debug = 'unit-card:ability';
-  section.append(el('div', `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}`, 'unit-card-label'));
+  section.append(el('div', `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}${fourStar ? ' · 四星数值' : ''}`, 'unit-card-label'));
   section.append(el('p', ability?.text || '无主动技能说明', 'unit-card-text'));
   body.append(section);
   const speed = stats.baseAttackSpeedBps !== undefined ? stats.baseAttackSpeedBps / 10_000 : TICKS_PER_SECOND / stats.attackIntervalTicks;

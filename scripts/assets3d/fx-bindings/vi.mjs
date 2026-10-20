@@ -1,73 +1,157 @@
-// Explicit legacy preview table; tuple: action, variant, suffix, phase, anchor, bone, delay, duration.
-export default [
-  [
-    "cast",
-    "Q",
-    "Q_activate_hands_R",
-    "start",
-    "source",
-    "R_GloveHand",
-    0,
-    0.5
+// Explicit preview bindings; default cast and alternatives retain legacy semantics.
+export default {
+  "attack": [
+    {
+      "system": "@shared-hit",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.35,
+      "maxDuration": 0.5,
+      "status": "approximated",
+      "note": "Shared basic attack target preview; no crit discriminator."
+    }
   ],
-  [
-    "cast",
-    "Q",
-    "Q_activate_hands_L",
-    "start",
-    "source",
-    "L_GloveHand",
-    0,
-    0.5
+  "cast": [
+    {
+      "system": "Q_activate_hands_R",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "R_GloveHand",
+      "delay": 0,
+      "maxDuration": 0.5,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_activate_hands_L",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "L_GloveHand",
+      "delay": 0,
+      "maxDuration": 0.5,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_Jumping_Dust",
+      "phase": "start",
+      "anchor": "source",
+      "bone": "Buffbone_Glb_Ground_Loc",
+      "delay": 0.1,
+      "maxDuration": 0.4,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_Landing_Mis",
+      "phase": "travel",
+      "anchor": "source",
+      "bone": "C_Buffbone_Glb_Center_Loc",
+      "delay": 0.1,
+      "maxDuration": 0.35,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_Landing_AoE",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 1,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_Landing_AoE_Child",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 1,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    },
+    {
+      "system": "Q_Tar",
+      "phase": "impact",
+      "anchor": "target",
+      "delay": 0.45,
+      "maxDuration": 0.8,
+      "status": "approximated",
+      "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+    }
   ],
-  [
-    "cast",
-    "Q",
-    "Q_Jumping_Dust",
-    "start",
-    "source",
-    "Buffbone_Glb_Ground_Loc",
-    0.1,
-    0.4
-  ],
-  [
-    "cast",
-    "Q",
-    "Q_Landing_Mis",
-    "travel",
-    "source",
-    "C_Buffbone_Glb_Center_Loc",
-    0.1,
-    0.35
-  ],
-  [
-    "cast",
-    "Q",
-    "Q_Landing_AoE",
-    "impact",
-    "target",
-    null,
-    0.45,
-    1
-  ],
-  [
-    "cast",
-    "Q",
-    "Q_Landing_AoE_Child",
-    "impact",
-    "target",
-    null,
-    0.45,
-    1
-  ],
-  [
-    "cast",
-    "Q",
-    "Q_Tar",
-    "impact",
-    "target",
-    null,
-    0.45,
-    0.8
-  ]
-];
+  "variants": {
+    "Q": {
+      "cast": [
+        {
+          "system": "Q_activate_hands_R",
+          "phase": "start",
+          "anchor": "source",
+          "bone": "R_GloveHand",
+          "delay": 0,
+          "maxDuration": 0.5,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_activate_hands_L",
+          "phase": "start",
+          "anchor": "source",
+          "bone": "L_GloveHand",
+          "delay": 0,
+          "maxDuration": 0.5,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_Jumping_Dust",
+          "phase": "start",
+          "anchor": "source",
+          "bone": "Buffbone_Glb_Ground_Loc",
+          "delay": 0.1,
+          "maxDuration": 0.4,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_Landing_Mis",
+          "phase": "travel",
+          "anchor": "source",
+          "bone": "C_Buffbone_Glb_Center_Loc",
+          "delay": 0.1,
+          "maxDuration": 0.35,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_Landing_AoE",
+          "phase": "impact",
+          "anchor": "target",
+          "delay": 0.45,
+          "maxDuration": 1,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_Landing_AoE_Child",
+          "phase": "impact",
+          "anchor": "target",
+          "delay": 0.45,
+          "maxDuration": 1,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        },
+        {
+          "system": "Q_Tar",
+          "phase": "impact",
+          "anchor": "target",
+          "delay": 0.45,
+          "maxDuration": 0.8,
+          "status": "approximated",
+          "note": "Explicit preview staging; no gameplay timing or host trajectory reconstruction."
+        }
+      ]
+    }
+  },
+  "unavailable": []
+};

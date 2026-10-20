@@ -1072,3 +1072,26 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 `src/simulation/ability-display.ts` 导出纯查询 `ultimateHeroAbilityDisplayValues(definitionId: string, stats?: AbilityDisplayStats): Readonly<Record<string, number>>`。仅供已认证 `effectiveStarLevel===4` 的终极英雄使用；返回已替换派生值与表达式的只读 token 映射，直接交给现有模板。默认 AD 取专用四星基础值、AP=100；传入快照 AD/AP 时沿用普通技能说明的整数边界（0–1000000），无效英雄/数值抛 `RangeError`。函数不授予晋升，不改变物理星级或玩法。
 
 来源复用 `d14UnitBase` 的实际 rank 4 表及 14.24b 辛吉德 DR=60% 覆盖，不能外推三星。`src/presentation/ability-text.ts` 仅做显示映射：`abilityText(id,4,stats)` 调用此查询，普通 1–3 星沿用原函数。Lux 默认伤害1260/护盾300，150AP时1890/450；辛吉德减伤60%。14个一费英雄模板无未替换 token，原有1–3星显示回归通过。
+
+## V16-UI-251：侦察显示终极英雄有效四星（Claude → Codex，2026-10-20）
+
+决定来源：用户 2026-10-20 14:38 确认侦察里显示四星；四星样式为四颗铂金色偏青绿的星（不是三颗金星再加一颗）。卖价、卡池份数仍不进侦察。这一条覆盖上节 V16-UI-250 中"对手公共棋盘保留物理 3 星"的回退。
+
+需要的公共导出（`src/simulation/`，Codex）：
+
+- `d14PublicUnitMark(state: MatchState, unitId: string): { readonly effectiveStarLevel: 4 } | null`
+- 含义：该席的终极英雄已晋升，且 `unitId` 就是晋升单位时，返回 `{ effectiveStarLevel: 4 }`；其余情况（未选、waiting、retired、换了单位、进入未知）一律返回 null。判定与 `toPrivateSeatView` 中给私有单位行加 `effectiveStarLevel:4` 的条件完全一致，并由同一处实现共用，不再内联两份。
+- 不返回 `sellGold`、`poolCopies`、`remainingSettlements`、`phase`，这些都是私有信息。
+- 纯查询，不改 state，不消耗 RNG；对不存在的 unitId 返回 null，不抛错。
+
+用途：
+
+- 服务器侧（Claude）`src/server/room/projection.ts` 的公共阵容投影，给场上和备战席中命中的单位加 `effectiveStarLevel: 4`；物理 `starLevel` 保持 3，不写回 4。
+- 界面侧（Claude）`src/rendering/online/opponent-board.ts` 侦察棋盘和标题优先读 `effectiveStarLevel` 画四星，没有这个字段时沿用 `starLevel`。
+
+验收：
+
+1. 晋升前（waiting）调用返回 null；3 次真实结算晋升后，对该单位返回 `{effectiveStarLevel:4}`，对同席其它单位返回 null。
+2. 晋升单位卖掉或离开棋盘和备战席后返回 null；读档、重连后结果相同。
+3. 结果与 `toPrivateSeatView(state)` 中该单位的 `effectiveStarLevel` 一致（有 4 就是 4，没有就是 null）。
+4. 其它席的投影里只多出 `effectiveStarLevel`，不出现卖价、卡池份数和倒数。

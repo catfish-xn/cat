@@ -160,13 +160,17 @@ export function heroTraitLabels(definitionId: string): HeroTraitLabel[] {
  * content traits the client list lacks are appended. Unknown heroes fall back to their content traits.
  */
 export function heroTraitTags(definitionId: string): HeroTraitLabel[] {
+  return heroTraitTagsWithIds(definitionId).map(({ name, open }) => ({ name, open }));
+}
+/** `heroTraitTags` plus the content trait id where one is known (trait icons on shop cards). */
+export function heroTraitTagsWithIds(definitionId: string): (HeroTraitLabel & { readonly id?: string })[] {
   const content = UNIT_DEFINITIONS[definitionId]?.traits ?? [];
   const tags = (HERO_S13_TRAITS[definitionId] ?? g23HeroTraits(definitionId) ?? []).map(name => {
     const id = S13_TRAIT_IDS[name] ?? contentTraitIdByEn(name), open = id !== undefined && content.includes(id);
     return { name: open ? traitDisplayName(id) : S13_TRAIT_ZH[name] ?? name, open, id };
   });
   for (const id of content) if (!tags.some(tag => tag.id === id)) tags.push({ name: traitDisplayName(id), open: Object.hasOwn(TRAIT_DEFINITIONS, id), id });
-  return tags.map(({ name, open }) => ({ name, open }));
+  return tags;
 }
 /** Opened profession names only (compact displays). */
 export function heroTraitNames(definitionId: string): string[] {

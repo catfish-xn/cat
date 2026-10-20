@@ -19,6 +19,7 @@ const source = (primitive?: object) => ({
   birthScale0: { constantValue: [100, 400, 1] },
   scale0: { dynamics: { times: [0, 1], values: [[2, 1, 1], [1, 1, 1]] } },
   ...(primitive ? { primitive } : {}),
+  ...(primitive && '__type' in primitive && primitive.__type === 'VfxPrimitiveRay' ? { birthRotation0: { constantValue: [90, 0, 0] } } : {}),
 });
 
 describe('batch three offline FX', () => {

@@ -99,6 +99,23 @@ describe('toPublicBoard (C5)', () => {
     const text = JSON.stringify(board);
     for (const forbidden of ['unit-9', 'item-', 'choice-secret', 'acquiredRound', 'boundRound', 'unitId', 'streak', 'gold', 'shop', 'seed', 'rngState', 'pve-', 'enemy', 'inventory']) expect(text).not.toContain(forbidden);
   });
+  it('marks a promoted 终极英雄 with effectiveStarLevel 4 only, never its sell gold, pool copies or countdown (V16-UI-251)', () => {
+    const { room } = makeRoom(new DamageResolver(() => 0));
+    room.start();
+    const base = room.state.seats[1]!.match, definitionId = base.preparation.units[0]!.definitionId;
+    const hero = { id: 'unit-92', definitionId, team: 'player', starLevel: 3, location: { kind: 'board', cell: { col: 4, row: 6 } } } as const;
+    const benched = { id: 'unit-93', definitionId, team: 'player', starLevel: 3, location: { kind: 'bench', slot: 1 } } as const;
+    const promoted = (unitId: string, phase: string) => ({ ...base, preparation: { ...base.preparation, units: [...base.preparation.units, hero, benched] },
+      d14: { choiceId: 'choice-secret-d14', anomalyId: 'ultimate-hero', originalUnit: hero, unitId, atOrdinal: 0, selectionPrefixLength: 1, phase, held: null } }) as unknown as MatchState;
+    const onBoard = toPublicBoard(promoted('unit-92', 'promoted'));
+    expect(onBoard.units.find(unit => unit.cell.col === 4 && unit.cell.row === 6)).toEqual({ definitionId, starLevel: 3, cell: { col: 4, row: 6 }, items: [], effectiveStarLevel: 4 });
+    expect([...onBoard.units, ...onBoard.bench!].filter(unit => 'effectiveStarLevel' in unit)).toHaveLength(1);
+    const onBench = toPublicBoard(promoted('unit-93', 'promoted'));
+    expect(onBench.bench!.find(unit => unit.slot === 1)).toEqual({ definitionId, starLevel: 3, slot: 1, items: [], effectiveStarLevel: 4 });
+    expect(JSON.stringify(toPublicBoard(promoted('unit-92', 'waiting')))).not.toContain('effectiveStarLevel');
+    const text = JSON.stringify(onBoard);
+    for (const forbidden of ['sellGold', 'poolCopies', 'remainingSettlements', 'phase', 'choice-secret', 'unit-9']) expect(text).not.toContain(forbidden);
+  });
   it('rides on every seat of every view, so each player sees the same public board of a seat', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start();

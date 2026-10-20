@@ -9,6 +9,8 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
+import { boardFeedGeneration, provideCarouselControls, publishCarousel } from '../board-feed';
+import { s13AssetUrl } from '../../presentation/s13-assets';
 import { BattleOutcome } from './battle-outcome';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
@@ -90,6 +92,10 @@ export class OnlineApplication implements SceneApplication {
   private pendingRank: number | null | undefined = undefined;
   private hitLanding = false;
   private view: PlayerView | null = null;
+  /** board-feed subscription the 3D carousel was last sent to, and the next seat release that changes what it draws. */
+  private carouselFeedGeneration = -1;
+  private carouselNextRelease = Infinity;
+  private withdrawCarouselControls: () => void;
   /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
   get roomInCombat(): boolean { return this.view?.phase.kind === 'combat'; }
   private unlisten: () => void;
@@ -108,6 +114,7 @@ export class OnlineApplication implements SceneApplication {
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
+    this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.leftToggle = new LeftPanelToggle();
@@ -156,7 +163,7 @@ export class OnlineApplication implements SceneApplication {
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
   private phaseLine: { readonly round: number; readonly phase: string; readonly text: string } | null = null;
   private onRefused(refusal: RefusedCommand) {
-    this.carousel.clearPending();
+    this.carousel.clearPending(); this.publishCarousel3d();
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
   }
@@ -202,6 +209,12 @@ export class OnlineApplication implements SceneApplication {
       const kept = new Set(after.preparation.units.map(unit => unit.id));
       if (before.preparation.units.some(unit => unit.team === 'player' && !kept.has(unit.id))) cue = 'sell';
     }
+    // A move between bench and board (or a swap) with no gold change: a soft placement thud. Only units on both sides
+    // count, so a hero arriving from an orb or the carousel (nothing moved) stays silent.
+    else if (after.gold === before.gold) {
+      const where = new Map(before.preparation.units.filter(unit => unit.team === 'player').map(unit => [unit.id, JSON.stringify(unit.location)]));
+      if (after.preparation.units.some(unit => unit.team === 'player' && where.has(unit.id) && where.get(unit.id) !== JSON.stringify(unit.location))) cue = 'place';
+    }
     if (upgraded) cue = 'starUp';
     if (cue) this.sound.play(cue);
   }
@@ -213,6 +226,7 @@ export class OnlineApplication implements SceneApplication {
     if (!previous || previous.phase.kind === view.phase.kind) return;
     if (view.phase.kind === 'preparation') this.sound.play('prep');
     else if (view.phase.kind === 'combat') this.sound.play('combat');
+    else if (view.phase.kind === 'choice') this.sound.play('choice');
     else if (view.phase.kind === 'ended' && me?.rank != null) this.sound.play(me.rank <= 4 ? 'win' : 'lose');
   }
   private lastTick: number | null = null;
@@ -284,13 +298,39 @@ export class OnlineApplication implements SceneApplication {
   private syncCarouselMode() {
     const side = this.carousel.showing;
     if (side) document.body.dataset.onlineCarousel = side; else delete document.body.dataset.onlineCarousel;
+    this.publishCarousel3d();
   }
+  /**
+   * ?render=3d: the carousel side is drawn by the 3D layer from the same view (board-feed BoardCarousel); its clicks come
+   * back through the panel's own pickSlot. The 2D panel then keeps head, countdown and release order only.
+   */
+  private publishCarousel3d() {
+    this.carouselFeedGeneration = boardFeedGeneration();
+    const view = this.view?.carousel ?? null, seats = this.view?.seats ?? [], mySeatId = this.view?.mySeatId ?? '';
+    const shown = view !== null && this.carousel.showing === 'carousel';
+    const drawn = publishCarousel(() => {
+      if (!shown || !view) return null;
+      const elapsedMs = this.carousel.elapsedNow() ?? view.elapsedMs, pending = this.carousel.pendingSlot;
+      this.carouselNextRelease = Math.min(Infinity, ...Object.values(view.releaseAtMs).filter(at => at > elapsedMs));
+      const taken = new Set(view.slots.flatMap(slot => slot.pickedBy ? [slot.pickedBy] : []));
+      return { id: view.id, elapsedMs, at: performance.now(),
+        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, picked: taken.has(seat.seatId),
+          locked: (view.releaseAtMs[seat.seatId] ?? Infinity) > elapsedMs })),
+        slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel,
+          items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), picked: slot.pickedBy !== null,
+          takable: view.eligible && slot.pickedBy === null && pending === null, pending: pending === slot.slot })) };
+    });
+    this.carousel.drawnIn3d = drawn && shown;
+    if (!shown) this.carouselNextRelease = Infinity;
+  }
+  private carouselReleaseDue(): boolean { return (this.carousel.elapsedNow() ?? -Infinity) >= this.carouselNextRelease; }
   private pickCarousel(slot: number, view: CarouselView) {
     const result = this.session.carouselPick(view.id, view.revision, slot);
+    this.publishCarousel3d(); // pending
     if (result.ok) return;
     const notice = this.session.takeNotice();
     if (notice?.kind === 'pending') return; // the receipt and the next view answer it
-    this.carousel.clearPending();
+    this.carousel.clearPending(); this.publishCarousel3d();
     this.hooks.status(notice?.kind === 'offline' ? notice.text : NON_RULE_REFUSALS[result.reason as ReceiptFailure] ?? `选秀未成功：${result.reason}`);
   }
   /**
@@ -359,6 +399,8 @@ export class OnlineApplication implements SceneApplication {
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
     this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
+    // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
+    if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
     // Last three seconds of a preparation: one tick per second.
     const seconds = this.mode === 'active' && !this.spectating && this.view?.phase.kind === 'preparation' ? this.sidebar.secondsLeft() : null;
     if (seconds !== this.lastTick) { this.lastTick = seconds; if (seconds !== null && seconds >= 1 && seconds <= 3) this.sound.play('tick'); }
@@ -395,7 +437,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }
