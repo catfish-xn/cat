@@ -184,8 +184,8 @@ describe('latest approximate pilot', () => {
       if (root.startsWith(pilot + '\\') || root.startsWith(pilot + '/')) await rm(root, { recursive: true, force: true });
     }
   });
-  it('rejects merging into read-only asset roots before reading or writing', async () => {
+  it('rejects missing input roots before reading or writing', async () => {
     for (const out of ['assets3d-local/fx-trial', 'assets3d-local/fx-all', 'assets3d-local/fx-pilot'])
-      await expect(mergeFxRoots({ out })).rejects.toThrow('pilot-merge-output-only');
+      await expect(mergeFxRoots({ out })).rejects.toThrow('usage: --roots');
   });
 });

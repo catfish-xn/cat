@@ -52,6 +52,21 @@ const DEFAULT_EFFECT_SECONDS = 1;
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 const FX_SCALE = 0.44;
+/**
+ * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
+ * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
+ * minions are set lower than the doc's 0.57 because their bind pose is low (idle ≈ 0.77): 0.43 stands about as tall
+ * as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
+ */
+const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly lift: number }>> = {
+  'pve-minion-melee': { height: 0.57, lift: -0.03 }, 'pve-minion-ranged': { height: 0.43, lift: 0.02 },
+  'pve-krug': { height: 0.78, lift: 0.03 },
+  'pve-wolf-large': { height: 0.87, lift: 0.01 }, 'pve-wolf-small': { height: 0.52, lift: 0.04 },
+  'pve-razorbeak-large': { height: 0.87, lift: 0.1 }, 'pve-razorbeak-small': { height: 0.48, lift: 0.05 },
+  'pve-elder-dragon': { height: 1.52, lift: 0 }, 'pve-rift-herald': { height: 1.36, lift: 0.01 },
+};
+/** Minion tiers A/B/C share one look: 'pve-minion-melee-b' → 'pve-minion-melee'. */
+const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
@@ -131,8 +146,11 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
 
 interface PieceView {
   readonly root: Group; readonly ring: Mesh; state: UnitActionState;
-  /** Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body). */
-  readonly stars: StarMark; starHeight: number;
+  /**
+   * Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body).
+   * Null on a PvE monster: as in TFT, monsters carry only their health bar.
+   */
+  stars: StarMark | null; starHeight: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -244,8 +262,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.lease = lease;
       if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
-      view.body = lease.placeholder ? fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH) : fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
-      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT) + STAR_GAP;
+      const monster = lease.placeholder ? undefined : monsterFit(definitionId);
+      if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
+      else if (monster) {
+        // The offset goes on the GLB root, which the mixer never animates (clips drive its bones).
+        view.body = fit(lease.scene, MODEL_HEIGHT * monster.height); lease.scene.position.y += MODEL_HEIGHT * monster.lift;
+      } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
+      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
@@ -255,18 +278,23 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get none.
+  const syncStars = (view: PieceView, piece: BoardPiece) => {
+    if (piece.neutral) { view.stars?.dispose(); view.stars = null; return; }
+    const level = piece.effectiveStarLevel ?? piece.starLevel;
+    if (view.stars) { view.stars.setLevel(level); return; }
+    view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
+    view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
+  };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
     const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
     root.add(ring);
-    // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them.
-    const stars = createStarMark({ effectiveStarLevel: piece.effectiveStarLevel ?? piece.starLevel, colorFor: starColorFor });
-    stars.object.scale.setScalar(STAR_SIZE);
-    scene.add(root, stars.object);
-    const view: PieceView = { root, ring, stars, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    scene.add(root);
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
-    attachBody(view);
+    attachBody(view); syncStars(view, piece);
     return view;
   };
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
@@ -278,7 +306,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
-    view.mixer?.dispose(); view.lease?.release(); view.stars.dispose();
+    view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null;
     view.root.removeFromParent();
   };
 
@@ -374,7 +402,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
-      view.stars.setLevel(piece.effectiveStarLevel ?? piece.starLevel);
+      syncStars(view, piece);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -539,8 +567,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
-      view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
-      view.stars.object.visible = view.root.visible;
+      if (view.stars) {
+        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+        view.stars.object.visible = view.root.visible;
+      }
     }
     updateEffects(seconds);
     if (width > 0) renderer.render(scene, camera);
