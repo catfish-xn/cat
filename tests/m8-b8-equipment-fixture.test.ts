@@ -60,7 +60,7 @@ describe('B8 public equipment fixture provenance', () => {
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-  });
+  }, 10_000); // 临时，经用户 10-20 批准：CI 上超过默认 5 秒（本机约 2.5 秒），断言全部通过
 
   it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => {
     const first = itemMatch('bloodthirster'), original = serializeMatch(first);
