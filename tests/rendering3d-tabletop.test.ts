@@ -121,6 +121,15 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(release).toHaveBeenCalled();
   });
 
+  it('maps receipts built from the rules\' own orb and entry ids back to their orb (fails if that id format changes)', async () => {
+    const { grantedOrbIds } = await import('../src/rendering/online/orb-dock');
+    const { lootEntryId, lootOrbId, lootReceiptId } = await import('../src/simulation/loot-identity');
+    const orbA = lootOrbId('1-3', 'minions-b-v1', 'm01', 0), orbB = lootOrbId('1-3', 'minions-b-v1', 'r01', 0);
+    const receipt = (dropId: string, resolution?: 'held' | 'forfeited') => ({ receiptId: lootReceiptId(dropId), dropId, resolution,
+      payload: { kind: 'gold' as const, quantity: 1 }, grantedItemIds: [], grantedUnitIds: [] });
+    expect(grantedOrbIds([receipt(lootEntryId(orbA, 0)), receipt(lootEntryId(orbA, 1)), receipt(lootEntryId(orbB, 0), 'forfeited')])).toEqual([orbA]);
+  });
+
   it('rebuilds a bounded orb idle when it reaches its bound', async () => {
     const loadEffect = vi.fn(async (_id: string, _seconds: number) => fakeEffect());
     const { tabletop, step } = setup({ loadEffect });
