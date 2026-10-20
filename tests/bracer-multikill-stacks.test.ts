@@ -79,6 +79,7 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
   }
 });
 
+// Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
 it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every complete combat state', () => {
   let preparation = publicEquipmentPreparation(['rod']);
   expect(preparation.seed).toBe(3151248); expect(preparation.roundDefinitionId).toBe('2-1');
@@ -129,7 +130,7 @@ it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every
   for (const expected of states.slice(1)) expect(playback.advance(50).combat).toEqual(expected);
   for (const tick of [59, 60, 61, states.at(-1)!.tick]) expect(playback.seek(tick).combat).toEqual(states[tick]);
   playback.dispose();
-});
+}, 20000);
 
 /** S1 isolates life/attribution boundaries after the real strategy/item/summon
  * compiler. Only starting stats and readiness are controlled; all attacks,
