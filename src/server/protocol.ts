@@ -41,8 +41,8 @@ export interface SeatPublic {
   readonly controller: SeatController;
   /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
-   * Only units deployed on the board, with the items they hold. Never the bench, shop, gold, XP or RNG.
-   * Optional so older views and tests stay valid; the room always fills it.
+   * Board and bench units with the items and anomaly they hold, unequipped items and owned augments (2026-10-20 scouting).
+   * Never the shop, gold, XP, streak, pending choices or RNG. Optional so older views and tests stay valid; the room always fills it.
    */
   readonly publicBoard?: PublicBoard;
 }
@@ -58,8 +58,28 @@ export interface PublicBoardUnit {
    * `starLevel` is its stage appearance. Not a champion: no trait, no avatar, no items; the holder and item instance stay private.
    */
   readonly summon?: true;
+  /** 2026-10-20 scouting: the anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
 }
-export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
+/** A unit on the owner's bench (2026-10-20 scouting): same fields as a board unit, a bench slot instead of a cell. */
+export interface PublicBenchUnit {
+  readonly definitionId: string;
+  readonly starLevel: number;
+  readonly slot: number;
+  /** Item definition ids held by the unit, in slot order. */
+  readonly items: readonly string[];
+  /** The anomaly (异常) definition id bound to this unit; omitted when it has none. */
+  readonly anomaly?: string;
+}
+export interface PublicBoard {
+  readonly units: readonly PublicBoardUnit[];
+  /** Bench units by slot. Optional so older views stay valid; the room always fills it. */
+  readonly bench?: readonly PublicBenchUnit[];
+  /** Item definition ids not held by any unit (the item bench), in the owner's item order. */
+  readonly looseItems?: readonly string[];
+  /** Augment definition ids the seat owns, in the order acquired. Offers and rerolls stay private. */
+  readonly augments?: readonly string[];
+}
 /**
  * C15: one of MY units in my battle replay. The replay names units by their battle ids (contract §10.2); this pair
  * says which of my own units a battle id stands for, so the client can show that unit's equipment without

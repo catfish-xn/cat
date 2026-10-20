@@ -23,7 +23,7 @@ const panel = page => page.evaluate(() => {
   if (!root || root.hidden) return null;
   return {
     seat: root.dataset.seat, name: root.querySelector('.opponent-name')?.textContent ?? '',
-    units: [...root.querySelectorAll('.opponent-unit')].map(node => ({ definitionId: node.dataset.definition, starLevel: Number(node.dataset.star),
+    units: [...root.querySelectorAll('.opponent-grid .opponent-unit')].map(node => ({ definitionId: node.dataset.definition, starLevel: Number(node.dataset.star),
       cell: node.dataset.debug.replace('online:opponent-unit:', ''), items: node.querySelectorAll('.item-mark').length })).sort((a, b) => a.cell.localeCompare(b.cell)),
     traits: [...root.querySelectorAll('.opponent-trait')].map(node => ({ id: node.dataset.trait ?? null, text: node.textContent.trim(), active: node.classList.contains('active') })),
   };
