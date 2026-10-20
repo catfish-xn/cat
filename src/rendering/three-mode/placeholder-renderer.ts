@@ -14,7 +14,7 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
 } from 'three';
 import { ModelCache, UnitActionState, UnitAnimationMixer, hexCenter, pick, type AnimationEvent, type HexGrid, type ModelLease } from '../../rendering3d';
-import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece } from '../board-feed';
+import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 
@@ -210,7 +210,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
     }
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, unitAt: client => pickUnit(client, true) ?? undefined }) ?? (() => {});
+  // Hover cards: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels. Only the hovered piece is
+  // measured, once per 2D frame; a skinned body's bounds are its cached bind-pose box, so the card stays still while it animates.
+  const corner = new Vector3(), pieceBox = new Box3();
+  const screenBox = (id: string): BoardScreenBox | undefined => {
+    const view = pieces.get(id), area = viewport();
+    if (!view?.root.visible || area.width <= 0 || area.height <= 0) return undefined;
+    camera.updateMatrixWorld();
+    pieceBox.setFromObject(view.root);
+    if (pieceBox.isEmpty()) return undefined;
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    const { min, max } = pieceBox;
+    for (const x of [min.x, max.x]) for (const y of [min.y, max.y]) for (const z of [min.z, max.z]) {
+      corner.set(x, y, z).project(camera);
+      if (corner.z > 1) return undefined; // behind the camera
+      const cx = area.left + (corner.x + 1) / 2 * area.width, cy = area.top + (1 - corner.y) / 2 * area.height;
+      left = Math.min(left, cx); right = Math.max(right, cx); top = Math.min(top, cy); bottom = Math.max(bottom, cy);
+    }
+    // Off the 3D canvas: nothing to point at.
+    if (right < area.left || left > area.left + area.width || bottom < area.top || top > area.top + area.height) return undefined;
+    return { left, top, right, bottom };
+  };
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, unitAt: client => pickUnit(client, true) ?? undefined, screenBox }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
