@@ -50,4 +50,4 @@ npm run build
 
 ## 许可证
 
-仓库暂未选定许可证（见 [README](README.md#许可证)）。在 `LICENSE` 加入之前，较大的改动请先开 issue 讨论。Riot 的素材和数据不受任何代码许可证覆盖，见 [NOTICE.md](NOTICE.md)。
+代码以 [MIT 许可证](LICENSE) 发布，提交 PR 即表示你同意你的贡献以 MIT 发布。Riot 的素材和数据不受该许可证覆盖，见 [NOTICE.md](NOTICE.md)。

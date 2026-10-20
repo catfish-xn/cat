@@ -1,6 +1,6 @@
 # M4 RULES — 规则、内容与确定性契约
 
-状态：M4 v1 实施契约；实际门禁结果见 [M4_VALIDATION](docs/M4_VALIDATION.md)。基线与范围见 [PLAN P1–P3](M4_PLAN.md#p1-基线与实际仓库审查)，测试及交付门禁见 [ACCEPTANCE](M4_ACCEPTANCE.md)。本文是规则唯一来源；F1冻结语义，F3冻结数值及完整正常游玩路径。所有名称为原创/占位，不代表正式 S13。
+状态：M4 v1 实施契约；实际门禁结果见 [M4_VALIDATION](../M4_VALIDATION.md)。基线与范围见 [PLAN P1–P3](M4_PLAN.md#p1-基线与实际仓库审查)，测试及交付门禁见 [ACCEPTANCE](M4_ACCEPTANCE.md)。本文是规则唯一来源；F1冻结语义，F3冻结数值及完整正常游玩路径。所有名称为原创/占位，不代表正式 S13。
 
 ## R1. 状态、版本与命令
 

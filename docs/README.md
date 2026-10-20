@@ -35,7 +35,8 @@
 
 这些文件记录某个阶段的计划、验收、审计、交接和派单，内容可能已被后续改动推翻：
 
-- 根目录 `M1_PLAN.md` … `M8_PLAN.md`、`M2_GOAL.txt`、`M4_*`、`M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M6_GOAL.md`、`M6_PLAN.md`、`M7_PLAN.md`
+- [archive/](archive/)：M1–M6 旧计划（`M1_PLAN.md`、`M2_GOAL.txt`、`M2_PLAN.md`、`M3_PLAN.md`、`M4_*`、`M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M6_PLAN.md`），2026-10-20 从根目录移入，只改了文内相对链接（M1、M6 未改，保持逐字副本哈希）
+- 根目录 `M6_GOAL.md`、`M7_PLAN.md`、`M8_PLAN.md`：同属过程记录，但被测试、脚本或内容来源清单按路径引用，暂留原位
 - `docs/M1_*` … `docs/M9_*` 中的 `*_VALIDATION`、`*_REVIEW`、`*_STATUS`、`*_HANDOFF`、`*_AUDIT*`、`*_BASELINE`、`*_PLAN` 等阶段文档
 - 早期联机设计 [MULTIPLAYER_ARCHITECTURE.md](MULTIPLAYER_ARCHITECTURE.md)、[MULTIPLAYER_RENOVATION_PLAN.md](MULTIPLAYER_RENOVATION_PLAN.md)、[SERVER_AUTHORITY_ARCHITECTURE_AUDIT.md](SERVER_AUTHORITY_ARCHITECTURE_AUDIT.md)，以及 `MULTIPLAYER_T*_WORK_ORDER.md`
 - 派单与交接：`CLAUDE_WORK_ORDERS.md`、`DISPATCH_2026-10-14.md`、`IMPLEMENTATION_PHASE1.md`、`PLAN_GOALS_2026-10-15.md`、`PR166_*`、`PR_P3P4P5.md`
@@ -43,4 +44,4 @@
 
 `docs/evidence/` 和 `docs/audits/` 是测试与审计的原始证据，部分被脚本和 CI 按路径读取，请勿移动或改写。
 
-部分过程记录被测试或脚本按文件名引用，所以暂时没有挪进单独的归档目录。
+`docs/` 下的阶段文档有一部分被测试或脚本按文件名引用，所以暂时没有挪进 `archive/`。

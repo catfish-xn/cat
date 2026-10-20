@@ -58,16 +58,9 @@ main 当前包含：
 .
 ├── AGENTS.md                  协作边界、报告格式、常用入口
 ├── README.md                  玩家操作、架构概览、主要验证入口
-├── M1_PLAN.md                 M1 最小自动战斗历史计划
-├── M2_PLAN.md / M2_GOAL.txt    M2 连续对局循环计划与目标
-├── M3_PLAN.md                 M3 成长循环历史计划
-├── M4_PLAN.md                 M4 策略切片计划
-├── M4_RULES.md                M4 历史规则
-├── M4_ACCEPTANCE.md           M4 验收要求
-├── M5_PLAN.md                 M5 范围、依赖与冻结点
 ├── M5_RULES.md                当前 S13 切片详细规则与审计修订
-├── M5_ACCEPTANCE.md           M5 验收矩阵和证据门禁
-├── M6_PLAN.md / M6_GOAL.md     M6 历史计划与已冻结产品契约
+├── (M1–M6 旧计划)             2026-10-20 移到 docs/archive/（M1–M4、M5_PLAN、M5_ACCEPTANCE、M6_PLAN）
+├── M6_GOAL.md                 M6 已冻结产品契约
 ├── M7_PLAN.md                 已合并 M7 的历史计划
 ├── M8_PLAN.md                 已确认的装备/PvE 规划，尚未实施
 ├── package.json               npm scripts、依赖声明
@@ -181,7 +174,7 @@ main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`
 - `docs/SAVE_CONTRACT.md`、`docs/REPLAY_CONTRACT.md`、`M6_GOAL.md`：已合入 M6 的存档、回放和性能契约。
 - `docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md`：当前公共 API、阶段、原子性、事件、tick 与恢复契约。
 - `docs/M1_VALIDATION.md` 至 `docs/M5_VALIDATION.md`：各阶段真实执行记录，包含失败、中间状态和历史限制，阅读时核对日期/SHA。
-- `docs/M3_RULES.md`、根目录 `M4_RULES.md`：历史规则，不能覆盖 M5 的新内容/数值。
+- `docs/M3_RULES.md`、`docs/archive/M4_RULES.md`：历史规则，不能覆盖 M5 的新内容/数值。
 - `docs/M5_FIX_REVIEW.md`：M5 六项审计问题、修复依据、版本与验证边界。
 - `docs/M5_TEST_MIGRATION.md`、`docs/M5_HISTORICAL_TESTS.md`：测试迁移、替代覆盖与历史保留依据。
 - `docs/evidence/M5_CI_BUDGET.json`、`M5_CI_PROFILE_PERFORMANCE.json`：已入库的实测预算/性能证据，不是任意可重新生成的临时输出。
@@ -324,7 +317,7 @@ M7 既有预算要求 JS gzip 不超过该 M6 基线的 1.10 倍、交互就绪�
 
 重要的状态差异：
 
-- `M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5、M6、M7 均已合并；保留历史证据，但不要复述为当前仓库阻塞。
+- `docs/archive/M5_PLAN.md`、`docs/archive/M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5、M6、M7 均已合并；保留历史证据，但不要复述为当前仓库阻塞。
 - 当前 CI 使用 `docs/evidence/M5_CI_BUDGET.json` 和 `src/m6/limits.ts` 的预算；旧阶段“预算尚缺”不代表当前预算可以任意修改。
 - M7 历史 CI `37540777240` 在 `77600c8` 的 11 个验收作业全部成功（2 个诊断按条件跳过），包括 M7 表现、资源、视口和预算。`6120e86` 又调整 Vite 构建模式，不能用该旧 run 冒充 `15313a7`、`44541f0` 或后续文档合并提交的完整验收；当前工作流快照、日期和证据链接见 [M7_STATUS.md](M7_STATUS.md)。
 - 分支验证报告、用户签收、Git 合并和 Pages 部署是不同状态，必须分别汇报。

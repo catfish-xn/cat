@@ -6,7 +6,7 @@ HEX 自动战棋是免费、非商业的粉丝项目，复刻《云顶之弈》�
 
 HEX is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
-以下内容的权利属于 Riot Games，按 Riot 面向同人作品的 [Legal Jibber Jabber](https://www.riotgames.com/en/legal) 政策使用，**不在本仓库任何开源许可证的授权范围内**：
+以下内容的权利属于 Riot Games，按 Riot 面向同人作品的 [Legal Jibber Jabber](https://www.riotgames.com/en/legal) 政策使用，**不在本仓库 MIT 许可证（[LICENSE](LICENSE)）的授权范围内**：
 
 | 内容 | 位置 | 来源 |
 | --- | --- | --- |

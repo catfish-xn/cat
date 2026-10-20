@@ -2,7 +2,7 @@
 
 浏览器里玩的六角棋盘自动战棋，复刻《云顶之弈》S13（双城之战 II）**14.24b** 版本的规则与内容。以**八人联机**为主：一台服务器同时跑一局，真人点“匹配”进入队列，不足八人由机器人补位；也保留了单人模式。只面向桌面 Chromium。
 
-这是免费、非商业的粉丝项目，与 Riot Games 无关，见下方「免责声明」和 [NOTICE.md](NOTICE.md)。
+这是免费、非商业的粉丝项目，与 Riot Games 无关。代码以 [MIT](LICENSE) 发布，Riot 的素材和数据除外，见下方「免责声明」和 [NOTICE.md](NOTICE.md)。
 
 - 在线试玩（GitHub Pages，跟随 `main`）：<https://catfish-xn.github.io/cat/>
   公开站点没有联机服务器；`?mode=online` 会在浏览器里跑一局完整房间（另外七席是机器人），用来体验联机流程。
@@ -84,11 +84,11 @@ npm run build                         # typecheck + 生产构建
 - 现行规则与接口：[Match](docs/MATCH_CONTRACT.md)、[Combat](docs/COMBAT_CONTRACT.md)、[联机合同](docs/MULTIPLAYER_CONTRACT.md)、[存档](docs/SAVE_CONTRACT.md)、[回放](docs/REPLAY_CONTRACT.md)、[经济规则](M5_RULES.md)
 - 联机方案与部署：[改造方案 V2](docs/MULTIPLAYER_RENOVATION_V2.md)、[联机发布说明](docs/MULTIPLAYER_RELEASE_NOTES.md)
 - 参与开发：[CONTRIBUTING.md](CONTRIBUTING.md)
-- 根目录的 `M1_PLAN.md` … `M8_PLAN.md` 和 `docs/` 下带阶段编号的文档是开发过程记录，按当时日期阅读，不代表现状。
+- [docs/archive/](docs/archive/) 里的 M1–M6 旧计划、根目录的 `M6_GOAL.md`、`M7_PLAN.md`、`M8_PLAN.md` 和 `docs/` 下带阶段编号的文档是开发过程记录，按当时日期阅读，不代表现状。
 
 ## 许可证
 
-**尚未选定。** 在仓库加入 `LICENSE` 文件之前，代码保留所有权利。无论最终选哪种许可证，都不覆盖 Riot Games 的素材、游戏数据和商标，详见 [NOTICE.md](NOTICE.md)。
+本仓库的原创代码和文档以 [MIT 许可证](LICENSE) 发布。**Riot Games 的素材（`public/assets/s13/` 图标等）、游戏数据（`src/simulation/content/source/`）、名称和商标不在 MIT 许可范围内**，仍归 Riot Games 所有，详见 [NOTICE.md](NOTICE.md)。
 
 ## 免责声明
 
