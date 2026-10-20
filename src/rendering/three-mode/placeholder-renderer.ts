@@ -44,6 +44,10 @@ const DROP_COLOR = { allowed: '#68ddd0', refused: '#f08080' } as const;
 const MAX_EFFECTS = 48;
 /** Effects without a playback entry play at the source this long. */
 const DEFAULT_EFFECT_SECONDS = 1;
+/** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
+ * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
+ * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
+const FX_SCALE = 0.44;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 
@@ -249,7 +253,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.root.getWorldPosition(out).setY(IMPACT_HEIGHT);
     return true;
   };
-  const bodyScale = (view: PieceView): number => view.body ? view.body.getWorldScale(new Vector3()).x : 1;
+  /** Local scale that gives an effect FX_SCALE in world space under `parent`. */
+  const effectScale = (parent: Object3D): number => FX_SCALE / (parent.getWorldScale(new Vector3()).x || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
@@ -260,12 +265,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        if (node === source.root) fx.object.scale.setScalar(bodyScale(source));
+        fx.object.scale.setScalar(effectScale(node));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
-        fx.object.scale.setScalar(bodyScale(source));
+        fx.object.scale.setScalar(FX_SCALE);
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
