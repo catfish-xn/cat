@@ -11,6 +11,16 @@ import type { CombatReplay } from '../../server-entry';
 
 export * from '../../server/protocol';
 
+/**
+ * v15 commands the UI sends (docs/UI_REQUESTS.md "法球领取" / "按卡刷新", MULTIPLAYER_CONTRACT §claimOrb/rerollAugment):
+ * the room forwards them to runSharedMatchCommand. Listed here until the server's WireCommand union carries them (RemoteSession
+ * hands them to GameClient.send as they are); the shapes are the contract's, nothing is decided on the client.
+ */
+export interface ClaimOrbCommand { readonly type: 'claimOrb'; readonly round: number; readonly orbId: string }
+export interface AugmentSlotRerollCommand { readonly type: 'rerollAugment'; readonly choiceId: string; readonly generation: number; readonly optionIndex: number }
+/** Every command the online UI may send. */
+export type UiCommand = WireCommand | ClaimOrbCommand | AugmentSlotRerollCommand;
+
 /** A network client cannot answer at once: the command is sent and waits for its receipt. */
 export interface PendingCommand { readonly ok: 'pending'; readonly commandId: number }
 export type ClientSendResult = MatchCommandResult | PendingCommand;

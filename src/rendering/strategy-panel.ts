@@ -27,6 +27,8 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+import { augmentOptionViews } from '../simulation/augment-offers';
+import { d11PrivateDisplay } from '../simulation/d11-display';
 import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -85,8 +87,8 @@ interface PanelActions {
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
-  /** Augment offers: free whole-set reroll that keeps the tier (rules rerollAugment); optional so panels without it hide the button. */
-  readonly rerollAugment?: (choice: string, generation: number) => void;
+  /** Augment offers (v15): one free reroll per card, same tier (rules rerollAugment with the card's optionIndex); optional so panels without it hide the buttons. */
+  readonly rerollAugment?: (choice: string, generation: number, optionIndex: number) => void;
   /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
   readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
@@ -115,6 +117,22 @@ const itemDefinitionName = (id: string) => itemDisplayName(id);
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? (ITEM_DEFINITIONS[id] ? itemDisplayName(id) : undefined) ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? (ANOMALY_DEFINITIONS[id] ? anomalyDisplayName(id) : undefined) ?? '未知来源';
+/**
+ * v15 per-card reroll buttons (MATCH_CONTRACT augmentOptions): online the private view's pendingChoice.augmentOptions as
+ * sent; offline the rules' own augmentOptionViews on the authoritative state. Never derived from rerollsRemaining.
+ */
+function readAugmentOptions(state: MatchState): readonly AugmentOptionView[] {
+  const sent = (state.pendingChoice as { readonly augmentOptions?: readonly AugmentOptionView[] } | null)?.augmentOptions;
+  if (Array.isArray(sent)) return sent;
+  return isOnline() ? [] : augmentOptionViews(state);
+}
+type D11DisplayView = { readonly definitions: readonly { readonly definitionId: string; readonly name: string; readonly description: string; readonly tier?: string }[]; readonly headhunterKills?: number };
+/** v15 D11-DISPLAY: the private view's d11Display online; offline the rules' own d11PrivateDisplay of my state. */
+function readD11Display(state: MatchState): D11DisplayView | undefined {
+  const sent = (state as MatchState & { readonly d11Display?: D11DisplayView }).d11Display;
+  return sent ?? (isOnline() ? undefined : d11PrivateDisplay(state));
+}
+type AugmentOptionView = { readonly optionIndex: number; readonly definitionId: string; readonly rerollAvailable: boolean };
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
@@ -318,7 +336,7 @@ export class StrategyPanel {
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
-    chip.dataset.augment = id; chip.title = `${augmentDisplayName(id)}\n${AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).join('；') ?? ''}`;
+    chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).filter(Boolean).join('；')].filter(Boolean).join('\n');
     chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
     return chip;
   }
@@ -545,7 +563,12 @@ export class StrategyPanel {
     owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
-    owned.append(element('p', binding ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
+    const anomalyLine = element('p', binding ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位');
+    if (binding) anomalyLine.title = anomalyPlayerDescription(binding.definitionId);
+    // v15 D11-DISPLAY: 猎头者's settled permanent kills, as the rules count them (never added up from battle events here).
+    const kills = readD11Display(state)?.headhunterKills;
+    if (binding?.definitionId === 'headhunter' && kills !== undefined) anomalyLine.append(element('span', ` · 已结算击杀 ${kills}`, 'headhunter-kills'));
+    owned.append(anomalyLine);
     this.root.append(owned);
     this.renderChoice(state); this.lastCombatTick = -1; this.updateCombat();
   }
@@ -870,7 +893,9 @@ export class StrategyPanel {
         card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
       }
       const offers = element('div', '', 'choice-cards');
-      for (const id of choice.offers) {
+      // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
+      const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
+      for (const [index, id] of choice.offers.entries()) {
         if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
         // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
@@ -885,7 +910,16 @@ export class StrategyPanel {
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
         if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
-        button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
+        button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
+        const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
+        if (!option || !rerollAugment) { offers.append(button); continue; }
+        const slot = element('div', '', 'augment-slot');
+        const used = choice.rerolledSlots?.[index] === true;
+        const reroll = this.button(`augment-reroll:${index}`, used ? '已刷新' : '刷新这张', () => rerollAugment(choice.choiceId, choice.generation, index), !option.rerollAvailable);
+        reroll.className = 'augment-slot-reroll';
+        reroll.title = option.rerollAvailable ? '免费刷新这一张 · 等级不变 · 每张只能刷新 1 次，刷掉的强化本局不再出现'
+          : used ? '这张已经刷新过' : '同等级已没有可替换的强化';
+        slot.append(button, reroll); offers.append(slot);
       }
       card.append(offers);
       if (generic) {
@@ -894,12 +928,6 @@ export class StrategyPanel {
         if (extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
         row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
         card.append(row);
-      }
-      const rerollAugment = this.actions.rerollAugment;
-      // Rules expose the remaining free rerolls on the offer; the button only forwards, the rules check count and generation again.
-      if (choice.kind === 'augment' && rerollAugment && choice.rerollsRemaining !== undefined) {
-        card.append(this.button('augment-reroll', `刷新强化 · 同一等级（剩余 ${choice.rerollsRemaining} 次）`,
-          () => rerollAugment(choice.choiceId, choice.generation), choice.rerollsRemaining < 1));
       }
       if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }

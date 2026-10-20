@@ -16,7 +16,7 @@ import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
-import type { ConsumableTarget, GameClient, ItemSummonView, ReplayUnitId, WireCommand } from './protocol';
+import type { ConsumableTarget, GameClient, ItemSummonView, ReplayUnitId, UiCommand, WireCommand } from './protocol';
 import type { HexCell } from '../../simulation/board';
 import type { DisplayMatch } from './seat-view-adapter';
 
@@ -25,7 +25,9 @@ export type IntentNotice = { readonly kind: 'pending'; readonly commandId: numbe
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
-const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable']);
+const BATTLE_COMMANDS: ReadonlySet<UiCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable',
+  // v15: an orb clicked during my battle is queued by the rules and settled after it (user 2026-10-20 02:26).
+  'claimOrb']);
 /** G5: my finished battle of a round, kept after the settlement took it off the board (post-battle ranking). */
 export interface FinishedBattle { readonly round: number; readonly roundId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
 /** Playback behind wall time by more than this (dropped or stalled frames) catches up at once; 1x otherwise. */
@@ -148,14 +150,15 @@ export class RemoteSession extends MatchSession {
     if (!this.playingBack) this.accumulator = 0;
     return events;
   }
-  private intent(command: WireCommand): MatchCommandResult {
+  private intent(command: UiCommand): MatchCommandResult {
     this.notice = null;
     if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
     if (this.spectating) { this.notice = { kind: 'offline', text: '已淘汰 · 观战中，不能操作' }; return this.blocked(); }
     // Contract §15.2: a running battle accepts operations only (choices wait for their window); the server and the rules
     // decide everything else, including the board-target refusals of §15.1.
     if (this.paused || (this.inBattle && !BATTLE_COMMANDS.has(command.type))) return this.blocked();
-    const result = this.client.send(command);
+    // claimOrb / per-card rerollAugment are v15 contract commands the server's WireCommand union does not list yet.
+    const result = this.client.send(command as WireCommand);
     // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).
     if (result.ok === 'pending') { this.notice = { kind: 'pending', commandId: result.commandId }; return this.blocked(); }
     if (!result.ok) return result;
@@ -189,7 +192,9 @@ export class RemoteSession extends MatchSession {
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
-  override augmentReroll(choiceId: string, generation: number) { return this.intent({ type: 'rerollAugment', choiceId, generation }); }
+  override augmentReroll(choiceId: string, generation: number, optionIndex: number) { return this.intent({ type: 'rerollAugment', choiceId, generation, optionIndex }); }
+  /** v15: claim one of my unclaimed orbs; `round` is the round shown now (the orb may come from an earlier one). */
+  override claimOrb(orbId: string) { return this.intent({ type: 'claimOrb', round: this.matchState.round, orbId }); }
   /** G2-4b (§26): the room hands it to the rules' moveItemSummon; refused outside preparation like any board move. */
   override moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.intent({ type: 'moveItemSummon', itemInstanceId, cell: { col: cell.col, row: cell.row } }); }
   /** G2-4b: the summons of my last state push as the server placed them; never derived from items or rounds here. */

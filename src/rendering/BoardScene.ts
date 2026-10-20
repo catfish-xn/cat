@@ -42,11 +42,16 @@ import type { ConsumableTarget } from '../simulation/consumable-types';
 import { itemDisplayName } from '../presentation/g23-display';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
+import { OrbDock, readUnclaimedOrbs } from './online/orb-dock';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
 /** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
 const SUMMON_BOARD_ONLY = '虚空生物只能在我方棋盘区域移动，不能放入备战席';
+/** v15 claimOrb refusals (MULTIPLAYER_CONTRACT: already-claimed covers a second click on a queued orb). */
+const ORB_FAILURE_TEXT: Readonly<Partial<Record<string, string>>> = {
+  'already-claimed': '这个法球已领取或已排队', 'unknown-orb': '这个法球已不存在', 'seat-eliminated': '已淘汰，不能领取法球',
+};
 const SPECIAL_CELL_COLORS: Readonly<Record<string, string>> = { trial: THEME.color.gold };
 
 declare global {
@@ -70,6 +75,8 @@ export class BoardScene extends Phaser.Scene {
   private inputRouter = new InputRouter();
   private strategyPanel: StrategyPanel | null = null;
   private help: HelpPanel | null = null;
+  /** v15 (online): my unclaimed orbs in the board's right gutter. */
+  private orbDock: OrbDock | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
   private views = new Map<string, UnitView>();
@@ -203,13 +210,19 @@ export class BoardScene extends Phaser.Scene {
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
-      rerollAugment: (choice, generation) => this.command(this.session.augmentReroll(choice, generation), '强化选项已刷新 · 等级不变'),
+      rerollAugment: (choice, generation, slot) => {
+        const result = this.session.augmentReroll(choice, generation, slot), success = '这张强化已刷新 · 等级不变，刷掉的强化本局不再出现';
+        this.command(result, success);
+        // command() keeps "完成当前三选一" during a choice; a confirmed reroll names itself instead.
+        if (result.ok) this.setStatus(success);
+      },
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
     }, this.inputRouter, mounts?.shopDock ?? null, mounts?.itemDock ?? null);
+    this.orbDock = mounts ? new OrbDock(mounts.orbDock, { claim: id => this.claimOrb(id), status: message => this.setStatus(message) }) : null;
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -268,6 +281,7 @@ export class BoardScene extends Phaser.Scene {
       this.statsPanel?.dispose(); this.statsPanel = null; this.feedback?.dispose(); this.feedback = null;
       this.application?.dispose(); this.application = null;
       this.strategyPanel?.destroy(); this.strategyPanel = null; this.help?.destroy(); this.help = null;
+      this.orbDock?.reset(); this.orbDock = null;
       this.resetViewReferences();
     });
   }
@@ -519,16 +533,17 @@ export class BoardScene extends Phaser.Scene {
       'missing-player': '无法开始：请先将至少 1 个我方单位部署到棋盘',
       'missing-enemy': '无法开始：棋盘上至少需要 1 个敌方单位',
       'missing-both': '无法开始：棋盘上双方都至少需要 1 个单位',
-      'invalid-slot': '商店槽位无效', 'stale-shop': '商店已更新，请选择当前商品', 'purchased-slot': '该商店槽位已经购买',
+      'invalid-slot': this.session.phase === 'choice' ? '这张强化不能刷新 · 请重新选择' : '商店槽位无效', 'stale-shop': '商店已更新，请选择当前商品', 'purchased-slot': '该商店槽位已经购买',
       'insufficient-gold': '金币不足', 'bench-full': '备战席已满 · 请先部署或出售单位',
       'stale-round': this.online ? '此回合已结束 · 请在当前回合重新操作' : '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
       // Equipment-only codes share the preview wording (U3 dynamic; replaces the B5 interim copy).
       ...Object.fromEntries(EQUIPMENT_COMMAND_FAILURES.map(code => [code, EQUIPMENT_FAILURE_TEXT[code]])) as Record<typeof EQUIPMENT_COMMAND_FAILURES[number], string>,
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
+      'augment-rerolls-exhausted': '这张强化已经刷新过', 'augment-pool-too-small': '同等级已没有可替换的强化',
     };
     // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
-    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason] ?? (CONSUMABLE_FAILURE_TEXT as Partial<Record<string, string>>)[reason];
+    return (messages as Partial<Record<string, string>>)[reason] ?? ORB_FAILURE_TEXT[reason] ?? POOL_REFUSAL_TEXT[reason] ?? (CONSUMABLE_FAILURE_TEXT as Partial<Record<string, string>>)[reason];
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
@@ -564,6 +579,20 @@ export class BoardScene extends Phaser.Scene {
     // P1: online, an operation confirmed during the settlement (shop, bench, items, tools) keeps its own success text;
     // offline the settlement line still says how to continue.
     else if (this.session.phase === 'settlement' && !this.online) this.setStatus(this.settledText());
+  }
+  /** v15: a battle of mine is on the board or running; a claim then waits for the rules' post-battle settlement. */
+  private orbsInBattle(): boolean {
+    return this.session.phase === 'combat' || (this.session instanceof RemoteSession && this.session.inBattle);
+  }
+  private syncOrbs() {
+    const spectating = document.body.dataset.onlineSpectating === 'true';
+    this.orbDock?.render(this.session.state, { inBattle: this.orbsInBattle(), locked: spectating || this.onlineEnded() });
+  }
+  /** v15: the rules grant the orb now or queue it until the battle ends; the dock announces the receipts when they arrive. */
+  private claimOrb(orbId: string) {
+    const result = this.session.claimOrb(orbId);
+    const queued = result.ok && readUnclaimedOrbs(result.state).some(orb => orb.orbId === orbId && orb.queued);
+    this.command(result, queued || this.orbsInBattle() ? '法球已排队 · 战后结算' : '法球已打开');
   }
   /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
   private showUpgrades(events: readonly MatchEvent[]) {
@@ -652,6 +681,7 @@ export class BoardScene extends Phaser.Scene {
   private sync() {
     this.reconcileTokens(); this.syncHud();
     this.strategyPanel?.render();
+    this.syncOrbs();
     if (this.session.phase !== 'preparation') {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
       if (this.benchOps()) this.syncOperable();

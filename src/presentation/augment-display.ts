@@ -5,6 +5,7 @@
  */
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
+import { d11ChoiceDisplay } from '../simulation/d11-display';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const ICONS = new Map(S13_AUGMENT_ASSETS.map(asset => [asset.id, asset.path]));
@@ -41,7 +42,12 @@ export function augmentIconHtml(id: string, size: number, className = 'augment-i
  * `description` is an implementation note, so the choice card shows only the effect text.
  */
 const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i', 'pumping-up-i', 'investment-strategy-i', 'bulky-buddies-i']);
-export const augmentPlayerDescription = (id: string): string | null => AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null;
+/**
+ * Player text of an augment: the authored description of the first six, and (v15 D11-DISPLAY) the rules' own display
+ * description of 一费奉献 I / 三项赛 I / 灵魂连接 (d11ChoiceDisplay, the same text the private view's d11Display carries).
+ */
+export const augmentPlayerDescription = (id: string): string | null => AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null
+  : d11ChoiceDisplay(id)?.description ?? null;
 
 /** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */
 export const AUGMENT_TIER_TEXT: Readonly<Record<import('../simulation/augment-offers').AugmentTier, string>> = {

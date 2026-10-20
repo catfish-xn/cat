@@ -428,12 +428,54 @@ body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), c
 .item-dock .item-glyph { font-size: 12px; line-height: 1; }
 .item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
 .item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
+/* v15: unclaimed orbs in the board's right gutter (mirror of the item bench). Tier colours follow the 14.24 client: grey
+   (silver-white), blue, gold and prismatic; a reward orb from an augment / conqueror / black market carries a "奖" mark. */
+.orb-dock { position: absolute; z-index: 20; right: 0; width: calc(var(--item-gutter, 56px) - 6px); top: calc(var(--online-countdown-h) + var(--online-gap));
+  bottom: calc(var(--online-dock-h) + var(--online-gap) + 8px); pointer-events: none; }
+.orb-dock:empty { display: none; }
+.orb-dock-list { display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; height: 100%; }
+.orb-token { position: relative; pointer-events: auto; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.orb-token:disabled { cursor: default; }
+.orb-token-gem { position: absolute; inset: 3px; border-radius: 50%; box-shadow: 0 0 10px var(--orb-glow), inset 0 -4px 8px #0006, inset 0 3px 6px #fff8;
+  background: radial-gradient(circle at 35% 30%, #fff 0 8%, var(--orb-light) 22%, var(--orb-base) 62%, var(--orb-dark) 100%); animation: orb-float 2.4s ease-in-out infinite; }
+.orb-gray { --orb-light: #f2f4f6; --orb-base: #aeb7bf; --orb-dark: #5d6871; --orb-glow: #d9e1e8aa; }
+.orb-blue { --orb-light: #b9e4ff; --orb-base: #3d8fe0; --orb-dark: #173f80; --orb-glow: #4aa6ffbb; }
+.orb-gold { --orb-light: #fff1b8; --orb-base: #e9b43c; --orb-dark: #8a5a12; --orb-glow: #ffc94dcc; }
+.orb-prismatic { --orb-light: #ffffff; --orb-base: #c69bff; --orb-dark: #3d6fb5; --orb-glow: #f3a6ffcc; }
+.orb-prismatic .orb-token-gem { background: radial-gradient(circle at 35% 30%, #fff 0 8%, #fff0 30%), conic-gradient(from 30deg, #ff8ad8, #ffd36b, #7dffb2, #6cc8ff, #b48bff, #ff8ad8); }
+.orb-token:hover .orb-token-gem, .orb-token:focus-visible .orb-token-gem { filter: brightness(1.18); box-shadow: 0 0 16px var(--orb-glow), inset 0 -4px 8px #0006, inset 0 3px 6px #fff8; }
+.orb-token[data-queued="true"] .orb-token-gem { filter: saturate(.55) brightness(.85); animation: none; }
+.orb-token-mark { position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #3a2b10; border: 1px solid #ffd782;
+  color: #ffe39b; font-size: 10px; line-height: 14px; font-weight: 700; }
+.orb-token-queued { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); white-space: nowrap; padding: 0 4px; border-radius: 6px; background: #24404d;
+  color: #ffe39b; font-size: 10px; line-height: 15px; }
+.orb-opening .orb-token-gem { animation: orb-open .45s ease-out forwards; }
+.orb-tip { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: none; width: max-content; max-width: 220px; padding: 8px 10px;
+  border-radius: 8px; border: 1px solid #304653; background: #0f1a24f2; color: #e2eef1; text-align: left; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 24px #000a; z-index: 30; }
+.orb-token:hover .orb-tip, .orb-token:focus-visible .orb-tip { display: grid; gap: 4px; }
+.orb-tip-entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.orb-tip-entries li { display: flex; align-items: center; gap: 6px; }
+.orb-tip-hint { color: #9aaeb9; }
+.orb-result { position: absolute; right: calc(100% + 8px); bottom: 0; width: max-content; max-width: 240px; padding: 8px 10px; border-radius: 8px; border: 1px solid #ffd782;
+  background: #1b2a33f2; color: #e2eef1; font-size: 13px; line-height: 1.5; pointer-events: none; animation: orb-result-in .25s ease-out; }
+.orb-result p { margin: 0; }
+.orb-result .orb-result-sold { color: #ffe39b; }
+@keyframes orb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes orb-open { 0% { transform: scale(1); } 50% { transform: scale(1.25); filter: brightness(1.6); } 100% { transform: scale(.6); opacity: .2; } }
+@keyframes orb-result-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .orb-token-gem, .orb-opening .orb-token-gem, .orb-result { animation: none; } }
+/* v15: one reroll button under each augment card. */
+.choice-cards .augment-slot { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; }
+.choice-cards .augment-slot > button:first-child { height: 100%; }
+.choice-cards button.augment-slot-reroll { min-height: 0; padding: 6px 8px; font-size: 14px; line-height: 1.3; }
 .equip-details, .stats-details { margin: 8px 0; }
 .stats-details:has(> .combat-sources:empty) { display: none; }
 .equip-details > summary, .stats-details > summary { padding: 6px 0; font-weight: 600; cursor: pointer; }
 @media (max-width: 700px) {
   body[data-online] { --item-gutter: 0px; }
   .item-dock { position: static; width: auto; flex-direction: row; flex-wrap: wrap; }
+  .orb-dock { position: static; width: auto; }
+  .orb-dock-list { flex-direction: row; flex-wrap: wrap; height: auto; }
   .item-dock .item-inventory, .item-dock .consumable-row { flex-direction: row; flex-wrap: wrap; }
   .item-dock > * { min-width: 0; max-width: 100%; }
 }
