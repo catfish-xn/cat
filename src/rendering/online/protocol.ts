@@ -6,8 +6,9 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure, SeatNotice } from '../../server/net/messages';
-import type { WireCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
+import type { WireCommand, LittleLegendId, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
+import type { LegendWalk, LegendWalkRequest } from '../../server/legend-motion';
 
 export * from '../../server/protocol';
 
@@ -53,12 +54,15 @@ export interface ClientListeners {
   /** v15: an orb claim held while the round was frozen was refused by the rules at battle entry (its receipt was ok). */
   notice?(notice: SeatNotice): void;
   connection?(status: ConnectionStatus): void;
+  /** A little-legend walk the room took (any seat); `serverNow` is the server clock when it was sent. */
+  legend?(walk: LegendWalk, serverNow: number): void;
 }
 /** What the UI talks to: the real room run in-browser (local-room-client.ts) or the game server over a socket (ws-client.ts). */
 export interface GameClient {
   readonly transport: 'local-room' | 'websocket';
   listen(listeners: ClientListeners): () => void;
-  joinQueue(name: string): void;
+  /** `legend`: the little legend picked in the lobby (cosmetic); omitted means `default`. */
+  joinQueue(name: string, legend?: LittleLegendId): void;
   leaveQueue(): void;
   startMatch(): void;
   /**
@@ -66,6 +70,8 @@ export interface GameClient {
    * not change until the receipt and the state push that follows it (or a `refused` callback).
    */
   send(command: WireCommand): ClientSendResult;
+  /** My legend's walk to the room (no receipt); false when it was not sent. In-browser rooms have none. */
+  walk?(request: LegendWalkRequest): boolean;
   /** Lobby again after a finished match. */
   reset(): void;
   dispose(): void;

@@ -26,7 +26,9 @@ import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
-import type { CarouselPickCommand } from '../protocol';
+import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type CarouselPickCommand, type LittleLegendId, type SeatKind } from '../protocol';
+import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, carouselHome, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
+import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
 import { DEFAULT_PAIRING_POLICY, findPairing, planCandidates, planPairings, recordPairings, type PairingPolicy } from './pairing';
@@ -173,6 +175,11 @@ export type TimeoutOutcome =
   | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: string };
 const MAX_TIMEOUT_STEPS = 8;
+/** A seat that named no legend: a human shows `default`; a fill-in bot one of the others in seat order (cosmetic only). */
+function seatLegend(kind: SeatKind, index: number): LittleLegendId {
+  const others = ROOM_LITTLE_LEGENDS.filter(id => id !== ROOM_DEFAULT_LEGEND);
+  return kind === 'bot' ? others[index % others.length]! : ROOM_DEFAULT_LEGEND;
+}
 
 /**
  * Resolves one seat's pending decisions with the rules' timeout commands, in the contract's order:
@@ -251,6 +258,8 @@ export class Room {
   /** A live run replaced one of this round's published battles: the round settles those, not the staged ones. */
   private liveReplaced = false;
   private readonly listeners = new Set<(state: RoomState) => void>();
+  /** Little-legend walks (legend-walk.ts): display state plus the carousel arrival that asks for a pick. */
+  private readonly legendWalks: LegendWalkBook;
   private readonly pvpMode: PvpMode;
   private readonly checkConservation: boolean;
   private readonly pairingPolicy: PairingPolicy;
@@ -260,6 +269,7 @@ export class Room {
     if (new Set(seats.map(seat => seat.seatId)).size !== seats.length) throw new RangeError('duplicate seat id');
     validateSeed(options.seed);
     this.pvpMode = options.pvpMode ?? 'two-sided';
+    this.legendWalks = new LegendWalkBook(options.clock);
     this.checkConservation = options.assertPoolConservation ?? true;
     this.pairingPolicy = options.pairingPolicy ?? DEFAULT_PAIRING_POLICY;
     // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed, shared-deferred)` openings by
@@ -284,7 +294,7 @@ export class Room {
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
-      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
+      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, legend: spec.legend ?? seatLegend(spec.kind, index), connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
@@ -308,6 +318,10 @@ export class Room {
   subscribeNotices(listener: (notice: RoomNotice) => void): () => void { this.noticeListeners.add(listener); return () => { this.noticeListeners.delete(listener); }; }
   get clock(): Clock { return this.options.clock; }
   subscribe(listener: (state: RoomState) => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
+  /** Every little-legend walk as it starts (legend-walk.ts); they change no state, so no publication carries them. */
+  subscribeWalks(listener: (walk: LegendWalk) => void): () => void { return this.legendWalks.subscribe(listener); }
+  /** The walks still kept, for a connection that (re)joins mid-phase. */
+  get walks(): readonly LegendWalk[] { return this.legendWalks.list(); }
   /**
    * Releases everything the room holds besides its last published state: the deadline or resolution timer, listeners,
    * the frozen envelopes and staged results. A disposed room never publishes again. Idempotent.
@@ -318,10 +332,11 @@ export class Room {
     this.listeners.clear();
     this.liveListeners.clear();
     this.noticeListeners.clear();
+    this.legendWalks.dispose();
     this.releaseRound();
   }
   get retained(): RoomRetained {
-    return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1), listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
+    return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1) + this.legendWalks.pendingArrivals, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
       resolving: this.resolution !== null };
   }
 
@@ -804,6 +819,57 @@ export class Room {
     return { ok: true, state: result.state, events: matchEvents, seatRevision: after.seatRevision, roomRevision: this.current.roomRevision };
   }
   /**
+   * A little-legend walk (legend-motion.ts). Changes no rule state and answers only whether it was taken. On the carousel
+   * the room plans it from where it left this legend (home on the seat's cradle), only for a released seat that has not
+   * picked, and a walk toward a standing unit asks the rules for that pick when it arrives (the same pick-and-grant as a
+   * click, decided on the carousel as it is then): the first legend to reach a unit takes it. A board walk is display
+   * only: the room bounds it and relays it to the room, so an opponent can draw that legend.
+   */
+  walkLegend(seatId: string, request: LegendWalkRequest): { readonly ok: true; readonly walk: LegendWalk } | { readonly ok: false; readonly reason: string } {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat' };
+    if (this.disposed || !seat.alive) return { ok: false, reason: 'seat-eliminated' };
+    if (seat.controller !== 'human') return { ok: false, reason: 'seat-controlled' };
+    if (this.legendWalks.throttled(seatId)) return { ok: false, reason: 'rate-limited' };
+    const now = this.options.clock.now(), phase = this.current.phase;
+    if (request.scene === 'board') {
+      if (phase === 'waiting' || phase === 'carousel' || phase === 'ended' || !request.to) return { ok: false, reason: 'wrong-phase' };
+      const from = boxed(request.from ?? this.legendWalks.position(seatId, 'board', now) ?? request.to), to = boxed(request.to);
+      const walk: LegendWalk = { seatId, scene: 'board', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: null };
+      this.legendWalks.start(walk);
+      return { ok: true, walk };
+    }
+    const rules = this.options.carousel, room = this.current.carousel;
+    if (phase !== 'carousel' || !rules || !room || room.state.status !== 'open') return { ok: false, reason: 'wrong-phase' };
+    const elapsed = Math.max(0, now - room.startedAt);
+    if (elapsed >= room.state.deadlineMs) return { ok: false, reason: 'carousel-closed' };
+    const at = room.state.releaseAtMs[seatId];
+    if (at === undefined || at > elapsed) return { ok: false, reason: 'carousel-locked' };
+    if (room.state.receipts.some(receipt => receipt.seatId === seatId && receipt.status !== 'released')) return { ok: false, reason: 'already-picked' };
+    const index = this.current.seats.findIndex(candidate => candidate.seatId === seatId);
+    const from = this.legendWalks.position(seatId, 'carousel', now) ?? carouselHome(index, this.current.seats.length);
+    if (request.slot === undefined) {
+      if (!request.to) return { ok: false, reason: 'invalid-walk' };
+      const to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
+      const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: null };
+      this.legendWalks.start(walk);
+      return { ok: true, walk };
+    }
+    const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
+    if (target < 0 || slots[target]!.pickedBy !== null) return { ok: false, reason: 'slot-taken' };
+    const meet = interceptCarouselUnit(from, target, slots.length, elapsed);
+    const walk: LegendWalk = { seatId, scene: 'carousel', from, to: meet.to, startedAt: now, arriveAt: now + meet.ms, slot: request.slot };
+    const carouselId = room.state.id;
+    this.legendWalks.start(walk, () => this.arriveCarousel(seatId, carouselId, walk.slot!));
+    return { ok: true, walk };
+  }
+  /** A legend reached its unit: the pick as a click on the carousel as it is now. Taken by someone else first: it stays there. */
+  private arriveCarousel(seatId: string, carouselId: string, slot: number): void {
+    const room = this.current.carousel, seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (this.disposed || this.current.phase !== 'carousel' || !room || room.state.id !== carouselId || !seat) return;
+    this.pickCarousel(seat, { type: 'carousel-pick', carouselId, revision: room.state.revision, slot });
+  }
+  /**
    * Publishes one carousel transaction (§21.1 "原子发布"): the carousel, the pool it carries, the granted seat's state and
    * every event it returned (into the carousel ledger and the seat's server events), in one room publication.
    */
@@ -1272,6 +1338,8 @@ export class Room {
 
   private setPhase(phase: RoomPhase, durationMs: number | null): void {
     this.clearTimer();
+    // Every carousel starts with the legends on their cradles; a walk toward a unit never outlives its carousel.
+    this.legendWalks.clearScene('carousel');
     const deadlineAt = durationMs === null ? null : this.options.clock.now() + durationMs;
     if (phase === 'ended') {
       // An ended room keeps only what its last view and replay need (the rules' battle results, terminals and ledgers);
@@ -1356,4 +1424,10 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
     // G23-SERVER-FACTS: the rules' own battle facts, forwarded verbatim (a mirror copy has none and never settles).
     ...(proposal.g23Facts ? { g23Facts: proposal.g23Facts } : {}),
   };
+}
+
+/** A board walk's point inside the room's sanity bound. */
+function boxed(point: CellPoint): CellPoint {
+  const limit = (value: number) => Math.min(BOARD_WALK_LIMIT, Math.max(-BOARD_WALK_LIMIT, Number.isFinite(value) ? value : 0));
+  return { x: limit(point.x), y: limit(point.y) };
 }

@@ -1,12 +1,12 @@
 import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type ActionState } from './contracts';
+import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata } from './contracts';
 
 export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
-export interface ModelLease extends ModelTemplate {
+export interface ModelLease extends ModelTemplate, CastMetadata {
   placeholder: boolean;
-  animationNames: Partial<Record<ActionState, string>>;
+  animationNames: AnimationNames;
   release(): void;
 }
 interface Entry { promise: Promise<ModelTemplate>; refs: number; retired: boolean; placeholder: boolean }
@@ -96,6 +96,7 @@ export class ModelCache {
     const scene = clone(model.scene);
     let released = false;
     return { scene, animations: model.animations, placeholder: current.placeholder,
+      castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

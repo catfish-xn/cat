@@ -10,7 +10,7 @@ import { consumableName } from './orb-loot';
 import { g23ChampionNameByApi, itemDisplayName } from './g23-display';
 import { getHeroIdentity } from './hero-identity';
 
-const FORGES: Readonly<Record<string, string>> = { TFT_ArmoryKeyCompleted: '成装锻造器', TFT_ArmoryKeyOrnn: '神器锻造器', TFT_ArmoryKeySupport: '辅助装锻造器' };
+const FORGES: Readonly<Record<string, string>> = { TFT_ArmoryKeyCompleted: '成装锻造器', TFT_ArmoryKeyOrnn: '神器装备锻造器', TFT_ArmoryKeySupport: '辅助装锻造器' };
 const POOLS: Readonly<Record<string, string>> = { Tier0: '随机初级黑市装备', Tier1: '随机黑市装备', Tier2: '随机黑市装备 II', Tier3: '随机完美黑市装备', RADIANTITEMS_SET5: '随机光明装备' };
 const TOOLS: Readonly<Record<string, string>> = { TFT_Consumable_ItemRemover: 'magnetic-remover', TFT_Consumable_ItemReroller: 'reforger' };
 const COSTS: Readonly<Record<string, number>> = { TwoCostUnit: 2, ThreeCostUnit: 3, FourCostUnit: 4, FiveCostUnit: 5 };

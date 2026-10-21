@@ -15,7 +15,7 @@ import type { CombatResult } from '../../simulation/combat-types';
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
 import type { CandidateMap, PairingHistory } from './pairing';
 import type { CarouselFailure, CarouselLedgerEntry, RoomCarousel } from './carousel';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type LittleLegendId, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
@@ -31,7 +31,8 @@ export type RoundKind = 'pvp' | 'pve' | 'supply';
  */
 export type PvpMode = 'placeholder' | 'two-sided';
 
-export interface SeatSpec { readonly seatId: string; readonly name: string; readonly kind: SeatKind }
+/** `legend` is cosmetic; absent, a human seat shows `default` and a fill-in bot one of the others by seat order. */
+export interface SeatSpec { readonly seatId: string; readonly name: string; readonly kind: SeatKind; readonly legend?: LittleLegendId }
 
 export interface SeatState {
   readonly seatId: string;
@@ -39,6 +40,8 @@ export interface SeatState {
   readonly index: number;
   readonly name: string;
   readonly kind: SeatKind;
+  /** Cosmetic little legend, published in SeatPublic; no rule reads it. */
+  readonly legend: LittleLegendId;
   readonly connected: boolean;
   /** Current controller (B6); a fill-in bot seat is always `bot`, a human seat is `human` or temporarily `takeover`. */
   readonly controller: SeatController;

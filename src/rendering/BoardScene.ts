@@ -275,11 +275,11 @@ export class BoardScene extends Phaser.Scene {
         this.pendingSuccess.delete(commandId);
         const equipment = this.pendingEquipment.delete(commandId);
         const orbId = this.pendingOrbClaims.get(commandId);
-        if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.orbDock?.release(orbId); }
+        if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.releaseOrb(orbId); }
         this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
       },
       orbClaimRefused: (orbId, reason) => {
-        this.orbDock?.release(orbId);
+        this.releaseOrb(orbId);
         this.setStatus(`法球未能排队 · ${ORB_FAILURE_TEXT[reason] ?? '已放回，可再次点击领取'}`);
       },
     }, mounts) : new MatchApplication(this.session, {
@@ -769,6 +769,10 @@ export class BoardScene extends Phaser.Scene {
     const spectating = document.body.dataset.onlineSpectating === 'true';
     this.orbDock.render(this.session.state, { inBattle: this.orbsInBattle(), locked: spectating || this.onlineEnded() });
   }
+  /** Refused claims per orb (the 3D layer may walk into that orb again only after one); forgotten with the orb. */
+  private orbRefusals = new Map<string, number>();
+  /** A claim was refused: the dock shows the orb as claimable again and the 3D layer may retry it. */
+  private releaseOrb(orbId: string) { this.orbRefusals.set(orbId, (this.orbRefusals.get(orbId) ?? 0) + 1); this.orbDock?.release(orbId); }
   /** v15: the rules grant the orb now or queue it until the battle ends; the dock announces the receipts when they arrive. */
   private claimOrb(orbId: string) {
     this.pendingOrbNotice = null;
@@ -778,7 +782,7 @@ export class BoardScene extends Phaser.Scene {
     // A refusal (now, or later for a pending socket command) puts the orb back to claimable.
     const notice = !result.ok ? this.pendingOrbNotice : null; this.pendingOrbNotice = null;
     if (notice !== null) this.pendingOrbClaims.set(notice, orbId);
-    else if (!result.ok) this.orbDock?.release(orbId);
+    else if (!result.ok) this.releaseOrb(orbId);
   }
   /** I6: each upgrade among `events` plays its merge (copies fly in, then a ring); returns the upgrades. */
   private showUpgrades(events: readonly MatchEvent[]) {
@@ -1025,7 +1029,9 @@ export class BoardScene extends Phaser.Scene {
     // With a 3D layer drawing the board, the 2D one is covered or hidden: Phaser keeps updating it (tweens feed the
     // frame) but no longer draws it, which was about a fifth of the main thread during a 3D match (2026-10-21).
     const feeding = boardFeedActive();
-    if (this.cameras.main.visible === feeding) this.cameras.main.setVisible(!feeding);
+    // No camera (a scene that never booted its camera manager) leaves nothing to stop.
+    const camera = this.cameras?.main;
+    if (camera && camera.visible === feeding) camera.setVisible(!feeding);
     if (feeding) publishBoardFrame(() => this.boardFrame());
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
@@ -1198,6 +1204,7 @@ export class BoardScene extends Phaser.Scene {
         return { orbId: orb.orbId, tier: orb.tier, queued: orb.queued, ...(variant ? { variant } : {}) };
       }),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
+      orbRefusals: this.orbRefusalsOf(),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
       ...this.feedMechanics() };
   }
@@ -1207,6 +1214,11 @@ export class BoardScene extends Phaser.Scene {
     const state = this.session.state;
     if (state !== this.mechanicsOf) { this.mechanicsOf = state; const mechanics = g23BoardMechanics(state); this.mechanics = mechanics ? { mechanics } : {}; }
     return this.mechanics;
+  }
+  private orbRefusalsOf(): Readonly<Record<string, number>> {
+    const present = new Set(readUnclaimedOrbs(this.session.state).map(orb => orb.orbId));
+    for (const id of [...this.orbRefusals.keys()]) if (!present.has(id)) this.orbRefusals.delete(id);
+    return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items'> {

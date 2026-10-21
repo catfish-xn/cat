@@ -6,7 +6,7 @@
  *
  * Run `npm run client:game -- ws://localhost:8787 名字` to play one idle match end to end.
  */
-import type { LobbyView, PlayerView, SeatStateView, WireCommand } from '../protocol';
+import type { LittleLegendId, LobbyView, PlayerView, SeatStateView, WireCommand } from '../protocol';
 import { NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptMessage, type ServerMessage } from './messages';
 
 export type Receipt = ReceiptMessage;
@@ -89,7 +89,7 @@ export class TestClient {
     });
   }
 
-  join(name: string): Promise<Receipt> { return this.send({ type: 'join', name }); }
+  join(name: string, legend?: string): Promise<Receipt> { return this.send({ type: 'join', name, ...(legend === undefined ? {} : { legend: legend as LittleLegendId }) }); }
   leaveQueue(): Promise<Receipt> { return this.send({ type: 'leaveQueue' }); }
   start(): Promise<Receipt> { return this.send({ type: 'start' }); }
   resume(token: string): Promise<Receipt> { return this.send({ type: 'resume', token }); }

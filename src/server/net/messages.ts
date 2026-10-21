@@ -12,10 +12,11 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, SeatStateView, WireCommand } from '../protocol';
+import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type ConsumableTarget, type LittleLegendId, type LobbyView, type PlayerView, type ReplayUnitId, type SeatStateView, type WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
+import type { CellPoint, LegendWalk, LegendWalkRequest } from '../legend-motion';
 
 /**
  * Network message envelope contract version, independent of the rules-side multiplayer command/state
@@ -46,7 +47,7 @@ import type { ConsumableDisplayEvent } from '../room/projection';
 export const NET_PROTOCOL_VERSION: number = 5;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
-export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
+export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128, legendChars: 32 } as const;
 
 /* ---------------- client → server ---------------- */
 
@@ -58,7 +59,8 @@ interface ClientEnvelope {
    */
   readonly commandId: number;
 }
-export interface JoinMessage extends ClientEnvelope { readonly type: 'join'; readonly name: string }
+/** `legend` (optional, cosmetic): the little legend the player picked; anything off the list is `default`, never a refusal. */
+export interface JoinMessage extends ClientEnvelope { readonly type: 'join'; readonly name: string; readonly legend?: LittleLegendId }
 export interface LeaveQueueMessage extends ClientEnvelope { readonly type: 'leaveQueue' }
 export interface StartMessage extends ClientEnvelope { readonly type: 'start' }
 export interface ResumeMessage extends ClientEnvelope { readonly type: 'resume'; readonly token: string }
@@ -71,7 +73,13 @@ export interface CommandMessage extends ClientEnvelope {
   readonly seatRevision: number;
   readonly command: WireCommand;
 }
-export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage;
+/**
+ * A little-legend walk (src/server/legend-motion.ts). Not a command: it changes no rule state, so it has no receipt and
+ * no seatRevision, and its commandId is never deduplicated. Refused walks are dropped silently; the walks the room takes
+ * come back to everyone as `legend`.
+ */
+export interface WalkMessage extends ClientEnvelope, LegendWalkRequest { readonly type: 'walk'; readonly roomId: string }
+export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage | WalkMessage;
 export type ClientMessageType = ClientMessage['type'];
 
 /* ---------------- server → client ---------------- */
@@ -150,7 +158,9 @@ export type ServerMessage =
    * answers by itself). A client that has seen one may treat a silence of a few intervals as a dead connection and
    * reconnect; clients that do not know the type ignore it, and a server without it never sends one (no version bump).
    */
-  | { readonly type: 'heartbeat'; readonly intervalMs: number };
+  | { readonly type: 'heartbeat'; readonly intervalMs: number }
+  /** A little-legend walk the room took, for every seat of the room; `serverNow` lets the client place its times. Older clients ignore it. */
+  | { readonly type: 'legend'; readonly roomId: string; readonly serverNow: number; readonly walk: LegendWalk };
 
 /* ---------------- validation ---------------- */
 
@@ -173,10 +183,20 @@ function str(value: unknown, where: string, max: number = LIMITS.idChars, allowE
   if (value.length > max) return bad(`${where} longer than ${max} characters`);
   return value;
 }
+/** A listed little legend, or `default` for anything else (an older or newer client's pick is cosmetic, not an error). */
+function littleLegend(value: string): LittleLegendId {
+  return (ROOM_LITTLE_LEGENDS as readonly string[]).includes(value) ? value as LittleLegendId : ROOM_DEFAULT_LEGEND;
+}
 function int(value: unknown, where: string, min = Number.MIN_SAFE_INTEGER): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) return bad(`${where} must be an integer`);
   if (value < min) return bad(`${where} must be >= ${min}`);
   return value;
+}
+function point(value: unknown, where: string): CellPoint {
+  if (!isRecord(value)) return bad(`${where} must be an object`);
+  onlyKeys(value, ['x', 'y'], where);
+  const coordinate = (raw: unknown, at: string) => typeof raw === 'number' && Number.isFinite(raw) && Math.abs(raw) <= 1000 ? raw : bad(`${at} must be a finite number`);
+  return { x: coordinate(value.x, `${where}.x`), y: coordinate(value.y, `${where}.y`) };
 }
 function bool(value: unknown, where: string): boolean { return typeof value === 'boolean' ? value : bad(`${where} must be a boolean`); }
 
@@ -249,13 +269,23 @@ const ENVELOPE = ['type', 'protocolVersion', 'commandId'] as const;
 function validateEnvelopeBody(value: Shape, commandId: number): ClientMessage {
   const protocolVersion = NET_PROTOCOL_VERSION;
   switch (value.type) {
-    case 'join': onlyKeys(value, [...ENVELOPE, 'name'], 'join'); return { type: 'join', protocolVersion, commandId, name: str(value.name, 'join.name', LIMITS.nameChars, true) };
+    case 'join': onlyKeys(value, [...ENVELOPE, 'name', 'legend'], 'join');
+      return { type: 'join', protocolVersion, commandId, name: str(value.name, 'join.name', LIMITS.nameChars, true),
+        ...(value.legend === undefined ? {} : { legend: littleLegend(str(value.legend, 'join.legend', LIMITS.legendChars, true)) }) };
     case 'leaveQueue': onlyKeys(value, ENVELOPE, 'leaveQueue'); return { type: 'leaveQueue', protocolVersion, commandId };
     case 'start': onlyKeys(value, ENVELOPE, 'start'); return { type: 'start', protocolVersion, commandId };
     case 'resume': onlyKeys(value, [...ENVELOPE, 'token'], 'resume'); return { type: 'resume', protocolVersion, commandId, token: str(value.token, 'resume.token', LIMITS.tokenChars) };
     case 'command': onlyKeys(value, [...ENVELOPE, 'roomId', 'round', 'seatRevision', 'command'], 'command');
       return { type: 'command', protocolVersion, commandId, roomId: str(value.roomId, 'command.roomId'), round: int(value.round, 'command.round', 0),
         seatRevision: int(value.seatRevision, 'command.seatRevision', 0), command: validateClientCommand(value.command) };
+    case 'walk': {
+      onlyKeys(value, [...ENVELOPE, 'roomId', 'scene', 'to', 'slot', 'from'], 'walk');
+      if (value.scene !== 'carousel' && value.scene !== 'board') return bad('walk.scene must be "carousel" or "board"');
+      if (value.to === undefined && value.slot === undefined) return bad('walk needs to or slot');
+      return { type: 'walk', protocolVersion, commandId, roomId: str(value.roomId, 'walk.roomId'), scene: value.scene,
+        ...(value.to !== undefined ? { to: point(value.to, 'walk.to') } : {}), ...(value.from !== undefined ? { from: point(value.from, 'walk.from') } : {}),
+        ...(value.slot !== undefined ? { slot: int(value.slot, 'walk.slot', 0) } : {}) };
+    }
     default: return bad(`type ${JSON.stringify(value.type)} is not a client message`);
   }
 }
