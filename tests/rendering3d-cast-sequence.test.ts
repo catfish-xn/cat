@@ -94,9 +94,12 @@ describe('staged casts with generated skeleton curves', () => {
     const action = f.mixer.mixer.clipAction(f.clips[6]);
     f.mixer.update(0.1);
     expect(action.getEffectiveWeight()).toBeCloseTo(0.5);
-    expect(f.mixer.mixer.clipAction(f.clips[1]).isRunning()).toBe(false);
+    // Halfway through the fade the interrupted cast stage still plays: entry at 0.35 s (x 0.7) blended with fall at 0.1 s (x -0.2).
+    expect(f.mixer.mixer.clipAction(f.clips[1]).isRunning()).toBe(true);
+    expect(f.bone.position.x).toBeCloseTo(0.25);
     f.mixer.update(0.1);
     expect(action.getEffectiveWeight()).toBeCloseTo(1);
+    expect(f.mixer.mixer.clipAction(f.clips[1]).isRunning()).toBe(false);
     f.mixer.update(4);
     expect(f.bone.position.x).toBeCloseTo(-1);
     for (const clip of f.clips.slice(1, 5)) expect(f.mixer.mixer.clipAction(clip).isRunning()).toBe(false);
