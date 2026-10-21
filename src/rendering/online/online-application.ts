@@ -19,6 +19,7 @@ import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
 import { OnlineSound, type SoundCue } from './sound';
 import { Lobby } from './lobby';
+import { ScoutMinimap } from './scout-minimap';
 import { OpponentBoardPanel, publicTraitRows } from './opponent-board';
 import { traitColumnShowRows } from '../trait-column';
 import { PlayersSidebar } from './players-sidebar';
@@ -74,6 +75,7 @@ export class OnlineApplication implements SceneApplication {
   private lobby: Lobby;
   private sidebar: PlayersSidebar;
   private opponentBoard: OpponentBoardPanel;
+  private minimap: ScoutMinimap;
   private carousel: CarouselPanel;
   private carouselHolding: CarouselHoldingSlot;
   /** G5: battle ranking (right column) and the preparation economy hint. */
@@ -117,6 +119,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
+    this.minimap = new ScoutMinimap(app, seatId => this.toggleBoard(seatId));
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
@@ -388,6 +391,7 @@ export class OnlineApplication implements SceneApplication {
     const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs } : null) && !!seat;
     this.opponentBoard.drawnIn3d = drawn;
     this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
+    this.minimap.render(this.view, seatId);
     traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
   }
   private syncSpectating(view: PlayerView) {
@@ -451,7 +455,7 @@ export class OnlineApplication implements SceneApplication {
     document.body.dataset.onlineMode = this.mode;
     if (this.spectating) document.body.dataset.onlineSpectating = 'true'; else delete document.body.dataset.onlineSpectating;
     const inGame = this.mode !== 'online-lobby', playing = this.mode === 'active' && !this.spectating;
-    this.lobby.show(!inGame); this.sidebar.show(inGame);
+    this.lobby.show(!inGame); this.sidebar.show(inGame); this.minimap.root.hidden = !inGame;
     if (!inGame) this.opponentBoard.close();
     const strategy = document.getElementById('strategy-root'); if (strategy) strategy.inert = !playing;
     if (this.mounts) { this.mounts.shopDock.inert = !playing; this.mounts.countdown.hidden = !inGame; }
@@ -470,7 +474,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.minimap.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }
