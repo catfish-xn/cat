@@ -17,7 +17,12 @@ export interface BoardPiece {
   readonly visible: boolean;
   /** False once the shown combat has killed it; the 3D layer plays the death action before hiding the piece. */
   readonly alive: boolean;
+  /** The 2D combat meters while BoardScene draws them (a shown combat, alive); absent otherwise. */
+  readonly meters?: BoardMeters;
+  /** Worn items in slot order with the 2D icon URL (null when there is none); absent when it wears none. */
+  readonly items?: readonly { readonly id: string; readonly icon: string | null }[];
 }
+export interface BoardMeters { readonly hp: number; readonly maxHp: number; readonly mana: number; readonly maxMana: number; readonly shield: number }
 export interface BoardFrame {
   readonly rows: number; readonly columns: number; readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number };
   readonly bench: readonly { readonly x: number; readonly y: number }[];

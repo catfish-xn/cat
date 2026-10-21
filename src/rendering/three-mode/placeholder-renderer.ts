@@ -11,7 +11,8 @@
  */
 import {
   AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Vector2, Vector3, WebGLRenderer, type Object3D,
+  PerspectiveCamera, Plane, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
+  type Object3D, type Texture,
 } from 'three';
 import {
   ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
@@ -24,6 +25,7 @@ import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } fro
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
@@ -84,6 +86,9 @@ export function useAssetProgress(next: (text: string) => void): void { assetProg
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
+// Injected the same way: the 2D theme's meter colors (presentation/theme.ts THEME.color), so 2D and 3D bars match.
+let meterColors: MeterColors = DEFAULT_METER_COLORS;
+export function useMeterColors(next: MeterColors): void { meterColors = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
@@ -153,6 +158,8 @@ interface PieceView {
    * Null on a PvE monster: as in TFT, monsters carry only their health bar.
    */
   stars: StarMark | null; starHeight: number;
+  /** HP/mana bars and worn items over the head (unit-overhead.ts); a scene child placed each frame like the stars. */
+  readonly overhead: UnitOverhead;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -258,6 +265,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
+  // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
+  const itemTextures = new Map<string, Promise<Texture | null>>();
+  let closed = false;
+  const textureLoader = new TextureLoader();
+  const overheadContext = {
+    colors: () => meterColors,
+    itemTexture: (url: string) => {
+      let texture = itemTextures.get(url);
+      if (!texture) {
+        texture = textureLoader.loadAsync(url).then(loaded => {
+          // Arrived after the player left 3D: owned resources are already released, so this one goes too.
+          if (closed) { loaded.dispose(); return null; }
+          loaded.colorSpace = SRGBColorSpace; return own(loaded);
+        }).catch(() => null);
+        itemTextures.set(url, texture);
+      }
+      return texture;
+    },
+  };
   const pawnFor = (team: BoardPiece['team']): Object3D => {
     const pawn = new Group();
     pawn.name = 'render3d-pawn';
@@ -308,7 +334,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
     root.add(ring);
     scene.add(root);
-    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
     attachBody(view); syncStars(view, piece);
     return view;
@@ -322,7 +349,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
-    view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null;
+    view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
 
@@ -419,6 +446,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
       syncStars(view, piece);
+      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -616,6 +644,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
         view.stars.object.visible = view.root.visible;
       }
+      // Above the star row; a monster has none, so its bar takes the stars' place.
+      view.overhead.object.position.copy(view.root.position)
+        .setY(view.root.position.y + view.starHeight + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
     tabletop.update(seconds); stage.update(seconds);
@@ -630,7 +662,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      cancelAnimationFrame(frameId); unsubscribe();
+      closed = true; cancelAnimationFrame(frameId); unsubscribe();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
