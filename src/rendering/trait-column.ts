@@ -11,6 +11,9 @@ import { SHOP_CATALOG } from '../simulation/match-rules';
 import type { TraitSnapshot } from '../simulation/strategy-types';
 import { deriveTraits } from '../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS } from '../simulation/units';
+import type { MatchState } from '../simulation/match-types';
+import { readG23Progress } from '../simulation/g2-3-state';
+import { G23_CONQUEROR_CHESTS } from '../simulation/content/g2-3-policy';
 import { describeTraitTier } from '../presentation/effect-text';
 import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
@@ -40,6 +43,21 @@ export interface TraitRow {
 export interface TraitRuntimeLine { readonly label: string; readonly value: string }
 export type TraitRuntime = ReadonlyMap<string, readonly TraitRuntimeLine[]>;
 const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined) => (lines ?? []).map(line => `${line.label} ${line.value}`).join(' · ');
+
+/**
+ * My own Conqueror and Chem-Baron counters, read from the rules' G2-3 progress (offline state or my private seat view):
+ * 征服层数 with the next chest breakpoint (all 15 opened shows the total only), and 微光 out of 100. Owner-only data:
+ * never pass it for a scouted board. No progress (older saves, content without G2-3) renders no counters.
+ */
+export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
+  let progress; try { progress = readG23Progress(state); } catch { return undefined; }
+  if (!progress) return undefined;
+  const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
+  return new Map([
+    ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}` }]],
+    ['chem-baron', [{ label: '微光', value: shimmer < 100 ? `${shimmer}/100` : String(shimmer) }]],
+  ]);
+}
 
 /** Rows of the traits present on the board (count > 0): active by tier desc, then count desc, then name; inactive after. */
 export function traitRows(snapshots: readonly TraitSnapshot[]): TraitRow[] {
