@@ -20,8 +20,14 @@ const rootAssets = new Map<string, string>();
 let rootManifest: Promise<void> | null = null;
 export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (...args) => fetch(...args)): Promise<void> {
   if (!base) return Promise.resolve();
-  return rootManifest ??= fetcher(new URL('ui-assets.json', base).href).then(response => response.ok ? response.json() : null)
-    .then(manifest => registerRootUiAssets(base, manifest), () => undefined);
+  // Optional: a request or body that hangs is aborted after 3 s (and given up on even if the fetcher ignores the signal),
+  // so the bundled portraits still load.
+  return rootManifest ??= new Promise<void>(resolve => {
+    const abort = new AbortController(), timer = setTimeout(() => { abort.abort(); resolve(); }, 3000);
+    fetcher(new URL('ui-assets.json', base).href, { signal: abort.signal }).then(response => response.ok ? response.json() : null)
+      .then(manifest => { if (!abort.signal.aborted) registerRootUiAssets(base, manifest); }, () => undefined)
+      .finally(() => { clearTimeout(timer); resolve(); });
+  });
 }
 /** Registers the manifest's champion/trait entries whose path stays inside the root; anything else is ignored. */
 export function registerRootUiAssets(base: string, manifest: unknown): void {
