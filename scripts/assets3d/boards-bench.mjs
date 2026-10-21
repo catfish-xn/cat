@@ -90,7 +90,7 @@ export function benchFromUvTiles(triangles, tiles, alignment, home) {
 }
 
 /** Prefer authored individual rectangular ground faces when they exist. Pair
- * both triangles and require all four corners, so a diagonal alone is no tile. */
+ * both triangles across a shared diagonal and verify full rectangle coverage. */
 export function benchFromGroundQuads(triangles, alignment, home) {
   const groups = new Map();
   for (const t of triangles) {
@@ -106,7 +106,22 @@ export function benchFromGroundQuads(triangles, alignment, home) {
     if (g.hits.length !== 2) return false;
     const corners = g.hits.flatMap(h => h.vertices.map(v => v.p));
     if (!corners.every(p => [0, 2].every(k => Math.min(Math.abs(p[k] - g.min[k]), Math.abs(p[k] - g.max[k])) < .01))) return false;
-    return new Set(corners.map(p => p.map(v => Math.round(v * 100)).join(','))).size === 4;
+    const cornerId = p => (Math.abs(p[0] - g.max[0]) < .01 ? 1 : 0)
+      + (Math.abs(p[2] - g.max[2]) < .01 ? 2 : 0);
+    const ids = g.hits.map(h => h.vertices.map(v => cornerId(v.p)));
+    if (ids.some(v => new Set(v).size !== 3) || new Set(ids.flat()).size !== 4) return false;
+    const shared = ids[0].filter(id => ids[1].includes(id));
+    if (shared.length !== 2 || (shared[0] ^ shared[1]) !== 3) return false;
+    const [a, b] = shared.map(id => corners.find(p => cornerId(p) === id));
+    const side = p => (b[0] - a[0]) * (p[2] - a[2]) - (b[2] - a[2]) * (p[0] - a[0]);
+    const others = g.hits.map((h, i) => h.vertices[ids[i].findIndex(id => !shared.includes(id))].p);
+    if (side(others[0]) * side(others[1]) >= 0) return false;
+    const area = g.hits.reduce((sum, h) => {
+      const [p, q, r] = h.vertices.map(v => v.p);
+      return sum + Math.abs((q[0] - p[0]) * (r[2] - p[2]) - (q[2] - p[2]) * (r[0] - p[0])) / 2;
+    }, 0);
+    const rectangleArea = (g.max[0] - g.min[0]) * (g.max[2] - g.min[2]);
+    return Math.abs(area - rectangleArea) <= rectangleArea * 1e-4;
   }).map(g => ({ ...g, point: g.min.map((v, k) => (v + g.max[k]) / 2) }))
     .sort((a, b) => benchWorld(a.point, alignment)[0] - benchWorld(b.point, alignment)[0]);
   const bench = cells.map(c => c.point);
@@ -154,19 +169,21 @@ export async function measureBenchSeams(png, islands) {
   return { tiles, measurements };
 }
 
-function groundTriangles(mesh, home, steps) {
+export function groundTriangles(mesh, home, steps) {
   const result = [], ps = mesh.vertices.map(v => carouselPoint(v.p, mesh.matrix, [0, 0, 0]));
-  for (let i = 0; i < mesh.indices.length; i += 3) {
+  check(mesh.ranges.length === 1, 'unsupported-bench-material-ranges');
+  const range = mesh.ranges[0];
+  for (let i = range.start; i < range.start + range.count; i += 3) {
     const vs = mesh.indices.slice(i, i + 3).map(j => ({ p: ps[j], uv: mesh.vertices[j].uv }));
     if (vs.some(v => Math.abs(v.p[2] - home[2]) > steps[1] || Math.abs(v.p[1] - home[1]) > steps[1])) continue;
     const [a, b, c] = vs.map(v => v.p), u = b.map((v, k) => v - a[k]), v = c.map((v, k) => v - a[k]);
     const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
-    if (Math.abs(n[1]) / Math.hypot(...n) >= .995) result.push({ i, vs });
+    if (Math.abs(n[1]) / Math.hypot(...n) >= .995) result.push({ i: i - range.start, vs });
   }
   return result;
 }
 
-function glbEvidence(bytes, nodeName) {
+export function glbEvidence(bytes, nodeName) {
   const { document: d, binary: b } = readGlb(bytes), node = d.nodes.find(n => n.name === nodeName);
   check(node && !node.matrix && !node.translation && !node.rotation && !node.scale, 'bench-glb-node-not-baked');
   const primitive = d.meshes[node.mesh].primitives[0];
@@ -222,7 +239,7 @@ export async function locateBoardBenches(evidencePath) {
         : benchFromUvTiles(triangles, measured.tiles, alignment, home);
       const sourceResult = extract(sourceTriangles);
       const used = new Set(sourceResult.cells.flatMap(c => c.hits.map(h => h.triangle)));
-      // Conversion reverses each source triangle's winding, retaining its index.
+      // Conversion reverses winding; both IDs are offsets relative to this range.
       const glbResult = extract(glb.triangles.filter(t => used.has(t.i)));
       report.sourceGlbMaxCenterDeviation = Math.max(...sourceResult.bench.map((p, i) => distance(p, glbResult.bench[i])));
       check(report.sourceGlbMaxCenterDeviation < .01, 'bench-source-glb-mismatch');

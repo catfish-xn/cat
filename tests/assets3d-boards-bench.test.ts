@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Offline Node module.
-import { benchFromGroundQuads, benchFromUvTiles, benchWorld, measureBenchSeams, validateBench } from '../scripts/assets3d/boards-bench.mjs';
+import { benchFromGroundQuads, benchFromUvTiles, benchWorld, glbEvidence, groundTriangles, measureBenchSeams, validateBench } from '../scripts/assets3d/boards-bench.mjs';
+// @ts-expect-error Offline Node module.
+import { carouselRangeGlb } from '../scripts/assets3d/carousel-geometry.mjs';
+// @ts-expect-error Offline Node module.
+import { readGlb, writeGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Offline Node module.
 import { encodePng } from '../scripts/assets3d/texture.mjs';
 
@@ -37,6 +41,43 @@ describe('bench geometry evidence (synthetic only)', () => {
     expect(() => benchFromGroundQuads(triangles.slice(1), alignment, home)).toThrow('bench-needs-nine-xyz');
     // A lone triangle's bbox is insufficient evidence of a rectangular tile.
     expect(() => benchFromGroundQuads(triangles.filter((_, i) => i % 2 === 0), alignment, home)).toThrow('bench-needs-nine-xyz');
+  });
+
+  it('rejects ABC + ABD overlapping halves despite four corners and equal total area', () => {
+    const [a, b, c] = triangles[0].vs, d = triangles[1].vs[2];
+    const overlapping = [{ i: 0, vs: [a, b, c] }, { i: 3, vs: [a, b, d] }, ...triangles.slice(2)];
+    expect(() => benchFromGroundQuads(overlapping, alignment, home)).toThrow('bench-needs-nine-xyz');
+    // The other diagonal, reversed winding and arbitrary triangle order remain valid.
+    const alternate = [{ i: 3, vs: [d, c, b] }, { i: 0, vs: [d, b, a] }, ...triangles.slice(2)];
+    expect(benchFromGroundQuads(alternate, alignment, home).bench).toEqual(expected);
+  });
+
+  it('checks area even when near-corner vertices share a diagonal and lie on opposite sides', () => {
+    const incomplete = triangles.map(t => ({ ...t, vs: t.vs.map(v => ({ ...v, p: [...v.p] })) }));
+    incomplete[1].vs[2].p[2] -= .004;
+    expect(() => benchFromGroundQuads(incomplete, alignment, home)).toThrow('bench-needs-nine-xyz');
+  });
+
+  it('cross-checks a nonzero source range against actual GLB offsets, excluding surrounding faces', () => {
+    const vertices = triangles.flatMap(t => t.vs.map(v => ({ ...v, p: [-v.p[0], v.p[1], v.p[2]] })));
+    const ids = vertices.map((_, i) => i);
+    const range = { start: 6, count: ids.length, material: 'synthetic-bench' };
+    const mesh = { vertices, indices: [...ids.slice(0, 6), ...ids, ...ids.slice(0, 6)], ranges: [range],
+      matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] };
+    const png = encodePng({ width: 1, height: 1, rgba: Buffer.alloc(4, 255) });
+    const converted = carouselRangeGlb(mesh, range, png, { origin: [0, 0, 0] });
+    const { document, binary } = readGlb(converted.glb);
+    document.nodes[0].name = 'synthetic';
+    const glb = glbEvidence(writeGlb(document, binary), 'synthetic');
+    const source = groundTriangles(mesh, home, alignment.sourceSteps);
+    expect(source.map((t: { i: number }) => t.i)).toEqual(triangles.map(t => t.i));
+    const sourceResult = benchFromGroundQuads(source, alignment, home);
+    const used = new Set(sourceResult.cells.flatMap((c: { hits: { triangle: number }[] }) => c.hits.map(h => h.triangle)));
+    const glbResult = benchFromGroundQuads(glb.triangles.filter((t: { i: number }) => used.has(t.i)), alignment, home);
+    expect(sourceResult.bench).toEqual(expected);
+    expect(glbResult.bench).toEqual(sourceResult.bench);
+    expect(glbResult.cells.map((c: { hits: { triangle: number }[] }) => c.hits.map(h => h.triangle)))
+      .toEqual(sourceResult.cells.map((c: { hits: { triangle: number }[] }) => c.hits.map(h => h.triangle)));
   });
 
   it('rejects missing, ambiguous or out-of-surface UV evidence', () => {
