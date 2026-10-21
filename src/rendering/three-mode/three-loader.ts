@@ -4,17 +4,42 @@
  * 3D 层盖在 #board-root 上，画面和棋盘指针都在 3D 层；拖放和点选经 board-feed 交回 2D 棋盘的同一套手势和命令。
  * 任何失败都留在 2D。
  */
-import { readAssetBase3d, readRenderMode, withoutRenderParam } from '../render-mode';
+import { buildAssetBase3d, readAssetBase3d, readRenderMode, withRenderParam, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
 import { boardFeed } from '../board-feed';
-import { starColor } from '../../presentation/theme';
+import { THEME, starColor } from '../../presentation/theme';
 
 export interface ThreeModeHandle { dispose(): void }
 
 const NOOP: ThreeModeHandle = { dispose() {} };
 
 export function mountThreeMode(board: HTMLElement, search = window.location.search): ThreeModeHandle {
-  if (readRenderMode(search) !== '3d') return NOOP;
+  let current = NOOP;
+  const show2d = () => { current = mountEntry(board, () => {
+    current.dispose();
+    const href = withRenderParam(window.location.href);
+    history.replaceState(history.state, '', href);
+    show3d(new URL(href).search);
+  }); };
+  const show3d = (next: string) => { current = mount3d(board, next, show2d); };
+  if (readRenderMode(search) === '3d') show3d(search); else show2d();
+  return { dispose: () => { current.dispose(); current = NOOP; } };
+}
+
+/** 2D page, built with an asset root: a corner button that opens 3D in place (none without one, e.g. the public /cat/ site). */
+function mountEntry(board: HTMLElement, open: () => void): ThreeModeHandle {
+  if (!buildAssetBase3d()) return NOOP;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'render3d-entry';
+  button.dataset.debug = 'render3d-enter';
+  button.textContent = '切换 3D';
+  button.addEventListener('click', open);
+  board.append(button);
+  return { dispose: () => button.remove() };
+}
+
+function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeModeHandle {
   const layer = document.createElement('div');
   layer.className = 'render3d-layer';
   layer.dataset.debug = 'render3d-layer';
@@ -45,12 +70,13 @@ export function mountThreeMode(board: HTMLElement, search = window.location.sear
   back.addEventListener('click', () => {
     dispose();
     history.replaceState(history.state, '', withoutRenderParam(window.location.href));
+    exited();
   });
 
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
     .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => { if (!disposed) preload.textContent = text; });
-      module.useStarColor?.(starColor);
+      module.useStarColor?.(starColor); module.useMeterColors?.(THEME.color);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }

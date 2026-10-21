@@ -56,7 +56,7 @@ describe('optional 3D mode import boundary and fallback', () => {
   afterEach(async () => {
     await vi.dynamicImportSettled();
     vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs();
-    vi.doUnmock('../src/rendering/three-mode/placeholder-renderer'); vi.doUnmock('three'); vi.resetModules();
+    vi.doUnmock('../src/rendering/three-mode/placeholder-renderer'); vi.doUnmock('three'); vi.doUnmock('../src/rendering/render-mode'); vi.resetModules();
   });
 
   it.each(['', '?render=2d', '?render=3D', '?unrelated=1', '?assets3d=/assets3d-local/'])('keeps 2D without an explicit render=3d switch: %s', async search => {
@@ -99,6 +99,30 @@ describe('optional 3D mode import boundary and fallback', () => {
     const notice = board.children.find(child => child.dataset.debug === 'render3d-fallback');
     expect(notice?.textContent).toContain('2D'); expect(console.warn).toHaveBeenCalledTimes(1); expect(disconnect).toHaveBeenCalledTimes(1);
     handle.dispose(); expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+  it('offers a 3D button on the 2D page only when the build has an asset root, and comes back to it from 3D', async () => {
+    // Vite fixes the build constant at transform time, so the build root is stood in for at its reader.
+    vi.doMock('../src/rendering/render-mode', async importOriginal => {
+      const actual = await importOriginal<typeof import('../src/rendering/render-mode')>();
+      const base = (search = '', page = 'https://example.test/cat/') => actual.readAssetBase3d(search, page, 'https://cdn.example.test/3d');
+      return { ...actual, buildAssetBase3d: () => base(), readAssetBase3d: base };
+    });
+    const { mountThreeMode } = await import('../src/rendering/three-mode/three-loader');
+    const handle = mountThreeMode(board as unknown as HTMLElement, '?mode=online');
+    const enter = () => board.children.find(child => child.dataset.debug === 'render3d-enter');
+    expect(enter()?.textContent).toBe('切换 3D');
+    await vi.dynamicImportSettled();
+    expect(evaluations.chunk).toBe(0); expect(evaluations.three).toBe(0); // the button alone loads nothing
+    enter()!.click(); await settled;
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', 'https://example.test/cat/?render=3d');
+    expect(enter()).toBeUndefined();
+    const layer = board.children.find(child => child.dataset.debug === 'render3d-layer')!;
+    expect(mount).toHaveBeenCalledExactlyOnceWith(layer, { assetBase: 'https://cdn.example.test/3d/' });
+    const back = layer.children[0].children.find(child => child.dataset.debug === 'render3d-exit')!;
+    back.click();
+    expect(renderer.dispose).toHaveBeenCalledTimes(1); expect(enter()).toBeDefined();
+    handle.dispose(); vi.doUnmock('../src/rendering/render-mode');
+    expect(board.children).toEqual([original2d]);
   });
   it('disposes a late renderer when the player leaves 3D before mounting completes', async () => {
     let resolve!: (renderer: Renderer3d) => void;

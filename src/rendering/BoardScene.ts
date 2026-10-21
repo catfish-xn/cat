@@ -34,7 +34,7 @@ import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
-import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { playMerge } from '../presentation/merge-fx';
@@ -1177,11 +1177,19 @@ export class BoardScene extends Phaser.Scene {
         ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
         x: token.x, y: token.y, alive: !fallen.has(id),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
-        visible: (token.visible || fallen.has(id)) && token.alpha > 0 })),
+        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
       orbs: readUnclaimedOrbs(this.session.state).map(orb => ({ orbId: orb.orbId, tier: orb.tier, queued: orb.queued })),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
+  }
+  /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items'> {
+    const view = this.views.get(id);
+    if (!view) return {};
+    const hp = view.meter('hp'), mana = view.meter('mana');
+    return { ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+      ...(view.equipped.length ? { items: view.equipped.map(item => ({ id: item, icon: s13AssetUrl('item', item) })) } : {}) };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

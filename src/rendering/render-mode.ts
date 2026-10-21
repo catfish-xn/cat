@@ -26,6 +26,18 @@ export function readAssetBase3d(search = window.location.search, page = window.l
   } catch { return null; }
 }
 
+/** The build-time asset root alone (VITE_ASSETS3D_BASE), ignoring the address bar: the 2D page offers 3D only with one. */
+export function buildAssetBase3d(page = window.location.href): string | null {
+  return readAssetBase3d('', page);
+}
+
+/** Adds `render=3d` to the address bar, keeping everything else (an `assets3d=` included). */
+export function withRenderParam(href: string): string {
+  const url = new URL(href);
+  url.searchParams.set('render', '3d');
+  return url.toString();
+}
+
 /** Drops `render` from the address bar so a reload stays in 2D after the player switches back. */
 export function withoutRenderParam(href: string): string {
   const url = new URL(href);
