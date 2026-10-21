@@ -254,7 +254,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       flushSlowTasks(now, false);
     }
   }
-  /** Logs every kind with slow tasks pending whose window ran out (any kind with some pending when `all`: closing). */
+  /** Logs every kind with slow tasks pending whose SLOW_TASK_LOG_EVERY_MS has passed (any kind with some pending when `all`: closing). */
   function flushSlowTasks(now: number, all: boolean): void {
     for (const [task, slow] of slowTasks) {
       if (slow.count === 0 || (!all && now - slow.loggedAt < SLOW_TASK_LOG_EVERY_MS)) continue;
