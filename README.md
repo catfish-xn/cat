@@ -5,7 +5,7 @@
 这是免费、非商业的粉丝项目，与 Riot Games 无关。代码以 [MIT](LICENSE) 发布，Riot 的素材和数据除外，见下方「免责声明」和 [NOTICE.md](NOTICE.md)。
 
 - 在线试玩（GitHub Pages，跟随 `main`）：<https://catfish-xn.github.io/cat/>
-  公开站点没有联机服务器，只能玩单机；正式构建不带浏览器内房间，打开 `?mode=online` 只会提示连接联机服务器。
+  公开站点没有联机服务器，只能玩单机；正式构建不带浏览器内房间，打开 `?mode=online` 只会提示去测试服。
 
 ## 现在做到哪了
 

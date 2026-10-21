@@ -6,10 +6,11 @@
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult } from '../../simulation/match-types';
 import { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
-import { ROOM_CAPACITY, type ClientListeners, type GameClient, type LobbyView } from './protocol';
+import { type ClientListeners, type GameClient, type LobbyView } from './protocol';
 
-export const LOCAL_ROOM_UNAVAILABLE = '本站没有联机服务器，不能在这里开联机对局。请改用单机模式（去掉网址里的 mode=online），或连接到联机服务器（网址加上 server=ws）。';
-const VIEW: LobbyView = { queue: [], capacity: ROOM_CAPACITY, joined: false, canStart: false, error: LOCAL_ROOM_UNAVAILABLE };
+export const LOCAL_ROOM_UNAVAILABLE = '本站没有联机服务器。在线对战请打开测试服网址；单机请去掉网址里的 mode=online。';
+// capacity 0: there is no queue here, so the lobby leaves out its queue line (lobby.ts).
+const VIEW: LobbyView = { queue: [], capacity: 0, joined: false, canStart: false, error: LOCAL_ROOM_UNAVAILABLE };
 
 export class LocalRoomClient implements GameClient {
   readonly transport = 'local-room' as const;
