@@ -492,10 +492,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.starHeight = MODEL_HEIGHT * monster.height + STAR_GAP;
       } else {
         // Official scale when the asset root has it (short champions stay short); the stars and bars follow the drawn height.
-        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE,
-          unitScale: readUnitScale(models.cache?.manifest.models, definitionId) });
+        const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
+        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale });
         view.body = lease.scene;
-        view.starHeight = drawn + STAR_GAP;
+        // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
+        view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
       }
       if (lease.placeholder) view.starHeight = PAWN_HEIGHT + STAR_GAP;
       view.root.add(lease.scene);

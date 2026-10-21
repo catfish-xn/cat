@@ -106,6 +106,8 @@ export function assetUrl(root: string, path: string): string {
     || path.split('/').some(part => part === '..' || /%/i.test(part))) throw new Error('invalid-asset-path');
   return `${root.replace(/\/?$/, '/')}${path}`;
 }
+/** Accepted `models[id].unitScale` (official skin scale; 1 = the mesh as authored). Anything else rejects the manifest. */
+export const UNIT_SCALE_RANGE = { min: 0.2, max: 3 } as const;
 export function assertManifest(value: unknown): asserts value is AssetManifest {
   if (!value || typeof value !== 'object') throw new Error('invalid-manifest');
   const m = value as AssetManifest;
@@ -113,6 +115,8 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
   for (const entry of Object.values(m.models)) {
     if (!entry || typeof entry.path !== 'string' || !/\.glb$/i.test(entry.path)) throw new Error('invalid-model');
     assetUrl('', entry.path);
+    if (entry.unitScale !== undefined && !(typeof entry.unitScale === 'number' && Number.isFinite(entry.unitScale)
+      && entry.unitScale >= UNIT_SCALE_RANGE.min && entry.unitScale <= UNIT_SCALE_RANGE.max)) throw new Error('invalid-unit-scale');
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
