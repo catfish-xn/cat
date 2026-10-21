@@ -1,6 +1,6 @@
 // Offline v19 additions. Copyrighted payloads/reports belong only in assets3d-local.
 import { readFile, mkdir, lstat } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { safeInputPath, safeOutputPath, writeOutputFile } from './safe-path.mjs';
@@ -21,15 +21,50 @@ const hash = x => createHash('sha256').update(x).digest('hex');
 const input = async (root, path) => readFile(await safeInputPath(resolve(root), resolve(root, path)));
 const read = async (root, path) => JSON.parse(await input(root, path));
 export const FAMILY_IDS = ['violet', 'vander', 'powder', 'warwick', 'jinx', 'vi'];
-export const PORTRAITS = { warwick: 'tft13_warwick', viktor: 'tft13_viktor', mel: 'tft13_missmage' };
-const PORTRAIT_API = { warwick: 'TFT13_Warwick', viktor: 'TFT13_Viktor', mel: 'TFT13_MissMage' };
-// Source paths cross-checked against the local 14.24 en_us archive, never inferred from ids.
+export const PORTRAITS = { warwick: { apiName: 'TFT13_Warwick' }, viktor: { apiName: 'TFT13_Viktor' }, mel: { apiName: 'TFT13_MissMage' } };
 export const TRAIT_ICONS = {
-  sisters: { apiName: 'TFT13_Teamup_Sisters', source: 'assets/ux/traiticons/teamup_trait_sisters.tft_set13.tex' },
-  'blood-hunter': { apiName: 'TFT13_BloodHunter', source: 'assets/ux/traiticons/trait_icon_13_bloodhunter.tft_set13.tex' },
-  'machine-herald': { apiName: 'TFT13_MachineHerald', source: 'assets/ux/traiticons/trait_icon_13_machineherald.tft_set13.tex' },
-  'banished-mage': { apiName: 'TFT13_MissMageTrait', source: 'assets/ux/traiticons/trait_icon_13_banishedmage.tft_set13.tex' },
+  sisters: { apiName: 'TFT13_Teamup_Sisters' },
+  'blood-hunter': { apiName: 'TFT13_BloodHunter' },
+  'machine-herald': { apiName: 'TFT13_MachineHerald' },
+  'banished-mage': { apiName: 'TFT13_MissMageTrait' },
 };
+const DEFAULT_SOURCES = 'assets3d-local/v19-assets.sources.json';
+
+/** Local schema v1: { schemaVersion: 1, portraits: { [id]: { requested, evolved? } }, traits: { [id]: { source } } }.
+ * Paths are exact extraction-receipt keys, never inferred from an id or filename suffix. */
+export function validateSources(config) {
+  const record = v => v && typeof v === 'object' && !Array.isArray(v);
+  const keys = (v, allowed) => record(v) && Object.keys(v).every(k => allowed.includes(k));
+  const path = p => typeof p === 'string' && p.length > 0 && !/[\\:%?#\x00-\x1f]/.test(p)
+    && p.split('/').every(s => s && s !== '.' && s !== '..' && s.toLowerCase() !== '.git');
+  if (!keys(config, ['schemaVersion', 'portraits', 'traits']) || config.schemaVersion !== 1
+    || !keys(config.portraits, Object.keys(PORTRAITS)) || !keys(config.traits, Object.keys(TRAIT_ICONS))) throw new Error('invalid-v19-sources-config');
+  for (const id of Object.keys(PORTRAITS)) {
+    const p = config.portraits[id];
+    if (!keys(p, ['requested', 'evolved']) || !path(p.requested)
+      || (p.evolved !== undefined && (!path(p.evolved) || p.evolved === p.requested))) throw new Error(`invalid-v19-portrait-config:${id}`);
+  }
+  for (const id of Object.keys(TRAIT_ICONS)) {
+    const t = config.traits[id];
+    if (!keys(t, ['source']) || !path(t.source)) throw new Error(`invalid-v19-trait-config:${id}`);
+  }
+  return config;
+}
+export async function readSources(path = DEFAULT_SOURCES) {
+  // Reuse the ignored local-output boundary without creating or changing the config.
+  const target = await safeOutputPath(path, { force: true });
+  try { return validateSources(JSON.parse(await readFile(target, 'utf8'))); }
+  catch (e) {
+    if (e.code === 'ENOENT') throw new Error(`missing-v19-sources-config:${path}; create ${DEFAULT_SOURCES} using the schema in docs/ASSETS3D_V19_FINISH.md`);
+    throw e;
+  }
+}
+function portraitPath(config, id, portraitSource) {
+  if (!['requested', 'evolved'].includes(portraitSource)) throw new Error('invalid-portrait-source');
+  const path = config.portraits[id]?.[portraitSource];
+  if (!path) throw new Error(`undeclared-portrait-source:${id}:${portraitSource}`);
+  return path;
+}
 
 /** Prefer an explicitly named dance_loop, then dance. Ambiguity is a fallback, not a guess. */
 export function selectDance(animationFiles) {
@@ -59,18 +94,26 @@ export function applyScales(manifest, scaleManifest) {
 
 /** The requested unsuffixed PNG and the locally available Evolved TEX are not
  * asserted identical. Selecting the alternate source is an explicit caller choice. */
-export function checkPortraitSource(ui, portraitSource = 'requested') {
+export function checkPortraitSource(ui, config, portraitSource = 'requested') {
+  validateSources(config);
   if (!['requested', 'evolved'].includes(portraitSource)) throw new Error('invalid-portrait-source');
-  if (portraitSource !== 'evolved' && ui.assets.some(a => a.kind === 'champion' && /_evolved\.tex$/i.test(a.source))) {
-    throw new Error('requested-portrait-source-unavailable:select-portraitSource-evolved-or-supply-requested-source');
+  for (const a of ui.assets.filter(a => a.kind === 'champion')) {
+    if (!Object.hasOwn(PORTRAITS, a.id) || a.source !== portraitPath(config, a.id, portraitSource)
+      || a.requestedSource !== config.portraits[a.id].requested) throw new Error(`portrait-source-mismatch:${a.id}:${portraitSource}`);
   }
 }
 
-async function newDirectory(path) {
+async function absentDirectory(path) {
   const target = await safeOutputPath(path, { directory: true });
   try { await lstat(target); throw new Error('output-exists-use-new-directory'); }
   catch (e) { if (e.code !== 'ENOENT') throw e; }
-  await mkdir(target, { recursive: true });
+  return target;
+}
+async function newDirectory(path) {
+  const target = await absentDirectory(path);
+  await mkdir(dirname(target), { recursive: true });
+  await absentDirectory(path);
+  await mkdir(target); // exclusive creation, including an empty existing directory
 }
 async function writeFiles(root, files) {
   for (const [path, data] of files) await writeOutputFile(join(root, path), data);
@@ -116,9 +159,12 @@ export function appendDance(before, skn, skl, animation, name) {
 export async function prepareV19({ out = 'assets3d-local/v19-additions', source = 'assets3d-local/trial/local',
   sixSource = 'assets3d-local/six-cost/source', base = 'assets3d-local/cast-anim',
   rebuilt = 'assets3d-local/six-cost/rebuilt-v2/converted', scales = 'assets3d-local/model-scale/root',
-  board = 'assets3d-local/row-align/asset-root-v2' } = {}) {
+  board = 'assets3d-local/row-align/asset-root-v2', sources = DEFAULT_SOURCES,
+  portraitSource = 'requested' } = {}, { unitMap } = {}) {
+  const config = await readSources(sources);
+  for (const id of Object.keys(PORTRAITS)) portraitPath(config, id, portraitSource);
   await newDirectory(out);
-  const caches = [source, sixSource], map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url)));
+  const caches = [source, sixSource], map = unitMap ?? JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url)));
   const { assertManifest } = await contracts();
   const normal = await read(base, 'manifest.json'), six = await read(rebuilt, 'manifest.json');
   assertManifest(normal); assertManifest(six);
@@ -156,10 +202,9 @@ export async function prepareV19({ out = 'assets3d-local/v19-additions', source 
 
   const assets = [], missingIcons = [], iconFiles = new Map();
   const specs = [
-    ...Object.entries(PORTRAITS).map(([id, key]) => ({ id, kind: 'champion', apiName: PORTRAIT_API[id],
-      requestedSource: `characters/${key}/hud/${key}_square.tft_set13.png`,
-      candidates: [`assets/characters/${key}/hud/${key}_square.tft_set13.tex`, `assets/characters/${key}/hud/${key}_square.tft_set13_evolved.tex`] })),
-    ...Object.entries(TRAIT_ICONS).map(([id, c]) => ({ id, kind: 'trait', apiName: c.apiName, candidates: [c.source] })),
+    ...Object.entries(PORTRAITS).map(([id, c]) => ({ id, kind: 'champion', apiName: c.apiName,
+      requestedSource: config.portraits[id].requested, candidates: [portraitPath(config, id, portraitSource)] })),
+    ...Object.entries(TRAIT_ICONS).map(([id, c]) => ({ id, kind: 'trait', apiName: c.apiName, candidates: [config.traits[id].source] })),
   ];
   for (const spec of specs) {
     let found;
@@ -240,11 +285,13 @@ export async function verifyRoot(root, { packed = false } = {}) {
 
 export async function finalizeV19({ additions = 'assets3d-local/v19-additions',
   base = '../boardwire/assets3d-local/game-v6', fx = 'assets3d-local/fx-batch7',
-  scales = 'assets3d-local/model-scale/root', out = 'assets3d-local/test-server-v7', portraitSource = 'requested' } = {}) {
+  scales = 'assets3d-local/model-scale/root', out = 'assets3d-local/test-server-v7', portraitSource = 'requested', sources = DEFAULT_SOURCES } = {}) {
+  const config = await readSources(sources);
   const ui = await read(join(additions, 'ui'), 'ui-assets.json');
-  checkPortraitSource(ui, portraitSource);
+  checkPortraitSource(ui, config, portraitSource);
   // Standard merger/compressor/packer retain all their existing path and ignore checks.
   const raw = `${out}-uncompressed`;
+  await absentDirectory(out); await absentDirectory(raw);
   await buildAssetRoot({ roots: [base, join(additions, 'board'), fx, join(additions, 'models')], out: raw });
   const manifest = applyScales(await read(raw, 'manifest.json'), await read(scales, 'manifest.json'));
   const { assertManifest } = await contracts(); assertManifest(manifest);
@@ -270,7 +317,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const [command, ...args] = process.argv.slice(2), options = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i].replace(/^--/, '');
-    if (!['out', 'source', 'sixSource', 'base', 'rebuilt', 'scales', 'board', 'additions', 'fx', 'portraitSource'].includes(key) || !args[i + 1] || Object.hasOwn(options, key)) throw new Error('invalid-argument');
+    if (!['out', 'source', 'sixSource', 'base', 'rebuilt', 'scales', 'board', 'additions', 'fx', 'portraitSource', 'sources'].includes(key) || !args[i + 1] || Object.hasOwn(options, key)) throw new Error('invalid-argument');
     options[key] = args[i + 1];
   }
   try {
