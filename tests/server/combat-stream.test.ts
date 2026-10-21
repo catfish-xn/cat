@@ -149,3 +149,46 @@ it('D11 gold samples feed the same first-pass task and remain replayable', async
   expect(json({ initial: stream.initial, ticks: stream.ticks, terminal: stream.terminal })).toBe(json(replay));
   room.dispose();
 }, 60_000);
+
+it('absolute boundaries include compute time and cap immediate catch-up at two ticks', async () => {
+  const { vi } = await import('vitest');
+  const { CombatStream } = await import('../../src/server/room/combat-stream');
+  const clock = new ManualClock(); let workMs = 0;
+  const scheduled: number[] = [], starts: number[] = [];
+  const wallClock = { now: () => clock.now() + workMs,
+    schedule: (at: number, fn: () => void) => { scheduled.push(at); return clock.schedule(at - workMs, fn); }, cancel: (id: number) => clock.cancel(id) };
+  const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS,
+    roomId: 'absolute', seed: 42, clock: wallClock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 8, sliceMs: 20 });
+  room.start(); clock.fireNext();
+  const started = wallClock.now(), original = CombatStream.prototype.advancePve;
+  const spy = vi.spyOn(CombatStream.prototype, 'advancePve').mockImplementation(function (this: InstanceType<typeof CombatStream>, state) {
+    if (this.envelope.seats[0]!.seatId === 's0') starts.push(wallClock.now());
+    const result = original.call(this, state); workMs++; return result;
+  });
+  try {
+    for (let i = 0; i < 10; i++) clock.fireNext();
+    expect(starts).toEqual(Array.from({ length: 10 }, (_, i) => started + (i + 1) * 50));
+    // Event-loop stall: one overdue callback, two catch-up boundaries, then a timed yield.
+    workMs += 1_000;
+    for (let i = 0; i < 3; i++) clock.fireNext();
+    expect(scheduled.at(-1)).toBe(wallClock.now() + 50);
+    expect(room.committedBattleTick).toBe(13);
+  } finally { spy.mockRestore(); room.dispose(); }
+});
+
+it('reuses a terminal settlement plan, and replans only when a tail operation changes its basis', async () => {
+  const { vi } = await import('vitest');
+  for (const change of [false, true]) {
+    const { room, clock } = fixture(42);
+    const seam = room as unknown as { planStreamSettlement: () => unknown };
+    const spy = vi.spyOn(seam, 'planStreamSettlement');
+    try {
+      runUntil(room, clock, s => s.battles.length > 0, 20_000);
+      expect(spy).toHaveBeenCalledTimes(1);
+      if (change) expect(room.handle('s0', { type: 'shopLock', locked: true, generation: room.state.seats[0]!.match.shop!.generation })).toMatchObject({ ok: true });
+      clock.advance(800);
+      expect(room.state.fault).toBeNull(); expect(room.state.settlements).toHaveLength(1);
+      expect(spy).toHaveBeenCalledTimes(change ? 2 : 1);
+    } finally { spy.mockRestore(); room.dispose(); }
+  }
+}, 60_000);

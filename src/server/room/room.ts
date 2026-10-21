@@ -231,12 +231,16 @@ export class Room {
   private streamBoundary: string[] = [];
   private streamTick = 0;
   private streamSealedTick = 0;
+  private streamCatchUp = 0;
+  private streamStateDirty = false;
   /** Phase2 command queue stamps the next unsealed boundary, never a client-provided historical tick. */
   get nextBattleInputTick(): number | null {
     return this.streams.size && [...this.streams.values()].some(s => !s.done) ? this.streamSealedTick + 1 : null;
   }
   get committedBattleTick(): number { return this.streamTick; }
-  /** Same source for participants and a future watch-tail subscription selecting a public seat. */
+  get hasCombatStreams(): boolean { return this.streams.size > 0; }
+  get streamingBoundaryPending(): boolean { return this.streamBoundary.length > 0; }
+  /** Same recorder for independent participant and watched-seat cursors. */
   combatStreamFor(seatId: string): CombatStreamView | null {
     for (const stream of this.streams.values()) { const view = stream.view(seatId); if (view) return view; }
     return null;
@@ -266,6 +270,7 @@ export class Room {
   private readonly pveIgnored = new Set<string>();
   /** Battles whose live run finished and was handled (adopted or dropped). */
   private readonly liveDone = new Set<string>();
+  private readonly streamListeners = new Set<() => void>();
   private readonly liveListeners = new Set<(battleId: string) => void>();
   private readonly noticeListeners = new Set<(notice: RoomNotice) => void>();
   /** PvE seats whose live combat was stepped during the battle phase, by seat id. */
@@ -323,6 +328,8 @@ export class Room {
   }
 
   get state(): RoomState { return this.current; }
+  /** One notification after every battle has sealed the boundary; never once per source or slice. */
+  subscribeStreams(listener: () => void): () => void { this.streamListeners.add(listener); return () => { this.streamListeners.delete(listener); }; }
   /**
    * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
    * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
@@ -348,7 +355,7 @@ export class Room {
     this.disposed = true;
     this.clearTimer();
     this.listeners.clear();
-    this.liveListeners.clear();
+    this.liveListeners.clear(); this.streamListeners.clear();
     this.noticeListeners.clear();
     this.legendWalks.dispose();
     this.releaseRound();
@@ -1016,7 +1023,7 @@ export class Room {
       });
       if (entry.roundKind === 'pvp') for (const input of this.frozenInputs) this.streams.set(input.battleId, new CombatStream(input));
       entry = { ...entry, seats, battles: [] };
-      this.battleStartedAt = this.options.clock.now(); this.streamTick = 0; this.streamSealedTick = 0;
+      this.battleStartedAt = this.options.clock.now(); this.streamTick = 0; this.streamSealedTick = 0; this.streamCatchUp = 0; this.streamStateDirty = false;
       this.replace(entry);
       this.setPhase('battle', null);
       this.flushFrozenClaims();
@@ -1026,8 +1033,15 @@ export class Room {
   }
 
   private scheduleStreamBoundary(): void {
-    // No catch-up burst: overload slows all battles equally. A boundary must finish before the next opens.
-    this.timer = this.options.clock.schedule(this.options.clock.now() + this.tickMs, () => {
+    // Absolute cadence includes the time spent computing/slicing the previous boundary.
+    // At most two immediately overdue boundaries, then yield a tick so overload cannot spin indefinitely.
+    const now = this.options.clock.now(), target = this.battleStartedAt! + (this.streamTick + 1) * this.tickMs;
+    let at = target;
+    if (target < now) {
+      if (this.streamCatchUp >= 2) { at = now + this.tickMs; this.streamCatchUp = 0; }
+      else this.streamCatchUp++;
+    } else this.streamCatchUp = 0;
+    this.timer = this.options.clock.schedule(at, () => {
       this.timer = null; this.streamSealedTick = this.streamTick + 1; this.streamBoundary = [...this.streams.keys()].filter(id => !this.streams.get(id)!.done);
       this.advanceStreams();
     });
@@ -1046,11 +1060,11 @@ export class Room {
           // Combat tick progress stays private; do not broadcast full seat/view snapshots at 20 Hz.
           if (step.events.length) {
             const seatRevision = seat.seatRevision + 1;
-            this.replace({ ...this.current, seats: this.current.seats.map(s => s === seat
-              ? { ...s, match: step.state, seatRevision, serverEvents: { seatRevision, events: step.events } } : s) });
+            this.current = { ...this.current, seats: this.current.seats.map(s => s === seat
+              ? { ...s, match: step.state, seatRevision, serverEvents: { seatRevision, events: step.events } } : s) };
+            this.streamStateDirty = true;
           } else this.current = { ...this.current, seats: this.current.seats.map(s => s === seat ? { ...s, match: step.state } : s) };
         }
-        for (const listener of this.liveListeners) listener(stream.envelope.battleId);
         if (this.options.clock.now() >= deadline) break;
       }
       if (this.streamBoundary.length) {
@@ -1058,6 +1072,9 @@ export class Room {
         return;
       }
       this.streamTick++;
+      // Publish only the sealed boundary: no connection sees a half-updated room or gets eight push scans per tick.
+      if (this.streamStateDirty) { this.assertConserved(this.current); this.streamStateDirty = false; this.replace(this.current); }
+      for (const listener of this.streamListeners) listener();
       if ([...this.streams.values()].every(s => s.done)) return this.finishStreams();
       this.scheduleStreamBoundary();
     } catch (error) { this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
@@ -1396,7 +1413,9 @@ export class Room {
 
   /** Battle deadline: publish the staged round, then decide what follows (§11.3 item 5). */
   private commitPending(): void {
-    if (this.streams.size) {
+    const pending = this.pendingSettlement;
+    if (this.streams.size && (!pending || pending.basis.poolRevision !== this.current.poolRevision
+      || this.aliveSeats().some(s => pending.basis.seatRevisions[s.seatId] !== s.seatRevision))) {
       const plan = this.planStreamSettlement();
       if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
       this.pendingSettlement = plan.settlement;

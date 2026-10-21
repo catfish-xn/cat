@@ -34,6 +34,8 @@ export class CombatStream {
   private mirroredInitial: CombatViewState | null = null;
   private mirroredTerminal: CombatViewState | null = null;
   private completedReplay: CombatReplay | null = null;
+  private readonly views = new Map<string, CombatStreamView>();
+  private readonly seatUnitIds = new Map<string, readonly ReplayUnitId[]>();
   result: TwoSidedBattleResult | null = null;
   terminal: CombatState | null = null;
   tick = 0;
@@ -53,6 +55,8 @@ export class CombatStream {
       // Tick-zero finishes still need the task to authenticate/finalize its result (without stepping).
       if (this.initial.status === 'finished') this.advancePvp();
     }
+    for (const seat of envelope.seats) this.seatUnitIds.set(seat.seatId, this.mapping.filter(m => m.kind === 'unit' && m.seatId === seat.seatId)
+      .map(m => ({ combatId: m.combatId, originalId: m.originalId })));
   }
   get done(): boolean { return this.terminal !== null; }
   /** Phase 2 input hook: Room's single writer installs ordered inputs before calling this boundary.
@@ -95,11 +99,18 @@ export class CombatStream {
     if (!this.envelope.seats.some(s => s.seatId === seatId)) return null;
     const mirrored = this.right === seatId, rows = this.initial.board.rows;
     if (mirrored) while (this.mirroredFrames.length < this.frames.length) this.mirroredFrames.push(mirrorReplayTick(this.frames[this.mirroredFrames.length]!, rows));
-    return { battleId: this.envelope.battleId, revision: this.revision,
-      initial: mirrored ? this.mirroredInitial ??= mirrorViewState(this.initial, rows) : this.initial,
-      ticks: mirrored ? this.mirroredFrames : this.frames,
-      terminal: this.completedReplay ? (mirrored ? this.mirroredTerminal ??= mirrorViewState(this.completedReplay.terminal, rows) : this.completedReplay.terminal) : null,
-      unitIds: this.mapping.filter(m => m.kind === 'unit' && m.seatId === seatId).map(m => ({ combatId: m.combatId, originalId: m.originalId })) };
+    let view = this.views.get(seatId);
+    if (!view) {
+      const source = this;
+      view = { battleId: this.envelope.battleId, revision: this.revision,
+        initial: mirrored ? this.mirroredInitial ??= mirrorViewState(this.initial, rows) : this.initial,
+        ticks: mirrored ? this.mirroredFrames : this.frames,
+        get terminal() { return source.completedReplay ? (mirrored
+          ? source.mirroredTerminal ??= mirrorViewState(source.completedReplay.terminal, rows) : source.completedReplay.terminal) : null; },
+        unitIds: this.seatUnitIds.get(seatId)! };
+      this.views.set(seatId, view);
+    }
+    return view;
   }
   private checkLimit(): void {
     if (!this.done && this.tick >= this.envelope.maxSteps) throw new BattleResolveError(this.envelope.battleId, 'battle-validation:step-limit-exceeded');

@@ -18,7 +18,7 @@ describe('NET6 combat stream', () => {
     harness.clock.advance(250); await flush();
     const chunks = messagesOfType(a.inbox, 'combat-chunk');
     let next = 1;
-    for (const chunk of chunks) { expect(chunk.fromTick).toBe(next); expect(chunk.ticks.map(f => f.tick)).toEqual(Array.from({ length: chunk.ticks.length }, (_, i) => next + i)); next = chunk.throughTick + 1; }
+    for (const chunk of chunks.flatMap(packet => packet.chunks)) { expect(chunk.fromTick).toBe(next); expect(chunk.ticks.map(f => f.tick)).toEqual(Array.from({ length: chunk.ticks.length }, (_, i) => next + i)); next = chunk.throughTick + 1; }
     expect(next).toBeGreaterThan(1);
     const token = a.token!; a.close(); await a.closed;
     harness.clock.advance(150); await flush();
@@ -26,16 +26,17 @@ describe('NET6 combat stream', () => {
     expectOk(await resumed.send({ type: 'resume', token, combat: { battleId: open.battleId, revision: open.revision, nextTick: next, seatId: a.seatId! } }));
     await flush();
     expect(messagesOfType(resumed.inbox, 'combat-open')).toHaveLength(0);
-    const resumedChunk = messagesOfType(resumed.inbox, 'combat-chunk')[0]!;
+    const resumedChunk = messagesOfType(resumed.inbox, 'combat-chunk')[0]!.chunks[0]!;
     expect(resumedChunk.fromTick).toBe(next);
     expectOk(await b.send({ type: 'watch', roomId: room.state.roomId, seatId: a.seatId! }));
     await flush();
     const watched = messagesOfType(b.inbox, 'combat-open').at(-1)!;
     expect(watched.battleId).toBe(open.battleId); expect(watched.unitIds).toEqual([]);
     harness.clock.advance(50); await flush();
-    const viewerChunk = messagesOfType(b.inbox, 'combat-chunk').at(-1)!;
-    const playerChunk = messagesOfType(resumed.inbox, 'combat-chunk').at(-1)!;
-    expect(viewerChunk).toEqual(playerChunk);
+    const viewerChunk = messagesOfType(b.inbox, 'combat-chunk').at(-1)!.chunks.find(chunk => chunk.watch)!;
+    const playerChunk = messagesOfType(resumed.inbox, 'combat-chunk').at(-1)!.chunks[0]!;
+    expect(viewerChunk.ticks).toEqual(playerChunk.ticks);
+    expect(viewerChunk).toMatchObject({ watch: true, seatId: a.seatId });
     for (let i = 0; !room.state.battles.length && i < 1_300; i++) harness.clock.advance(50);
     await flush();
     const end = messagesOfType(resumed.inbox, 'combat-end').at(-1)!;

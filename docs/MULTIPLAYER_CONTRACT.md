@@ -1910,31 +1910,38 @@ runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchC
 准备截止只自动部署、配对、冻结 seed/输入并初始化 tick0，随即进入 battle。
 每个 PvP 配对一个 `BattleReplayTask`，PvE 每席一个公共 Match 流；固定 50ms 逻辑边界，每场每边界只推进一 tick。
 一批最多 8 场各一步，`sliceTicks` 可缩小，`sliceMs`（生产 20ms）在每一步之后检查；单 tick 不能抢占。
-全体未结束战斗完成同一边界后，才从当前时间再等 50ms 开下一边界；超载统一减速，不追赶跳 tick。
+全体未结束战斗完成同一边界后，按 `battleStartedAt+(tick+1)×tickMs` 的绝对时刻安排下一拍，计算和切片耗时不再逐拍累加。落后时最多连续补两拍，再让出一个 tick；不跳过领域 tick，持续过载时允许整体落后。
 `Room.committedBattleTick` 为全轮已提交边界；chunk 的 throughTick 为该场权威水位。
 
 所有字段均为公开显示白名单，完整领域事件账本保留在首遍任务中，绝不随网络裁剪。
-消息均带 `{roomId,round,battleId,revision}`，本阶段 revision=1，独立于连接、控制和存档 activationEpoch：
+open/end 以及 chunk 内每条增量均带 `{roomId,round,battleId,revision,seatId,watch}`，本阶段 revision=1，独立于连接、控制和存档 activationEpoch。`watch:false` 永远是本人流；`watch:true` 是所订阅席位的公开流：
 
 | 消息 | 字段及含义 |
 | --- | --- |
 | `combat-open` | `initial:CombatViewState, frame:CombatReplayTick, unitIds:ReplayUnitId[]`；tick0 或最近已提交关键帧。frame.tick=initial.tick。晚加入的关键帧不重播旧动画。 |
-| `combat-chunk` | `fromTick,throughTick,ticks:CombatReplayTick[]`；闭区间，逐 tick 连续，只追加。零长度 chunk 不发送。 |
+| `combat-chunk` | `{chunks:CombatChunk[]}`；每条增量含上面的信封和 `fromTick,throughTick,ticks:CombatReplayTick[]`。闭区间逐 tick 连续，只追加。本人与观战各至多一条非空增量合并为一个包，每连接每拍最多一个 chunk 消息；先 open，再 chunk，最后 end。 |
 | `combat-end` | `throughTick,terminal:CombatViewState`；只在真实终局后发送，terminal.tick=throughTick。只有收到 end 且播到该 tick，客户端才完成。 |
 
-客户端缓冲耗尽保持最后画面并等待；普通追加保留已播视图与事件，不重建前缀、不重复动画。
-`resume` 可带 `combat:{battleId,revision,nextTick,seatId}`。凭证仍认证自己的席位，seatId 仅选择公开观战投影，不能控制该席位或读取其私有 state。
-匹配当前源且 `1<=nextTick<=已提交帧数` 时只发送缺失后缀及 end；游标不匹配时重发最近关键帧及其尾段。
-断线/慢客户端不暂停战斗；每连接 bufferedAmount 超过 1MiB 即断开保留席位，重新连接取权威游标。无等待客户端确认的房间屏障。
-客户端丢弃旧 battle/revision、重复 chunk/end；发现缺口后用保留游标重连。游标是优化提示，不能使服务器结算或改写战斗。
+客户端本人、观战各自保留 4 tick（200ms）抖动缓冲，按自己的时间余额推进；到达可播前沿保持画面，不清零 accumulator。
+追加不重建已播前缀或重播事件。收到 end 后释放最后四拍，播到真实终局才完成。服务器终局播放尾段至少 800ms，覆盖缓冲；真实时钟只留在 server/显示层。
+`resume` 可带本人 `combat:{battleId,revision,nextTick,seatId}`、观战 `watchCombat:{...}` 以及 `watchSeatId:string|null`。
+两条游标独立校验、独立续传。本人 cursor.seatId 必须等于凭证席位；观战 cursor.seatId 必须等于订阅席位；显式 null 停止观战。
+匹配当前源且 `1<=nextTick<=已录帧数` 时只发送缺失后缀及 end；游标不匹配时重发最近关键帧及尾段。未完成整拍时等整拍封口后推送。
+断线/慢客户端不暂停战斗；每连接 bufferedAmount 超过 1MiB 即记录 `warn connection.backpressure`（连接、席位、积压字节）并断开保留席位。
+客户端丢弃旧 battle/revision、重复 chunk/end；任一流发现缺口后用两条保留游标重连。游标不能结算或改写战斗，也不能读取他人私有 state。
 
-在基线 `14006984` 中未找到 #376 的 watch-tail 协议或服务器实现。本次补充认证后的 `watch:{roomId,seatId:string|null}`，
-回执 `{kind:'watching',seatId}`，null 恢复本人视角；观战、玩家和重连都只调用 `Room.combatStreamFor(seatId)`，共用 recorder/chunk。
-B 方仅镜像投影已录帧，观战其他席位的 unitIds 为空；没有另开模拟、第二套 watch 账本或可视化控件。
+#376 的观战接线沿用 `ClientListeners.watched(seatId,replay)` → `RemoteSession.watchReplay`，本人仍走 replay/replayRevised。
+观战不得写 finished/lastBattle，自己的流和播放继续推进。删除旧 watch-replay/watch-tail 路径，双方只使用同一 recorder 的 open/chunk/end。
+`watch:{roomId,seatId:string|null}` 每次都有 `{kind:'watching',seatId}` 回执，客户端按 commandId 消除 pending；请求本人席位归一为 null。
+同席重复订阅不重置任何游标；切换/停止仅重置 watchCursor。失败为 `not-authenticated`（含连接 epoch 失效）、`no-room`、`wrong-room`、`unknown-seat`，不改变订阅。
+B 方仅镜像投影已录帧，观战的 unitIds 为空。每席缓存 CombatStreamView，unitIds 建流时一次计算；未新增模拟或视觉控件。
+`Room.subscribeStreams(listener:()=>void):()=>void` 每个完整边界只通知一次；取消函数与 dispose 均解除监听。
+PvE 的事件/私有 state 更新先汇集到拍末，再统一发布一次；服务器将该发布和流通知合并为一次连接遍历。
+旧 resolver 路径的 `subscribeLive((battleId:string)=>void)` 不变。本 PR 尚未发布的 NET6 草案内调整，不重录 epoch。
 
 PvE 的运行帧、掉落揭示来自 `openMatchCombatStream` / `stepMatchCombatStream`（规则层）；真实终局先暂存。
 全轮实际结束后按席位 index 顺序，在最新共享池上用 `runSharedMatchCommand(...,{type:'settleCombatStream',terminal})` 暂存奖励/收入/成长，
-PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交；最终播放缓冲期间有操作则从最新资产重规划，纯暂存不会提前发奖。
+PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交；提交时复用终局计划，仅当 poolRevision/seatRevisions 基础变化才从最新资产重规划，纯暂存不会提前发奖。
 重复提交由既有 settlementId 拒绝；失败仍为原 state/pool/reason，不新增服务器规则。
 完成录像来自同一次 recorder，D11 金币直接采样当前流任务，不再预模拟再重算。既有 replay/replay-tail 仅供旧测试路径。
 抽检只在完整结果产生后启动，并继续使用 #371 同样的有界后台切片。

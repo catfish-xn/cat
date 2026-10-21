@@ -8,10 +8,11 @@
 PvP 直接复用 startLiveTask/BattleReplayTask.advanceTick；PvE 公共 open/step/settle 接口分开战斗推进与终局奖励。
 首遍完整领域账本与紧凑 recorder 均保留；B方镜像只投影已录帧，已镜像前缀缓存复用。
 
-服务器 subscribeLive 和 combatStreamFor 是唯一数据源，发 combat-open/chunk/end，断线游标从最近提交 chunk 续传，初次/丢失游标从最新关键帧接尾段。
-基线没有 #376 watch-tail 实现，因此新增同源 watch 请求与回执；未增观战模拟或视觉控件。
-浏览器仅最小改 ws-client / remote-session：连续追加、缺口重连、空缓冲等待、只以end完成；追加不重放已播特效。
-慢连接1MiB积压后断开并保留席位；room不等待网络确认。
+服务器 subscribeStreams 和 combatStreamFor 是实时流的数据源，发 combat-open/chunk/end，断线游标从最近提交 chunk 续传，初次/丢失游标从最新关键帧接尾段。
+#382 评审修订按本地 #376 接回观战：本人/观战独立游标，带 seatId/watch 的 open/end 和批量 chunk；观战只送 watchReplay，不记入本人的战绩。watch 请求两端都有回执处理；旧 watch-replay/watch-tail 路径移除。
+浏览器最小接收适配：双游标恢复、连续追加、缺口重连；本人和观战各保留四拍/200ms 缓冲，空缓冲不清零时间余额，end 释放尾段。服务器绝对时刻排拍，最多连续补两拍；终局尾段至少800ms。
+整拍只通知一次，PvE state 汇集到拍末；同一连接每拍至多一个 chunk 包，内含本人/观战各自增量。view 按席缓存，unitIds 建流时计算一次。结算计划仅基础变化时重算。
+慢连接1MiB积压后记录一行 warn，断开并保留席位；room不等待网络确认。
 
 PvE终局只暂存，全部战斗实际结束后按固定席序在最新池规划共享奖励，再使用既有原子 round settlement。
 D11金币直接采样同一PvP任务，PvE逐步读取Match.gold。可信、已冻结且由本地任务认证的 BattleResult 不再在 proposeSettlement 重新模拟整场；
@@ -27,3 +28,9 @@ v20/schema10/save6/replay5/command5/NET6；新 content/loot digest 自动计算�
 
 完整消息字段、公共函数输入输出和失败枚举见 [MULTIPLAYER_CONTRACT](MULTIPLAYER_CONTRACT.md) 的 B 方案第1阶段一节。
 测试、分片失败清单和环境限制见 [验证记录](evidence/v20/phase1-validation.md)。
+
+
+#382 本次工作区基线限制：保持不联网、未 push。`origin/multiplayer` 本地仍为 14006984；本地其他提交可读到 #376（ed7346ba）、#370 和 #380（6b361334），未找到 #381。
+Git 元数据只读，根工作区 merge 写 ORIG_HEAD 失败；在 /tmp 本地副本演练合流，冲突为 net/messages.ts 的 WatchMessage 说明以及 net/server.ts 的连接初始化/重置，已按双游标统一实现。
+工作区只落本次授权目录内所需 #376 接收/观战接线与修订，不表示完整 multiplayer 已合并；#370 其他目录的上游更改和 #381 仍需用户取得最新基线后合流。
+epoch 仍为临时版本，未运行录制脚本、未改 golden/digest；等待 #373/#379 合入后统一处理。
