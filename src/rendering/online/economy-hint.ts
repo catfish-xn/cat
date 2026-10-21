@@ -59,6 +59,8 @@ export class EconomyHint {
     this.shown = read;
     this.interest.textContent = `利息 +${read.interest}（胜 +${read.winInterest}）`;
     this.interest.title = `按当前 ${read.gold} 金币，本回合结算时（金币不再变化）\n${outcomeText('胜', read.ifWin)}\n${outcomeText('败/平', read.ifLoss)}`;
+    // 3D shows only the streak beside the gold (TFT); hovering it gives the same income lines.
+    this.root.title = this.interest.title;
     const label = kind === 'win' ? '连胜' : kind === 'loss' ? '连败' : null;
     this.streak.textContent = label ? `${label} ${read.streakCount}` : '无连胜/连败';
     this.streak.dataset.kind = kind ?? 'none';
