@@ -28,14 +28,19 @@ export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
 export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean }
 
+/** Vertices read between time checks in the sliced envelope (a few hundred microseconds of work). */
+const ENVELOPE_CHUNK = 1500;
+
 /**
  * How far from the body's upright axis its skinned vertices reach (ENVELOPE_QUANTILE of the samples) over the given
  * clips, in the world units fitModel's box reads (the unattached body's own transform, before fitting); 0 without
  * skinned meshes or clips. A one-frame box misses an idle that spreads its arms (Nami, Trundle) or an attack that
  * swings wide (Garen). Distances are taken from the skeleton root's own horizontal place in each sample, so a clip
  * that carries the whole body sideways (Vi, Zoe) does not count as reach. Leaves the skeleton in its bind pose.
+ * The work is a generator that pauses every ENVELOPE_CHUNK vertices: the sync form runs it through, the async form
+ * spreads it over idle slices.
  */
-export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number {
+function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generator<void, number> {
   const meshes: SkinnedMesh[] = [];
   body.traverse(node => { if (node instanceof SkinnedMesh) meshes.push(node); });
   if (!meshes.length || !clips.length) return 0;
@@ -46,34 +51,68 @@ export function animationEnvelopeRadius(body: Object3D, clips: readonly Envelope
   for (const mesh of meshes) mesh.skeleton.pose();
   body.updateMatrixWorld(true);
   const homes = roots.map(root => root ? root.getWorldPosition(new Vector3()) : new Vector3());
-  for (const { clip, loop } of clips) {
-    const action = mixer.clipAction(clip);
-    // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
-    if (!loop) { action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; }
-    action.play();
-    for (let i = 0; i < ENVELOPE_SAMPLES; i++) {
-      mixer.setTime(clip.duration * i / (loop ? ENVELOPE_SAMPLES : Math.max(1, ENVELOPE_SAMPLES - 1)));
-      body.updateMatrixWorld(true);
-      meshes.forEach((mesh, index) => {
-        mesh.skeleton.update();
-        const root = roots[index];
-        // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
-        if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
-        const count = mesh.geometry.attributes.position?.count ?? 0;
-        for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
-          mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
-          radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
+  try {
+    for (const { clip, loop } of clips) {
+      const action = mixer.clipAction(clip);
+      // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
+      if (!loop) { action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; }
+      action.play();
+      for (let i = 0; i < ENVELOPE_SAMPLES; i++) {
+        // Set the pose again on every resume: nothing else animates this body, but a slice boundary may fall here.
+        const pose = () => { mixer.setTime(clip.duration * i / (loop ? ENVELOPE_SAMPLES : Math.max(1, ENVELOPE_SAMPLES - 1))); body.updateMatrixWorld(true); };
+        pose();
+        for (let index = 0; index < meshes.length; index++) {
+          const mesh = meshes[index]!, root = roots[index];
+          mesh.skeleton.update();
+          // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
+          if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
+          const count = mesh.geometry.attributes.position?.count ?? 0;
+          for (let v = 0, read = 0; v < count; v += ENVELOPE_STRIDE) {
+            mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
+            radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
+            if (++read % ENVELOPE_CHUNK === 0) { yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
+          }
         }
-      });
+      }
+      action.stop();
     }
-    action.stop();
+  } finally {
+    mixer.stopAllAction(); mixer.uncacheRoot(body);
+    for (const mesh of meshes) mesh.skeleton.pose();
+    body.updateMatrixWorld(true);
   }
-  mixer.stopAllAction(); mixer.uncacheRoot(body);
-  for (const mesh of meshes) mesh.skeleton.pose();
-  body.updateMatrixWorld(true);
   if (!radii.length) return 0;
   radii.sort((a, b) => a - b);
   return radii[Math.min(radii.length - 1, Math.floor(radii.length * ENVELOPE_QUANTILE))]!;
+}
+
+/** The envelope at once (a piece mounting outside combat with nothing measured yet). */
+export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number {
+  const steps = envelopeSteps(body, clips);
+  for (;;) { const next = steps.next(); if (next.done) return next.value; }
+}
+
+/**
+ * The same envelope in slices of about `budgetMs`, handing the thread back between them (`pause`, an idle callback by
+ * default). Resolves null when `stop()` turns true at a slice boundary (a combat began, the renderer went); the body is
+ * left in its bind pose either way.
+ */
+export async function animationEnvelopeRadiusSliced(body: Object3D, clips: readonly EnvelopeClip[], options: {
+  budgetMs?: number; stop?: () => boolean; pause?: () => Promise<void>; now?: () => number;
+} = {}): Promise<number | null> {
+  const budget = options.budgetMs ?? 3, now = options.now ?? (() => performance.now());
+  const pause = options.pause ?? (() => new Promise<void>(resolve => setTimeout(resolve, 0)));
+  const steps = envelopeSteps(body, clips);
+  for (;;) {
+    const started = now();
+    for (;;) {
+      const next = steps.next();
+      if (next.done) return next.value;
+      if (now() - started >= budget) break;
+    }
+    await pause();
+    if (options.stop?.()) { steps.return(0); return null; }
+  }
 }
 
 /**
