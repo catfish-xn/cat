@@ -197,7 +197,7 @@ interface Connection {
   sentCombat: { readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   /** The seat this connection watches (`watch`) and the battle of it last pushed as `watch-replay`. */
   watchSeatId: string | null;
-  sentWatch: { readonly battle: BattleResult; readonly replay: CombatReplay } | null;
+  sentWatch: { readonly key: string; readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   closeHandle: ClockHandle | null;
   /** Clock time of the last pong or message from the peer (heartbeat). */
   lastSeen: number;
@@ -314,7 +314,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     }
     pushWatch(conn, state);
   }
-  /** The watched seat's battle while the round's battles run: once per battle result (a live run that replaced it is sent again whole). */
+  /**
+   * The watched seat's battle while the round's battles run: whole once, then (a live run that replaced the battle
+   * already sent) only the records that changed, as `watch-tail`, like my own battle's `replay-tail`.
+   */
   function pushWatch(conn: Connection, state: RoomState): void {
     const watched = conn.watchSeatId;
     if (!watched || state.phase !== 'battle') return;
@@ -323,8 +326,12 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     let replay: ReturnType<typeof toCombatReplayFor> = null;
     try { replay = toCombatReplayFor(state, watched); }
     catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: watched, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
-    conn.sentWatch = replay ? { battle, replay: replay.replay } : null;
-    if (replay) send(conn, { type: 'watch-replay', roomId: state.roomId, round: state.round, seatId: watched, battleId: replay.battleId, replay: replay.replay });
+    if (!replay) { conn.sentWatch = null; return; }
+    const key = `${state.round}:${battle.battleId}:${watched}`, sent = conn.sentWatch?.key === key ? conn.sentWatch : null;
+    conn.sentWatch = { key, battle, replay: replay.replay };
+    if (!sent) { send(conn, { type: 'watch-replay', roomId: state.roomId, round: state.round, seatId: watched, battleId: replay.battleId, replay: replay.replay }); return; }
+    const tail = replayTail(sent.replay, replay.replay);
+    if (tail) send(conn, { type: 'watch-tail', roomId: state.roomId, round: state.round, seatId: watched, battleId: replay.battleId, ...tail });
   }
   /**
    * D11 live bank: a battle's live run produced frames that differ from the replay its seats were pushed. Each seat that
@@ -354,7 +361,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const ticks = battle.battle.b.seatId === watched ? frames.ticks.map(frame => mirrorReplayTick(frame, rows)) : frames.ticks;
       const revised: CombatReplay = { ...sent.replay, ticks: [...sent.replay.ticks.slice(0, frames.fromTick), ...ticks] };
       const tail = replayTail(sent.replay, revised);
-      conn.sentWatch = { battle, replay: revised };
+      conn.sentWatch = { key: sent.key, battle, replay: revised };
       if (tail) send(conn, { type: 'watch-tail', roomId: state.roomId, round: state.round, seatId: watched, battleId, ...tail });
     }
   }
