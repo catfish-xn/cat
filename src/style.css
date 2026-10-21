@@ -441,12 +441,14 @@ body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), c
 .item-dock:empty { display: none; }
 .item-dock > * { pointer-events: auto; }
 .item-dock .item-inventory, .item-dock .consumable-row { display: flex; flex-direction: column-reverse; gap: 4px; }
-.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark), .item-dock .consumable-hint { display: none; }
+.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark, .consumable-count), .item-dock .consumable-hint { display: none; }
 .item-dock .item-card, .item-dock .consumable-card { width: 44px; height: 44px; min-height: 0; padding: 3px; font-size: 0; line-height: 0; display: grid; place-items: center;
   border-radius: 7px; background: #0f1a24; border: 1px solid #304653; }
 .item-dock .item-card .item-mark { width: 36px !important; height: 36px !important; margin: 0; }
 .item-dock .item-glyph { font-size: 12px; line-height: 1; }
 .item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
+.item-dock .consumable-card { position: relative; }
+.item-dock .consumable-count { position: absolute; right: 1px; bottom: 1px; padding: 1px 3px; border-radius: 4px; background: #0b131b; color: #ffe6a8; font-size: 11px; line-height: 1; font-weight: 700; }
 .item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
 /* v15: unclaimed orbs in the board's right gutter (mirror of the item bench). Tier colours follow the 14.24 client: grey
    (silver-white), blue, gold and prismatic; a reward orb from an augment / conqueror / black market carries a "奖" mark. */
@@ -689,6 +691,7 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-shelf h4 { margin: 10px 0 6px; font-size: 13px; }
 .consumable-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+.consumable-count { color: #ffe6a8; font-weight: 700; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
