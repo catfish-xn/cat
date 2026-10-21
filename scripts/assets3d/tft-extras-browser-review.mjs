@@ -3,7 +3,9 @@ import { chromium } from 'playwright';
 import { resolve, join } from 'node:path';
 import { mkdir, readFile } from 'node:fs/promises';
 import { safeOutputPath, safeInputPath, writeOutputFileAtomic } from './safe-path.mjs';
+import { SPECIAL_ORB_EFFECTS } from './tft-extras.mjs';
 
+const specialOnly = process.argv.slice(2).includes('--special-orbs');
 const root = resolve('assets3d-local/tft-extras'), review = await safeOutputPath(join(root, 'review'), { directory: true });
 await mkdir(review, { recursive: true });
 const manifest = JSON.parse(await readFile(await safeInputPath(root, join(root, 'manifest.json')), 'utf8'));
@@ -21,7 +23,7 @@ try {
   page.on('pageerror', e => errors.push(e.message)); page.on('requestfailed', r => errors.push(r.url()));
   await page.route('**/*', r => new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort());
   await page.route('http://127.0.0.1:5199/review', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
-  const targets = [...Object.entries(manifest.models).flatMap(([id, m]) =>
+  const targets = specialOnly ? SPECIAL_ORB_EFFECTS.map(({ id }) => ({ id })) : [...Object.entries(manifest.models).flatMap(([id, m]) =>
     [...new Set(['idle', ...['move', 'cast', 'attack'].filter(a => m.animations?.[a]).slice(0, 2)])].map(action => ({ id, action }))),
     ...Object.keys(manifest.effects).map(id => ({ id }))];
   for (const { id, action } of targets) {
@@ -47,7 +49,7 @@ try {
         }
       } else gltf = await new GLTFLoader().loadAsync(base + manifest.models[id].path);
       const travel = bindings.playback[id]?.phase === 'travel';
-      const times = id.startsWith('orb-prismatic') ? [.5, 8, 60] : travel ? [.15, .45, .8] : id.includes('open') || id.includes('damage') ? [.08, .25, .6] : [.1, .5, 2];
+      const times = id.startsWith('orb-prismatic') || ['orb-warband', 'orb-crime'].includes(id) ? [.5, 8, 60] : travel ? [.15, .45, .8] : id.includes('open') || id.includes('damage') ? [.08, .25, .6] : [.1, .5, 2];
       for (const top of [false, true]) for (const time of times) {
         const box = document.createElement('div'); box.textContent = `${id} ${action ?? ''} | ${top ? 'top' : 'oblique'} | ${time}s | grid=1 cell`; document.body.append(box);
         const scene = new T.Scene(); scene.background = new T.Color('#182936');
@@ -90,7 +92,7 @@ try {
     await page.screenshot({ path: await safeOutputPath(join(review, id + (action && action !== 'idle' ? '-' + action : '') + '.png'), { force: true }), fullPage: true });
     results.push(result); console.log(id);
   }
-  await writeOutputFileAtomic(join(review, 'review-report.json'), JSON.stringify({ browser: 'local Chrome', offline: true, errors, results,
+  await writeOutputFileAtomic(join(review, specialOnly ? 'special-orbs-review-report.json' : 'review-report.json'), JSON.stringify({ browser: 'local Chrome', offline: true, errors, results,
     unavailableModels: manifest.models['little-legend-default'] ? [] : build.petDependencies ?? build.failures.filter(f => f.stage === 'little-legend') }, null, 2), { force: true });
   if (errors.length) throw new Error(errors.join('\n'));
 } finally { await browser?.close(); await server.close(); }

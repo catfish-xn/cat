@@ -9,6 +9,21 @@ const doc = (...emitters: unknown[]) => ({ schemaVersion: 2, limits: { maxPartic
 const mesh = (e: ParticleEffect, i = 0) => e.object.children[i] as Mesh<import('three').BufferGeometry, ShaderMaterial>;
 const manifest = { schemaVersion: 1 as const, models: {}, effects: { effect: { path: 'fx/effect.json' } } };
 
+describe('particle mesh vertex colors', () => {
+  it('uses normalized RGBA geometry including alpha, with a white fallback for ordinary particles', () => {
+    const geometry = new BoxGeometry();
+    geometry.setAttribute('color', new Float32BufferAttribute(new Float32Array(geometry.getAttribute('position').count * 4).fill(0.5), 4));
+    const fx = new ParticleEffect(doc(quad({ kind: 'mesh', mesh: 'synthetic.glb' }), quad()), { mesh: () => geometry });
+    expect(mesh(fx).material.defines.PARTICLE_MESH_RGBA).toBe(1);
+    expect(mesh(fx, 1).material.defines.PARTICLE_MESH_RGBA).toBeUndefined();
+    expect(mesh(fx).material.vertexShader).toContain('vMeshColor=color;');
+    expect(mesh(fx).material.vertexShader).toContain('vMeshColor=vec4(1.0);');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity)*vMeshColor');
+    expect(mesh(fx).geometry).toBe(geometry);
+    fx.dispose(); geometry.dispose();
+  });
+});
+
 describe('strict particle v2 contract', () => {
   it('exports a discriminated document, clones inputs and accepts an explicitly bounded empty v2', () => {
     const input = doc(quad());

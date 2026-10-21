@@ -31,7 +31,20 @@ const MAX_BIRTH_ATTEMPTS = 100000;
 const reached = (at: number, time: number) => at <= time + Number.EPSILON * Math.max(Math.abs(at), Math.abs(time)) * 8;
 // Repeat inside the atlas cell without mutating a borrowed texture's wrap mode.
 const v2FragmentShader = fragmentShader.replace('uniform vec2 tiles;', 'uniform bool repeatU; uniform vec2 tiles;')
-  .replace('(vUv+cell)/tiles', '(vec2(repeatU?fract(vUv.x):vUv.x,vUv.y)+cell)/tiles');
+  .replace('(vUv+cell)/tiles', '(vec2(repeatU?fract(vUv.x):vUv.x,vUv.y)+cell)/tiles')
+  .replace('varying vec2 vUv;', 'varying vec2 vUv; varying vec4 vMeshColor;')
+  .replace('vec4(texel.rgb*tint,texel.a*opacity)', 'vec4(texel.rgb*tint,texel.a*opacity)*vMeshColor');
+const v2VertexShader = `#ifdef PARTICLE_MESH_RGBA
+attribute vec4 color;
+#endif
+varying vec4 vMeshColor;
+${vertexShader}`.replace('vUv=uv;', `vUv=uv;
+#ifdef PARTICLE_MESH_RGBA
+vMeshColor=color;
+#else
+vMeshColor=vec4(1.0);
+#endif
+`);
 
 export class ParticleEffectV2 {
   readonly object = new Group();
@@ -132,7 +145,9 @@ export class ParticleEffectV2 {
       }
       geometry.setIndex(indices); geometry.setDrawRange(0, 0);
     }
-    const material = new ShaderMaterial({ vertexShader, fragmentShader: v2FragmentShader, transparent: true, depthWrite: false, side: DoubleSide,
+    const material = new ShaderMaterial({ vertexShader: v2VertexShader, fragmentShader: v2FragmentShader,
+      defines: geometry.getAttribute('color')?.itemSize === 4 ? { PARTICLE_MESH_RGBA: 1 } : {},
+      transparent: true, depthWrite: false, side: DoubleSide,
       blending: e.blend === 'additive' ? AdditiveBlending : e.blend === 'multiply' ? MultiplyBlending : NormalBlending,
       uniforms: { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
         opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [e.frames?.columns ?? 1, e.frames?.rows ?? 1] }, frame: { value: 0 },

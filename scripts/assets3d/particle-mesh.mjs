@@ -21,20 +21,30 @@ function readScb(b, limits) {
   check([2, 3].includes(major) && minor === 2, 'unsupported-scb-version');
   at = 140; const nv = u32(), nf = u32(), flags = u32();
   budgetCount(nv, limits.maxVertices); budgetCount(nf, limits.maxFaces);
-  // Vertex colors and unrecognized flags have no particle GLB material equivalent.
-  check(flags === 0 || flags === 2, 'unsupported-scb-flags');
+  check((flags & ~3) === 0, 'unsupported-scb-flags');
   floats(6); // file bounding box; recompute from actual output vertices
-  if (major === 3) check(u32() === 0, 'unsupported-scb-vertex-colors');
-  check(b.length === at + nv * 12 + 12 + nf * 100, 'invalid-scb-length');
+  const colorFlag = major === 3 ? u32() : 0;
+  check(colorFlag === 0 || colorFlag === 1, 'unsupported-scb-vertex-colors');
+  check(b.length === at + nv * (12 + colorFlag * 4) + 12 + nf * (100 + (flags & 1 ? 9 : 0)), 'invalid-scb-length');
   const vertices = Array.from({ length: nv }, () => floats(3));
-  check(floats(3).every(v => v === 0), 'unsupported-mesh-pivot');
+  // SCB 3.2 stores per-vertex BGRA U8 after positions (local StaticMesh.cs).
+  const colors = colorFlag ? Array.from({ length: nv }, () => {
+    need(4); const bgra = [...b.subarray(at, at + 4)]; at += 4;
+    return [bgra[2], bgra[1], bgra[0], bgra[3]];
+  }) : undefined;
+  // Local LeagueToolkit StaticMesh.cs reads CentralPoint as metadata and keeps
+  // vertex coordinates unchanged. It is not a translation to apply a second time.
+  const centralPoint = floats(3);
   const faces = [];
   for (let i = 0; i < nf; i++) {
     const indices = [u32(), u32(), u32()];
     need(64); at += 64; // source material name is replaced by emitter material
     const uv = floats(6); faces.push({ indices, uv: [0, 1, 2].map(j => [uv[j], uv[j + 3]]) });
   }
-  return { vertices, faces };
+  if (flags & 1) for (const face of faces) face.colors = Array.from({ length: 3 }, () => {
+    need(3); const rgb = [...b.subarray(at, at + 3)]; at += 3; return [...rgb, 255];
+  });
+  return { vertices, faces, colors, centralPoint };
 }
 function readSco(b, limits) {
   const text = new TextDecoder('utf-8', { fatal: true }).decode(b);
@@ -45,7 +55,11 @@ function readSco(b, limits) {
   check(line() === '[ObjectBegin]', 'unsupported-sco-magic');
   check(/^Name\s*=/.test(line()), 'invalid-sco-name');
   const center = line().match(/^CentralPoint\s*=\s*(.*)$/);
-  check(center && numbers(center[1], 3).every(v => v === 0), 'unsupported-mesh-pivot');
+  check(center, 'invalid-sco-center');
+  const centralPoint = numbers(center[1], 3);
+  // As in the local reference reader, locator metadata leaves vertices intact.
+  const pivot = lines[at]?.match(/^PivotPoint\s*=\s*(.*)$/);
+  const pivotPoint = pivot ? (at++, numbers(pivot[1], 3)) : undefined;
   const n = line().match(/^Verts\s*=\s*(\d+)$/); check(n, 'invalid-sco-vertices');
   const nv = Number(n[1]); budgetCount(nv, limits.maxVertices);
   const vertices = Array.from({ length: nv }, () => numbers(line(), 3));
@@ -57,7 +71,7 @@ function readSco(b, limits) {
     return { indices: v.slice(1, 4).map(Number), uv: [0, 1, 2].map(j => uv.slice(j * 2, j * 2 + 2)) };
   });
   check(line() === '[ObjectEnd]' && at === lines.length, 'invalid-sco-tail');
-  return { vertices, faces };
+  return { vertices, faces, centralPoint, pivotPoint };
 }
 /** Bounded static, UV-bearing triangle mesh. No skinning/material approximation.
  * Reflect X and reverse winding exactly as the model pipeline. UVs are unchanged. */
@@ -66,18 +80,24 @@ export function convertParticleMesh(bytes, extension, options = {}) {
   check(Object.values(limits).every(v => Number.isSafeInteger(v) && v >= 0), 'invalid-mesh-budget');
   check(Buffer.isBuffer(bytes) && bytes.length <= limits.maxBytes, 'mesh-byte-budget');
   check(['.scb', '.sco'].includes(extension.toLowerCase()), 'unsupported-mesh-extension');
-  const { vertices, faces } = extension.toLowerCase() === '.scb' ? readScb(bytes, limits) : readSco(bytes, limits);
+  const { vertices, faces, colors, centralPoint, pivotPoint } = extension.toLowerCase() === '.scb' ? readScb(bytes, limits) : readSco(bytes, limits);
   // Deindex to preserve per-face UV seams. Check before allocating output buffers.
-  const count = faces.length * 3, length = count * 20;
+  const faceColors = faces.some(f => f.colors);
+  const count = faces.length * 3, length = count * (20 + (colors ? 4 : 0) + (faceColors ? 4 : 0));
   check(length + 4096 <= limits.maxOutputBytes, 'mesh-output-budget');
   const positions = Buffer.alloc(count * 12), texcoords = Buffer.alloc(count * 8);
+  const rgba = colors ? Buffer.alloc(count * 4) : undefined;
+  const faceRgba = faceColors ? Buffer.alloc(count * 4) : undefined;
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   let index = 0;
   for (const face of faces) for (const j of [0, 2, 1]) {
     const vi = face.indices[j]; check(Number.isSafeInteger(vi) && vi >= 0 && vi < vertices.length, 'invalid-mesh-index');
     const p = [-vertices[vi][0], vertices[vi][1], vertices[vi][2]], uv = face.uv[j];
     p.forEach((v, k) => { positions.writeFloatLE(float32(v), index * 12 + k * 4); min[k] = Math.min(min[k], v); max[k] = Math.max(max[k], v); });
-    uv.forEach((v, k) => texcoords.writeFloatLE(float32(v), index * 8 + k * 4)); index++;
+    uv.forEach((v, k) => texcoords.writeFloatLE(float32(v), index * 8 + k * 4));
+    if (rgba) colors[vi].forEach((v, k) => { rgba[index * 4 + k] = v; });
+    if (faceRgba) face.colors[j].forEach((v, k) => { faceRgba[index * 4 + k] = v; });
+    index++;
   }
   const doc = { asset: { version: '2.0', generator: 'assets3d-static-particle-mesh' }, scene: 0,
     scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }], meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, mode: 4 }] }],
@@ -85,7 +105,24 @@ export function convertParticleMesh(bytes, extension, options = {}) {
       { buffer: 0, byteOffset: positions.length, byteLength: texcoords.length }],
     accessors: [{ bufferView: 0, componentType: 5126, count, type: 'VEC3', min, max },
       { bufferView: 1, componentType: 5126, count, type: 'VEC2' }] };
-  const glb = writeGlb(doc, Buffer.concat([positions, texcoords]));
+  if (rgba) {
+    doc.meshes[0].primitives[0].attributes.COLOR_0 = 2;
+    doc.bufferViews.push({ buffer: 0, byteOffset: positions.length + texcoords.length, byteLength: rgba.length });
+    doc.accessors.push({ bufferView: 2, componentType: 5121, normalized: true, count, type: 'VEC4' });
+  }
+  if (faceRgba) {
+    // HasVcp's role in VFX shading is unknown (the reference mesh reader keeps
+    // it separately too). Preserve it losslessly without multiplying it into
+    // COLOR_0 and turning zero-filled locator colors into black particles.
+    const accessor = doc.accessors.length;
+    doc.meshes[0].primitives[0].attributes._FACE_COLOR_0 = accessor;
+    doc.bufferViews.push({ buffer: 0, byteOffset: positions.length + texcoords.length + (rgba?.length ?? 0), byteLength: faceRgba.length });
+    doc.accessors.push({ bufferView: accessor, componentType: 5121, normalized: true, count, type: 'VEC4' });
+  }
+  const glb = writeGlb(doc, Buffer.concat([positions, texcoords, ...(rgba ? [rgba] : []), ...(faceRgba ? [faceRgba] : [])]));
   check(glb.length <= limits.maxOutputBytes, 'mesh-output-budget');
-  return { glb, report: { vertices: count, triangles: faces.length, sourceVertices: vertices.length, bytes: glb.length } };
+  return { glb, report: { vertices: count, triangles: faces.length, sourceVertices: vertices.length, bytes: glb.length,
+    centralPoint, ...(pivotPoint ? { pivotPoint } : {}), locatorPolicy: 'metadata-only-source-vertices-unchanged',
+    ...(faceRgba ? { faceColors: 'RGB-U8-preserved-in-_FACE_COLOR_0; shading-not-reproduced' } : {}),
+    ...(rgba ? { vertexColors: 'BGRA-U8-to-RGBA-normalized' } : {}) } };
 }
