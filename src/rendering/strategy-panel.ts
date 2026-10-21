@@ -183,8 +183,7 @@ export class StrategyPanel {
   private selectedItems: string[] = [];
   /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
   private selectedConsumable: string | null = null;
-  private anomalyCodexOpen = false;
-  private tab: 'traits' | 'items' | 'units' | 'builds' | 'events' = 'items';
+  private tab: 'traits' | 'items' | 'units' | 'events' = 'items';
   private lastCombatTick = -1;
   private lastCombatId: string | undefined;
   private eventList: HTMLElement | null = null;
@@ -577,7 +576,8 @@ export class StrategyPanel {
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     // Online (docked) drops the battle-record tab: rounds move on by themselves and there is nothing to look back at.
-    const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const;
+    // No fixed build guide tab: TFT has none, and the shipped anomalies are named where they are offered and bound.
+    const tabList = [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['events', '记录']] as const;
     if (this.itemDock && this.tab === 'events') this.tab = 'traits';
     for (const [tab, label] of tabList.filter(([tab]) => !this.itemDock || tab !== 'events')) {
       const button = this.button(`panel:${tab}`, label, () => { this.actions.cancelGesture(); this.tab = tab; this.render(); });
@@ -599,7 +599,6 @@ export class StrategyPanel {
     // Docked, the item bench stays on the board whichever tab is open.
     if (this.tab === 'items' || this.itemDock) this.renderItems(state, this.itemsOpen(), this.tab === 'items');
     if (this.tab === 'units') this.renderUnits(state, ready);
-    if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
     const augments = element('p', state.augments.length ? '强化：' : '强化： 尚未选择', 'owned-augments');
@@ -1186,34 +1185,6 @@ export class StrategyPanel {
       shop.append(button);
     });
     section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); (this.shopDock ?? this.root).append(section);
-  }
-  private renderBuilds(): void {
-    const section = element('section', '', 'build-guide'); section.dataset.debug = 'build-guide';
-    const builds = [
-      ['四炮四哨', '崔丝塔娜 / 厄加特 / 伊泽瑞尔 / 库奇 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '麦迪 暂持物理装 → 中期两炮 → 升8找二星 库奇；出售持装者归还装备。', '库奇：死亡之刃 / 朔极之矛 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
-      ['两狙四监察两哨', '麦迪 / 克格莫 · 德莱厄斯 / 范德尔 / 斯卡 / 盖伦 · 艾瑞莉娅 / 洛里斯', '6/7级寻找二星 克格莫、斯卡，保利息搜牌；8级补 盖伦。凯特琳 可替 麦迪。', '克格莫：鬼索的狂暴之刃 / 大天使之杖 / 海克斯科技枪刃；盖伦：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
-      ['四法四哨', '拉克丝 / 婕拉 / 娜美 / 佐伊 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '拉克丝/婕拉 过渡 → 娜美 中期 → 8级二星 佐伊；出售过渡持装者后重购羁绊挂件。', '佐伊：朔极之矛 / 灭世者的死亡之帽 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
-    ];
-    for (const [title, units, route, items] of builds) { const card = element('article', '', 'trait'); card.append(element('h3', title), element('p', units), element('p', route), element('p', items)); section.append(card); }
-    section.append(this.anomalyCodex());
-    section.append(element('p', '日程：强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7。S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀。', 'mode-note'));
-    section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自每阶段 .4 补给；1-2～1-4 与各阶段 .7 为野怪回合，野怪掉落尚未开放。副羁绊只保留原生身份，本版本未开放。'));
-    this.root.append(section);
-  }
-  /** Collapsible anomaly codex: every definition the content ships, name + verbatim description; open state survives re-renders. */
-  private anomalyCodex(): HTMLElement {
-    const definitions = Object.values(ANOMALY_DEFINITIONS);
-    const codex = element('details', '', 'anomaly-codex'); codex.dataset.debug = 'anomaly-codex'; codex.open = this.anomalyCodexOpen;
-    codex.addEventListener('toggle', () => { this.anomalyCodexOpen = codex.open; });
-    codex.append(element('summary', `异常图鉴（${definitions.length} 个）`));
-    const list = element('ul', '', 'anomaly-codex-list');
-    for (const definition of definitions) {
-      const row = element('li', '', 'anomaly-codex-entry'); row.dataset.anomaly = definition.id;
-      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${anomalyPlayerDescription(definition.id)}`));
-      list.append(row);
-    }
-    codex.append(list);
-    return codex;
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
