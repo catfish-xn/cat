@@ -9,6 +9,7 @@
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
+import { installHudStyle } from './hud-style';
 import {
   AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
@@ -232,6 +233,7 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 }
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
+  installHudStyle();
   const renderer = new WebGLRenderer({ antialias: true });
   const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined);
   const actionEffects = await openActionEffects(models, options.assetBase);
