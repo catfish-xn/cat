@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { genericOffer, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
+import { genericOffer, isShopChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
 import { itemDisplayName } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
@@ -65,7 +65,15 @@ describe('generic mechanic choice display', () => {
     const extras = readChoiceExtras(armory);
     expect(genericOffer('spare-parts', extras)).toMatchObject({ name: '备用零件！', price: 0 });
     expect(genericOffer('flamethrower', extras)).toMatchObject({ name: '喷火器', price: 5 });
+    for (const id of ['flamethrower', 'petricite-rod', 'repairing-microbots', 'self-destruct', 'tankbuster', 'spare-parts', 'finishing-touch', 'junkyard-titan'])
+      expect(genericOffer(id, extras).description).toMatch(/[一-鿿]/);
     expect(timeoutOption({ kind: 'blackMarket', payload: { timeoutOption: '@skip' } })).toBe(SKIP_OPTION);
+  });
+  it('sends the black market and the Junker King armory to the shop row, titled by their 14.24 trait names; forges stay popups', () => {
+    expect(['blackMarket', 'armory'].every(isShopChoiceKind)).toBe(true);
+    expect(['forge', 'augment', 'component', 'anomaly'].some(isShopChoiceKind)).toBe(false);
+    expect(readChoiceExtras({ kind: 'blackMarket', offers: ['x'], payload: { kind: 'blackMarket', source: 'black-market', skippable: true } }).title).toBe('炼金男爵 · 黑市');
+    expect(readChoiceExtras({ kind: 'armory', offers: ['spare-parts'], payload: { kind: 'armory', source: 'junker-king', prices: {} } }).title).toBe('机械公敌 · 升级');
   });
 });
 
