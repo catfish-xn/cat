@@ -742,8 +742,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const name = view.lease?.animationNames.celebrate, clip = name ? view.lease!.animations.find(c => c.name === name) : undefined;
     // A model swap or action reset rebuilds the mixer: the clip is started again on the new one.
     if (clip && view.mixer ? view.dance === 'clip' && view.mixer.mixer.existingAction(clip)?.isRunning() : view.dance === 'hop') return;
-    // A dance starts from its own start: time the mixer held for the earlier action is dropped.
-    if (clip && view.mixer) { held.delete(view); view.mixer.mixer.stopAllAction(); view.mixer.mixer.clipAction(clip).reset().setLoop(LoopRepeat, Infinity).play(); view.dance = 'clip'; }
+    // A dance starts from its own start: time the mixer held for the earlier action is dropped, and from here on its
+    // frames count (held for the action revision it is shown over).
+    if (clip && view.mixer) { held.set(view, { seconds: 0, revision: view.state.output.revision, mixer: view.mixer }); view.mixer.mixer.stopAllAction(); view.mixer.mixer.clipAction(clip).reset().setLoop(LoopRepeat, Infinity).play(); view.dance = 'clip'; }
     else view.dance = 'hop';
   };
   const onFrame = (frame: BoardFrame) => {
