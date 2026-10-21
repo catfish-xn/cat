@@ -441,12 +441,14 @@ body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), c
 .item-dock:empty { display: none; }
 .item-dock > * { pointer-events: auto; }
 .item-dock .item-inventory, .item-dock .consumable-row { display: flex; flex-direction: column-reverse; gap: 4px; }
-.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark), .item-dock .consumable-hint { display: none; }
+.item-dock .item-inventory:empty, .item-dock .consumable-shelf h4, .item-dock .consumable-card > span:not(.consumable-mark, .consumable-count), .item-dock .consumable-hint { display: none; }
 .item-dock .item-card, .item-dock .consumable-card { width: 44px; height: 44px; min-height: 0; padding: 3px; font-size: 0; line-height: 0; display: grid; place-items: center;
   border-radius: 7px; background: #0f1a24; border: 1px solid #304653; }
 .item-dock .item-card .item-mark { width: 36px !important; height: 36px !important; margin: 0; }
 .item-dock .item-glyph { font-size: 12px; line-height: 1; }
 .item-dock .consumable-mark { width: 36px; height: 36px; font-size: 13px; line-height: 1; }
+.item-dock .consumable-card { position: relative; }
+.item-dock .consumable-count { position: absolute; right: 1px; bottom: 1px; padding: 1px 3px; border-radius: 4px; background: #0b131b; color: #ffe6a8; font-size: 11px; line-height: 1; font-weight: 700; }
 .item-dock [aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: 1px; }
 /* v15: unclaimed orbs in the board's right gutter (mirror of the item bench). Tier colours follow the 14.24 client: grey
    (silver-white), blue, gold and prismatic; a reward orb from an augment / conqueror / black market carries a "奖" mark. */
@@ -689,6 +691,7 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-shelf h4 { margin: 10px 0 6px; font-size: 13px; }
 .consumable-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+.consumable-count { color: #ffe6a8; font-weight: 700; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
@@ -789,6 +792,7 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .unit-card-stats dt { color: #7e95a4; } .unit-card-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
 .unit-card-battle { margin: 0; padding-top: 4px; border-top: 1px solid #2c4350; font-size: 12px; color: #c9d4da; font-variant-numeric: tabular-nums; }
 .trait-card-meta { font-size: 12px; color: #9aaeb9; }
+.trait-card-summary { margin: 0; font-size: 12px; line-height: 1.5; color: #c4d4dc; max-width: 320px; }
 .trait-card-tiers { margin: 0; padding-left: 16px; display: grid; gap: 3px; font-size: 12px; color: #7e95a4; }
 .trait-card-tiers li.reached { color: #e2eef1; }
 .trait-card-members { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
@@ -804,7 +808,7 @@ body[data-online][data-online-left="collapsed"] #app { grid-template-columns: 20
 body[data-online][data-online-left="collapsed"] #strategy-root,
 body[data-online][data-online-left="collapsed"] #stats-root,
 body[data-online][data-online-left="collapsed"] #legal-notice { display: none; }
-body[data-online][data-online-left="collapsed"] .trait-row { grid-template-columns: 22px 1.4em minmax(0, 1fr); }
+body[data-online] .trait-row { grid-template-columns: 22px 1.4em minmax(0, 1fr); }
 body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; font-size: 10px; }
 @media (max-width: 1100px) { body[data-online][data-online-left="collapsed"] #app { grid-template-columns: minmax(0, 1fr) 232px; } }
 
@@ -1007,14 +1011,163 @@ body[data-online] .trait-row[data-style] .trait-icon { filter: drop-shadow(0 0 0
 body[data-online] .left-panel-toggle { border: 1px solid #1d2f3d; border-radius: 6px; background: linear-gradient(180deg, #14212c, #0d1822); color: #c8aa6e; letter-spacing: .04em; }
 body[data-online] .left-panel-toggle:hover { color: #f0e6d2; border-color: #785a28; }
 body[data-online][data-online-left="collapsed"] .left-panel-toggle { width: auto; min-height: 26px; padding: 2px 10px; }
-body[data-online][data-online-left="collapsed"] .trait-column { padding: 4px 0; background: transparent; }
-body[data-online][data-online-left="collapsed"] .trait-column-title { padding-left: 4px; font-size: 12px; letter-spacing: .1em; }
-body[data-online][data-online-left="collapsed"] .trait-row { padding: 3px 6px 3px 2px; border-radius: 16px 6px 6px 16px; background: #0b151fb3; }
-body[data-online][data-online-left="collapsed"] .trait-row[data-style] { background: linear-gradient(90deg, color-mix(in srgb, var(--trait-tier) 30%, #0b151f), #0b151fb3 80%); box-shadow: none; }
-body[data-online][data-online-left="collapsed"] .trait-row.inactive { background: #0b151f80; }
+body[data-online] .trait-column { padding: 4px 0; background: transparent; }
+body[data-online] .trait-column-title { padding-left: 4px; font-size: 12px; letter-spacing: .1em; }
+body[data-online] .trait-row { padding: 3px 6px 3px 2px; border-radius: 16px 6px 6px 16px; background: #0b151fb3; }
+body[data-online] .trait-row[data-style] { background: linear-gradient(90deg, color-mix(in srgb, var(--trait-tier) 30%, #0b151f), #0b151fb3 80%); box-shadow: none; }
+body[data-online] .trait-row.inactive { background: #0b151f80; }
 body[data-online]:not([data-online-left="collapsed"]) #strategy-root { animation: left-panel-in .18s ease-out; }
 @keyframes left-panel-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { body[data-online]:not([data-online-left="collapsed"]) #strategy-root { animation: none; } }
 /* The level chip carries "5 · 10/20": a size smaller so it never ellipsizes in the narrower stats column. */
 .shop-dock .hud-level strong { font-size: 15px; white-space: nowrap; }
 .shop-dock .mobile-controls button { font-size: 12px; white-space: nowrap; }
+
+/* TFT layout pass L1–L3 (online). Top: a compact round capsule (round, stage icons, a smaller timer) instead of a full-width
+   strip. Bottom: the shop bar as in TFT — level and XP over the two buttons on the left (buy XP above refresh), the five
+   cards in the middle with the odds over them and gold top right, lock, sell and the board count as small pills at the
+   right end; HP lives in the player list. Layout only: the same elements, re-placed through display: contents. */
+body[data-online] .online-countdown { justify-self: center; gap: 10px; padding: 0 18px; border: 1px solid #1d2f3d; border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, #0b151fe6, #14212ce6); box-shadow: 0 4px 14px #0007; }
+body[data-online] .online-countdown .online-timer { font-size: 24px; color: #f0e6d2; }
+body[data-online] .online-countdown .online-timer.urgent { color: #f08080; }
+body[data-online] .online-countdown .countdown-round { font-size: 14px; }
+body[data-online] .online-countdown .economy-chip { font-size: 11px; padding: 1px 7px; }
+body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "level top top" "xp cards side" "reroll cards side"; column-gap: 8px; row-gap: 4px; padding: 5px 8px 6px; border: 1px solid #1d2f3d;
+  background: linear-gradient(180deg, #0b151fee, #14212cee); }
+body[data-online] .shop-dock :is(.hud-stats, .mobile-controls, .shop-panel) { display: contents; }
+body[data-online] .shop-dock .hud-chip { display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 7px; border-radius: 12px; box-sizing: border-box; }
+body[data-online] .shop-dock .hud-chip strong { font-size: 14px; }
+body[data-online] .shop-dock .hud-hp { display: none; }
+body[data-online] .shop-dock .hud-level { grid-area: level; }
+body[data-online] .shop-dock .hud-level .hud-label { display: none; }
+body[data-online] .shop-dock .hud-level strong { font-size: 13px; }
+body[data-online] .shop-dock .hud-level strong::before { content: "Lv."; font-size: 11px; color: #9aaeb9; margin-right: 1px; }
+body[data-online] .shop-dock .hud-xp-bar { flex: 1; min-width: 18px; }
+body[data-online] .shop-dock .hud-gold { grid-area: top; justify-self: end; min-width: 84px; justify-content: center; border-color: #785a28; }
+body[data-online] .shop-dock .hud-gold .hud-label { width: 13px; height: 13px; overflow: hidden; color: transparent; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff2b8, #f2c24f 55%, #a8781e); box-shadow: 0 0 4px #ffd36a99; }
+body[data-online] .shop-dock .hud-gold strong { font-size: 16px; }
+body[data-online] .shop-dock :is(.hud-pop, [data-debug="mobile:sell"], [data-debug="shop-lock"]) { grid-area: side; }
+body[data-online] .shop-dock [data-debug="shop-lock"] { align-self: start; }
+body[data-online] .shop-dock [data-debug="mobile:sell"] { align-self: center; }
+body[data-online] .shop-dock .hud-pop { align-self: end; justify-content: center; padding: 0 4px; }
+body[data-online] .shop-dock .hud-pop .hud-label { font-size: 10px; }
+body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-lock"]) { width: 100%; min-height: 0; height: 24px; padding: 0 4px; font-size: 11px; border-radius: 12px; }
+body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
+body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
+body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
+body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
+body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap; }
+body[data-online] .shop-dock[data-sell-hint]::after { border-radius: 8px; }
+
+/* L12 online 3D: the scene fills the window behind the panels, as in TFT. placeholder-renderer moves the layer to <body>
+   (#board-frame is a size container, which would clip a fixed layer) and keeps the board framed in #board-root's box, so
+   the item and orb docks, hover cards and combat floats still line up. */
+body[data-online]:has(.render3d-layer) { --c-surface: #14212cd9; }
+body[data-online] > .render3d-layer { position: fixed; inset: 0; z-index: 0; }
+/* #board-frame is sticky, so it stacks as one: it goes above the layer, and the 2D board inside it steps aside (hidden,
+   letting pointers through to the 3D canvas, which handles them). The frame's own gaps let pointers through as well (the
+   legend and orbs are drawn there); its panels take them back, and the overlays that never take them keep none. */
+body[data-online]:has(> .render3d-layer) #board-frame { z-index: 1; pointer-events: none; }
+body[data-online]:has(> .render3d-layer) #board-frame > :not(#board-root, #feedback-root, #item-dock, #orb-dock, .left-panel-toast, .battle-outcome, .d14-away-chip) { pointer-events: auto; }
+body[data-online]:has(> .render3d-layer) #board-root { visibility: hidden; }
+body[data-online]:has(.render3d-layer) :is(#panels-root, #online-countdown, #shop-dock, #lobby-root) { position: relative; z-index: 1; }
+body[data-online]:has(.render3d-layer) #online-sidebar { z-index: 1; }
+/* The status and 切回 2D sit in the free corner right of the shop bar; the label wraps rather than run under the bar. */
+body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right: 8px; bottom: 26px; max-width: 220px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* R1 3D layout (TFT today): the board takes the window. Three columns 232 / board / 232 (184 below 1500px) with no width cap;
+   #board-root (the 3D camera's box) fills the middle between the round capsule and the shop instead of the 2D 480:520
+   canvas. Left: owned augment icons over the trait strip; the strategy panel starts folded and opens as a drawer over the trait strip, clear of the
+   board. Right: a slim player list (portrait, HP, thin bar; level on hover) and the foldable battle chart. Translucent all round. */
+.augment-strip { display: none; }
+body[data-online] .augment-strip:not(:empty) { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; }
+.augment-strip .augment-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151fb3; font-size: 11px; cursor: help; }
+.augment-strip .augment-chip:has(img) { padding: 2px; border-radius: 6px; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e66; }
+.augment-strip .augment-icon { display: block; width: 28px; height: 28px; border-radius: 4px; }
+.summary-head[role="button"] { cursor: pointer; }
+.summary-head[role="button"]::after { content: "▾"; font-size: 11px; color: #9aaeb9; }
+.battle-summary[data-folded] .summary-head::after { content: "▸"; }
+.battle-summary[data-folded] > :not(.summary-head) { display: none; }
+body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-dock-h: clamp(140px, 19.5dvh, 220px);
+  --online-shop-left: max(11.6vw - 8px, 0px); --online-shop-w: min(67vw, 100vw - 236px);
+  --online-board-h: calc(100dvh - 16px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
+body[data-online]:has(> .render3d-layer) #app { max-width: none; padding: 8px; grid-template-columns: minmax(0, 1fr); }
+body[data-online]:has(> .render3d-layer) #board-frame { top: 8px; }
+body[data-online]:has(> .render3d-layer) #board-root { width: 100%; height: var(--online-board-h); }
+body[data-online]:has(> .render3d-layer) #shop-dock { width: var(--online-shop-w); justify-self: start; margin-left: var(--online-shop-left); background: #0b151fcc; }
+body[data-online]:has(> .render3d-layer) .item-dock { left: 248px; }
+/* The side UI floats on the scene as in TFT: no columns, no panels behind it. */
+body[data-online]:has(> .render3d-layer) #panels-root { position: fixed; z-index: 2; left: 8px; top: 8px; width: 13vw; min-width: 184px;
+  max-height: calc(100dvh - 32px - var(--online-dock-h)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+body[data-online]:has(> .render3d-layer):not([data-online-left="collapsed"]) #strategy-root { position: fixed; left: 8px; top: 44px; width: min(360px, 22vw);
+  max-height: calc(100dvh - 76px - var(--online-dock-h)); overflow-y: auto; padding: 10px; border: 1px solid #1d2f3d; border-radius: 8px; background: #0b151fe6; box-shadow: 0 6px 24px #000a; }
+body[data-online]:has(> .render3d-layer) #online-sidebar { position: fixed; right: 4px; top: 4px; width: 232px; padding: 4px 10px 4px 4px; max-height: calc(100dvh - 32px - var(--online-dock-h)); }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { padding: 4px 8px; background: none; }
+/* Players: name, HP in a small box and a round portrait, right-aligned with no row panel; my own seat first and larger. */
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seats { gap: 6px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 44px; grid-template-areas: "main hp avatar"; column-gap: 6px;
+  padding: 0; border: 0; border-radius: 24px 0 0 24px; background: none; box-shadow: none; text-shadow: 0 1px 2px #000; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { order: -1; grid-template-columns: minmax(0, 1fr) auto 64px; margin-bottom: 6px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat:hover { background: linear-gradient(270deg, #1c2e3bcc, #0b151f00); }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.viewing { background: linear-gradient(270deg, #68ddd044, #0b151f00); }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-main { grid-area: main; gap: 0; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-head { justify-content: flex-end; gap: 3px; font-size: 12px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-name { flex: 0 1 auto; color: #e2eef1; text-align: right; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-name { display: none; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-kind { padding: 0; background: none; font-size: 10px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-bar { display: none; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { grid-area: avatar; width: 44px; height: 44px; box-shadow: 0 0 0 2px #7d8f9c; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 64px; height: 64px; box-shadow: 0 0 0 3px #e6bc4a, 0 0 12px #e6bc4a88; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.opponent .seat-avatar { box-shadow: 0 0 0 2px #f08080, 0 0 8px #f0808088; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-foot { grid-area: hp; display: grid; justify-items: end; min-width: 0; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-hp { padding: 1px 5px; border: 1px solid #3a5260; background: #0b151fcc; font-size: 13px; line-height: 1.2; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-hp { padding: 2px 10px; border-color: #785a28; font-size: 24px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat:not(:hover, :focus-visible) .seat-level { display: none; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .battle-summary { background: #0b151fb3; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .summary-row { background: #17263399; }
+body[data-online]:has(> .render3d-layer) .trait-row { text-shadow: 0 1px 2px #000; }
+@media (max-width: 1500px) {
+  body[data-online]:has(> .render3d-layer) #panels-root { width: 196px; }
+  body[data-online]:has(> .render3d-layer) .item-dock { left: 210px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar { width: 192px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 36px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 36px; height: 36px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 52px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 52px; height: 52px; }
+  body[data-online] > .render3d-layer .render3d-bar { max-width: 168px; }
+}
+/* TFT: gold sits centred over the shop cards. */
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { justify-self: center; }
+/* Proportions of the TFT screen (user's reference shot): traits from ~20% down the left edge, players from ~13% down the right,
+   the shop ~67% wide starting ~12% in (bottom right stays free for the scouting minimap), streak beside the gold. */
+body[data-online]:has(> .render3d-layer) .left-panel-toggle { position: fixed; z-index: 3; left: 8px; top: 8px; width: auto; min-height: 26px; padding: 2px 10px; }
+body[data-online]:has(> .render3d-layer) :is(#stats-root, #legal-notice) { display: none; }
+body[data-online]:has(> .render3d-layer) #panels-root { top: 20dvh; max-height: calc(80dvh - 24px - var(--online-dock-h)); }
+body[data-online]:has(> .render3d-layer) .trait-column-title { display: none; }
+body[data-online]:has(> .render3d-layer) .trait-rows { gap: 6px; }
+body[data-online]:has(> .render3d-layer) .trait-row { grid-template-columns: 36px 26px minmax(0, 1fr); min-height: 44px; font-size: 14px; }
+body[data-online]:has(> .render3d-layer) .trait-row .trait-icon, body[data-online]:has(> .render3d-layer) .trait-row .trait-letter { width: 36px; height: 36px; padding: 6px; }
+body[data-online]:has(> .render3d-layer) .trait-count { padding: 1px 0; border: 1px solid #3a5260; background: #0b151fcc; }
+body[data-online]:has(> .render3d-layer) .trait-steps { font-size: 11px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-phase, body[data-online]:has(> .render3d-layer) #online-sidebar .online-round { display: none; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { display: flex; justify-content: flex-end; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seats { margin-top: calc(13dvh - 48px); gap: 10px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 56px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 56px; height: 56px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 76px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 76px; height: 76px; }
+body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: fixed; z-index: 2; left: calc(45.1vw + 120px); bottom: calc(var(--online-dock-h) - 22px); }
+body[data-online]:has(> .render3d-layer) .economy-interest { display: none; }
+body[data-online]:has(> .render3d-layer) #online-countdown { z-index: 2; }
+@media (max-width: 1500px) {
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 42px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 42px; height: 42px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 58px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 58px; height: 58px; }
+  body[data-online]:has(> .render3d-layer) #online-sidebar .online-seats { gap: 6px; }
+  body[data-online]:has(> .render3d-layer) .trait-row { grid-template-columns: 30px 24px minmax(0, 1fr); min-height: 38px; font-size: 13px; }
+  body[data-online]:has(> .render3d-layer) .trait-row .trait-icon, body[data-online]:has(> .render3d-layer) .trait-row .trait-letter { width: 30px; height: 30px; padding: 5px; }
+}

@@ -83,6 +83,34 @@ it('compresses synthetic geometry, animation and typed textures; rewrites effect
   expect(await readFile(join(input, 'models/sample/model.glb'))).toEqual(before);
   await expect(compressAssets({ from: input, out: output })).rejects.toThrow('compression-output-exists');
 }, 30000);
+it.each([false, true])('preserves an animated rig without vertices and skips meshopt (empty mesh: %s)', async emptyMesh => {
+  const { input, output, put } = await fixture();
+  const doc = new Document(), buffer = doc.createBuffer();
+  const root = doc.createNode('rig'), joint = doc.createNode('joint').setTranslation([1, 2, 3]);
+  root.addChild(joint);
+  if (emptyMesh) root.setMesh(doc.createMesh('empty'));
+  doc.createScene().addChild(root);
+  const times = doc.createAccessor().setType('SCALAR').setArray(new Float32Array([0, 1, 2])).setBuffer(buffer);
+  const values = doc.createAccessor().setType('VEC3').setArray(new Float32Array([1, 2, 3, 2, 2, 3, 3, 2, 3])).setBuffer(buffer);
+  const sampler = doc.createAnimationSampler().setInput(times).setOutput(values);
+  doc.createAnimation('move').addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(joint).setTargetPath('translation').setSampler(sampler));
+  await put('models/sample/model.glb', await new NodeIO().writeBinary(doc));
+  const before = await readFile(join(input, 'models/sample/model.glb'));
+  const report = await compressAssets({ from: input, out: output });
+  expect(report.ready).toBe(true);
+  expect(report.fallbacks).toContainEqual({ path: 'models/sample/model.glb', reason: 'empty-geometry-rig-preserved-without-meshopt' });
+  const result: Document = await (await compressionIO()).readBinary(await readFile(join(output, 'models/sample/model.glb')));
+  expect(result.getRoot().listExtensionsUsed().map((e: { extensionName: string }) => e.extensionName)).not.toContain('EXT_meshopt_compression');
+  const nodes = result.getRoot().listNodes();
+  expect(nodes.find(n => n.getName() === 'rig')!.listChildren().map(n => n.getName())).toEqual(['joint']);
+  expect(nodes.find(n => n.getName() === 'joint')!.getTranslation()).toEqual([1, 2, 3]);
+  const animation = result.getRoot().listAnimations()[0];
+  expect(animation.getName()).toBe('move');
+  expect(animation.listChannels()[0].getTargetNode()!.getName()).toBe('joint');
+  expect(Array.from(animation.listSamplers()[0].getInput()!.getArray()!)).toEqual([0, 2]);
+  expect(Array.from(animation.listSamplers()[0].getOutput()!.getArray()!)).toEqual([1, 2, 3, 3, 2, 3]);
+  expect(await readFile(join(input, 'models/sample/model.glb'))).toEqual(before);
+}, 30000);
 it('rejects source descendants and texture destination collisions before writes', async () => {
   const { input, output, put } = await fixture();
   await expect(compressAssets({ from: input, out: join(input, 'child') })).rejects.toThrow('overlaps-source');

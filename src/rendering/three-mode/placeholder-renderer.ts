@@ -21,14 +21,18 @@ import {
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
-import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
+import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
+import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
+/** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
+ * drop to the unversioned, unpacked per-file path, so they get longer and one more try. */
+const INDEX_TIMEOUT_MS = 20000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
@@ -94,14 +98,21 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
 
-const fetchJson = async (url: string): Promise<unknown> => {
+const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, cache: 'no-cache' });
     if (!response.ok) throw new Error(`http-${response.status}`);
     return await response.json();
   } finally { clearTimeout(timer); }
+};
+/** An index file, or null when the root has none (HTTP error); a timeout or dropped link gets one more try. */
+const fetchIndex = async (url: string): Promise<unknown> => {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fetchJson(url, INDEX_TIMEOUT_MS); }
+    catch (error) { if (attempt >= 1 || /^http-\d+$/.test((error as Error)?.message ?? '')) return null; }
+  }
 };
 
 async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
@@ -118,9 +129,11 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     let preloader: AssetPreloader | null = null;
     const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
-    const list = readPrecacheList(await fetchJson(`${assetBase}precache.json`).catch(() => null), cache.manifest);
+    const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
+    // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
+    const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
     const store = await openAssetStore();
-    preloader = new AssetPreloader(assetBase, list, store);
+    preloader = new AssetPreloader(assetBase, list, store, { packs });
     if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
     void navigator.storage?.persist?.().catch(() => false);
     void preloader.start();
@@ -250,33 +263,50 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (boardBox.isEmpty()) return;
     const center = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
     const tan = Math.tan(camera.fov * Math.PI / 360);
-    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.66 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
+    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
     camera.position.copy(center).addScaledVector(VIEW, distance);
     camera.lookAt(center);
   };
   scene.add(boardGroup);
+  // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
+  const arenaGroup = new Group();
+  scene.add(arenaGroup);
+  let lastFrame: BoardFrame | null = null;
+  const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
+  const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
+    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }) : null;
   let boardKey = '';
   const buildBoard = (frame: BoardFrame) => {
-    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}`;
+    lastFrame = frame;
+    arena?.place(frame);
+    const overlay = !!arena?.ready;
+    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}`;
     if (key === boardKey) return;
     boardKey = key;
     boardGroup.clear();
     const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
-    const own0 = own(new MeshStandardMaterial({ color: '#2d5c7a', roughness: 0.85 }));
-    const foe = own(new MeshStandardMaterial({ color: '#5a3a48', roughness: 0.85 }));
+    // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
+    const tileLook = (color: string) => overlay
+      ? { color, roughness: 0.85, transparent: true, opacity: 0.22, depthWrite: false } : { color, roughness: 0.85 };
+    const own0 = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
+    const foe = own(new MeshStandardMaterial(tileLook('#5a3a48')));
     const grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
       const mesh = new Mesh(tile, row < frame.rows / 2 ? foe : own0);
-      mesh.position.copy(hexCenter({ col, row }, grid)).setY(-3);
+      mesh.position.copy(hexCenter({ col, row }, grid)).setY(overlay ? 1 : -3);
+      if (overlay) mesh.scale.y = 0.2;
       boardGroup.add(mesh);
     }
+    // The arena has its own bench strip; the slot boxes are only drawn on the procedural board.
     const slot = own(new BoxGeometry(48, 4, 56)), slotMaterial = own(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
-    for (const point of frame.bench) {
+    for (const point of overlay ? [] : frame.bench) {
       const mesh = new Mesh(slot, slotMaterial);
       mesh.position.set(point.x, -2, point.y);
       boardGroup.add(mesh);
     }
     boardBox.setFromObject(boardGroup);
+    // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
+    for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
     for (const point of tabletop.layout(frame)) boardBox.expandByPoint(point);
     frameCamera();
   };
@@ -638,14 +668,39 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onContextMenu = (event: Event) => { if (stage.active) event.preventDefault(); };
   canvas.addEventListener('contextmenu', onContextMenu);
 
-  let width = 0, frameId = 0, last = performance.now();
+  let width = 0, height = 0, frameId = 0, last = performance.now();
+  // Online the layer fills the window behind the panels (style.css L12), so it moves from #board-root to <body>: inside
+  // #board-frame's size container a fixed layer would stay clipped to the frame. The board keeps #board-root's box: both
+  // cameras are framed for that box and offset so it lands where the box is, the rest of the window showing more scene.
+  // Offline the layer stays in the board and there is no offset.
+  const board = host.parentElement;
+  const page = typeof document === 'undefined' ? null : document.body;
+  let boxKey = '';
+  const readBox = () => board?.getBoundingClientRect?.() ?? null;
+  const frameBox = () => {
+    const view = canvas.getBoundingClientRect?.(), box = readBox();
+    boxKey = box ? `${box.left},${box.top},${box.width},${box.height}` : '';
+    if (!view) return null;
+    if (!box || box.width <= 0 || box.height <= 0 || (Math.abs(box.left - view.left) < 1 && Math.abs(box.top - view.top) < 1
+      && Math.abs(box.width - view.width) < 1 && Math.abs(box.height - view.height) < 1)) return null;
+    return { width: box.width, height: box.height, x: view.left - box.left, y: view.top - box.top };
+  };
   const resize = (w: number, h: number) => {
     if (w <= 0 || h <= 0) return;
-    width = w;
+    width = w; height = h;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    frameCamera(); stage.resize(w / h);
+    const box = frameBox();
+    camera.aspect = box ? box.width / box.height : w / h;
+    if (box) camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else camera.clearViewOffset();
+    frameCamera(); stage.resize(camera.aspect);
+    if (box) stage.camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else stage.camera.clearViewOffset();
+  };
+  // Once a frame: the online page may mark itself after the mount, and the box moves without the layer resizing (the
+  // left panel folding, a resized column, a scrolled page). One rect read; reframed only when it changed.
+  const followBox = () => {
+    if (page?.hasAttribute?.('data-online') && board && host.parentElement === board) page.append(host);
+    const box = readBox();
+    if (width > 0 && (box ? `${box.left},${box.top},${box.width},${box.height}` : '') !== boxKey) resize(width, height);
   };
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
@@ -674,7 +729,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); stage.update(seconds);
+    tabletop.update(seconds); stage.update(seconds); followBox();
     if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
   };
   resize(host.clientWidth, host.clientHeight);
@@ -692,7 +747,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      withdrawPicker(); clearEffects(); tabletop.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); tabletop.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

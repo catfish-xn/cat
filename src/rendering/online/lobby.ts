@@ -55,6 +55,8 @@ export class Lobby {
   private hidePicker() { const close = this.closePicker; this.closePicker = null; close?.(); }
   private button(name: string, label: string, action: () => void) { const b = element('button', label); b.type = 'button'; b.dataset.debug = name; b.addEventListener('click', action); return b; }
   render(view: LobbyView): void {
+    // No queue to join (a build without a room, local-room-unavailable.ts): no 队列 / 机器人 line.
+    this.count.hidden = !view.capacity;
     this.count.textContent = `队列 ${view.queue.length} / ${view.capacity}${view.queue.length < ROOM_CAPACITY ? ` · 开局时补 ${ROOM_CAPACITY - view.queue.length} 个机器人` : ' · 已满'}`;
     this.list.replaceChildren(...view.queue.map(entry => {
       const item = element('li', '', `queue-entry${entry.me ? ' me' : ''}`); item.dataset.debug = 'online:queue-entry';

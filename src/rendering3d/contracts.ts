@@ -10,7 +10,18 @@ export interface AssetManifest {
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;
+  /** Arena scenes (models of the same key) and their alignment to the hex grid; see BoardAlignment. */
+  boards?: Record<string, BoardEntry>;
 }
+/**
+ * Source → hex-grid placement, built offline against a reference grid (`target`: hex radius and origin of cell 0,0
+ * in board units). World = offset + scale × source; a live grid of another radius/origin is a uniform retarget.
+ */
+export interface BoardAlignment {
+  scale: Vec3; offset: Vec3;
+  target: { radius: number; origin: { x: number; y: number } };
+}
+export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number } }
 export type Vec3 = readonly [number, number, number];
 export type Curve = readonly { time: number; value: number }[];
 export type ColorCurve = readonly { time: number; value: Vec3 }[];
@@ -95,6 +106,20 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     }
   }
   if (m.actionEffects !== undefined) parseActionEffects(m.actionEffects, m);
+  if (m.boards !== undefined) assertBoards(m.boards, m);
+}
+
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const vec3 = (v: unknown): boolean => Array.isArray(v) && v.length === 3 && v.every(finite);
+/** Each board names a model of this manifest (same key) and how its source coordinates land on the hex grid. */
+function assertBoards(value: unknown, manifest: AssetManifest): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid-boards');
+  for (const [key, entry] of Object.entries(value as Record<string, BoardEntry>)) {
+    if (!Object.hasOwn(manifest.models, key)) throw new Error('invalid-board-model');
+    const a = entry?.alignment, target = a?.target;
+    if (!a || !vec3(a.scale) || !vec3(a.offset) || !target || !finite(target.radius) || target.radius <= 0
+      || !finite(target.origin?.x) || !finite(target.origin?.y)) throw new Error('invalid-board-alignment');
+  }
 }
 
 /** Also accepts build-report.actionEffects, but the host must deliberately select
