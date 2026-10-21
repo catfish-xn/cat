@@ -21,6 +21,7 @@ class Element {
 describe('optional 3D mode import boundary and fallback', () => {
   let board: Element, original2d: Element, renderer: Renderer3d;
   let mount: ReturnType<typeof vi.fn<MountRenderer3d>>;
+  let warmModels: ReturnType<typeof vi.fn>;
   let evaluations: { chunk: number; three: number; rejectImport: boolean };
   let observe: ReturnType<typeof vi.fn>, disconnect: ReturnType<typeof vi.fn>, createElement: ReturnType<typeof vi.fn>;
   let settled: Promise<void>, mountStarted: Promise<void>, rendererDisposed: Promise<void>;
@@ -34,6 +35,7 @@ describe('optional 3D mode import boundary and fallback', () => {
     rendererDisposed = new Promise<void>(done => { signalDisposed = done; });
     renderer = { status: 'placeholder', detail: 'synthetic', resize: vi.fn(), dispose: vi.fn(() => signalDisposed()) };
     mount = vi.fn<MountRenderer3d>().mockImplementation(async () => { signalMount(); return renderer; });
+    warmModels = vi.fn();
     observe = vi.fn(() => signalSettled()); disconnect = vi.fn(() => signalSettled()); createElement = vi.fn(() => new Element());
     vi.stubGlobal('window', { location: { search: '', href: 'https://example.test/cat/' } });
     vi.stubGlobal('document', { createElement });
@@ -50,7 +52,7 @@ describe('optional 3D mode import boundary and fallback', () => {
       evaluations.chunk++;
       if (evaluations.rejectImport) throw new Error('synthetic chunk unavailable');
       const actual = await importOriginal<typeof import('../src/rendering/three-mode/placeholder-renderer')>();
-      return { ...actual, mountRenderer3d: mount };
+      return { ...actual, mountRenderer3d: mount, useWarmModels: warmModels };
     });
   });
   afterEach(async () => {
@@ -124,6 +126,15 @@ describe('optional 3D mode import boundary and fallback', () => {
     expect(renderer.dispose).toHaveBeenCalledTimes(1); expect(enter()).toBeDefined();
     handle.dispose(); vi.doUnmock('../src/rendering/render-mode');
     expect(board.children).toEqual([original2d]);
+  });
+  it('passes all cost 1, then cost 2, then cost 3 models to warm-up, excluding higher tiers', async () => {
+    const { mountThreeMode } = await import('../src/rendering/three-mode/three-loader');
+    const { SHOP_CATALOG_BY_COST: catalog } = await import('../src/simulation/match-rules');
+    const handle = mountThreeMode(board as unknown as HTMLElement, '?render=3d'); await settled;
+    expect(warmModels).toHaveBeenCalledExactlyOnceWith([...catalog[1], ...catalog[2], ...catalog[3]]);
+    const ids = warmModels.mock.calls[0][0] as string[];
+    expect(ids.some(id => [...catalog[4], ...catalog[5]].includes(id))).toBe(false);
+    handle.dispose();
   });
   it('puts the 3D button back when 3D fails to load', async () => {
     vi.doMock('../src/rendering/render-mode', async importOriginal => {
