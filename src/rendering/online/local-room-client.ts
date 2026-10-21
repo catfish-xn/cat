@@ -15,7 +15,7 @@ import {
   Lobby, PlaceholderBattleResolver, RealClock, mirrorReplayTick, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
-import type { ClientListeners, GameClient, LobbyView, PlayerView, WireCommand } from './protocol';
+import type { ClientListeners, GameClient, LittleLegendId, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 import type { CombatReplay } from '../../presentation/combat-display';
 
@@ -96,10 +96,10 @@ export class LocalRoomClient implements GameClient {
     return () => { if (this.listeners === listeners) this.listeners = null; };
   }
 
-  joinQueue(name: string): void {
+  joinQueue(name: string, legend?: LittleLegendId): void {
     if (this.room && this.room.state.phase !== 'ended') return;
     if (this.mySeatId !== null && this.lobby.view(this.mySeatId).joined) return;
-    const joined = this.lobby.join(name.trim() || this.options.myName);
+    const joined = this.lobby.join(name.trim() || this.options.myName, legend);
     if (!joined.ok) { this.error = JOIN_ERRORS[joined.reason]; this.emitLobby(); return; }
     this.error = null; this.mySeatId = joined.seatId; this.emitLobby();
   }

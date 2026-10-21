@@ -443,7 +443,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function handleJoin(conn: Connection, message: ClientMessage & { type: 'join' }): void {
     if (conn.session && sessionLocked(conn.session)) return send(conn, fail(message.commandId, 'already-joined'));
     if (conn.session) { sessions.revoke(conn.session.seatId); conn.session.connection = null; conn.session = null; }
-    const joined = lobby.join(message.name);
+    const joined = lobby.join(message.name, message.legend);
     if (!joined.ok) return send(conn, fail(message.commandId, joined.reason));
     const { token, session } = sessions.issue(joined.seatId);
     bind(conn, session);

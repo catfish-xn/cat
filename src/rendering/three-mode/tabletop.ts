@@ -44,6 +44,8 @@ export interface TabletopContext {
   readonly effectScale: number;
   /** A lease of `id` when the asset manifest names that model; null otherwise (a stand-in is drawn). */
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
+  /** Model of each side's little legend now (cosmetic, board-feed legends); LEGEND_MODEL when absent. A change rebuilds that legend. */
+  readonly legendModel?: (side: 'me' | 'opponent') => string;
   /** The effect when the manifest names it; null otherwise (a stand-in is drawn). */
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
@@ -60,7 +62,7 @@ export interface Tabletop {
   dispose(): void;
 }
 
-interface LegendView { readonly id: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean }
+interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean }
 interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
 interface Bolt { from: Vector3; to: Vector3; elapsed: number; fx: ParticleEffect | null; mesh: Mesh | null; disposed: boolean }
@@ -125,15 +127,17 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
   const legend = (side: 'me' | 'opponent'): LegendView => {
+    const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
-    if (view) return view;
+    if (view?.model === model) return view;
+    if (view) dropLegend(side);
     const root = new Group(); root.name = `render3d-legend-${side}`;
-    view = { id: `legend:${side}`, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false };
+    view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false };
     legends.set(side, view);
     root.add(standIn(side));
     placeLegend(view); scene.add(root);
     const created = view;
-    void ctx.loadModel?.(LEGEND_MODEL).then(lease => {
+    void ctx.loadModel?.(model).then(lease => {
       if (created.disposed || lease.placeholder) { lease.release(); return; }
       created.root.clear();
       created.lease = lease;

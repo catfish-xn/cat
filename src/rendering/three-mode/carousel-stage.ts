@@ -73,6 +73,7 @@ export interface CarouselStageContext {
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
   readonly hasModel: (id: string) => boolean;
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
+  /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
   /** Item icon textures (tests pass a stub); defaults to three's TextureLoader. */
@@ -273,7 +274,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
 
   // --- seats -----------------------------------------------------------------------------------------------------
   const seatViews = new Map<string, SeatView>();
-  const createSeat = (seatId: string, me: boolean, index: number, count: number): SeatView => {
+  const legendOf = (legend: string | undefined) => legend && ctx.hasModel(`little-legend-${legend}`) ? `little-legend-${legend}` : ctx.legendModel;
+  const createSeat = (seatId: string, me: boolean, index: number, count: number, legend: string | undefined): SeatView => {
     const root = new Group(); root.name = `render3d-carousel-seat-${me ? 'me' : 'other'}`;
     const anchor = anchorAt(index, Math.max(8, count), LEGEND_RADIUS);
     anchor.y = surfaceAt(anchor.x, anchor.z, LEGEND_SURFACE);
@@ -287,7 +289,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     taken.add(tether);
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
       releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, carry: null, tether, countdown: null };
-    attach(view, ctx.legendModel, legendHeight);
+    attach(view, legendOf(legend), legendHeight);
     return view;
   };
   const dropCountdown = (view: SeatView) => {
@@ -509,7 +511,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     // Seats: stable public order; my seat's side faces the camera.
     view.seats.forEach((seat, index) => {
       let entry = seatViews.get(seat.seatId);
-      if (!entry) { entry = createSeat(seat.seatId, seat.me, index, view.seats.length); seatViews.set(seat.seatId, entry); }
+      if (!entry) { entry = createSeat(seat.seatId, seat.me, index, view.seats.length, seat.legend); seatViews.set(seat.seatId, entry); }
       entry.releaseAtMs = seat.releaseAtMs;
       if (seat.me) azimuth = Math.atan2(entry.anchor.x, entry.anchor.z);
       if (seat.me && !entry.indicator) {

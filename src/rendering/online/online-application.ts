@@ -9,7 +9,8 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, publishCarousel } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, publishCarousel, setBoardLegends } from '../board-feed';
+import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
 import { BattleOutcome } from './battle-outcome';
@@ -108,7 +109,7 @@ export class OnlineApplication implements SceneApplication {
   constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
-    this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch() });
+    this.lobby = new Lobby(app, { join: name => client.joinQueue(name, readLegendChoice()), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
@@ -235,6 +236,9 @@ export class OnlineApplication implements SceneApplication {
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
+    // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
+    const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
+    setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
     this.syncSpectating(view);
     this.syncCarousel(view);
     this.syncBattleViews();
@@ -314,7 +318,7 @@ export class OnlineApplication implements SceneApplication {
       const elapsedMs = this.carousel.elapsedNow() ?? view.elapsedMs, pending = this.carousel.pendingSlot;
       this.carouselNextRelease = Math.min(Infinity, ...Object.values(view.releaseAtMs).filter(at => at > elapsedMs));
       return { id: view.id, elapsedMs, at: performance.now(),
-        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, releaseAtMs: view.releaseAtMs[seat.seatId] ?? Infinity })),
+        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, releaseAtMs: view.releaseAtMs[seat.seatId] ?? Infinity, ...(seat.legend ? { legend: seat.legend } : {}) })),
         slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel,
           cost: getHeroIdentity(slot.definitionId).cost,
           items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), pickedBy: slot.pickedBy,
@@ -390,7 +394,7 @@ export class OnlineApplication implements SceneApplication {
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
-    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
+    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null);
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();

@@ -25,6 +25,7 @@ import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } fro
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { offerLegendPicker } from './legend-picker';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
@@ -232,9 +233,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     clearTimeout(calloutTimer); calloutTimer = setTimeout(() => callout?.classList.remove('flash'), 1800);
   };
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
-    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
+  // Each side's own little legend (board-feed legends) when the root has it, else the default 河灵.
+  const legendModel = (side: 'me' | 'opponent') => {
+    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : LEGEND_MODEL;
+    return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+  };
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
+    loadModel: models.cache ? id => models.cache!.load(id) : null,
     loadEffect });
+  // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
+  const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -684,7 +692,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); tabletop.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
