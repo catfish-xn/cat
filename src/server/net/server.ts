@@ -158,6 +158,8 @@ export const SPOT_CHECK_EVERY_ROUNDS = 4;
 export const DEFAULT_SLICE_MS = 20;
 /** A write-queue task (room slice, deadline, push) taking longer than this is logged as `task.slow`. */
 export const SLOW_TASK_MS = 50;
+/** At most one `task.slow` line per task kind this often; it counts the slow tasks since the last line and their longest. */
+export const SLOW_TASK_LOG_EVERY_MS = 10_000;
 /** A `loop.lag` report whose largest delay reaches this is a warning; below it the report is debug. */
 export const LOOP_LAG_WARN_MS = 100;
 
@@ -236,12 +238,24 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     schedule: (at, fn) => clock.schedule(at, () => queue.push(() => timed('room', fn))),
     cancel: handle => clock.cancel(handle),
   };
-  /** Runs one write-queue task and logs it when it held the single writer (and the event loop) past SLOW_TASK_MS. */
+  /**
+   * Runs one write-queue task and notes it when it held the single writer (and the event loop) past SLOW_TASK_MS.
+   * Throttled per task kind, so sustained blocking does not add a log line per task on top of it.
+   */
+  const slowTasks = new Map<string, { count: number; longestMs: number; loggedAt: number }>();
   function timed(task: string, fn: () => void): void {
     const started = clock.now();
     try { fn(); } finally {
-      const ms = clock.now() - started;
-      if (ms >= SLOW_TASK_MS) log('warn', 'task.slow', { task, ms: Math.round(ms), roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+      const now = clock.now(), ms = now - started;
+      if (ms >= SLOW_TASK_MS) {
+        const slow = slowTasks.get(task) ?? { count: 0, longestMs: 0, loggedAt: -Infinity };
+        slow.count++; slow.longestMs = Math.max(slow.longestMs, ms); slowTasks.set(task, slow);
+        if (now - slow.loggedAt >= SLOW_TASK_LOG_EVERY_MS) {
+          log('warn', 'task.slow', { task, count: slow.count, longestMs: Math.round(slow.longestMs), lastMs: Math.round(ms),
+            roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+          slow.count = 0; slow.longestMs = 0; slow.loggedAt = now;
+        }
+      }
     }
   }
   // First-pass capture (MULTIPLAYER_CONTRACT): a battle with a human or connected seat records its replay frames while it
