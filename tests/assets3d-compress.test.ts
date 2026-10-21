@@ -86,6 +86,22 @@ it('rejects source descendants and texture destination collisions before writes'
   await put('textures/spark.webp', 'synthetic-collision');
   await expect(compressAssets({ from: input, out: output })).rejects.toThrow('compression-path-collision');
 });
+it('writes to a new real output outside assets3d-local', async () => {
+  const root = await mkdtemp(resolve('compression-output-test-'));
+  try {
+    const input = join(root, 'input'), output = join(root, 'nested', 'output');
+    await mkdir(input);
+    await writeFile(join(input, 'manifest.json'), JSON.stringify({ schemaVersion: 1, models: {}, effects: {} }));
+    await writeFile(join(input, 'notes.txt'), 'synthetic-copy');
+    expect((await compressAssets({ from: input, out: output })).ready).toBe(true);
+    expect(await readFile(join(output, 'notes.txt'), 'utf8')).toBe('synthetic-copy');
+    await expect(compressAssets({ from: input, out: output })).rejects.toThrow('compression-output-exists');
+  } finally {
+    withinRoot(resolve('.'), root);
+    expect(root).not.toBe(resolve('.'));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 it('reads nested input junctions and refuses an existing output junction', async () => {
   const { input, output } = await fixture();
   const linked = join(dirname(input), 'linked');
@@ -98,5 +114,5 @@ it('reads nested input junctions and refuses an existing output junction', async
   expect((await lstat(output)).isSymbolicLink()).toBe(false);
   const alias = join(dirname(input), 'alias');
   await symlink(output, alias, 'junction');
-  await expect(compressAssets({ from: linked, out: alias })).rejects.toThrow('compression-output-exists');
+  await expect(compressAssets({ from: linked, out: alias })).rejects.toThrow('merge-output-link');
 }, 30000);
