@@ -46,7 +46,7 @@ export const ORBIT_SECONDS = 48;
  * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
  */
-const STAGE_RADIUS = 8.6, FRAME_FILL = 0.98, RIM_POINTS = 48, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 8.6, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
 /**
  * Effects (manifest keys). One variant of each is chosen explicitly: the plain restraint for my seat and the enemy one for
  * others, the Galaxy first-draft wall. The restraint plays only its reviewed early part (the later part shows a grey band),
@@ -306,9 +306,11 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     if (!rim.length) measureRim();
     const direction = VIEW.clone().applyAxisAngle(new Vector3(0, 1, 0), azimuth);
     const target = new Vector3(0, legendHeight * 0.5, 0);
-    // The nearest distance that still fits the rim, by bisection (the fit only gets easier farther out); kept until the
-    // view's shape, its side or the platform changes.
-    const key = `${camera.aspect}/${azimuth}`;
+    // The nearest distance that still fits the rim, by bisection (the fit only gets easier farther out), in the projection
+    // as drawn: the host sets its view offset after resize(), so each update re-checks. Kept until the view's shape or
+    // offset, its side or the platform changes.
+    const view = camera.view;
+    const key = `${camera.aspect}/${azimuth}/${view?.enabled ? [view.fullWidth, view.fullHeight, view.offsetX, view.offsetY, view.width, view.height].join(',') : ''}`;
     if (fitted.key !== key) {
       let near = STAGE_RADIUS * cell * 0.5, far = STAGE_RADIUS * cell * 20;
       for (let step = 0; step < 24; step++) {
@@ -704,7 +706,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     if (!current) return;
     units.rotation.y = orbitAngle();
     syncLocks(false);
-    if (intro > 0) { intro = Math.max(0, intro - seconds); frameCamera(); }
+    if (intro > 0) intro = Math.max(0, intro - seconds);
+    frameCamera(); // cheap unless the projection changed since the last fit
     for (const seat of seatViews.values()) moveSeat(seat, seconds);
     for (const view of [...seatViews.values(), ...unitViews.values()]) {
       const output = view.state.output;
