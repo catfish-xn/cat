@@ -1,0 +1,818 @@
+{
+  "status": "draft-feature-epoch-and-targeted-checks-verified;full-fast-not-green",
+  "baseCommit": "30cf934446719a0da0d3cea1667bf84a3df5296c",
+  "gitWriteCommands": false,
+  "networkAccess": false,
+  "prPolicy": "Keep draft until v16 release closes; no PR created in this offline workspace",
+  "identity": {
+    "contentDigest": "fnv1a32-utf16:8a955c10",
+    "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+    "rulesVersion": "s13-g2-3-v17",
+    "contentVersion": "s13-14.24b-g2-3-v17",
+    "schemaVersion": 7,
+    "previousContentDigest": "fnv1a32-utf16:de829c8a",
+    "previousLootReplayDigest": "fnv1a32-utf16:62c76cb9",
+    "traceHashes": {
+      "state": "c928f6a4b2524bb774b6c0769cdf910e044a9c5e1dcdc550008e7e0f5e0ed445",
+      "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+      "rng": "e53503850192286f5ab6b91c25bb886c07072224c2ea44c3cf24947a22917f29"
+    },
+    "firstBattle": {
+      "seed": 42,
+      "ticks": 164,
+      "events": 106,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:1db5b9e9",
+      "eventHash": "fnv1a32-utf16:cf452d32"
+    },
+    "reason": "S13 v17: restore Avarice Incarnate to the online anomaly pool; authoritative live-bank wiring already present; old saves rejected without migration."
+  },
+  "digestComparison": {
+    "before": {
+      "contentDigest": "fnv1a32-utf16:de829c8a",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    },
+    "after": {
+      "contentDigest": "fnv1a32-utf16:8a955c10",
+      "lootReplayDigest": "fnv1a32-utf16:62c76cb9",
+      "rulesManifestDigest": "fnv1a32-utf16:31950a0f"
+    }
+  },
+  "tsc": {
+    "exitCode": 0,
+    "signal": null,
+    "elapsedMs": 38410,
+    "command": [
+      "node_modules/typescript/bin/tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ]
+  },
+  "build": {
+    "exitCode": 0,
+    "signal": null,
+    "elapsedMs": 75331,
+    "command": "npm.cmd run build -- --configLoader runner"
+  },
+  "bundle": {
+    "files": [
+      {
+        "file": "dist/assets/3d/basis_transcoder-o4Hde_L7.js",
+        "bytes": 57529,
+        "gzip": 15143,
+        "sha256": "8478b5b6d6b74e7d3082b89f6417321d8d1dc0307f2b30d4484bb11b441696a1"
+      },
+      {
+        "file": "dist/assets/3d/render3d-DEm5B6nG.js",
+        "bytes": 719692,
+        "gzip": 197994,
+        "sha256": "183fdac237f9a4e61e9258e9f203e4b8fc7b341586ea0d35169bcfa555865802"
+      },
+      {
+        "file": "dist/assets/index-C9JcEHd2.js",
+        "bytes": 2109437,
+        "gzip": 626556,
+        "sha256": "5c94844059826bcea668fe3530ea768fb35af74d49049eee73308ba081fa8217"
+      }
+    ],
+    "gzipBytes": 626556,
+    "baselineGzipBytes": 424763,
+    "baselineReference": "M7 retained published budget baseline; docs/V16_PREMERGE_265.md",
+    "ratio": 1.4750719813166402,
+    "limit": 1.49,
+    "passed": true,
+    "allAssetsGzipBytes": 839693,
+    "allAssetsRatio": 1.9768506202282214,
+    "production2dFiles": [
+      {
+        "file": "dist/assets/index-C9JcEHd2.js",
+        "bytes": 2109437,
+        "gzip": 626556,
+        "sha256": "5c94844059826bcea668fe3530ea768fb35af74d49049eee73308ba081fa8217"
+      }
+    ],
+    "lazy3dFiles": [
+      {
+        "file": "dist/assets/3d/basis_transcoder-o4Hde_L7.js",
+        "bytes": 57529,
+        "gzip": 15143,
+        "sha256": "8478b5b6d6b74e7d3082b89f6417321d8d1dc0307f2b30d4484bb11b441696a1"
+      },
+      {
+        "file": "dist/assets/3d/render3d-DEm5B6nG.js",
+        "bytes": 719692,
+        "gzip": 197994,
+        "sha256": "183fdac237f9a4e61e9258e9f203e4b8fc7b341586ea0d35169bcfa555865802"
+      }
+    ],
+    "scope": "Established M7 production 2D budget: direct dist/assets/*.js; independent lazy dist/assets/3d/*.js reported separately"
+  },
+  "epoch": {
+    "baseCommit": "30cf934446719a0da0d3cea1667bf84a3df5296c",
+    "steps": [
+      {
+        "name": "record-release",
+        "args": [
+          "scripts/record-v17-release.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 270001,
+        "log": "artifacts\\v17-recording\\record-release.log"
+      },
+      {
+        "name": "record-herald",
+        "args": [
+          "tests/fixtures/record-v17-herald.cjs",
+          "--write"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 123542,
+        "log": "artifacts\\v17-recording\\record-herald.log"
+      },
+      {
+        "name": "record-inputs",
+        "args": [
+          "scripts/record-v17-inputs.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 38069,
+        "log": "artifacts\\v17-recording\\record-inputs.log"
+      },
+      {
+        "name": "record-live-reveal",
+        "args": [
+          "scripts/record-v17-live-reveal.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 57394,
+        "log": "artifacts\\v17-recording\\record-live-reveal.log"
+      },
+      {
+        "name": "check-inputs",
+        "args": [
+          "scripts/record-v17-inputs.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 41100,
+        "log": "artifacts\\v17-recording\\check-inputs.log"
+      },
+      {
+        "name": "check-herald",
+        "args": [
+          "scripts/verify-m8-herald-fixtures.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 88654,
+        "log": "artifacts\\v17-recording\\check-herald.log"
+      },
+      {
+        "name": "check-history",
+        "args": [
+          "scripts/v17-fixture-audit.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 4293,
+        "log": "artifacts\\v17-recording\\check-history.log"
+      },
+      {
+        "name": "check-live-reveal",
+        "args": [
+          "scripts/record-v17-live-reveal.cjs",
+          "--baseline-commit=30cf934446719a0da0d3cea1667bf84a3df5296c",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 57068,
+        "log": "artifacts\\v17-recording\\check-live-reveal.log"
+      },
+      {
+        "name": "compare-digests",
+        "args": [
+          "scripts/compare-v17-digests.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 35955,
+        "log": "artifacts\\v17-recording\\compare-digests.log"
+      }
+    ],
+    "complete": true
+  },
+  "fullFast": {
+    "command": "node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers 4 --reporter=json --outputFile=artifacts/v17-recording/fast-initial.json",
+    "exitCode": 1,
+    "success": false,
+    "total": 5560,
+    "passed": 5512,
+    "failed": 25,
+    "pending": 23,
+    "all": {
+      "files": 417,
+      "failedFiles": 20,
+      "passed": 5512,
+      "failed": 25,
+      "skipped": 23
+    },
+    "server": {
+      "files": 48,
+      "failedFiles": 3,
+      "passed": 286,
+      "failed": 6,
+      "skipped": 4
+    },
+    "nonServer": {
+      "files": 369,
+      "failedFiles": 17,
+      "passed": 5226,
+      "failed": 19,
+      "skipped": 19
+    },
+    "rawJsonSha256": "3eb9a05f6a2c81ff4e7b889ee6bf10d160e5c8d5fc99263cb92cefc5f9a24e8a",
+    "failures": [
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\b3fix\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1163:52\n    at buildResponseToResult (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1209:7)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1236:16\n    at responseCallbacks.<computed> (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:886:9)\n    at handleIncomingPacket (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:941:12)\n    at Socket.readFromStdout (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:864:7)\n    at Socket.emit (node:events:518:28)\n    at addChunk (node:internal/streams/readable:561:12)"
+            ]
+          },
+          {
+            "name": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\set13-worktrees\\\\b3fix\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1163:52\n    at buildResponseToResult (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1209:7)\n    at C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:1236:16\n    at responseCallbacks.<computed> (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:886:9)\n    at handleIncomingPacket (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:941:12)\n    at Socket.readFromStdout (C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules\\esbuild\\lib\\main.js:864:7)\n    at Socket.emit (node:events:518:28)\n    at addChunk (node:internal/streams/readable:561:12)"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/g2-2-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "freezes one G2-2 identity on the P7 merged base and retains historical bytes",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'c93bc7737abe6016e6a8967cc8b30e038ab66…' to be 'b3b8d3a80181cbc85f5dabdcf2c3af4563495…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/g2-2-identity.test.ts:16:61\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/g2-augments-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "retains W4 historical bytes and rejects their obsolete identity",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '9ed91fe64b6ff55a76ebf4754b537e096f777…' to be '387522c770720d46e7c5f000715d5676f3496…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/g2-augments-identity.test.ts:10:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "M5 mage restores every command and tick; rejected insertion preserves every field",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Test timed out in 360000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at chain (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m5-replay-mage.test.ts:4:1\n    at VitestModuleEvaluator._runInlinedModule (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/module-evaluator.js:261:4)\n    at VitestModuleRunner.directRequest (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vite/dist/node/module-runner.js:1146:59)\n    at VitestModuleRunner.cachedRequest (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vite/dist/node/module-runner.js:1053:73)\n    at VitestModuleRunner.import (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vite/dist/node/module-runner.js:1014:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3448:5"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "M6 independent route/history/playback/session integration sniper-caitlyn: every completed battle has exact original state/events and isolated playback",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Test timed out in 180000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at chain (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m6-integration-helper.ts:23:31\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:22)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2768:51)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3451:26"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/m8-b5-instances.test.ts",
+        "suiteMessage": "Hook timed out in 10000ms.\nIf this is a long-running hook, pass a timeout value as the last argument or configure it globally with \"hookTimeout\".",
+        "cases": [
+          {
+            "name": "B5 permanent equipment constraints and atomic commands blue-buff is unique per holder, not per inventory or team",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands last-whisper is unique per holder, not per inventory or team",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands quicksilver is unique per holder, not per inventory or team",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands allows three nonunique copies but refuses a fourth without spending resources or event IDs",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands three-slot item requested at 0 uses canonical parent slot 0 and reserves all slots",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands three-slot item requested at 1 uses canonical parent slot 0 and reserves all slots",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands three-slot item requested at 2 uses canonical parent slot 0 and reserves all slots",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 0",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 1",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 2",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands phase then identity then input then conflicts; same item has the frozen reason",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands successful combine consumes exactly two IDs and one serial; stale replay fails atomically",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands upgrade does not bypass blue-buff / blue-buff placement constraints",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands upgrade does not bypass thiefs-gloves / sword placement constraints",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B5 permanent equipment constraints and atomic commands upgrade does not bypass sword / thiefs-gloves placement constraints",
+            "status": "skipped",
+            "failureMessages": []
+          }
+        ]
+      },
+      {
+        "file": "tests/m8-b7-audit-vectors.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "B7 audit: Match save/restore of real encounters 5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Test timed out in 20000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at Object.chain (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:10\n    at Array.forEach (<anonymous>)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2866:10\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m8-b7-audit-vectors.test.ts:127:46\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/m8-b8-golden-guard.test.mjs",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "B8 exact reviewed golden migration guards preserves the exact ff60a79/4554f5a bytes and rejects a semantically equal reserialization",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'bb6d40336d122149c43b6d4fea93fb6cc7b38…' to be '007b6b4136d6959b227cbd9567948f83dca75…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m8-b8-golden-guard.test.mjs:21:24\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/m8-b9-golden-guard.test.mjs",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "B9 reviewed golden migration binds golden, archive and updater to the reviewed audit",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '0cc4ba7885a375f80355893625e95b434a4b5…' to be 'ae227f505d9cdb31fbdd16e37263040e34d10…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m8-b9-golden-guard.test.mjs:21:61\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          },
+          {
+            "name": "B9 reviewed golden migration binds the regenerated Herald fixtures to their classified migration evidence",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '4e3f2dad08abd11275d4f6e6e5cd75dcbf86b…' to be 'a530483bdbaeb7c2f218c4dc24cef09c53f67…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/m8-b9-golden-guard.test.mjs:41:59\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "binds v17 to fresh public rules and preserved v16 byte evidence",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'dc6dbfa047f0148df6f27352a84889c3e9d31…' to be '04e5351c3f4da628939508225a0fae618ca05…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/opening-random-identity.test.ts:208:70\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/p7-1-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "binds P7-1 once and preserves all historical golden bytes and route commands/events",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '7ab698fe7cc3b790b233d79e1b724e01e3439…' to be 'b623b030883b07960bbc6b0005fdb1fde00ad…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/p7-1-identity.test.ts:18:63\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/p7-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "binds P7 once and preserves all historical golden bytes and route commands/events",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '743db7ee30017e4f57892245bf53f643a7f65…' to be '2d2c18fe87ae02e396c25a6b55d26ed91fc6b…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/p7-identity.test.ts:18:63\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/t11-golden.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "T11 binds regenerated route/probe evidence to the reviewed audit and preserved historical identity",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'ae72504bee94f84f0b5393fb62792aeceab5f…' to be '1369f32bb8790f3a756819623e52f857e0e6c…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t11-golden.test.ts:16:63\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/t12-golden.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "T12 binds full-route digest-only audit and historical identity without changing historical evidence",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '392dcf24b26f709c55c57ac9689b6a661ad55…' to be '2eb99cc8fdde0be2df0b987fa4eabea554d1f…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t12-golden.test.ts:17:48\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/t13-a-golden.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "T13-A binds full-route digest-only audit and preserved historical identity without changing historical evidence",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '4a2d6dc716f7260ea0ae48f5b371c85bcacb1…' to be '7827c91f7edb5009f3b8d00bd874b9c29e898…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t13-a-golden.test.ts:17:50\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/t13-golden.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "T13 records independent full-route audits while preserving the T12 golden bytes",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '778f90be40809c27e71b22ceabe0f2e786969…' to be '9acaea36280a4d7405b59bcfab38e438624ab…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t13-golden.test.ts:9:62\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/t13-identity.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "preserves original T13 bytes and pins genuinely re-recorded commands, events and states",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '050e49574bdffbd2e5682d588c3e9dbdc07c3…' to be 'b45aa9b5a046fffd7a5022a539982ffe4db50…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t13-identity.test.ts:29:62\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          },
+          {
+            "name": "pins G2 public-command byte evidence while preserving #90 recording bytes",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected '332a6f2555c076c72b349f66afb5858e1fdbf…' to be 'e5397017e626b068dbf1acf45f2e2c2ee353f…' // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/t13-identity.test.ts:46:65\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+            ]
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+            ]
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: expected 'node:events:496\\r\\n      throw er; //…' to contain 'Server replay error:'\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/e2e-replay-errors.test.ts:24:39\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+            ]
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+            "status": "failed",
+            "failureMessages": [
+              "AssertionError: node:events:496\r\n      throw er; // Unhandled 'error' event\r\n      ^\r\n\r\nError: spawn C:\\Program Files\\nodejs\\node.exe ENOENT\r\n    at ChildProcess._handle.onexit (node:internal/child_process:285:19)\r\n    at onErrorNT (node:internal/child_process:483:16)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\r\nEmitted 'error' event on ChildProcess instance at:\r\n    at ChildProcess._handle.onexit (node:internal/child_process:291:12)\r\n    at onErrorNT (node:internal/child_process:483:16)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {\r\n  errno: -4058,\r\n  code: 'ENOENT',\r\n  syscall: 'spawn C:\\\\Program Files\\\\nodejs\\\\node.exe',\r\n  path: 'C:\\\\Program Files\\\\nodejs\\\\node.exe',\r\n  spawnargs: [\r\n    '-e',\r\n    \"process.stdout.write('READY\\\\n'); setImmediate(() => process.stderr.write('ordinary server warning\\\\n'));\"\r\n  ]\r\n}\r\n\r\nNode.js v22.17.0\r\n: expected 1 to be +0 // Object.is equality\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/e2e-replay-errors.test.ts:23:42\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/server/lifecycle.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "B8 sliced resolution publishes the same rounds whether a frozen round is resolved in one go or in slices of a few ticks",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B8 sliced resolution refuses commands while the round is frozen and resolves one slice per clock turn",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B8 sliced resolution ends a slice once the clock passed sliceMs, in steps of SLICE_STEP_TICKS, and publishes the same round",
+            "status": "skipped",
+            "failureMessages": []
+          },
+          {
+            "name": "B8 sliced resolution stops resolving and publishes nothing once disposed in the middle of a frozen round",
+            "status": "skipped",
+            "failureMessages": []
+          }
+        ]
+      },
+      {
+        "file": "tests/server/replay-first-pass.test.ts",
+        "suiteMessage": "",
+        "cases": [
+          {
+            "name": "game server: spot check logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at chain (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/replay-first-pass.test.ts:131:3\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:22)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2768:51)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3451:26"
+            ]
+          },
+          {
+            "name": "game server: spot check checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between",
+            "status": "failed",
+            "failureMessages": [
+              "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at chain (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at C:/Users/Administrator/Desktop/set13-worktrees/b3fix/tests/server/replay-first-pass.test.ts:148:3\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:22)\n    at Object.collect (file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2768:51)\n    at file:///C:/Users/Administrator/Desktop/set13-worktrees/compress/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3451:26"
+            ]
+          }
+        ]
+      }
+    ],
+    "interpretation": "Original full-run result retained without subtracting recovered failures. One v17 audit mismatch read the earlier recording; final related rerun uses the completed current epoch. No claim that the full fast suite passed."
+  },
+  "relatedFinal": {
+    "exitCode": 0,
+    "elapsedMs": 28906,
+    "args": [
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "tests/opening-random-identity.test.ts",
+      "tests/v17-avarice-online.test.ts",
+      "tests/v15-anomaly-availability.test.ts",
+      "tests/s13-p1-avarice.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/live-gold-exports.test.ts",
+      "tests/d11-wiring-online.test.ts",
+      "--configLoader",
+      "runner",
+      "--project",
+      "fast",
+      "--maxWorkers",
+      "4",
+      "--reporter=json",
+      "--outputFile=artifacts/v17-recording/related-final.json"
+    ],
+    "files": 8,
+    "failedFiles": 0,
+    "passed": 192,
+    "failed": 0,
+    "skipped": 0,
+    "total": 192
+  },
+  "serialReruns": [
+    {
+      "file": "tests/m5-replay-mage.test.ts",
+      "exitCode": 0,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "jsonSha256": "e7e458f570cfe1a40017fc6a59d9d023d15774f086d8730564b7de9b14ab413c",
+      "tests": 1
+    },
+    {
+      "file": "tests/m6-integration-sniper-caitlyn.test.ts",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "jsonSha256": "0145bd5a35e8a026a41332a504d5d33269e835617e3ebf19ffdb1bb0380c0b16",
+      "tests": 2
+    },
+    {
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "exitCode": 0,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "jsonSha256": "6a918f948dee71927c6017d0c241aa56593ec5039192cf794a8a4910e6b409e4",
+      "tests": 14
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "exitCode": 0,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "jsonSha256": "e5c35577f18f499836aa42c073755cc83ef416048c5c2d511ddf7a681f36c8db",
+      "tests": 18
+    }
+  ],
+  "residuals": {
+    "historicalEolFailedAssertions": 13,
+    "historyEvidence": "docs/evidence/v17/historical-eol-diagnosis.json",
+    "explorerBracerSubprocessBuildFailures": 2,
+    "serverFailedAssertions": 6,
+    "serverSkipped": 4,
+    "serverFailedFiles": [
+      "tests/server/e2e-replay-errors.test.ts",
+      "tests/server/replay-first-pass.test.ts",
+      "tests/server/lifecycle.test.ts"
+    ],
+    "serverAcceptanceRequirements": 6,
+    "oldPrivateInputsCompatible": false,
+    "deploymentRequiresDrainingMatches": true
+  },
+  "integrity": {
+    "historicalV15V16Files": 58,
+    "historicalByteIdentical": true,
+    "forbiddenFiles": 196,
+    "forbiddenByteIdentical": true,
+    "changedAndNewFiles": [
+      "docs/D11_WIRING_V15.md",
+      "docs/LIVE_GOLD_EXPORTS.md",
+      "docs/MATCH_CONTRACT.md",
+      "docs/MULTIPLAYER_CONTRACT.md",
+      "docs/UI_REQUESTS.md",
+      "scripts/verify-m8-herald-fixtures.cjs",
+      "src/simulation/content/anomalies.ts",
+      "src/simulation/content/identity-constants.ts",
+      "src/simulation/m8/contracts.ts",
+      "src/simulation/m8/version.ts",
+      "tests/b8-resumable-battle-helper.ts",
+      "tests/c19-missed-pulse.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/fixtures/m5/assert-golden.cjs",
+      "tests/fixtures/m8-golden-states.cjs",
+      "tests/fixtures/m8-neutral-public-route.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m8-contracts.test.ts",
+      "tests/match-contract.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/s13-p1-avarice.test.ts",
+      "tests/ur-i3-combat-statuses.test.ts",
+      "tests/v15-anomaly-availability.test.ts",
+      "docs/V17_AVARICE_ONLINE.md",
+      "docs/evidence/v17/epoch-verification.json",
+      "docs/evidence/v17/historical-checkout-bytes.json",
+      "docs/evidence/v17/historical-eol-diagnosis.json",
+      "docs/evidence/v17/input-fixture-audit.json",
+      "docs/evidence/v17/live-reveal-audit.json",
+      "docs/evidence/v17/release-audit.json",
+      "scripts/check-v17-tests.cjs",
+      "scripts/compare-v17-digests.cjs",
+      "scripts/record-v17-inputs.cjs",
+      "scripts/record-v17-live-reveal.cjs",
+      "scripts/record-v17-release.cjs",
+      "scripts/v17-fixture-audit.cjs",
+      "scripts/verify-v17-epoch.cjs",
+      "tests/fixtures/m5/full-match-golden.v17.json",
+      "tests/fixtures/record-v17-herald.cjs",
+      "tests/fixtures/v17-b8-fingerprints.json",
+      "tests/fixtures/v17-c19-seed-9-minimal.json",
+      "tests/fixtures/v17-herald-raw/edge-of-night.json",
+      "tests/fixtures/v17-herald-raw/evenshroud.json",
+      "tests/fixtures/v17-herald-raw/ionic-spark--evenshroud.json",
+      "tests/fixtures/v17-herald-raw/ionic-spark.json",
+      "tests/fixtures/v17-herald-raw/manifest.json",
+      "tests/fixtures/v17-herald-raw/quicksilver.json",
+      "tests/fixtures/v17-herald-raw/trajectory.json",
+      "tests/fixtures/v17-herald-support/generate.ts",
+      "tests/fixtures/v17-recorded-states/cannon.json.gz",
+      "tests/fixtures/v17-recorded-states/sniper.json.gz",
+      "tests/v17-avarice-online.test.ts",
+      "tests/v17-content-baseline.json"
+    ]
+  },
+  "environment": {
+    "platform": "win32",
+    "node": "v22.17.0",
+    "zlib": "1.3.0.1-motley-780819f",
+    "dependencyLink": {
+      "original": "C:\\Users\\Administrator\\Desktop\\set13-worktrees\\assets3d\\node_modules",
+      "temporary": "C:\\Users\\Administrator\\Desktop\\set13-worktrees\\compress\\node_modules",
+      "network": false
+    },
+    "dependencyLinkRestored": true
+  },
+  "earlierAttempts": {
+    "checkoutEol": "artifacts/v17-recording/initial-checkout-eol-failure.log",
+    "assertionEol": "artifacts/v17-recording/eol-assertion-epoch-failure.json",
+    "canonicalVsCheckout": "artifacts/v17-recording/canonical-checkout-release-failure.json"
+  }
+}

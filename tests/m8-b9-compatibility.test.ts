@@ -25,10 +25,10 @@ function finishedEnvelope(): SaveEnvelope {
     const before = match, next = stepMatch(match); match = next.state;
     history.observe({ before, after: match, events: combat(next.events), reason: 'tick' });
   }
-  return { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3, runId: 'compat-run', createdAt: '2026-10-10T00:00:00Z',
+  return { kind: 'hex-autobattler-save', saveFormatVersion: 4, replayFormatVersion: 3, runId: 'compat-run', createdAt: '2026-10-10T00:00:00Z',
     match, battles: history.completedRecords, currentBattle: history.capturePrefix() };
 }
-const fresh = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3, runId: 'fresh-run',
+const fresh = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 4, replayFormatVersion: 3, runId: 'fresh-run',
   createdAt: '2026-10-10T00:00:00Z', match: readyMatch(42), battles: [], currentBattle: null });
 const mutated = (base: SaveEnvelope, change: (file: Record<string, any>) => void) => { const file = structuredClone(base) as Record<string, any>; change(file); return file; };
 
@@ -56,7 +56,7 @@ describe('B9 readCompatibility routing', () => {
   it('rejects unknown versions, digest mismatches, capacity overflow and damaged data with the frozen reasons', () => {
     const base = fresh(), finished = finishedEnvelope();
     const reason = (file: unknown) => { const view = readCompatibility(file); expect(view.canResume).toBe(false); expect(view.canReplay).toBe(false); return view.status === 'rejected' ? [view.reason, view.fileRulesVersion, view.canExportOriginal] : view.status; };
-    expect(reason(mutated(base, f => { f.saveFormatVersion = 4; }))).toEqual(['unsupported-version', M8_VERSION.rulesVersion, false]);
+    expect(reason(mutated(base, f => { f.saveFormatVersion = 3; }))).toEqual(['unsupported-version', M8_VERSION.rulesVersion, false]);
     expect(reason(mutated(base, f => { f.replayFormatVersion = 1; }))).toEqual(['unsupported-version', M8_VERSION.rulesVersion, false]);
     expect(reason(mutated(base, f => { f.match.schemaVersion = 5; }))).toEqual(['unsupported-version', M8_VERSION.rulesVersion, false]);
     expect(reason(mutated(base, f => { f.match.rulesVersion = 'm9-future'; }))).toEqual(['unsupported-version', 'm9-future', false]);

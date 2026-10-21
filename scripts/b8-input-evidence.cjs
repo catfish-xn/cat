@@ -2,7 +2,7 @@
  * trusted start and to the recorded native inputs. The validator replays the whole route with the
  * domain's own public commands from createMatch(42), using the same pick policy as the gate, and
  * requires every recorded interaction (before, expected and actual state) to equal the replay; the
- * complete 2-1 combat ledger must equal the replayed ledger event by event. Each interaction's
+ * complete 3-1 combat ledger must equal the replayed ledger event by event. Each interaction's
  * inputs must be trusted native mouse events of known types, in time order, forming exactly one
  * legal press/release sequence per control of that command and ending in the committing click
  * (see checkInputs). Hashes, artifact files and the summary identities are still checked, and
@@ -14,7 +14,7 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { hash } = require('./m4-evidence.cjs');
 
-const SEED = 14349, OPENING_COMPONENTS = ['bow', 'rod'];
+const SEED = 27, OPENING_COMPONENTS = ['bow', 'rod'];
 const INPUT_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'mousedown', 'mouseup', 'mouseout', 'mouseleave', 'click']);
 const POINTER_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'click']);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -83,13 +83,13 @@ function checkInputs(name, inputs, targets) {
 function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   const summary = manifest.b8RagebladeChain;
   assert(summary && typeof summary === 'object', 'B8 Rageblade evidence: summary missing');
-  assert.equal(summary.roundId, '2-1', 'B8 Rageblade evidence: round');
+  assert.equal(summary.roundId, '3-1', 'B8 Rageblade evidence: round');
   for (const key of ['luxId', 'ragebladeId']) assert(typeof summary[key] === 'string' && summary[key], `B8 Rageblade evidence: ${key}`);
   for (const key of ['combatTicks', 'frozenAttackIntervalTicks', 'currentAttackIntervalTicks'])
     assert(positive(summary[key]), `B8 Rageblade evidence: ${key} must be a positive integer tick count`);
   const interactions = manifest.interactions ?? [];
-  const finals = interactions.filter(entry => entry.name === 'b8-rageblade-2-1-combat');
-  assert.equal(finals.length, 1, 'B8 Rageblade evidence: exactly one b8-rageblade-2-1-combat interaction');
+  const finals = interactions.filter(entry => entry.name === 'b8-rageblade-3-1-combat');
+  assert.equal(finals.length, 1, 'B8 Rageblade evidence: exactly one b8-rageblade-3-1-combat interaction');
   const first = interactions.findIndex(entry => entry.name?.startsWith('b8-opening-'));
   const last = interactions.indexOf(finals[0]);
   assert(first >= 0 && first < last, 'B8 Rageblade evidence: interactions in route order');
@@ -107,23 +107,8 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   };
 
   // Trusted start and the gate's opening policy: Start in preparation, Continue in settlement,
-  // T13 seed 14349 earns bow/rod randomly; choose the first non-placebo augment.
-  let state = api.createMatch(SEED);
-  for (let guard = 0; state.m8.round.roundId !== '2-1' || state.phase !== 'preparation'; guard++) {
-    assert(guard < 200, 'B8 Rageblade replay: 2-1 preparation not reached');
-    if (state.phase === 'preparation') {
-      state = accepted(api.startMatchCombat(state), 'opening start');
-      while (state.phase === 'combat') state = api.stepMatch(state).state;
-    } else if (state.phase === 'choice') {
-      const choice = state.pendingChoice;
-      const pick = choice.offers.find(id => id !== 'placebo');
-      assert(pick && choice.offers.includes(pick), `B8 Rageblade replay: offer ${pick}`);
-      const after = accepted(api.selectChoice(state, choice.choiceId, choice.generation, pick), `pick ${pick}`);
-      step(`b8-opening-${choice.kind}-${pick}`, state, after, [`choice:${pick}`]);
-      state = after;
-    } else if (state.phase === 'settlement') state = accepted(api.nextRound(state, state.round), 'continue');
-    else assert.fail(`B8 Rageblade replay: opening ended at ${state.phase}`);
-  }
+  // T13 seed 27 earns bow/rod randomly; choose the first non-placebo augment.
+  let state=require('./v17-rageblade-route.cjs').prefix(api,(before,after,pick)=>step(`b8-opening-${before.pendingChoice.kind}-${pick}`,before,after,[`choice:${pick}`]));
 
   // Identities from the replay: components from the real random drops, Lux from its loot receipt.
   const lootItem = id => state.m8.loot.receipts.find(receipt => receipt.payload.kind === 'item' && receipt.payload.definitionId === id)?.grantedItemIds[0];
@@ -149,16 +134,16 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
     state = fielded;
   }
 
-  // The real 2-1 combat: the full recorded ledger must equal the replayed one.
+  // The real 3-1 combat: the full recorded ledger must equal the replayed one.
   const started = api.startMatchCombat(state);
-  let fought = accepted(started, 'start 2-1');
+  let fought = accepted(started, 'start 3-1');
   const events = started.events.filter(event => 'tick' in event);
   while (fought.phase === 'combat') { const next = api.stepMatch(fought); fought = next.state; events.push(...next.events.filter(event => 'tick' in event)); }
-  const combat = step('b8-rageblade-2-1-combat', state, fought, ['mobile:start-combat']);
+  const combat = step('b8-rageblade-3-1-combat', state, fought, ['mobile:start-combat']);
   same(combat.actual.combatEvents, plain(events), 'B8 Rageblade evidence: combat ledger equals the replayed combat');
   assert.equal(cursor, chain.length, 'B8 Rageblade evidence: no unreplayed interaction in the chain');
 
-  assert.equal(fought.roundDefinitionId, '2-1');
+  assert.equal(fought.roundDefinitionId, '3-1');
   assert(fought.combat?.status === 'finished' && fought.combat.tick === summary.combatTicks, 'B8 Rageblade evidence: combat ticks');
   assert(events.some(event => event.type === 'statChanged' && event.unitId === lux.id && event.source?.definitionId === 'rageblade'),
     'B8 Rageblade evidence: Rageblade statChanged for Lux');

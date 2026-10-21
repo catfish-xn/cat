@@ -261,8 +261,8 @@ describe('T12 public saves across equipment phases', () => {
   it('augment choice and supply choice retain offers while equipment saves resume', () => {
     let state = createMatch(42);
     for (const component of [null, 'sword', 'rod']) {
-      for (const [i,unit] of state.preparation.units.filter(u => u.team === 'player').entries())
-        state = accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col:i*2+1,row:7}}));
+      for (const [i,unit] of state.preparation.units.filter(u => u.team === 'player').slice(0,state.level).entries())
+        state = accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col:[1,3,5,0,6,2,4][i],row:7}}));
       state = finishPublicEquipmentBattle(state);
       if (component) state = resolvePublicEquipmentChoices(state,component);
       state = accepted(nextRound(state,state.round));
@@ -325,7 +325,8 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
     const next=resolvePublicEquipmentChoices(accepted(nextRound(resolvePublicEquipmentChoices(end),end.round)));
     const started=accepted(startMatchCombat(next));
     expect(started.combat!.units.find(u=>u.id===dead.id)!.attackDamage).toBeGreaterThan(dead.attackDamage);
-  });
+  // Temporary 12s: 5.74s measured at four workers; user approved approximately 2x on 2026-10-21.
+  },12000);
   for(const kind of ['pve','pvp']) it(`${kind}: latest board/bench gear migrates after deferred merge, frozen rewards commit once`,()=>{
     const setup=room({irelia:20},1);
     let r=accept(generateSharedShop(setup.pool,{...setup.states[0],gold:100,items:[stock('item-1','sword'),stock('item-2','rod'),stock('item-3','bow')],nextItemSerial:4},0));
@@ -374,7 +375,14 @@ describe('T12 supply choice input', () => {
   let supplyInput: { acquired: ReturnType<typeof publicInventory>; state: MatchState } | undefined;
   beforeAll(() => {
     const acquired=publicInventory(['gloves','gloves'],false,9);let state=acquired.state;
-    while(state.roundDefinitionId!=='4-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(resolvePublicEquipmentChoices(state))),state.round));
+    while(state.roundDefinitionId!=='4-4'){
+      state=resolvePublicEquipmentChoices(state);
+      if(state.phase==='preparation'){
+        for(const [i,u]of state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>b.starLevel-a.starLevel).slice(0,state.level).entries())state=accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:[1,3,5,0,6,2,4][i],row:7}}));
+        state=finishPublicEquipmentBattle(state);
+      }
+      state=resolvePublicEquipmentChoices(state);state=accepted(nextRound(state,state.round));
+    }
     supplyInput=prepareInput({ acquired, state });
   });
   afterAll(() => { supplyInput = undefined; });

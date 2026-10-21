@@ -95,7 +95,7 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
     const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,1);
     if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
     const boundLoot=prepareMatchLoot(state.seed,1,{...state.m8.loot,layoutBinding:{mode:'shared',poolId:pool.poolId,
-      version:'s13-orb-layout-v1',throughRoundOrdinal:0}},draft.orbLayout);
+      version:'s13-orb-layout-v2',throughRoundOrdinal:0}},draft.orbLayout);
     if(hero) {
       requirePool(draft.available[hero.definitionId]>0,'pool-empty');draft.available[hero.definitionId]--;
       draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});

@@ -14,9 +14,10 @@
 import { spawn } from 'node:child_process';
 import { watchServerReplayErrors } from '../../../scripts/replay-error-guard.cjs';
 import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const OUT = `${ROOT}artifacts/c5`;
 const VITE_PORT = 5198;
 const BASE = `http://127.0.0.1:${VITE_PORT}/`;

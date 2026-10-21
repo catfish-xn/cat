@@ -70,16 +70,18 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   }});}catch(e){if(e!==captured)throw e;}
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
-export async function transferPreparation() {
-  // Restore the v15 seed and paid route; mage-armor is sought until gold runs out,
-  // then the public route selects slime-time in both v15 and v16 (see V16_SHARED_TRANSFER_SEED4.md).
-  // Save 4-5 XP spending for the expanded anomaly pool; keep the paid roster and equipment route.
-  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',goldReserves:{'4-5':40},copyLimits:{ezreal:2,corki:1},fieldCopies:['ezreal'],
-    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
-    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor',
-    goldReserveByRound:{'4-5':19}});
+export async function transferPreparation({equipGloves=true}={}) {
+  // Keep seed 4 and two paid copies. Its independent v17 box oracle yields
+  // Tristana at 4-7 (no Ezreal/remover), so target that real reward for transfer.
+  // Equip the original glove recipe here; the offline variant freezes a vest
+  // on the donor and equips the gloves during combat without inventing a remover.
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
+    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'tristana',copy:0}},
+    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
+    goldReserveByRound:{'4-5':19,'4-7':0}});
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
-  const pair=players(s).filter(u=>u.definitionId==='ezreal'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
+  const pair=players(s).filter(u=>u.definitionId==='tristana'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
+  if(equipGloves)s=accepted(api.equipItem(s,s.items.find(i=>i.definitionId==='thiefs-gloves')!.id,donor.id,0));
   if(donor.location.kind==='board'&&survivor.location.kind==='board'){
     const a=donor.location,b=survivor.location;
     if(a.cell.row<b.cell.row||a.cell.row===b.cell.row&&a.cell.col<b.cell.col){
@@ -94,7 +96,7 @@ export async function terminalPreparation(keep:string|null,col=1,row=7) {
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-10','unit-15']});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }

@@ -1,14 +1,24 @@
 # M5 Match contract v5
 
-## v16 当前身份（2026-10-20，覆盖下文历史交接状态）
+## v17 当前身份（2026-10-20，草稿，覆盖下文历史交接状态）
 
-#265 体积方案：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用，无构建期替换。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，覆盖范围和 FNV-1a UTF-16 算法不变，四张归档表的说明来源列仍参与完整内容根。`node scripts/update-content-identities.cjs --check` 校验，`--write` 重算；CI fast 测试每次从完整表重算并对比常量。当前值仍为 CONTENT `fnv1a32-utf16:de829c8a`、LOOT `fnv1a32-utf16:62c76cb9`；规则 manifest `fnv1a32-utf16:31950a0f` 不变。规则、内容、存档与协议版本均不变。
+#265 生成流程保持：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，四张归档表的说明来源列仍参与完整内容根。执行 `node scripts/update-content-identities.cjs --write` 后 `--check`；CI fast 从完整表重算核对。v17 法球组合本次 CONTENT 从 `fnv1a32-utf16:8a955c10` 变为 `fnv1a32-utf16:05439fc4`，LOOT 从 `fnv1a32-utf16:62c76cb9` 变为 `fnv1a32-utf16:132ae758`，规则 manifest 随阶段/RNG 政策更新。
 
-当前 rules/content 为 `s13-g2-3-v16` / `s13-14.24b-g2-3-v16`（v16 变更见下文 v16 小节与 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)；以下 v15 说明为历史）。v15 时为 `s13-g2-3-v15` / `s13-14.24b-g2-3-v15`，commandProtocolVersion=4；schema7/save3/replay3/lcg32-v1/50ms 保持。领域网络目标 MULTIPLAYER_NET_PROTOCOL_VERSION=4，法球合同 multiplayer-orb-claim-v2。旧 v14 身份、旧摘要及 command3 按严格边界拒绝，无迁移。完整 60/54 目录、D11 来源系数与执行约定已进入 CONTENT_DIGEST，preD11 过滤已移除。强化 manifest 为 augment-card-reroll-v15：初次三字、刷新一字，每选择每槽一次，刷掉 ID 本局本席永久移出。
+当前 rules/content 为 `s13-g2-3-v17` / `s13-14.24b-g2-3-v17`；schema/save/replay/command 为 **8/4/3/4**（schema 7→8、save 3→4），领域NET4、服务器网络NET5、法球合同 multiplayer-orb-claim-v2、lcg32-v1、50ms保持。旧v15/v16及改前v17存档身份/摘要严格拒绝，无静默迁移；发版须排空当前对局。PR保持草稿，等v16发版收口后才合入。法球规则与迁移说明见 [V17_ORB_COMBO](V17_ORB_COMBO.md)，贪财化身见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md)，v16历史见 [EPIC_LOOT_V16](EPIC_LOOT_V16.md)。
 
-用户 2026-10-20 04:22 确认：贪财化身联机暂缓。`anomalyCandidates(multiplayer:boolean):string[]` 返回当前模式候选 ID；单机 56、联机 55（v16 加入终极英雄、进入未知；联机仍仅排除 `avarice-incarnate`；v15 时为 54/53），强化仍 60。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，原签名及失败枚举不变；重选目标仍保留已有候选且不消耗 RNG。候选池约定进入 CONTENT_DIGEST，模块和单机实时金币实现保留。服务器按命令顺序接通每 tick 前 `sampleBankGold` 后另行恢复联机候选；缺少该配套不再阻塞其余 v15 内容的领域验收。当前发布说明见 [v15 RELEASE_NOTES](evidence/v15/RELEASE_NOTES.md)，下文实时银行发布阻塞描述属于移出候选池之前的交接状态。
+### v17 法球、独立随机流及存档
 
-新证据写入 docs/evidence/v15 与 tests/fixtures/v15-*，CURRENT Herald 生成器指向 v15；G2-3/G2-4b 历史数据与审计断言保留。最终 digest、实际录制/测试结果及服务器配套边界见 [V15_RELEASE](V15_RELEASE.md)。下文“待统一、不改 digest/command3”为此前交接记录。服务器 NET 常量与接线仍由 Claude 完成，领域切换不代表端到端上线完成。
+第 1–4 阶段用 14.24b 阶段 Base/High 表一次派生整局组合，11–15 组件、20–79 价值点，最多 64 次拒绝后使用四个 Base 第一行（12 组件、30 点）；第 1 阶段按组件→灰→蓝轮流分给 1-2/1-3/1-4，其余落在 x-7，轮内按各色顺序轮流挂载 slotId 代码点排序的中立槽位。仅被击杀载体揭示。组件为独立 blue 珠，templateId=component；其他颜色按阶段选铜/铜Plus、银/银Plus、金/金Plus、UltraPlus 箱。前四阶段复制器只来自箱子行，删除 v16 追加流。未实现奖励只删对应原子，同行余项与权重不变。
+
+`sampleOrbStagePlan(seed:number):OrbStagePlan` 是 `simulation/orb-stage-plan` / `orb-layout` 的纯函数导出：返回 stages、highStages、attempts、fallback、rng；非法 uint32 seed 抛 RangeError，不是客户端接口。现有 create/freeze/restore 的函数参数与失败枚举不变，`OrbLayoutLedger` / shared binding 版本改 `s13-orb-layout-v2`；冻结 ledger 改 `s13-orb-freeze-v17`。计划在可信领域临时计算，账本仅展开已进入轮次；未来数量、颜色和高额阶段不写入视图、公开摘要或任何 ledger。
+
+组合流为 FNV1a32_UTF16(JSON(['orb-stage-plan-v17',layoutSeed]))：先 k(1000)、再字典序 C(4,k) 子集（k=0/4 不抽），再 1..4 行权重；拒绝整局时续用同一局部游标。每珠流 FNV1a32_UTF16(JSON(['orb-box-v17',seatSeed,orbId]))：先箱子行(100)，再行内英雄；组件珠只抽八组件索引。两者均 lcg32-v1 拒绝取模、拒绝词计数。旧 layout 游标保持初态/0；旧 loot 流只供 5-7/6-7，前四阶段不推进，史诗抽取顺序不变。商店、重铸、装备、战斗流不参与组合/开箱；领取和失败命令不重抽。
+
+新增 `TFT_ArmoryKeyComponent` 基础装备锻造器，八普通组件按 id 排序、四选一，沿现有 G24 派生流与唯一收据。箱子英雄覆盖费用完整商店池，可出 5 费；不出 6 费。金箱的 2 星 3 费用既有 starLevel=2，入库需完整 3 份卡池；不足份数按当前基础费用补金，满席按 2 星卖价补金。领取、排队、跨轮保留、补给和史诗算法沿用现行公共命令。具体箱子行顺序、数值来源等级与测试见 [M8B_LOOT §12](M8B_LOOT.md#12-v17-前四阶段每局随机组合)。
+
+v17恢复贪财化身联机准入：`anomalyCandidates(multiplayer:boolean):string[]` 两模式均返回56项（联机55→56），强化仍60；按备战席/普通场上/可晋升场上目标过滤后均54/55/56。初次 `selectAnomalyTarget` 与 `rerollAnomaly` 共用该入口，权重、签名及失败枚举不变；重选目标保留已有候选且不消耗RNG。候选政策进入CONTENT根。#254/#258已接通权威实时银行，获取+5金走唯一收据。`BattleTask.sampleBankGold(seatId:string,liveGold:number):boolean` 在规则游标t之后、t+1执行前注入；相同有效银行、未绑定、镜像B返回false。服务器显示前瞻8tick=0.4秒，不能承诺显示下一帧立即变伤害；末尾操作边界及6条服务器待补验收见v17说明。
+
+新证据只写 docs/evidence/v17 与 tests/fixtures/v17-*，CURRENT Herald生成器指向v17；v15/v16证据与历史身份断言保留原字节。下文D11/v15/v16段落为历史交接记录，其旧身份、目录数与“服务器待接”不再表示当前状态。历史v15见 [V15_RELEASE](V15_RELEASE.md)。本草稿不修改服务器或表现层，不代表端到端上线验收完成。
 
 
 ## D11 领域接线，等待统一 v15（2026-10-20）
@@ -689,7 +699,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 
 ### v16 D14 专用异常
 
-`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。目录56，联机排除 avarice-incarnate 后55；报价按目标资格过滤，旧权重不变。
+`selectAnomalyTarget(state,choiceId,generation,unitId)` / `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)` / `rerollAnomaly` 签名不变。`ultimate-hero` 仅场上三星一费普通英雄；`into-the-unknown` 仅场上普通英雄。不合法目标返回 `invalid-target`、原 state，无事件/资源/RNG变化。v16历史目录56、联机排除avarice-incarnate后55；v17已恢复联机56，见顶部当前合同。报价按目标资格过滤，旧权重不变。
 
 `MatchBase.d14?:D14Progress` 是私有持久状态；生产证书只由已接纳选择收据、资源事实与结算历史认证，不单凭存档 phase 授权。`readCombatStrategyInputs` 和 `PlayerBattleSnapshot` 可含 `d14Combat:{unitId,anomalyId,phase:'waiting'|'promoted'|'returned'}`，仅对可见绑定有效；离场单位不编入人口/羁绊/战斗。`restorePlayerBattleSnapshot` 结构校验，来源认证仍由上游可信 Match 完成；offline `restoreMatch` 继续拒绝联机完整存档。
 

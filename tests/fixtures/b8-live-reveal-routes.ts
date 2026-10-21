@@ -19,7 +19,7 @@ export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<
  ];
  let state=await configuredPrefix('4-7',{build:'mage',seed,goldReserves:{'4-7':0},goldReserveByRound:{'4-3':100,'4-5':100,'4-7':100},
   augmentPriorities:['bronze-for-life-ii','pumping-up-iii','item-collector-ii'],anomalyDefinitionId:'protective-shielding',anomalyTargetDefinitionId:'zoe',
-  equipmentTargets,reservedComponents:['sword','vest','belt','rod','cloak','bow','gloves','tear'],supplyChoices:['sword','rod','sword']});
+  equipItems:false,equipmentTargets,reservedComponents:['sword','vest','belt','rod','cloak','bow','gloves','tear'],supplyChoices:['cloak','sword','sword']});
  while(state.level<8){const r=api.buyXp(state);if(!r.ok)break;state=r.state;}
  const wanted=new Set(board.map(u=>u.definitionId));
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!wanted.has(u.definitionId)))state=accepted(api.sellUnit(state,unit.id));
@@ -44,12 +44,12 @@ export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<
  }
  for(const [slot,unit]of kept.entries())state=accepted(api.deployMatchUnit(state,unit.id,{kind:'bench',slot}));
  for(const w of board)state=accepted(api.deployMatchUnit(state,kept.find(u=>u.definitionId===w.definitionId)!.id,{kind:'board',cell:{col:w.col,row:w.row}}));
- for(const [definitionId,target]of Object.entries(equipmentTargets))state=accepted(api.equipItem(state,state.items.find(i=>i.definitionId===definitionId)!.id,kept.find(u=>u.definitionId===target.definitionId)!.id,definitionId==='shojin'?1:0));
+ for(const [definitionId,target]of Object.entries(equipmentTargets)){const item=state.items.find(i=>i.definitionId===definitionId);if(!item)throw Error('Missing actual recipe '+definitionId);state=accepted(api.equipItem(state,item.id,kept.find(u=>u.definitionId===target.definitionId)!.id,definitionId==='shojin'?1:0));}
  return state;
 }
 // Recreate each bare two-star holder by public sales, purchases and an earned remover.
 export async function barePartialPrefix(name:'zyra'|'loris',seed:number,augmentPriorities:string[]):Promise<api.MatchState>{
- let state=await configuredPrefix('4-7',{build:'mage',seed,goldReserves:{'4-7':0},augmentPriorities,anomalyDefinitionId:'protective-shielding'});
+ let state=await configuredPrefix('4-7',{build:'mage',seed,equipItems:false,goldReserves:{'4-7':0},augmentPriorities,anomalyDefinitionId:'protective-shielding'});
  let target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===name)!;
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))state=accepted(api.sellUnit(state,unit.id));
  for(let rolls=0;rolls<100&&target.starLevel!==2;rolls++){

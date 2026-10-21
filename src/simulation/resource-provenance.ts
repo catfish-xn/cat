@@ -1,4 +1,5 @@
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
+import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
@@ -273,7 +274,7 @@ export function validateResourceReceipts(context: ReceiptContext): Map<string, B
     }
     if(receipt.payload.kind==='forge') {
       keys(receipt.payload,['kind','definitionId','quantity']);
-      requireValue(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyOrnn'].includes(receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'forge grant');continue;
+      requireValue(Object.hasOwn(G24_FORGE_POOLS,receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'forge grant');continue;
     }
     if(receipt.payload.kind==='consumable') {
       requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');

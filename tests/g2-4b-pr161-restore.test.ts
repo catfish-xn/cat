@@ -32,7 +32,7 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
-  }else if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
+  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
  }
  throw Error('Duplicator preparation budget');
@@ -43,7 +43,7 @@ let duplicatorArchive:SaveEnvelope|undefined;
  * Seed26 also supplies a magnetic remover from its real 2-7 prismatic package. */
 function publicDuplicatorArchive():{state:MatchState;history:CompletedBattleHistory;unitId:string}{
  if(!duplicatorArchive){
-  let state=nextDuplicatorPreparation(createMatch(26));
+  let state=nextDuplicatorPreparation(createMatch(27566));
   const history=new CompletedBattleHistory('pr161-duplicator');
   state=accepted(grantMechanicGold(state,{receiptId:'fixture:duplicator:gold',source:'fixture',amount:150}));
   while(state.level<6)state=accepted(buyXp(state));
@@ -241,7 +241,7 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
  // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-17',definitionId:'TFT_Item_ForceOfNature'});
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-20',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',
@@ -260,14 +260,14 @@ it('rejects a duplicator receipt and matching hero forged to an unowned option a
  expect([state.seed,state.round,state.roundDefinitionId]).toEqual([42,6,'2-3']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
- expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-65'});
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-70'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
  expect(atom.options).toContain('zeri');
  const bad=structuredClone(state);
  Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!,{definitionId:'zeri'});
- Object.assign(bad.preparation.units.find(u=>u.id==='unit-65')!,{definitionId:'zeri'});
+ Object.assign(bad.preparation.units.find(u=>u.id==='unit-70')!,{definitionId:'zeri'});
  expect(()=>serializeMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('mechanic duplicator target');

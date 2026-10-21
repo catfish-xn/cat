@@ -1,0 +1,23 @@
+{
+  "baselineFiles": [
+    {
+      "file": "artifacts/premerge-265/baseline/dist/assets/index-CsWIfx1z.js",
+      "bytes": 1497604,
+      "gzip9": 424763,
+      "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+    }
+  ],
+  "currentFiles": [
+    {
+      "file": "dist/assets/index-CSkJKxjw.js",
+      "bytes": 2111291,
+      "gzip9": 627432,
+      "sha256": "bd6be18df1a07f567fff6fd54e69a3630a0ce70db02db910d67ab8219938c8c5"
+    }
+  ],
+  "baseline": 424763,
+  "current": 627432,
+  "ratio": 1.477134307837547,
+  "limit": 1.49,
+  "passed": true
+}

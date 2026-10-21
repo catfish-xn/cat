@@ -1,5 +1,9 @@
 # 战中实时金币：领域导出与重放输入
 
+## v17 当前接线状态（草稿）
+
+#254/#258的权威实时银行已接通：Room成功经济命令触发PvP live采样、替换结算结果并推送replay-tail；PvE先catchUp再操作，由stepMatch采样。v17恢复贪财化身联机池，单机/联机均56项。`sampleBankGold`仍返回boolean；样本tick t指规则t已完成、t+1执行前注入，服务器8tick=0.4秒显示前瞻不是“显示下一帧生效”。首次目标超过冻结终战tick不建轨，终战后不追改。本次不改本页导出签名、格式或数值；rules/content同升v17，CONTENT `de829c8a→8a955c10`、LOOT `62c76cb9`保持。兼容说明及6条服务器待补测试见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md)。以下原基线、初版验证与“不改版本”描述为历史交付上下文。
+
 基线：`codex/live-gold-exports`，`2aaa537c02f6675a952ea26894c79996067543b3`。
 只补领域接口、输入记录和验证；不改战斗规则、数值、RNG、版本、digest 或指纹。
 本文件补充 [D11 接线](D11_WIRING_V15.md) 的 D11-SERVER-LIVE-BANK，覆盖其中 `sampleBankGold():void` 的旧返回类型。

@@ -1,0 +1,2516 @@
+[
+  {
+    "seed": 0,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2498801434
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2768872580
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 573775550
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2426187848
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2223693730
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2087307084
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 571258310
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3947023760
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2569577770
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2262755092
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3817730510
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 685668312
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 776937394
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 3772960506,
+          "draws": 1
+        },
+        "output": "vest"
+      },
+      {
+        "rng": {
+          "state": 1020596753,
+          "draws": 2
+        },
+        "output": "vest"
+      },
+      {
+        "rng": {
+          "state": 4229735484,
+          "draws": 3
+        },
+        "output": "gargoyle"
+      },
+      {
+        "rng": {
+          "state": 2100245099,
+          "draws": 4
+        },
+        "output": "belt"
+      },
+      {
+        "rng": {
+          "state": 1381901518,
+          "draws": 5
+        },
+        "output": "belt"
+      }
+    ]
+  },
+  {
+    "seed": 1,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2745540835
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2282599509
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3225111255
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3055474921
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3744487179
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 563241405
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3452328319
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3208217297
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1177757235
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2146152485
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3319058727
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1935318457
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2040901211
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 3771295981,
+          "draws": 1
+        },
+        "output": "gloves"
+      },
+      {
+        "rng": {
+          "state": 631027048,
+          "draws": 2
+        },
+        "output": "vest"
+      },
+      {
+        "rng": {
+          "state": 1288935847,
+          "draws": 3
+        },
+        "output": "nashors-tooth"
+      },
+      {
+        "rng": {
+          "state": 1941261018,
+          "draws": 4
+        },
+        "output": "bow"
+      },
+      {
+        "rng": {
+          "state": 2814418033,
+          "draws": 5
+        },
+        "output": "bow"
+      }
+    ]
+  },
+  {
+    "seed": 42,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 4271921684
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3820240078
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 260725464
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3086441138
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1672509148
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2501058006
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1317114400
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2981923386
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 4242657444
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1660412894
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 53384808
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1631366850
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2323810156
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 3836212456,
+          "draws": 1
+        },
+        "output": "tear"
+      },
+      {
+        "rng": {
+          "state": 2939343655,
+          "draws": 2
+        },
+        "output": "cloak"
+      },
+      {
+        "rng": {
+          "state": 16004698,
+          "draws": 3
+        },
+        "output": "blue-buff"
+      },
+      {
+        "rng": {
+          "state": 3846672881,
+          "draws": 4
+        },
+        "output": "rod"
+      },
+      {
+        "rng": {
+          "state": 2780848796,
+          "draws": 5
+        },
+        "output": "rod"
+      }
+    ]
+  },
+  {
+    "seed": 230,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3414288816
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2595215946
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 495631668
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1133326574
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 4113836024
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3739519186
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1792396796
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1525261814
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 278434624
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1213959258
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 792370116
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 342392830
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3725806472
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 3922767756,
+          "draws": 1
+        },
+        "output": "gloves"
+      },
+      {
+        "rng": {
+          "state": 1722131835,
+          "draws": 2
+        },
+        "output": "bow"
+      },
+      {
+        "rng": {
+          "state": 2613730462,
+          "draws": 3
+        },
+        "output": "dragons-claw"
+      },
+      {
+        "rng": {
+          "state": 3523910501,
+          "draws": 4
+        },
+        "output": "tear"
+      },
+      {
+        "rng": {
+          "state": 1304434048,
+          "draws": 5
+        },
+        "output": "tear"
+      }
+    ]
+  },
+  {
+    "seed": 3735928559,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1311152065
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2278459043
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 930338837
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1108679831
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3013232809
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 743363787
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1306844541
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3288941375
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 4073769617
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 629554163
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3668018149
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2381304551
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3090464121
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 2143192039,
+          "draws": 1
+        },
+        "output": "rod"
+      },
+      {
+        "rng": {
+          "state": 2201530394,
+          "draws": 2
+        },
+        "output": "sword"
+      },
+      {
+        "rng": {
+          "state": 2936291505,
+          "draws": 3
+        },
+        "output": "adaptive-helm"
+      },
+      {
+        "rng": {
+          "state": 582337116,
+          "draws": 4
+        },
+        "output": "bow"
+      },
+      {
+        "rng": {
+          "state": 1712749067,
+          "draws": 5
+        },
+        "output": "bow"
+      }
+    ]
+  },
+  {
+    "seed": 4294967295,
+    "shops": [
+      {
+        "shop": {
+          "generation": 1,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2252062033
+      },
+      {
+        "shop": {
+          "generation": 2,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3255145651
+      },
+      {
+        "shop": {
+          "generation": 3,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2217407141
+      },
+      {
+        "shop": {
+          "generation": 4,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1796900775
+      },
+      {
+        "shop": {
+          "generation": 5,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 702900281
+      },
+      {
+        "shop": {
+          "generation": 6,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3611372763
+      },
+      {
+        "shop": {
+          "generation": 7,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 1985155597
+      },
+      {
+        "shop": {
+          "generation": 8,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "lux"
+            },
+            {
+              "status": "available",
+              "definitionId": "morgana"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 390862927
+      },
+      {
+        "shop": {
+          "generation": 9,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "steb"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3961398305
+      },
+      {
+        "shop": {
+          "generation": 10,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "darius"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "powder"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 2379357699
+      },
+      {
+        "shop": {
+          "generation": 11,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "amumu"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 21434997
+      },
+      {
+        "shop": {
+          "generation": 12,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "draven"
+            },
+            {
+              "status": "available",
+              "definitionId": "maddie"
+            },
+            {
+              "status": "available",
+              "definitionId": "vex"
+            },
+            {
+              "status": "available",
+              "definitionId": "singed"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3730985463
+      },
+      {
+        "shop": {
+          "generation": 13,
+          "slots": [
+            {
+              "status": "available",
+              "definitionId": "powder"
+            },
+            {
+              "status": "available",
+              "definitionId": "trundle"
+            },
+            {
+              "status": "available",
+              "definitionId": "irelia"
+            },
+            {
+              "status": "available",
+              "definitionId": "zyra"
+            },
+            {
+              "status": "available",
+              "definitionId": "violet"
+            }
+          ],
+          "locked": false
+        },
+        "rng": 3807940873
+      }
+    ],
+    "reforges": [
+      {
+        "rng": {
+          "state": 2548150711,
+          "draws": 1
+        },
+        "output": "belt"
+      },
+      {
+        "rng": {
+          "state": 982705066,
+          "draws": 2
+        },
+        "output": "sword"
+      },
+      {
+        "rng": {
+          "state": 4164173569,
+          "draws": 3
+        },
+        "output": "red-buff"
+      },
+      {
+        "rng": {
+          "state": 3477703788,
+          "draws": 4
+        },
+        "output": "tear"
+      },
+      {
+        "rng": {
+          "state": 3349814491,
+          "draws": 5
+        },
+        "output": "tear"
+      }
+    ]
+  }
+]

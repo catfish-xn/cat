@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { freezeLootThroughRound, drawLootIndex } from '../src/simulation/loot-freeze';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from '../src/simulation/orb-layout';
-import { lootPlan as v16Plan } from './fixtures/epic-loot-oracle.cjs';
+import { lootPlan as v17Plan } from './fixtures/orb-combo-oracle.cjs';
 
 // Independent specification oracle: BigInt arithmetic, literal signed tables,
 // no production random, layout, slot or reward-table helpers.
 const rounds=['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7'];
-const oracle=(seed:number,roomSeed=seed)=>{const p=v16Plan(seed,38,roomSeed);return {plans:p.rounds.map((r:any)=>({tiers:r.orbs.map((o:any)=>o.tier),payloads:r.orbs.map((o:any)=>o.entries.map((e:any)=>e.payload))})),layoutRng:p.layoutRng,lootRng:p.rng};};
+const oracle=(seed:number,roomSeed=seed)=>{const p=v17Plan(seed,38,roomSeed);return {plans:p.rounds.map(r=>({tiers:r.orbs.map(o=>o.tier),payloads:r.orbs.map(o=>o.entries.map(e=>e.payload))})),layoutRng:p.layoutRng,lootRng:p.rng};};
 function stream(seed:number){let state=BigInt(seed>>>0),draws=0;return {draw(n:number){const size=BigInt(n),limit=4294967296n/size*size;do{state=(1664525n*state+1013904223n)%4294967296n;draws++;}while(state>=limit);return Number(state%size);},value:()=>({state:Number(state),draws})};}
 describe('signed R3/R4 independent loot oracle',()=>{
   it('matches every PvE entry and both independent RNG cursors for 512 seeds',()=>{
@@ -19,11 +19,11 @@ describe('signed R3/R4 independent loot oracle',()=>{
         expect(round.encounterPlan.roundId).toBe(rounds[r]);
         expect(round.orbs.map(o=>o.tier)).toEqual(expected.plans[r].tiers);
         expect(round.orbs.map(o=>o.entries.map(e=>e.payload))).toEqual(expected.plans[r].payloads);
-        expect(round.orbs.map(o=>JSON.parse(o.sourceUnitId)[3])).toEqual(v16Plan(seed,38).rounds[r].orbs.map((o:any)=>JSON.parse(o.sourceUnitId)[3]));
-        expect(round.orbs.map(o=>o.slotOrdinal)).toEqual(v16Plan(seed,38).rounds[r].orbs.map((o:any)=>o.slotOrdinal));
+        expect(round.orbs.map(o=>JSON.parse(o.sourceUnitId)[3])).toEqual(v17Plan(seed,38).rounds[r].orbs.map(o=>JSON.parse(o.sourceUnitId)[3]));
+        expect(round.orbs.map(o=>o.slotOrdinal)).toEqual(v17Plan(seed,38).rounds[r].orbs.map(o=>o.slotOrdinal));
         round.orbs.forEach(o=>seen.add(o.tier));
       }
-      expect(actual.rounds).toEqual(v16Plan(seed,38).rounds);
+      expect(actual.rounds).toEqual(v17Plan(seed,38).rounds);
     }
     expect([...seen].sort()).toEqual(['blue','gold','gray','prismatic']);
   });

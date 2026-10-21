@@ -1,0 +1,105 @@
+{
+  "baseCommit": "d677a291405ac263b617844d8ae43a604139b7fb",
+  "steps": [
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v17-release.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 78670,
+      "log": "artifacts\\v17-recording\\record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v17-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 68957,
+      "log": "artifacts\\v17-recording\\record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v17-inputs.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 11890,
+      "log": "artifacts\\v17-recording\\record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v17-live-reveal.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 28703,
+      "log": "artifacts\\v17-recording\\record-live-reveal.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v17-inputs.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 12052,
+      "log": "artifacts\\v17-recording\\check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 68051,
+      "log": "artifacts\\v17-recording\\check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v17-fixture-audit.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4421,
+      "log": "artifacts\\v17-recording\\check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v17-live-reveal.cjs",
+        "--baseline-commit=d677a291405ac263b617844d8ae43a604139b7fb",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 28468,
+      "log": "artifacts\\v17-recording\\check-live-reveal.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v17-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9762,
+      "log": "artifacts\\v17-recording\\compare-digests.log"
+    }
+  ],
+  "complete": true
+}

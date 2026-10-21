@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:05439fc4",
+  "lootReplayDigest": "fnv1a32-utf16:132ae758",
+  "rulesVersion": "s13-g2-3-v17",
+  "contentVersion": "s13-14.24b-g2-3-v17",
+  "schemaVersion": 8,
+  "previousContentDigest": "fnv1a32-utf16:de829c8a",
+  "previousLootReplayDigest": "fnv1a32-utf16:62c76cb9",
+  "traceHashes": {
+    "state": "be6d301ebc903b105d5dc051d0b073b4474f8760e975ded8889a70636abe8f06",
+    "events": "ab228696c20a67efe1b6549ea3452500afb17e2e1c632a1cf953093c2ead9ac8",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "S13 v17: independent random stage orb combinations and box streams; schema 8/save 4; old saves rejected without migration."
+}

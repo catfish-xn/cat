@@ -8,7 +8,7 @@ export const accept=(r:SharedPoolResult)=>{if(!r.ok)throw new Error(r.reason);re
 export const batch=(r:SharedPoolBatchResult)=>{if(!r.ok)throw new Error(r.reason);return r;};
 export function room(capacities?:Record<string,number>,count=2,seed=42) {
   // Explicit tiny-capacity vectors need two actual Irelia draws; do not force a hero in production.
-  if(capacities && seed===42) seed=3150966028;
+  if(capacities && seed===42) seed=3150966029;
   let pool=createSharedPool('test-pool',seed,{seatCount:count,...(capacities?{capacities}: {})});const states:MatchState[]=[];
   for(let i=0;i<count;i++) {
     const r=accept(initializeSharedSeat(pool,createMatch(5, {mode:'shared-deferred'}),`seat-${i}`,i));pool=r.pool;states.push(r.state);
@@ -36,11 +36,10 @@ export function fight(pool:SharedPoolState,state:MatchState) {
 export function fullBench() {
   let {pool,states}=room(undefined,1);let state:MatchState={...states[0],gold:1000,level:9,xp:0};
   let r=accept(generateSharedShop(pool,state,0));pool=r.pool;state=r.state;
-  const reward=state.m8.loot.frozen.rounds[0].encounterPlan.drops.find(d=>d.payload.kind==='unit')!.payload;
-  const excluded=reward.kind==='unit'?reward.definitionId:'';
+  const excluded=state.m8.loot.frozen.rounds[0].encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);
   for(let budget=0;state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length<9;budget++) {
     if(budget>60)throw new Error('fill bench budget');
-    const slot=state.shop.slots.findIndex(s=>s.status==='available'&&s.definitionId!==excluded
+    const slot=state.shop.slots.findIndex(s=>s.status==='available'&&!excluded.includes(s.definitionId)
       &&state.preparation.units.filter(u=>u.team==='player'&&u.definitionId===s.definitionId&&u.starLevel===1).length<2);
     r=accept(slot<0?rerollSharedShop(pool,state,state.shop.generation):buySharedUnit(pool,state,slot,state.shop.generation));pool=r.pool;state=r.state;
   }
@@ -55,7 +54,7 @@ export function syntheticSharedRound(pool: SharedPoolState, states: readonly Mat
   const nextPool={...pool,orbLayout:result.layout};
   const nextStates=states.map(state=>{
     const deferred=prepareMatchLoot(state.seed,0,undefined,undefined,{mode:'shared-deferred'});
-    const previous={...deferred,layoutBinding:{mode:'shared' as const,poolId:pool.poolId,version:'s13-orb-layout-v1' as const,throughRoundOrdinal:0}};
+    const previous={...deferred,layoutBinding:{mode:'shared' as const,poolId:pool.poolId,version:'s13-orb-layout-v2' as const,throughRoundOrdinal:0}};
     return {...state,round,m8:{...state.m8,loot:prepareMatchLoot(state.seed,ordinal,previous,result.layout)}};
   });
   return {pool:nextPool,states:nextStates};

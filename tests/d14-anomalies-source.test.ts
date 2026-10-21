@@ -52,9 +52,9 @@ it('reconciles the official Chinese description keys and keeps selection semanti
   expect(strings.tft13_goopbuff_ultimatehero_description).toContain('4');
   expect(map['{560f71cc}'].name).toBe('TFT13_GoopBuff_IntoTheUnknown_ReturnState');
 });
-it('registers the two D14 anomalies in v16 without overwriting retained intentional values',()=>{
+it('registers the two D14 anomalies in v17 without overwriting retained intentional values',()=>{
   expect(ANOMALY_DEFINITIONS['ultimate-hero'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);expect(ANOMALY_DEFINITIONS['into-the-unknown'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);
-  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:de829c8a');expect(M8_VERSION.rulesVersion).toBe('s13-g2-3-v16');
+  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:05439fc4');expect(M8_VERSION.rulesVersion).toBe('s13-g2-3-v17');
   // Protect existing live source values; this pack never replaces lower-star tables.
   expect(S13_ABILITY_DATA['singed-ability'].variables.DR).toEqual([0.5,0.5,0.6]);
 });

@@ -67,13 +67,14 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   it('5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage', async () => {
     // Random belt/vest + 2-4 belt make Warmog; 3-4 bow makes Titan;
     // the actual 2-7 rod and 3-7 sword make Gunblade. No obsolete 4-7 choice.
-    let s = await configuredPrefix('5-1', {seed:42,build:'sniper',
+    let s = await configuredPrefix('5-1', {seed:42,build:'sniper',equipItems:false,
       supplyChoices:['belt','bow','rod'],reservedComponents:['belt','bow','vest','sword','rod'],
       fieldCopies:['irelia'],equipmentTargets:{
         'titans-resolve':{definitionId:'irelia'},warmog:{definitionId:'irelia'},gunblade:{definitionId:'irelia'},
       }});
     expect(restoreMatch(serializeMatch(s))).toEqual(s);
     expect(s.roundDefinitionId).toBe('5-1');
+    for(const [slot,id] of ['titans-resolve','warmog','gunblade'].entries())s=accepted((await import('../src/simulation/match')).equipItem(s,s.items.find(i=>i.definitionId===id)!.id,'unit-1',slot));
     for (const definitionId of ['titans-resolve','warmog','gunblade']) {
       expect(s.items.find(item => item.definitionId === definitionId)?.location)
         .toMatchObject({kind:'unit',unitId:'unit-1'});

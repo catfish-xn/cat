@@ -59,12 +59,12 @@ export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   'dual-wielding':{id:'dual-wielding',name:'双刀流',description:'获得2件符合该英雄定位的成装。',effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}}]},
 });
 
-/** Online Avarice requires authoritative bank samples before each combat tick.
- * Keep its definition and solo acquisition executable while server support is pending. */
+/** v17: authoritative live-bank sampling is wired for online combat.
+ * Solo and multiplayer share the complete pool; target eligibility still applies. */
 export const ANOMALY_OFFER_POLICY = freezeContent({
-  revision: 'anomaly-offers-v15-online-avarice-deferred',
-  multiplayerExcluded: ['avarice-incarnate'],
-  resumeWhen: 'server-sampleBankGold-before-next-tick',
+  revision: 'anomaly-offers-v17-online-avarice-enabled',
+  multiplayerExcluded: [] as readonly string[],
+  resumeWhen: 'enabled-server-authoritative-live-bank-wired',
 } as const);
 export function anomalyCandidates(multiplayer: boolean): string[] {
   return Object.keys(ANOMALY_DEFINITIONS).filter(id => !multiplayer

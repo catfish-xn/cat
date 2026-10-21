@@ -29,7 +29,7 @@ function bounceFacts(before:MatchState, after:MatchState, events:readonly MatchE
 const priorFacts:ReturnType<typeof bounceFacts>=[];
 let captured:MatchState|undefined;
 const stop=new Error('captured genuine 3-7 preparation');
-try { await run(api,{seed:74,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+try { await run(api,{seed:49,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}
@@ -50,6 +50,8 @@ const giantSlayer=prepared.items.find(i=>i.definitionId==='giant-slayer')!;
 if(giantSlayer.location.kind==='unit')prepared=accepted(api.sellUnit(prepared,giantSlayer.location.unitId));
 for(const unitId of originals)if(prepared.items.some(i=>i.location.kind==='unit'&&i.location.unitId===unitId)){const remover=prepared.consumables.find(c=>c.definitionId==='magnetic-remover')!;prepared=accepted(api.useConsumable(prepared,remover.consumableId,{kind:'unit',unitId}));}
 prepared=accepted(api.equipItem(prepared,giantSlayer.id,SURVIVOR,0));
+// The real seed49 Radiant Relics choice supplies durability for clearing every carrier.
+prepared=accepted(api.equipItem(prepared,prepared.items.find(i=>i.definitionId==='TFT5_Item_WarmogsArmorRadiant')!.id,SURVIVOR,1));
 const currentFacts:ReturnType<typeof bounceFacts>=[];
 let probe=accepted(startMatchCombat(prepared));
 while(probe.phase==='combat'){const next=stepMatch(probe);currentFacts.push(...bounceFacts(probe,next.state,next.events));probe=next.state;}
@@ -63,7 +65,7 @@ const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
 describe('B8 live growth plus immediate randomized loot merge',()=>{
- it('pins real v16 seed74 prior stock and original-source current delta independently',()=>{
+ it('pins real v17 seed49 prior stock and original-source current delta independently',()=>{
   expect(prepared.persistentGrowth).toEqual(priorBySource);
   const totals=new Map<string,number>();
   expect(live.events.filter(e=>e.type==='growth')).toEqual(currentFacts.map(f=>{const total=(totals.get(f.unitId)??0)+GAIN;totals.set(f.unitId,total);return {...f,totalBps:total};}));

@@ -16,7 +16,7 @@ import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../src/simulation/carousel-p
 import { RULES_GAP_MANIFEST } from '../src/simulation/content/rules-manifest';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../src/simulation/operation-policy';
 import { M8_VERSION } from '../src/simulation/m8/version';
-import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, LOOT_HERO_POOL_VERSION, LOOT_HERO_POOLS, LOOT_SLOTS, LOOT_CATEGORIES } from '../src/simulation/content/loot';
+import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, ORB_BOXES, EPIC_LOOT } from '../src/simulation/content/loot';
 import { NEUTRAL_RUNTIME_VERSION } from '../src/simulation/neutral-receipts';
 import { NEUTRAL_DEFINITIONS } from '../src/simulation/content/neutrals';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from '../src/simulation/content/neutral-encounters';
@@ -37,7 +37,7 @@ import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { ANOMALY_DEFINITIONS, ANOMALY_OFFER_POLICY } from '../src/simulation/content/anomalies';
-import { ORB_RULES, ORB_SLOTS } from '../src/simulation/content/orbs';
+import { ORB_RULES, ORB_STAGE_PLAN } from '../src/simulation/content/orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from '../src/simulation/content/consumables';
 import { G24_SUPPORT_DECLARATIONS } from '../src/simulation/content/g2-4-support-items';
 import { G24_SUPPORT_ITEM_SOURCE } from '../src/simulation/content/g2-4-support-item-source';
@@ -60,9 +60,9 @@ export function recomputeContentDigest(): string {
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},
-  orbs:{rules:ORB_RULES,slots:ORB_SLOTS},
+  orbs:{rules:ORB_RULES,stagePlan:ORB_STAGE_PLAN},
   consumables:{rules:CONSUMABLE_RULES,definitions:CONSUMABLE_DEFINITIONS,pools:REFORGE_POOLS},
-  loot:{runtime:LOOT_RUNTIME_REVISION,freeze:LOOT_FREEZE_ALGORITHM,policy:LOOT_POLICY_VERSION,heroPoolVersion:LOOT_HERO_POOL_VERSION,heroPools:LOOT_HERO_POOLS,slots:LOOT_SLOTS,categories:LOOT_CATEGORIES},
+  loot:{runtime:LOOT_RUNTIME_REVISION,freeze:LOOT_FREEZE_ALGORITHM,policy:LOOT_POLICY_VERSION,boxes:ORB_BOXES,epic:EPIC_LOOT},
   neutralEncounters:{runtime:NEUTRAL_RUNTIME_VERSION,version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,policy:NEUTRAL_ENCOUNTER_POLICY_VERSION,definitions:NEUTRAL_DEFINITIONS,encounters:NEUTRAL_ENCOUNTERS},
   deploymentRulesVersion:DEPLOYMENT_RULES_VERSION, multiplayerOperations:MULTIPLAYER_OPERATION_RULES,
   roundRulesVersion:ROUND_RULES_VERSION, roundCatalog:ROUND_CATALOG, roundSemanticNodes:ROUND_SEMANTIC_NODES,
