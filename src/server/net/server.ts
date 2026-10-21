@@ -242,14 +242,14 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
    * Runs one write-queue task and notes it when it held the single writer (and the event loop) past SLOW_TASK_MS.
    * Throttled per task kind, so sustained blocking does not add a log line per task on top of it.
    */
-  const slowTasks = new Map<string, { count: number; longestMs: number; loggedAt: number }>();
+  const slowTasks = new Map<string, { count: number; longestMs: number; lastMs: number; loggedAt: number }>();
   function timed(task: string, fn: () => void): void {
     const started = clock.now();
     try { fn(); } finally {
       const now = clock.now(), ms = now - started;
       if (ms >= SLOW_TASK_MS) {
-        const slow = slowTasks.get(task) ?? { count: 0, longestMs: 0, loggedAt: -Infinity };
-        slow.count++; slow.longestMs = Math.max(slow.longestMs, ms); slowTasks.set(task, slow);
+        const slow = slowTasks.get(task) ?? { count: 0, longestMs: 0, lastMs: 0, loggedAt: -Infinity };
+        slow.count++; slow.longestMs = Math.max(slow.longestMs, ms); slow.lastMs = ms; slowTasks.set(task, slow);
       }
       flushSlowTasks(now, false);
     }
@@ -258,7 +258,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function flushSlowTasks(now: number, all: boolean): void {
     for (const [task, slow] of slowTasks) {
       if (slow.count === 0 || (!all && now - slow.loggedAt < SLOW_TASK_LOG_EVERY_MS)) continue;
-      log('warn', 'task.slow', { task, count: slow.count, longestMs: Math.round(slow.longestMs), roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+      log('warn', 'task.slow', { task, count: slow.count, longestMs: Math.round(slow.longestMs), lastMs: Math.round(slow.lastMs), roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
       slow.count = 0; slow.longestMs = 0; slow.loggedAt = now;
     }
   }
