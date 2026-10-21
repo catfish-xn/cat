@@ -37,7 +37,7 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
-  readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4};
+  readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4;readonly downgradedAtTick?:number};
   readonly sixCost?:import('./combat-six-cost').SixCostState;
   readonly d11Kills?:readonly {readonly eventSeq:number;readonly victimId:string}[];
   readonly s13P2Opening?: import('./s13-augments-p2-combat').P2Opening;

@@ -225,7 +225,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

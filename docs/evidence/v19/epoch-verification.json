@@ -9,7 +9,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 103608,
+      "elapsedMs": 120602,
       "log": "artifacts\\v19-recording\\record-release.log"
     },
     {
@@ -20,7 +20,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 76294,
+      "elapsedMs": 80191,
       "log": "artifacts\\v19-recording\\record-herald.log"
     },
     {
@@ -31,7 +31,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 17867,
+      "elapsedMs": 18650,
       "log": "artifacts\\v19-recording\\record-inputs.log"
     },
     {
@@ -42,7 +42,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 36619,
+      "elapsedMs": 38407,
       "log": "artifacts\\v19-recording\\record-live-reveal.log"
     },
     {
@@ -54,7 +54,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 17785,
+      "elapsedMs": 18075,
       "log": "artifacts\\v19-recording\\check-inputs.log"
     },
     {
@@ -64,7 +64,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 75861,
+      "elapsedMs": 107572,
       "log": "artifacts\\v19-recording\\check-herald.log"
     },
     {
@@ -75,7 +75,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 4952,
+      "elapsedMs": 5289,
       "log": "artifacts\\v19-recording\\check-history.log"
     },
     {
@@ -87,7 +87,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 38265,
+      "elapsedMs": 44550,
       "log": "artifacts\\v19-recording\\check-live-reveal.log"
     },
     {
@@ -97,7 +97,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 15761,
+      "elapsedMs": 18262,
       "log": "artifacts\\v19-recording\\compare-digests.log"
     }
   ],

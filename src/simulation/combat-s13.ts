@@ -1,3 +1,4 @@
+import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
 import { v19DominatorCast, smokeV19, sistersV19, markRoseV19, roseAmpV19, chainblade, chainbladeGoldTarget, chainbladeKill } from './combat-v19';
@@ -682,6 +683,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
+  settleFamilyReunionDeaths(ctx, fullRoster);
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive), state.strategy?.traits);
   const anomalyRemoved=removeBoundAnomalySummons(ctx,fullRoster);
   if(hasBanish&&anomalyRemoved.length)for(let i=fullRoster.length-1;i>=0;i--)if(anomalyRemoved.includes(fullRoster[i].id))fullRoster.splice(i,1);
