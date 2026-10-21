@@ -6,11 +6,10 @@ import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
 /** Synthetic data only: no asset files. Models are plain boxes and effects stand-in objects; the stage logic is production code. */
 const slot = (index: number, changes: Partial<BoardCarouselSlot> = {}): BoardCarouselSlot => ({
-  slot: index, definitionId: `unit-${index}`, starLevel: 1, items: [{ id: `item-${index}`, icon: null }], picked: false, takable: false, pending: false, ...changes,
+  slot: index, definitionId: `unit-${index}`, starLevel: 1, items: [{ id: `item-${index}`, icon: null }], pickedBy: null, takable: false, pending: false, ...changes,
 });
-const seats = (locked: boolean, picked: readonly string[] = []) => Array.from({ length: 8 }, (_, index) => ({
-  seatId: `s${index}`, me: index === 2, locked, picked: picked.includes(`s${index}`),
-}));
+/** Eight seats, mine is s2; held until a minute in, or released from the start. */
+const seats = (locked: boolean) => Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, me: index === 2, releaseAtMs: locked ? 60_000 : 0 }));
 const carousel = (changes: Partial<BoardCarousel> = {}): BoardCarousel => ({
   id: 'c1', slots: Array.from({ length: 9 }, (_, index) => slot(index)), seats: seats(true), elapsedMs: 0, at: 0, ...changes,
 });
@@ -71,7 +70,7 @@ describe('3D carousel stage', () => {
     expect(stage.scene.getObjectByName('render3d-carousel-platform')!.rotation.y).toBe(0);
   });
 
-  it('rings the units the panel would take, and removes one only once the view says it was taken', async () => {
+  it('rings the units the panel would take, and takes one off the ring only once the view names who took it', async () => {
     const { stage } = setup();
     stage.show(carousel());
     stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { takable: true })) }));
@@ -81,10 +80,10 @@ describe('3D carousel stage', () => {
     // Pending: still standing until the server answers.
     stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { pending: index === 4 })) }));
     expect(stage.debug().units.find(unit => unit.slot === 4)!.ring).toBe('pending');
-    stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { picked: index === 4 })) }));
+    stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
     await flush();
-    expect(stage.debug().units.map(unit => unit.slot)).not.toContain(4);
-    expect(stage.debug().effects).toContain('burst:standin');
+    expect(stage.debug().units.find(unit => unit.slot === 4)!.ring).toBe('none');
+    expect(stage.scene.getObjectByName('render3d-carousel-units')!.children).toHaveLength(8);
   });
 
   it('holds locked seats with the restraint (early part only) and plays the first-draft wall until my release', async () => {
@@ -100,7 +99,7 @@ describe('3D carousel stage', () => {
     expect(effects.some(entry => entry.id === 'carousel-shareddraft-playerindicator')).toBe(true);
     expect(effects.some(entry => /timer|beam|crystal|unittier/.test(entry.id))).toBe(false);
     // My batch is released: my restraint and the wall end, its fade plays once.
-    stage.show(carousel({ seats: seats(true).map(seat => seat.me ? { ...seat, locked: false } : seat) }));
+    stage.show(carousel({ seats: seats(true).map(seat => seat.me ? { ...seat, releaseAtMs: 0 } : seat) }));
     await flush();
     expect(effects.find(entry => entry.id === 'carousel-shareddraftplayerrestraint')!.fx.disposed).toBe(true);
     expect(effects.find(entry => entry.id === 'carousel-shareddraft-firstdraftwall-galaxy')!.fx.disposed).toBe(true);
@@ -120,7 +119,7 @@ describe('3D carousel stage', () => {
     expect(tiers.map(entry => entry.id).sort()).toEqual([1, 2, 3, 4, 5, 6].map(tier => `carousel-shareddraft-unittier${tier}`));
     for (const entry of tiers) expect(entry.fx.object.parent?.name).toBe('render3d-carousel-unit');
     // Taking a unit removes its ring with it.
-    stage.show(carousel({ slots: slots.map(entry => entry.slot === 2 ? { ...entry, picked: true } : entry) }));
+    stage.show(carousel({ slots: slots.map(entry => entry.slot === 2 ? { ...entry, pickedBy: 's0' } : entry) }));
     await flush();
     expect(tiers.find(entry => entry.id === 'carousel-shareddraft-unittier3')!.fx.disposed).toBe(true);
     expect(tiers.filter(entry => entry.fx.disposed)).toHaveLength(1);
@@ -163,6 +162,82 @@ describe('3D carousel stage', () => {
     expect(stage.slotAt(point(0), area)).toEqual({ slot: 0, takable: true });
     expect(stage.slotAt(point(1), area)).toEqual({ slot: 1, takable: false });
     expect(stage.slotAt({ x: 2, y: 2 }, area)).toBeNull();
+  });
+
+  it("sends another seat's legend dashing for the unit it took, then home with it on the tether", async () => {
+    const { stage } = setup();
+    stage.show(carousel({ seats: seats(false) }));
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
+    const legend = stage.scene.getObjectByName('render3d-carousel-seats')!.children[5]!;
+    const home = legend.position.clone();
+    expect(stage.debug().legends[5]).toMatch(/:chase$/);
+    // The dash takes about 0.8 s from the cradle to the ring, then the grab burst.
+    for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
+    expect(stage.debug().fetched).toEqual({});
+    for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
+    expect(stage.debug().fetched).toEqual({ s5: 4 });
+    expect(stage.debug().legends[5]).toMatch(/:carry$/);
+    expect(stage.debug().effects).toContain('burst:standin');
+    for (let frame = 0; frame < 240; frame++) stage.update(1 / 60);
+    expect(legend.position.distanceTo(home)).toBeLessThan(1);
+    const unit = stage.scene.getObjectByName('render3d-carousel-taken')!.children.find(child => child.name === 'render3d-carousel-unit')!;
+    expect(unit.position.distanceTo(home) / CAROUSEL_CELL).toBeCloseTo(1.1, 0);
+    expect(stage.scene.getObjectByName('render3d-carousel-taken')!.children.filter(child => child.name === 'render3d-carousel-tether' && child.visible)).toHaveLength(1);
+    // Off the ring: never picked again.
+    expect(stage.debug().units.filter(entry => entry.ring !== 'none').map(entry => entry.slot)).not.toContain(4);
+  });
+
+  it('walks my legend on a ground click only once released and with no pick out; my pick sends it running, a refusal stops it', () => {
+    const { stage } = setup();
+    const area = { left: 0, top: 0, width: 1600, height: 900 }, middle = { x: 800, y: 450 };
+    stage.show(carousel());
+    stage.update(0);
+    expect(stage.walkTo(middle, area)).toBe(false); // held
+    stage.show(carousel({ seats: seats(false) }));
+    expect(stage.walkTo(middle, area)).toBe(true);
+    expect(stage.debug().legends[2]).toMatch(/:walk$/);
+    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, start = Math.hypot(mine.position.x, mine.position.z);
+    for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
+    expect(Math.hypot(mine.position.x, mine.position.z)).toBeLessThan(start - CAROUSEL_CELL);
+    // My click on slot 3 is out: running for it, and no more ground walking.
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pending: index === 3 })) }));
+    expect(stage.debug().legends[2]).toMatch(/:chase$/);
+    expect(stage.walkTo(middle, area)).toBe(false);
+    // Refused (someone else got it first): it stops where it is.
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : null })) }));
+    expect(stage.debug().legends[2]).not.toMatch(/:chase$/);
+    expect(stage.debug().legends[6]).toMatch(/:chase$/);
+    // Mine is taken: it carries it home and walks no more.
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : index === 5 ? 's2' : null })) }));
+    expect(stage.debug().legends[2]).toMatch(/:chase$/);
+    for (let frame = 0; frame < 180; frame++) stage.update(1 / 60);
+    expect(stage.debug().fetched).toMatchObject({ s2: 5, s6: 3 });
+    expect(stage.walkTo(middle, area)).toBe(false);
+  });
+
+  it('puts units already taken on the first view by their legends at home, with nothing to watch', async () => {
+    const { stage } = setup();
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 1 ? 's7' : null })) }));
+    await flush();
+    expect(stage.debug().fetched).toEqual({ s7: 1 });
+    expect(stage.debug().effects.some(entry => entry.startsWith('burst'))).toBe(false);
+    expect(stage.debug().legends[7]).toMatch(/:carry$/);
+  });
+
+  it('releases held seats by the carousel clock, breaking the chains once and calling my release once', async () => {
+    const onReleased = vi.fn();
+    const { stage, tick } = setup({ onReleased });
+    const timed = seats(true).map((seat, index) => ({ ...seat, releaseAtMs: index < 4 ? 3000 : 6000 }));
+    stage.show(carousel({ seats: timed }));
+    stage.update(1 / 60);
+    expect(stage.debug().legends.filter(entry => entry.includes(':locked'))).toHaveLength(8);
+    tick(3000); stage.update(1 / 60);
+    expect(stage.debug().legends.filter(entry => entry.includes(':locked'))).toHaveLength(4);
+    expect(stage.debug().effects.filter(entry => entry.startsWith('burst'))).toHaveLength(5); // four chains and my wall
+    expect(onReleased).toHaveBeenCalledTimes(1);
+    tick(3000); stage.update(1 / 60); stage.update(1 / 60);
+    expect(stage.debug().legends.some(entry => entry.includes(':locked'))).toBe(false);
+    expect(onReleased).toHaveBeenCalledTimes(1);
   });
 
   it('shows item icons from their URLs and disposes everything on a new carousel and on dispose', async () => {
