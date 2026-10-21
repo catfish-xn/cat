@@ -20,12 +20,13 @@ import { convertParticleMesh } from './particle-mesh.mjs';
 import { convertParticles } from './particles.mjs';
 import { contracts } from './runtime.mjs';
 import { createPrecache } from './merge-manifests.mjs';
+import { boardGroundSpan, alignBoardGroundZ } from './boards-alignment.mjs';
 
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
 const json = boardPlanJson;
-/** Reverse both board axes: native home becomes the current renderer's near
- * side. Separate horizontal scales compensate for authored locator rounding.
+/** Legacy locator estimate, retained for boards without measured ground evidence.
+ * The first-cell interpretation is an assumption, not native grid metadata.
  * GLBs already reflect X. Callers apply this scale and offset to their group. */
 export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}) {
   const sourceStepX=(center[0]-first[0])/3.25,sourceStepZ=(center[2]-first[2])/3.5;
@@ -140,11 +141,13 @@ export async function buildBoards({keys}={}) {
     const locator = locators.find(v => binField(v, 'name') === 'BoardLocator');
     const centerLocator = locators.find(v => binField(v, 'name') === 'BoardCenterLocator');
     const matrix = locator && binField(locator, 'transform');
-    // The placed locator identifies the first cell; spacing is taken from the
-    // client's design record if available. Never fit the decorative arena bbox.
+    // Locator-only placement is a legacy estimate, not recovered cell centres.
+    // For the base arena, use the actual playable ground/wall section for Z.
     scene.locators = locators;
     if(!matrix || !centerLocator)throw new Error('missing-board-grid-locators');
     scene.alignment = boardAlignment(matrix.slice(12,15),binField(centerLocator,'transform').slice(12,15));
+    if (pick.key === 'board-default') scene.alignment = alignBoardGroundZ(scene.alignment,
+      boardGroundSpan(geometry, binField(centerLocator, 'transform').slice(12,15)), scene.grid.rows);
 
     const propObjects = nestedBoardObjects(entries, 'MapAnimatedProp');
     const propModels = new Map();
