@@ -5,7 +5,7 @@ import type { BattleStats, UnitTotals } from './aggregate';
 import { displayUnitName } from '../rendering/display-names';
 import { originLabel } from '../rendering/combat-feedback';
 import { eventSource, eventUnitId, m8EventText, readUnitStatusRows, STATUS_KIND_NAMES, statusRowText } from '../presentation/combat-status';
-import { tallyViewEvents, type CombatViewState, type DisplayCombatEvent, type ViewTotals } from '../presentation/combat-display';
+import { createViewTally, type CombatViewState, type DisplayCombatEvent, type ViewTotals } from '../presentation/combat-display';
 /** Offline and saved replays: the local engine state and its ledger, aggregated by the stats module. */
 export interface LedgerStatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[]; readonly selectedUnitId: string | null }
 /**
@@ -102,6 +102,9 @@ function viewMatches(event: DisplayCombatEvent, filter: EventFilter): boolean {
     || filter === 'mana' && event.type === 'manaChanged' || filter === 'target' && event.type === 'targetChanged'
     || filter === 'skill' && ['cast', 'statChanged', 'maxHpChanged', 'growth'].includes(event.type);
 }
+const SHOWN = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'unitRevived', 'combatFinished', 'effectTriggered']);
+/** Event lines listed at most (the newest). */
+const LISTED = 80;
 const zeroView = (unitId: string): ViewTotals => ({ unitId, hpDamage: 0, physicalHpDamage: 0, magicHpDamage: 0, trueHpDamage: 0, shieldAbsorbed: 0, healingReceived: 0 });
 const zero = (unitId: string): UnitTotals => ({ unitId, hpDamage: 0, physicalHpDamage: 0, magicHpDamage: 0, shieldAbsorbed: 0, effectiveHealing: 0, overhealing: 0 });
 /** Read-only DOM component; filtering never modifies authoritative event or stat arrays. */
@@ -130,33 +133,55 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   root.append(heading, explanation, selection, filter, table, detail, effects, disclosure, debug); host.append(root);
   let view: StatsView | null = null, rosterKey = '', disposed = false;
   const rows = new Map<string, { button: HTMLButtonElement; cells: HTMLTableCellElement[] }>();
+  // The live panel re-renders four times a second while its log grows (2026-10-21: late fights stuttered). Totals and the
+  // event list take only the events added since the last render of the same log; a new log, filter or unit rebuilds them.
+  const sameLog = (cached: { log: readonly unknown[]; first: unknown; length: number }, log: readonly unknown[]) =>
+    cached.log === log && cached.first === log[0] && log.length >= cached.length;
+  let tallied: { log: readonly unknown[]; first: unknown; length: number; tally: ReturnType<typeof createViewTally>; rows: ViewTotals[] } | null = null;
+  const viewTotals = (events: readonly DisplayCombatEvent[]): ViewTotals[] => {
+    if (!tallied || !sameLog(tallied, events)) tallied = { log: events, first: events[0], length: 0, tally: createViewTally(), rows: [] };
+    if (tallied.length !== events.length) { tallied.tally.add(events, tallied.length); tallied.length = events.length; tallied.rows = tallied.tally.rows(); }
+    return tallied.rows;
+  };
+  let listed: { log: readonly unknown[]; first: unknown; length: number; key: string; count: number; texts: string[] } | null = null;
   function renderEvents(): void {
     if (!view) return;
-    const selected = selection.value; const visible: string[] = []; let count = 0;
-    const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'unitRevived', 'combatFinished', 'effectTriggered']);
+    const selected = selection.value, kind = filter.value as EventFilter, log: readonly unknown[] = view.events, key = `${view.stats === null}/${selected}/${kind}`;
+    const fresh = !listed || listed.key !== key || !sameLog(listed, log);
+    if (fresh) listed = { log, first: log[0], length: 0, key, count: 0, texts: [] };
+    const state = listed!;
+    if (!fresh && state.length === log.length) return;
+    const added: string[] = [];
     if (view.stats === null) {
       const online = view;
-      for (let i = online.events.length - 1; i >= 0; i--) {
-        const event = online.events[i];
-        if (shown.has(event.type) && (!selected || viewIncludesUnit(event, selected)) && viewMatches(event, filter.value as EventFilter)) {
-          count++; if (visible.length < 80) { const text = viewEventText(event, online.combat); if (text) visible.push(text); }
+      for (let i = state.length; i < online.events.length; i++) {
+        const event = online.events[i]!;
+        if (SHOWN.has(event.type) && (!selected || viewIncludesUnit(event, selected)) && viewMatches(event, kind)) {
+          state.count++; const text = viewEventText(event, online.combat); if (text) added.push(text);
         }
       }
-    } else for (let i = view.events.length - 1; i >= 0; i--) {
-      const event = view.events[i];
-      if (shown.has(event.type) && (!selected || includesUnit(event, selected)) && matches(event, filter.value as EventFilter)) {
-        count++; if (visible.length < 80) { const text = eventText(event, view.combat); if (text) visible.push(text); }
+    } else for (let i = state.length; i < view.events.length; i++) {
+      const event = view.events[i]!;
+      if (SHOWN.has(event.type) && (!selected || includesUnit(event, selected)) && matches(event, kind)) {
+        state.count++; const text = eventText(event, view.combat); if (text) added.push(text);
       }
     }
-    visible.reverse(); range.textContent = count > visible.length ? `显示最近 ${visible.length} 条，共 ${count} 条；${view.stats === null ? '完整事件账本保留在服务器。' : '完整事件保留在战斗档案中。'}` : `共 ${count} 条事件`;
-    list.replaceChildren(...visible.map(text => { const item = document.createElement('li'); item.textContent = text; return item; }));
+    state.length = log.length;
+    state.texts.push(...added);
+    if (state.texts.length > LISTED) state.texts.splice(0, state.texts.length - LISTED);
+    const shown = state.texts.length;
+    range.textContent = state.count > shown ? `显示最近 ${shown} 条，共 ${state.count} 条；${view.stats === null ? '完整事件账本保留在服务器。' : '完整事件保留在战斗档案中。'}` : `共 ${state.count} 条事件`;
+    const item = (text: string) => { const element = document.createElement('li'); element.textContent = text; return element; };
+    if (fresh || added.length >= LISTED) { list.replaceChildren(...state.texts.map(item)); return; }
+    list.append(...added.map(item));
+    while (list.children.length > shown) list.firstElementChild!.remove();
   }
   /** Online detail: the view's current values and the event tally; sources, healing shares and statuses are not sent. */
   function renderViewDetail(online: ReplayStatsView): void {
     const unit = online.combat.units.find(value => value.id === selection.value);
     effects.replaceChildren();
     if (!unit) { detail.textContent = '选择单位查看生命、法力与伤害明细。'; debugText.textContent = `对局：${online.runId}\n战斗：${online.combat.combatId ?? ''}\n事件数：${online.events.length}`; return; }
-    const totals = tallyViewEvents(online.events).find(value => value.unitId === unit.id) ?? zeroView(unit.id);
+    const totals = viewTotals(online.events).find(value => value.unitId === unit.id) ?? zeroView(unit.id);
     detail.textContent = `${unitName(online.combat, unit.id)} · ${unit.alive ? '存活' : '阵亡'}；生命 ${unit.hp}/${unit.maxHp}；法力 ${unit.mana}/${unit.maxMana}；攻击力 ${unit.attackDamage}；法强 ${unit.abilityPower}；护甲 ${unit.armor}；魔抗 ${unit.magicResist}；物理实际伤害 ${totals.physicalHpDamage}；魔法实际伤害 ${totals.magicHpDamage}；真实实际伤害 ${totals.trueHpDamage}；受击护盾吸收 ${totals.shieldAbsorbed}；受到治疗 ${totals.healingReceived}；目标：${unitName(online.combat, unit.targetId)}`;
     debugText.textContent = `对局：${online.runId}\n战斗：${online.combat.combatId ?? ''}\n单位：${unit.id}\n内容：${unit.definitionId}`;
   }
@@ -183,7 +208,7 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
     render(next) {
       if (disposed) return; view = next;
       // Online the totals are tallied from the replay's own events and healing by source is not sent: that column hides.
-      const totalsOf: readonly { readonly unitId: string; readonly hpDamage: number; readonly shieldAbsorbed: number; readonly effectiveHealing?: number }[] = next.stats ? next.stats.units : tallyViewEvents(next.events);
+      const totalsOf: readonly { readonly unitId: string; readonly hpDamage: number; readonly shieldAbsorbed: number; readonly effectiveHealing?: number }[] = next.stats ? next.stats.units : viewTotals(next.events);
       const online = next.stats === null;
       headings[3]!.hidden = online;
       const ids = [...new Set([...next.combat.units.map(unit => unit.id), ...totalsOf.map(unit => unit.unitId)])];

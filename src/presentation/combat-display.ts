@@ -61,20 +61,31 @@ export interface DisplayCombat { readonly units: readonly DisplayUnit[] }
 /** Display-only tally of one battle from view events (online stats): damage and absorption by the event's own numbers. */
 export interface ViewTotals { readonly unitId: string; hpDamage: number; physicalHpDamage: number; magicHpDamage: number; trueHpDamage: number; shieldAbsorbed: number; healingReceived: number }
 export function tallyViewEvents(events: readonly DisplayCombatEvent[]): ViewTotals[] {
+  const tally = createViewTally();
+  tally.add(events);
+  return tally.rows();
+}
+/** tallyViewEvents kept open: events are added as they play, the rows read at any point (the live stats panel). */
+export function createViewTally(): { add(events: readonly DisplayCombatEvent[], from?: number): void; rows(): ViewTotals[] } {
   const rows = new Map<string, ViewTotals>();
   const row = (unitId: string) => {
     let value = rows.get(unitId);
     if (!value) { value = { unitId, hpDamage: 0, physicalHpDamage: 0, magicHpDamage: 0, trueHpDamage: 0, shieldAbsorbed: 0, healingReceived: 0 }; rows.set(unitId, value); }
     return value;
   };
-  for (const event of events) {
-    if (event.type === 'packetDamage') {
-      const source = row(event.sourceId); source.hpDamage += event.hpDamage;
-      if (event.damageType === 'physical') source.physicalHpDamage += event.hpDamage;
-      else if (event.damageType === 'magic') source.magicHpDamage += event.hpDamage;
-      else source.trueHpDamage += event.hpDamage;
-      row(event.targetId).shieldAbsorbed += event.absorbed;
-    } else if (event.type === 'heal') row(event.targetId).healingReceived += event.actual;
-  }
-  return [...rows.values()].sort((a, b) => a.unitId < b.unitId ? -1 : a.unitId > b.unitId ? 1 : 0);
+  return {
+    add(events, from = 0) {
+      for (let i = from; i < events.length; i++) {
+        const event = events[i]!;
+        if (event.type === 'packetDamage') {
+          const source = row(event.sourceId); source.hpDamage += event.hpDamage;
+          if (event.damageType === 'physical') source.physicalHpDamage += event.hpDamage;
+          else if (event.damageType === 'magic') source.magicHpDamage += event.hpDamage;
+          else source.trueHpDamage += event.hpDamage;
+          row(event.targetId).shieldAbsorbed += event.absorbed;
+        } else if (event.type === 'heal') row(event.targetId).healingReceived += event.actual;
+      }
+    },
+    rows: () => [...rows.values()].map(value => ({ ...value })).sort((a, b) => a.unitId < b.unitId ? -1 : a.unitId > b.unitId ? 1 : 0),
+  };
 }

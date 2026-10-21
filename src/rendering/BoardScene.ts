@@ -1178,6 +1178,8 @@ export class BoardScene extends Phaser.Scene {
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     const casts = this.fx.casts;
     // The engine state, when there is one, adds ability colors; positions and teams are the same as the view's.
+    // Under the 3D layer the 2D canvas is not drawn: its pieces still react, but no effect objects are built.
+    this.fx.drawn = !boardFeedActive();
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
     this.feedback?.push(events, performance.now());
