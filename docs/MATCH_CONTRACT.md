@@ -1,8 +1,12 @@
+## v20-traits 继承规则覆盖（2026-10-21）
+
+父 epoch 规则/内容为 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`，schema/save/replay/command＝10/6/4/4；当前身份以下文 v20-chem-baron 为准。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、输入输出、失败/跳过语义、强化赠卡唯一收据与恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧关系延期与v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。
+
 # M5 Match contract v5
 
 ## v20-chem-baron 当前炼金男爵规则（2026-10-21）
 
-本 epoch 的父版本为 v19（multiplayer `14006984`），完整保留 v19 内容、规则和账本。本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:31c27e0d`，LOOT_REPLAY `fnv1a32-utf16:53b885c7`；schema/save/replay/command 沿用 v19 的 9/5/4/4，旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
+本 epoch 的父版本为 v20-traits（multiplayer `ce60a8b9`），完整保留迅击、野火、五组搭档、共用移动禁止判定、66 强化及 v19 账本。本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:2d1eafb8`，LOOT_REPLAY `fnv1a32-utf16:7fd08770`；schema/save/replay/command 为 11/7/4/4（父 10/6/4/4；新增存档候选与领取决策字段，各升 schema/save 一版），旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
 
 12/17 B 公告 15 条（16 具名字段）在规则内容层采纳覆盖，raw/archive mirror 不变。标准模式只在玩家对战后获取微光，野怪不增加且不触发新 offer。黑市 N=3 为项目自定（用户要求多选一），按该档源权重无放回抽取，不足三包时全部列出，每候选一词 lcg32-v1。`choiceId/generation/options` 投影与 choose 命令不变，optionId 为完整奖励包 apiName；只发选中包，`@skip`/超时即“保留”，本轮不领且微光不清空。既有跨档/领取清空/跳过生命规则保持。
 

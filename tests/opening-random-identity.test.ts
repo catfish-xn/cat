@@ -335,16 +335,68 @@ it('binds v19 to fresh public rules and preserved v18 byte evidence', () => {
   }
 });
 
-it('binds v20-chem-baron to fresh public rules and preserved v19 byte evidence', () => {
-  expect(bytes('scripts/verify-m8-herald-fixtures.cjs').toString()).toContain("const CURRENT = '../tests/fixtures/record-v20-chem-baron-herald.cjs';");
-  expect(load('tests/fixtures/v20-chem-baron-herald-raw/manifest.json').generationVersion).toBe('v20-chem-baron-herald-public-commands-v1');
-  const recorded = currentBaseline(), previous = load('tests/v19-content-baseline.json'), fresh = createMatch(42);
-  expect(recorded.parentEpoch).toBe('v19');
+it('binds v20-traits to fresh public rules and preserved v19 byte evidence', () => {
+  expect(load('tests/fixtures/v20-traits-herald-raw/manifest.json').generationVersion).toBe('v20-traits-herald-public-commands-v1');
+  const recorded = load('tests/v20-traits-content-baseline.json'), previous = load('tests/v19-content-baseline.json'), fresh = JSON.parse(gunzipSync(bytes('tests/fixtures/v20-traits-recorded-states/cannon.json.gz')).toString()).states[0];
+  const CONTENT_DIGEST = fresh.contentDigest, LOOT_REPLAY_DIGEST = fresh.m8.loot.frozen.replayDigest;
+  expect(() => restoreMatch(fresh)).toThrow();
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
-  // v20-chem-baron has its own identity; retained v19 evidence remains byte-for-byte unchanged.
+  // v20-traits has its own identity; retained v19 evidence remains byte-for-byte unchanged.
+  expect(recorded.contentDigest).not.toBe(previous.contentDigest);
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v20-traits');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v20-traits');
+  expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
+  expect(recorded.contentVersion).not.toBe(previous.contentVersion);
+  expect(recorded.previousContentDigest).toBe(previous.contentDigest);
+  expect(recorded.previousLootReplayDigest).toBe(previous.lootReplayDigest);
+  const audit = load('docs/evidence/v20-traits/release-audit.json');
+  expect(audit.baseline).toEqual(recorded);
+  expect(audit.baseCommit).toMatch(/^[0-9a-f]{40}$/);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v19.json'))).toBe(audit.previousGoldenSha256);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v20-traits.json'))).toBe(audit.candidateSha256);
+  const historicalAudit = load('docs/evidence/v19/release-audit.json');
+  expect(audit.previousGoldenSha256).toBe(historicalAudit.candidateSha256);
+  for (const build of ['cannon', 'sniper']) {
+    const oldBytes = bytes(`tests/fixtures/v19-recorded-states/${build}.json.gz`);
+    const currentBytes = bytes(`tests/fixtures/v20-traits-recorded-states/${build}.json.gz`);
+    const evidence = audit.builds[build].recording;
+    expect(sha(oldBytes)).toBe(evidence.previousGzipSha256);
+    expect(sha(oldBytes)).toBe(historicalAudit.builds[build].recording.gzipSha256);
+    expect(sha(currentBytes)).toBe(evidence.gzipSha256);
+    expect(evidence.byteEvidence.previousBytes).toBe(oldBytes.length);
+    expect(evidence.byteEvidence.currentBytes).toBe(currentBytes.length);
+    expect(evidence.textAndObjectRestoreBytesEqual).toBe(true);
+    const old = JSON.parse(gunzipSync(oldBytes).toString()).states;
+    expect(old).toHaveLength(67);
+    for (const state of [old[0], old.at(-1)]) {
+      expect(() => restoreMatch(state)).toThrow();
+      expect(() => restoreMatch(JSON.stringify(state))).toThrow();
+    }
+  }
+  const inputs = load('docs/evidence/v20-traits/input-fixture-audit.json');
+  expect(inputs.baseCommit).toBe(audit.baseCommit);
+  expect(inputs.contentDigest).toBe(recorded.contentDigest);
+  for (const [path, raw] of Object.entries(inputs.files)) {
+    const evidence = raw as {previousSha256: string; currentSha256: string};
+    expect(sha(bytes(path))).toBe(evidence.currentSha256);
+    expect(sha(bytes(path.replace('v20-traits-', 'v19-')))).toBe(evidence.previousSha256);
+  }
+});
+
+
+it('binds v20-chem-baron to fresh public rules and preserved v20-traits byte evidence', () => {
+  expect(bytes('scripts/verify-m8-herald-fixtures.cjs').toString()).toContain("const CURRENT = '../tests/fixtures/record-v20-chem-baron-herald.cjs';");
+  expect(load('tests/fixtures/v20-chem-baron-herald-raw/manifest.json').generationVersion).toBe('v20-chem-baron-herald-public-commands-v1');
+  const recorded = currentBaseline(), previous = load('tests/v20-traits-content-baseline.json'), fresh = createMatch(42);
+  expect(recorded.parentEpoch).toBe('v20-traits');
+  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
+    expect(fresh[key]).toBe(recorded[key]);
+  expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
+  expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
+  // v20-chem-baron has its own identity; retained v20-traits evidence remains byte-for-byte unchanged.
   expect(recorded.contentDigest).not.toBe(previous.contentDigest);
   expect(recorded.rulesVersion).toBe('s13-g2-3-v20-chem-baron');
   expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v20-chem-baron');
@@ -355,12 +407,12 @@ it('binds v20-chem-baron to fresh public rules and preserved v19 byte evidence',
   const audit = load('docs/evidence/v20-chem-baron/release-audit.json');
   expect(audit.baseline).toEqual(recorded);
   expect(audit.baseCommit).toMatch(/^[0-9a-f]{40}$/);
-  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v19.json'))).toBe(audit.previousGoldenSha256);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v20-traits.json'))).toBe(audit.previousGoldenSha256);
   expect(sha(bytes('tests/fixtures/m5/full-match-golden.v20-chem-baron.json'))).toBe(audit.candidateSha256);
-  const historicalAudit = load('docs/evidence/v19/release-audit.json');
+  const historicalAudit = load('docs/evidence/v20-traits/release-audit.json');
   expect(audit.previousGoldenSha256).toBe(historicalAudit.candidateSha256);
   for (const build of ['cannon', 'sniper']) {
-    const oldBytes = bytes(`tests/fixtures/v19-recorded-states/${build}.json.gz`);
+    const oldBytes = bytes(`tests/fixtures/v20-traits-recorded-states/${build}.json.gz`);
     const currentBytes = bytes(`tests/fixtures/v20-chem-baron-recorded-states/${build}.json.gz`);
     const evidence = audit.builds[build].recording;
     expect(sha(oldBytes)).toBe(evidence.previousGzipSha256);
@@ -382,7 +434,7 @@ it('binds v20-chem-baron to fresh public rules and preserved v19 byte evidence',
   for (const [path, raw] of Object.entries(inputs.files)) {
     const evidence = raw as {previousSha256: string; currentSha256: string};
     expect(sha(bytes(path))).toBe(evidence.currentSha256);
-    expect(sha(bytes(path.replace('v20-chem-baron-', 'v19-')))).toBe(evidence.previousSha256);
+    expect(sha(bytes(path.replace('v20-chem-baron-', 'v20-traits-')))).toBe(evidence.previousSha256);
   }
 });
 

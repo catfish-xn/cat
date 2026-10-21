@@ -6,9 +6,9 @@ import { enableMultiplayerSettlement } from '../src/simulation/round-settlement'
 import { accepted } from './t10-helpers';
 import { catalogPreparation } from './t5r-helpers';
 
-it('keeps v19 61 augments (including Sisters) and the same complete 56-anomaly pool in both modes', () => {
+it('keeps v20 66 augments (including Sisters and five relationship augments) and the same complete 56-anomaly pool in both modes', () => {
   const all = Object.keys(ANOMALY_DEFINITIONS).sort();
-  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(61);
+  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(66);
   expect(all).toHaveLength(56);
   expect(anomalyCandidates(false).sort()).toEqual(all);
   expect(anomalyCandidates(true).sort()).toEqual(all);

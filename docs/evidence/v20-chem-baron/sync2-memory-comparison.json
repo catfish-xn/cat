@@ -1,0 +1,22 @@
+{
+  "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+  "workersExcludePreload": true,
+  "reports": [
+    {
+      "label": "v20-traits",
+      "exitCode": 0,
+      "peakRssKiB": 282868,
+      "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":45.575900000000274}\n",
+      "stderr": ""
+    },
+    {
+      "label": "current",
+      "exitCode": 0,
+      "peakRssKiB": 284088,
+      "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":49.185575999999855}\n",
+      "stderr": ""
+    }
+  ],
+  "limitKiB": 262144,
+  "classification": "inherited-performance-gate-failure; both immutable v20-traits and current exceed 256 MiB under the same Node 24 environment; arithmetic and elapsed-time checks pass"
+}

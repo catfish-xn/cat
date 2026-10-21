@@ -1,15 +1,15 @@
 {
-  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
   "steps": [
     {
       "name": "record-release",
       "args": [
         "scripts/record-v20-chem-baron-release.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 218921,
+      "elapsedMs": 148861,
       "log": "artifacts/v20-chem-baron-recording/record-release.log"
     },
     {
@@ -20,29 +20,29 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 203672,
+      "elapsedMs": 122650,
       "log": "artifacts/v20-chem-baron-recording/record-herald.log"
     },
     {
       "name": "record-inputs",
       "args": [
         "scripts/record-v20-chem-baron-inputs.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 15171,
+      "elapsedMs": 8096,
       "log": "artifacts/v20-chem-baron-recording/record-inputs.log"
     },
     {
       "name": "record-live-reveal",
       "args": [
         "scripts/record-v20-chem-baron-live-reveal.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 66158,
+      "elapsedMs": 44452,
       "log": "artifacts/v20-chem-baron-recording/record-live-reveal.log"
     },
     {
@@ -52,7 +52,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 24946,
+      "elapsedMs": 15419,
       "log": "artifacts/v20-chem-baron-recording/record-transfer.log"
     },
     {
@@ -63,19 +63,19 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 22292,
+      "elapsedMs": 15088,
       "log": "artifacts/v20-chem-baron-recording/check-transfer.log"
     },
     {
       "name": "check-inputs",
       "args": [
         "scripts/record-v20-chem-baron-inputs.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
         "--check"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 10269,
+      "elapsedMs": 7787,
       "log": "artifacts/v20-chem-baron-recording/check-inputs.log"
     },
     {
@@ -85,30 +85,30 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 144287,
+      "elapsedMs": 123047,
       "log": "artifacts/v20-chem-baron-recording/check-herald.log"
     },
     {
       "name": "check-history",
       "args": [
         "scripts/v20-chem-baron-fixture-audit.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 2848,
+      "elapsedMs": 2635,
       "log": "artifacts/v20-chem-baron-recording/check-history.log"
     },
     {
       "name": "check-live-reveal",
       "args": [
         "scripts/record-v20-chem-baron-live-reveal.cjs",
-        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--baseline-commit=ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
         "--check"
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 55919,
+      "elapsedMs": 47321,
       "log": "artifacts/v20-chem-baron-recording/check-live-reveal.log"
     },
     {
@@ -118,7 +118,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 4965,
+      "elapsedMs": 5087,
       "log": "artifacts/v20-chem-baron-recording/compare-digests.log"
     }
   ],

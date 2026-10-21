@@ -1,46 +1,46 @@
 {
   "epoch": "v20-chem-baron",
   "seed": 4,
-  "contentDigest": "fnv1a32-utf16:31c27e0d",
-  "donor": "unit-14",
-  "survivor": "unit-24",
-  "reward": "unit-32",
+  "contentDigest": "fnv1a32-utf16:2d1eafb8",
+  "donor": "unit-11",
+  "survivor": "unit-21",
+  "reward": "unit-27",
   "tg": "item-10",
   "acquisitions": [
     {
       "kind": "unit-acquired",
-      "unitId": "unit-14",
+      "unitId": "unit-11",
       "source": {
         "kind": "shop",
         "generation": 16,
         "slotIndex": 2,
         "definitionId": "tristana"
       },
-      "sequence": 41,
+      "sequence": 35,
       "roundId": "3-3"
     },
     {
       "kind": "unit-acquired",
-      "unitId": "unit-24",
+      "unitId": "unit-21",
       "source": {
         "kind": "shop",
         "generation": 39,
         "slotIndex": 2,
         "definitionId": "tristana"
       },
-      "sequence": 58,
-      "roundId": "3-6"
+      "sequence": 53,
+      "roundId": "3-7"
     }
   ],
   "provenanceCounts": [
-    31,
+    26,
     20,
     15,
-    7,
+    6,
     4,
-    8,
+    5,
     1
   ],
-  "provenanceLength": 86,
-  "nextUnitSerial": 32
+  "provenanceLength": 77,
+  "nextUnitSerial": 27
 }

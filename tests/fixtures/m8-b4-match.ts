@@ -40,10 +40,10 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
     return definition.recipe ? [...definition.recipe] : [definitionId];
   });
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  // Keep the two-Bloodthirster control's original component births and chosen
-  // augments under the v14 same-tier pool. Other controls retain their seed.
+  // Keep the original component births. In v20, reroll the second node
+  // once to publicly recover the inert back-row Glass Cannon II control.
   let state = requested.length === 2 && requested.every(id => id === 'bloodthirster')
-    ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['manaflow-i', 'pumping-up-ii'] })
+    ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['manaflow-i', 'glass-cannon-ii'], rerollForAugment: true })
     : equipmentPreparation(components);
   const available = state.items.filter(item => item.location.kind === 'inventory');
   for (const [slot, definitionId] of requested.entries()) {

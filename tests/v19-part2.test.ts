@@ -288,5 +288,5 @@ describe('v19 emblem replacement and schema',()=>{
     let c:CombatState=idle(start(s).state);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,maxMana:100,mana:0}:u)};
     for(let i=0;i<19;i++)c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(0);c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(3);
   });
-  it('retains v19 schema/save/replay 9/5/4 in the descendant epoch',()=>expect(M8_VERSION).toMatchObject({schemaVersion:9,saveFormatVersion:5,replayFormatVersion:4,rulesVersion:'s13-g2-3-v20-chem-baron'}));
+  it('retains v19 rules in v20-chem-baron schema/save/replay 11/7/4',()=>expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:4,rulesVersion:'s13-g2-3-v20-chem-baron'}));
 });

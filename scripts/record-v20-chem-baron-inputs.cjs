@@ -13,7 +13,7 @@ async function main(){
  const api=await server.ssrLoadModule('/src/simulation/match.ts'),battle=await server.ssrLoadModule('/src/simulation/two-sided-battle.ts'),{CONTENT_DIGEST}=await server.ssrLoadModule('/src/simulation/content/index.ts'),{ROUND_CATALOG}=await server.ssrLoadModule('/src/simulation/content/round-catalog.ts');
  const outputs=new Map(),audit={baseCommit,sourceDigests:migration.sourceDigests(),contentDigest:CONTENT_DIGEST,files:{}};
  const record=(p,value,prior)=>{const b=Buffer.from(JSON.stringify(value,null,2)+'\n');outputs.set(p,b);audit.files[p]=evidence(migration.archivedBytes(baseCommit,prior),b);};
- const old='tests/fixtures/v19-c19-seed-9-minimal.json',prior=JSON.parse(migration.archivedBytes(baseCommit,old));
+ const old='tests/fixtures/v20-traits-c19-seed-9-minimal.json',prior=JSON.parse(migration.archivedBytes(baseCommit,old));
  const compiled=battle.compileBattle({...prior.a,contentDigest:CONTENT_DIGEST},{...prior.b,contentDigest:CONTENT_DIGEST},prior.battleSeed,{battleId:prior.battleId,mirrorOfSeatId:prior.mirrorOfSeatId??undefined});
  const result=battle.resolveTwoSidedBattle(compiled,5000),pulses=result.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.damageType==='true');
  assert.equal(result.terminal.tick,273);assert.equal(result.terminal.result,'enemyWin');
@@ -30,13 +30,13 @@ async function main(){
   const resolved=battle.resolveTwoSidedBattle(battle.compileBattle(snapshotForBattle(state,'A'),snapshotForBattle(state,'B'),42,{battleId:'resumable'}),1201),replay=toCombatReplay(resolved),legacy={...replay,ticks:replay.ticks.map(frame=>({...frame,events:frame.events.map(event=>{if(event.type!=='heal')return event;const {shares,...rest}=event;return rest;})}))};
   fingerprints[count]=[sha(resolved),sha(legacy)];
  }
- record('tests/fixtures/v20-chem-baron-b8-fingerprints.json',fingerprints,'tests/fixtures/v19-b8-fingerprints.json');
+ record('tests/fixtures/v20-chem-baron-b8-fingerprints.json',fingerprints,'tests/fixtures/v20-traits-b8-fingerprints.json');
  // Final fixture generation records these independently generated Herald bytes too.
  const dir='tests/fixtures/v20-chem-baron-herald-raw';
  const manifest=JSON.parse(fs.readFileSync(dir+'/manifest.json'));assert.equal(manifest.contentDigest,CONTENT_DIGEST,'Generate Herald first at final identity');assert.equal(manifest.cases.length,5);
  assert.equal(sha(fs.readFileSync(dir+'/trajectory.json')),manifest.traceSha256);
  for(const entry of manifest.cases)assert.equal(sha(fs.readFileSync(dir+'/'+entry.file)),entry.rawSha256);
- for(const name of [...manifest.cases.map(e=>e.file),'manifest.json','trajectory.json'])audit.files[dir+'/'+name]=evidence(migration.archivedBytes(baseCommit,'tests/fixtures/v19-herald-raw/'+name),fs.readFileSync(dir+'/'+name));
+ for(const name of [...manifest.cases.map(e=>e.file),'manifest.json','trajectory.json'])audit.files[dir+'/'+name]=evidence(migration.archivedBytes(baseCommit,'tests/fixtures/v20-traits-herald-raw/'+name),fs.readFileSync(dir+'/'+name));
  migration.verifySources(audit.sourceDigests);
  for(const [p,b] of outputs)if(process.argv.includes('--check'))assert.deepEqual(fs.readFileSync(p),b);else fs.writeFileSync(p,b);
  const path='docs/evidence/v20-chem-baron/input-fixture-audit.json',bytes=JSON.stringify(audit,null,2)+'\n';if(process.argv.includes('--check'))assert.equal(fs.readFileSync(path,'utf8'),bytes);else{fs.mkdirSync('docs/evidence/v20-chem-baron',{recursive:true});fs.writeFileSync(path,bytes);}

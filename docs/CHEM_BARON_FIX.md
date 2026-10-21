@@ -1,6 +1,6 @@
-# Chem-Baron 修正：v20-chem-baron（2026-10-21）
+# Chem-Baron 修正：v20-chem-baron（2026-10-22 第二次同步）
 
-父 epoch 为 v19；基线为已合入 PR #364 的 `origin/multiplayer` / `14006984600a08f8dd96fa776bf9ba1d1048ff24`。离线合并完整保留 v19 内容、规则、家人/Mel 账本与本 PR 的 B 补丁覆盖、标准 PvE 零微光、黑市多选一。v19 及更早 fixtures、证据、录制脚本和归档字节保持不变。
+父 epoch 为 v20-traits；基线为已合入 PR #379 的 `origin/multiplayer` / `ce60a8b9dd2b0c3a0c34c527405d44939233fb5b`。离线合并保留迅击、野火、五组搭档、共用移动禁止判定、66 张强化，以及 v19 家人/Mel 账本；同时保留本 PR 的 B 补丁覆盖、标准 PvE 零微光、黑市多选一/保留。v20-traits、v19 及更早 fixtures、证据、录制脚本和归档字节保持不变。
 
 ## B 补丁采纳覆盖
 
@@ -36,14 +36,14 @@ N=3，**项目自定（用户要求多选一）**。本地 14.24 归档的 `map2
 
 ## 版本、录制与验证
 
-规则 `s13-g2-3-v20-chem-baron`；内容 `s13-14.24b-g2-3-v20-chem-baron`；schema/save/replay/command 沿用 v19 的 9/5/4/4。CONTENT `fnv1a32-utf16:31c27e0d`，LOOT_REPLAY `fnv1a32-utf16:53b885c7`，均由 `update-content-identities.cjs` 完整重算。旧身份拒绝，无迁移。
+规则 `s13-g2-3-v20-chem-baron`；内容 `s13-14.24b-g2-3-v20-chem-baron`；schema/save/replay/command 为 11/7/4/4（父 v20-traits 为 10/6/4/4）：候选 optionIds 和领取决策 optionId 新增持久化字段，因此 schema 与 save 各递增一；战斗回放事件结构与命令协议未变。CONTENT `fnv1a32-utf16:2d1eafb8`，LOOT_REPLAY `fnv1a32-utf16:7fd08770`，均由 `update-content-identities.cjs` 完整重算。旧身份拒绝，无迁移。
 
-独立入口 `scripts/verify-v20-chem-baron-epoch.cjs`、`docs/evidence/v20-chem-baron/`、`tests/fixtures/v20-chem-baron-*`；历史 v19 及更早录制保留。CURRENT Herald 和当前夹具消费者改指本 epoch。通用路线保存完整当前身份以验证恢复，不能把旧存档改版本字符串冒充当前录制；与既有路线的命令/事件差异由 release-audit 单独记录。化工专用旧测试的首次市场从第 8 轮推迟至第 12 轮，派生奖励候选随 offer 身份变化，已用独立 BigInt LCG/权重 oracle 核对新的进度流。
+独立入口 `scripts/verify-v20-chem-baron-epoch.cjs`、`docs/evidence/v20-chem-baron/`、`tests/fixtures/v20-chem-baron-*`；历史 v20-traits、v19 及更早录制保留。CURRENT Herald 和当前夹具消费者改指本 epoch。通用路线保存完整当前身份以验证恢复，不能把旧存档改版本字符串冒充当前录制；与既有路线的命令/事件差异由 release-audit 单独记录。化工专用旧测试的首次市场从第 8 轮推迟至第 12 轮，派生奖励候选随 offer 身份变化，已用独立 BigInt LCG/权重 oracle 核对新的进度流。
 
 回归输入为合成棋盘/战斗事实及已存在公共命令路线。独立公告数值断言覆盖 16 字段、归档不变及实际 HP/AD/AP；标准 PvE 五档/死亡数/第三败；无放回抽样、非首项领取、保留/超时、过期和无效选择零变更，以及三候选各自恢复与防重发。已执行指定相关测试、v19 补充回归、typecheck、epoch 录制/校验及 fast 四分片；浏览器及上线验收尚未完成。
 
-指定的 23 文件共 665 项通过（原 662 项加两项合并/oracle 回归和一项 v19 历史身份检查）；含 v19 补充回归共 44 文件、1095 项通过，typecheck 通过。epoch 11 步全部通过，三份审计各 357 个源哈希匹配，190 份历史文件与受保护 manifest 字节一致。fast 四分片各运行一次，合计 6112 项通过、49 项失败、38 项被 hook 阻塞；环境/计时分类、单跑复核与 v19 同样存在的 RSS 性能门槛失败见 [完整清单](evidence/v20-chem-baron/FAST_TEST_RESULTS.md)。
+第二次同步专项 58 文件 / 1396 项及最终 typecheck 通过，epoch 11 步与 220 份历史字节校验通过；完整 fast 四片 6384 通过 / 53 环境失败（0 跳过，无计时或规则断言失败）。U6 DOM 仍被监听权限阻断，父/当前 RSS 均超过本环境 256 MiB 门槛。详细测试、四分片分类和环境限制以 [同步报告](evidence/v20-chem-baron/SYNC2_RESULTS.md) 为准；先前 v19 父基线结果只作历史记录，不能证明本次通过。
 
 本次验证结果见 [validation.json](evidence/v20-chem-baron/validation.json)，epoch 顺序录制见 [epoch-verification.json](evidence/v20-chem-baron/epoch-verification.json)。新增 transfer-route 独立录制及复核，当前消费者也使用 v20 输入。独立 `oracle.g2.cjs` 手录标准五档微光和八档源权重，用 BigInt LCG 校验每候选一词、保留、非首项领取和冠冕抽样顺序，不 import 运行时规则；额外覆盖家人任务、Mel 救援与黑市共享同一本账后完整重放。
 
-环境限制：Node 24 同步管道报 EPERM，验证时用忽略目录内的预加载器将同步子进程输出接到普通文件，保留真实退出码；U6 原脚本监听 127.0.0.1 被沙箱拒绝，浏览器验收须在可监听环境复核。无浏览器的原 U6 采集/存档路线另行执行，不能替代 DOM 验收。Git index.lock 位于只读元数据目录，`git add` 失败；冲突文件内容已解决，索引待用户提交时登记。未联网、未 push，未手动修改界面目录。
+环境限制：Node 24 同步管道报 EPERM，当前 epoch 工具直接用普通文件描述符捕获输出，保留真实退出码，不加载预加载器；U6 原脚本监听 127.0.0.1 被沙箱拒绝，浏览器验收须在可监听环境复核。本次原 U6 脚本已完成公共路线采集、存档验证和结算预检，不能替代 DOM 验收。Git index 位于只读元数据目录，无法在本环境登记冲突；冲突文件内容已解决，索引待用户提交时登记。未联网、未 push，未手动修改界面目录。
