@@ -218,7 +218,7 @@
     "src/simulation/d14-runtime.ts": "b4867a671564aa39a5e57b69a111c4eb93422528928d957b90702c71201da68a",
     "src/simulation/deferred-upgrades.ts": "9bd23d7897326aeecf7acef996e5b42dd261fabbfe44b23cf377d83bfe7c07cd",
     "src/simulation/deployment-cap.ts": "4956a2619262e450eb9b28f0e86c8869bad53161cfcf4eab18feaf0f8aaeaf43",
-    "src/simulation/economy-preview.ts": "7361823ba6d7b7b889203ef1582db25edc29764919704fa7233cef55f678e2ae",
+    "src/simulation/economy-preview.ts": "0449a3c18cdf0510a77c9bcfe5cd8a334ab3d82b42895004f27b255bd992c9d2",
     "src/simulation/economy.ts": "62a35f2b1f046440035e2e71841c9afe9e9d51219a4f63ed0975c64c583cd73b",
     "src/simulation/effects.ts": "ad92ecefb29933c26f3ce4f54a92179f2081284a2000340a420e44bcf8cecf83",
     "src/simulation/encounter-selectors.ts": "ddb974b3a9d0572a9380651fbe99b09004a213b3656e0ce4b5b04a5647c705e3",
@@ -430,7 +430,7 @@
       "previousBytes": 37828,
       "currentBytes": 38237,
       "previousSha256": "9ea81bc5b9cf76d20abad333df736d10479089a0e52d3b824e45b6bc8676dc8a",
-      "currentSha256": "8b7207dde73cd02fe3672f5247fbafae0a307c2bbbffb7e71a82ae63eac3edf7",
+      "currentSha256": "9432beca058ec200d9d119a4e2d71915856bcec0f9a9b492d16d2ca64b9b084b",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v17-herald-raw/trajectory.json": {

@@ -73,7 +73,7 @@ PvP 已锁阵容的结算使用可信服务器战斗收据中的冻结羁绊档�
 - 试验品纹章的8秒/死亡分身实验加成是独立特殊召唤机制，本轮仅装备数值、成员身份与已有供体翻倍。
 - 野火帮4的 `{0a9a9714}:3.5` 没有明确字段绑定；攻速爆发与冲刺/无限射程按用户决定延期。
 - 双铲/双锅/铲锅组合不在16个纹章配方范围，沿用现有不支持组合的失败语义。
-- 本地 HEAD `566dbe34` 及缓存的 `origin/multiplayer` 未找到 #344；按用户的条件只改规则侧。没有联网查询远端，也没有 Git 合并/写操作。待同步位置：`src/presentation/effect-text.ts` 的 `describeTraitTier`，以及 #344 新增的羁绊说明模板。须遍历 `TRAIT_DEFINITIONS[id].tiers` 的全部档位、保留上表数值/延期机制区分。当前调用点为 `src/rendering/trait-column.ts`。
+- 合入 `a0a63ae5` 后，按用户授权同步 `src/presentation/effect-text.ts` 与 #344 的 `trait-text.ts`：调用点继续遍历 `TRAIT_DEFINITIONS[id].tiers` 全部档位，说明覆盖上表数值及 B 类修正，延期机制明确标“暂未实装”。法师/狙神的归档覆盖值从实际 authored effects 读取，征服者每箱缩放从执行 policy 读取，不改原始归档。相关测试覆盖全目录与新增顶档。未修改 `src/rendering/`。
 - 界面/侦察若直接调用 `deriveTraits`，应传第五参数 `state.items`；无需自行从纹章另算规则。
 
 ## 验证与录制

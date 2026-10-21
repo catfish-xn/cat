@@ -91,3 +91,15 @@ node scripts/verify-v17-epoch.cjs
 最终联合重录 `node scripts/verify-v17-epoch.cjs` 九步全部 exitCode=0；`../v17/epoch-verification.json` 为 `complete:true`。四条公共命令路线均胜利完成33场，cannon/sniper各67个状态完整恢复；5组Herald在加载恢复器前独立导出原始字节，通过开场及后续15tick恢复。inputs/live-reveal 重新生成并核对；摘要比较通过；58个v15/v16历史文件及对应身份断言字节不变。最终证据使用当前v17录制目录承载v18，不改历史目录。
 
 本轮日志在不提交的 `artifacts/v18-traits-epoch-final.log`、`v18-traits-related-final.log`、`v18-traits-identity-final.log`、`v18-traits-tsc-final.log`、`v18-traits-digest-final.log`。第一次录制在补充冻结装备结算修正前主动中断，最终九步已从头重跑，交付不依赖中断结果。
+
+## 合入 multiplayer 后的收尾（2026-10-21，HEAD a0a63ae5）
+
+按本次用户授权同步 `src/presentation/effect-text.ts` 与 #344 的 `trait-text.ts`，全档位遍历保持，覆盖纹章可达档位、数值顶档、迅击/搏击/法师8/先知8修正。法师125 AP、狙神18%/36%读取实际效果，征服者每箱5%读取执行policy；延期机制逐档标“暂未实装”，不改原始归档或规则。未修改 rendering 或服务器实现。
+
+收入预览的 `ifWin` / `ifLoss` 新增 `base:number`，直接读取结算规划器的基础金币。1-2/1-3/1-4 为2/3/5，之后普通战斗与加时为5，排除利息、胜利、连胜败及掉落；合同同步到 MULTIPLAYER_CONTRACT §14.4。规则测试覆盖两阶段/两分支、开局/PvE/PvP/加时及输入不变；私有席位投影测试逐项比对真实结算。另补齐原 `match-contract` 空场投降断言漏掉的 v18 固定拆卸器收据与事件序号，未修改结算行为。
+
+最终 CONTENT_DIGEST 仍为 `fnv1a32-utf16:697f888d`，LOOT_REPLAY_DIGEST 仍为 `fnv1a32-utf16:ffebff3f`；完整根重算一致，无需更新摘要常量或升版本。接口源码字节改变了 Herald/审计的源码指纹，因此实际执行 `node scripts/verify-v17-epoch.cjs` 全部九步重录与核验，`../v17/epoch-verification.json` 为 `complete:true`、九项 exitCode=0。四条完整路线、五组 Herald、inputs、live-reveal 均重新生成；最终 golden、cannon/sniper 检查点、Herald原始状态及轨迹字节未变，元数据更新到最终源码。58个v15/v16历史文件与历史身份断言字节检查通过。
+
+最终相关回归29文件642项通过，当前身份/首战/恢复5项与Herald集成30项通过，合计31文件677项；身份文件其余138项历史/其他用例未选择。`tsc --noEmit`、两根离线重算、LF及 `git diff --check` 均通过。只跑相关测试，未跑全套或浏览器验收。要求保留的 `tests/fixtures/g2-4b-herald-raw/manifest.json` SHA256 仍为 `b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22`，字节不变；全程离线、Git只读、不写 `.git`。
+
+本次日志：不提交的 `artifacts/v18-closeout-{related,final-tests,contract-final,identity,herald,tsc-final,epoch}.log`。`final-tests` 记录原契约断言的一次失败，修正后的对应文件12项全过见 `contract-final`；其他文件最终通过，不以删除测试或放宽断言消除失败。

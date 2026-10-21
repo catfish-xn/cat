@@ -1137,6 +1137,7 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 
 ```ts
 interface RoundEconomyPreviewOutcome {
+  readonly base: number;
   readonly interest: number;
   readonly win: number;
   readonly streakGold: number;
@@ -1155,7 +1156,7 @@ previewRoundEconomy(state: MatchState): RoundEconomyPreview | null;
 
 `resolveRoundEconomy` 是预估与真实结算的共用分流：目录回合调用 planCatalogRoundEconomy（1-x 走 OPENING_ECONOMY_RULES，利息/胜利/连胜金币为 0），加时调用原 planRoundEconomy PvP 规划。Match 的离线/PvE 结算与 applyRoundSettlement 均走该入口。预估传入己方 HP/等级/经验及固定 enemySurvivors=0，伤害参数不参与返回经济字段，无须读对手。
 
-ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.interest/win/streak，streakAfter 也相等。不承诺基础收入、掉落、XP、HP 或敌方奖励。
+ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 base/interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.base/interest/win/streak，streakAfter 也相等。base 是本回合结算的基础金币，1-2/1-3/1-4 分别为 2/3/5，后续普通战斗及加时为 5；两种胜负分支相同，直接读取共用经济规划器，不含掉落或额外奖励。不承诺掉落、XP、HP 或敌方奖励。此字段仅为只读预览输出，不改变结算、存档或协议版本；无新增失败原因。
 
 Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
 

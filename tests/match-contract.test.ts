@@ -19,12 +19,15 @@ describe('M5 public contract (M4 command invariants retained)', () => {
   it('concedes an empty deployment at tick zero once, with stage-one base income and fixed PvE failure damage', () => {
     const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-    // B8: an unearned 1-2 slot is explicitly forfeited between finish and settlement.
+    // B8 forfeits unearned loot; v18 still grants the fixed remover to a surviving loser.
     const ids=state.m8.loot.frozen.rounds[0].encounterPlan.drops.map(d=>d.dropId);
     expect(result.events).toEqual([
       {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},
       ...ids.map((dropId,index)=>({type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq+index})),
-      {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+ids.length},
+      {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',
+        round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},
+        domain:'match',eventSeq:state.nextMatchEventSeq+ids.length},
+      {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+ids.length+1},
     ]);
     expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
     expect(result.state.preparation).toEqual(state.preparation);

@@ -48,13 +48,23 @@ describe('SR-G5-02 preview agrees with committed round results', () => {
         }
         const actual = settled.roundResults.at(-1)!;
         expect(actual.result).toBe(won ? 'playerWin' : 'enemyWin');
-        expect(preview[won?'ifWin':'ifLoss']).toEqual({ interest:actual.incomeBreakdown.interest,
+        expect(preview[won?'ifWin':'ifLoss']).toEqual({ base:actual.incomeBreakdown.base, interest:actual.incomeBreakdown.interest,
           win:actual.incomeBreakdown.win, streakGold:actual.incomeBreakdown.streak, streakAfter:actual.streakAfter });
-        if (roundId === '1-2') expect(preview.ifWin).toEqual({interest:0,win:0,streakGold:0,streakAfter:streak});
+        if (roundId === '1-2') expect(preview.ifWin).toEqual({base:2,interest:0,win:0,streakGold:0,streakAfter:streak});
         expect(JSON.stringify(state)).toBe(before);
       }
     });
   }
+  it.each([['1-2',2],['1-3',3],['1-4',5],['2-1',5],['2-7',5],['overtime-1',5]] as const)(
+    '%s exposes base income %i separately from outcome bonuses and loot', (roundId, base) => {
+      for (const phase of ['preparation','combat'] as const) {
+        const state = { ...(phase === 'combat' ? openingLastTick : createMatch(42)), roundDefinitionId:roundId, gold:49,
+          streak:{kind:'win' as const,count:5} };
+        const before = JSON.stringify(state), preview = previewRoundEconomy(freeze(state))!;
+        expect(preview.ifWin.base).toBe(base); expect(preview.ifLoss.base).toBe(base);
+        expect(JSON.stringify(state)).toBe(before);
+      }
+    });
   it('returns null outside active preparation/combat and for supply/eliminated seats', () => {
     const state = createMatch(42);
     for (const phase of ['choice','settlement','gameOver'] as const) expect(previewRoundEconomy({...state,phase} as MatchState)).toBeNull();
