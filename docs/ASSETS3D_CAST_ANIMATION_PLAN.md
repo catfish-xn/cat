@@ -1,75 +1,71 @@
 # 3D 施法动画改动清单（2026-10-21）
 
-依据：用户整理的《S13 技能动画对照册 V2》（逐棋子的技能表现描述、星级和英雄强化分轴，原视频不进仓库），对照 `scripts/assets3d/ANIMATION-SOURCE-APPENDIX.md` 里每个单位源图中的施法片段、`unit-map.json` 规则和 `docs/ASSETS3D_CAST_PICKS.md` 的近似选择。
+依据：用户《S13 技能动画对照册 V2》与本地源图。原视频不入库；对照册没有逐帧核验，也不指定源片段。
+按本次交付要求，本文仅记录数量、单位键与配置键；源动作名的显式映射集中在 `scripts/assets3d/unit-map.json`，素材与截图仅留在忽略目录。
 
-对照册本身**没有逐帧核验**，也不给片段名；下表的“该用哪段”是按对照册描述的动作阶段，匹配源图里现有的片段名。改完要在本机真实素材上目视确认，不靠云端判断。片段名以下都省略 `.TFT_Set13.anm` 后缀，不区分大小写。
+## 范围
 
-## 一、结论
+已有 60 个英雄模型；原对照约 19 个明显选错或缺主段，约 13 个缺起手或收尾。所有英雄的施法播放改为读取片段实际时长。
+尚缺模型的 3 个单位不在本任务内。规则、战斗事件与协议不修改。
 
-- 60 个已有模型里，约 **19 个明显不对**：选错了片段（如阿木木拿普攻冒充技能），或者只播了起手、真正打出去的那一段没播，或者有两种形态/轮换/随机招式，却总播同一段。
-- 另有约 **13 个基本对**，但只播了一段，少了起手或收尾，看起来会断。
-- **全部 60 个**的施法时长都固定为 0.7 秒，和片段实际长度无关：长片段被截断，短片段停在最后一帧。
-- 星级和英雄强化：源图里只有两段专用片段——莫德凯撒的 `Spell3Star`、艾瑞莉娅的 `SpellHero`。其余棋子三星和英雄强化的变化，按对照册看主要在特效和范围上，不是身体动作。
-- 3 个 6 费（维克托、沃里克、梅尔）没有模型，如果要上场，得先提取模型。
+## 单位覆盖
 
-## 二、逐棋子（只列要改的）
+| 单位键 | 配置键与处理 |
+| --- | --- |
+| amumu | `animations.cast: null`，保留特效事件 |
+| tristana | `castSequence.in/main` |
+| irelia | `castSequence.hold/main/out`、`castVariants.hero` |
+| leona | `castSequence.in/hold/main` |
+| loris | `castSequence.in/main` |
+| illaoi | `castSequence.in/hold/main/out` |
+| corki | `castSequence.in/hold/main` |
+| ekko | `castSequence.in/main[]/out`，主段按施法次数轮换 |
+| caitlyn | `castSequence.in/main/out`、`castVariants.branch`，侧向候选 |
+| renni | `castSequence.in/hold/main` |
+| smeech | `castSequence.in/main[]`、`castExtraClips` |
+| sett | `castSequence.in/main`、`castVariants.branch`，单侧候选 |
+| jinx | `castVariants.rotate`，3 段轮换；`castExtraClips` 保留候选 |
+| sevika | `castVariants.branch`，4 个分支；等待战斗招式键 |
+| gangplank / jayce | `castVariants.front/back` |
+| swain | `castSequence.main/out`，形态差异待确认 |
+| elise / vi | 保持已有主段 |
+| ambessa | `castSequence.in/main`、`castVariants.branch`，姿态键待接线 |
+| mordekaiser | `castVariants.star3` |
+| drmundo | `castSequence.main/out`，持续段近似 |
+| darius / twistedfate | `castSequence.in/main` |
+| draven / morgana / rell / singed / camille / zeri / ezreal / renata / nunu | `castSequence.main/out` |
+| akali | `castExtraClips`，2 个候选待核验，不默认启用 |
+| vander | 普通主段保留，`castVariants.hero` |
 
-符号说明：**错** = 现在选的片段不对；**缺主段** = 打出段没播；**序列** = 要按 起手→(持续)→打出/收尾 播；**分支** = 按形态、轮换或随机招式选片段；**变体** = 星级或英雄强化专用。
+其余 25 个单位的身体动作选择不变。32 个单位有施法显式配置，另 1 个单位仅追加候选。
 
-| 单位 | 现在 | 对照册描述 | 改成 | 类别 |
-| --- | --- | --- | --- | --- |
-| amumu | 普攻2（近似） | 被动周期脉冲，不是通常施法 | 不播施法动作（`cast` 设为无），只放特效 | 错 |
-| tristana | Spell_Start | 炮弹 | Spell_Start → Spell_Attack | 错 / 序列 |
-| irelia | Spell | 防御姿态 → 结束斩击 | Spell（持续）→ SpellAction_Attack → SpellAction_toIdle；英雄强化「刀锋之舞」用 SpellHero | 缺主段 / 变体 |
-| leona | Spell_In | 防御持续 → 周围爆发 | Spell_In → Spell_Idle（持续）→ Spell_Damage | 缺主段 |
-| loris | spellup | 持盾 → 扇形爆发 | spellup → SpellOut | 缺主段 |
-| illaoi | Spell_Intro | 引导吸取 → 范围砸击 | Spell_Intro → Spell_Loop（持续）→ Spell_Finish_In → Spell_Finish_Out | 缺主段 |
-| corki | Spell_Start | 侧移与连续导弹 | Spell_Start → Spell_Loop（持续）→ Spell_End | 缺主段 |
-| ekko | Spell_Start | 残影与多点打击 | Spell_Start → Spell_Attack / _2 / _3 轮流 → Spell_Teleport_Out | 缺主段 |
-| caitlyn | Spell_First | 空袭落点与狙击衔接 | Spell_First → Spell_Shoot（目标在侧面时用 Shoot_90 / Shoot_-90）→ Shoot_toIdle | 缺主段 |
-| renni | Spell1_Stun_Activate | 举起目标 → 砸落 | Spell1_Stun_Activate → Spell1_Stun_Loop → Spell1_Throw | 缺主段 |
-| smeech | Spell | 跃进、连击、再次追击 | SpellAntic → SpellAtkLeft / SpellAtkRight 交替（Spell 作回退） | 缺主段 |
-| sett | Spell3 | 两侧抓取 → 合拢撞击 | Spell3_Both_Start → Spell3_Both_End（只抓到一侧时用 Front / Back） | 缺主段 |
-| jinx | DeathRocket | 三段素材轮换 | 每次施法按 DeathRocket → FlameChompers → Zap 轮换（DeathRocket2 待目视确认） | 分支 |
-| sevika | Spell1_Activate | 机械臂随机招式，不是固定轮换 | 按本次招式选 Spell1 / Spell2_* / Spell3 / Spell4；需要战斗事件带上招式 | 分支 |
-| gangplank | Spell_Melee（近似） | 近战斩击 / 远程桶爆 | 前排用 Spell_Melee（+Melee_Ignite），后排用 Spell_Ranged_Summon → Spell_Ranged_Blast | 分支 |
-| jayce | Spell2_KnockHexCrystals（近似） | 近战传送门 / 远程晶体 | 前排用 Spell1_Right（+GainShield），后排用 Spell2_Ranged_Jump → Spell2_KnockHexCrystals | 分支 |
-| swain | Spell_2 | 近战变身 / 远程施法 | Spell_2 → Spell2_Out；形态片段待目视确认 | 分支 / 序列 |
-| elise | Spell | 近战蛛网 / 远程施法 | 源图只有一段 Spell，先保持；形态差异放进特效 | 分支（无源） |
-| ambessa | SpellFist_Dash（近似） | 两种姿态与位移节奏 | 按姿态在 SpellChain_Strike 和 SpellFist_Dash → SpellFist_Throw 之间选 | 分支 |
-| mordekaiser | Spell | 巨锤轨迹与强化阶段 | 1–2 星用 Spell，3 星用 Spell3Star | 变体 |
-| drmundo | Spell4_Idle（近似） | 强化自愈 → 周围爆发 | 源图没有起手和爆发段：保留 Spell4_Idle 做持续段，结束时接 Spell4_Out_Idle | 近似 |
-| vi | Spell4_hit | 目标重击与横排波纹 | 源图只有这一段，保持 | 近似 |
+## 素材与播放合同
 
-只缺起手或收尾（**序列**，主体片段不改）：darius（Spell1_IN → Spell1）、twistedfate（Spell_In → Spell1）、draven（Spin_Left_Right → Arm_Catches）、morgana / rell / singed（→ Spell_Out）、camille（→ Spell1_Out）、zeri（→ Spell1_Out）、ezreal（→ Spell2_Out）、renata（→ Spell_toIdle）、nunu（→ Spell_ToIdle）、akali（Spell3_In / Spell3_Out 待目视确认是否属于本技能）、vander（英雄强化「卯足全力」用 Spell_Strike_Start_2 → Spell_Strike_End_2，普通技能保持 Spell_Brace）。
+- `castSequence`：`in → hold → main → out`；可选阶段省略；`main` 数组按施法次数轮换。`hold` 暂播放一次。
+- `castVariants`：`star3/hero/front/back` 为序列；`rotate` 为轮换列表；`branch` 为招式键到序列的映射。
+- `animations.cast: null` 明确关闭身体施法，与缺少映射不同。旧 manifest 仍可读取。
+- 播放使用 `durationSeconds`；施法总时长受视觉上下限约束，整体调整速度以保留全部阶段。普攻可接受 `attackIntervalSeconds`。
+- 各阶段单次播放并淡入，死亡清空队列。缺片段或明确关闭时保留当前动作与播放时间。
+- 前后排依据布阵位置，在战斗中冻结；星级读取现有显示数据。计数随新战斗重置。
 
-英雄强化只改特效、不换身体动作的（渲染侧以后处理）：powder「敌我不分」、steb「战地医生」、trundle「震惊巨魔」（普通技能的治疗反馈不再播；源图另有 SpellHeal，可作普通技能的治疗段）、vladimir「血色契约」、renni「残暴复仇」。singed「炼金术师」：不普攻、一直跑动，战斗中应循环播移动动作。
+## 待战斗数据与边界
 
-不用改：lux、maddie、powder、steb、vex、violet、zyra、ziggs、nocturne、urgot、vladimir、blitzcrank、cassiopeia、kogmaw、nami、scar、garen、heimerdinger、silco、twitch、zoe、leblanc、malzahar、rumble（Spell2 用途待确认）。
+`sevika` 招式键、引导开始/结束、英雄强化标记由战斗数据下发，本任务不修改 simulation 或协议。
+`ambessa` 姿态、`sett` 单侧命中、`caitlyn` 侧向分支缺少明确显示上下文，保留导出的可选片段，不据此推算规则。
+`akali` 与 `jinx` 的额外候选未经用户视频逐帧确认，不代替默认序列。
+其余英雄强化只变特效或行为的接线留待后续；不从单位名称猜测强化是否生效。
 
-## 三、给 Codex 的改动
+## 本地交付与验证
 
-### 1. 素材管线（scripts/assets3d，在本机素材上做）
-- GLB 现在只导出了选中的 6 个动作。上表“改成”一列里所有片段，都要从源图**重新导出进同一个 GLB**（`appendCastClip` 已经能追加同骨架的片段）。
-- manifest 加可选字段（向后兼容，旧素材根不受影响）：
-  - `castSequence: { in?: clip, main: clip | clip[], hold?: clip, out?: clip }`：`main` 是数组时按施法次数轮流。
-  - `castVariants: { star3?: …, hero?: …, front?: …, back?: … }`：结构和 `castSequence` 相同；`rotate: clip[]` 用于金克丝这种轮换；`branch: Record<招式键, …>` 用于赛薇卡。
-  - `cast: null`：明确表示“没有施法动作”（阿木木），和“没找到”区分开。
-- `unit-map.json` 按上表写单位级显式覆盖，并写 `animationNotes` 依据；`cast-picks.mjs` 的 5 个近似里，阿木木改成 `cast: null`，其余 4 个改成序列或分支。
-- 不写原版数值和原图，只写片段名。
+`cast-animations.mjs` 从只读素材根与固定版本提取缓存生成新根；先校验源文件基线与输入索引，再检查所有非动画数据及已有动作保留。
+缺失必需源数据时仅写 `assets3d-local/cast-anim/plan.json` 并停止，不下载。
+产物位于 `assets3d-local/cast-anim/` 与 `assets3d-local/cast-anim-compressed/`，不纳入 Git。
+测试使用假名与程序生成骨骼曲线；本地真实预览至少核验 5 个指定单位，每个过程保存 3 帧至 `review/`。
 
-### 2. 播放时长（src/rendering3d/animation-state.ts + animation-mixer.ts）
-- `cast` 的时长改成**片段实际时长**（序列就是各段时长相加，持续段算 1 次），限制在 0.3–2.5 秒；不再固定 0.7 秒。持续段（hold）按片段时长循环 1 次；等战斗事件能给出引导时长后，再改成按引导时长循环。
-- `attack` 同理按片段时长，最长不超过两次普攻的间隔（间隔由渲染层传入；没有时用片段时长）。
-- 序列在 mixer 里依次播：每段 LoopOnce，上一段结束时交叉淡入 0.08 秒；被死亡打断时立刻停。
-- `cast: null` 或找不到片段：**保持当前动作，不重启待机**（现在会退回 idle 并重播，看起来抖一下）。
-- 测试用合成片段（长度按比例，比如 0.5 倍、2 倍于默认值），不用真实素材。
+## 本次交付验证
 
-### 3. 需要战斗数据的（src/simulation 和协议，要协调者另派）
-- 赛薇卡的随机招式：`cast` 显示事件里需要带上本次招式键（`castOutcome.abilityKey`/`subOutcomes` 现在只是部分信息）。
-- 引导时长（伊莉丝、俄洛伊、库奇、努努、蒙多）：要一个“引导开始/结束”的显示事件；现在 `activityChanged` 不下发。
-- 英雄强化：BoardPiece 现在没有“已装英雄强化”标记，`castVariants.hero` 需要它。
-
-### 4. 渲染侧（Claude，src/rendering/three-mode）
-- 施法时朝向目标：已在 #356。
-- 形态（前排/后排）、施法次数轮换、星级 3 的变体选择：等第 1、2 步的 manifest 字段合入后，由渲染层按 BoardPiece 的位置、`starLevel` 和施法计数来选。
+33 个单位经过重建检查，追加 68 个片段；32 个单位更新施法配置，另 1 个仅导出候选。33 个原模型的输入哈希与重建前一致。
+源根与压缩根各保留 82 个模型、451 个动作，全部动作键及时间端点一致；运行文件索引各 2332 项，哈希检查通过。
+25 个测试文件共 376 项通过，类型检查与构建通过。构建后的真实渲染器核验 5 个单位、8 种选择，源根与压缩根合计保存 48 帧。
+`review-report.json` 的 `ready` 与 `proxyConnected` 均通过；`verification.json` 的 `ready`、`metadataEqual` 通过，`build-report.json` 的 `missingChunks` 为空。
+仓库全量绝对路径预检命中既有文档；本次新增文件没有机器绝对路径，未修改既有无关文档。

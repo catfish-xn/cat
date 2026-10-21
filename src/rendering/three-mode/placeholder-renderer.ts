@@ -205,6 +205,7 @@ interface PieceView {
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
+  starLevel: number; form: 'front' | 'back';
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
@@ -399,7 +400,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
       view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
       view.root.add(lease.scene);
-      view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
+      view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
     }).catch(() => {
@@ -423,7 +425,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null,
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -433,7 +436,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const resetAction = (view: PieceView, id: string) => {
     view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
-    if (view.lease) { view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames); view.mixer.apply(view.state.output); }
+    if (view.lease) {
+      view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.mixer.apply(view.state.output);
+    }
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
@@ -523,6 +530,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
+    const combatStarted = fighting !== true && frame.fighting;
     if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     const seen = new Set<string>();
@@ -532,6 +540,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       let view = pieces.get(piece.id);
       const created = !view;
       if (!view) { view = createPiece(piece); pieces.set(piece.id, view); }
+      view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
+      // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
+      if (!frame.fighting || combatStarted || created) {
+        const middle = frame.origin.y + (frame.rows - 1) * frame.hexRadius * 1.5 / 2;
+        view.form = Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
+      }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
@@ -840,7 +854,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
-      if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      if (view.mixer) { view.mixer.update(seconds); view.mixer.apply(output); }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
         view.stars.object.visible = view.root.visible;
