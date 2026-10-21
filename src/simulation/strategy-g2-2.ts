@@ -3,7 +3,6 @@ import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, ItemDefinition, TraitSnapshot, TraitTier } from './strategy-types';
-import { getUnitStats } from './unit-stats';
 import { readRoundEnemyProjection } from './round-enemies';
 import { G22_CONVENTIONS } from './content/g2-2-traits';
 import { priorPvpWins } from './g2-2-pvp-history';
@@ -53,10 +52,10 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
         const wins=unit.team!=='player'?0:state.priorPvpWins??priorPvpWins(state.roundResults??[],state.round),amount=wins*e.values.armorPerWin;
         result.push({kind:'statFlat',stat:'armor',amount},{kind:'statFlat',stat:'magicResist',amount});
       }
-      for(const garen of board.filter(u=>u.team===unit.team&&u.definitionId==='garen'&&trait.memberDefinitionIds.includes('garen')&&(!trait.memberUnitIds||trait.memberUnitIds.includes(u.id)))){
-        if(garen.location.kind==='board'&&unit.location.kind==='board'&&unit.location.cell.row===garen.location.cell.row&&Math.abs(unit.location.cell.col-garen.location.cell.col)<=1)
-          result.push({kind:'statFlat',stat:'maxHp',amount:Math.floor((getUnitStats('garen',garen.starLevel).health+(trait.tier===4?200:0))*e.values.healthBps/10000)});
-      }continue;
+      // Freeze actual maximum health after every opening stat contribution, then broadcast once.
+      if(unit.definitionId==='garen'&&trait.memberDefinitionIds.includes('garen')&&member)
+        result.push({kind:'mechanic',mechanic:'v19Garen',values:{healthBps:e.values.healthBps}});
+      continue;
     }
     if(e.mechanic==='scrap'){
       const holders=new Set(board.filter(u=>u.team===unit.team).map(u=>u.id));

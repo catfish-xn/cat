@@ -226,7 +226,11 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId });
+  // v19's expanded gold pool changes the paid route's economy. Reserve enough
+  // gold to actually select Eagle Eye rather than silently accepting a fallback.
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId,
+    ...(anomalyDefinitionId==='eagle-eye'?{goldReserveByRound:{'4-5':80}}:{}) });
+  expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;

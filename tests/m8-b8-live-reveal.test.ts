@@ -82,8 +82,8 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    ['loris', 'r00', 381, 'settlement', 1],
-    ['zyra', 'r01', 152, 'settlement', 1],
+    ['loris', 'r00', 437, 'settlement', 1],
+    ['zyra', 'r01', 176, 'settlement', 1],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
     let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : lorisPrefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;

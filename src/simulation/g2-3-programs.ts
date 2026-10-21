@@ -36,13 +36,14 @@ export function g23AnomalyProgram(id:string,maxMana:number):ItemProgram{
   }
 }
 /** Source tier parameters compiled into the existing declarative trigger vocabulary. */
-export function g23TraitProgram(id:string,tier:number,maxMana:number):ItemProgram{
+export function g23TraitProgram(id:string,tier:number,_maxMana:number):ItemProgram{
   const source=(G23_TRAIT_SOURCE as Readonly<Record<string,{readonly tiers:readonly {readonly threshold:number;readonly values:Readonly<Record<string,number|null|undefined>>}[]}>>)[id];
   const v=source?.tiers.find(t=>t.threshold===tier)?.values;if(!v)return {};
   const n=(k:string)=>v[k]??0,b=(k:string)=>Math.round(n(k)*10000);
   switch(id){
     case 'ambusher':return {modifiers:[modifier('critChance',b('CritChance'),'bps'),modifier('critMultiplier',b('CritDamage'),'bps'),modifier('damageReduction',b('DamageReductionPct'),'bps',undefined,filter())],effects:[{kind:'authorize-spell-crit',duplicateBonusBps:1000}]};
-    case 'dominator':return {triggers:[trigger({id:'dominator-cast',event:'cast-completed',effects:[stack(modifier('abilityPower',Math.floor(maxMana*n('APPercent'))))]})],effects:[{...shield(0,Math.round(n('ShieldDuration')*20)),amount:amount({flat:n('ShieldAmount')})}]};
+    // v19: AP is applied from the completed actualManaSpent receipt, never maximum Mana.
+    case 'dominator':return {effects:[{...shield(0,Math.round(n('ShieldDuration')*20)),amount:amount({flat:n('ShieldAmount')})}]};
     case 'pit-fighter':return {vamp:[vamp(b('OmnivampPercent'))],triggers:[trigger({id:'pit-true',event:'damage-dealt',aggregation:'action-damage-total',condition:{kind:'positive-hp-damage'},selector:enemies({candidates:'event-target'}),effects:[proc('true',{actualDamageBps:b('TrueDamagePercent')})]})],survival:[survival(b('HealthThreshold'),[{kind:'over-time',resource:'heal',amount:amount({maxHpBps:b('HealPercent')}),pulses:Math.round(n('Duration')*20),periodTicks:1}])]};
     case 'sorcerer':return tier<8?{}:{triggers:[trigger({id:'sorcerer-weaken',event:'damage-dealt',maxPerAction:1000000,condition:{kind:'damage-delivery',deliveries:['ability-direct','ability-periodic']},selector:enemies({candidates:'event-target'}),effects:[status('stat-debuff',b('DamageDecrease'),Math.round(n('DamageDecreaseDuration')*20),{activation:'next-tick',polarity:'harmful',removable:true,modifier:modifier('damageAmp',0,'bps')})]})]};
     case 'sniper':return n('BonusHexRangeIncrease')?{modifiers:[modifier('range',n('BonusHexRangeIncrease'),'hexes')]}:{};

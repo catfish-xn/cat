@@ -1,5 +1,6 @@
 import type { Effect, ItemDefinition } from '../strategy-types';
-import { modifier } from './item-programs';
+import { V19_EMBLEM_VALUES } from './v19-emblems';
+import { periodic, mana, modifier } from './item-programs';
 import { EMBLEM_SOURCE } from './emblem-source';
 import { freezeContent } from './freeze';
 
@@ -17,7 +18,7 @@ export const CRAFTING_ITEMS: Readonly<Record<string, ItemDefinition>> = freezeCo
   effects: [], combatProgram: {}, evidenceStatus: 'source-reviewed', craftingOnly: true }])));
 
 export const EMBLEM_ITEMS: Readonly<Record<string, ItemDefinition>> = freezeContent(Object.fromEntries(EMBLEM_SOURCE.map(row => {
-  const v: Readonly<Record<string, number | undefined>> = row.values, effects: Effect[] = [];
+  const v: Readonly<Record<string, number | undefined>> = V19_EMBLEM_VALUES[row.traitId], effects: Effect[] = [];
   for (const [key, stat] of [['Health','maxHp'], ['AP','abilityPower'], ['Armor','armor'], ['MagicResist','magicResist'], ['Mana','initialMana']] as const)
     if (v[key]) effects.push({kind:'statFlat',stat,amount:v[key]});
   if (v.AD) effects.push({kind:'statPercentBps',stat:'attackDamage',bps:Math.round(v.AD*10000)});
@@ -26,7 +27,8 @@ export const EMBLEM_ITEMS: Readonly<Record<string, ItemDefinition>> = freezeCont
     emblemTrait:row.traitId, restriction:{kind:'exclude-trait',traitId:row.traitId}, unique:true, slotCost:1, effects,
     ...(row.recipe.length ? {recipe:row.recipe as [string,string]} : {}),
     combatProgram:{modifiers:[...(v.CritChance ? [modifier('critChance',v.CritChance*100,'bps')] : []),
-      ...(v.RangeIncrease ? [modifier('range',v.RangeIncrease,'hexes')] : [])]},
-    evidenceStatus:'source-reviewed', effectDescriptions:[`携带者获得${names[row.traitId]}羁绊。`,
+      ...(v.CritDamage ? [modifier('critMultiplier',v.CritDamage*100,'bps')] : []),
+      ...(v.RangeIncrease ? [modifier('range',v.RangeIncrease,'hexes')] : [])],...(v.ManaPerSecond?{periodic:[periodic(20,[mana(v.ManaPerSecond,'periodic')])]}:{})},
+    evidenceStatus:'approved-provisional', conventionIds:['V19-EMBLEM-CUSTOM'], effectDescriptions:[...(v.ManaPerSecond?[`每秒回复 ${v.ManaPerSecond} 法力。`]:[]),...(v.CritChance?[`暴击率 +${v.CritChance} 个百分点。`]:[]),...(v.CritDamage?[`暴击伤害 +${v.CritDamage} 个百分点。`]:[]),...(v.RangeIncrease?[`射程 +${v.RangeIncrease} 格。`]:[]),`携带者获得${names[row.traitId]}羁绊。`,
       ...(row.traitId==='experiment' ? ['试验品纹章的分身实验加成尚未实现。'] : [])]} satisfies ItemDefinition];
 })));

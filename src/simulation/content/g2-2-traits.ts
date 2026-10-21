@@ -30,6 +30,6 @@ export const G22_CONVENTIONS = freezeContent({
   conqueror:'base AD/AP only; no chests, conquest progression or chest scaling',
   academy:{sponsored:['archangel','deathblade','warmog'],grants:'none',selection:'fixed project pool',stacking:'one bonus per holder'},
   scrap:{selection:'component instances by id; lexicographically first legal ordinary recipe respecting unique/slot rules',lucky:'not modeled',radiant:'excluded'},
-  emissary:{ambessa:'2 resist per prior PvP victory, capped at 7; no distinct-opponent identity in solo inputs',garen:'12% base star HP plus four-emissary 200; before items/other traits'},
+  emissary:{ambessa:'2 resist per prior PvP victory, capped at 7; no distinct-opponent identity in solo inputs',garen:'12% actual frozen opening max HP after all other opening contributions; broadcast once, no feedback'},
   geometry:'finite hex paths; no animation travel time except source Vex DOTDuration; detailed per-skill audit',
 });

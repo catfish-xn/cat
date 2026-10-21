@@ -1,3 +1,4 @@
+import { familyDisplay } from './family-heist';
 import { validateEpicForges } from './epic-forges';
 import { validateAugmentAcquisition } from './augment-acquisition';
 import { validateD11Acquisition } from './d11-fill';
@@ -22,6 +23,8 @@ export function validateG23Restoration(state:MatchState,parsedJsonInput=false):v
   validateAugmentAcquisition(state);
   check(!!state.seatMechanics?.hidden.progress&&!!readG23Progress(state), 'G23 progress required');
   validateG23MechanicLinks(state);
+  const mel=readG23Progress(state)?.mel;check(equal(state.seatMechanics?.seat.melRescue??null,mel?{pvpCasts:mel.pvpCasts,saved:mel.savedBattleId!==null}:null),'Mel display projection');
+  check(equal(state.seatMechanics?.seat.familyHeist??null,familyDisplay(readG23Progress(state)?.family)),'family display projection');
   if(state.phase==='choice'){
     const choice=state.pendingChoice!;const expected=openG23Choice({...state,phase:choice.returnPhase,pendingChoice:null} as MatchState);
     const source=choice.payload?.source;

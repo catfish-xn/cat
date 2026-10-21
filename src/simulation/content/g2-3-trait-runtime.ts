@@ -151,7 +151,7 @@ export const G23_TRAIT_SOURCE = freezeContent({
   },
   "form-swapper": {
     "name": "Form Swapper",
-    "enabled": false,
+    "enabled": true,
     "tiers": [
       {
         "threshold": 2,

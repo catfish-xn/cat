@@ -46,9 +46,9 @@ describe('B8 public equipment fixture provenance', () => {
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"],["2-7","item-5","loot"],["2-7","item-6","loot"],["2-7","item-7","loot"],["3-4","item-8","schedule"]]);
     expect(state.items.map(i=>[i.id,i.definitionId])).toEqual([["item-10","bloodthirster"],["item-5","gloves"],["item-6","bow"],["item-7","sword"],["item-8","sword"],["item-9","bloodthirster"]]);
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-9","definitionId":"bloodthirster"},{"type":"itemCombined","consumedIds":["item-3","item-4"],"itemId":"item-10","definitionId":"bloodthirster"}]);
-    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','investment-strategy-i']);
-    // v15's expanded catalog changes the second offer. This paid route earns
-    // zero interest after acquisition, so Investment grants no HP here.
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['manaflow-i','glass-cannon-ii']);
+    // v19 Sisters changes the second offer. Glass Cannon II is back-row-only,
+    // so the front-row item holder retains the independent 700 HP expectation.
     expect(state.augmentProgress.investmentHp).toBe(0);
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 700]]);
     const restored = restoreMatch(serializeMatch(state));

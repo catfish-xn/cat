@@ -1,3 +1,4 @@
+import { familyTaskAt } from './family-heist';
 import {canonicalContent} from './content';
 import {freezeContent} from './content/freeze';
 import {G23_POLICY,G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward} from './content/g2-3-policy';
@@ -38,6 +39,10 @@ function frozenReward(bundle:G23RewardBundle):Readonly<Record<string,unknown>>{
  return admitted;
 }
 export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=false):readonly G23RewardAtom[]{
+ if(bundle.source==='family'){
+  const task=familyTaskAt(seed,bundle.tier);if(bundle.id!==`family:orb:${bundle.tier}`||canonicalContent(bundle.reward)!==canonicalContent({payloads:task.payloads}))throw new RangeError('Invalid frozen family reward');
+  return task.payloads.map((p,i)=>({id:bundle.id+':atom:'+i,kind:p.kind==='consumable'?'tool':p.kind==='forge'?'item':p.kind,options:p.kind==='gold'?[]:[p.definitionId],quantity:1,gold:p.kind==='gold'?p.quantity:0,...(p.kind==='unit'?{starLevel:p.starLevel??1}:{})}));
+ }
  const reward=frozenReward(bundle);
  const key=canonicalContent([seed,bundle,multiplayer]),cached=atomCache.get(key);if(cached)return cached;
  const out:G23RewardAtom[]=[],add=(kind:G23RewardAtom['kind'],pool:readonly string[],quantity=1,gold=0,choices=1,duplicatorDefinitionId?:G23RewardAtom['duplicatorDefinitionId'])=>{

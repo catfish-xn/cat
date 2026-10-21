@@ -62,7 +62,7 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  const originalWins=receipts.filter(r=>r.ownerId===ownerId&&r.kind==='gamblers-blade'&&r.gold===1);
  const copyWins=receipts.filter(r=>split.copyIds.includes(r.ownerId)&&r.kind==='gamblers-blade'&&r.gold===1);
  const executions=receipts.filter(r=>split.copyIds.includes(r.ownerId)&&r.kind==='collector'&&r.gold===1);
- expect(originalWins).toHaveLength(1);expect(copyWins).toHaveLength(1);expect(executions).toHaveLength(1);
+ expect(originalWins).toHaveLength(1);expect(copyWins).toHaveLength(1);expect(executions).toHaveLength(2);
  expect(originalWins.every(r=>r.tick<=split.tick)).toBe(true);
  expect(copyWins.concat(executions).every(r=>r.tick>split.tick)).toBe(true);
  expect(executions.every(r=>r.itemInstanceId===collectorId)).toBe(true);
@@ -76,7 +76,7 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  }
  expect(current.combat!.itemRandomStreams).toEqual(streams);
  const positive=receipts.filter(r=>r.gold===1),payouts=current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold');
- expect(positive).toHaveLength(3);expect(payouts).toHaveLength(3);
+ expect(positive).toHaveLength(4);expect(payouts).toHaveLength(4);
  const fact=readG23Progress(current)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.battleId===current.combat!.combatId)!;
  expect(fact.kind).toBe('battle');if(fact.kind!=='battle')throw Error('Missing battle settlement');
  expect(fact.facts.itemGoldPayouts!.map(p=>p.receiptId)).toEqual(positive.map(r=>r.id));
@@ -87,5 +87,5 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  const facts=g23SoloFacts(current,current.combat!);
  expect(commitG23Settlement(current,facts)).toBe(current);
  expect(commitG23Settlement(restored,facts)).toEqual(current);
- expect(current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold')).toHaveLength(3);
+ expect(current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold')).toHaveLength(4);
 });

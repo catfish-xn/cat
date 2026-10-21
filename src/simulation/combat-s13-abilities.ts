@@ -1,3 +1,4 @@
+import { sixCostCast, sixCostAttack } from './combat-six-cost';
 import { planG2Cast, planG2Attack, executeG2Task } from './combat-g2';
 import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m8/targeting';
 import { targetingEnvironment } from './m8/s13-targeting';
@@ -12,7 +13,7 @@ import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enem
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
-export interface S13Packet { beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+export interface S13Packet { devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
@@ -43,6 +44,7 @@ function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, val
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
 }
 export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): string[] {
+  const six=sixCostCast(ctx,unit,target,seq);if(six)return six;
   const { tick, units, events } = ctx, source = origin(unit), v = (key: string, fallback = 0) => variable(unit, key, fallback);
   const mag = (key: string) => amount(unit, tick, { ap: v(key) });
   const physical = (key: string, apKey?: string) => amount(unit, tick, { ad: v(key), ap: apKey ? v(apKey) : 0 });
@@ -230,6 +232,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
   }
 }
 export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): void {
+  if(sixCostAttack(ctx,unit,target,seq))return;
   const replacement = planG2Attack(ctx, unit, target, seq);
   const source = { ...origin(unit), sourceKind: 'attack' as const }, base = unit.runtime.nextAttackPhysical || ad(unit);
   if (!replacement) ctx.packets.push({ source, targetId: target.id, raw: base, damageType: 'physical',

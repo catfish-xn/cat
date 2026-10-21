@@ -22,7 +22,7 @@ export function investment(before: {
   readonly augmentProgress: MatchState['augmentProgress'];
   readonly augments: readonly { readonly definitionId: string }[];
 }, record: Pick<RoundResult, 'incomeBreakdown'>): MatchState['augmentProgress'];
-export function shop(rng: number, generation: number, level: number, locked?: boolean): { rngState: number; shop: MatchState['shop'] };
+export function shop(rng: number, generation: number, level: number, locked?: boolean, round?: number): { rngState: number; shop: MatchState['shop'] };
 export function xp(level: number, value: number, amount: number): { level: number; xp: number; xpApplied: number };
 export function lootIndex(rng: RngStream, n: number): { index: number; rng: RngStream };
 export function lootPlan(seed: number, ordinal: number): { readonly rng: RngStream; readonly rounds: readonly FrozenLootRound[] };

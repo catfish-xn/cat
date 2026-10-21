@@ -7,6 +7,7 @@ import { S13_P2_TIERS } from './s13-augments-p2';
 export const AUGMENT_OFFER_POLICY = freezeContent({version:'augment-card-reroll-v15',evidence:'user-convention-2026-10-20',tierEvidence:'unweighted-project-convention-pending-confirmation',tiers:['silver','gold','prismatic'],tierSeedXor:0x61756774,freeRerolls:1,rerollScope:'per-slot-per-choice',sampling:'equal-without-replacement',words:{initial:3,reroll:1},reroll:'single-card-locked-tier-exclude-current-owned-and-permanently-removed-reject-empty-pool'} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
 export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[]>> = freezeContent({
+  'form-swapper':[2],
   // S13 14.24 source style 1; later content releases added these active traits.
   "ambusher": [2],
   "visionary": [2],
@@ -60,6 +61,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  sisters:'gold',
   ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",
   "portable-forge": "gold",

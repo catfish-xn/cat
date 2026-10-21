@@ -73,7 +73,7 @@ it('freezes the expanded shop species count and bag capacity at every cost', () 
     expect(SHOP_CATALOG_BY_COST[cost].reduce((sum, id) => sum + pool.initial[id], 0)).toBe(capacities[n]);
     for (const id of SHOP_CATALOG_BY_COST[cost]) expect(pool.initial[id]).toBe(POOL_CAPACITY_BY_COST[cost]);
   }
-  expect(Object.keys(pool.initial)).toHaveLength(60); expect(Object.values(pool.initial).reduce((s, n) => s + n)).toBe(1171);
+  expect(Object.keys(pool.initial)).toHaveLength(63); expect(Object.values(pool.initial).reduce((s, n) => s + n)).toBe(1198);
 });
 
 describe('G2 factions: source breakpoints and effective tiers', () => {

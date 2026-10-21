@@ -173,7 +173,7 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   const before = previous ? readG23Progress(previous)!.economyReceipts : [];
   const after = readG23Progress(next)!.economyReceipts;
   check(equalContent(after.slice(0, before.length), before), '历史经济收据前缀不一致');
-  check(after.slice(before.length).every(action => action.kind !== 'battle'), '缺少历史证据：未验证的战斗经济收据');
+  check(after.slice(before.length).every(action => action.kind !== 'battle'&&action.kind!=='mel-save'), '缺少历史证据：未验证的战斗经济收据');
   if (!previous) { validateHistoricalEquipment(null, next); return; }
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
