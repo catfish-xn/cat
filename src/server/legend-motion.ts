@@ -23,7 +23,8 @@ export interface LegendWalk {
   readonly slot: number | null;
 }
 
-export const LEGEND_CELLS_PER_SECOND = 5;
+/** Half the first pace (playtest 10-21: legends moved too fast to watch a carousel scramble), on the board too. */
+export const LEGEND_CELLS_PER_SECOND = 2.5;
 /** Carousel layout in cells: legends on cradles around the ring, units on a ring inside the glass turning once per ORBIT_MS. */
 export const CAROUSEL_LEGEND_RADIUS = 7.1, CAROUSEL_UNIT_RADIUS = 2.5, CAROUSEL_ORBIT_MS = 48_000, CAROUSEL_SEATS = 8;
 /** A board walk stays within this many cells of the board origin (the room's sanity bound; the layer keeps it nearer). */
@@ -62,7 +63,7 @@ export function walkPoint(walk: Pick<LegendWalk, 'from' | 'to' | 'startedAt' | '
  */
 export function interceptCarouselUnit(from: CellPoint, index: number, count: number, elapsedMs: number): { readonly to: CellPoint; readonly ms: number } {
   let ms = 0, to = carouselUnitPoint(index, count, elapsedMs);
-  for (let step = 0; step < 6; step++) {
+  for (let step = 0; step < 12; step++) { // each step shrinks the miss by unit speed / legend pace (about 0.13)
     ms = walkMs(from, to);
     to = carouselUnitPoint(index, count, elapsedMs + ms);
   }

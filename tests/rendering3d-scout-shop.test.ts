@@ -1,0 +1,284 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ClientListeners, GameClient, PlayerView, WireCommand } from '../src/rendering/online/protocol';
+import type { RemoteSession } from '../src/rendering/online/remote-session';
+import type { OnlineApplication } from '../src/rendering/online/online-application';
+import type { OnlineBoardMounts } from '../src/rendering/app-shell';
+
+/** Minimal DOM, with real minimap clicks and real OpponentBoardPanel open/close behavior. */
+class Node {
+  children: Node[] = []; dataset: Record<string, string> = {}; className = ''; hidden = false; inert = false;
+  textContent = ''; id = ''; style = { setProperty() {} }; classList = { add() {}, remove() {}, toggle() {} };
+  private attributes = new Set<string>();
+  private listeners = new Map<string, () => void>();
+  append(...nodes: Node[]) { this.children.push(...nodes); }
+  prepend(...nodes: Node[]) { this.children.unshift(...nodes); }
+  replaceChildren(...nodes: Node[]) { this.children = nodes; }
+  setAttribute(name: string) { this.attributes.add(name); }
+  hasAttribute(name: string) { return this.attributes.has(name); }
+  toggleAttribute(name: string, on: boolean) { if (on) this.attributes.add(name); else this.attributes.delete(name); }
+  addEventListener(type: string, callback: () => void) { this.listeners.set(type, callback); }
+  removeEventListener(type: string) { this.listeners.delete(type); }
+  click() { this.listeners.get('click')?.(); }
+  querySelector() { return null; }
+  closest(_selector?: string): Node | null { return null; }
+  isContentEditable = false;
+  remove() {}
+}
+
+describe('3D scouting shop availability', () => {
+  let app: OnlineApplication | undefined, root: Node, shop: Node, listeners: ClientListeners, off: (() => void) | undefined;
+  let shutdown: (() => void) | undefined;
+  const sceneMocks = ['phaser', '../src/rendering/online/mode', '../src/rendering/app-shell',
+    '../src/rendering/strategy-panel', '../src/presentation/help-panel', '../src/presentation/s13-assets',
+    '../src/presentation/unit-view', '../src/stats/stats-panel', '../src/stats/combat-feedback-renderer',
+    '../src/rendering/online/orb-dock', '../src/rendering/online/online-application'];
+  const mocked = ['lobby', 'players-sidebar', 'carousel-panel', 'battle-summary', 'economy-hint', 'left-panel-toggle', 'sound', 'ranking', 'battle-outcome'];
+  beforeEach(() => {
+    vi.resetModules(); root = new Node(); shop = new Node();
+    const body = new Node();
+    const stats = new Node();
+    vi.stubGlobal('document', { body, hidden: false, createElement: () => new Node(), getElementById: (id: string) => id === 'app' ? root : id === 'shop-dock' ? shop : id === 'stats-root' ? stats : null,
+      querySelector: () => null, addEventListener() {}, removeEventListener() {} });
+    // Unrelated HUD widgets are passive: keep the application, minimap, scout panel and board-feed real.
+    class Widget {
+      root = new Node(); showing = false; isCollapsed = false; isMuted = true; played: string[] = [];
+      render() {} show() {} hide() {} dispose() {} setViewing() {} connection() {} tick() {} secondsLeft() { return null; }
+      play() {} createToggle() { return new Node(); } debug() { return {}; } clear() {}
+    }
+    vi.doMock('../src/rendering/online/lobby', () => ({ Lobby: Widget }));
+    vi.doMock('../src/rendering/online/players-sidebar', () => ({ PlayersSidebar: Widget }));
+    vi.doMock('../src/rendering/online/carousel-panel', () => ({ CarouselPanel: Widget, CarouselHoldingSlot: Widget, readHeldCarouselUnits: () => [] }));
+    vi.doMock('../src/rendering/online/battle-summary', () => ({ BattleSummaryPanel: Widget }));
+    vi.doMock('../src/rendering/online/economy-hint', () => ({ EconomyHint: Widget }));
+    vi.doMock('../src/rendering/online/left-panel-toggle', () => ({ LeftPanelToggle: Widget }));
+    vi.doMock('../src/rendering/online/sound', () => ({ OnlineSound: Widget }));
+    vi.doMock('../src/rendering/online/ranking', () => ({ RankingOverlay: Widget, EliminationCard: Widget }));
+    vi.doMock('../src/rendering/online/battle-outcome', () => ({ BattleOutcome: Widget }));
+    vi.doMock('../src/presentation/hover-card', () => ({ traitHoverCard: () => ({}) }));
+    vi.doMock('../src/presentation/unit-card', () => ({ attachUnitCards: () => () => {} }));
+    vi.doMock('../src/presentation/item-codex', async importOriginal => ({
+      ...await importOriginal<typeof import('../src/presentation/item-codex')>(), attachItemPopover: () => () => {},
+    }));
+    vi.doMock('../src/rendering/trait-column', async importOriginal => ({
+      ...await importOriginal<typeof import('../src/rendering/trait-column')>(), attachTraitCards: () => () => {},
+    }));
+  });
+  afterEach(() => {
+    shutdown?.(); shutdown = undefined;
+    app?.dispose(); app = undefined; off?.(); off = undefined;
+    vi.unstubAllGlobals();
+    for (const name of mocked) vi.doUnmock(`../src/rendering/online/${name}`);
+    for (const name of ['hover-card', 'unit-card', 'item-codex']) vi.doUnmock(`../src/presentation/${name}`);
+    vi.doUnmock('../src/rendering/trait-column');
+    for (const name of sceneMocks) vi.doUnmock(name);
+    vi.restoreAllMocks(); vi.resetModules();
+  });
+  const nodes = (node: Node): Node[] => [node, ...node.children.flatMap(nodes)];
+  const select = (seatId: string) => {
+    const minimap = nodes(root).find(node => node.dataset.debug === 'online:minimap')!;
+    const button = minimap.children.find(node => node.dataset.seat === seatId)!;
+    expect(button).toBeDefined(); button.click();
+  };
+  const view: PlayerView = { mySeatId: 'me', opponentSeatId: null, ranking: null, fault: null,
+    phase: { kind: 'preparation', round: 2, roundName: '1-2', serverNow: 0, endsAt: 30000 },
+    seats: ['me', 'other'].map(seatId => ({ seatId, name: seatId, kind: 'human', connected: true, controller: 'human',
+      rank: null, alive: true, hp: 100, level: 1, publicBoard: { units: [] } })) };
+
+  async function mount() {
+    const { OnlineApplication } = await import('../src/rendering/online/online-application');
+    const client = { transport: 'websocket', listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
+    const session = { state: { phase: 'preparation', preparation: { board: { columns: 7, rows: 8, deploymentZones: { player: { firstRow: 4, lastRow: 7 } } } } },
+      pause() {}, resume() {}, subscribe: () => () => {}, dispose() {} } as unknown as RemoteSession;
+    app = new OnlineApplication(session, client, { refresh() {}, clearInput() {}, status() {} },
+      { shopDock: shop, countdown: new Node() } as unknown as OnlineBoardMounts);
+    listeners.view(view);
+    expect(app.debug().mode).toBe('active');
+    expect(shop.inert).toBe(false);
+  }
+
+  /** Public create + native event boundary; only graphics and unrelated DOM widgets are substituted.
+   * The real OnlineApplication, RemoteSession and BoardScene choose whether any intent reaches send.
+   * No private scene fields/methods are accessed, and no server or asset requests are made.
+   */
+  async function mountKeyboard() {
+    const { createMatch } = await import('../src/simulation/match');
+    const initial = { ...createMatch(42), gold: 50 };
+    let commandId = 0;
+    const send = vi.fn<GameClient['send']>(() => ({ ok: 'pending', commandId: ++commandId }));
+    const client = { transport: 'websocket', send, listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
+    const keyEvents = new EventTarget();
+    const stops: (() => void)[] = [];
+    vi.stubGlobal('HTMLElement', Node);
+    vi.stubGlobal('window', { addEventListener: keyEvents.addEventListener.bind(keyEvents),
+      removeEventListener: keyEvents.removeEventListener.bind(keyEvents), requestIdleCallback() {} });
+    vi.stubGlobal('fetch', vi.fn(() => { throw Error('unexpected network request'); }));
+
+    // Chainable Phaser drawing doubles. They never decide input availability or issue commands.
+    class Drawing {
+      name = ''; visible = true; active = true; scaleX = 1; scaleY = 1;
+      input = { enabled: true }; private data = new Map<string, unknown>();
+      constructor(public x = 0, public y = 0) {}
+      setName(value: string) { this.name = value; return this; }
+      setData(key: string, value: unknown) { this.data.set(key, value); return this; }
+      getData(key: string) { return this.data.get(key); }
+      setVisible(value: boolean) { this.visible = value; return this; }
+      setPosition(x: number, y: number) { this.x = x; this.y = y; return this; }
+      setInteractive() { this.input.enabled = true; return this; }
+      disableInteractive() { this.input.enabled = false; return this; }
+      setText() { return this; } setAlpha() { return this; } setScale() { return this; }
+      setDepth() { return this; } setOrigin() { return this; } setBackgroundColor() { return this; }
+      on() { return this; } clear() { return this; } fillStyle() { return this; } lineStyle() { return this; }
+      fillPoints() { return this; } strokePoints() { return this; } strokeRect() { return this; }
+      fillRoundedRect() { return this; } strokeRoundedRect() { return this; } destroy() {}
+    }
+    class Scene {
+      children = { length: 0, list: [] as Drawing[] };
+      add = { text: (x: number, y: number) => { const node = new Drawing(x, y); this.children.list.push(node); return node; }, graphics: () => new Drawing() };
+      input = { on() {}, setDraggable() {}, setDragState() {}, manager: { pointers: [] } };
+      events = { once: (_event: string, callback: () => void) => stops.push(callback) };
+      scene = { isActive: () => true }; tweens = { killAll() {} };
+    }
+    vi.doMock('phaser', () => ({ default: { Scene, Scenes: { Events: { SHUTDOWN: 'shutdown' } } } }));
+    vi.doMock('../src/rendering/online/mode', () => ({ isOnlineMode: () => true, createGameClient: () => client }));
+    vi.doMock('../src/rendering/app-shell', () => ({ mountOnlineBoardFrame: () => ({ shopDock: shop, countdown: new Node(), orbDock: new Node() }) }));
+    let selectUnit: (id: string) => void;
+    vi.doMock('../src/rendering/strategy-panel', () => ({ StrategyPanel: class {
+      blocksSell = false;
+      constructor(actions: { selectUnit: (id: string) => void }) { selectUnit = actions.selectUnit; }
+      render() {} reset() {} cancel() {} destroy() {} status() {}
+    } }));
+    vi.doMock('../src/presentation/help-panel', () => ({ HelpPanel: class { open = false; destroy() {} } }));
+    vi.doMock('../src/presentation/s13-assets', () => ({ buildPortraitTextures() {}, loadS13Portraits() {}, s13AssetUrl: () => '' }));
+    vi.doMock('../src/presentation/unit-view', () => ({ UnitView: class {
+      token: Drawing;
+      constructor(_scene: unknown, unit: { id: string }, x: number, y: number) { this.token = new Drawing(x, y).setName(`unit:${unit.id}`).setData('unitId', unit.id); }
+      update() {} setRing() {} resetMeters() {} destroy() {}
+    } }));
+    vi.doMock('../src/stats/stats-panel', () => ({ createStatsPanel: () => ({ render() {}, dispose() {} }) }));
+    vi.doMock('../src/stats/combat-feedback-renderer', () => ({ createCombatFeedbackRenderer: () => ({ reset() {}, dispose() {} }) }));
+    vi.doMock('../src/rendering/online/orb-dock', async importOriginal => ({
+      ...await importOriginal<typeof import('../src/rendering/online/orb-dock')>(), OrbDock: class { render() {} reset() {} },
+    }));
+    // Capture the public session passed by create; do not replace any application behavior.
+    let session: RemoteSession;
+    vi.doMock('../src/rendering/online/online-application', async importOriginal => {
+      const original = await importOriginal<typeof import('../src/rendering/online/online-application')>();
+      return { ...original, OnlineApplication: class extends original.OnlineApplication {
+        constructor(...args: ConstructorParameters<typeof original.OnlineApplication>) {
+          super(...args); app = this; session = args[0];
+        }
+      } };
+    });
+    const { BoardScene } = await import('../src/rendering/BoardScene');
+    const scene = new BoardScene();
+    scene.create();
+    shutdown = () => { for (const stop of stops) stop(); };
+    listeners.state(initial);
+    const unit = initial.preparation.units.find(unit => unit.team === 'player')!;
+    expect(unit).toBeDefined();
+    const press = (target: Node = new Node()) => {
+      selectUnit!(unit.id); // the same public callback the strategy panel invokes
+      for (const code of ['KeyD', 'KeyF', 'KeyW', 'KeyE']) {
+        const event = new Event('keydown', { cancelable: true });
+        Object.defineProperties(event, { code: { value: code }, target: { value: target } });
+        keyEvents.dispatchEvent(event);
+      }
+    };
+    const expectBlocked = () => {
+      expect(shop.inert).toBe(true);
+      const before = session!.state;
+      press();
+      expect(send).not.toHaveBeenCalled(); // includes buy, shopLock and all other wire commands
+      expect(session!.state).toBe(before);
+      expect(session!.state.gold).toBe(50);
+    };
+    const expectEnabled = () => {
+      expect(shop.inert).toBe(false);
+      press();
+      expect(send.mock.calls.map(([command]) => command.type)).toEqual(['reroll', 'buyXp', 'deploy', 'sell']);
+      for (const type of ['reroll', 'buyXp', 'deploy', 'sell'] as WireCommand['type'][])
+        expect(send.mock.calls.filter(([command]) => command.type === type)).toHaveLength(1);
+      send.mockClear();
+    };
+    return { press, send, expectBlocked, expectEnabled };
+  }
+
+  it('blocks all D/F/W/E intents and preserves gold while scouting, then restores each shortcut once', async () => {
+    const { subscribeBoardFeed } = await import('../src/rendering/board-feed');
+    off = subscribeBoardFeed({ frame() {}, events() {}, scout() {} });
+    const keyboard = await mountKeyboard();
+    listeners.view(view);
+    keyboard.expectEnabled(); // positive control: W and E have a valid own-unit target
+    select('other'); keyboard.expectBlocked();
+    listeners.view(view); keyboard.expectBlocked();
+    select('me'); keyboard.expectEnabled();
+    select('other'); keyboard.expectBlocked();
+    nodes(root).find(node => node.dataset.debug === 'online:opponent-close')!.click();
+    keyboard.expectEnabled();
+  }, 20_000);
+
+  it('blocks D/F/W/E outside a match and after match end, restoring them when play starts', async () => {
+    const keyboard = await mountKeyboard();
+    expect(app!.debug().mode).toBe('online-lobby'); keyboard.expectBlocked();
+    listeners.view(view); keyboard.expectEnabled();
+    listeners.view({ ...view, phase: { ...view.phase, kind: 'ended' } });
+    expect(app!.debug().mode).toBe('online-ended'); keyboard.expectBlocked();
+  }, 20_000);
+
+  it('keeps editable targets exempt when the shop is enabled', async () => {
+    const keyboard = await mountKeyboard();
+    listeners.view(view);
+    for (const tag of ['input', 'textarea', 'select']) {
+      const target = new Node();
+      vi.spyOn(target, 'closest').mockImplementation(selector => selector === 'input, textarea, select' ? target : null);
+      keyboard.press(target);
+      expect(keyboard.send, tag).not.toHaveBeenCalled();
+    }
+    const editable = new Node(); editable.isContentEditable = true;
+    keyboard.press(editable); expect(keyboard.send).not.toHaveBeenCalled();
+    keyboard.expectEnabled();
+  }, 20_000);
+
+  it('keeps scouting shortcuts blocked through choice/carousel views and restores them on combat auto-return', async () => {
+    const { subscribeBoardFeed } = await import('../src/rendering/board-feed');
+    off = subscribeBoardFeed({ frame() {}, events() {}, scout() {} });
+    const keyboard = await mountKeyboard();
+    listeners.view(view);
+    select('other'); keyboard.expectBlocked();
+    for (const kind of ['choice', 'carousel'] as const) {
+      listeners.view({ ...view, phase: { ...view.phase, kind } });
+      expect(app!.debug().viewingSeatId).toBe('other');
+      keyboard.expectBlocked();
+    }
+    listeners.view({ ...view, phase: { ...view.phase, kind: 'combat' } });
+    expect(app!.debug().viewingSeatId).toBeNull();
+    keyboard.expectEnabled();
+  }, 20_000);
+
+  it('makes the shop inert for a 3D scout, and restores it via my avatar or the panel close button', async () => {
+    const { subscribeBoardFeed } = await import('../src/rendering/board-feed');
+    const shown: (string | null)[] = [];
+    off = subscribeBoardFeed({ frame() {}, events() {}, scout: value => shown.push(value?.seatId ?? null) });
+    await mount();
+    select('other');
+    expect(shown.at(-1)).toBe('other'); expect(shop.inert).toBe(true);
+    listeners.view(view); // a server refresh must not restore the shop while still scouting
+    expect(shop.inert).toBe(true);
+    select('me');
+    expect(shown.at(-1)).toBeNull(); expect(shop.inert).toBe(false);
+    select('other'); expect(shop.inert).toBe(true);
+    nodes(root).find(node => node.dataset.debug === 'online:opponent-close')!.click();
+    expect(shown.at(-1)).toBeNull(); expect(shop.inert).toBe(false);
+  });
+
+  it('keeps the shop usable for a 2D scout and restores it when the 3D layer detaches', async () => {
+    const { subscribeBoardFeed } = await import('../src/rendering/board-feed');
+    const keyboard = await mountKeyboard();
+    listeners.view(view);
+    select('other'); keyboard.expectEnabled();
+    off = subscribeBoardFeed({ frame() {}, events() {}, scout() {} });
+    app!.frame(0); keyboard.expectBlocked();
+    off(); off = undefined;
+    app!.frame(0); keyboard.expectEnabled();
+  }, 20_000);
+});

@@ -7,7 +7,7 @@
 import { buildAssetBase3d, readAssetBase3d, readRenderMode, withRenderParam, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
 import { boardFeed } from '../board-feed';
-import { THEME, starColor } from '../../presentation/theme';
+import { THEME, costColor, starColor } from '../../presentation/theme';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 
 export interface ThreeModeHandle { dispose(): void }
@@ -79,7 +79,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
     .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => {
         // Shown while it changes; six quiet seconds after the last update (done, or stalled) it clears so it never sits on the HUD.
         if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000); });
-      module.useStarColor?.(starColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
+      module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
       if (disposed) { mounted.dispose(); return; }

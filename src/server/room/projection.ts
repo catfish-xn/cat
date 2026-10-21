@@ -385,21 +385,29 @@ export function startReplaySpotCheck(battles: readonly BattleResult[], round: nu
   if (candidates.length === 0) return null;
   const chosen = all ? candidates : [candidates[round % candidates.length]!];
   const results: SpotCheckResult[] = [];
-  let index = 0, task: CombatReplayTask | null = null;
+  let index = 0, task: CombatReplayTask | null = null, comparison: ReplayComparison | null = null;
   const finish = (candidate: AuditCandidate, firstDifference: string | null) => {
     results.push({ battleId: candidate.battleId, seatIds: candidate.seatIds, battleSeed: candidate.battleSeed, firstDifference });
-    index++; task = null;
+    index++; task = null; comparison = null;
   };
   return {
     advance(maxTicks: number): readonly SpotCheckResult[] | null {
       const candidate = chosen[index];
       if (!candidate) return results;
+      // The room passes Infinity when it does not slice; the rules take a positive safe integer.
+      const budget = Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER;
       try {
-        task ??= startCombatReplay(candidate.input);
-        // The room passes Infinity when it does not slice; the rules take a positive safe integer.
-        const rerun = task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
-        if (!rerun) return null;
-        finish(candidate, firstReplayDifference(replays.get(candidate.key)!, rerun));
+        if (!comparison) {
+          task ??= startCombatReplay(candidate.input);
+          const rerun = task.advance(budget);
+          if (!rerun) return null;
+          comparison = startReplayComparison(replays.get(candidate.key)!, rerun);
+        }
+        // The comparison serializes frames; it shares the slice's budget (frames for ticks) so a long battle's
+        // comparison is spread over slices like its re-run.
+        const difference = comparison.advance(budget);
+        if (difference === undefined) return null;
+        finish(candidate, difference);
       } catch (error) {
         finish(candidate, `rerun-refused:${error instanceof Error ? error.message : String(error)}`);
       }
@@ -408,14 +416,25 @@ export function startReplaySpotCheck(battles: readonly BattleResult[], round: nu
   };
 }
 
-/** Both replays come from the same rules recorder, so equal content serializes identically frame by frame. */
-function firstReplayDifference(captured: CombatReplay, rerun: CombatReplay): string | null {
-  if (JSON.stringify(captured.initial) !== JSON.stringify(rerun.initial)) return 'initial';
+/** A frame-by-frame comparison: `advance` compares at most `frames` more and gives the first difference (null: equal) once done. */
+interface ReplayComparison { advance(frames: number): string | null | undefined }
+/**
+ * Both replays come from the same rules recorder, so equal content serializes identically frame by frame. Compares
+ * initial, then the ticks in order, then the frame count and terminal; the first difference names the first of them.
+ */
+function startReplayComparison(captured: CombatReplay, rerun: CombatReplay): ReplayComparison {
   const count = Math.min(captured.ticks.length, rerun.ticks.length);
-  for (let i = 0; i < count; i++) {
-    if (JSON.stringify(captured.ticks[i]) !== JSON.stringify(rerun.ticks[i])) return `tick ${captured.ticks[i]!.tick}`;
-  }
-  if (captured.ticks.length !== rerun.ticks.length) return `frames ${captured.ticks.length}/${rerun.ticks.length}`;
-  if (JSON.stringify(captured.terminal) !== JSON.stringify(rerun.terminal)) return 'terminal';
-  return null;
+  // -1: initial; 0..count-1: ticks; count: frame count and terminal.
+  let next = -1;
+  return {
+    advance(frames) {
+      for (let done = 0; done < frames; done++, next++) {
+        if (next < 0) { if (JSON.stringify(captured.initial) !== JSON.stringify(rerun.initial)) return 'initial'; continue; }
+        if (next < count) { if (JSON.stringify(captured.ticks[next]) !== JSON.stringify(rerun.ticks[next])) return `tick ${captured.ticks[next]!.tick}`; continue; }
+        if (captured.ticks.length !== rerun.ticks.length) return `frames ${captured.ticks.length}/${rerun.ticks.length}`;
+        return JSON.stringify(captured.terminal) !== JSON.stringify(rerun.terminal) ? 'terminal' : null;
+      }
+      return undefined;
+    },
+  };
 }

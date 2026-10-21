@@ -1,7 +1,7 @@
 /**
  * The 3D board's surroundings (docs/ASSETS3D_TFT_EXTRAS.md 界面接线需求): my 河灵 (little legend) beside the board, an
- * opponent's on the far side while a PvP battle is shown, my unclaimed orbs in a column next to my legend, and the
- * HP-loss bolt of a settled round. Everything here is drawn from BoardFrame fields the 2D scene already reads (the
+ * opponent's on the far side while a PvP battle is shown, my unclaimed orbs where their monster fell (else in a column
+ * next to my legend), and the HP-loss bolt of a settled round. Everything here is drawn from BoardFrame fields the 2D scene already reads (the
  * private orb view, the claim receipts, roundResults); a click on an orb goes back through BoardControls.claimOrb, which
  * is the 2D orb dock's own click. Nothing is priced, rolled or settled here, and a reload never replays an old opening
  * or hit: the first frame only records what is already there.
@@ -46,8 +46,10 @@ const OPPONENT_LINGER_SECONDS = 4;
 const BOLT_ARC = 60;
 /** My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of. */
 const ROAM_MARGIN = 2, ORB_REACH = 0.45;
+/** Orbs one monster dropped lie this many hex widths apart around where it fell. */
+const ORB_SPREAD = 0.4;
 /** Hex widths a second: the room's legend pace (legend-motion.ts LEGEND_CELLS_PER_SECOND; the carousel's RUN_CELLS). */
-const WALK_WIDTHS = 5;
+const WALK_WIDTHS = 2.5;
 
 export interface TabletopContext {
   readonly scene: Scene;
@@ -81,6 +83,11 @@ export interface Tabletop {
   walkTo(point: { x: number; y: number }, orbId?: string | null): { from: CellPoint; to: CellPoint } | null;
   /** An opponent's walk as the room relayed it (its own board cells): drawn mirrored on the far side. */
   walk(walk: BoardLegendWalk): void;
+  /**
+   * Visiting another board (TFT: my legend goes there): mine leaves this one, its walk dropped and no orb claimed meanwhile;
+   * back home it stands at its own spot again.
+   */
+  away(on: boolean): void;
   /** Acceptance read (?debug3d). */
   debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean }[]; hits: string[]; opening: number; bolt: boolean };
   dispose(): void;
@@ -130,7 +137,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       anchors.orbs = Array.from({ length: MAX_ORBS }, (_, index) => new Vector3(
         anchors.me.x + (index % 2 ? 0.42 : -0.42) * width, 0, anchors.me.z - (1 + Math.floor(index / 2)) * step * 0.9));
       for (const view of legends.values()) placeLegend(view);
-      [...orbs.values()].forEach((view, index) => view.root.position.copy(orbSlot(index)));
+      [...orbs.values()].filter(view => !spots.has(view.orbId)).forEach((view, index) => view.root.position.copy(orbSlot(index)));
     }
     const pad = legendHeight;
     return [anchors.me.clone().add(new Vector3(pad, 0, pad)), anchors.opponent.clone().add(new Vector3(-pad, 0, -pad)),
@@ -158,6 +165,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     // Models face +z; turn toward the board.
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
+  /** Set while I visit another board (`away`). */
+  let away = false;
   const legend = (side: 'me' | 'opponent'): LegendView => {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
@@ -168,7 +177,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-legend-${side}`;
     view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
-    root.add(standIn(side));
+    root.add(standIn(side)); root.visible = !(away && side === 'me');
     placeLegend(view); scene.add(root);
     if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
     if (side === 'opponent' && before) opponentWalk = before.walk;
@@ -222,7 +231,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
   const sent = new Map<string, number>();
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
-    if (!layoutKey) return null;
+    if (!layoutKey || away) return null;
     const view = legend('me');
     const orb = orbId ? orbs.get(orbId) : undefined;
     const { minX, maxX, minZ, maxZ } = board.bounds;
@@ -242,7 +251,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.position.lerpVectors(path.from, path.to, t);
     if (path.from.distanceToSquared(path.to) > 1) view.root.rotation.y = Math.atan2(path.to.x - path.from.x, path.to.z - path.from.z);
     if (t >= 1) view.path = null;
-    if (view.id !== 'legend:me') return;
+    if (view.id !== 'legend:me' || away) return;
     // An orb it walked over since the last frame (the whole stretch, so a long frame skips none), or the one it was sent
     // to on arrival, is claimed as the dock's click; once, unless that claim was refused.
     for (const orb of orbs.values()) {
@@ -287,6 +296,27 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   // --- orbs --------------------------------------------------------------------------------------------------------
   const orbs = new Map<string, OrbView>();
+  /**
+   * Where each orb lies, as in TFT: where the monster that dropped it was last drawn (frame.orbs `source`), spread a little
+   * when one monster drops several; kept until the orb is claimed. An orb with no known source (a mechanic's, or one listed
+   * before this layer saw its monster) takes the column beside my legend.
+   */
+  const spots = new Map<string, Vector3>();
+  /** Neutral pieces' last drawn points in the latest PvE combat, by combat unit id (the loot's sourceUnitId). */
+  const monsters = new Map<string, Vector3>();
+  let wasFighting = false;
+  const spotFor = (orb: BoardOrb): Vector3 | undefined => {
+    const known = spots.get(orb.orbId);
+    if (known || !orb.source) return known;
+    const at = monsters.get(orb.source);
+    if (!at) return undefined;
+    const siblings = [...spots.keys()].filter(id => orbSource.get(id) === orb.source).length;
+    const angle = siblings * 2.4, reach = siblings ? ORB_SPREAD * board.width : 0;
+    const spot = new Vector3(at.x + Math.cos(angle) * reach, 0, at.z + Math.sin(angle) * reach);
+    spots.set(orb.orbId, spot); orbSource.set(orb.orbId, orb.source);
+    return spot;
+  };
+  const orbSource = new Map<string, string>();
   const idleSeconds = (tier: BoardOrb['tier']) => tier === 'prismatic' ? PRISMATIC_IDLE_SECONDS : ORB_IDLE_SECONDS;
   const startIdle = (view: OrbView) => {
     if (!ctx.loadEffect || view.loading) return;
@@ -376,11 +406,16 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     refusals = frame.orbRefusals ?? {};
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); removeOrb(view, seeded && opened.has(id)); }
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id)); }
+    if (frame.fighting && !wasFighting) monsters.clear();
+    wasFighting = frame.fighting;
+    for (const piece of frame.pieces) if (piece.neutral) monsters.set(piece.id, new Vector3(piece.x, 0, piece.y));
+    let column = 0;
     list.slice(0, MAX_ORBS).forEach((orb, index) => {
       let view = orbs.get(orb.orbId);
       if (!view) { view = createOrb(orb, index); orbs.set(orb.orbId, view); }
-      view.root.position.copy(orbSlot(index));
+      const spot = spotFor(orb);
+      view.root.position.copy(spot ?? orbSlot(column++));
       // Queued until after the battle: drawn a little smaller, still not opened.
       view.root.scale.setScalar(orb.queued ? 0.8 : 1);
     });
@@ -445,6 +480,14 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    away(on) {
+      if (on === away) return;
+      away = on; orbTarget = null;
+      const view = legends.get('me');
+      if (!view) return;
+      view.path = null; view.root.visible = !on;
+      if (!on) { view.walked = false; placeLegend(view); }
+    },
     walk(walk) {
       if (walk.scene !== 'board' || walk.who !== 'opponent') return;
       opponentWalk = walk;
