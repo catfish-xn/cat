@@ -38,6 +38,9 @@ const FX = {
   wall: 'carousel-shareddraft-firstdraftwall-galaxy', wallEnd: 'carousel-shareddraft-firstdraftwall-death-galaxy',
   selected: 'carousel-shareddraft-unitselected', indicator: 'carousel-shareddraft-playerindicator',
 } as const;
+/** Quality ring under each carousel unit, by its cost (S13 shared-draft unittier1..6); bounded and rebuilt like the others. */
+const TIER_FX = (cost: number) => `carousel-shareddraft-unittier${Math.min(6, Math.max(1, Math.round(cost)))}`;
+const TIER_SECONDS = 4;
 const RESTRAINT_EARLY_SECONDS = 1.2, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SELECTED_SECONDS = 1.5, INDICATOR_SECONDS = 30;
 /** Stand-in feedback when an effect is missing: a ring that swells and fades this long. */
 const POP_SECONDS = 0.5;
@@ -79,11 +82,12 @@ export interface CarouselStage {
 interface Body { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: UnitActionState; disposed: boolean }
 interface UnitView extends Body {
   readonly slot: number; readonly definitionId: string; readonly holder: Group; readonly ring: Mesh; readonly proxy: Mesh;
-  stars: StarMark; items: Sprite[]; data: BoardCarouselSlot;
+  stars: StarMark; items: Sprite[]; data: BoardCarouselSlot; tier: Loop | null;
 }
 interface SeatView extends Body { readonly seatId: string; readonly me: boolean; readonly anchor: Vector3; lock: Loop | null; indicator: Loop | null }
 /** A bounded effect rebuilt while wanted, or its stand-in mesh. */
-interface Loop { id: string; seconds: number; point: Vector3; fx: ParticleEffect | null; stand: Mesh | null; left: number; loading: boolean; disposed: boolean }
+/** `parent`: carry the effect with a moving object (a unit on the turning ring); `point` is then local to it. */
+interface Loop { id: string; seconds: number; point: Vector3; fx: ParticleEffect | null; stand: Mesh | null; left: number; loading: boolean; disposed: boolean; parent?: Object3D }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number; disposed: boolean }
 
 export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
@@ -239,19 +243,21 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
 
   // --- effects ---------------------------------------------------------------------------------------------------
   const loops = new Set<Loop>(), bursts = new Set<Burst>();
-  const placeEffect = (fx: ParticleEffect, point: Vector3) => { fx.object.scale.setScalar(ctx.sourceScale); fx.object.position.copy(point); scene.add(fx.object); };
+  const placeEffect = (fx: ParticleEffect, point: Vector3, parent: Object3D = scene) => {
+    fx.object.scale.setScalar(ctx.sourceScale); fx.object.position.copy(point); parent.add(fx.object);
+  };
   const startLoop = (loop: Loop) => {
     if (!ctx.loadEffect || loop.loading || loop.disposed) return;
     loop.loading = true;
     void ctx.loadEffect(loop.id, loop.seconds).then(fx => {
       loop.loading = false;
       if (loop.disposed) { fx.dispose(); return; }
-      placeEffect(fx, loop.point); loop.fx = fx; loop.left = loop.seconds;
+      placeEffect(fx, loop.point, loop.parent); loop.fx = fx; loop.left = loop.seconds;
       if (loop.stand) loop.stand.visible = false;
     }).catch(() => { loop.loading = false; });
   };
-  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null): Loop => {
-    const entry: Loop = { id, seconds, point: point.clone(), fx: null, stand, left: 0, loading: false, disposed: false };
+  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null, parent?: Object3D): Loop => {
+    const entry: Loop = { id, seconds, point: point.clone(), fx: null, stand, left: 0, loading: false, disposed: false, ...(parent ? { parent } : {}) };
     if (stand) { stand.position.copy(point); scene.add(stand); }
     loops.add(entry); startLoop(entry);
     return entry;
@@ -299,7 +305,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight + STAR_GAP;
     holder.add(root, ring, proxy, stars.object);
-    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, proxy, stars, items: [], data,
+    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, proxy, stars, items: [], data, tier: null,
       lease: null, mixer: null, state: new UnitActionState(`carousel:slot:${data.slot}`), disposed: false };
     // Item marks bound to the same slot, above the stars.
     data.items.forEach((item, at) => {
@@ -310,9 +316,12 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     });
     units.add(holder);
     attach(view, data.definitionId, ctx.championHeight, ctx.championWidth);
+    // Quality ring at the unit's feet, turning with it; none without a known cost (stand-ins only, no guess).
+    if (data.cost) view.tier = loop(TIER_FX(data.cost), TIER_SECONDS, new Vector3(0, 0.5, 0), null, holder);
     return view;
   };
   const dropUnit = (view: UnitView) => {
+    endLoop(view.tier); view.tier = null;
     releaseBody(view); view.stars.dispose();
     for (const sprite of view.items) sprite.material.dispose();
     view.holder.removeFromParent();
