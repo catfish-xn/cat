@@ -153,12 +153,16 @@ export function consumableShelf(consumables: readonly ConsumableInstance[], sele
   const section = node('div', '', 'consumable-shelf'); section.dataset.debug = 'consumables';
   section.append(node('h4', '消耗品'));
   const row = node('div', '', 'consumable-row');
-  for (const tool of consumables) {
-    const button = node('button', '', 'consumable-card'); button.type = 'button';
-    button.dataset.debug = `consumable:${tool.consumableId}`; button.dataset.consumableDef = tool.definitionId;
-    button.setAttribute('aria-pressed', String(selected === tool.consumableId));
-    button.insertAdjacentHTML('afterbegin', toolMark(tool.definitionId));
-    button.append(node('span', consumableName(tool.definitionId)));
+  // Same-kind tools stack on one card (14.23 bench): the first copy is the one a click or drag uses, ×N counts the rest.
+  const stacks = new Map<string, ConsumableInstance[]>();
+  for (const tool of consumables) { const stack = stacks.get(tool.definitionId); if (stack) stack.push(tool); else stacks.set(tool.definitionId, [tool]); }
+  for (const [definitionId, stack] of stacks) {
+    const tool = stack[0]!, button = node('button', '', 'consumable-card'); button.type = 'button';
+    button.dataset.debug = `consumable:${tool.consumableId}`; button.dataset.consumableDef = definitionId;
+    button.setAttribute('aria-pressed', String(stack.some(copy => copy.consumableId === selected)));
+    button.insertAdjacentHTML('afterbegin', toolMark(definitionId));
+    button.append(node('span', consumableName(definitionId)));
+    if (stack.length > 1) { button.dataset.count = String(stack.length); button.append(node('span', `×${stack.length}`, 'consumable-count')); }
     button.title = CONSUMABLE_DEFINITIONS[tool.definitionId]?.description ?? tool.definitionId;
     bind(button, tool);
     row.append(button);
