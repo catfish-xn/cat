@@ -429,6 +429,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
       return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
     },
+    myLegend: () => feed?.legends?.().me ?? null,
     starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
   let scoutView: Parameters<typeof scout.show>[0] = null;
   const pawnFor = (team: BoardPiece['team']): Object3D => {

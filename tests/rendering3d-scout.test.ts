@@ -74,7 +74,7 @@ describe('3D scouting stage', () => {
   const setup = (loadModel: ((id: string) => Promise<ModelLease>) | null = null) => {
     const scene = new Scene(), owned: { dispose(): void }[] = [];
     const icons: string[] = [];
-    const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, legendModel: () => null,
+    const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, legendModel: () => null, myLegend: () => null,
       starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; },
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => { owned.push(resource); return resource; } });
@@ -128,14 +128,16 @@ describe('3D scouting: the seat\'s little legend', () => {
     const scene = new Scene();
     const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40,
       loadModel: id => { loads.push(id); return id === 'little-legend-default' ? Promise.resolve({ scene: new Group(), animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease) : Promise.reject(new Error('missing')); },
-      legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default',
+      legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default', myLegend: () => 'pengu',
       starColor: () => '#ffd34d', itemIcon: () => null,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => resource });
     stage.show(scoutOf({ legend: 'ao-shin', board: { units: [] } }), frame);
     await new Promise(resolve => setTimeout(resolve, 0));
-    expect(loads).toEqual(['little-legend-ao-shin', 'little-legend-default']);
+    // Theirs (falling back to the default) and mine, which came along to their board.
+    expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu']);
     expect(stage.debug().legend).toBe('model:little-legend-ao-shin');
+    expect(stage.debug().visitor).toBe('model:little-legend-pengu');
     stage.show(null, null);
   });
 });

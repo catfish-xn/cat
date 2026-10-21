@@ -79,6 +79,8 @@ export interface ScoutStageContext {
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
   /** Legend model to load for a seat's legend (falls back to the default, see legend-load), null without legend assets. */
   readonly legendModel: (legend: string | null) => string | null;
+  /** My own little legend (code name, null for the default): as in TFT it travels with me and stands at the visitor's corner. */
+  readonly myLegend: () => string | null;
   readonly starColor: (level: number) => string;
   readonly overhead: OverheadContext;
   /** Item icon URL (the 2D bundle's) for an item definition id; null when there is none. */
@@ -91,7 +93,7 @@ export interface ScoutStage {
   /** The seat to draw on this board layout, or null to stop (everything is released). */
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
   update(seconds: number): void;
-  debug(): { seatId: string | null; units: string[]; bench: string[]; orbs: string[]; legend: string };
+  debug(): { seatId: string | null; units: string[]; bench: string[]; orbs: string[]; legend: string; visitor: string };
   dispose(): void;
 }
 
@@ -120,7 +122,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
 
   let current: ScoutView | null = null, layoutKey = '';
   const pieces: Piece[] = [], orbs: Mesh[] = [];
-  let legend: Piece | null = null;
+  let legend: Piece | null = null, visitor: Piece | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
     load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel): Piece => {
@@ -169,7 +171,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     for (const piece of pieces) dropPiece(piece);
     pieces.length = 0;
     if (legend) dropPiece(legend);
-    legend = null;
+    if (visitor) dropPiece(visitor);
+    legend = null; visitor = null;
     for (const orb of orbs) orb.removeFromParent();
     orbs.length = 0;
   };
@@ -187,16 +190,23 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     }
     // The owner's 河灵 where mine stands, facing the board; its orbs in two columns beside it, by tier only.
     const spot = legendSpot(frame), legendHeight = ctx.championHeight * 0.5;
-    const legendModel = ctx.legendModel(view.legend), loadModel = ctx.loadModel;
-    legend = createPiece(`legend:${legendModel ?? 'none'}`, legendModel, legendHeight, Infinity, () => {
-      const body = new Mesh(legendGeometry, legendMaterial); body.scale.set(1, 0.82, 1); body.position.y = 12;
-      const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
-      return fit(stand, legendHeight);
-    }, loadModel ? id => loadLegendLease(loadModel, id) : null);
-    legend.root.position.copy(spot);
+    const loadModel = ctx.loadModel;
+    const legendPiece = (role: 'legend' | 'visitor', code: string | null, at: Vector3) => {
+      const model = ctx.legendModel(code);
+      const piece = createPiece(`${role}:${model ?? 'none'}`, model, legendHeight, Infinity, () => {
+        const body = new Mesh(legendGeometry, legendMaterial); body.scale.set(1, 0.82, 1); body.position.y = 12;
+        const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
+        return fit(stand, legendHeight);
+      }, loadModel ? id => loadLegendLease(loadModel, id) : null);
+      piece.root.position.copy(at);
+      piece.root.rotation.y = Math.atan2(center.x - at.x, center.z - at.z);
+      return piece;
+    };
     const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5;
     const center = new Vector3(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, frame.origin.y + step * (frame.rows - 1) / 2);
-    legend.root.rotation.y = Math.atan2(center.x - spot.x, center.z - spot.z);
+    legend = legendPiece('legend', view.legend, spot);
+    // Mine came along: the visitor's corner, across the board from the owner's (where a PvP opponent's legend stands).
+    visitor = legendPiece('visitor', ctx.myLegend(), new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y));
     view.orbs.tiers.slice(0, MAX_ORBS).forEach((tier, index) => {
       const orb = new Mesh(orbGeometry, orbMaterial[tier]); orb.name = `render3d-scout-orb-${tier}`;
       orb.position.set(spot.x + (index % 2 ? 0.42 : -0.42) * width, ORB_FLOAT, spot.z - (1 + Math.floor(index / 2)) * step * 0.9);
@@ -204,6 +214,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     });
   };
 
+  const legendDebug = (piece: Piece | null) => piece ? piece.lease ? `model:${piece.key.slice(piece.key.indexOf(':') + 1)}` : 'standin' : 'none';
   let clock = 0;
   return {
     group,
@@ -211,7 +222,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     show(scout, frame) {
       if (!scout || !frame) { if (current) { clear(); current = null; layoutKey = ''; group.visible = false; } return; }
       const view = readScout(scout);
-      const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${JSON.stringify(view)}`;
+      const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${ctx.myLegend()}|${JSON.stringify(view)}`;
       current = view; group.visible = true;
       if (key === layoutKey) return;
       layoutKey = key;
@@ -220,7 +231,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     update(seconds) {
       if (!current) return;
       clock += seconds;
-      for (const piece of legend ? [...pieces, legend] : pieces) {
+      for (const piece of [...pieces, legend, visitor]) {
+        if (!piece) continue;
         const output = piece.state.update(seconds);
         if (piece.mixer) { piece.mixer.apply(output); piece.mixer.update(seconds); }
       }
@@ -231,7 +243,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       units: pieces.filter(piece => piece.key.startsWith('board:')).map(piece => `${piece.key}:${piece.lease ? 'model' : 'standin'}`),
       bench: pieces.filter(piece => piece.key.startsWith('bench:')).map(piece => piece.key),
       orbs: orbs.map(orb => orb.name.replace('render3d-scout-orb-', '')),
-      legend: legend ? legend.lease ? `model:${legend.key.slice('legend:'.length)}` : 'standin' : 'none',
+      legend: legendDebug(legend), visitor: legendDebug(visitor),
     }),
     dispose() { clear(); current = null; group.removeFromParent(); },
   };
