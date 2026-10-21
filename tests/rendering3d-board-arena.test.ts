@@ -26,12 +26,13 @@ describe('3D board arena', () => {
     let released = 0, ready = 0;
     const lease = { scene, animations: [], animationNames: {}, placeholder: false, release: () => { released++; } } as unknown as ModelLease;
     const arena = createBoardArena(parent, alignment, async () => lease, () => { ready++; });
-    arena.place({ hexRadius: 34, origin: { x: 35, y: 50 } });
+    arena.place({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } });
     await new Promise(done => setTimeout(done, 0));
     expect(arena.ready).toBe(true); expect(ready).toBe(1);
     const root = parent.getObjectByName('render3d-board-arena')!;
     expect(root.children).toContain(scene);
-    arena.place({ hexRadius: 68, origin: { x: 35, y: 50 } });
+    arena.place({ rows: 6, columns: 9, hexRadius: 68, origin: { x: 35, y: 50 } });
+    expect(arena.ready).toBe(true); // No declared grid: dimensions retain the existing behavior.
     expect(root.scale.toArray()).toEqual([1, 1, -1]);
     arena.dispose();
     expect(released).toBe(1); expect(parent.children).toHaveLength(0);
@@ -45,6 +46,44 @@ describe('3D board arena', () => {
     const b = createBoardArena(parent, alignment, async () => { throw new Error('synthetic-missing'); }, () => { throw new Error('not-ready'); });
     await new Promise(done => setTimeout(done, 0));
     expect(a.ready || b.ready).toBe(false); expect(released).toBe(1); expect(parent.children).toHaveLength(0);
+  });
+
+  it.each([{ columns: 6, rows: 8 }, { columns: 7, rows: 7 }])('does not load an arena for a mismatched grid %o', async dimensions => {
+    const parent = new Group();
+    let loads = 0, ready = 0, released = 0;
+    const arena = createBoardArena(parent, alignment, async () => {
+      loads++;
+      return { scene: new Group(), placeholder: false, release: () => { released++; } } as unknown as ModelLease;
+    }, () => { ready++; }, { columns: 7, rows: 8 });
+    expect(loads).toBe(0);
+    const frame = { ...dimensions, hexRadius: 34, origin: { x: 35, y: 50 } };
+    arena.place(frame);
+    await Promise.resolve();
+    expect(loads).toBe(0); expect(arena.ready).toBe(false); expect(parent.children).toHaveLength(0);
+    arena.place({ ...frame, columns: 7, rows: 8 });
+    await Promise.resolve();
+    expect(loads).toBe(1); expect(arena.ready).toBe(true); expect(ready).toBe(1);
+    const root = parent.getObjectByName('render3d-board-arena')!;
+    arena.place(frame);
+    expect(arena.ready).toBe(false); expect(root.visible).toBe(false);
+    arena.place({ ...frame, columns: 7, rows: 8 });
+    expect(arena.ready).toBe(true); expect(root.visible).toBe(true); expect(loads).toBe(1);
+    arena.dispose(); expect(released).toBe(1);
+  });
+
+  it('keeps a pending model hidden if the live grid changes before it loads', async () => {
+    const parent = new Group();
+    let resolve!: (lease: ModelLease) => void, ready = 0;
+    const arena = createBoardArena(parent, alignment, () => new Promise(done => { resolve = done; }),
+      () => { ready++; }, { columns: 7, rows: 8 });
+    const frame = { columns: 7, rows: 8, hexRadius: 34, origin: { x: 0, y: 0 } };
+    arena.place(frame);
+    arena.place({ ...frame, rows: 6 });
+    resolve({ scene: new Group(), placeholder: false, release() {} } as unknown as ModelLease);
+    await Promise.resolve();
+    expect(arena.ready).toBe(false); expect(ready).toBe(0);
+    expect(parent.getObjectByName('render3d-board-arena')!.visible).toBe(false);
+    arena.dispose();
   });
 
   it('validates board entries in the asset manifest', () => {

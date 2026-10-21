@@ -1219,3 +1219,43 @@ body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost::before { content
 .odds-cost[data-cost="1"] { --odds-color: var(--cost-1); } .odds-cost[data-cost="2"] { --odds-color: var(--cost-2); } .odds-cost[data-cost="3"] { --odds-color: var(--cost-3); }
 .odds-cost[data-cost="4"] { --odds-color: var(--cost-4); } .odds-cost[data-cost="5"] { --odds-color: var(--cost-5); }
 body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--odds-color); }
+
+/* 14.24 炼金男爵黑市: violet glass dialog, one large reward card, 接受 (filled) and 跳过 (炼金男爵 +N 生命值，微光保留). */
+.choice-dialog[data-choice-source="blackMarket"] { width: min(520px, 100%); text-align: center; border-color: #a86bf0;
+  background: radial-gradient(120% 90% at 50% 0%, #3a2152 0%, #1d1430 55%, #140f22 100%); box-shadow: 0 0 0 1px #5b3b86 inset, 0 16px 80px #000a, 0 0 40px #8a4fd655; }
+.choice-dialog[data-choice-source="blackMarket"] h2 { color: #f0dcff; letter-spacing: .08em; text-shadow: 0 0 12px #b46cff99; }
+.market-meta { display: inline-block; margin: 0 0 14px !important; padding: 2px 12px; border-radius: 999px; border: 1px solid #7d55b0; background: #24183a; color: #e4c9ff !important; font-size: 13px; }
+.market-reward { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 auto 16px; padding: 18px 16px 16px; max-width: 340px;
+  border-radius: 12px; border: 1px solid #c79bff; background: linear-gradient(180deg, #2c1e45, #1a1329); box-shadow: inset 0 0 24px #b46cff33, 0 0 18px #b46cff44; }
+.market-reward .item-mark { margin-bottom: 4px; border: 2px solid #e2c7ff; border-radius: 10px; box-shadow: 0 0 16px #c98bff99; }
+.market-name { font-size: 20px; color: #fff3d6; }
+.market-line { font-size: 13px; line-height: 1.5; color: #d9c8ec; }
+.market-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.market-actions button { min-height: 48px; font-size: 16px; font-weight: 700; border-radius: 10px; }
+.market-actions button:first-child { background: linear-gradient(180deg, #a067e8, #6f3fb4); border-color: #d6b3ff; color: #fff; }
+.market-actions button:first-child:hover { background: linear-gradient(180deg, #b27cf5, #7d4bc4); }
+.market-actions [data-debug="choice-skip"] { background: #1c2a24; border-color: #5fc98a; color: #b7f2cb; }
+.market-actions [data-debug="choice-skip"]:hover { background: #22382d; }
+.choice-dialog[data-choice-source="blackMarket"] .choice-timeout { margin: 10px 0 0; font-size: 12px; }
+
+/* 锻造器四选一: a row of large item cards (icon, name, one effect line), gold rim, raised on hover and focus. */
+.choice-dialog[data-choice-source="forge"] { border-color: #c99a4a; background: linear-gradient(180deg, #2a2418, #182a37 70%); }
+.choice-dialog[data-choice-source="forge"] h2 { color: #ffe3a1; }
+.choice-dialog[data-choice-source="forge"] .choice-cards { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
+.choice-dialog[data-choice-source="forge"] .generic-offer { padding: 16px 10px 12px; border-radius: 12px; border: 1px solid #6c5733; background: linear-gradient(180deg, #2d2618, #1b2026);
+  transition: transform .12s ease-out, box-shadow .12s ease-out, border-color .12s; }
+.choice-dialog[data-choice-source="forge"] .generic-offer:hover, .choice-dialog[data-choice-source="forge"] .generic-offer:focus-visible {
+  transform: translateY(-3px); border-color: #ffd27a; box-shadow: 0 0 0 1px #ffd27a, 0 0 18px #ffc24a66; }
+.choice-dialog[data-choice-source="forge"] .generic-offer .item-mark { width: 60px !important; height: 60px !important; border: 2px solid #c99a4a; border-radius: 10px; }
+.choice-dialog[data-choice-source="forge"] .offer-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 征服层数 hover: the 15-chest ladder, opened ticked, the next one highlighted with the stacks still missing. */
+.conquest-ladder { display: grid; gap: 2px; margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; max-width: 340px; }
+.conquest-ladder li { display: grid; grid-template-columns: 38px 1fr auto; gap: 6px; align-items: baseline; padding: 2px 6px; border-radius: 5px; color: #7e95a4; }
+.conquest-ladder .ladder-at { font-variant-numeric: tabular-nums; text-align: right; }
+.conquest-ladder li.done { color: #9aaeb9; }
+.conquest-ladder li.done .ladder-at::before { content: '✓ '; color: #68ddd0; }
+.conquest-ladder li.next { color: #fff1cf; background: #3a2a14; box-shadow: inset 0 0 0 1px #e6bc76; }
+.conquest-ladder li.next .ladder-at { color: #ffd27a; font-weight: 700; }
+.conquest-ladder .ladder-left { color: #ffd27a; white-space: nowrap; }
+
