@@ -1,3 +1,4 @@
+import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
 import { reviveG23Forge } from './combat-g2-3-summons';
@@ -127,7 +128,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
     case 'sevika':{
-      const initialSpell=Math.floor(ctx.draw()*3/2**32),mod=rollG23HighRoller(ctx.draw),spell=mod.mod==='blue-flamethrower'?0:mod.mod==='knockout-punch'?1:mod.mod==='quadruple-chomp'?2:initialSpell;
+      const initialSpell=Math.floor(ctx.draw()*3/2**32),mod=rollG23HighRoller(ctx.draw,!!teamup(u,'unlikely-duo')),spell=mod.mod==='blue-flamethrower'?0:mod.mod==='knockout-punch'?1:mod.mod==='quadruple-chomp'?2:initialSpell;
       ctx.events.push({type:'castOutcome',tick:ctx.tick,unitId:u.id,abilityKey:u.ability.id,outcome:mod.mod,subOutcomes:mod.enhanced?[mod.mod]:[],
         castVariant:{actionSeq:seq,move:spell===0?'flamethrower':spell===1?'punch':'chomp',channelTicks:spell===0?Math.round(v('Spell1_MinDuration'))*20:0,enhanced:mod.enhanced,heroAugmentIds:[]}});
       g23State(u).highRoller.push({actionSeq:seq,spell,...mod,gold:mod.mod==='coin'||mod.mod==='jackpot'?3:0});

@@ -40,6 +40,8 @@ type Raw = ClientMessage extends infer M ? M extends ClientMessage ? Omit<M, 'pr
 type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
 type CombatStreamMessage = Extract<ServerMessage, { type: 'combat-open' | 'combat-chunk' | 'combat-end' }>;
 type ReplayTailMessage = Extract<ServerMessage, { type: 'replay-tail' }>;
+type WatchReplayMessage = Extract<ServerMessage, { type: 'watch-replay' }>;
+type WatchTailMessage = Extract<ServerMessage, { type: 'watch-tail' }>;
 type StreamPart = Exclude<CombatStreamMessage, { type: 'combat-chunk' }>
   | (Extract<CombatStreamMessage, { type: 'combat-chunk' }>['chunks'][number] & { type: 'combat-chunk' });
 
@@ -202,6 +204,19 @@ export class WsGameClient implements GameClient {
   }
   private watchSeat: string | null = null;
   private lastWatch: { readonly key: string; readonly battleId: string; readonly seatId: string; readonly replay: CombatReplay } | null = null;
+  private onWatchReplay(message: WatchReplayMessage): void {
+    if (message.roomId !== this.roomId || message.seatId !== this.watchSeat) return;
+    this.lastWatch = { key: `${message.round}:${message.battleId}:${message.seatId}`, battleId: message.battleId, seatId: message.seatId, replay: message.replay };
+    this.listeners?.watched?.(message.seatId, message.replay);
+  }
+  private onWatchTail(message: WatchTailMessage): void {
+    const last = this.lastWatch;
+    if (!last || message.roomId !== this.roomId || `${message.round}:${message.battleId}:${message.seatId}` !== last.key || !Number.isInteger(message.fromTick)
+      || message.fromTick < 0 || message.fromTick > last.replay.ticks.length || !Array.isArray(message.ticks)) return;
+    const replay: CombatReplay = { initial: last.replay.initial, ticks: [...last.replay.ticks.slice(0, message.fromTick), ...message.ticks], terminal: message.terminal };
+    this.lastWatch = { ...last, replay };
+    this.listeners?.watched?.(message.seatId, replay);
+  }
   private get ready(): boolean { return !this.disposed && !this.superseded && this.socket !== null && this.socket.readyState === SOCKET_OPEN; }
 
   /* ---------------- outbound ---------------- */
@@ -306,6 +321,8 @@ export class WsGameClient implements GameClient {
       case 'combat-chunk': for (const chunk of message.chunks) { if (!this.onCombatStream({ type: 'combat-chunk', ...chunk })) break; } return;
       case 'replay': return this.onReplay(message);
       case 'replay-tail': return this.onReplayTail(message);
+      case 'watch-replay': return this.onWatchReplay(message);
+      case 'watch-tail': return this.onWatchTail(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
       case 'heartbeat': return this.onHeartbeat(message.intervalMs);
@@ -421,6 +438,8 @@ export class WsGameClient implements GameClient {
           this.seatId = result.seatId; this.roomId = result.roomId; this.bound = true;
           this.nextCommandId = Math.max(this.nextCommandId, result.lastCommandId + 1);
           this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
+          // Resume already carries the selection and both cursors. Retain the
+          // watched prefix so its next chunk can append without another open.
           break;
         case 'applied':
         case 'consumable-used':

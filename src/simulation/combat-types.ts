@@ -11,7 +11,7 @@ export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g24Heal' | 'g24Mana'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+export interface CombatTask { readonly teamupKind?:'attack'|'echo'|'wave'|'missiles'; readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g24Heal' | 'g24Mana' | 'v20Teamup' | 'v20Powder'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export interface V19CombatFacts { readonly garenSample?:number; readonly sharedHealth?:number; readonly smokePermanent?:boolean; readonly smokeOrdinal?:number; readonly roseTeams?:readonly Team[] }
@@ -32,11 +32,12 @@ export interface G23State {
   stationaryTicks:number;
   lastCell:HexCell;
   absorbed: {unitId:string;tick:number;value:number}[];
-  highRoller: {actionSeq:number;spell:number;mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
+  highRoller: {actionSeq:number;spell:number;luck?:{readonly word:number;readonly converted:boolean;readonly firstSlot:number};mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
 }
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly v20Traits?:import('./combat-v20-traits').V20TraitsState;
   readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4;readonly downgradedAtTick?:number};
   readonly sixCost?:import('./combat-six-cost').SixCostState;
   readonly d11Kills?:readonly {readonly eventSeq:number;readonly victimId:string}[];

@@ -1,4 +1,5 @@
 import { isPresent, isSelectable } from './anomalies/availability';
+import { phase1BattleInputsSupported } from './battle-input-log';
 import { d11CombatDisplay } from './d11-display';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { freezeCombatDeclarations } from './combat-static';
@@ -40,7 +41,7 @@ function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
     ...(choiceEffects.length?{choiceEffects}:{}),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
-    ...(unit.anomalyState || unit.anomalySummon ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
+    ...(unit.anomalyState || unit.anomalySummon || unit.v20Traits?.minion ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }
 function combatViewState(state: CombatState) {
@@ -109,7 +110,7 @@ export interface CombatReplay {
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;
 }
-export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>
+export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples' | 'inputLog'>
   & Partial<Pick<import('./two-sided-types').BattleResult, 'mirrorOfSeatId'>>;
 /** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
 export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
@@ -184,6 +185,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
+  if (!phase1BattleInputsSupported(input.inputLog)) throw new RangeError('battle-input-unsupported');
   const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));

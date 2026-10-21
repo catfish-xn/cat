@@ -47,12 +47,12 @@ class Socket extends EventEmitter {
 let server: GameServer | null = null;
 afterEach(async () => { await server?.close(); server = null; });
 function connect() { const socket = new Socket(); transport.connect!(socket); return socket; }
-async function setup(count = 2) {
+async function setup(count = 2, combatStreaming = true) {
   const logs: { level: string; event: string; fields: unknown }[] = [];
   const clock = new ManualClock();
   server = await createGameServer({ port: 0, clock, seed: 42, timings: TIMINGS, bots: { stepMs: 1_000_000 },
     logger: (level, event, fields) => { logs.push({ level, event, fields }); },
-    combatStreaming: true, resolver: new TwoSidedBattleResolver(), limits: { maxMessagesPerWindow: 10_000 } });
+    combatStreaming, resolver: new TwoSidedBattleResolver(), limits: { maxMessagesPerWindow: 10_000 } });
   const clients = Array.from({ length: count }, (_, index) => { const socket = connect(); socket.request({ type: 'join', name: `seat-${index}` }); return socket; });
   const [a, b] = clients as [Socket, Socket, ...Socket[]]; a.request({ type: 'start' });
   const joined = a.messages('receipt').find(m => m.ok && m.result.kind === 'joined')!;
@@ -60,6 +60,21 @@ async function setup(count = 2) {
   return { clock, a, b, clients, logs, token: joined.result.token, seatId: joined.result.seatId, room: server.room! };
 }
 describe('NET6 production stream with memory transport', () => {
+  it('#376 legacy resolver fallback shares the seat subscription without introducing live watch packets', async () => {
+    const { a, b, clock, room, seatId } = await setup(2, false);
+    clock.advance(1_000);
+    const before = room.state;
+    expect(b.request({ type: 'watch', roomId: room.state.roomId, seatId })).toBeUndefined();
+    expect(b.messages('watch-replay')).toHaveLength(1);
+    expect(b.messages('watch-replay')[0]!.seatId).toBe(seatId);
+    expect(b.messages('watch-replay')[0]!.replay).toEqual(a.messages('replay')[0]!.replay);
+    expect(room.state).toBe(before);
+    b.request({ type: 'watch', roomId: room.state.roomId, seatId });
+    expect(b.messages('watch-replay')).toHaveLength(1);
+    b.request({ type: 'watch', roomId: room.state.roomId, seatId: null });
+    expect(b.messages('combat-open')).toEqual([]);
+    expect(b.messages('combat-chunk')).toEqual([]);
+  });
   it('one source serves ordered chunks, cursor resume, keyframe reload and watch tail; settles once', async () => {
     const { clock, a, b, token, seatId, room } = await setup();
     clock.advance(1_000);
@@ -94,7 +109,9 @@ describe('NET6 production stream with memory transport', () => {
     clock.advance(800);
     expect(room.state.settlements).toHaveLength(1); expect(room.state.fault).toBeNull();
     expect(resumed.messages('replay')).toHaveLength(0);
-    for (const stream of [...b.messages('combat-chunk'), ...resumed.messages('combat-end')]) expect(JSON.stringify(stream)).not.toMatch(/rngState|bankSamples|liveGold|proposals|mapping/);
+    for (const stream of [...b.messages('combat-chunk'), ...resumed.messages('combat-end')]) expect(JSON.stringify(stream)).not.toMatch(/rngState|bankSamples|liveGold|inputLog|proposals|mapping/);
+    expect(b.messages('watch-replay')).toEqual([]);
+    expect(b.messages('watch-tail')).toEqual([]);
   }, 60_000);
   it('a slow client is dropped without blocking ticks or a healthy peer', async () => {
     const { clock, a, b, room, logs } = await setup();
@@ -228,3 +245,45 @@ it('jittered production chunks finish playback before the minimum battle tail se
   expect(replay.ticks.at(-1)!.tick).toBe(replay.terminal.tick);
   client.dispose();
 }, 60_000);
+
+it('WsGameClient retains both received prefixes when resuming a watched stream through #376 callbacks', async () => {
+  const clock = new ManualClock();
+  server = await createGameServer({ port: 0, clock, seed: 42, combatStreaming: true, resolver: new TwoSidedBattleResolver(),
+    timings: TIMINGS, bots: { stepMs: 1_000_000 } });
+  const backends: Socket[] = [], browsers: WebSocket[] = [];
+  const watched: import('../../../src/server-entry').CombatReplay[] = [];
+  const own: import('../../../src/server-entry').CombatReplay[] = [];
+  const client = new WsGameClient({ url: 'ws://memory', storage: null, backoffMs: [1],
+    timers: { set: (callback, ms) => clock.schedule(clock.now() + ms, callback), clear: id => clock.cancel(id as number) },
+    createSocket: () => {
+      const backend = connect();
+      const browser = { readyState: 1, onopen: null, onmessage: null, onclose: null, onerror: null,
+        send(text: string) { backend.emit('message', Buffer.from(text), false); },
+        close() { Object.assign(browser, { readyState: 3 }); backend.close(); browser.onclose?.({ code: 1006 } as CloseEvent); },
+      } as unknown as WebSocket;
+      backend.receive = text => browser.onmessage?.({ data: text } as MessageEvent);
+      backends.push(backend); browsers.push(browser); return browser;
+    } });
+  client.listen({ lobby() {}, view() {}, state() {}, replay: replay => own.push(replay), replayRevised: replay => own.push(replay),
+    watched: (_seat, replay) => watched.push(replay) });
+  try {
+    client.joinQueue('viewer');
+    const target = connect();
+    const joined = target.request({ type: 'join', name: 'target' });
+    if (joined?.type !== 'receipt' || !joined.ok || joined.result.kind !== 'joined') throw Error('join');
+    client.startMatch(); clock.advance(1_000);
+    client.watch(joined.result.seatId); clock.advance(250);
+    const ownPrefix = own.at(-1)!, watchPrefix = watched.at(-1)!;
+    expect(ownPrefix.ticks.at(-1)!.tick).toBe(5);
+    expect(watchPrefix.ticks.at(-1)!.tick).toBe(5);
+    browsers[0]!.close(); clock.advance(51);
+    expect(browsers).toHaveLength(2);
+    browsers[1]!.onopen?.({} as Event);
+    expect(backends[1]!.messages('combat-open')).toHaveLength(0);
+    expect(own.at(-1)!.ticks.at(-1)!.tick).toBe(6);
+    expect(watched.at(-1)!.ticks.at(-1)!.tick).toBe(6);
+    expect(own.at(-1)!.ticks.slice(0, ownPrefix.ticks.length)).toEqual(ownPrefix.ticks);
+    expect(watched.at(-1)!.ticks.slice(0, watchPrefix.ticks.length)).toEqual(watchPrefix.ticks);
+    expect(client.pendingCount).toBe(0);
+  } finally { client.dispose(); }
+});

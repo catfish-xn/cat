@@ -1,3 +1,7 @@
+## v20-traits 当前覆盖（2026-10-21）
+
+当前规则/内容为 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`，schema/save/replay/command＝10/6/4/4。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、数值、伙伴冻结、协同资格、RNG及恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧的关系延期、野火仅回血及v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。
+
 # M5 Combat contract v5
 
 ## v19 第二部分（当前合同，2026-10-21）
@@ -202,3 +206,12 @@ createCombatReplayRecorder(initialState: CombatState,
 ## v19 回归修复边界
 
 宝箱战中发装备重算最大生命时，必须保留盖伦已授予的实际共享生命，仍置于百分比乘区外；不改变召唤物/建筑永久禁装备、击杀归属或助攻条件。普通 v19 恢复复用由完整认证输入绑定的独立回放证据，每次仍比较完整候选；Zephyr/Trench/异常路径保留每次冷重演。细节与回归证据见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。
+
+
+## PR #382：逐 tick 输入与认证日志预留（阶段1）
+
+`BattleReplayOptions.beforeTick?: (effectiveTick:number)=>readonly BattleTickInput[]` 在推进的每一 tick 前调用（包括 `advance(n)` 内部多步与 `advanceTick()`），effectiveTick 为当前游标 + 1；终局后不调用。
+`BattleTickInput = BattleEquipmentInput`：`{kind:'equipment',seq,effectiveTick,seatId,itemId,unitId,slot}`，序号与生效 tick 由服务器单写队列认证，不接受客户端自报历史时刻。
+`BattleResult.inputLog?:readonly BattleTickInput[]` 预留成功安装日志，空时省略；不进入 CombatView/网络公共帧。阶段2须将安装效果与成功日志原子提交，在恢复/重演中按相同 tick/seq 注入，失败不记入日志或消费 RNG。
+本阶段没有 applyBattleEquipment：输入源返回空批次时无副作用；非空批次在 stepCombat 前抛 `battle-input-unsupported`，不会推进该 tick；外部 BattleResult 的结算与回放也拒绝非空/畸形 inputLog，防止静默丢弃日志。
+既有单人 Match 的成功装备操作继续写 `BattleRecord.equipmentCommands`（共享类型 `BattleEquipmentCommand`），按原游标 tick 重演并与资源账本逐项认证；日志缺失、伪造或时序不符仍拒绝恢复。

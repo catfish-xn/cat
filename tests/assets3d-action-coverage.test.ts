@@ -5,7 +5,7 @@ import { selectAnimations } from '../scripts/assets3d/bin-bindings.mjs';
 // @ts-expect-error Pure Node utility.
 import { fnv1a } from '../scripts/assets3d/bin.mjs';
 
-const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
+const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8'));
 const rules = map.$animationRules;
 const clip = (name: string, alias = name) => ({ hash: fnv1a(alias), atomic: true, flags: 0, path: `${name}.anm` });
 
@@ -51,12 +51,12 @@ describe('source-grounded cast and hit coverage', () => {
     expect(knocked.mapped.hit).toBeUndefined(); expect(knocked.decisions.hit.sourceStatus).toBe('no-source-action');
   });
   it('honors explicit unit selections only when that actual eligible atomic file exists', () => {
-    const clips = ['spell1_spin_left_right', 'spell1_arm_catches'].map(n => clip(n));
+    const clips = ['demo_spell1_spin', 'demo_spell1_catch'].map(n => clip(n));
     expect(selectAnimations(clips, rules).mapped.cast).toBeUndefined();
     const selected = selectAnimations(clips, rules, map.draven.animations);
-    expect(selected.mapped.cast).toBe('spell1_spin_left_right');
+    expect(selected.mapped.cast).toBe('demo_spell1_spin');
     expect(selected.decisions.cast.method).toBe('unit-explicit');
-    expect(map.draven.animationNotes.cast).toContain('Spell1_Arm_Catches');
+    expect(map.draven.animationNotes.cast).toContain('Demo_Spell1_Catch');
     const missing = selectAnimations(clips, rules, { cast: 'not_in_graph' });
     expect(missing.mapped.cast).toBeUndefined(); expect(missing.decisions.cast.sourceStatus).toBe('undetermined');
     expect(selectAnimations([clip('hero_death')], rules, { hit: 'hero_death' }).mapped.hit).toBeUndefined();

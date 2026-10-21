@@ -55,8 +55,9 @@ export function rollG23CrownGold(crowns:number,rngState:number){
 }
 /** Triple's conditional second draw is consumed only when the first draw rolls Triple. */
 export type G23HighRollerMod='rocket'|'shield'|'coin'|'blue-flamethrower'|'knockout-punch'|'quadruple-chomp'|'jackpot';
-export function rollG23HighRoller(draw:()=>number):{readonly mod:G23HighRollerMod;readonly enhanced:boolean}{
+export function rollG23HighRoller(draw:()=>number,lucky=false):{readonly mod:G23HighRollerMod;readonly enhanced:boolean;readonly luck?:{readonly word:number;readonly converted:boolean;readonly firstSlot:number}}{
   const first=g23WeightedIndex(draw(),G23_POLICY.highRoller.first);
-  const enhanced=first===3,index=enhanced?g23WeightedIndex(draw(),G23_POLICY.highRoller.triple):first;
-  return {mod:(enhanced?G23_POLICY.highRoller.tripleMods[index]:G23_POLICY.highRoller.mods[index]) as G23HighRollerMod,enhanced};
+  const word=lucky&&first!==3?draw():undefined,converted=word!==undefined&&Math.floor(word*10000/2**32)<1000;
+  const enhanced=first===3||converted,index=first===3?g23WeightedIndex(draw(),G23_POLICY.highRoller.triple):first;
+  return {mod:(enhanced?G23_POLICY.highRoller.tripleMods[index]:G23_POLICY.highRoller.mods[index]) as G23HighRollerMod,enhanced,...(word===undefined?{}:{luck:{word,converted,firstSlot:first}})};
 }

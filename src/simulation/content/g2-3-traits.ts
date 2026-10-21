@@ -22,7 +22,7 @@ export const G23_TRAITS:Readonly<Record<string,TraitDefinition>>=freezeContent(O
       case 'watcher':effects=[mechanic('watcher',{reductionBps:b('BaseDR'),healthyReductionBps:b('IncreasedDR'),thresholdBps:b('HealthBreakpoint')})];break;
       case 'automata':effects=[flat('armor',n('Resists')),flat('magicResist',n('Resists')),mechanic('automata',{crystals:n('TriggerNumCrystals'),damage:n('MagicDamage'),conversionBps:b('ConversionDamagePct')})];break;
       case 'family':effects=[mechanic('family',{manaReductionBps:b('ManaReduction'),damageReductionBps:b('DamageReduction'),heist:threshold>=5?1:0}),...(threshold>=4?[{kind:'attackSpeedBps' as const,bps:b('AttackSpeed')}]:[])];break;
-      case 'firelight':effects=[mechanic('firelight',{periodTicks:120,healBps:b('PercentDamageTakenHeal'),attackSpeedBps:0,dashTicks:20})];break;
+      case 'firelight':effects=[mechanic('firelight',{periodTicks:120,healBps:b('PercentDamageTakenHeal'),attackSpeedBps:threshold>=4?35000:0,dashTicks:20})];break;
       case 'rebel':effects=[pct('maxHp',1200),mechanic('rebel',{thresholdBps:2500,adApBps:b('ADAP'),bonusHpBps:b('PercentMaxHealthBonus'),stunTicks:Math.round(n('StunDuration')*20),attackSpeedBps:6000,durationTicks:100,...(threshold===10?{forcedPeriodTicks:Math.round(n('ForceDuration')*20)}:{})})];break;
       case 'enforcer':effects=[mechanic('damageAmp',{bps:b('BaseDA')}),mechanic('enforcer',{shieldBps:b('PercentMaxHealthShield'),wanted:n('NumOfWantedEnemies'),attackSpeedBps:3000})];break;
       case 'scrap':effects=[mechanic('scrap',{shieldPerComponent:n('HPShieldAmount'),conversions:n('NumComponents'),durationTicks:Math.round(n('ShieldDuration')*20),componentCount:0})];break;

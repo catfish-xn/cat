@@ -208,11 +208,13 @@ interface Connection {
   sentRoomRevision: number;
   sentSeatRevision: number;
   sentCombatKey: string;
-  watchedSeatId: string | null;
+  watchSeatId: string | null;
   streamCursor: StreamCursor | null;
   watchCursor: StreamCursor | null;
   /** The battle result and replay behind the last `replay` (or `replay-tail`) this connection was sent. */
   sentCombat: { readonly battle: BattleResult; readonly replay: CombatReplay } | null;
+  /** The seat this connection watches (`watch`) and the battle of it last pushed as `watch-replay`. */
+  sentWatch: { readonly key: string; readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   closeHandle: ClockHandle | null;
   /** Clock time of the last pong or message from the peer (heartbeat). */
   lastSeen: number;
@@ -358,6 +360,29 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         }
       }
     }
+    pushWatch(conn, state);
+  }
+  /**
+   * The watched seat's battle while the round's battles run: whole once, then (a live run that replaced the battle
+   * already sent) only the records that changed, as `watch-tail`, like my own battle's `replay-tail`.
+   */
+  function pushWatch(conn: Connection, state: RoomState): void {
+    const watched = conn.watchSeatId;
+    if (!watched || state.phase !== 'battle') return;
+    // Live battles share the single combat-open/chunk/end source, including when
+    // this observer has no own battle. #376's legacy replay path is fallback only.
+    if (room?.hasCombatStreams) return;
+    const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(watched) : candidate.outcomes.some(outcome => outcome.seatId === watched));
+    if (!battle || conn.sentWatch?.battle === battle) return;
+    let replay: ReturnType<typeof toCombatReplayFor> = null;
+    try { replay = toCombatReplayFor(state, watched); }
+    catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: watched, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
+    if (!replay) { conn.sentWatch = null; return; }
+    const key = `${state.round}:${battle.battleId}:${watched}`, sent = conn.sentWatch?.key === key ? conn.sentWatch : null;
+    conn.sentWatch = { key, battle, replay: replay.replay };
+    if (!sent) { send(conn, { type: 'watch-replay', roomId: state.roomId, round: state.round, seatId: watched, battleId: replay.battleId, replay: replay.replay }); return; }
+    const tail = replayTail(sent.replay, replay.replay);
+    if (tail) send(conn, { type: 'watch-tail', roomId: state.roomId, round: state.round, seatId: watched, battleId: replay.battleId, ...tail });
   }
   /** Both cursors advance independently. At most one chunk packet carries all increments for this connection. */
   function pushStream(conn: Connection, owner: Room): boolean {
@@ -391,7 +416,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       return true;
     };
     const own = append(session.seatId, false);
-    if (conn.watchedSeatId) append(conn.watchedSeatId, true);
+    if (conn.watchSeatId) append(conn.watchSeatId, true);
     if (chunks.length) send(conn, { type: 'combat-chunk', chunks });
     for (const end of ends) send(conn, end);
     return own;
@@ -415,6 +440,17 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const tail = replayTail(sent.replay, revised);
       conn.sentCombat = { battle: sent.battle, replay: revised };
       if (tail) send(conn, { type: 'replay-tail', roomId: state.roomId, round: state.round, battleId, ...tail });
+    }
+    // Watchers of either side follow the same revision from that side's point of view (`watch-tail`).
+    for (const conn of connections.values()) {
+      const watched = conn.session?.roomId === state.roomId ? conn.watchSeatId : null, sent = conn.sentWatch;
+      if (!watched || !sent || sent.battle !== battle || !battle.participants.includes(watched)) continue;
+      const rows = sent.replay.initial.board.rows;
+      const ticks = battle.battle.b.seatId === watched ? frames.ticks.map(frame => mirrorReplayTick(frame, rows)) : frames.ticks;
+      const revised: CombatReplay = { ...sent.replay, ticks: [...sent.replay.ticks.slice(0, frames.fromTick), ...ticks] };
+      const tail = replayTail(sent.replay, revised);
+      conn.sentWatch = { key: sent.key, battle, replay: revised };
+      if (tail) send(conn, { type: 'watch-tail', roomId: state.roomId, round: state.round, seatId: watched, battleId, ...tail });
     }
   }
   function pushAll(state: RoomState): void { for (const conn of connections.values()) pushRoom(conn, state); }
@@ -467,7 +503,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
-      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.streamCursor = null; conn.watchCursor = null; conn.watchedSeatId = null;
+      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.streamCursor = null; conn.watchCursor = null; conn.watchSeatId = null; conn.sentWatch = null;
       if (!conn.open) opened.setConnected(session.seatId, false);
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
@@ -614,9 +650,9 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     bind(conn, session);
     if (room && session.roomId === room.state.roomId) {
       const watched = message.watchSeatId === undefined ? message.watchCombat?.seatId ?? null : message.watchSeatId;
-      if (watched !== session.seatId && room.state.seats.some(s => s.seatId === watched)) conn.watchedSeatId = watched;
+      if (watched !== session.seatId && room.state.seats.some(s => s.seatId === watched)) conn.watchSeatId = watched;
       const restore = (cursor: CombatCursor | undefined, watch: boolean) => {
-        if (!cursor || cursor.seatId !== (watch ? conn.watchedSeatId : session.seatId)) return;
+        if (!cursor || cursor.seatId !== (watch ? conn.watchSeatId : session.seatId)) return;
         const stream = room!.combatStreamFor(cursor.seatId);
         if (stream && stream.battleId === cursor.battleId && stream.revision === cursor.revision
           && cursor.nextTick >= 1 && cursor.nextTick <= stream.ticks.length) conn[watch ? 'watchCursor' : 'streamCursor'] = { ...cursor, ended: false };
@@ -667,6 +703,16 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     current.walkLegend(session.seatId, request);
   }
 
+  /** A watch answers nothing either: another seat of my room starts it (its battle follows at once when there is one), anything else stops it. */
+  function handleWatch(conn: Connection, message: ClientMessage & { type: 'watch' }): void {
+    const session = conn.session, current = room;
+    if (!session || conn.epoch !== session.connectionEpoch || !current || session.roomId !== current.state.roomId || message.roomId !== current.state.roomId) return;
+    const seatId = message.seatId !== session.seatId && current.state.seats.some(seat => seat.seatId === message.seatId) ? message.seatId : null;
+    if (seatId === conn.watchSeatId) return;
+    conn.watchSeatId = seatId; conn.sentWatch = null; conn.watchCursor = null;
+    if (seatId) pushRoom(conn, current.state);
+  }
+
   function dispatch(conn: Connection, message: ClientMessage): void {
     switch (message.type) {
       case 'join': return handleJoin(conn, message);
@@ -674,17 +720,19 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       case 'start': return handleStart(conn, message);
       case 'resume': return handleResume(conn, message);
       case 'watch': {
+        if (!(options.combatStreaming ?? options.resolver === undefined)) return handleWatch(conn, message);
         if (!conn.session || conn.epoch !== conn.session.connectionEpoch) return send(conn, fail(message.commandId, 'not-authenticated'));
         if (!room || conn.session.roomId !== room.state.roomId) return send(conn, fail(message.commandId, 'no-room'));
         if (message.roomId !== room.state.roomId) return send(conn, fail(message.commandId, 'wrong-room'));
         if (message.seatId !== null && !room.state.seats.some(s => s.seatId === message.seatId)) return send(conn, fail(message.commandId, 'unknown-seat'));
         const seatId = message.seatId === conn.session.seatId ? null : message.seatId;
-        if (conn.watchedSeatId !== seatId) { conn.watchedSeatId = seatId; conn.watchCursor = null; }
+        if (conn.watchSeatId !== seatId) { conn.watchSeatId = seatId; conn.watchCursor = null; }
         send(conn, done(message.commandId, { kind: 'watching', seatId }));
         pushStream(conn, room); return;
       }
       case 'command': return handleCommand(conn, message);
       case 'walk': return handleWalk(conn, message);
+
     }
   }
 
@@ -714,7 +762,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     conn.session = session;
     conn.epoch = session.connectionEpoch;
     session.connection = conn;
-    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.streamCursor = null; conn.watchCursor = null; conn.watchedSeatId = null;
+    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.streamCursor = null; conn.watchCursor = null; conn.watchSeatId = null; conn.sentWatch = null;
   }
 
   /** The connection loses its seat but may stay open: `superseded` tells it why and closes it after a grace period. */
@@ -750,7 +798,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', watchedSeatId: null, streamCursor: null, watchCursor: null, sentCombat: null, closeHandle: null, lastSeen: clock.now() };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', watchSeatId: null, streamCursor: null, watchCursor: null, sentCombat: null, sentWatch: null, closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
     socket.on('pong', () => { conn.lastSeen = clock.now(); });

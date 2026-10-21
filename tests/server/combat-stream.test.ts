@@ -192,3 +192,45 @@ it('reuses a terminal settlement plan, and replans only when a tail operation ch
     } finally { spy.mockRestore(); room.dispose(); }
   }
 }, 60_000);
+
+it.each([5, 11])('round %i: buys/sells/rerolls during battle use settlement gold for interest with deterministic slicing', round => {
+  const play = (sliceTicks: number) => {
+    const { room, clock } = fixture(42, sliceTicks);
+    try {
+      runUntil(room, clock, s => s.round === round && s.phase === 'battle', 20_000);
+      clock.advance(50);
+      const match = () => room.state.seats[0]!.match;
+      const openingGold = match().gold;
+      const openingUnits = new Set(match().preparation.units.map(u => u.id));
+      expect(room.combatStreamFor('s0')!.terminal).toBeNull();
+      const slot = match().shop.slots.findIndex(o => o.status === 'available');
+      expect(slot).toBeGreaterThanOrEqual(0);
+      expect(room.handle('s0', { type: 'buy', slot, generation: match().shop.generation })).toMatchObject({ ok: true });
+      expect(match().gold).toBeLessThan(openingGold);
+      const bought = match().preparation.units.find(u => !openingUnits.has(u.id))!;
+      expect(bought.location.kind).toBe('bench');
+      const paidGold = match().gold;
+      expect(room.handle('s0', { type: 'sell', unitId: bought.id })).toMatchObject({ ok: true });
+      expect(match().gold).toBeGreaterThan(paidGold);
+      do {
+        const before = match().gold;
+        expect(room.handle('s0', { type: 'reroll' })).toMatchObject({ ok: true });
+        expect(match().gold).toBe(before - 2);
+      } while (match().gold >= 10);
+      const settlementGold = match().gold;
+      expect(settlementGold).toBeLessThan(10);
+      expect(room.state.phase).toBe('battle');
+      expect(room.combatStreamFor('s0')!.ticks.at(-1)!.tick).toBe(1);
+      runUntil(room, clock, s => s.settlements.length === round, 20_000);
+      const record = match().roundResults.at(-1)!;
+      expect(record.goldBefore).toBe(settlementGold);
+      // Existing rule: PvP victory gold enters the interest basis before income.
+      expect(record.interestBasis).toBe(settlementGold + record.incomeBreakdown.win);
+      expect(record.incomeBreakdown.interest).toBe(Math.min(5, Math.floor(record.interestBasis / 10)));
+      expect(record.incomeBreakdown.interest).toBeLessThan(Math.min(5, Math.floor(openingGold / 10)));
+      expect(room.state.fault).toBeNull();
+      return json({ state: room.state.seats.map(s => s.match), battles: room.state.battles, pool: room.state.pool });
+    } finally { room.dispose(); }
+  };
+  expect(play(1)).toBe(play(8));
+}, 120_000);

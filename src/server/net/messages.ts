@@ -171,7 +171,14 @@ export type ServerMessage = CombatStreamMessage
    */
   | { readonly type: 'heartbeat'; readonly intervalMs: number }
   /** A little-legend walk the room took, for every seat of the room; `serverNow` lets the client place its times. Older clients ignore it. */
-  | { readonly type: 'legend'; readonly roomId: string; readonly serverNow: number; readonly walk: LegendWalk };
+  | { readonly type: 'legend'; readonly roomId: string; readonly serverNow: number; readonly walk: LegendWalk }
+  /**
+   * The battle of the round of the seat I watch (`watch`), from that seat's point of view, as it was replayed for it. Public:
+   * TFT shows any board's fight to a visitor. No unit ids (their equipment is not mine to map). Older clients ignore it.
+   */
+  | { readonly type: 'watch-replay'; readonly roomId: string; readonly round: number; readonly seatId: string; readonly battleId: string; readonly replay: CombatReplay }
+  /** The watched battle revised from `fromTick` on while it runs (as `replay-tail` for my own): the watch is a stream, start plus updates. */
+  | { readonly type: 'watch-tail'; readonly roomId: string; readonly round: number; readonly seatId: string; readonly battleId: string; readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] };
 
 /* ---------------- validation ---------------- */
 

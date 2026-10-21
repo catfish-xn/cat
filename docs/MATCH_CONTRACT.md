@@ -1,8 +1,12 @@
+## v20-traits 当前覆盖（2026-10-21）
+
+当前规则/内容为 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`，schema/save/replay/command＝10/6/4/4。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、输入输出、失败/跳过语义、强化赠卡唯一收据与恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧关系延期与v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。
+
 # M5 Match contract v5
 
-## v20 B 方案第 1 阶段（当前，覆盖下文历史版本）
+## v20 B 方案第 1 阶段（合流临时身份，覆盖下文历史版本）
 
-NET6；schema/save/replay/command=10/6/5/5（v19已占9/5/4/4）。实时推进不改战斗规则，旧身份拒绝运行态恢复，无迁移；历史字节保留。
+暂沿 multiplayer 的 v20-traits rules/content 名称，完整运行时 digest 按合流 manifest 重算，保留 NET6、schema/save/replay/command=10/6/5/5 和 combatStreaming 临时标识；不重录 epoch，等 #373 合入后统一 v20-live-combat。实时推进保留 v20-traits 战斗规则，旧身份拒绝运行态恢复，无迁移；历史字节保留。
 协议、结算与第2阶段挂点见 [MULTIPLAYER_CONTRACT](MULTIPLAYER_CONTRACT.md#b-方案第-1-阶段权威战斗流v20--net62026-10-21) 和 [实现说明](LIVE_COMBAT_PHASE1.md)。
 
 

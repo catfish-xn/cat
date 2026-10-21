@@ -40,7 +40,8 @@ export class CombatStream {
   terminal: CombatState | null = null;
   tick = 0;
 
-  constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[] }) {
+  constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[] },
+    beforeTick?: import('../../server-entry').BattleTickInputSource) {
     if (pve) {
       this.opening = pve.initial; this.ledger = pve.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
       this.recorder = createCombatReplayRecorder(pve.initial, this.ledger); this.task = null;
@@ -48,7 +49,7 @@ export class CombatStream {
       this.mapping = []; this.right = null;
       if (pve.initial.status === 'finished') { this.terminal = pve.initial; this.completedReplay = this.recorder.finish(pve.initial); }
     } else {
-      const live = startLiveTask(envelope);
+      const live = startLiveTask(envelope, beforeTick);
       this.task = live.task; this.recorder = null; this.opening = null; this.ledger = [];
       this.initial = live.task.initial; this.frames = [live.task.initialFrame];
       this.mapping = live.input.mapping; this.right = live.input.b.seatId;

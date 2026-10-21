@@ -9,6 +9,8 @@ import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
 import { g23ChampionAssets } from '../src/presentation/g23-display';
 
 // Presentation ownership remains Claude's: preserve the 33 authored styles and test fallback for the new content.
+// These six relationship traits require an augment; none is native to a hero.
+const augmentOnlyTraits = ['sisters','mentorship','reunion','geniuses','menaces','unlikely-duo'];
 const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => Object.hasOwn(HERO_STYLE, definition.id));
 const rgb = (hex: string) => [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16));
 const lum = (hex: string) => { const [r, g, b] = rgb(hex).map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
@@ -54,11 +56,11 @@ describe('M7 hero identity (G01)', () => {
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
       const names:Record<string,string> = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]])), 'form-swapper':'双形战士'};
-      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(30);
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(35);
       expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
   });
-  it('v19: opens every native trait for all 63 heroes; Sisters requires the augment', () => {
+  it('v20: opens every native trait for all 63 heroes; relationship traits require augments', () => {
     const names:Record<string,string> = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]])), 'form-swapper':'双形战士'};
     const observed = new Set<string>();
     expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(63);
@@ -68,7 +70,7 @@ describe('M7 hero identity (G01)', () => {
       expect(heroTraitTags(hero.id).filter(tag => tag.open).map(tag => tag.name).sort(), hero.id)
         .toEqual(expected.map(id => names[id]).sort());
     }
-    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).filter(id=>id!=='sisters').sort()); // v19 Sisters is augment-gated, not a native hero trait.
+    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).filter(id=>!augmentOnlyTraits.includes(id)).sort()); // Augment-gated relationship traits are absent from the native roster.
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {

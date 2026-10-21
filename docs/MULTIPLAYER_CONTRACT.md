@@ -1931,7 +1931,7 @@ open/end 以及 chunk 内每条增量均带 `{roomId,round,battleId,revision,sea
 客户端丢弃旧 battle/revision、重复 chunk/end；任一流发现缺口后用两条保留游标重连。游标不能结算或改写战斗，也不能读取他人私有 state。
 
 #376 的观战接线沿用 `ClientListeners.watched(seatId,replay)` → `RemoteSession.watchReplay`，本人仍走 replay/replayRevised。
-观战不得写 finished/lastBattle，自己的流和播放继续推进。删除旧 watch-replay/watch-tail 路径，双方只使用同一 recorder 的 open/chunk/end。
+观战不得写 finished/lastBattle，自己的流和播放继续推进。生产流式双方只使用同一 recorder 的 open/chunk/end，不另外发 watch-replay/watch-tail；#376 原消息仅供显式注入旧 resolver 的兼容路径，使用同一 watchSeatId 与 watched 回调。
 `watch:{roomId,seatId:string|null}` 每次都有 `{kind:'watching',seatId}` 回执，客户端按 commandId 消除 pending；请求本人席位归一为 null。
 同席重复订阅不重置任何游标；切换/停止仅重置 watchCursor。失败为 `not-authenticated`（含连接 epoch 失效）、`no-room`、`wrong-room`、`unknown-seat`，不改变订阅。
 B 方仅镜像投影已录帧，观战的 unitIds 为空。每席缓存 CombatStreamView，unitIds 建流时一次计算；未新增模拟或视觉控件。
@@ -1952,11 +1952,16 @@ PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交
 - `stepMatchCombatStream(state): MatchStep & {terminal:CombatState|null}`：推进一个 tick；运行帧更新 Match，终局保留前一合法 Match，并返回可信 terminal 供稍后结算。非法阶段抛 `wrong-phase`（内部调度错误）。
 - `settleMatchCombatStream(state,terminal,unitLootPolicy?): MatchCommandResult`：只接可信首遍终局，提交原有 withCombat 路径；重复回合、无开局输入或错误终局身份返回原 state / `wrong-phase`。共享池调用必须经过新 `settleCombatStream` 命令，不能直接越过卡池。
 
-第 2 阶段 `applyBattleEquipment` 尚未实现，装备仍只改变资产；挂点为 `Room.nextBattleInputTick`（下一未封口边界）和
-`CombatStream.nextEffectiveTick`（该场下一步）。未来单写队列按 `{battleId,effectiveTick,seq,seatId,commandId,payload}` 排序，在该边界 advanceTick 前调用领域事务；
-本阶段不保存未执行装备意图、不静默重解释旧 equipmentCommands.tick。
+战斗中允许买、卖备战席单位和刷新，利息按最终结算时的权威金币计算；PvP 沿用胜利金币先计入 interestBasis 的次序，不冻结开战金币。
 
-v19 已占 schema/save/replay/command=9/5/4/4，因此 v20 使用 **10/6/5/5**，NET 由5升6；RNG仍 lcg32-v1，tick仍50ms。
-新 rules/content 为 `s13-g2-3-v20` / `s13-14.24b-g2-3-v20`，CONTENT=`fnv1a32-utf16:ecca0d49`、LOOT=`fnv1a32-utf16:ca40ec4c`。
-所有 v19 及更早原始夹具、golden 和 `g2-4b-herald-raw/manifest.json` 保持历史字节；v20 公共命令独立录制，旧身份严格拒绝运行态恢复，无迁移。
+第 2 阶段 `applyBattleEquipment` 尚未实现，装备仍只改变资产；挂点为 `Room.nextBattleInputTick`（下一未封口边界）、
+`CombatStream.nextEffectiveTick`（该场下一步）和规则层 `BattleReplayOptions.beforeTick(effectiveTick:number):readonly BattleTickInput[]`。
+该回调在 `advance(n)` 内每个 tick 以及 `advanceTick()` 前执行，`startLiveTask(envelope,beforeTick?)` / `CombatStream(envelope,pve?,beforeTick?)` 向原 PvP 任务传递。
+`BattleTickInput = BattleEquipmentInput`，字段 `{kind:'equipment',seq:number,effectiveTick:number,seatId:string,itemId:string,unitId:string,slot:number}`；
+`BattleResult.inputLog?:readonly BattleTickInput[]` 是私有成功日志，缺省为空，绝不放进公共帧。阶段2由单写队列认证席位与命令，按 effectiveTick/seq 注入，成功安装后原子追加；失败不记日志、不消耗资源或 RNG。
+阶段1只支持空批次/空日志；非空输入在 stepCombat 前抛 `BattleValidationError('battle-input-unsupported')`，外部结果的 proposeSettlement 和 startCombatReplay 也拒绝非空/畸形 inputLog。
+本阶段不保存未执行装备意图、不静默重解释旧 equipmentCommands.tick。已有成功 Match 装备命令仍记入 `BattleRecord.equipmentCommands`，经公共命令重演及资源账本认证；漏记会拒绝恢复。
+
+合流暂用 multiplayer 的 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`；仅重算覆盖完整合流 manifest 的运行时 CONTENT=`fnv1a32-utf16:8e090a36`、LOOT=`fnv1a32-utf16:12b936a1`，没有重录 epoch 夹具；schema/save/replay/command 为 **10/6/5/5**，NET6、manifest `combatStreaming:live-tick-v1` 仍为本 PR 临时标识。
+旧 v20-traits 录制状态的 digest/command 身份拒绝恢复，不给历史证据改标签。等 #373 合入后统一重录为 `v20-live-combat`，不改旧黄金证据。
 本仓库无服务器房间持久化，本阶段不新增数据库；运行中单人 Match 前缀沿既有序列化重执行校验后续进，网络恢复使用已提交关键帧/尾段。

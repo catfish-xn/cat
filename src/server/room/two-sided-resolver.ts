@@ -100,9 +100,9 @@ function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | 
 }
 
 /** D11 live bank: the same compiled battle as a frame-by-frame replay task, with the rules' input (for its live-gold readers). */
-export function startLiveTask(envelope: BattleInput): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
+export function startLiveTask(envelope: BattleInput, beforeTick?: import('../../server-entry').BattleTickInputSource): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
   const input = compileEnvelope(envelope);
-  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true })) };
+  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true, beforeTick })) };
 }
 
 function compileEnvelope(envelope: BattleInput): RulesBattleInput {

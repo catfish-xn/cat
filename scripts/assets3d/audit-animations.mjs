@@ -1,3 +1,4 @@
+import { loadUnitMap } from './local-config.mjs';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
@@ -10,7 +11,7 @@ import { safeInputPath } from './safe-path.mjs';
  * PROP hash keys are not strings; unrecovered keys remain explicitly unknown. */
 export async function auditAnimations({ source = 'assets3d-local/trial/local',
   batches = ['assets3d-local/out/batch-cost12', 'assets3d-local/out/batch-cost345'] } = {}) {
-  const map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url), 'utf8'));
+  const map = await loadUnitMap();
   const root = resolve(source), raw = await safeInputPath(root, join(root, 'extracted'));
   const records = JSON.parse(await readFile(await safeInputPath(root, join(root, 'extraction.json')), 'utf8'));
   const byPath = new Map(records.files.map(r => [canonicalAsset(r.path), r]));

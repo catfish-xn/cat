@@ -19,11 +19,7 @@ export interface BattleRecord {
   readonly context: MatchState;
   /** Ordered equips (including in-place combinations), inventory combinations and consumable uses,
    * issued during combat before stepping this tick. */
-  readonly equipmentCommands?: readonly (
-    | { readonly tick: number; readonly itemId: string; readonly unitId: string; readonly slot: number }
-    | { readonly tick: number; readonly consumableId: string; readonly target: import('../simulation/consumable-types').ConsumableTarget }
-    | { readonly tick: number; readonly consumedIds: readonly [string, string] }
-  )[];
+  readonly equipmentCommands?: readonly import('../simulation/battle-input-log').BattleEquipmentCommand[];
   readonly initial: CombatState;
   readonly events: readonly LedgerCombatEvent[];
   readonly endTick: number;

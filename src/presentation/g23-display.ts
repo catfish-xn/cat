@@ -82,9 +82,12 @@ const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
 const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
 const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_ITEMS].map(row => [row.apiName, row]));
 
+/** Summons the rules create with their own ids (v20 危险人物's 畸变体 reuses Silco's monstrosity portrait). */
+const G23_SUMMON_IDS: Readonly<Record<string, string>> = Object.freeze({ 'v20-silco-minion': 'TFT13_Silco_Monstrosity' });
 /** apiName of a G2-3 hero or summon by content id; undefined for everything else. */
 export function g23ChampionApiName(id: string): string | undefined {
   if (Object.hasOwn(G23_HERO_IDS, id)) return G23_HERO_IDS[id];
+  if (Object.hasOwn(G23_SUMMON_IDS, id)) return G23_SUMMON_IDS[id];
   // Ranged form definitions (`elise-ranged`, g2-3-forms.ts) carry the hero's client name.
   if (id.endsWith('-ranged') && Object.hasOwn(G23_HERO_IDS, id.slice(0, -7))) return G23_HERO_IDS[id.slice(0, -7)];
   const direct = CHAMPION_BY_ID.get(id) ?? CHAMPION_BY_ID.get(lower(id));
@@ -188,7 +191,7 @@ export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): str
 /** Content unit ids that resolve to a bundled G2-3 portrait (for the board texture loader). */
 export function g23ChampionAssets(): readonly { readonly id: string; readonly path: string }[] {
   const list: { id: string; path: string }[] = [];
-  for (const id of Object.keys(UNIT_DEFINITIONS)) {
+  for (const id of [...Object.keys(UNIT_DEFINITIONS), ...Object.keys(G23_SUMMON_IDS)]) {
     const apiName = g23ChampionApiName(id);
     if (apiName && iconIndex.has(`champions:${apiName}`)) list.push({ id, path: g23IconPath('champions', apiName) });
   }

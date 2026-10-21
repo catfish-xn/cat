@@ -6,6 +6,7 @@ import type { TraitDefinition, TraitTier } from '../simulation/strategy-types';
 import { describeTraitTier } from './effect-text';
 import { fillAbilityTemplate } from './ability-text';
 import { V19_OFFICIAL_TRAIT_TEXT, V19_SISTERS_DISPLAY_SOURCE } from '../simulation/content/v19-trait-text';
+import { V20_OFFICIAL_TRAIT_TEXT, V20_TEAMUP_DISPLAY_SOURCE } from '../simulation/content/v20-trait-text';
 import { TRAIT_OFFICIAL_TEXT } from './trait-official-text';
 import type { familyDisplay } from '../simulation/family-heist';
 
@@ -20,8 +21,8 @@ const SIX_COST_TEXT = {
   'machine-herald':{apiName:'TFT13_MachineHerald',locale:'zh_cn',description:'【维克托】的固定攻击速度为每秒@AS@次攻击，并将所有额外攻击力、攻击速度和法力值转化为法术强度。<br><br>【维克托】不使用法力值，而是每次攻击获得1混沌能量，并且会在@MaxMana@混沌能量时施放技能。'},
   'banished-mage':{apiName:'TFT13_MissMageTrait',locale:'zh_cn',description:'在你第一次即将被淘汰时，如果【梅尔】在本局游戏的玩家对战回合中施放过至少@MinimumCasts@次技能，那么她会救下你，让你继续存活。<br><br>在那之后，【梅尔】会永久获得@ProcDamageAmp*100@%伤害增幅。<br><br>@TFTUnitProperty.:TFT13_MissMageTrait_TrackerTRA@'},
 };
-export const CURRENT_TRAIT_OFFICIAL_TEXT:Readonly<Record<string,{readonly apiName:string;readonly locale:string;readonly description:string}>> = {...TRAIT_OFFICIAL_TEXT,...V19_OFFICIAL_TRAIT_TEXT,...SIX_COST_TEXT};
-const SOURCES = {...G23_TRAIT_SOURCE,...V19_SISTERS_DISPLAY_SOURCE,
+export const CURRENT_TRAIT_OFFICIAL_TEXT:Readonly<Record<string,{readonly apiName:string;readonly locale:string;readonly description:string}>> = {...TRAIT_OFFICIAL_TEXT,...V19_OFFICIAL_TRAIT_TEXT,...V20_OFFICIAL_TRAIT_TEXT,...SIX_COST_TEXT};
+const SOURCES = {...G23_TRAIT_SOURCE,...V19_SISTERS_DISPLAY_SOURCE,...V20_TEAMUP_DISPLAY_SOURCE,
   'blood-hunter':{tiers:[{threshold:1,values:{EnemyHealthPercentThreshold:0.15,DevourHealing:400,ManaPerKill:50}}]},
   'machine-herald':{tiers:[{threshold:1,values:{AS:0.55,MaxMana:8}}]},
   'banished-mage':{tiers:[{threshold:1,values:{MinimumCasts:12,ProcDamageAmp:0.10}}]},
@@ -84,15 +85,14 @@ function annotate(id: string, text: string): string {
   if (id === 'black-rose') {
     mark('当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！');
   }
-  if (id === 'firelight') {
-    mark('【野火帮】们就会冲刺');
-    mark('他们会进行一次无限距离的攻击');
-    mark('在冲刺时，获得巨额爆发攻速加成。');
-  }
-  if (id === 'quickstriker') {
-    mark('【迅击战士】移动得更快');
-    mark('【迅击战士】们会冲刺至一个新目标');
-  }
+  if (id === 'firelight') text += ' 魔改执行：每 6 秒冲刺，1 秒窗口内无限射程，攻速 +350%（工程取值），按实际承伤回复，撤离到 2 格内落点。';
+  if (id === 'quickstriker') text += ' 移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。';
+  // Team-ups need the augment plus both named champions on the board; follow-ups land one tick later (project timing).
+  if (id === 'mentorship') text += ' 魔改执行：开场冻结凯特琳攻击力的25%给安蓓萨；安蓓萨施法后下一刻凯特琳对同一目标追加一次225%攻击力的物理伤害。';
+  if (id === 'reunion') text += ' 魔改执行：蔚施法后艾克发3道残影（各50%），艾克施法后蔚向目标所在行发地震波（150%）；只复制伤害。';
+  if (id === 'geniuses') text += ' 魔改执行：黑默丁格施法后艾克发3道残影（各33%），艾克施法后黑默丁格发3枚导弹（各120%）；协同不会再触发协同。';
+  if (id === 'menaces') text += ' 魔改执行：爆爆仍计入家人人数但不享受家人自身收益；开场冻结希尔科属性，猴子爆炸生成3个畸变体。';
+  if (id === 'unlikely-duo') text += ' 魔改执行：施法给另一名伙伴10法力；钢臂非三重结果有10%升为三重。';
   return text;
 }
 
