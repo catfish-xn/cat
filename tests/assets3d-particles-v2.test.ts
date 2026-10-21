@@ -258,11 +258,13 @@ describe('zero-dependency static particle meshes', () => {
     expect(() => convertParticleMesh(sco(), '.sco', limits)).toThrow(/budget/);
   });
   it('rejects unsupported flags, nonfinite locators, invalid indices, NaN and trailing/truncated bytes', () => {
-    const flags = scb(); flags.writeUInt32LE(1, 148);
+    const flags = scb(); flags.writeUInt32LE(4, 148);
+    // A face-color flag without its payload is still rejected by the length check.
+    const missingFaceColors = scb(); missingFaceColors.writeUInt32LE(1, 148);
     const pivot = scb(); pivot.writeFloatLE(NaN, 216);
     const index = scb(); index.writeUInt32LE(9, 228);
     const nan = scb(); nan.writeFloatLE(NaN, 180);
-    for (const b of [flags, pivot, index, nan, scb().subarray(0, -1), Buffer.concat([scb(), u32(0)])]) expect(() => convertParticleMesh(b, '.scb')).toThrow();
+    for (const b of [flags, missingFaceColors, pivot, index, nan, scb().subarray(0, -1), Buffer.concat([scb(), u32(0)])]) expect(() => convertParticleMesh(b, '.scb')).toThrow();
     expect(() => convertParticleMesh(Buffer.from(sco().toString().replace('3 0 1 2 material', '4 0 1 2 material')), '.sco')).toThrow();
     expect(() => convertParticleMesh(scb(), '.skn')).toThrow('unsupported-mesh-extension');
   });

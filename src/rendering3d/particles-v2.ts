@@ -34,6 +34,7 @@ const v2FragmentShader = fragmentShader.replace('uniform vec2 tiles;', 'uniform 
   .replace('(vUv+cell)/tiles', '(vec2(repeatU?fract(vUv.x):vUv.x,vUv.y)+cell)/tiles')
   .replace('varying vec2 vUv;', 'varying vec2 vUv; varying vec4 vParticleColor;')
   .replace('texel.rgb*tint,texel.a*opacity', 'texel.rgb*tint*vParticleColor.rgb,texel.a*opacity*vParticleColor.a');
+// Three declares color and selects RGB/RGBA via the material's vertexColors flag.
 const v2VertexShader = vertexShader.replace('varying vec2 vUv;', 'varying vec2 vUv; varying vec4 vParticleColor;')
   .replace('vUv=uv;', `vUv=uv;
  #ifdef USE_COLOR_ALPHA

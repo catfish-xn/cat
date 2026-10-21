@@ -55,6 +55,19 @@ export function sustainPrismaticIdle(system) {
   if (index !== system.document.emitters.length) throw new Error('prismatic-emitter-report-mismatch');
   system.document.limits.maxDuration = 3600;
 }
+export const SPECIAL_ORB_EFFECTS = [
+  ...['Warband', 'Crime'].map(name => ({ id: `orb-${name.toLowerCase()}`, system: `TFT13_${name}_LootOrb`, phase: 'start', anchor: 'source', role: 'idle' })),
+  // No dedicated orb-open system in the admitted map/set13 index. Explicit
+  // visual fallbacks, not an assertion about the original game's trigger.
+  { id: 'orb-warband-open', system: 'TFT_RewardBoxOpen_Gold', phase: 'impact', anchor: 'target', role: 'open', approximation: 'generic-gold-open; no-dedicated-source-system' },
+  { id: 'orb-crime-open', system: 'TFT_RewardBoxOpen_Silver', phase: 'impact', anchor: 'target', role: 'open', approximation: 'generic-silver-open; no-dedicated-source-system' },
+  { id: 'orb-warband-reward-queued', system: 'TFT13_Warband_RewardQueued', phase: 'travel', anchor: 'projectile', role: 'reward-queued' },
+  { id: 'orb-warband-cashout', system: 'TFT13_Warband_CashoutCeremony', phase: 'impact', anchor: 'target', role: 'cashout' },
+  { id: 'orb-warband-stack', system: 'TFT13_Warband_PropStackCeremony', phase: 'impact', anchor: 'target', role: 'stack-ceremony' },
+  { id: 'orb-crime-spawn', system: 'TFT13_Crime_Prop_Spawn', phase: 'start', anchor: 'source', role: 'spawn' },
+  { id: 'orb-crime-cashout', system: 'TFT13_Crime_Prop_CashoutTrigger', phase: 'impact', anchor: 'target', role: 'cashout' },
+  ...['Low', 'Medium', 'High', 'Full'].map(name => ({ id: `orb-crime-prop-${name.toLowerCase()}`, system: `TFT13_Crime_Prop_${name}`, phase: 'start', anchor: 'source', role: 'prop-idle' })),
+];
 export const EXTRA_EFFECTS = [
   ...['Bronze', 'Silver', 'Gold'].flatMap((tier, i) => {
     const id = ['gray', 'blue', 'gold'][i];
@@ -66,7 +79,7 @@ export const EXTRA_EFFECTS = [
   }),
   { id: 'orb-prismatic', system: 'TFT_Item_LootOrb_Prismatic', phase: 'start', anchor: 'source', role: 'idle' },
   { id: 'orb-prismatic-idle', system: 'TFT_Item_LootOrb_Prismatic_Idle', phase: 'start', anchor: 'source', role: 'idle' },
-  ...['Warband', 'Crime'].map(name => ({ id: `orb-${name.toLowerCase()}`, system: `TFT13_${name}_LootOrb`, phase: 'start', anchor: 'source', role: 'idle' })),
+  ...SPECIAL_ORB_EFFECTS,
   { id: 'player-damage-mis', system: 'TFT_PlayerDamageMis_Avatar', phase: 'travel', anchor: 'projectile', role: 'travel' },
   { id: 'player-damage-mis1', system: 'TFT_PlayerDamageMis1', phase: 'travel', anchor: 'projectile', role: 'travel' },
   { id: 'player-damage-tar', system: 'TFT_PlayerDamageTar', phase: 'impact', anchor: 'target', role: 'impact' },
@@ -81,7 +94,8 @@ export function extrasBindings(manifest, specs = EXTRA_EFFECTS) {
     if (!manifest.effects?.[s.id]) throw new Error('missing-extra-effect');
     if (playback[s.id]) throw new Error('duplicate-extra-effect');
     playback[s.id] = { phase: s.phase, anchor: s.anchor, role: s.role, delay: 0,
-      maxDuration: s.id.startsWith('orb-prismatic') ? 3600 : s.role.startsWith('idle') ? 30 : s.phase === 'travel' ? 1 : 3 };
+      maxDuration: s.id.startsWith('orb-prismatic') || ['orb-warband', 'orb-crime'].includes(s.id) ? 3600 : s.role.includes('idle') ? 30 : s.phase === 'travel' ? 1 : 3,
+      ...(s.approximation ? { approximation: s.approximation } : {}) };
   }
   return { schemaVersion: 1, status: 'approximated', playback };
 }
@@ -206,10 +220,12 @@ export async function buildTftExtras({ source = 'assets3d-local/trial/local', ou
   // These wrapper systems have one static child anchor. Resolve the actual BIN
   // resource key; omit parent angular velocity explicitly under preview policy.
   sustainPrismaticIdle(converted.systems.find(s => s.sourcePath.endsWith('/TFT_Item_LootOrb_Prismatic_Idle')));
+  for (const name of ['TFT13_Warband_LootOrb', 'TFT13_Crime_LootOrb'])
+    sustainPrismaticIdle(converted.systems.find(s => s.sourcePath.endsWith('/' + name)));
   const composition = composeStaticChildren(converted.systems, mapDoc);
   report.childComposition = composition;
-  for (const s of converted.systems) {
-    const spec = EXTRA_EFFECTS.find(e => s.sourcePath.endsWith('/' + e.system));
+  for (const spec of EXTRA_EFFECTS) {
+    const s = converted.systems.find(s => s.sourcePath.endsWith('/' + spec.system));
     if (s.document) { parseParticleDocument(s.document); const path = `effects/extras/${spec.id}.json`; await write(`${build}/${path}`, json(s.document)); manifest.effects[spec.id] = { path }; }
     report.systems.push({ id: spec.id, ...s });
   }
