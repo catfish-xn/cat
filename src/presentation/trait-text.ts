@@ -25,6 +25,11 @@ export function traitDisplayValues(traitId: string, threshold: number): Record<s
     const sniper = effects.find(effect => effect.kind === 'mechanic' && effect.mechanic === 'sniper');
     if (sniper?.kind === 'mechanic') effective.PercentDamageIncrease = sniper.values.damageBpsPerHex / 100;
   }
+  if (traitId === 'artillerist') {
+    // 12/17 B: the runtime tier overrides the archived AD fraction (e.g. 6: 60% -> 70%).
+    const ad = effects.find(effect => effect.kind === 'statPercentBps' && effect.stat === 'attackDamage');
+    if (ad?.kind === 'statPercentBps') effective.AD = ad.bps / 10000;
+  }
   if (traitId === 'conqueror') effective.PercentIncreasePerChest = G23_POLICY.conqueror.growthPerChestBps / 10000;
   const values: Record<string, number> = {};
   for (const [key, value] of Object.entries(effective)) if (typeof value === 'number') {
@@ -72,7 +77,6 @@ function annotate(id: string, text: string): string {
     mark('【迅击战士】移动得更快');
     mark('【迅击战士】们会冲刺至一个新目标');
   }
-  if (id === 'artillerist') mark('发射一枚造成双倍伤害的火箭。');
   if (id === 'dominator') mark('会基于已消耗的法力值获得可叠加的法术强度');
   if (id === 'emissary') text = text.replace(/【盖伦】：[^\n]+/, '$&（暂未实装）');
   return text;

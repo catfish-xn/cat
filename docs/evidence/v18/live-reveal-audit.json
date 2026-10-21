@@ -132,9 +132,9 @@
     "src/simulation/content/g2-3-special-item-runtime.ts": "f5ed291fc6c3c002b321d13a85a5792d7e3d167be0206aac9e1121df508f8d90",
     "src/simulation/content/g2-3-special-item-source.ts": "602a9ec240390188ebc344ecf7a1bfe4a7f750ba3869f974135d8da3d2bb5f9f",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
-    "src/simulation/content/g2-3-trait-runtime.ts": "69be6dcd710fedcaad286bc8dcc727b1afb17b75276dc1260f9ec928d93ac484",
+    "src/simulation/content/g2-3-trait-runtime.ts": "e1909d652ae45be04d320bc0734ed5c77e023d6399cc016bb536624fa5cda731",
     "src/simulation/content/g2-3-trait-source.ts": "c3ddb7c846ce7a29c1991efe88639199791dfe770f564d95ca53d75c50ca9dc8",
-    "src/simulation/content/g2-3-traits.ts": "439d75f53afc82a96b1d3e1c7323dbfbf8b49ad84a43b7d838a40544e2c12a8e",
+    "src/simulation/content/g2-3-traits.ts": "737b9d9c548ff2ac27e59ebf244e2c0a84505c6a9b2dd93de17b872a1f1c16c4",
     "src/simulation/content/g2-3-units.ts": "974fbfc3c127dbd925046135731b9053368ea3194eac7195c43de9981d3b2b4f",
     "src/simulation/content/g2-4-artifact-runtime.ts": "ef8f858c739c6d78d7ebfe92b0844787f18d8904bceae073ec74b563355de432",
     "src/simulation/content/g2-4-artifact-source.ts": "787f7497fc92fa93213801a7fda43f79d527b6b224005f082dddd1fa09b2d7c7",
@@ -149,7 +149,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "7cb481975bab3f9e02851375f32cb3fd8740c01ff780e2ea6a43e53db6094f6b",
+    "src/simulation/content/identity-constants.ts": "68ebef9435d6f060d842aca6c24e145473e50193cb8c7080ef5fede2dd5de08d",
     "src/simulation/content/index.ts": "257f7c643dfa1d5d4bdcb15f84154fc1a7b71e95b5351cc01d61db9bd624f926",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -384,11 +384,11 @@
     "tests/fixtures/v18-herald-support/generate.ts": "a68d1ab34d4ef22848dd684f1c1e4d3793398cda234de8e3e0ed888df17fbb0b",
     "tests/m8-b8-live-reveal.test.ts": "af4c1e00c484e5db7341b9c8795ddf21b3280574c9fbaa71f4bcc151bce7e56e"
   },
-  "contentDigest": "fnv1a32-utf16:9aff2c15",
+  "contentDigest": "fnv1a32-utf16:213ae9e4",
   "route": "mage",
   "seed": 242874,
   "roundId": "4-7",
-  "prefixHash": "3a62e898e2e35c2c4e1f91481162a7b5433867b00e3ab6135981c4b14be058e3",
+  "prefixHash": "5cd83d095ca5630fe1a874e30a2bfeabfb599555a1f659bd0d85c56179008153",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -567,7 +567,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "2b910d177b17b8436a328f239f9a623f4ba562ed039a47fd43d7c05d93664cf6",
-      "terminalHash": "f15f80fa9a35b477d05d5ecdc19ccaa716de6e51ed76c0929156c7cf12792194",
+      "terminalHash": "e315091a7668bb717aee16c0c0e6fe7b3c571b0e59d215ac44808f5b8c12ddb0",
       "receipts": 8,
       "unitSerialDelta": 2,
       "itemSerialDelta": 3
@@ -674,7 +674,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "57c561e348f4fcb67dbe4462d6ebf904de30e15f9f9d86ff8ca06e1de4cf7197",
-      "terminalHash": "952fe1b70c2a6dd180d71c79d02df04c66149df3414c946b94a181b901cab525",
+      "terminalHash": "450c9e224c6655c7e9c10f34fa5c3c13b84eb417865093c4f8896a798a2b2608",
       "receipts": 8,
       "unitSerialDelta": 2,
       "itemSerialDelta": 3
@@ -700,12 +700,12 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "cb2c3c3c58fb5856357e7ffa8af32e2c1be7292a30c35584f9adab171a1992e0",
-      "terminalHash": "fd67ea64c1ac8c0f212dbbb064a2e644dab64a9bcb2f664b435324c24493a216",
+      "terminalHash": "dfbaccb721be494add1bacbc10e8c9095aab34fad3e3104a3245f72992ba5a7b",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
       "star": 2,
-      "prefixHash": "ba4b02e2f0d15417084ff0aae6d1c1bb40ee0f01874d6562faba39df5c551de6"
+      "prefixHash": "8d06cf3985a69faa9ce8e7fc58739017d4b0937c4249330779158f580f322366"
     },
     "zyra": {
       "deaths": [
@@ -728,12 +728,12 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "ad30c020e26e76fc3b8c9cfd702ee6112eced0c26a32d7ed58f611084c947c02",
-      "terminalHash": "cdf433e40bce60128ccfcd7fb311797445b67ef90ef616dbc1d03c28c3697c7b",
+      "terminalHash": "146ed8fa05980b8fa16f2eb1afe04456a5be78edd1a83d75d7051972745af09b",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
       "star": 2,
-      "prefixHash": "8ab55a51d42261400eb72f4c740492776afb0001f01f29417fb8735afb6b7c2a"
+      "prefixHash": "110328b24be7ea785afcd62ac2bbd88f77de1ccf8f196eaf07396f2ebe6160d4"
     },
     "unloadedCarrier": {
       "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",

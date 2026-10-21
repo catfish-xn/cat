@@ -2,7 +2,7 @@
 
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 
-S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与拆卸器、纹章/高档羁绊及炮手修正合并后的完整根为 CONTENT `fnv1a32-utf16:9aff2c15`、LOOT `fnv1a32-utf16:ffebff3f`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与拆卸器、纹章/高档羁绊及炮手修正合并后的完整根为 CONTENT `fnv1a32-utf16:213ae9e4`、LOOT `fnv1a32-utf16:ffebff3f`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
 
 v18 使用独立 `scripts/verify-v18-epoch.cjs`、`record-v18-*.cjs` 与 `docs/evidence/v18/`、`tests/fixtures/v18-*`；CURRENT Herald 指向 `record-v18-herald.cjs`。v17 及更早证据保持历史字节，不作为当前规则录制目录。
 

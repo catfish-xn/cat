@@ -15,7 +15,8 @@ export const G23_TRAITS:Readonly<Record<string,TraitDefinition>>=freezeContent(O
     switch(id){
       case 'sentinel':effects=[flat('armor',n('BonusArmor')),flat('magicResist',n('BonusArmor'))];memberEffects=[flat('armor',n('BonusArmor')*2),flat('magicResist',n('BonusArmor')*2)];break;
       case 'sorcerer':effects=[flat('abilityPower',n('TeamAP'))];memberEffects=[flat('abilityPower',(threshold===8?125:n('BaseAP'))-n('TeamAP')),mechanic('g23Trait',{tier:threshold})];break;
-      case 'artillerist':effects=[pct('attackDamage',b('AD')),mechanic('artillery',{everyN:n('NumOfAttacks'),adBps:b('PercentDamage'),radius:1})];break;
+      // 12/17 B patch (M9_DATA_LEDGER); keep the source mirror at its archived 60%.
+      case 'artillerist':effects=[pct('attackDamage',threshold===6?7000:b('AD')),mechanic('artillery',{everyN:n('NumOfAttacks'),adBps:b('PercentDamage'),radius:1})];break;
       case 'quickstriker':effects=[mechanic('quickstriker',{minBps:b('MinBonusAS'),maxBps:b('MaxBonusAS'),shield:n('ShieldAmount'),durationTicks:Math.max(1,Math.round(n('ShieldDuration')*20))})];break;
       case 'sniper':effects=[mechanic('sniper',{damageBpsPerHex:(threshold===6?36:threshold===4?18:n('PercentDamageIncrease'))*100}),mechanic('g23Trait',{tier:threshold})];break;
       case 'watcher':effects=[mechanic('watcher',{reductionBps:b('BaseDR'),healthyReductionBps:b('IncreasedDR'),thresholdBps:b('HealthBreakpoint')})];break;

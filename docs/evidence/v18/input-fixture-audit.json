@@ -132,9 +132,9 @@
     "src/simulation/content/g2-3-special-item-runtime.ts": "f5ed291fc6c3c002b321d13a85a5792d7e3d167be0206aac9e1121df508f8d90",
     "src/simulation/content/g2-3-special-item-source.ts": "602a9ec240390188ebc344ecf7a1bfe4a7f750ba3869f974135d8da3d2bb5f9f",
     "src/simulation/content/g2-3-summons.ts": "268930a32a93c69fabc242dceecd7596b81dce8169edf344e264b0960aeefb71",
-    "src/simulation/content/g2-3-trait-runtime.ts": "69be6dcd710fedcaad286bc8dcc727b1afb17b75276dc1260f9ec928d93ac484",
+    "src/simulation/content/g2-3-trait-runtime.ts": "e1909d652ae45be04d320bc0734ed5c77e023d6399cc016bb536624fa5cda731",
     "src/simulation/content/g2-3-trait-source.ts": "c3ddb7c846ce7a29c1991efe88639199791dfe770f564d95ca53d75c50ca9dc8",
-    "src/simulation/content/g2-3-traits.ts": "439d75f53afc82a96b1d3e1c7323dbfbf8b49ad84a43b7d838a40544e2c12a8e",
+    "src/simulation/content/g2-3-traits.ts": "737b9d9c548ff2ac27e59ebf244e2c0a84505c6a9b2dd93de17b872a1f1c16c4",
     "src/simulation/content/g2-3-units.ts": "974fbfc3c127dbd925046135731b9053368ea3194eac7195c43de9981d3b2b4f",
     "src/simulation/content/g2-4-artifact-runtime.ts": "ef8f858c739c6d78d7ebfe92b0844787f18d8904bceae073ec74b563355de432",
     "src/simulation/content/g2-4-artifact-source.ts": "787f7497fc92fa93213801a7fda43f79d527b6b224005f082dddd1fa09b2d7c7",
@@ -149,7 +149,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "7cb481975bab3f9e02851375f32cb3fd8740c01ff780e2ea6a43e53db6094f6b",
+    "src/simulation/content/identity-constants.ts": "68ebef9435d6f060d842aca6c24e145473e50193cb8c7080ef5fede2dd5de08d",
     "src/simulation/content/index.ts": "257f7c643dfa1d5d4bdcb15f84154fc1a7b71e95b5351cc01d61db9bd624f926",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -384,13 +384,13 @@
     "tests/fixtures/v18-herald-support/generate.ts": "a68d1ab34d4ef22848dd684f1c1e4d3793398cda234de8e3e0ed888df17fbb0b",
     "tests/m8-b8-live-reveal.test.ts": "af4c1e00c484e5db7341b9c8795ddf21b3280574c9fbaa71f4bcc151bce7e56e"
   },
-  "contentDigest": "fnv1a32-utf16:9aff2c15",
+  "contentDigest": "fnv1a32-utf16:213ae9e4",
   "files": {
     "tests/fixtures/v18-c19-seed-9-minimal.json": {
       "previousBytes": 28248,
       "currentBytes": 28248,
       "previousSha256": "4dc31dd3556a4e5d5858b140127d4c08e1a34af495962a11bccf5f668548ec10",
-      "currentSha256": "6136749447b2377141816ded2a52658de5567613675bcff7b9439518a8d4e68f",
+      "currentSha256": "af60a97e36fe7099b9f5afbf3041af41092965b8e2d313878365d6ee8767e893",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v18-b8-fingerprints.json": {
@@ -404,49 +404,49 @@
       "previousBytes": 171261,
       "currentBytes": 172887,
       "previousSha256": "7f728a66e64ca7e448edee4d1941ad699b3f4962f2b5399de6ba760cf2d6ae0b",
-      "currentSha256": "dee34013bd70b59e170f6f7283c15ee31e5664232b480533bac1207a6f22e790",
+      "currentSha256": "e354841bd0d86f7a6c487939c9677eb62914eeedbd97008ee02ad1338d3804d9",
       "firstDifferentByte": 868
     },
     "tests/fixtures/v18-herald-raw/evenshroud.json": {
       "previousBytes": 171260,
       "currentBytes": 172886,
       "previousSha256": "79589a88861d487a2221a9aab1c1acfcc012bbe21570a93132ba83686ae913e1",
-      "currentSha256": "31fe38d5e5e61a5cb06090cdae3978ce04a73810aaf526e17772bca4f0c09a02",
+      "currentSha256": "f96d0f0a94274511dc67d46aec03c11aed27f1ecfa500c0cdefed404ab6636ba",
       "firstDifferentByte": 868
     },
     "tests/fixtures/v18-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 171251,
       "currentBytes": 172877,
       "previousSha256": "d2f52b646a69a3a3b6345c19d3ee79a90efd9fbc5bdf19915e0e5bdef59bbfb5",
-      "currentSha256": "26db28268a682aed4ec09ec9006c1533116e1e0f4b2ee32a7d64487c457ba5a8",
+      "currentSha256": "29437cecadceda51032d00646f71a292ff00cf2d9fce4224386ba1b96ed4a420",
       "firstDifferentByte": 868
     },
     "tests/fixtures/v18-herald-raw/quicksilver.json": {
       "previousBytes": 171264,
       "currentBytes": 172890,
       "previousSha256": "2aa921ab04c23def143c58505d1c30f48e36ce73d63fecf6bfafd31717c8a2dc",
-      "currentSha256": "e5ca3ba51647788a04ec323bcdf9db7b89a22721fdb2f676322f340f85f73703",
+      "currentSha256": "6901b4655bf4e4f47b4a63e9fe668c0cb474a65192fb6327bd979c3d8cf17517",
       "firstDifferentByte": 868
     },
     "tests/fixtures/v18-herald-raw/edge-of-night.json": {
       "previousBytes": 171272,
       "currentBytes": 172898,
       "previousSha256": "c1fb3938121903c67464c1233f57fdaf06c5142ccf67a778e721d7f6c41f0f0e",
-      "currentSha256": "b97c8f53d7379daaf8d85d1a3b974f3406ff6789a6356b8a817471f12523f5a9",
+      "currentSha256": "e9b7f7672b60b128c9b7246b0e7a543aa863faa1b4740cf39433afb225b29762",
       "firstDifferentByte": 868
     },
     "tests/fixtures/v18-herald-raw/manifest.json": {
       "previousBytes": 37926,
       "currentBytes": 38237,
       "previousSha256": "85e0bfd5b27fe3f506b844560dd4a55b956c90432e3ce8b8090ad5dab61875ca",
-      "currentSha256": "f11b8c0028c211b707df5d147a86bd66527bc27ed796bd6e882893b8a95ca9da",
+      "currentSha256": "49996c6d24ae814ff3117f69ff409c971a4e4306bc8cc264b3a80a385893f18b",
       "firstDifferentByte": 152
     },
     "tests/fixtures/v18-herald-raw/trajectory.json": {
       "previousBytes": 338385,
       "currentBytes": 338410,
       "previousSha256": "6c690df4c6af64f81f82940c4415abf89cb6db9fd38324d6a7b882410b21acf3",
-      "currentSha256": "404daa317474f555bf59e1e2ae2de2a6323e5f67fec5ba879dc6862d35083375",
+      "currentSha256": "93c66342ec9c8df292c35fa890183b4c30843f8d4bb7643ffb13aeb0a1630b3f",
       "firstDifferentByte": 42
     }
   },
