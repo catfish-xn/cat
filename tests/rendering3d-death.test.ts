@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import type { Group, PerspectiveCamera, Scene } from 'three';
-import type { BoardControls, BoardFeedListener, BoardFrame, BoardPiece } from '../src/rendering/board-feed';
+import type { BoardControls, BoardFeedListener, BoardFrame, BoardPiece, LegendControls } from '../src/rendering/board-feed';
 import type { Renderer3d } from '../src/rendering/three-mode/contract';
 import type { ModelLease, UnitAnimationMixer } from '../src/rendering3d';
 
@@ -19,10 +19,12 @@ class Canvas {
   hasPointerCapture(id: number): boolean { return this.captured.has(id); }
   releasePointerCapture(id: number): void { this.captured.delete(id); }
   remove(): void {}
-  pointer(type: string, point: { x: number; y: number }): void {
-    this.listeners.get(type)?.({ clientX: point.x, clientY: point.y, button: 0, pointerId: 1,
+  pointer(type: string, point: { x: number; y: number }, button = 0): void {
+    this.listeners.get(type)?.({ clientX: point.x, clientY: point.y, button, pointerId: 1,
       preventDefault() {} } as PointerEvent);
   }
+  has(type: string): boolean { return this.listeners.has(type); }
+  fire(type: string, event: Event): void { this.listeners.get(type)?.(event); }
 }
 
 const piece = (changes: Partial<BoardPiece> = {}): BoardPiece => ({
@@ -96,9 +98,9 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     };
     leases.push(lease); return lease;
   }
-  async function mount(assetBase: string | null = '/memory/'): Promise<void> {
+  async function mount(assetBase: string | null = '/memory/', legendControls: LegendControls | null = null): Promise<void> {
     const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
-    renderer.useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => controls });
+    renderer.useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => controls, legendControls: () => legendControls });
     mounted = await renderer.mountRenderer3d({ clientWidth: 800, clientHeight: 600,
       append() {} } as unknown as HTMLElement, { assetBase });
     advance(1);
@@ -243,5 +245,31 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     canvas.pointer('pointermove', point); expect(controls.hover).toHaveBeenLastCalledWith(null);
     canvas.pointer('pointerdown', point); canvas.pointer('pointerup', point);
     expect(controls.select).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens no browser menu over the game root or the canvas (links, text fields and selected text keep it), and right-click walks my legend', async () => {
+    const app = new Canvas();
+    vi.stubGlobal('document', { getElementById: (id: string) => (id === 'app' ? app : null), body: null, createElement: () => ({ getContext: () => null }) });
+    const walk = vi.fn(() => true);
+    await mount(null, { walk });
+    await publish([], false);
+    const menu = (target: { closest(selector: string): unknown } | null) => { const event = { target, preventDefault: vi.fn() }; return event; };
+    const plain = menu({ closest: () => null }), link = menu({ closest: (selector: string) => (selector.includes('a[href]') ? {} : null) });
+    app.fire('contextmenu', plain as unknown as Event); app.fire('contextmenu', link as unknown as Event);
+    expect(plain.preventDefault).toHaveBeenCalled(); expect(link.preventDefault).not.toHaveBeenCalled();
+    vi.stubGlobal('getSelection', () => ({ toString: () => '选中的字' }));
+    const selected = menu({ closest: () => null });
+    canvas.fire('contextmenu', selected as unknown as Event);
+    expect(selected.preventDefault).not.toHaveBeenCalled();
+    vi.stubGlobal('getSelection', () => ({ toString: () => '' }));
+    const onCanvas = menu({ closest: () => null });
+    canvas.fire('contextmenu', onCanvas as unknown as Event);
+    expect(onCanvas.preventDefault).toHaveBeenCalled();
+    // Right button on the board: my legend walks there, and the room is told in board cells.
+    canvas.pointer('pointerdown', screen(100, 0, 100), 2);
+    expect(walk).toHaveBeenCalledWith(expect.objectContaining({ scene: 'board', from: expect.any(Object), to: expect.any(Object) }));
+    expect(controls.select).not.toHaveBeenCalled();
+    mounted!.dispose(); mounted = undefined;
+    expect(app.has('contextmenu')).toBe(false); expect(canvas.has('contextmenu')).toBe(false);
   });
 });

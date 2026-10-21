@@ -217,4 +217,37 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(legend.position.x).toBeCloseTo(2 * centerX - (35 + width), 3);
     expect(legend.position.z).toBeCloseTo(2 * centerZ - (50 + width), 3);
   });
+
+  it('sends one claim per orb while it is out, and another only after the session refused it', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    const width = Math.sqrt(3) * 34;
+    tabletop.walkTo({ x: 0, y: 0 }, 'a');
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(1);
+    // Still out (no queued flag yet, no answer): walking onto it again sends nothing.
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(1);
+    // Refused: the next touch may send it again, once.
+    tabletop.frame(frame({ orbs: [orb('a')], orbRefusals: { a: 1 } }));
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016); tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(2);
+  });
+
+  it('claims an orb it crossed during one long frame (a dropped frame or a background tab)', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { scene, tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    const legend = scene.getObjectByName('render3d-legend-me')!.position.clone(), at = scene.getObjectByName('render3d-orb-blue')!.position.clone();
+    // A walk straight through the orb to well beyond it, finished within a single update.
+    const beyond = at.clone().add(at.clone().sub(legend));
+    tabletop.walkTo({ x: beyond.x, y: beyond.z });
+    clock += 60_000; tabletop.update(0.25);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
+  });
 });

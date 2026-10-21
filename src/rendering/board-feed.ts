@@ -36,6 +36,8 @@ export interface BoardFrame {
   readonly orbs?: readonly BoardOrb[];
   /** Orbs (by orbId) with a claim receipt that granted something (not forfeited); an orb that leaves `orbs` and is named here was opened. */
   readonly openedOrbs?: readonly string[];
+  /** How many claims of each orb still listed the session refused (the orb dock put it back); absent orbs have none. */
+  readonly orbRefusals?: Readonly<Record<string, number>>;
   /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
   readonly hit?: BoardHit | null;
 }

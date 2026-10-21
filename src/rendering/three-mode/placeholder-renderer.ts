@@ -640,14 +640,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
-  // A right click walks my legend (board and carousel), and as in TFT it never opens the browser menu anywhere in the
-  // game while the 3D view is up; text fields keep theirs (copy and paste).
+  // A right click walks my legend (board and carousel), and as in TFT it opens no browser menu over the game (the 3D
+  // view and the panels on it) while the 3D view is up. Links, text fields and selected text keep theirs; the page
+  // outside the game root is untouched.
   const onContextMenu = (event: Event) => {
     const target = event.target as Element | null;
-    if (!target?.closest?.('input, textarea, [contenteditable="true"]')) event.preventDefault();
+    if (target?.closest?.('a[href], input, textarea, [contenteditable="true"]')) return;
+    if (typeof getSelection === 'function' && getSelection()?.toString()) return;
+    event.preventDefault();
   };
+  // The game root (#app: panels, shop, sidebars) and the canvas itself, which online moves out of it onto <body>.
+  const app = typeof document === 'undefined' ? null : document.getElementById('app');
+  const menuRoots: EventTarget[] = app ? [app, canvas] : [canvas];
   const legend = () => feed?.legendControls?.() ?? null;
-  if (typeof document !== 'undefined') document.addEventListener('contextmenu', onContextMenu);
+  for (const root of menuRoots) root.addEventListener('contextmenu', onContextMenu);
 
   let width = 0, height = 0, frameId = 0, last = performance.now();
   // Online the layer fills the window behind the panels (style.css L12), so it moves from #board-root to <body>: inside
@@ -728,7 +734,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      if (typeof document !== 'undefined') document.removeEventListener('contextmenu', onContextMenu);
+      for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
       clearEffects(); tabletop.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();

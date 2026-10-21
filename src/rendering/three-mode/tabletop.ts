@@ -202,8 +202,12 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     if (settled || walk.arriveAt <= now()) { view.path = null; view.root.position.copy(to); return; }
     view.path = { from: view.root.position.clone(), to, start: now(), end: walk.arriveAt };
   };
-  let orbTarget: string | null = null, queuedOrbs = new Set<string>();
-  const claimed = new Set<string>();
+  /**
+   * Claims my legend sent, by orb, with the orb's refusal count when sent: not sent again until the session reports a
+   * refusal of it (the dock put it back); forgotten when the orb leaves.
+   */
+  let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
+  const sent = new Map<string, number>();
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
     if (!layoutKey) return null;
     const view = legend('me');
@@ -214,8 +218,6 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const from = view.root.position.clone().setY(0);
     const seconds = from.distanceTo(to) / (WALK_WIDTHS * board.width);
     view.walked = true; orbTarget = orb ? orb.orbId : null;
-    // A new walk may try again an orb whose claim came to nothing (it is still here and not queued).
-    for (const id of [...claimed]) if (!queuedOrbs.has(id)) claimed.delete(id);
     view.path = { from, to, start: now(), end: now() + seconds * 1000 };
     return { from: toCells(from), to: toCells(to) };
   };
@@ -223,16 +225,19 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const path = view.path;
     if (!path) return;
     const span = path.end - path.start, t = span <= 0 ? 1 : Math.min(1, Math.max(0, (now() - path.start) / span));
+    const before = view.root.position.clone();
     view.root.position.lerpVectors(path.from, path.to, t);
     if (path.from.distanceToSquared(path.to) > 1) view.root.rotation.y = Math.atan2(path.to.x - path.from.x, path.to.z - path.from.z);
     if (t >= 1) view.path = null;
     if (view.id !== 'legend:me') return;
-    // An orb it walks over (or the one it was sent to, on arrival) is claimed as the dock's click, once.
+    // An orb it walked over since the last frame (the whole stretch, so a long frame skips none), or the one it was sent
+    // to on arrival, is claimed as the dock's click; once, unless that claim was refused.
     for (const orb of orbs.values()) {
-      if (claimed.has(orb.orbId)) continue;
+      const at = sent.get(orb.orbId);
+      if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) continue;
       const reach = orb.orbId === orbTarget && t >= 1 ? board.width : ORB_REACH * board.width;
-      if (Math.hypot(orb.root.position.x - view.root.position.x, orb.root.position.z - view.root.position.z) > reach) continue;
-      claimed.add(orb.orbId); ctx.claimOrb?.(orb.orbId);
+      if (stretchDistance(orb.root.position, before, view.root.position) > reach) continue;
+      sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
     }
     if (t >= 1) orbTarget = null;
   };
@@ -355,10 +360,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     if (frame.fighting && pvpShown) { legend('opponent'); pvpLinger = OPPONENT_LINGER_SECONDS; }
 
     const list = frame.orbs ?? [], present = new Set(list.map(orb => orb.orbId));
-    queuedOrbs = new Set(list.filter(orb => orb.queued).map(orb => orb.orbId));
+    refusals = frame.orbRefusals ?? {};
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); claimed.delete(id); removeOrb(view, seeded && opened.has(id)); }
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); removeOrb(view, seeded && opened.has(id)); }
     list.slice(0, MAX_ORBS).forEach((orb, index) => {
       let view = orbs.get(orb.orbId);
       if (!view) { view = createOrb(orb, index); orbs.set(orb.orbId, view); }
@@ -455,4 +460,11 @@ function fitHeight(body: Object3D, height: number): Object3D {
   body.scale.multiplyScalar(scale);
   body.position.y -= box.min.y * scale;
   return body;
+}
+
+/** Ground distance (x/z) from `point` to the segment `a`–`b`. */
+function stretchDistance(point: Vector3, a: Vector3, b: Vector3): number {
+  const dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz;
+  const t = length > 0 ? Math.min(1, Math.max(0, ((point.x - a.x) * dx + (point.z - a.z) * dz) / length)) : 0;
+  return Math.hypot(point.x - (a.x + dx * t), point.z - (a.z + dz * t));
 }
