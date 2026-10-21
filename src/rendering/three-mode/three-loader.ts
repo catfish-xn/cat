@@ -95,6 +95,9 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       notice.textContent = '3D 模式不可用，已使用 2D';
       board.append(notice);
       setTimeout(() => notice.remove(), 4000);
+      // Back to plain 2D: a reload stays there, and the 2D page offers the button again.
+      history.replaceState(history.state, '', withoutRenderParam(window.location.href));
+      exited();
     });
   return { dispose };
 }

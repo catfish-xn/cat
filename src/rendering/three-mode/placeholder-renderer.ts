@@ -267,13 +267,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pieces = new Map<string, PieceView>();
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
+  let closed = false;
   const textureLoader = new TextureLoader();
   const overheadContext = {
     colors: () => meterColors,
     itemTexture: (url: string) => {
       let texture = itemTextures.get(url);
       if (!texture) {
-        texture = textureLoader.loadAsync(url).then(loaded => { loaded.colorSpace = SRGBColorSpace; return own(loaded); }).catch(() => null);
+        texture = textureLoader.loadAsync(url).then(loaded => {
+          // Arrived after the player left 3D: owned resources are already released, so this one goes too.
+          if (closed) { loaded.dispose(); return null; }
+          loaded.colorSpace = SRGBColorSpace; return own(loaded);
+        }).catch(() => null);
         itemTextures.set(url, texture);
       }
       return texture;
@@ -657,7 +662,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      cancelAnimationFrame(frameId); unsubscribe();
+      closed = true; cancelAnimationFrame(frameId); unsubscribe();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],

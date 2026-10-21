@@ -116,6 +116,22 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     return { x: (point.x + 1) * 400, y: (1 - point.y) * 300 };
   }
 
+  it('draws meters and items over a piece, and releases an item icon that arrives after the renderer is gone', async () => {
+    const lease = model(); vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+    let arrive!: (texture: InstanceType<typeof three.Texture>) => void;
+    const load = vi.spyOn(three.TextureLoader.prototype, 'loadAsync').mockReturnValue(new Promise(done => { arrive = done; }));
+    await mount();
+    await publish([piece({ meters: { hp: 300, maxHp: 600, mana: 0, maxMana: 50, shield: 0 }, items: [{ id: 'sword', icon: 'icons/sword.png' }] })]);
+    const overhead = scene.getObjectByName('render3d-overhead')!;
+    expect(overhead.visible).toBe(true);
+    expect(overhead.getObjectByName('render3d-overhead-bar')!.visible).toBe(true);
+    expect(overhead.getObjectByName('render3d-overhead-item-sword')).toBeDefined();
+    expect(load).toHaveBeenCalledExactlyOnceWith('icons/sword.png');
+    mounted!.dispose(); mounted = undefined;
+    const late = new three.Texture(), dispose = vi.spyOn(late, 'dispose');
+    arrive(late); await vi.waitFor(() => expect(dispose).toHaveBeenCalled());
+  });
+
   it('plays death while visible, hides, revives with a fresh action, and times a second death independently', async () => {
     const lease = model(); vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
     await mount(); await publish([piece()]);

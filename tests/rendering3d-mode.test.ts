@@ -97,6 +97,7 @@ describe('optional 3D mode import boundary and fallback', () => {
     const handle = mountThreeMode(board as unknown as HTMLElement, '?render=3d'); await settled;
     expect(board.children).toContain(original2d); expect(board.children.some(child => child.dataset.debug === 'render3d-layer')).toBe(false);
     const notice = board.children.find(child => child.dataset.debug === 'render3d-fallback');
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', 'https://example.test/cat/'); // render=3d dropped
     expect(notice?.textContent).toContain('2D'); expect(console.warn).toHaveBeenCalledTimes(1); expect(disconnect).toHaveBeenCalledTimes(1);
     handle.dispose(); expect(disconnect).toHaveBeenCalledTimes(1);
   });
@@ -123,6 +124,19 @@ describe('optional 3D mode import boundary and fallback', () => {
     expect(renderer.dispose).toHaveBeenCalledTimes(1); expect(enter()).toBeDefined();
     handle.dispose(); vi.doUnmock('../src/rendering/render-mode');
     expect(board.children).toEqual([original2d]);
+  });
+  it('puts the 3D button back when 3D fails to load', async () => {
+    vi.doMock('../src/rendering/render-mode', async importOriginal => {
+      const actual = await importOriginal<typeof import('../src/rendering/render-mode')>();
+      return { ...actual, buildAssetBase3d: () => 'https://cdn.example.test/3d/' };
+    });
+    mount.mockRejectedValueOnce(new Error('synthetic WebGL unavailable'));
+    const { mountThreeMode } = await import('../src/rendering/three-mode/three-loader');
+    const handle = mountThreeMode(board as unknown as HTMLElement, '?render=3d'); await settled;
+    await vi.waitFor(() => expect(board.children.some(child => child.dataset.debug === 'render3d-enter')).toBe(true));
+    expect(board.children.some(child => child.dataset.debug === 'render3d-layer')).toBe(false);
+    handle.dispose();
+    expect(board.children.some(child => child.dataset.debug === 'render3d-enter')).toBe(false);
   });
   it('disposes a late renderer when the player leaves 3D before mounting completes', async () => {
     let resolve!: (renderer: Renderer3d) => void;
