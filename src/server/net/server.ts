@@ -250,12 +250,16 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (ms >= SLOW_TASK_MS) {
         const slow = slowTasks.get(task) ?? { count: 0, longestMs: 0, loggedAt: -Infinity };
         slow.count++; slow.longestMs = Math.max(slow.longestMs, ms); slowTasks.set(task, slow);
-        if (now - slow.loggedAt >= SLOW_TASK_LOG_EVERY_MS) {
-          log('warn', 'task.slow', { task, count: slow.count, longestMs: Math.round(slow.longestMs), lastMs: Math.round(ms),
-            roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
-          slow.count = 0; slow.longestMs = 0; slow.loggedAt = now;
-        }
       }
+      flushSlowTasks(now, false);
+    }
+  }
+  /** Logs every kind with slow tasks pending whose window ran out (any kind with some pending when `all`: closing). */
+  function flushSlowTasks(now: number, all: boolean): void {
+    for (const [task, slow] of slowTasks) {
+      if (slow.count === 0 || (!all && now - slow.loggedAt < SLOW_TASK_LOG_EVERY_MS)) continue;
+      log('warn', 'task.slow', { task, count: slow.count, longestMs: Math.round(slow.longestMs), roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+      slow.count = 0; slow.longestMs = 0; slow.loggedAt = now;
     }
   }
   // First-pass capture (MULTIPLAYER_CONTRACT): a battle with a human or connected seat records its replay frames while it
@@ -713,6 +717,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       loopLagHandle = null;
       const maxMs = loopDelay.max / 1e6, p99Ms = loopDelay.percentile(99) / 1e6;
       loopDelay.reset();
+      flushSlowTasks(clock.now(), false);
       log(maxMs >= LOOP_LAG_WARN_MS ? 'warn' : 'debug', 'loop.lag', { maxMs: Math.round(maxMs), p99Ms: Math.round(p99Ms), queueDepth: queue.depth,
         roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
       scheduleLoopLag();
@@ -791,6 +796,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
           if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
           if (loopLagHandle !== null) { clock.cancel(loopLagHandle); loopLagHandle = null; }
           loopDelay?.disable();
+          flushSlowTasks(clock.now(), true);
           for (const conn of connections.values()) {
             // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
             if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
