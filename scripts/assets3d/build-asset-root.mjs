@@ -62,6 +62,17 @@ export async function buildAssetRoot({ roots, out, force = false } = {}) {
     inputs.push({ manifest, bindings });
   }
   const merged = mergeFxManifestEntries(inputs);
+  // Board alignment (no payload paths) rides along with its model; later roots win like every other entry.
+  const boards = {}, boardOwners = {};
+  for (const [index, { manifest }] of inputs.entries()) for (const [key, entry] of Object.entries(manifest.boards ?? {})) {
+    checkKeys({ [key]: true }, 'boards');
+    boards[key] = { alignment: entry.alignment, ...(entry.grid ? { grid: entry.grid } : {}) };
+    boardOwners[key] = index;
+  }
+  for (const key of Object.keys(boards)) {
+    if (boardOwners[key] !== merged.owners.models[key]) throw new Error(`board-alignment-model-root-mismatch:${key}`);
+  }
+  if (Object.keys(boards).length) merged.manifest.boards = boards;
   assertManifest(merged.manifest);
   for (const kind of ['models', 'effects', 'actionEffects']) checkKeys(merged.manifest[kind], kind);
   for (const actions of Object.values(merged.bindings.variants)) assertManifest({ ...merged.manifest, actionEffects: actions });

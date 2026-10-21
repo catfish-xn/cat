@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AssetPreloader, PRELOAD_CONCURRENCY, describePreload, memoryStore, openAssetStore, readPrecacheList, type AssetStore } from '../src/rendering/three-mode/asset-preload';
+import { AssetPreloader, PRELOAD_CONCURRENCY, describePreload, readPackList, memoryStore, openAssetStore, readPrecacheList, type AssetStore } from '../src/rendering/three-mode/asset-preload';
 import type { AssetManifest } from '../src/rendering3d';
 
 /** Synthetic bytes only: no real assets, IndexedDB or network. */
@@ -163,6 +163,80 @@ describe('3D asset preloader', () => {
     expect(calls).toHaveLength(4);
     expect(result).toMatchObject({ state: 'partial', failedFiles: 1, retriedRequests: 3 });
     expect(describePreload(result)).toContain('1 个文件失败（重试 3 次后仍失败');
+  });
+
+  describe('packs', () => {
+    // Synthetic pack: files 'a' (AAA) and 'b' (BB) concatenated as 'AAABB'; 'c' stays outside every pack.
+    const files: [string, number, number][] = [['a', 3, 1], ['b', 2, 2], ['c', 1, 3]];
+    const packed = { schemaVersion: 1, packs: [{ name: 'p', path: 'packs/p.bin', bytes: 5, sha256: sha(9),
+      files: [{ path: 'a', offset: 0, bytes: 3, sha256: sha(1) }, { path: 'b', offset: 3, bytes: 2, sha256: sha(2) }] }] };
+    const hashes = { AAA: 1, BB: 2, C: 3, AAABB: 9 };
+
+    it('accepts packs.json only when it agrees with precache', () => {
+      expect(readPackList(packed, list(files))).toHaveLength(1);
+      const wrong = (patch: object) => readPackList({ ...packed, packs: [{ ...packed.packs[0], ...patch }] }, list(files));
+      expect(wrong({ files: [{ path: 'a', offset: 0, bytes: 4, sha256: sha(1) }] })).toEqual([]);
+      expect(wrong({ files: [{ path: 'a', offset: 3, bytes: 3, sha256: sha(1) }] })).toEqual([]);
+      expect(wrong({ files: [{ path: 'zz', offset: 0, bytes: 1, sha256: sha(1) }] })).toEqual([]);
+      expect(wrong({ path: '../p.bin' })).toEqual([]);
+      expect(readPackList(packed, readPrecacheList(null, manifest))).toEqual([]);
+    });
+
+    it('fetches a pack once, cuts its files by offset, and downloads the rest one by one', async () => {
+      const store = memoryStore(), { fetch, calls } = bodies({ 'packs/p.bin': 'AAABB', c: 'C' });
+      const precache = list(files);
+      const result = await new AssetPreloader(ROOT, precache, store,
+        { fetch, digest: textDigest(hashes), packs: readPackList(packed, precache) }).start();
+      expect(calls).toEqual(['packs/p.bin', 'c']);
+      expect(result).toMatchObject({ state: 'done', readyFiles: 3, downloadedFiles: 3, downloadedBytes: 6 });
+      expect(await (await store.get(`${ROOT}|b`))!.blob.text()).toBe('BB');
+    });
+
+    it('falls back to per-file downloads when the pack is corrupt, and when one slice does not match', async () => {
+      const broken = bodies({ 'packs/p.bin': 'AAABX', a: 'AAA', b: 'BB', c: 'C' });
+      const precache = list(files);
+      const result = await new AssetPreloader(ROOT, precache, memoryStore(),
+        { fetch: broken.fetch, digest: textDigest(hashes), retries: 0, packs: readPackList(packed, precache) }).start();
+      expect(result).toMatchObject({ state: 'done', readyFiles: 3 });
+      expect(broken.calls.slice(1).sort()).toEqual(['a', 'b', 'c']);
+      // Pack hash is fine but a slice is not (no page hash for the pack): only that file is fetched again.
+      const slice = bodies({ 'packs/p.bin': 'AAABX', b: 'BB', c: 'C' });
+      const digest = async (blob: Blob) => blob.size === 5 ? null : textDigest(hashes)(blob);
+      const second = await new AssetPreloader(ROOT, precache, memoryStore(),
+        { fetch: slice.fetch, digest, retries: 0, packs: readPackList(packed, precache) }).start();
+      expect(second).toMatchObject({ state: 'done', readyFiles: 3 });
+      expect(slice.calls.slice(1).sort()).toEqual(['b', 'c']);
+    });
+
+    it('serves a file the board needs alone while its pack is still downloading', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>(done => { release = done; });
+      const calls: string[] = [];
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const path = String(input).slice(ROOT.length); calls.push(path);
+        if (path === 'packs/p.bin') { await gate; return new Response('AAABB'); }
+        return new Response({ a: 'AAA', b: 'BB', c: 'C' }[path] ?? '');
+      }) as unknown as typeof globalThis.fetch;
+      const precache = list(files);
+      const preloader = new AssetPreloader(ROOT, precache, memoryStore(), { fetch, digest: textDigest(hashes), packs: readPackList(packed, precache) });
+      const started = preloader.start();
+      await new Promise(done => setTimeout(done, 0));
+      expect(await (await preloader.read('b')).text()).toBe('BB');
+      expect(calls).toEqual(['packs/p.bin', 'b']);
+      release();
+      expect(await started).toMatchObject({ state: 'done', readyFiles: 3 });
+      expect(calls).toEqual(['packs/p.bin', 'b', 'c']);
+    });
+  });
+
+  it('takes a file off the failed count when a later read fetches it', async () => {
+    let down = true;
+    const fetch = vi.fn(async () => (down ? new Response('no', { status: 503 }) : new Response('x'))) as unknown as typeof globalThis.fetch;
+    const preloader = new AssetPreloader(ROOT, list([['a', 1, 1]]), memoryStore(), { fetch, retries: 0, digest: digestOf({ 1: 1 }) });
+    expect(await preloader.start()).toMatchObject({ state: 'partial', failedFiles: 1 });
+    down = false;
+    expect(await (await preloader.read('a')).text()).toBe('x');
+    expect(preloader.progress).toMatchObject({ state: 'done', failedFiles: 0, readyFiles: 1 });
   });
 
   it('moves a file the board needs to the front of the queue', async () => {

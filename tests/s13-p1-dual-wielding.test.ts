@@ -58,4 +58,5 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
 // Temporary, user-approved (04:22, #265): isolated full workload measured 12.66 s;
 // 30 s rounds about twice that up to allow worker contention. Assertions and
 // public command generation/replay/strict restore workloads remain unchanged.
-},30_000);
+ // 临时、用户 10-20 批准：只因 CI 机器计时超时或贴着上限（断言都过），按约 2 倍放宽；断言不变。30 秒 → 60 秒（本机满负载约 19 秒，CI 上贴着上限）。
+},60_000);

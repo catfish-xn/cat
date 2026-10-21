@@ -38,6 +38,11 @@ export class BattleSummaryPanel {
     this.root = element('section', '', 'battle-summary'); this.root.id = 'battle-summary'; this.root.hidden = true;
     this.root.dataset.debug = 'online:battle-summary'; this.root.setAttribute('aria-label', '战斗统计');
     const head = element('header', '', 'summary-head'); head.append(this.title, this.result);
+    // TFT's chart folds to its title: click (or Enter / Space) the head to hide or show the tabs and rows.
+    const fold = () => head.setAttribute('aria-expanded', String(!this.root.toggleAttribute('data-folded')));
+    head.setAttribute('role', 'button'); head.tabIndex = 0; head.dataset.debug = 'online:summary-fold'; head.setAttribute('aria-expanded', 'true');
+    head.addEventListener('click', fold);
+    head.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fold(); } });
     this.tabs.setAttribute('role', 'tablist');
     for (const { metric, label } of METRICS) {
       const tab = element('button', label, 'summary-tab'); tab.type = 'button'; tab.dataset.key = metric; tab.dataset.debug = `online:summary-tab:${metric}`;

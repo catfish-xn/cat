@@ -13,29 +13,14 @@ import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchFailure, MatchState } from '../../simulation/match-types';
 import {
   Lobby, PlaceholderBattleResolver, RealClock, mirrorReplayTick, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
-  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
+  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
 import type { ClientListeners, GameClient, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
+import { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
 import type { CombatReplay } from '../../presentation/combat-display';
 
-export interface LocalRoomOptions {
-  readonly seed: number;
-  readonly preparationMs: number;
-  readonly choiceMs: number;
-  readonly settlementMs: number;
-  readonly myName: string;
-  /** Debug only (`?faultAt=N`): the resolver throws on round N so the room's fault path can be seen in the UI. */
-  readonly faultAtRound: number | null;
-  /** `two-sided` (default): real PvP through T2/T3. `placeholder` is the B1 test path (`?pvp=placeholder`). */
-  readonly pvpMode: PvpMode;
-  /** Debug only (`?poolCaps=irelia:8,darius:1`): a scarce shared pool so empty shop slots and pool-empty rerolls can be seen
-   * (the room tops up the random opening heroes, `withOpeningCopies`); null = official sizes. */
-  readonly poolCapacities?: Readonly<Record<string, number>> | null;
-  /** Injectable for tests; the browser uses the real clock. */
-  readonly clock?: Clock;
-}
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null };
+export { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
 
 const JOIN_ERRORS: Record<Exclude<JoinResult, { ok: true }>['reason'], string> = {
   full: '对局已满（8 人），请等待本局结束',

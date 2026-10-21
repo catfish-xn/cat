@@ -131,7 +131,8 @@ describe('G2-3 mechanic choices', () => {
     const renamed = { ...state, pendingChoice: { ...choice, choiceId: 'armory-1', eventId: 'armory-1' } };
     for (const input of [renamed, JSON.stringify(renamed)]) expect(() => restoreMatch(input)).toThrow('G23 pending choice authority');
     expect(() => serializeMatch(renamed)).toThrow('G23 pending choice authority');
-  }, 20000);
+    // 临时、用户 10-20 批准：只因 CI 机器计时超时或贴着上限（断言都过），按约 2 倍放宽；断言不变。20 秒 → 40 秒（#343 上超时，本机满负载约 13 秒）。
+  }, 40_000);
 });
 
 describe('G2-3 unit grants through the shared pool', () => {
