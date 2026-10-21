@@ -1,3 +1,4 @@
+import { loadUnitMap } from './local-config.mjs';
 // Offline rebuild: inputs are read-only; generated files remain in ignored local roots.
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -38,7 +39,7 @@ export async function buildCastAnimations({ from, source = 'assets3d-local/trial
   }
   const read = async (r, p) => readFile(await safeInputPath(r, resolve(r, p)));
   const manifest = JSON.parse(await read(root, 'manifest.json'));
-  const map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url)));
+  const map = await loadUnitMap();
   const records = JSON.parse(await read(cache, 'extraction.json'));
   if (records.version !== VERSION) throw new Error('source-version-mismatch');
   const baseline = new Map(records.files.map(r => [r.path, r]));

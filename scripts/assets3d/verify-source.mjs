@@ -1,10 +1,11 @@
+import { loadUnitMap } from './local-config.mjs';
 import { readFile, realpath } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { inspectSkn, inspectSkl, inspectAnm } from './inspect-source.mjs';
 import { safeInputPath, withinRoot } from './safe-path.mjs';
 
-export async function verifySource(root, heroes = ['jinx', 'vi']) {
+export async function verifySource(root, heroes = ['jinx', 'vi'], map) {
   const input = await realpath(root), raw = await safeInputPath(input, join(input, '.local/extracted'));
   const report = JSON.parse(await readFile(await safeInputPath(input, join(input, '.local/extraction.json')), 'utf8'));
   if (report.version !== '14.24.6442327' || !Array.isArray(report.files)) throw new Error('source-version-mismatch');
@@ -18,9 +19,12 @@ export async function verifySource(root, heroes = ['jinx', 'vi']) {
     withinRoot(raw, path, 'unsafe-source-path');
     paths.set(entry.path, path);
   }
+  map ??= await loadUnitMap();
   const verified = {}, seen = new Set();
   for (const id of heroes) {
-    const prefix = `assets/characters/tft13_${id}/`;
+    const base = map[id]?.base;
+    if (typeof base !== 'string' || !base.includes('/skins/')) throw new Error(`missing-local-source-base:${id}`);
+    const prefix = base.slice(0, base.indexOf('/skins/') + 1);
     const entries = report.files.filter(e => typeof e.path === 'string' && e.path.startsWith(prefix));
     if (!entries.length) throw new Error(`missing-source-records:${id}`);
     const unit = { files: 0, bytes: 0, meshes: [], skeletons: [], animations: [], textures: 0 };

@@ -59,15 +59,16 @@ describe('local-only GLB asset preparation', () => {
       const source = join(root, 'source'), dir = join(source, 'public/assets/jinx'), out = join(root, 'out');
       await mkdir(dir, { recursive: true }); const { glb } = synthetic();
       await writeFile(join(dir, 'rigged.glb'), glb); await writeFile(join(dir, 'diffuse.png'), png());
-      const path = 'assets/characters/tft13_jinx/texture.png', raw = join(source, '.local/extracted', path);
-      await mkdir(join(source, '.local/extracted/assets/characters/tft13_jinx'), { recursive: true });
+      const path = 'assets/characters/demo_jinx/texture.png', raw = join(source, '.local/extracted', path);
+      await mkdir(join(source, '.local/extracted/assets/characters/demo_jinx'), { recursive: true });
       await writeFile(raw, png());
       await writeFile(join(source, '.local/extraction.json'), JSON.stringify({ version: '14.24.6442327',
         files: [{ path, bytes: png().length, sha256: createHash('sha256').update(png()).digest('hex') }] }));
-      const first = await prepareExisting(source, out, ['jinx']);
+      const map = { jinx: { base: 'assets/characters/demo_jinx/skins/base', animations: { idle: 'demo_idle', move: 'demo_move', attack: 'demo_attack', cast: 'demo_cast', death: 'demo_death' } } };
+      const first = await prepareExisting(source, out, ['jinx'], { map });
       const firstBytes = await readFile(join(out, 'models/jinx/model.glb'));
-      await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('output-exists-use-force');
-      const second = await prepareExisting(source, out, ['jinx'], { force: true });
+      await expect(prepareExisting(source, out, ['jinx'], { map })).rejects.toThrow('output-exists-use-force');
+      const second = await prepareExisting(source, out, ['jinx'], { force: true, map });
       expect(second).toEqual(first); expect(await readFile(join(out, 'models/jinx/model.glb'))).toEqual(firstBytes);
       expect(await readFile(join(dir, 'rigged.glb'))).toEqual(glb);
       expect(first.manifest).toMatchObject({ schemaVersion: 1, models: { jinx: { path: 'models/jinx/model.glb', animations: { cast: 'cast' } } } });
@@ -77,11 +78,11 @@ describe('local-only GLB asset preparation', () => {
       // Check every destination before writing any of them, including manifest collisions.
       await rm(join(out, 'models/jinx/model.glb'));
       await writeFile(join(out, 'manifest.json'), 'user-owned');
-      await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('output-exists-use-force');
+      await expect(prepareExisting(source, out, ['jinx'], { map })).rejects.toThrow('output-exists-use-force');
       await expect(readFile(join(out, 'models/jinx/model.glb'))).rejects.toMatchObject({ code: 'ENOENT' });
       expect(await readFile(join(out, 'manifest.json'), 'utf8')).toBe('user-owned');
       await writeFile(raw, Buffer.alloc(24));
-      await expect(prepareExisting(source, out, ['jinx'])).rejects.toThrow('source-hash-mismatch');
+      await expect(prepareExisting(source, out, ['jinx'], { map })).rejects.toThrow('source-hash-mismatch');
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 });
