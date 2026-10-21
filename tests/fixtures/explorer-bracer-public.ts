@@ -9,9 +9,9 @@ const accepted = (r: MatchCommandResult): MatchState => {
 };
 /** Public commands only: no battle facts or stats are edited. */
 export function startBracerFight(twoHolders = false): MatchState {
-  // Seed 3151248's 2-1 offer no longer contains a Manaflow augment; the equally
-  // back-row-only Glass Cannon II keeps the row-4 Lux fight unchanged.
-  let state = publicEquipmentPreparation(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
+  // v19: publicly reroll the shifted gold offer to recover Glass Cannon II;
+  // this back-row-only augment keeps the row-4 Lux numeric control unchanged.
+  let state = publicEquipmentPreparation(['rod'], { seed: 3151248, augmentPriorities:['glass-cannon-ii'],rerollForAugment:true });
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))state=accepted(sellUnit(state,u.id));
   if(!state.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))state=accepted(grantMechanicUnit(state,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));
   for (const definitionId of twoHolders ? ['lux', 'irelia'] : ['lux'])

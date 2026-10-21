@@ -11,6 +11,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
+import { fitModel } from './model-fit';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
@@ -77,6 +78,10 @@ export interface ScoutStageContext {
   /** Stand-in pawn size when no model is available. */
   readonly pawnHeight: number; readonly pawnWidth: number;
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
+  /** The asset root's official scale for a champion model (model-fit.ts), null when it has none. */
+  readonly unitScale?: (id: string) => number | null;
+  /** League source units → board units for a scaled champion (the board's FX_SCALE). */
+  readonly sourceScale?: number;
   /** Legend model to load for a seat's legend (falls back to the default, see legend-load), null without legend assets. */
   readonly legendModel: (legend: string | null) => string | null;
   readonly starColor: (level: number) => string;
@@ -123,7 +128,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let legend: Piece | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
-    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel): Piece => {
+    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel, drawn?: (height: number) => void): Piece => {
     const root = new Group(); root.name = 'render3d-scout-piece';
     const body = stand(); root.add(body);
     const piece: Piece = { root, lease: null, mixer: null, state: new UnitActionState(`scout:${key}`), stars: null,
@@ -132,7 +137,9 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     if (load && model) void load(model).then(lease => {
       if (piece.disposed || lease.placeholder) { lease.release(); return; }
       body.removeFromParent(); piece.lease = lease;
-      root.add(fit(lease.scene, height, width));
+      const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
+      if (unitScale && ctx.sourceScale) { piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale }); root.add(lease.scene); drawn!(piece.height); }
+      else root.add(fit(lease.scene, height, width));
       piece.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       piece.mixer.apply(piece.state.output);
     }).catch(() => { /* keeps the stand-in */ });
@@ -146,7 +153,13 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     return fit(body, ctx.pawnHeight, ctx.pawnWidth);
   };
   const unitPiece = (unit: ScoutUnit, key: string, at: Vector3): Piece => {
-    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn);
+    // Stars, the anomaly gem and the item row sit over the drawn body: a model at its official scale moves them.
+    const place = (height: number) => {
+      piece.stars?.object.position.copy(at).setY(height + STAR_GAP);
+      piece.root.getObjectByName('render3d-scout-anomaly')?.position.setY(height + STAR_GAP);
+      piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+    };
+    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height));
     piece.root.position.copy(at); piece.root.rotation.y = Math.PI; // models face +z; the owner's side looks up the board
     if (!unit.summon) {
       piece.stars = createStarMark({ effectiveStarLevel: unit.effectiveStarLevel ?? unit.starLevel, colorFor: ctx.starColor });

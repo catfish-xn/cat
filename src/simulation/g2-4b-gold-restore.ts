@@ -3,6 +3,7 @@ import type {CombatState} from './combat-types';
 import type {CombatInputBasis} from './combat-input';
 import type {StrategySnapshot} from './strategy-types';
 import {canonicalContent} from './content';
+import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
@@ -25,7 +26,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
-  const v19=strategy.units.some(u=>u.familyReunion||['warwick','viktor','mel'].includes(u.ability.kind==='s13'?u.ability.championId:'')||u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&['dominator','black-rose'].includes(m.source.definitionId)));
+  const v19=strategy.units.some(u=>u.familyReunion||['warwick','viktor','mel'].includes(u.ability.kind==='s13'?u.ability.championId:'')||u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&(m.source.definitionId==='dominator'||m.source.definitionId==='black-rose'&&m.values.tier>=4)));
   if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19){
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
@@ -36,9 +37,15 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     return false;
   }
   if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid dynamic combat checkpoint');
-  let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
-  while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${v19?'V19':anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
+  // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
+  // Only ordinary v19 combats reuse input-bound independent evidence.
+  let expected:CombatState;
+  if(v19&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
+  else{
+    expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+    while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
+  }
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':'Mirror forge'} replay`);
   return true;
 }
 

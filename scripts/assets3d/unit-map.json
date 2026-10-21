@@ -1803,5 +1803,114 @@
         "death1"
       ]
     }
+  },
+  "warwick": {
+    "sourceName": "tft13_warwick",
+    "base": "assets/characters/tft13_warwick/skins/base",
+    "mesh": "tft13_warwick.tft_set13_evolved.skn",
+    "skeleton": "tft13_warwick.tft_set13_evolved.skl",
+    "textures": {
+      "Body": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
+      "Crystal": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
+      "CrystalFX": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
+      "Tail": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
+      "TailFX": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
+      "HandR": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex"
+    },
+    "animations": {
+      "hit": null
+    },
+    "effectPatterns": {},
+    "animationFiles": {
+      "atk1.tft_set13_evolved": "animations/atk1.tft_set13_evolved.anm",
+      "atk2.tft_set13_evolved": "animations/atk2.tft_set13_evolved.anm",
+      "atk3.tft_set13_evolved": "animations/atk3.tft_set13_evolved.anm",
+      "atk4.tft_set13_evolved": "animations/atk4.tft_set13_evolved.anm",
+      "bite.tft_set13_evolved": "animations/bite.tft_set13_evolved.anm",
+      "dance.tft_set13_evolved": "animations/dance.tft_set13_evolved.anm",
+      "howl.tft_set13_evolved": "animations/howl.tft_set13_evolved.anm",
+      "idle.tft_set13_evolved": "animations/idle.tft_set13_evolved.anm",
+      "spellatksequence.tft_set13_evolved": "animations/spellatksequence.tft_set13_evolved.anm",
+      "tft13_warwick_crit.tft_set13_evolved": "animations/tft13_warwick_crit.tft_set13_evolved.anm",
+      "tft13_warwick_devour_dashland.tft_set13_evolved": "animations/tft13_warwick_devour_dashland.tft_set13_evolved.anm",
+      "tft13_warwick_devour_shortdash.tft_set13_evolved": "animations/tft13_warwick_devour_shortdash.tft_set13_evolved.anm",
+      "tft13_warwick_run.tft_set13_evolved": "animations/tft13_warwick_run.tft_set13_evolved.anm",
+      "tft13_warwick_run_hunt.tft_set13_evolved": "animations/tft13_warwick_run_hunt.tft_set13_evolved.anm",
+      "tft13_warwick_spell_dash.tft_set13_evolved": "animations/tft13_warwick_spell_dash.tft_set13_evolved.anm",
+      "warwick_death.tft_set13_evolved": "animations/warwick_death.tft_set13_evolved.anm"
+    },
+    "animationNotes": "Medium confidence: common audit selects the bound spell dash; one display segment, no hunt/form transition. Source hit alias points to death; no independent flinch is claimed. Hit playback intentionally disabled: source Hit/Knockup aliases resolve to the death animation."
+  },
+  "viktor": {
+    "sourceName": "tft13_viktor",
+    "base": "assets/characters/tft13_viktor/skins/base",
+    "mesh": "tft13_viktor.tft_set13_evolved.skn",
+    "skeleton": "tft13_viktor.tft_set13_evolved.skl",
+    "textures": {
+      "Body": "tft13_viktor_base_tx_cm.tft_set13_evolved.tex",
+      "Cape": "tft13_viktor_base_tx_cm.tft_set13_evolved.tex",
+      "Weapon": "tft13_viktor_base_weapon.tft_set13_evolved.tex"
+    },
+    "animations": {
+      "cast": "tft13_viktor_spell_intro.tft_set13_evolved",
+      "hit": null
+    },
+    "effectPatterns": {},
+    "animationFiles": {
+      "attack1_b.tft_set13_evolved": "animations/attack1_b.tft_set13_evolved.anm",
+      "attack2_b.tft_set13_evolved": "animations/attack2_b.tft_set13_evolved.anm",
+      "dance_loop.tft_set13_evolved": "animations/dance_loop.tft_set13_evolved.anm",
+      "death.tft_set13_evolved": "animations/death.tft_set13_evolved.anm",
+      "idle1.tft_set13_evolved": "animations/idle1.tft_set13_evolved.anm",
+      "run.tft_set13_evolved": "animations/run.tft_set13_evolved.anm",
+      "spell2.tft_set13_evolved": "animations/spell2.tft_set13_evolved.anm",
+      "spell3_-135.tft_set13_evolved": "animations/spell3_-135.tft_set13_evolved.anm",
+      "spell3_-180.tft_set13_evolved": "animations/spell3_-180.tft_set13_evolved.anm",
+      "spell3_-45.tft_set13_evolved": "animations/spell3_-45.tft_set13_evolved.anm",
+      "spell3_-90.tft_set13_evolved": "animations/spell3_-90.tft_set13_evolved.anm",
+      "spell3_0.tft_set13_evolved": "animations/spell3_0.tft_set13_evolved.anm",
+      "spell3_135.tft_set13_evolved": "animations/spell3_135.tft_set13_evolved.anm",
+      "spell3_180.tft_set13_evolved": "animations/spell3_180.tft_set13_evolved.anm",
+      "spell3_45.tft_set13_evolved": "animations/spell3_45.tft_set13_evolved.anm",
+      "spell3_90.tft_set13_evolved": "animations/spell3_90.tft_set13_evolved.anm",
+      "spell_new.tft_set13_evolved": "animations/spell_new.tft_set13_evolved.anm",
+      "spell_new_all.tft_set13_evolved": "animations/spell_new_all.tft_set13_evolved.anm",
+      "tft13_viktor_float_a.tft_set13_evolved": "animations/tft13_viktor_float_a.tft_set13_evolved.anm",
+      "tft13_viktor_float_b.tft_set13_evolved": "animations/tft13_viktor_float_b.tft_set13_evolved.anm",
+      "tft13_viktor_spell_hold.tft_set13_evolved": "animations/tft13_viktor_spell_hold.tft_set13_evolved.anm",
+      "tft13_viktor_spell_intro.tft_set13_evolved": "animations/tft13_viktor_spell_intro.tft_set13_evolved.anm",
+      "tft13_viktor_spell_outro.tft_set13_evolved": "animations/tft13_viktor_spell_outro.tft_set13_evolved.anm"
+    },
+    "animationNotes": "Medium confidence: bound atomic spell intro, one display segment; hold/outro and avatar transition omitted. Hit playback intentionally disabled: source Hit/Knockup aliases resolve to the death animation."
+  },
+  "mel": {
+    "sourceName": "tft13_missmage",
+    "base": "assets/characters/tft13_missmage/skins/base",
+    "mesh": "tft13_missmage.tft_set13_evolved.skn",
+    "skeleton": "tft13_missmage.tft_set13_evolved.skl",
+    "textures": {
+      "Body_Mat": "tft13_missmage_base_tx_cm.tft_set13_evolved.tex",
+      "SolarFlare1": "tft13_missmage_base_flares_mask_tx_cm.tft_set13_evolved.tex"
+    },
+    "animations": {
+      "cast": "spell1_blast.tft_set13_evolved",
+      "hit": "tft13_missmage_damage_block.tft_set13_evolved"
+    },
+    "effectPatterns": {},
+    "animationFiles": {
+      "attack1_new.tft_set13_evolved": "animations/attack1_new.tft_set13_evolved.anm",
+      "attack2_new.tft_set13_evolved": "animations/attack2_new.tft_set13_evolved.anm",
+      "celebration_in.tft_set13_evolved": "animations/celebration_in.tft_set13_evolved.anm",
+      "celebration_loop.tft_set13_evolved": "animations/celebration_loop.tft_set13_evolved.anm",
+      "death1.tft_set13_evolved": "animations/death1.tft_set13_evolved.anm",
+      "empowereddeath1.tft_set13_evolved": "animations/empowereddeath1.tft_set13_evolved.anm",
+      "idle1.tft_set13_evolved": "animations/idle1.tft_set13_evolved.anm",
+      "run_fast.tft_set13_evolved": "animations/run_fast.tft_set13_evolved.anm",
+      "spell1_blast.tft_set13_evolved": "animations/spell1_blast.tft_set13_evolved.anm",
+      "spell1_dash.tft_set13_evolved": "animations/spell1_dash.tft_set13_evolved.anm",
+      "spell2_new.tft_set13_evolved": "animations/spell2_new.tft_set13_evolved.anm",
+      "tft13_missmage_damage_block.tft_set13_evolved": "animations/tft13_missmage_damage_block.tft_set13_evolved.anm"
+    },
+    "animationNotes": "Medium confidence: bound atomic spell1 blast, one display segment; dash/empowered transitions omitted. Hit uses the bound damage-block clip. Repository converter skips the source-hidden empowered cape and approximates the visible procedural cape with its DiffuseHold_Texture; no scrolling shader reconstruction."
   }
 }

@@ -14,7 +14,7 @@ import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {dualWieldingItems,grantAnomalyAcquisition} from '../src/simulation/anomaly-acquisition';
 import {DUAL_WIELDING_POOLS,DUAL_WIELDING_ROLES} from '../src/simulation/content/s13-p1-dual-wielding';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
-it('raw role pools are eight actual completed items and all sixty real heroes have explicit roles',()=>{
+it('raw role pools are eight actual completed items and all 63 v19 real heroes have explicit roles',()=>{
  expect(Object.keys(DUAL_WIELDING_POOLS)).toHaveLength(15);
  for(const pool of Object.values(DUAL_WIELDING_POOLS)){expect(pool).toHaveLength(8);for(const id of pool)expect(ITEM_DEFINITIONS[id].kind).toBe('completed');}
  for(const unit of Object.values(M5_UNIT_DEFINITIONS)){const pool=DUAL_WIELDING_POOLS[DUAL_WIELDING_ROLES[unit.id]];expect(pool).toHaveLength(8);const draw=dualWieldingItems(42,'round-4-6:anomaly',unit.id);expect(draw).toHaveLength(2);expect(new Set(draw).size).toBe(2);expect(draw.every(id=>pool.includes(id))).toBe(true);}

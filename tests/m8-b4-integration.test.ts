@@ -1,3 +1,5 @@
+// v19: ordinary catalogue + 2 crafting inputs + 22 approved custom emblems.
+import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { beforeAll,describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
@@ -103,8 +105,8 @@ describe('B4 composed consumers and restore rejection',()=>{
   if(!a.combat||!c.combat)throw new Error('combat required');
   Object.assign(a.combat.units[0],{hp:0});Object.assign(c.combat.units[0],{hp:0});expect(serializeMatch(b)).toBe(json);expect(serializeMatch(source)).toBe(json);
  });
- it('catalogue query is frozen,source-labelled,44 entries and consumes zero Match words',()=>{
-  const s=itemMatch('jeweled-gauntlet'),before=JSON.stringify(s),a=readItemCatalog(),b=readItemCatalog();expect(a).toEqual(b);expect(a).toHaveLength(44);expect(a.every(i=>i.effectDescriptions.length&&i.referencePatch==='14.24b'&&i.evidenceStatus===(['red-buff','runaans-hurricane'].includes(i.id)?'approved-provisional':'source-reviewed'))).toBe(true);expect(Object.isFrozen(a)).toBe(true);expect(JSON.stringify(s)).toBe(before);
+ it('catalogue query is frozen,source-labelled,68 entries (v19) and consumes zero Match words',()=>{
+  const s=itemMatch('jeweled-gauntlet'),before=JSON.stringify(s),a=readItemCatalog(),b=readItemCatalog();expect(a).toEqual(b);expect(a).toHaveLength(68);expect(a.every(i=>(i.effectDescriptions.length||['spatula','frying-pan'].includes(i.id))&&i.referencePatch==='14.24b'&&i.evidenceStatus===((['red-buff','runaans-hurricane'].includes(i.id)||Object.hasOwn(EMBLEM_ITEMS,i.id))?'approved-provisional':'source-reviewed'))).toBe(true);expect(Object.isFrozen(a)).toBe(true);expect(JSON.stringify(s)).toBe(before);
  });
  it.each(['spellCrit','program','bonus','survival','shield','burn'])('rejects forged %s rather than silently executing it',kind=>{
   let s=itemMatch(kind==='burn'?'sunfire-cape':kind==='shield'?'crownguard':kind==='bonus'?'steraks-gage':kind==='survival'?'giant-slayer':'infinity-edge');

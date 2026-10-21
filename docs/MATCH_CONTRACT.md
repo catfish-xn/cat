@@ -7,7 +7,7 @@
 
 ## v19 当前规则与数据合同（2026-10-21）
 
-当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:3dad5abd`、LOOT_REPLAY=`fnv1a32-utf16:e83f0193`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
+当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:ff78c2b0`、LOOT_REPLAY=`fnv1a32-utf16:df0d757c`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
 
 实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/30羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
 
@@ -766,3 +766,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## v18 纹章与高档位扩展（2026-10-21）
 
 实现、导出签名、输入输出/失败语义、来源覆盖与明确延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份，等级与固定拆卸器规则保持。`deriveTraits` 第五参数可传当前 `items`；`buildStrategySnapshot` 自动编译冻结装备身份。公开合成/装备/重铸命令签名和失败枚举不变。
+
+## v19 座位只读字段（PR #364 收尾）
+
+`toPrivateSeatView(state:MatchState)` 返回 `familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}` 和 `shopOdds.sixCostBps`；`readG23MechanismState(state).familyReunion` 同退星事实。它们只投影规则，不发事件或消耗资源/RNG；精确类型、基点口径和逐项回归见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费加入可购买英雄集合（63），常规赠卡/素材渠道的费用限制仍由各自合同约束。

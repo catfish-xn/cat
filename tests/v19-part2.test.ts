@@ -13,7 +13,9 @@ import { validateDynamicCombat } from '../src/simulation/g2-4b-gold-restore';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { activateFamily, initialFamilyTask, familyTaskAt, FAMILY_REWARDS } from '../src/simulation/family-heist';
-import { familyReunionParticipants } from '../src/simulation/family-reunion';
+import { familyReunionParticipants, familyCombatBase } from '../src/simulation/family-reunion';
+import { settleFamilyReunionDeaths } from '../src/simulation/combat-family-reunion';
+import { resolveEffects } from '../src/simulation/effects';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
 import { createG23Progress, validateG23Progress, replayG23Economy } from '../src/simulation/g2-3-match-progress';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
@@ -31,7 +33,7 @@ import { compileBattle, resolveTwoSidedBattle } from '../src/simulation/two-side
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
 import { recordMelAbsorption, sixState } from '../src/simulation/combat-six-cost';
-import { toCombatReplay } from '../src/simulation/combat-replay-view';
+import { toCombatReplay, applyCombatReplayTick } from '../src/simulation/combat-replay-view';
 import { room, accept, conserved, syntheticSharedRound } from './tp-helpers';
 import { generateSharedShop, rerollSharedShop, buySharedUnit, sellSharedUnit, setSharedShopLock } from '../src/simulation/shared-pool';
 import type { Unit } from '../src/simulation/unit-types';
@@ -57,6 +59,8 @@ describe('v19 six costs',()=>{
     for(let level=1;level<=10;level++){
       expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?180:20);
       expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?184:24);
+      const projected=toPrivateSeatView({...army(['lux']),level});
+      expect(projected.shopOdds).toEqual({sixCostBps:level===10?180:20});
     }
     const before=generateShop(42,1,10,unlock-1),after=generateShop(42,1,10,unlock);
     expect(after.rngState).toBe(before.rngState);
@@ -210,11 +214,62 @@ describe('v19 Family heist and reunion',()=>{
   it.each([1,2,3] as const)('reunion boosts six real heroes at star %i, affects numeric stats, and never changes permanent ownership',star=>{
     const ids=['violet','vander','powder','warwick','jinx','vi'];let s=army(ids,star);s={...s,items:['warwick','jinx','vi'].map((id,i)=>({id:'item-'+(i+1),definitionId:'TFT13_Item_FamilyEmblemItem',location:{kind:'unit',unitId:id,slot:0}}))};
     expect(familyReunionParticipants(s)).toEqual(ids);const original=JSON.stringify(s),c=start(s).state;
+    expect(toPrivateSeatView({...s,combat:c} as MatchState).familyReunion).toMatchObject({eligible:true,participantIds:ids,downgraded:false,downgradedAtTick:null});
+    const basis=freezeCombatInput(s,42,s.resourceProvenance.entries.length);
+    const moved={...s,combat:c,combatInputBasis:basis,preparation:{...s.preparation,units:s.preparation.units.filter(u=>u.id!=='vi')}} as MatchState;
+    expect(toPrivateSeatView(moved).familyReunion).toMatchObject({eligible:true,participantIds:ids});
     for(const id of ids){expect(unit(c,id).effectiveStarLevel).toBe(star+1);expect(unit(c,id).maxHp).toBeGreaterThan(getUnitStats(id,star).health);expect(unit(c,id).ability).not.toEqual(buildStrategySnapshot({...s,items:[]}).units.find(u=>u.unitId===id)!.ability);}
     expect(JSON.stringify(s)).toBe(original);expect(start(s).state).toEqual(c);
     for(const missing of ids)expect(familyReunionParticipants({...s,preparation:{...s.preparation,units:s.preparation.units.filter(u=>u.id!==missing)}})).toEqual([]);
     expect(familyReunionParticipants({...s,items:s.items.slice(1)})).toEqual([]);
     expect(familyReunionParticipants({...s,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.id==='vi'?{...u,location:{kind:'bench',slot:0}}:u)}})).toEqual([]);
+  });
+  it.each([1,2,3] as const)('first real reunion death removes only the extra star once at rank %i, preserving sources and shield snapshots',star=>{
+    const ids=['violet','vander','powder','warwick','jinx','vi'];let s=army(ids,star);
+    s={...s,items:['warwick','jinx','vi'].map((id,i)=>({id:'item-'+(i+1),definitionId:'TFT13_Item_FamilyEmblemItem',location:{kind:'unit',unitId:id,slot:0}}))};
+    const initial=start(s).state,units=structuredClone(initial.units) as S13Unit[],events:import('../src/simulation/combat-types').CombatEvent[]=[];
+    const ctx={tick:1,board:initial.board,units,events,packets:[],heals:[],draw:()=>0};
+    // No member death: unrelated deaths and temporary absence cannot revoke the bonus.
+    units.find(u=>u.id==='enemy')!.alive=false;units.find(u=>u.id==='enemy')!.hp=0;
+    settleFamilyReunionDeaths(ctx,units);
+    for(const id of ids)expect(units.find(u=>u.id===id)!.effectiveStarLevel).toBe(star+1);
+    expect(events).toEqual([]);
+    const survivor=units.find(u=>u.id==='jinx')!;survivor.hp=Math.floor(survivor.maxHp/2);
+    grantShield(survivor,origin(survivor),333,100,1,events);const shields=structuredClone(survivor.shieldLayers),beforeHp=survivor.hp,beforeMax=survivor.maxHp;
+    const first=units.find(u=>u.id==='violet')!;first.alive=false;first.hp=0;
+    settleFamilyReunionDeaths(ctx,units);
+    for(const id of ids.slice(1)){
+      const u=units.find(u=>u.id===id)!,base=familyCombatBase(u,star),expected=resolveEffects(base.base,base.ability,u.sources!);
+      expect(u).toMatchObject({starLevel:star,effectiveStarLevel:star,maxHp:expected.stats.health,attackDamageBase:expected.attackDamageBase,ability:expected.ability,familyReunion:{downgradedAtTick:1}});
+    }
+    expect(survivor.hp).toBe(Math.floor(beforeHp*survivor.maxHp/beforeMax));expect(survivor.shieldLayers).toEqual(shields);
+    expect(events.filter(e=>e.type==='maxHpChanged')).toHaveLength(5);
+    const second=units.find(u=>u.id==='vander')!;second.alive=false;second.hp=0;ctx.tick=2;
+    const before=JSON.stringify(units),count=events.length;settleFamilyReunionDeaths(ctx,units);
+    expect(JSON.stringify(units)).toBe(before);expect(events).toHaveLength(count);
+    for(const id of ids)expect(unit(initial,id).effectiveStarLevel).toBe(star+1);
+  });
+  it('authenticates reunion downgrade checkpoints and resumes/replays the same deaths, stats and star updates',()=>{
+    const ids=['violet','vander','powder','warwick','jinx','vi'];let s=army(ids);
+    s={...s,items:['warwick','jinx','vi'].map((id,i)=>({id:'item-'+(i+1),definitionId:'TFT13_Item_FamilyEmblemItem',location:{kind:'unit',unitId:id,slot:0}})),preparation:{...s.preparation,units:[...s.preparation.units.filter(u=>u.team==='player'),hero('enemy',0,3,'enemy','warwick',3),hero('enemy-2',1,3,'enemy','garen',3)]}};
+    const basis=freezeCombatInput(s,42,s.resourceProvenance.entries.length),strategy=buildStrategySnapshot(s),initial=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+    let c=initial,checkpoint:CombatState|undefined;const events:import('../src/simulation/combat-types').CombatEvent[]=[];
+    while(c.status==='running'){
+      const r=stepCombat(c);c=r.state;events.push(...r.events);
+      if(!checkpoint&&c.units.some(u=>u.familyReunion?.downgradedAtTick!==undefined)){
+        const view=toPrivateSeatView({...s,combat:c} as MatchState).familyReunion;
+        expect(view).toMatchObject({eligible:true,participantIds:ids,downgraded:true,downgradedAtTick:c.tick});
+        expect(readG23MechanismState({...s,combat:c} as MatchState)!.familyReunion).toEqual(view);
+        checkpoint=JSON.parse(JSON.stringify(c));expect(validateDynamicCombat(checkpoint!,basis,strategy)).toBe(true);
+        const forged=structuredClone(c),u=forged.units.find(u=>u.alive&&u.familyReunion)!;
+        (u as S13Unit).effectiveStarLevel=2;expect(()=>validateDynamicCombat(forged,basis,strategy)).toThrow();
+      }
+    }
+    expect(checkpoint).toBeDefined();let resumed=checkpoint!;while(resumed.status==='running')resumed=stepCombat(resumed).state;
+    expect(resumed).toEqual(c);expect(validateDynamicCombat(c,basis,strategy)).toBe(true);
+    const replay=toCombatReplay({initial,terminal:c,events:events as import('../src/simulation/combat-types').LedgerCombatEvent[]});
+    let view=replay.initial;for(const tick of replay.ticks)view=applyCombatReplayTick(view,tick);expect(view).toEqual(replay.terminal);
+    expect(replay.ticks.some(t=>t.events.some(e=>e.type==='unitUpdated'&&e.changes.effectiveStarLevel===1))).toBe(true);
   });
 });
 

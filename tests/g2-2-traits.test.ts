@@ -11,7 +11,7 @@ import {readFileSync} from 'node:fs';
 function input(names:string[]){const s=createMatch(42);return {...s,preparation:{...s.preparation,units:names.map((definitionId,i)=>({id:definitionId,definitionId,starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}}))}};}
 it('admits precisely fifteen complete source records without form substitutes',()=>{
  const source=JSON.parse(readFileSync(new URL('../src/simulation/content/source/s13-14.24b/normalized/g2-2-champions.json',import.meta.url),'utf8'));
- expect(Object.keys(G22_UNITS)).toHaveLength(15);expect(Object.keys(M5_UNIT_DEFINITIONS)).toHaveLength(60);
+ expect(Object.keys(G22_UNITS)).toHaveLength(15);expect(Object.keys(M5_UNIT_DEFINITIONS)).toHaveLength(63);
  for(const row of source.champions.filter((r:any)=>r.new)){
   expect(Object.values(row.record.stats)).not.toContain(null);
   expect(G22_UNITS[row.id].baseStats).toEqual({health:row.record.stats.hp,attack:row.record.stats.damage,armor:row.record.stats.armor,magicResist:row.record.stats.magicResist});
