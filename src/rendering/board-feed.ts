@@ -38,7 +38,11 @@ export interface BoardFrame {
   /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
   readonly hit?: BoardHit | null;
 }
-export interface BoardOrb { readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean }
+export interface BoardOrb {
+  readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;
+  /** S13 trait orb skin, only when this seat's own mechanic receipt names it (see orbVariant); absent → the generic tier. */
+  readonly variant?: 'warband' | 'crime';
+}
 /** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
 export interface BoardHit { readonly key: string; readonly damage: number }
 export interface BoardDropHint {

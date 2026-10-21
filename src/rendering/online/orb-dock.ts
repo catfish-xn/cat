@@ -48,6 +48,18 @@ export function orbPayloadName(payload: LootPayload): string {
   return `${displayUnitName(payload.definitionId)}${stars(payload)}${count}`;
 }
 /**
+ * The trait skin of an orb a mechanic dropped, read from this seat's own mechanic receipts: a unit receipt resolved
+ * into `orbId` with source `conqueror` (Warband cash-out) is a Warband orb, `black-market` a Crime orb. Anything else,
+ * or no unique receipt, is undefined and the orb keeps its generic tier; the skin is never guessed from contents.
+ */
+export function orbVariant(state: MatchState, orbId: string): 'warband' | 'crime' | undefined {
+  const sources = new Set((state.seatMechanics?.receipts ?? [])
+    .filter(r => r.kind === 'unit' && r.resolution === 'orb' && r.orbId === orbId).map(r => r.source));
+  if (sources.size !== 1) return undefined;
+  const [source] = sources;
+  return source === 'conqueror' ? 'warband' : source === 'black-market' ? 'crime' : undefined;
+}
+/**
  * What one claim receipt did, in the player's words; null for receipts with nothing to announce (forfeited entries).
  * The amounts are the receipt's own (`gold`), never a sell price worked out here.
  */

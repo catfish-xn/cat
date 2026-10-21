@@ -61,7 +61,7 @@ export interface Tabletop {
 }
 
 interface LegendView { readonly id: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean }
-interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
+interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
 interface Bolt { from: Vector3; to: Vector3; elapsed: number; fx: ParticleEffect | null; mesh: Mesh | null; disposed: boolean }
 interface HitPlan { key: string; at: number; cast: boolean; bolt: Bolt | null; done: boolean; fromLegend: boolean }
@@ -166,11 +166,16 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       return fx;
     }).catch(() => null);
   };
-  /** A one-shot effect at `point`; the stand-in mesh (when given) swells and fades if the effect is not available. */
-  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null) => {
+  /**
+   * A one-shot effect at `point`; the stand-in mesh (when given) swells and fades if the effect is not available.
+   * `fallback` is tried first when `id` cannot load (a trait orb's own open effect → the generic tier's).
+   */
+  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null, fallback?: string) => {
     const entry: Burst = { fx: null, mesh: null, left: seconds, total: ORB_POP_SECONDS };
     bursts.add(entry);
-    void effectAt(id, seconds, point, () => bursts.has(entry)).then(fx => {
+    const live = () => bursts.has(entry);
+    void effectAt(id, seconds, point, live)
+      .then(fx => fx || !fallback || !live() ? fx : effectAt(fallback, seconds, point, live)).then(fx => {
       if (fx) { entry.fx = fx; disposeStand(stand); return; }
       if (!bursts.has(entry) || !stand) { bursts.delete(entry); disposeStand(stand); return; }
       stand.position.copy(point); scene.add(stand); entry.mesh = stand; entry.left = ORB_POP_SECONDS;
@@ -187,7 +192,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     if (!ctx.loadEffect || view.loading) return;
     view.loading = true;
     const point = new Vector3(0, ORB_FLOAT, 0);
-    void ctx.loadEffect(ORB_IDLE[view.tier], idleSeconds(view.tier)).then(fx => {
+    // A trait orb (S13 Warband/Crime) uses its own idle effect; if that cannot load, the generic tier's.
+    const generic = () => ctx.loadEffect!(ORB_IDLE[view.tier], idleSeconds(view.tier));
+    const load = view.variant ? ctx.loadEffect(`orb-${view.variant}`, idleSeconds(view.tier)).catch(generic) : generic();
+    void load.then(fx => {
       view.loading = false;
       if (view.disposed) { fx.dispose(); return; }
       fx.object.scale.setScalar(ctx.effectScale); fx.object.position.copy(point);
@@ -198,7 +206,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-orb-${orb.tier}`;
     const stand = new Mesh(orbGeometry, orbMaterial[orb.tier]); stand.position.y = ORB_FLOAT;
     root.add(stand); root.position.copy(orbSlot(index)); scene.add(root);
-    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, root, stand, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3 };
+    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3 };
     startIdle(view);
     return view;
   };
@@ -206,7 +214,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.disposed = true; view.fx?.dispose(); view.fx = null;
     const point = view.root.position.clone().setY(ORB_FLOAT);
     view.root.removeFromParent();
-    if (opened) burst(ORB_OPEN[view.tier], OPEN_SECONDS, point, new Mesh(orbGeometry, orbMaterial[view.tier].clone()));
+    if (opened) burst(view.variant ? `orb-${view.variant}-open` : ORB_OPEN[view.tier], OPEN_SECONDS, point,
+      new Mesh(orbGeometry, orbMaterial[view.tier].clone()), ORB_OPEN[view.tier]);
   };
 
   // --- HP-loss bolt ------------------------------------------------------------------------------------------------
