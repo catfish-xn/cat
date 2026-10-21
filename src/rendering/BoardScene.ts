@@ -1024,7 +1024,9 @@ export class BoardScene extends Phaser.Scene {
     // With a 3D layer drawing the board, the 2D one is covered or hidden: Phaser keeps updating it (tweens feed the
     // frame) but no longer draws it, which was about a fifth of the main thread during a 3D match (2026-10-21).
     const feeding = boardFeedActive();
-    if (this.cameras.main.visible === feeding) this.cameras.main.setVisible(!feeding);
+    // No camera (a scene that never booted its camera manager) leaves nothing to stop.
+    const camera = this.cameras?.main;
+    if (camera && camera.visible === feeding) camera.setVisible(!feeding);
     if (feeding) publishBoardFrame(() => this.boardFrame());
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
