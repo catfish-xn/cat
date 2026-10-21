@@ -104,18 +104,22 @@ describe('3D scouting stage', () => {
   });
 
   it('loads each unit model once per build and releases them on stop', async () => {
-    const leases: { released: boolean }[] = [];
-    const { stage } = setup(() => {
-      const lease = { scene: new Group(), animations: [], animationNames: {}, placeholder: false, released: false, release() { lease.released = true; } };
+    const leases: { id: string; release: ReturnType<typeof vi.fn> }[] = [];
+    const { stage } = setup(id => {
+      const lease = { id, scene: new Group(), animations: [], animationNames: {}, placeholder: false, release: vi.fn() };
       leases.push(lease); return Promise.resolve(lease as unknown as ModelLease);
     });
     stage.show(scoutOf(), frame);
     stage.show(scoutOf(), frame); // same seat and layout: no rebuild
     await new Promise(resolve => setTimeout(resolve, 0));
-    expect(leases).toHaveLength(4);
+    // The four units still load exactly once; adding legends must not hide duplicate unit loads.
+    expect(leases.map(lease => lease.id).sort()).toEqual(['summon-c', 'unit-a', 'unit-b', 'unit-d']);
+    expect(leases.every(lease => lease.release.mock.calls.length === 0)).toBe(true);
     expect(stage.debug().units.every(entry => entry.endsWith(':model'))).toBe(true);
     stage.show(null, null);
-    expect(leases.every(lease => lease.released)).toBe(true);
+    for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
+    stage.show(null, null);
+    for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -125,9 +129,14 @@ describe('3D scouting: the seat\'s little legend', () => {
     expect(readScout(scoutOf({ legend: '../x' })).legend).toBeNull();
     expect(readScout(scoutOf()).legend).toBeNull();
     const loads: string[] = [];
-    const scene = new Scene();
+    const scene = new Scene(), fallbackBodies: Group[] = [], releases: ReturnType<typeof vi.fn>[] = [];
     const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40,
-      loadModel: id => { loads.push(id); return id === 'little-legend-default' ? Promise.resolve({ scene: new Group(), animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease) : Promise.reject(new Error('missing')); },
+      loadModel: id => {
+        loads.push(id);
+        if (id !== 'little-legend-default') return Promise.reject(new Error('missing'));
+        const body = new Group(), release = vi.fn(); fallbackBodies.push(body); releases.push(release);
+        return Promise.resolve({ scene: body, animations: [], animationNames: {}, placeholder: false, release } as unknown as ModelLease);
+      },
       legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default', myLegend: () => 'pengu',
       starColor: () => '#ffd34d', itemIcon: () => null,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
@@ -138,7 +147,17 @@ describe('3D scouting: the seat\'s little legend', () => {
     expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu']);
     expect(stage.debug().legend).toBe('model:little-legend-ao-shin');
     expect(stage.debug().visitor).toBe('model:little-legend-pengu');
+    expect(fallbackBodies).toHaveLength(2);
+    for (const body of fallbackBodies) expect(stage.group.getObjectById(body.id)).toBe(body);
+    const before = [...loads];
+    stage.show(scoutOf({ legend: 'ao-shin', board: { units: [] } }), frame);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(loads).toEqual(before);
+    for (const release of releases) expect(release).not.toHaveBeenCalled();
     stage.show(null, null);
+    expect(stage.debug()).toMatchObject({ legend: 'none', visitor: 'none' });
+    for (const release of releases) expect(release).toHaveBeenCalledTimes(1);
+    for (const body of fallbackBodies) expect(stage.group.getObjectById(body.id)).toBeUndefined();
   });
 });
 
