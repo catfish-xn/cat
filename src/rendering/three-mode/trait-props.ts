@@ -54,7 +54,8 @@ export interface TraitProps {
 }
 
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number }
-interface Prop { readonly root: Group; readonly stand: Group; lease: ModelLease | null; motion: Group | null; mixer: AnimationMixer | null; loading: boolean; disposed: boolean }
+/** `root` is placed in the scene; `body` holds the stand-in, the aura and a model (one child of root, like a piece). */
+interface Prop { readonly root: Group; readonly body: Group; readonly stand: Group; lease: ModelLease | null; motion: Group | null; mixer: AnimationMixer | null; loading: boolean; disposed: boolean }
 
 export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const { scene, own } = ctx;
@@ -86,8 +87,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const glow = new Mesh(own(new BoxGeometry(width - 2, 3, depth - 2)), glowMaterial); glow.position.y = height + 0.5;
     chestStand.add(body, lock, lid, glow);
   }
-  chestRoot.add(chestStand); scene.add(chestRoot);
-  const chest: Prop = { root: chestRoot, stand: chestStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
+  const chestBody = new Group(); chestBody.add(chestStand); chestRoot.add(chestBody); scene.add(chestRoot);
+  const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
 
   // --- flask -------------------------------------------------------------------------------------------------------
   const flaskRoot = new Group(); flaskRoot.name = 'render3d-shimmer-flask'; flaskRoot.visible = false;
@@ -108,15 +109,15 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     }
     flaskStand.add(level, stopper, shell);
   }
-  flaskRoot.add(flaskStand); scene.add(flaskRoot);
-  const flask: Prop = { root: flaskRoot, stand: flaskStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
+  const flaskBody = new Group(); flaskBody.add(flaskStand); flaskRoot.add(flaskBody); scene.add(flaskRoot);
+  const flask: Prop = { root: flaskRoot, body: flaskBody, stand: flaskStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
   // Ground auras (outside the stand-ins, so a model keeps them): gold toward the next chest, violet with the 微光 level.
   const auraGeometry = own(new CircleGeometry(AURA_RADIUS, 32).rotateX(-Math.PI / 2));
   const flaskAuraMaterial = own(new MeshStandardMaterial({ color: SHIMMER, emissive: SHIMMER, emissiveIntensity: 0, transparent: true, opacity: 0, depthWrite: false }));
   const chestAuraMaterial = own(new MeshStandardMaterial({ color: GOLD, emissive: GOLD, emissiveIntensity: 0, transparent: true, opacity: 0, depthWrite: false }));
   const chestAura = new Mesh(auraGeometry, chestAuraMaterial), flaskAura = new Mesh(auraGeometry, flaskAuraMaterial);
   chestAura.position.y = flaskAura.position.y = 0.4;
-  chestRoot.add(chestAura); flaskRoot.add(flaskAura);
+  chestBody.add(chestAura); flaskBody.add(flaskAura);
 
   /** Swaps a stand-in for its manifest model once (scaled to the stand-in's height); the stand-in stays on any failure. */
   const tryModel = (prop: Prop, id: string, height: number) => {
@@ -126,7 +127,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       if (prop.disposed || lease.placeholder) { lease.release(); return; }
       prop.lease = lease; prop.stand.visible = false;
       // A wrapper takes the procedural motion, so the fitted model keeps its own scale and foot offset.
-      prop.motion = new Group(); prop.motion.add(fitHeight(lease.scene, height)); prop.root.add(prop.motion);
+      prop.motion = new Group(); prop.motion.add(fitHeight(lease.scene, height)); prop.body.add(prop.motion);
       const idle = lease.animations.find(clip => /idle/i.test(clip.name)) ?? lease.animations[0];
       if (idle) { prop.mixer = new AnimationMixer(lease.scene); prop.mixer.clipAction(idle).play(); }
     }).catch(() => { /* keeps the stand-in */ });
