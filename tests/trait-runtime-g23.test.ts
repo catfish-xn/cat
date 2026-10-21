@@ -4,7 +4,8 @@ import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state'
 import { G23_CONQUEROR_CHESTS } from '../src/simulation/content/g2-3-policy';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { toDisplayMatch } from '../src/rendering/online/seat-view-adapter';
-import { conquestLadder, g23BoardMechanics, g23TraitRuntime } from '../src/rendering/trait-column';
+import { conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime } from '../src/rendering/trait-column';
+import { activateFamily } from '../src/simulation/family-heist';
 import { g23RewardLines } from '../src/presentation/g23-reward-text';
 import { G23_BLACK_MARKETS } from '../src/simulation/content/g2-3-policy';
 
@@ -59,4 +60,25 @@ it('ladders the 15 chests: opened, the next with the stacks still missing, then 
   // Every chest and black-market bundle reads as zh text: no raw apiName or table key leaks into the UI.
   for (const step of ladder) expect(step.reward).not.toMatch(/TFT|_|^$/);
   for (const market of G23_BLACK_MARKETS) for (const option of market.options) expect(g23RewardLines(option.reward).join(' ')).not.toMatch(/TFT|_|^$/);
+});
+
+it('puts the 家人 5 reward and progress at the foot of the Family card only, and marks the reunion on the row', () => {
+  const base = createMatch(7), p = activateFamily(readG23Progress(base)!, base.round);
+  const state = writeG23Progress(base, { ...p, family: { ...p.family!, CurrentProgress: 7 } }), task = readG23Progress(state)!.family!;
+  const family = g23TraitRuntime(state)!.get('family')!;
+  expect(family.every(line => line.cardOnly)).toBe(true);
+  expect(family.map(line => line.label)).toEqual(['当前奖励', '进度']);
+  expect(family[1]!.value).toBe(`7/${task.CurrentRewardValue}`);
+  // Same lines from my private seat view online.
+  expect(g23TraitRuntime(toDisplayMatch(toPrivateSeatView(state) as never))!.get('family')).toEqual(family);
+
+  const ids = ['violet', 'vander', 'powder', 'warwick', 'jinx', 'vi'];
+  const reunion = { ...base, items: ['warwick', 'jinx', 'vi'].map((id, i) => ({ id: `item-${i + 1}`, definitionId: 'TFT13_Item_FamilyEmblemItem', location: { kind: 'unit' as const, unitId: id, slot: 0 } })),
+    preparation: { ...base.preparation, units: [...base.preparation.units.filter(u => u.team === 'enemy'),
+      ...ids.map((id, i) => ({ id, definitionId: id, team: 'player' as const, starLevel: 1 as const, location: { kind: 'board' as const, cell: { col: i, row: 5 } } }))] } };
+  expect(familyReunionDancers(reunion)).toEqual(ids);
+  expect(g23TraitRuntime(reunion)!.get('family')).toEqual([{ label: '家人团聚', value: '♪' }]);
+  expect(g23BoardMechanics(reunion)).toBeUndefined();
+  expect(familyReunionDancers({ ...reunion, phase: 'combat' } as never)).toEqual([]);
+  expect(familyReunionDancers({ ...reunion, items: reunion.items.slice(1) })).toEqual([]);
 });

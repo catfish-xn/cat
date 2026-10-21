@@ -8,6 +8,7 @@ import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { readEconomyPreview, readRevealedLoot } from './online/seat-view-adapter';
+import { sixCostOddsBps } from '../simulation/six-cost-shop';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -1244,6 +1245,9 @@ export class StrategyPanel {
     const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
     getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
       cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
+    // v19: the six-cost chance per slot once the rules unlock it (the rules' own schedule; it is not part of the 1–5 split).
+    const six = sixCostOddsBps(state.round, state.level);
+    if (six > 0) { const cost = element('span', '', 'odds-cost'); cost.dataset.cost = '6'; cost.append(element('span', '6费 ', 'odds-name'), `${six / 100}%`); odds.append(element('span', ' · ', 'odds-sep'), cost); }
     if (this.shopChoiceAway && this.shopChoiceAway === token) {
       const back = this.button('shop-choice-back', `返回${readChoiceExtras(choice!).title ?? '选择'}`, () => { this.shopChoiceAway = ''; this.render(); });
       back.className = 'shop-choice-toggle'; odds.append(back);
