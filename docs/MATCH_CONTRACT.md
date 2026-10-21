@@ -2,7 +2,25 @@
 
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 
-S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。完整根重算得到 CONTENT `fnv1a32-utf16:a76be833`、LOOT `fnv1a32-utf16:854f5ac0`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与下节拆卸器合并后的完整根为 CONTENT `fnv1a32-utf16:1af51f0b`、LOOT `fnv1a32-utf16:9c8f1388`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+
+## v18 PvE 固定装备拆卸器（与 10 级同版）
+
+每个按仓库目录判定为 PvE 的回合，在本回合法球之外，给每个结算后仍存活的玩家固定 1 个装备拆卸器，不检查原有数量，不要求胜利或击杀载体。来源：**原版 14.23 起的规则（本任务用户确认）**。当前为 1-2、1-3、1-4、2-7、3-7、4-7、5-7、6-7；之后只有 PvP 加时。箱子/法球表中的原拆卸器行、权重、顺序及显式 lcg32-v1 随机流不变。
+
+| 原版规则值 | 值 | 来源 |
+| --- | --- | --- |
+| 每个 PvE 额外拆卸器 | 每存活玩家 1 个，无持有数量门槛 | 原版 14.23 起 |
+
+| 项目约定值 | 约定 |
+| --- | --- |
+| 发放时点/存活 | PvE 原子结算后 hpAfter > 0；淘汰席不发；单人 6-7 存活终局仍发 |
+| 唯一收据 | seatMechanics.receipts；source=pve-remover；receiptId=pve-remover:<roundId>，独立于法球领取收据 |
+| 库存/事件 | 每份独立 consumableId，沿用 mechanicGranted；随结算提交，不消费 RNG；重复 step、Continue、恢复不重发 |
+
+内部 `grantPveRemover(state: MatchState): MatchState` 只授予当前已结算 PvE；不适用或收据已存在则返回原对象。`validatePveRemover(state: MatchState): void` 从已结算回合和 hpAfter 重建应有收据，缺失、重复、错误来源/轮次/类型抛 `RangeError('Invalid PvE remover receipt')`。恢复只验证，不发奖励。公开 Match/服务器命令签名和失败枚举不变，失败保持原 state，不产生事件。
+
+规则层没有消耗品格位/容量限制：`ConsumableInstance`（`src/simulation/consumable-types.ts`）只有 consumableId/definitionId；`consumables.ts` 校验每份 ID 与唯一收据。界面建议按 definitionId 聚合显示数量，使用时提交组内一个真实 consumableId；不改变领域库存结构。
 
 ## v17 当前身份（2026-10-20，草稿，覆盖下文历史交接状态）
 

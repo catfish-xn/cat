@@ -1,14 +1,14 @@
 {
-  "contentDigest": "fnv1a32-utf16:a76be833",
-  "lootReplayDigest": "fnv1a32-utf16:854f5ac0",
+  "contentDigest": "fnv1a32-utf16:1af51f0b",
+  "lootReplayDigest": "fnv1a32-utf16:9c8f1388",
   "rulesVersion": "s13-g2-3-v18",
   "contentVersion": "s13-14.24b-g2-3-v18",
   "schemaVersion": 8,
   "previousContentDigest": "fnv1a32-utf16:de829c8a",
   "previousLootReplayDigest": "fnv1a32-utf16:62c76cb9",
   "traceHashes": {
-    "state": "7649ea8a64b5fc1bc44f60efe0418754ca79296c321236d2600d88de8e55630b",
-    "events": "ab228696c20a67efe1b6549ea3452500afb17e2e1c632a1cf953093c2ead9ac8",
+    "state": "a8b555cb0ed3dce5064aa35c509dabf5308188aaa5b119f70eb5841bfda10f2d",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },
   "firstBattle": {
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "S13 v18: level 10, 84 XP from level 9, shop odds 5/10/20/40/25; schema 8/save 4 unchanged; old saves rejected without migration."
+  "reason": "S13 v18: level 10, 84 XP from level 9, shop odds 5/10/20/40/25; original 14.23 onward +1 fixed remover per survived PvE independent of orb loot; schema 8/save 4 unchanged; old saves rejected without migration."
 }

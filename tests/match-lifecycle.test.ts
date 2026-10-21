@@ -97,11 +97,12 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
     // B8: terminal preparation admits only the random Darius birth and tool receipt, never live combat changes.
     expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
     expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual([...prep.items,{id:'item-1',definitionId:'belt',location:{kind:'inventory'}}]);expect(state.nextItemSerial).toBe(prep.nextItemSerial+1);
-    expect(state.m8.loot.receipts).toEqual([itemReceipt,receipt]);expect(state.consumables).toHaveLength(0);expect(step.events.filter(e=>e.domain==='match')).toEqual([
+    expect(state.m8.loot.receipts).toEqual([itemReceipt,receipt]);expect(state.consumables).toHaveLength(1);expect(step.events.filter(e=>e.domain==='match')).toEqual([
      {type:'lootRevealed',dropId:heroDropId,death:{combatId:'round-1',tick:state.combat!.tick,eventSeq:step.events.find(e=>e.type==='death'&&e.unitId===heroSource)!.eventSeq},domain:'match',eventSeq:prior.nextMatchEventSeq},
      {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
      {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
-     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+3},
+     {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prior.nextMatchEventSeq+3},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+4},
     ]);
     expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
      {sequence:1,roundId:'1-2',kind:'item-acquired',itemId:'item-1',source:{kind:'loot',receiptId:itemReceipt.receiptId}},
@@ -117,7 +118,8 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
    ...evidence.map((e,i)=>({type:'lootRevealed',...e,domain:'match',eventSeq:prep.nextMatchEventSeq+i})),
    {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
    {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
-   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+4},
+   {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prep.nextMatchEventSeq+4},
+   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+5},
   ]);
   expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
   expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId:itemReceipt.receiptId},{dropId:heroDropId,status:'granted',receiptId}]);

@@ -22,7 +22,7 @@
     "scripts/record-v16-release.cjs": "77ecacdf936bf2637462b42003f0574f85bb2774099540c07aca0c535267c35e",
     "scripts/record-v17-inputs.cjs": "d6cff63fc9854e4b0170563ac030e224bbc2cf408e12adb0e6178fb0ad31a6e3",
     "scripts/record-v17-live-reveal.cjs": "f61d8c52e79f66e5f6aa5dea47d91ce2323e576c6a7a2d9c4003abb8ce71eb04",
-    "scripts/record-v17-release.cjs": "ae6eed9f50841d5f5ee93b42df79bb28c87149639defe4e8b8f91d6a3157fa40",
+    "scripts/record-v17-release.cjs": "3a8966d8cfd26d1c5070e0c175b944a5ed83e2da9312c1ec1af79dc13eedbb01",
     "scripts/v15-fixture-audit.cjs": "4f2651f37d7a27020155bbcc03230cab62af5d4e08413f7ee10f4bf282beb4f5",
     "scripts/v16-fixture-audit.cjs": "0e466bf8c2ea235c64fa64f61da27566967faa4aa00551c1d1bb6a250e3830ef",
     "scripts/v17-fixture-audit.cjs": "13075fa4df545981a069ccaab99a15358a362a86ce6324673654a7bc9d2161ec",
@@ -98,13 +98,13 @@
     "src/simulation/combat.ts": "d8fc69295a5a1097b49fd1889d6c195e00d9b575ff6547455daf3bb0ba17fa52",
     "src/simulation/component-pool.ts": "ef979cf4a814d84c3c890b5c2206205dbcbad1a61f2c247292a4778040da4fae",
     "src/simulation/consumable-types.ts": "fd5a5011f017b23c50efceb0ab12ca577a5d0ce2b47067c3d92ea2a4b09676c9",
-    "src/simulation/consumables.ts": "f472d6aaa27fd1d5d41c81fdbe55100ef1e6a276ea8175b79df6bd153e1474ff",
+    "src/simulation/consumables.ts": "965941cd0a42069a563f1c0fcccd84b265e2658e337b0a799a1c236918726e8c",
     "src/simulation/content/abilities.ts": "7a99ca66007549c22cf03563bc36722f7947d1e9cbf2e7bb422f0a051402b3ac",
     "src/simulation/content/anomalies.ts": "8af0f34f813fb64abd5481a91d6313b0ef91382ad3dbbfd71cdea45eb579c81e",
     "src/simulation/content/archive-source.ts": "3dc0a90070a31c87b4775dcf93810b44868220b20fa8df409634356300edfcb9",
     "src/simulation/content/augment-policy.ts": "30a52a5d36e57fe9a5e4262a67c9c1da7fa1ee9d800a9cda0452a0d60f29f2d5",
     "src/simulation/content/augments.ts": "2f12318429bafb67f24748d64918c0d79c8015de558c9d28613c3268c050f51c",
-    "src/simulation/content/consumables.ts": "6e2d80ff13e79b7ebe672f0ae01a78246c2664d8d91f46bb4992e4db0ab146cc",
+    "src/simulation/content/consumables.ts": "caf4bc3f0df22f9b0af9550d72936cc583394b272ace6cec3b47b808e86e78ff",
     "src/simulation/content/d11-fill-source.ts": "1ef70b109a3546c5dd44f9b4873fd6dbceaa24dc16dc4358fc7a33a52fdf4f30",
     "src/simulation/content/d11-fill.ts": "9d9167876c4a0155354636673583881809dff30a960f0e893c6356d67743e468",
     "src/simulation/content/d14-anomalies.ts": "87af76df11ba116afee31128ad645e592a0c961e8176177727f9a8e15ce86659",
@@ -140,7 +140,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "ed0f69814e738a0c8fd4e3f3e363957f2151e085b4cb3c7634d45e82dd4794d7",
+    "src/simulation/content/identity-constants.ts": "2b4ff15f732e6c86284ae78aca501b9a9471a880671aaaed4703b820e3fab3c5",
     "src/simulation/content/index.ts": "257f7c643dfa1d5d4bdcb15f84154fc1a7b71e95b5351cc01d61db9bd624f926",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -293,7 +293,7 @@
     "src/simulation/m8/version.ts": "2b14e48b195d106150058a449d50be0e35b4b946f8a2a046c55e19f8b1faa86e",
     "src/simulation/match-rules.ts": "3ea63c4479fc1872c4373a6569a181dac9e5c861ea0f954edd900b9e738263e4",
     "src/simulation/match-types.ts": "6f84c82c83a94efd76ee7b6cf32144993991bc45cfd9d55bd42bf5505bfc94e4",
-    "src/simulation/match.ts": "8d12af165fcf72e5a490b00e570925c6f2bc56028ec8e876e0151a2b41093733",
+    "src/simulation/match.ts": "2f809bf3cc7ea32c69d913ac71d0352907788b357efdcbb9bdbc4335b9350cab",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
@@ -310,6 +310,7 @@
     "src/simulation/owned-resources/types.ts": "4f6648022926dfe0e2a6642cd1b34db8892c4554646e583421bb7544c1150645",
     "src/simulation/private-seat-view.ts": "149f9fa6b5783e3f8fd18b6a2bbf6d13c7ae256abbbc025f1b833f8df5296c1a",
     "src/simulation/progression.ts": "bf9df858df4e3fde5f7296e988ad09bfd93c30b0b101fd92a406b67685b05669",
+    "src/simulation/pve-remover.ts": "74f09b4aa34887ba7d4ae6122df299c8b2fd679dda2474c068c378b271e0b661",
     "src/simulation/resource-provenance.ts": "e650023f9e935000d866fcbec347a72d4cb5f72d8049cf1aabdc88ff7847f48f",
     "src/simulation/restore-bounds-preflight.ts": "32174996022aea6009fd6750f3a00087386b365c5eda32ebb8f1b4461d4a7543",
     "src/simulation/restore-combat-replay.ts": "910a07d40e21ff64af773358eb3066f376d72f74c15a770f4dfaeccf8b649a97",
@@ -361,7 +362,7 @@
     "tests/fixtures/b8-live-reveal-routes.ts": "dd140826729f623d10cf743b2b1336c5b3e7c340a1eb28d4ac280bc5f952a5ec",
     "tests/fixtures/epic-loot-oracle.cjs": "c61626c6800b9ff842103e7ad4522713a6401f0223936ee3e8331afc8cb315e0",
     "tests/fixtures/epic-loot-oracle.d.cts": "cc9d0dc40dbfffa670251bb3f368896148c2fc0fb01a61df9c722e4948884546",
-    "tests/fixtures/m5/oracle.g2.cjs": "2ee5beb36afbd32ad368cbd71b3a32bd244f3ca9a7403153d4b3c2d5e92fd268",
+    "tests/fixtures/m5/oracle.g2.cjs": "c5bc5b13f1236296310a7d4ce7ea62be4245bcce68a03c3a4c6d10489597e69b",
     "tests/fixtures/m8-golden-states.cjs": "99a7a162503967007e4d9d79c374d594a63e3d61ddfcfaed75b357387fce7e6f",
     "tests/fixtures/record-g2-4b-herald.cjs": "873371f3572b960bd564f67face0d65bc57f48d9d38608121895462527806654",
     "tests/fixtures/record-v15-herald.cjs": "5bb32a91b3a7e33f26d04fa4408029abd7c58f2bd27fc50f50c4a9c5c1892474",
@@ -372,13 +373,13 @@
     "tests/fixtures/v17-herald-support/generate.ts": "98934f3a80d5e81e144a807ed463f4727f5171d2c758100d58ca769a8ae77e45",
     "tests/m8-b8-live-reveal.test.ts": "af4c1e00c484e5db7341b9c8795ddf21b3280574c9fbaa71f4bcc151bce7e56e"
   },
-  "contentDigest": "fnv1a32-utf16:a76be833",
+  "contentDigest": "fnv1a32-utf16:1af51f0b",
   "files": {
     "tests/fixtures/v17-c19-seed-9-minimal.json": {
       "previousBytes": 28248,
       "currentBytes": 28248,
       "previousSha256": "f8cc8f598cd0a262dd8105a65ca15527c783e8bc4a9c911ae1095b6f7e18eb50",
-      "currentSha256": "005a9d5b2096787c988c6fc03c1500fc9897b9ce16201fed173ef9a6d640eeec",
+      "currentSha256": "72b8962d1d84717abcaf92b5eda72c61cb6d0792c13e93540ffa56e6e4718ba2",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v17-b8-fingerprints.json": {
@@ -390,51 +391,51 @@
     },
     "tests/fixtures/v17-herald-raw/ionic-spark.json": {
       "previousBytes": 132692,
-      "currentBytes": 171261,
+      "currentBytes": 172887,
       "previousSha256": "ad71e41cc465d4cbeb58a1eb65938d1e94efcdd2d7cdd40c2ab69febd1cc9f0e",
-      "currentSha256": "db10e8319848bb018ca350489c94ff1edf61d19cd5dbc9195e54311ca4792722",
+      "currentSha256": "92df717b4fbab33d3fab7e9bcccbd67d44d2de3414aaecc23fec55b4cfd7b652",
       "firstDifferentByte": 110
     },
     "tests/fixtures/v17-herald-raw/evenshroud.json": {
       "previousBytes": 132691,
-      "currentBytes": 171260,
+      "currentBytes": 172886,
       "previousSha256": "642d05f10815777dafd301a3420f89090b62ab7f74a9ff1e3196e19f8622d67a",
-      "currentSha256": "ba778824f05cc8f586b4c0cc0cc78eb8249469fa63e6e891a43a5f0363f567fd",
+      "currentSha256": "3a29412b34d4ba8a709f34257749f3e70bb81198a2ba4f20c9f012cf6335e75f",
       "firstDifferentByte": 110
     },
     "tests/fixtures/v17-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 132680,
-      "currentBytes": 171251,
+      "currentBytes": 172877,
       "previousSha256": "8121c010cb0b41347dee62dadfc75fcf486d7c834535d6019d3b94bf00ba1733",
-      "currentSha256": "62ab3a0d5bfee6008de1f2137a870acf773c31d3e13c57e8dba51487316be6da",
+      "currentSha256": "1214988a22a6bb3deb6aecccd64937ead9819c575978c3201070bd0c098b22fd",
       "firstDifferentByte": 110
     },
     "tests/fixtures/v17-herald-raw/quicksilver.json": {
       "previousBytes": 132695,
-      "currentBytes": 171264,
+      "currentBytes": 172890,
       "previousSha256": "276e1cfc0971f9add79191e48c237954a2a780c4aa56edf9791b8097079d89ec",
-      "currentSha256": "204cbf674312aaac6ab30a45c6d5215843e4e6ee9b08894cf644ff0670f8a9fb",
+      "currentSha256": "44611079c6b236b45491693358a8aba5d46205feb9a7107fbe3d636bb1c6e1db",
       "firstDifferentByte": 110
     },
     "tests/fixtures/v17-herald-raw/edge-of-night.json": {
       "previousBytes": 132693,
-      "currentBytes": 171272,
+      "currentBytes": 172898,
       "previousSha256": "90d398dc8cb228eb0416c92a63cfc9adf65338e3a7dd86ce202102d055d5aba8",
-      "currentSha256": "2f3e8165e450f1690d6d59ca27206494515f2de0497db11667d17de0fca5e034",
+      "currentSha256": "9b7ed7ea5c47d977a4ff52d28b3344f7ad942436db5b723e9c80ce10b06c0380",
       "firstDifferentByte": 110
     },
     "tests/fixtures/v17-herald-raw/manifest.json": {
       "previousBytes": 37828,
-      "currentBytes": 37926,
+      "currentBytes": 38025,
       "previousSha256": "9ea81bc5b9cf76d20abad333df736d10479089a0e52d3b824e45b6bc8676dc8a",
-      "currentSha256": "215c82f01b673ba88047adec2fe6c68cc47b2b46711d685d47e3a31cfde32501",
+      "currentSha256": "67eee058fd172ca0011064b770dce4e2deb2b7f586f772cd848e517035638957",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v17-herald-raw/trajectory.json": {
       "previousBytes": 327275,
-      "currentBytes": 338385,
+      "currentBytes": 338410,
       "previousSha256": "d403bde560f6164c62f18d02caf1e2ce75ff9bb584693dc0595f563b98f70a20",
-      "currentSha256": "3315c32c77f86f30354dd801ac58e6647f97e0060f3eb46915120525e5752831",
+      "currentSha256": "905e53edd8577937c9d555525a3743f25f87f374b10e984614c191ace70d31a5",
       "firstDifferentByte": 42
     }
   },

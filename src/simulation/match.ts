@@ -1,6 +1,7 @@
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
 import { grantConsumableCopy } from './consumables';
+import { grantPveRemover } from './pve-remover';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
 import { sampleD11CombatGold } from './d11-fill';
 import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
@@ -369,7 +370,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  return combat?commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy,hookEvents):settled;
+  return combat?grantPveRemover(commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy,hookEvents)):settled;
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)

@@ -1,12 +1,12 @@
-# v18：S13 开放 10 级
+# v18：S13 开放 10 级与每 PvE 固定拆卸器
 
 用户试玩反馈及核对线已确认的 14.24 一手数值，用户批准采用：上限 10；9→10 需要 84XP；10 级 1–5 费商店概率 5/10/20/40/25。1–9 级概率、既有升级阈值不变，不开放 11 级。完整概率表只维护 M5_RULES 原表，不在此重复。
 
 规则/内容身份：`s13-g2-3-v17` / `s13-14.24b-g2-3-v17` → `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`。progression policy 为 `s13-14.24b-ten-levels-v1`，G23 revision 为 `g2-4b-ten-levels-v18`。schema8/save4/replay3/command4、网络协议4、50ms tick、lcg32-v1 不变；旧身份/摘要存档拒绝，无迁移。
 
-完整根离线重算：content `fnv1a32-utf16:05439fc4` → `fnv1a32-utf16:a76be833`；loot replay `fnv1a32-utf16:132ae758` → `fnv1a32-utf16:854f5ac0`。两根均覆盖 progression manifest，因此 loot replay 摘要也变化。使用既有 `scripts/update-content-identities.cjs --write` 更新两个常量，`--check` 校验。
+完整根离线重算：content `fnv1a32-utf16:05439fc4` → `fnv1a32-utf16:1af51f0b`；loot replay `fnv1a32-utf16:132ae758` → `fnv1a32-utf16:9c8f1388`。两根均覆盖 progression 和 consumables manifest；10 级单项中间摘要 a76be833/854f5ac0 由本轮最终摘要覆盖，不另升版本。使用既有 `scripts/update-content-identities.cjs --write` 更新两个常量，`--check` 校验。
 
-## 改动文件
+## 改动文件（10 级已提交部分）
 
 - `src/simulation/match-rules.ts`：上限、XP、10 级商店行；`content/rules-manifest.ts`：progression policy。
 - `src/simulation/input-assets.ts`、`serialization-structure.ts`、`validate-content.ts`：等级/满级 XP/表覆盖校验统一读取 `MATCH_RULES.maxLevel`。
@@ -20,7 +20,7 @@
 
 机器人 `src/simulation/bot/index.ts` 已使用 maxLevel；`src/server/` 只转发公共买经验命令，未发现需修改的9级硬编码。九格备战席、共享池5费9份、三星9份、明确指定9级的战斗夹具/路线均不是满级判断，保留。
 
-## 验证及录制
+## 10 级单项已完成的验证及录制（本轮最终结果见末尾）
 
 最终定向17文件403项全部通过；另当前 epoch 身份/轨迹5项通过（只选择当前相关用例，138项历史/其他用例未运行）、Herald集成30项全部通过，共19文件438项。完整 digest 根校验、`tsc --noEmit`、`git diff --check` 通过；改动文本均为LF。本次未运行全套测试。
 
@@ -42,3 +42,32 @@ node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --m
 ## 界面侧
 
 未发现需要修改的9级硬编码。`src/rendering/BoardScene.ts:901–912` 与 `src/rendering/strategy-panel.ts:482–504,1187` 已调用 `getXpToNextLevel` / `getShopOdds`，会随规则显示9级84XP、10级满级和新概率。界面侧只需实际试玩确认这些位置；本次未执行浏览器验收。
+
+## PvE 拆卸器追加改动与最终联合录制
+
+原版 14.23 起每个 PvE 给每个存活玩家额外 1 个装备拆卸器，不检查已有数量；来源由本任务用户确认，箱子/法球原拆卸器行不变。原版值与项目结算时点、存活定义、唯一收据等约定分别单列于 MATCH_CONTRACT/M5_RULES 的 v18 PvE 节。
+
+新增 `src/simulation/pve-remover.ts`；`match.ts` 原 PvE 结算调用该纯授予器，`consumables.ts` 恢复验证固定收据，`content/consumables.ts` 将独立固定奖励政策纳入两个摘要根。10 级数值和相关代码保持 HEAD 71bbcdcf 不变；箱子/法球表不改，不新增服务器规则。消耗品无格位/容量规则限制，界面按类型聚合、按一个真实 ID 消费即可。
+
+定向测试补每个 PvE（单人/联机）无击杀、失败存活、HP0、箱子额外拆卸器、积累/恢复/重复 step、伪造收据、共享满席和服务器各存活席发放；服务器动态找持有者，不绑定某个座位。独立 oracle 增加固定奖励收据核验，不从生产实现读取预期。
+
+本项实际文件：
+
+- 规则：`src/simulation/pve-remover.ts`（新增）、`match.ts`、`consumables.ts`、`content/consumables.ts`、`content/identity-constants.ts`。
+- 测试：`tests/pve-remover.test.ts`（新增）、`r3r4-loot.test.ts`、`r3r4-shared.test.ts`、`match-lifecycle.test.ts`、`match-session.test.ts`、`m8-b8-live-cross-round.test.ts`、`d14-anomalies-source.test.ts`、`server/c18b-use-consumable.test.ts`；独立 oracle 为 `tests/fixtures/m5/oracle.g2.cjs`。
+- 录制入口说明：`scripts/record-v17-release.cjs`；生成物沿用上节 v17 epoch 清单，只重录当前身份，不改历史 v15/v16 字节。
+- 文档：`docs/MATCH_CONTRACT.md`、`M5_RULES.md`、本文。
+
+最终相关回归 13 个文件 175 项全部通过；另当前 epoch 身份/轨迹 5 项通过（该文件其余历史/其他 138 项未选择），合计 14 个相关文件 180 项。`tsc --noEmit`、完整摘要根 `--check`、`git diff --check` 通过；未运行全套或浏览器测试。重录前普通状态/Herald 的 8 项 content-digest 不匹配已在最终夹具生成后复测消除。
+
+联合 `verify-v17-epoch.cjs` 九步全部 exitCode=0，`docs/evidence/v17/epoch-verification.json` 为 `complete:true`。四条公共命令路线均胜利完成 33 场，cannon/sniper 各 67 个状态通过完整恢复；五组 Herald 原始输入在导入恢复器前独立导出，并通过完整恢复、开场及后续 15 tick 校验。58 个 v15/v16 历史文件及历史身份断言字节比对通过。相对 10 级单项，首战战斗状态/事件摘要与 RNG 轨迹摘要保持，领域状态/事件因固定奖励收据变化。
+
+本轮已在沙箱完成联合重录，无需沙箱外执行命令。以下为已执行的单份顺序（10 级与本项合并，供复核）：
+
+```powershell
+node scripts/update-content-identities.cjs --write
+node scripts/update-content-identities.cjs --check
+node scripts/verify-v17-epoch.cjs
+```
+
+九步包含 golden、Herald --write、inputs/live-reveal 及相应校验，不另跑历史生成器。全程离线、Git 只读，不写 .git。

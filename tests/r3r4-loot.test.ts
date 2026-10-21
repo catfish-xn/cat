@@ -78,11 +78,11 @@ describe('R3/R4 catalog and live entry accounting',()=>{
       expect(view.revealedOrbs.every(o=>o.status==='claimed')).toBe(true);
       if(n<2)state=accepted(nextRound(state,state.round));
     }
-    expect(readComponentEquivalent(state)).toBe(2);expect(state.consumables).toHaveLength(0);
+    expect(readComponentEquivalent(state)).toBe(2);expect(state.consumables).toHaveLength(3);
     expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
   });
   it('earned remover returns original IDs, consumes once, and restores without another grant',()=>{
-    // Seed with a real box-row remover (no guaranteed opening tool in v17).
+    // Seed with a real box-row remover in addition to the three fixed PvE bonuses.
     let state=opening(17);const tool=state.consumables.find(c=>c.definitionId==='magnetic-remover')!,item=state.items[0];
     state=accepted(equipItem(state,item.id,'unit-1',2));
     const preview=previewUseConsumable(state,tool.consumableId,{kind:'unit',unitId:'unit-1'});

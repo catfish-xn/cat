@@ -114,7 +114,7 @@ describe('match session commands and fixed clock', () => {
     expect(session.state.pendingChoice).toBeNull();
     expect(session.state.m8.loot.choiceResolutions).toEqual([]);
     expect(session.state.items.map(i=>i.definitionId)).toEqual(['gloves','belt']);
-    expect(session.state.consumables).toHaveLength(0);
+    expect(session.state.consumables).toHaveLength(2);
     expect(players(session.state)).toEqual(secondSettledRoster);
     const resolved = session.state, resolvedBefore = structuredClone(resolved);
     expect(session.continue(2).ok).toBe(true);

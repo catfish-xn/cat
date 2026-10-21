@@ -80,10 +80,22 @@ describe('C18-B useConsumable room gate and dispatch', () => {
 });
 
 describe('C18-B useConsumable success through the room (§18.6)', () => {
+  it('each surviving seat receives one fixed PvE remover before any orb claim', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
+    room.start();
+    runUntil(room, clock, state => state.phase === 'settlement' && state.round === 1, 4_000);
+    const alive = room.state.seats.filter(seat => seat.alive);
+    expect(alive).toHaveLength(room.state.seats.length);
+    for (const seat of alive) {
+      const receipts = seat.match.seatMechanics!.receipts.filter(r => r.source === 'pve-remover');
+      expect(receipts).toHaveLength(1);
+      expect(receipts[0]).toMatchObject({receiptId:'pve-remover:1-2',kind:'consumable',definitionId:'magnetic-remover'});
+      expect(seat.match.consumables.filter(c => c.definitionId === 'magnetic-remover')).toHaveLength(1);
+      expect(seat.match.m8.loot.receipts).toEqual([]);
+    }
+  });
   it('a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched', () => {
-    // v17 orbs are a random stage combination (room layout seed) with per-seat boxes (seat seed). The independent oracle
-    // (tests/fixtures/orb-combo-oracle.cjs lootPlan(seat seed, ordinal, room seed)) puts a gray orb's remover on s3's
-    // 1-2 carriers with room seed 3, so that room really drops one; the seat claims it after its source died.
+    // Every surviving seat earns a fixed PvE remover; find a live holder with a claimed item.
     const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
     room.start();
     // Find the seat holding the remover with an inventory item too.
@@ -92,7 +104,7 @@ describe('C18-B useConsumable success through the room (§18.6)', () => {
     // v15: the items (and the remover) arrive as orbs each seat claims in preparation.
     runUntilClaiming(room, clock, state => state.phase === 'preparation' && holder() !== undefined, 4_000);
     const seat = holder()!, seatId = seat.seatId;
-    expect(seatId).toBe('s3');
+    expect(seat.alive).toBe(true);
     const unit = seat.match.preparation.units.find(entry => entry.team === 'player' && entry.location.kind === 'board')!;
     const item = seat.match.items.find(entry => entry.location.kind === 'inventory')!;
     const equipped = room.handle(seatId, { type: 'equip', itemId: item.id, unitId: unit.id, slot: 0 });

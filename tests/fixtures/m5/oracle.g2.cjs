@@ -294,6 +294,11 @@ class Ledger {
   if(command?.type==='select'&&command.definitionId==='dual-wielding'){assert.equal(acquired.length,2,'source two role items');assert.equal(new Set(acquired.map(r=>r.definitionId)).size,2,'project no-repeat role draws');assert(acquired.every(r=>r.source==='s13-anomaly-acquisition'));}
   if(before.pendingChoice?.kind==='forge'&&before.pendingChoice.payload?.source==='s13-augment-acquisition'){assert.equal(acquired.length,1,'one forge item');assert.equal(acquired[0].optionId,command?.definitionId);assert(before.pendingChoice.offers.includes(acquired[0].optionId));}
   const records=appended(before.roundResults,after.roundResults,'settlementId','settlements');assert(records.length<=1,'one settlement per command');
+  // Original 14.23 onward: +1 fixed remover per survived PvE, independent of box loot.
+  const pveBonus=appendedMechanics.filter(r=>r.source==='pve-remover'||r.receiptId.startsWith('pve-remover:'));
+  const eligible=records.filter(r=>r.roundKind==='pve'&&r.hpAfter>0);
+  assert.equal(pveBonus.length,eligible.length,'independent fixed PvE remover count');
+  for(const [i,r] of pveBonus.entries()){const round=eligible[i];assert.equal(r.receiptId,`pve-remover:${round.roundId}`);assert.equal(r.source,'pve-remover');assert.equal(r.kind,'consumable');assert.equal(r.definitionId,'magnetic-remover');assert.equal(r.round,round.round);assert.equal(r.roundId,round.roundId);assert(after.consumables.some(c=>c.consumableId===r.consumableId&&c.definitionId==='magnetic-remover'));}
   let growth=before.augmentProgress;
   for(const record of records){const expected=settlement(before,after.combat,this.gold);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.income;costs.income+=expected.income;this.rows.push(expected);growth=investment(before,expected);}
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');

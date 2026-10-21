@@ -1,4 +1,5 @@
 import { canonicalContent } from './content';
+import { validatePveRemover } from './pve-remover';
 import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
 import { canOperateEquipment, isCombatRosterLocked } from './operation-policy';
 import { getCatalogRoundById } from './round-selectors';
@@ -106,6 +107,7 @@ export function replayConsumableItems(items:readonly ItemInstance[],serial:numbe
 }
 /** Rebuild tools from unique grant receipts and validate each ordered draw/output. */
 export function validateConsumableState(state:MatchState):void {
+  validatePveRemover(state);
   const check=(condition:unknown)=>{if(!condition)throw new RangeError('Invalid consumable ledger');};
   const grants=new Map<string,{definitionId:string;roundId:string}>();let serial=1;
   const all:{id:string;definitionId:string;roundId:string}[]=[];

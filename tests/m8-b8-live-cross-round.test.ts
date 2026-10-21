@@ -56,7 +56,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.map(d=>d.payload));
     expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb','trundle','vex']);
     expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','gloves','rod','rod','rod','sword','tear']);
-    expect(opening.consumables).toEqual([]);
+    expect(opening.consumables.map(c=>c.definitionId)).toEqual(Array(4).fill('magnetic-remover'));
     expect(api.readLootView(opening)).toEqual({ roundId: '3-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
   });
