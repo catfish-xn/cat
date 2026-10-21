@@ -13,6 +13,8 @@ import transcoderWasm from 'three/addons/libs/basis/basis_transcoder.wasm?url';
 import type { ModelTemplate } from '../../rendering3d';
 
 export type ReadBlob = (url: string) => Promise<Blob>;
+/** One model read: milliseconds getting its bytes (local store or network) and parsing them (meshopt, KTX2, glTF). */
+export type ModelTiming = (url: string, readMs: number, parseMs: number) => void;
 
 export interface AssetReader {
   readModel(url: string): Promise<ModelTemplate>;
@@ -21,7 +23,7 @@ export interface AssetReader {
   dispose(): void;
 }
 
-export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob): AssetReader {
+export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob, onModel?: ModelTiming): AssetReader {
   // KTX2Loader asks for `<path>basis_transcoder.{js,wasm}`; Vite fingerprints both, so map the bare names.
   const manager = new LoadingManager();
   manager.setURLModifier(url => url === 'basis_transcoder.js' ? transcoderJs : url === 'basis_transcoder.wasm' ? transcoderWasm : url);
@@ -32,9 +34,12 @@ export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob): Asse
   const gltf = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
   return {
     async readModel(url) {
+      const started = performance.now();
       const blob = await read(url);
+      const bytes = await blob.arrayBuffer(), readAt = performance.now();
       detect();
-      const parsed = await gltf.parseAsync(await blob.arrayBuffer(), url.slice(0, url.lastIndexOf('/') + 1));
+      const parsed = await gltf.parseAsync(bytes, url.slice(0, url.lastIndexOf('/') + 1));
+      onModel?.(url, readAt - started, performance.now() - readAt);
       return { scene: parsed.scene, animations: parsed.animations };
     },
     async readTexture(url) {

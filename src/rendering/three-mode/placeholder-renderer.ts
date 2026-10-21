@@ -11,19 +11,19 @@
  */
 import { installHudStyle } from './hud-style';
 import {
-  AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, Plane, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
+  AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
+  PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, readParticleMesh,
+  ModelCache, UnitActionState, UnitAnimationMixer, assetUrl, createActionEffectResolver, createStarMark, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
-import { createAssetReader, type AssetReader } from './asset-reader';
+import { createAssetReader, type AssetReader, type ModelTiming } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
@@ -33,6 +33,8 @@ import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, fitModel, readUnitScale } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
+import { createEffectLibrary } from './effect-library';
+import { createLoadReport, createModelWarmup } from './model-warmup';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -60,6 +62,13 @@ const DRAG_LIFT = 10;
 const DROP_COLOR = { allowed: '#68ddd0', refused: '#f08080' } as const;
 /** Live action effects at most; later ones are dropped rather than queued. */
 const MAX_EFFECTS = 48;
+/**
+ * Action effects started per frame at most, and waiting at most (a burst of casts spreads over a few frames instead of
+ * stalling one); one still waiting STALE_SECONDS past its time is dropped, as its moment has gone.
+ */
+const MAX_STARTS_PER_FRAME = 6, MAX_QUEUED = 64, STALE_SECONDS = 0.3;
+/** A batch of combat events spanning more ticks than this (catching up after dropped frames) plays effects for its last ticks only. */
+const EFFECT_TICKS = 2;
 /** Effects without a playback entry play at the source this long. */
 const DEFAULT_EFFECT_SECONDS = 1;
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
@@ -118,8 +127,12 @@ function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height
 let feed: BoardFeed | null = null;
 export function useBoardFeed(next: BoardFeed): void { feed = next; }
 // Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
-let assetProgress: ((text: string) => void) | null = null;
-export function useAssetProgress(next: (text: string) => void): void { assetProgress = next; }
+// `fraction` is the share downloaded while a download runs (the shell's progress bar), null once there is none.
+let assetProgress: ((text: string, fraction: number | null) => void) | null = null;
+export function useAssetProgress(next: (text: string, fraction: number | null) => void): void { assetProgress = next; }
+// Injected the same way: models a game is likely to show first (the cheapest shop tiers), warmed while idle.
+let warmModels: readonly string[] = [];
+export function useWarmModels(next: readonly string[]): void { warmModels = next; }
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
@@ -133,8 +146,8 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 
-type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
-  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
+type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
+  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
 
 const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
@@ -153,8 +166,9 @@ const fetchIndex = async (url: string): Promise<unknown> => {
   }
 };
 
-async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
-  const none = (detail: string): Models => ({ cache: null, status: 'placeholder', detail, preloader: null, reader: null });
+async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string, fraction: number | null) => void,
+  onModel?: ModelTiming): Promise<Models> {
+  const none = (detail: string): Models => ({ cache: null, status: 'placeholder', detail, preloader: null, reader: null, preloaded: null });
   if (!assetBase) return none('未配置 3D 素材，显示占位棋子');
   let manifest: unknown;
   try { manifest = await fetchJson(`${assetBase}manifest.json`); }
@@ -165,17 +179,18 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
   try {
     // Everything under the root goes through the preloader; the cache keeps models it has already decoded.
     let preloader: AssetPreloader | null = null;
-    const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
+    const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)), onModel);
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
     const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
     // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
     const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
     const store = await openAssetStore();
     preloader = new AssetPreloader(assetBase, list, store, { packs });
-    if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
+    if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress), progress.state !== 'downloading' ? null
+      : progress.totalBytes > 0 ? progress.readyBytes / progress.totalBytes : progress.readyFiles / Math.max(1, progress.totalFiles)));
     void navigator.storage?.persist?.().catch(() => false);
-    void preloader.start();
-    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader };
+    const preloaded = preloader.start().catch(() => null);
+    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded };
   } catch {
     return none('素材地址无法访问或清单格式不符，显示占位棋子');
   }
@@ -250,7 +265,14 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   installHudStyle();
   const renderer = new WebGLRenderer({ antialias: true });
-  const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined);
+  // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
+  // One report per match: a new match (body[data-m6-mode] turning active) starts it again.
+  let loadReport = createLoadReport(), timeUpload = false, reported = false;
+  const modelByUrl = new Map<string, string>();
+  delete (globalThis as { __render3dLoad?: unknown }).__render3dLoad;
+  const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined,
+    (url, readMs, parseMs) => loadReport.read(modelByUrl.get(url) ?? url, readMs, parseMs));
+  if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
   const actionEffects = await openActionEffects(models, options.assetBase);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
@@ -279,10 +301,52 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
-  const loadEffect = models.cache && options.assetBase && models.cache.manifest.effects ? (id: string, maxDuration: number) => {
+  // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
+  const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
+  // Models warmed while idle (model-warmup.ts): little legends first, then the cheapest shop tiers, once the preload has
+  // finished (on a first visit the reads would compete with the download). Its textures and programs go to the GPU here.
+  // A compile in flight when the renderer goes: dispose waits for it (three polls the programs until they are ready).
+  let compiling: Promise<unknown> | null = null;
+  const uploadModel = async (lease: ModelLease) => {
+    const started = performance.now();
+    lease.scene.traverse(object => {
+      const mesh = object as Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+        for (const value of Object.values(material)) if ((value as Texture | null)?.isTexture) renderer.initTexture(value as Texture);
+    });
+    const compile = renderer.compileAsync(lease.scene, camera, scene);
+    compiling = compile.catch(() => {}).finally(() => { if (compiling === settled) compiling = null; });
+    const settled = compiling;
+    await compile;
+    return performance.now() - started;
+  };
+  const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
+    upload: uploadModel, busy: () => !!fighting }) : null;
+  const warmList = () => {
+    const legends = feed?.legends?.();
+    return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels];
+  };
+  let preloaded = false;
+  void models.preloaded?.then(() => { preloaded = true; if (!closed) warmup?.want(warmList()); });
+  // Match edges (body[data-m6-mode]): entering a match starts a fresh first-batch report and asks for anything not yet
+  // warmed; leaving one (back to the lobby or the start screen) drops what was still waiting. Before the first match the
+  // lobby warms from the preload above.
+  const inMatch = () => typeof document === 'undefined' || document.body?.dataset?.m6Mode === 'active';
+  let matchShown = inMatch();
+  const followMatch = () => {
+    const now = inMatch();
+    if (now === matchShown) return;
+    matchShown = now;
+    if (now) {
+      loadReport = createLoadReport(); reported = false; timeUpload = false;
+      delete (globalThis as { __render3dLoad?: unknown }).__render3dLoad;
+      if (preloaded) warmup?.want(warmList());
+    } else warmup?.cancel();
+  };
+  const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
-    return loadParticleEffect(models.cache!.manifest, id, { root: options.assetBase!, scale: 1, maxDuration, readTexture: models.reader!.readTexture,
-      readJson: models.reader!.readJson, readMesh: url => readParticleMesh(url, models.reader!.readModel) });
+    return effects.load(id, maxDuration);
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
@@ -502,7 +566,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
-    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null;
+    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
@@ -546,6 +610,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
+      if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) { loadReport.attached(id, definitionId); timeUpload = true; }
     }).catch(() => {
       // A disposed cache rejects late loads; the piece keeps its pawn (and a dying one hides).
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
@@ -573,9 +638,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachBody(view); syncStars(view, piece);
     return view;
   };
+  // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
+  // a new action, a new mixer or a removed piece drops it.
+  const held = new WeakMap<PieceView, { seconds: number; revision: number; mixer: UnitAnimationMixer }>();
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
+    held.delete(view);
     view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
@@ -585,7 +654,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
   };
   const removePiece = (view: PieceView) => {
-    view.disposed = true;
+    view.disposed = true; held.delete(view);
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -613,12 +682,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
-    if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
+    if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void loadParticleEffect(models.cache.manifest, id, { root: options.assetBase, scale: 1, maxDuration: spec.maxDuration, readTexture: models.reader.readTexture,
-      readJson: models.reader.readJson,
-      // Each call parses a fresh template from the cached bytes, as readParticleMesh requires (it disposes it).
-      readMesh: url => readParticleMesh(url, models.reader.readModel) }).then(fx => {
+    void effects.load(id, spec.maxDuration).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
@@ -646,16 +712,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!actionEffects || !source?.alive) return;
     const owner = generation;
     for (const { id } of actionEffects.resolve(source.definitionId, action)) {
+      if (queued.length >= MAX_QUEUED) return;
       const spec = actionEffects.playback[id] ?? { anchor: 'source', delay: 0, maxDuration: DEFAULT_EFFECT_SECONDS };
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
     }
   };
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    for (let i = queued.length - 1; i >= 0; i--) {
-      const job = queued[i];
-      if (job.generation !== generation) { queued.splice(i, 1); continue; }
-      if (job.at <= clock) { queued.splice(i, 1); job.run(); }
+    // Oldest first, MAX_STARTS_PER_FRAME at most; the rest wait for the next frame unless their moment has passed.
+    let started = 0;
+    for (let i = 0; i < queued.length;) {
+      const job = queued[i]!;
+      if (job.generation !== generation || clock - job.at > STALE_SECONDS) { queued.splice(i, 1); continue; }
+      if (job.at <= clock && started < MAX_STARTS_PER_FRAME) { queued.splice(i, 1); started++; job.run(); continue; }
+      i++;
     }
     for (const effect of live) {
       effect.elapsed += seconds; effect.left -= seconds;
@@ -672,10 +742,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const name = view.lease?.animationNames.celebrate, clip = name ? view.lease!.animations.find(c => c.name === name) : undefined;
     // A model swap or action reset rebuilds the mixer: the clip is started again on the new one.
     if (clip && view.mixer ? view.dance === 'clip' && view.mixer.mixer.existingAction(clip)?.isRunning() : view.dance === 'hop') return;
-    if (clip && view.mixer) { view.mixer.mixer.stopAllAction(); view.mixer.mixer.clipAction(clip).reset().setLoop(LoopRepeat, Infinity).play(); view.dance = 'clip'; }
+    // A dance starts from its own start: time the mixer held for the earlier action is dropped, and from here on its
+    // frames count (held for the action revision it is shown over).
+    if (clip && view.mixer) { held.set(view, { seconds: 0, revision: view.state.output.revision, mixer: view.mixer }); view.mixer.mixer.stopAllAction(); view.mixer.mixer.clipAction(clip).reset().setLoop(LoopRepeat, Infinity).play(); view.dance = 'clip'; }
     else view.dance = 'hop';
   };
   const onFrame = (frame: BoardFrame) => {
+    followMatch(); // a new match's first board can arrive before this renderer's next animation frame
     buildBoard(frame);
     lastFrame = frame;
     if (scoutView && !scoutView.watching) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
@@ -726,7 +799,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
-    for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
+    for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
+    if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
+      [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
     tabletop.frame(frame); traitProps.frame(frame);
@@ -737,13 +812,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
+    // A batch spanning many ticks is the replay catching up after dropped frames: every event still moves the action
+    // states, but only its last EFFECT_TICKS start effects (the earlier ones would all burst in this one frame).
+    const tickOf = (event: DisplayCombatEvent) => 'tick' in event && typeof event.tick === 'number' ? event.tick : null;
+    let latest = -Infinity;
+    for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
     for (const event of events) {
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
-      for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
-      if (event.type === 'attack') { face(event.attackerId, event.targetId); playAction('attack', event.attackerId, event.targetId); }
-      else if (event.type === 'cast') { face(event.sourceId, event.targetIds[0]); playAction('cast', event.sourceId, event.targetIds[0]); }
+      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
+      if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
+      else if (event.type === 'cast') { face(event.sourceId, event.targetIds[0]); if (current) playAction('cast', event.sourceId, event.targetIds[0]); }
     }
+    // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
+    for (const view of pieces.values()) if (view.dance !== 'clip') view.mixer?.apply(view.state.output);
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
@@ -1015,12 +1098,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
   let fpsFrames = 0, fpsSince = 0;
+  // Pieces the board camera cannot see this frame: their skeletons are not posed (the mixer holds the time and catches
+  // up when they are seen again). Hidden, off the view, or the board not drawn at all (carousel, scouting).
+  const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere();
+  const seen = (view: PieceView): boolean => {
+    if (!view.root.visible || stage.active || scout.active) return false;
+    view.root.getWorldPosition(bounds.center).setY(bounds.center.y + MODEL_HEIGHT / 2);
+    bounds.radius = MODEL_HEIGHT;
+    return frustum.intersectsSphere(bounds);
+  };
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
     if (fpsLabel && ++fpsFrames && now - fpsSince >= 1000) { if (fpsSince) fpsLabel.textContent = `FPS: ${Math.round(fpsFrames * 1000 / (now - fpsSince))}`; fpsFrames = 0; fpsSince = now; }
+    followMatch();
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
+    camera.updateMatrixWorld();
+    frustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     for (const [id, view] of pieces) {
       if (id === dragging) view.root.position.copy(view.target).setY(view.target.y + DRAG_LIFT); // follows the pointer exactly
       else {
@@ -1036,7 +1131,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
-      if (view.mixer) { view.mixer.update(seconds); if (view.dance !== 'clip') view.mixer.apply(output); }
+      if (view.mixer) {
+        // Held time catches up only the action it was held for, on the same mixer: a new action starts from its own start.
+        const kept = held.get(view), same = !!kept && kept.mixer === view.mixer && kept.revision === output.revision;
+        if (seen(view)) { view.mixer.update(seconds + (same ? kept!.seconds : 0)); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
+        else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
+        if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
+      }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
         view.stars.object.visible = view.root.visible;
@@ -1056,7 +1157,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         for (const child of hidden) child.visible = false;
         renderer.render(scene, camera);
         for (const child of hidden) child.visible = true;
+      } else if (timeUpload) {
+        // A first-batch model was just attached: this frame uploads its geometry, textures and programs.
+        const started = performance.now();
+        renderer.render(scene, camera);
+        loadReport.uploaded(performance.now() - started); timeUpload = false;
       } else renderer.render(scene, camera);
+    }
+    if (!reported && loadReport.report.wallMs !== null && !timeUpload) {
+      reported = true;
+      const r = loadReport.report, ms = (n: number) => Math.round(n);
+      (globalThis as { __render3dLoad?: unknown }).__render3dLoad = r;
+      console.info(`[3D] 首批 ${r.shown}/${r.pieces} 个棋子模型 ${ms(r.wallMs!)} ms 后出现；各模型合计：读取 ${ms(r.readMs)} ms，解析 ${ms(r.parseMs)} ms，`
+        + `首帧上传与编译 ${ms(r.uploadMs)} ms；其中 ${r.warmed} 个已预热`);
     }
   };
   resize(host.clientWidth, host.clientHeight);
@@ -1078,9 +1191,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
-      models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
+      warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
-      renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
+      renderer.domElement.remove();
+      const release = () => { renderer.dispose(); renderer.forceContextLoss(); };
+      if (compiling) void compiling.then(release); else release();
     },
   };
   return renderer3d;

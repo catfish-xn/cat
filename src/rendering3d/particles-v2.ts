@@ -2,7 +2,7 @@ import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Euler, Float32Buff
   Matrix4, Mesh, MultiplyBlending, NormalBlending, PlaneGeometry, Quaternion, ShaderMaterial, Vector3,
   type Camera } from 'three';
 import type { BirthValue, ParticleDocumentV2, ParticleEmitterV2 } from './contracts';
-import { fragmentShader, sampleCurve, vertexShader } from './particle-common';
+import { colorChannels, fragmentShader, sampleCurve, vertexShader } from './particle-common';
 import type { ParticleOptions, ParticleSkip } from './particles';
 
 interface Source {
@@ -16,6 +16,8 @@ interface Source {
 interface Live {
   source: Source;
   mesh: Mesh<BufferGeometry, ShaderMaterial>;
+  /** Its material's pool variant. */
+  key: string;
   birth: number;
   death: number;
   origin: Vector3;
@@ -24,6 +26,7 @@ interface Live {
   history: { time: number; world: Vector3 }[];
 }
 const finite = (n: number) => Number.isFinite(n);
+const ZERO = [0, 0, 0] as const, scratch = new Vector3();
 /** Bounded total birth attempts as well as live GPU objects, including cap drops. */
 const MAX_BIRTH_ATTEMPTS = 100000;
 // Shared 8 ULP time boundary: scale tolerance to the compared times, never to a
@@ -145,20 +148,24 @@ export class ParticleEffectV2 {
       }
       geometry.setIndex(indices); geometry.setDrawRange(0, 0);
     }
-    const material = new ShaderMaterial({ vertexShader: v2VertexShader, fragmentShader: v2FragmentShader,
-      vertexColors: !!geometry.getAttribute('color'), transparent: true, depthWrite: false, side: DoubleSide,
-      blending: e.blend === 'additive' ? AdditiveBlending : e.blend === 'multiply' ? MultiplyBlending : NormalBlending,
-      uniforms: { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
-        opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [e.frames?.columns ?? 1, e.frames?.rows ?? 1] }, frame: { value: 0 },
-        repeatU: { value: e.kind === 'trail' && e.trail.uvMode === 'repeat' } } });
+    const vertexColors = !!geometry.getAttribute('color');
+    const blending = e.blend === 'additive' ? AdditiveBlending : e.blend === 'multiply' ? MultiplyBlending : NormalBlending;
+    const uniforms = { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
+      opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [e.frames?.columns ?? 1, e.frames?.rows ?? 1] }, frame: { value: 0 },
+      repeatU: { value: e.kind === 'trail' && e.trail.uvMode === 'repeat' } };
+    const key = `v2/${blending}/${vertexColors}`;
+    const material = this.options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader: v2VertexShader,
+      fragmentShader: v2FragmentShader, vertexColors, transparent: true, depthWrite: false, side: DoubleSide, blending, uniforms });
     const mesh = new Mesh(geometry, material);
     if (e.kind === 'trail') mesh.frustumCulled = false;
     this.object.add(mesh);
-    this.live.push({ source, mesh, birth, origin, size, rotation, history: [],
+    this.live.push({ source, mesh, key, birth, origin, size, rotation, history: [],
       death: e.lifetime === 'infinite' ? this.duration : birth + e.lifetime });
+    if (this.options.budget) this.options.budget.live++;
   }
   private remove(p: Live): void {
-    p.mesh.material.dispose();
+    if (this.options.materials) this.options.materials.give(p.key, p.mesh.material); else p.mesh.material.dispose();
+    if (this.options.budget) this.options.budget.live--;
     if (p.source.emitter.kind === 'trail') p.mesh.geometry.dispose();
     p.mesh.removeFromParent();
   }
@@ -173,8 +180,8 @@ export class ParticleEffectV2 {
     const e = p.source.emitter, drag = e.drag ?? 0;
     const vf = drag === 0 ? age : -Math.expm1(-drag * age) / drag;
     const gf = drag === 0 ? age * age / 2 : (age - vf) / drag;
-    const position = p.origin.clone().addScaledVector(new Vector3(...(e.velocity ?? [0, 0, 0])), vf)
-      .addScaledVector(new Vector3(...(e.gravity ?? [0, 0, 0])), gf);
+    const position = p.origin.clone().addScaledVector(scratch.set(...(e.velocity ?? ZERO)), vf)
+      .addScaledVector(scratch.set(...(e.gravity ?? ZERO)), gf);
     return e.localTransform ? position.applyMatrix4(new Matrix4().fromArray(e.localTransform)) : position;
   }
   private trail(p: Live, time: number, size: number, camera?: Camera): void {
@@ -230,7 +237,8 @@ export class ParticleEffectV2 {
         }
         this.attempts++;
         this.expire(at);
-        if (this.live.length < this.limit) this.spawn(source, at); else this.droppedParticles++;
+        const budget = this.options.budget;
+        if (this.live.length < this.limit && (!budget || budget.live < budget.max)) this.spawn(source, at); else this.droppedParticles++;
         if (source.burstLeft > 0) source.burstLeft--;
         if (source.burstLeft > 0) source.next = start;
         else if (em.mode === 'burst') source.next = Infinity;
@@ -242,6 +250,8 @@ export class ParticleEffectV2 {
       this.elapsed = target;
       this.expire(target);
       this.object.updateWorldMatrix(true, true);
+      // Camera-facing in this effect's space, the same for every quad this frame.
+      const facing = camera ? this.object.getWorldQuaternion(new Quaternion()).invert().multiply(camera.getWorldQuaternion(new Quaternion())) : null;
       for (const p of this.live) {
         const e = p.source.emitter, age = Math.max(0, Math.min(target, p.death) - p.birth);
         const t = e.lifetime === 'infinite' ? 0 : age / e.lifetime;
@@ -251,10 +261,7 @@ export class ParticleEffectV2 {
           p.mesh.position.copy(this.position(p, age));
           p.mesh.scale.copy(p.size).multiplyScalar(size);
           p.mesh.quaternion.identity();
-          if (e.kind === 'quad' && camera) {
-            camera.getWorldQuaternion(p.mesh.quaternion);
-            p.mesh.quaternion.premultiply(this.object.getWorldQuaternion(new Quaternion()).invert());
-          }
+          if (e.kind === 'quad' && facing) p.mesh.quaternion.copy(facing);
           if (e.kind === 'ray') {
             const length = Math.hypot(...e.direction);
             p.mesh.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(...e.direction.map(n => n / length) as [number, number, number]));
@@ -274,8 +281,8 @@ export class ParticleEffectV2 {
         const u = p.mesh.material.uniforms;
         u.opacity.value = sampleCurve(e.opacity, t, 1); u.dissolve.value = sampleCurve(e.dissolve, t, 0);
         if (e.color) {
-          const rgb = [0, 1, 2].map(c => sampleCurve(e.color!.map(k => ({ time: k.time, value: k.value[c] })), t, 1));
-          (u.tint.value as Color).setRGB(rgb[0], rgb[1], rgb[2]);
+          const [r, g, b] = colorChannels(e.color);
+          (u.tint.value as Color).setRGB(sampleCurve(r, t, 1), sampleCurve(g, t, 1), sampleCurve(b, t, 1));
         }
         if (e.frames) {
           const count = e.frames.columns * e.frames.rows, frame = Math.floor(age * e.frames.fps);
