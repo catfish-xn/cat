@@ -12,7 +12,8 @@ import {
 import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardOrb } from '../board-feed';
 
-export const LEGEND_MODEL = 'little-legend-default';
+import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+export { LEGEND_MODEL };
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
  * explicit display convention, not a name match. */
@@ -137,7 +138,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     root.add(standIn(side));
     placeLegend(view); scene.add(root);
     const created = view;
-    void ctx.loadModel?.(model).then(lease => {
+    if (ctx.loadModel) void loadLegendLease(ctx.loadModel, model).then(lease => {
       if (created.disposed || lease.placeholder) { lease.release(); return; }
       created.root.clear();
       created.lease = lease;

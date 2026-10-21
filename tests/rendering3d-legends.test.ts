@@ -2,17 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene } from 'three';
 import { createTabletop, LEGEND_MODEL } from '../src/rendering/three-mode/tabletop';
 import { createCarouselStage } from '../src/rendering/three-mode/carousel-stage';
+import { loadLegendLease } from '../src/rendering/three-mode/legend-load';
 import { boardFeed, setBoardLegends, type BoardCarousel, type BoardFrame } from '../src/rendering/board-feed';
 import type { ModelLease } from '../src/rendering3d';
 
 /** Synthetic data only: models are plain boxes keyed by made-up ids; the choice logic is production code. */
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
-function recorder() {
+function recorder(broken: Readonly<Record<string, 'reject' | 'placeholder'>> = {}) {
   const loaded: string[] = [], leases: (ModelLease & { released: boolean })[] = [];
   const loadModel = (id: string) => {
     loaded.push(id);
+    if (broken[id] === 'reject') return Promise.reject(new Error('broken'));
     const scene = new Group(); scene.add(new Mesh(new BoxGeometry(10, 20, 10), new MeshBasicMaterial()));
-    const lease = { scene, animations: [], animationNames: {}, placeholder: false, released: false, release() { lease.released = true; scene.removeFromParent(); } };
+    const lease = { scene, animations: [], animationNames: {}, placeholder: broken[id] === 'placeholder', released: false, release() { lease.released = true; scene.removeFromParent(); } };
     leases.push(lease as unknown as ModelLease & { released: boolean });
     return Promise.resolve(lease as unknown as ModelLease);
   };
@@ -69,5 +71,48 @@ describe('little legends in the 3D layer', () => {
     expect(boardFeed.legends?.()).toEqual({ me: 'a', opponent: 'b' });
     setBoardLegends(null);
     expect(boardFeed.legends?.()).toEqual({ me: 'default', opponent: null });
+  });
+
+  it('falls back to the default legend when the picked one is refused or a placeholder, releasing the broken lease', async () => {
+    for (const mode of ['reject', 'placeholder'] as const) {
+      const { loaded, leases, loadModel } = recorder({ 'little-legend-x': mode });
+      const lease = await loadLegendLease(loadModel, 'little-legend-x');
+      expect(loaded).toEqual(['little-legend-x', LEGEND_MODEL]);
+      expect(lease.placeholder).toBe(false);
+      if (mode === 'placeholder') expect(leases[0]!.released).toBe(true);
+    }
+    // The default failing too: its own answer (a placeholder here), so callers keep their stand-in.
+    const both = recorder({ 'little-legend-x': 'reject', [LEGEND_MODEL]: 'placeholder' });
+    expect((await loadLegendLease(both.loadModel, 'little-legend-x')).placeholder).toBe(true);
+  });
+
+  it('draws the default 河灵 on the tabletop and the carousel when a seat\'s legend fails to load', async () => {
+    const { loaded, loadModel } = recorder({ 'little-legend-a': 'reject', 'little-legend-b': 'placeholder' });
+    const tabletop = createTabletop({ scene: new Scene(), camera: new PerspectiveCamera(), championHeight: 92, effectScale: 0.44, loadModel, loadEffect: null,
+      own: resource => resource, legendModel: side => side === 'me' ? 'little-legend-a' : 'little-legend-b' });
+    tabletop.frame(frame({ fighting: true, pieces: [enemy] }));
+    await flush(); await flush();
+    expect(tabletop.debug().legends).toEqual(['legend:me:model', 'legend:opponent:model']);
+    expect(loaded.filter(id => id === LEGEND_MODEL)).toHaveLength(2);
+    tabletop.dispose();
+
+    const carousel = recorder({ 'little-legend-a': 'placeholder' });
+    const stage = createCarouselStage({ championHeight: 92, championWidth: 110, sourceScale: 0.44, legendModel: LEGEND_MODEL,
+      loadModel: carousel.loadModel, hasModel: () => true, loadEffect: null, starColor: () => '#ffd34d', now: () => 0 });
+    stage.show({ id: 'c1', slots: [], elapsedMs: 0, at: 0, seats: [{ seatId: 's0', me: true, releaseAtMs: 0, legend: 'a' }] });
+    await flush(); await flush();
+    expect(carousel.loaded.filter(id => id.startsWith('little-legend-'))).toEqual(['little-legend-a', LEGEND_MODEL]);
+    expect(stage.debug().legends[0]).toMatch(/^s0:model/);
+    stage.dispose();
+  });
+
+  it('keeps the stand-in when even the default fails', async () => {
+    const { loadModel } = recorder({ 'little-legend-a': 'reject', [LEGEND_MODEL]: 'reject' });
+    const tabletop = createTabletop({ scene: new Scene(), camera: new PerspectiveCamera(), championHeight: 92, effectScale: 0.44, loadModel, loadEffect: null,
+      own: resource => resource, legendModel: () => 'little-legend-a' });
+    tabletop.frame(frame());
+    await flush(); await flush();
+    expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
+    tabletop.dispose();
   });
 });

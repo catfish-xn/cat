@@ -19,6 +19,7 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, Texture, TextureLoader, Vector2, Vector3, type Object3D,
 } from 'three';
 import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
+import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot } from '../board-feed';
 
 /** Board units per carousel cell, as the asset review lays out the stage (one grid interval; models and effects at .44). */
@@ -260,9 +261,9 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     body.scale.multiplyScalar(scale); body.position.y -= bounds.min.y * scale;
     return body;
   };
-  const attach = (view: Body, id: string, height: number, width?: number) => {
-    if (!ctx.loadModel || !ctx.hasModel(id)) return;
-    void ctx.loadModel(id).then(lease => {
+  const attach = (view: Body, id: string, height: number, width?: number, load = ctx.loadModel && ctx.hasModel(id) ? ctx.loadModel : null) => {
+    if (!load) return;
+    void load(id).then(lease => {
       if (view.disposed || lease.placeholder) { lease.release(); return; }
       view.root.clear(); view.lease = lease;
       view.root.add(fit(lease.scene, height, width));
@@ -289,7 +290,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     taken.add(tether);
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
       releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, carry: null, tether, countdown: null };
-    attach(view, legendOf(legend), legendHeight);
+    // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
+    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
     return view;
   };
   const dropCountdown = (view: SeatView) => {

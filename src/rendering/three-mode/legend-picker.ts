@@ -11,6 +11,7 @@ import {
 } from 'three';
 import type { ModelCache, ModelLease } from '../../rendering3d';
 import type { BoardFeed, LegendPicker } from '../board-feed';
+import { loadLegendLease } from './legend-load';
 
 /** 14.24 zh_cn names (docs/ASSETS3D_LITTLE_LEGENDS.md); an id without one shows the id. */
 const LEGEND_LABEL: Readonly<Record<string, string>> = {
@@ -90,6 +91,8 @@ export function offerLegendPicker(feed: BoardFeed | null, cache: ModelCache): ()
 
 function openPicker(host: HTMLElement, cache: ModelCache, choices: readonly string[], current: string, pick: (id: string) => void, closed: () => void): () => void {
   injectStyle();
+  // A pick whose model cannot be drawn shows the default 河灵 (still and preview), as the board does.
+  const load = (model: string) => cache.load(model);
   let selected = choices.includes(current) ? current : 'default', disposed = false;
 
   const root = element('div', '', 'legend-picker'); root.dataset.debug = 'legend-picker';
@@ -139,8 +142,10 @@ function openPicker(host: HTMLElement, cache: ModelCache, choices: readonly stri
   const show = (id: string, celebrate: boolean) => {
     const mine = ++token;
     if (!renderer) return;
-    void cache.load(modelOf(id)).then(next => {
-      if (disposed || mine !== token || next.placeholder) { next.release(); return; }
+    void loadLegendLease(load, modelOf(id)).then(next => {
+      if (disposed || mine !== token) { next.release(); return; }
+      // Not even the default can be drawn: an empty stage, never the previous pick under the new name.
+      if (next.placeholder) { next.release(); dropPreview(); return; }
       dropPreview();
       lease = next;
       const box = fitModel(next.scene, 1);
@@ -153,7 +158,7 @@ function openPicker(host: HTMLElement, cache: ModelCache, choices: readonly stri
         const action = mixer.clipAction(cheer).setLoop(LoopOnce, 1); action.clampWhenFinished = true; action.play();
         mixer.addEventListener('finished', () => { if (idle) { idle.reset().play(); idle.crossFadeFrom(action, 0.25, false); } });
       } else idle?.play();
-    }).catch(() => { /* the card stays selectable; the stage just keeps what it had */ });
+    }).catch(() => { if (!disposed && mine === token) dropPreview(); });
   };
   const choose = (id: string) => {
     if (disposed) return;
@@ -171,7 +176,7 @@ function openPicker(host: HTMLElement, cache: ModelCache, choices: readonly stri
     renderer.setSize(THUMB_PX * 2, THUMB_PX * 2, false);
     for (const id of choices) {
       if (disposed) return;
-      const still = await cache.load(modelOf(id)).catch(() => null);
+      const still = await loadLegendLease(load, modelOf(id)).catch(() => null);
       if (!still) continue;
       if (disposed || still.placeholder) { still.release(); if (disposed) return; continue; }
       const box = fitModel(still.scene, 1);
