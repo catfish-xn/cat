@@ -25,18 +25,24 @@ async function main(){
  const base=partialPrefixes[definitionId],target=base.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
  branches[definitionId]={...resolve(helpers.partialB8Preparation(base,definitionId),base),star:target.starLevel,prefixHash:sha(base)};
  }
- assert.equal(branches.loris.deaths.length,1);assert.equal(branches.loris.deaths[0].tick,381);assert.equal(branches.loris.receipts,4);assert.equal(branches.loris.unitSerialDelta,0);assert.equal(branches.loris.itemSerialDelta,2);
- assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,152);assert.equal(branches.zyra.receipts,0);assert.equal(branches.zyra.unitSerialDelta,0);assert.equal(branches.zyra.itemSerialDelta,0);
+ assert.equal(branches.loris.deaths.length,1);assert.equal(branches.loris.deaths[0].tick,381);assert.equal(branches.loris.receipts,1);assert.equal(branches.loris.unitSerialDelta,0);assert.equal(branches.loris.itemSerialDelta,1);
+ assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,152);assert.equal(branches.zyra.receipts,1);assert.equal(branches.zyra.unitSerialDelta,0);assert.equal(branches.zyra.itemSerialDelta,1);
+ let checkpoint=accept(api.startMatchCombat(helpers.simultaneousB8Preparation(prefix)));
+ while(checkpoint.phase==='combat'&&checkpoint.combat.tick<105)checkpoint=api.stepMatch(checkpoint).state;
+ const unloaded=api.stepMatch(checkpoint),carrier='["pve","4-7","razorbeaks-v1","r05"]';
+ assert.deepEqual(unloaded.events.filter(e=>e.type==='death').map(e=>({unitId:e.unitId,tick:e.tick,eventSeq:e.eventSeq})),[{unitId:carrier,tick:106,eventSeq:822}]);
+ assert.equal(unloaded.events.filter(e=>e.type==='lootRevealed').length,0);assert.deepEqual(unloaded.state.m8.loot.earnedEvidence,checkpoint.m8.loot.earnedEvidence);
+ branches.unloadedCarrier={unitId:carrier,tick:106,eventSeq:822,newReveals:0,newEarnedEvidence:0,terminalReceipts:unloaded.state.m8.loot.receipts.length-checkpoint.m8.loot.receipts.length};
  const previousAudit=JSON.parse(migration.archivedBytes(baseCommit,'docs/evidence/v16/live-reveal-audit.json'));
  const previousAssertions=previousAudit.currentAssertions;
- const currentAssertions={simultaneous:branches.simultaneous.deaths.slice(0,2),partialWithoutDrops:{definitionId:'zyra',tick:152}};
+ const currentAssertions={simultaneous:branches.simultaneous.deaths.slice(0,2),partialDrops:{definitionId:'zyra',tick:152,receipts:1},unloadedCarrier:branches.unloadedCarrier};
  const evidence=(value)=>({bytes:Buffer.byteLength(JSON.stringify(value)),sha256:sha(value)});
  const oldTest=require('node:child_process').execFileSync('git',['cat-file','--filters',`${baseCommit}:tests/m8-b8-live-reveal.test.ts`]);
  const newTest=fs.readFileSync('tests/m8-b8-live-reveal.test.ts');let first=0;
  while(first<Math.min(oldTest?.length??0,newTest.length)&&oldTest[first]===newTest[first])first++;
  const byteEvidence={previousCommit:baseCommit,previousBytes:oldTest.length,currentBytes:newTest.length,previousSha256:createHash('sha256').update(oldTest).digest('hex'),currentSha256:createHash('sha256').update(newTest).digest('hex'),firstDifferentByte:oldTest.equals(newTest)?null:first};
  const audit={baseCommit,sourceDigests,contentDigest:prefix.contentDigest,route:'mage',seed:routes.SIMULTANEOUS_REVEAL_SEED,roundId:'4-7',prefixHash:sha(prefix),previousAssertions,currentAssertions,assertionBytes:{previous:evidence(previousAssertions),current:evidence(currentAssertions)},byteEvidence,helperSha256:createHash('sha256').update(fs.readFileSync('tests/fixtures/g2-3-b8-public.ts')).digest('hex'),routesSha256:createHash('sha256').update(fs.readFileSync('tests/fixtures/b8-live-reveal-routes.ts')).digest('hex'),driverSha256:createHash('sha256').update(fs.readFileSync('scripts/generate-m5-route.cjs')).digest('hex'),branches};
- migration.verifySources(sourceDigests);const output=JSON.stringify(audit,null,2)+'\n',destination='docs/evidence/v17/live-reveal-audit.json';if(process.argv.includes('--check'))assert.equal(fs.readFileSync(destination,'utf8'),output);else{fs.mkdirSync('docs/evidence/v17',{recursive:true});fs.writeFileSync(destination,output);}console.log(JSON.stringify({contentDigest:prefix.contentDigest,branches:Object.keys(branches),sameTick44:true,partialReceipts:[branches.loris.receipts,branches.zyra.receipts]}));
+ migration.verifySources(sourceDigests);const output=JSON.stringify(audit,null,2)+'\n',destination='docs/evidence/v17/live-reveal-audit.json';if(process.argv.includes('--check'))assert.equal(fs.readFileSync(destination,'utf8'),output);else{fs.mkdirSync('docs/evidence/v17',{recursive:true});fs.writeFileSync(destination,output);}console.log(JSON.stringify({contentDigest:prefix.contentDigest,branches:Object.keys(branches),sameTick44:true,partialReceipts:[branches.loris.receipts,branches.zyra.receipts],unloadedCarrierReveals:branches.unloadedCarrier.newReveals}));
  }finally{await server.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

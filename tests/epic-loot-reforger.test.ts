@@ -3,11 +3,10 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { battle,fillBench } from './fixtures/t13-loot-public';
 import {describe,it,expect} from 'vitest';
-import {lootPlan,bonus,variant,copper,silver,LESSER,DUPLICATOR,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures/epic-loot-oracle.cjs';
+import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures/epic-loot-oracle.cjs';
+import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {ORB_SLOTS} from '../src/simulation/content/orbs';
-import {sampleOrbDuplicatorBonus} from '../src/simulation/orb-bonuses';
 import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch} from '../src/simulation/match';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
@@ -49,7 +48,6 @@ describe('v17 epic rewards and unified consumables',()=>{
   for(let n=0;n<100;n++){expect(pick(EPIC_LOOT.copper,n)).toBe(copper(n));expect(pick(EPIC_LOOT.silver,n)).toBe(silver(n));}
   for(const table of [EPIC_LOOT.copper,EPIC_LOOT.silver])expect(table.reduce((n,r)=>n+r.weight,0)).toBe(100);
   expect(EPIC_LOOT.silver.map(r=>r.id)).toEqual(['four-cost-gold','three-cost-pair','reforger','duplicator']);
-  expect(ORB_SLOTS['5-7']).toBeUndefined();expect(ORB_SLOTS['6-7']).toBeUndefined();
  });
  it.each([0,512,1024,1536,2048,2560,3072,3584])('independent complete payload/identity/RNG oracle, 512 seeds starting %i',start=>{
   for(let seed=start;seed<start+512;seed++){
@@ -93,7 +91,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(terminal.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(2);expect(settleTerminalEpicForges(terminal.state).events).toEqual([]);
  });
  it('crown receipt adds exactly one permanent deployment slot, before and after removal/reforge',()=>{
-  const seed=Array.from({length:10000},(_,i)=>i).find(s=>lootPlan(s).rolls[0].variant==='crown')!;
+  const seed=28687;expect(lootPlan(seed).rolls[0].variant).toBe('crown');
   const {state,dead}=late(seed),earned=revealMatchLoot(state,dead).state,paid=grantDirectLoot({...earned,phase:'settlement',combat:dead},false).state;
   expect(getDeploymentCap(paid)).toBe(getDeploymentCap(state)+1);
   expect(epicCrownsAtResourcePrefix(paid,state.resourceProvenance.entries.length)).toEqual([]);expect(epicCrownsAtResourcePrefix(paid,paid.resourceProvenance.entries.length)).toHaveLength(1);
@@ -151,17 +149,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(REFORGE_POOLS[kind].map(x=>x.definitionId)).toContain(result.items.at(-1)!.definitionId);expect(result.items.at(-1)!.definitionId).not.toBe(definitionId);
   expect(restoreMatch(serializeMatch(result))).toEqual(result);
  });
- it('every integer bonus index matches the independent 1–4 stage oracle, including mutually exclusive pairs and prismatic zero',()=>{
-  for(let stage=1;stage<=4;stage++)for(const tier of ['gray','blue','gold','prismatic'] as const)for(let n=0;n<100;n++)expect(sampleOrbDuplicatorBonus(tier,stage,n)).toEqual(bonus(tier,stage,n));
-  expect(sampleOrbDuplicatorBonus('blue',3,98)).toEqual([LESSER]);expect(sampleOrbDuplicatorBonus('gold',3,99)).toEqual([DUPLICATOR,LESSER]);
- });
- it('gray 80/20 and prismatic two reforgers plus all black-market old sources use the unified id',()=>{
-  const seen=new Set<number>();
-  for(let seed=0;seed<200;seed++){
-   const p=freezeLootThroughRound(seed,10).rounds.at(-1)!,gray=p.orbs[1],extras=gray.entries.filter(e=>e.payload.kind==='consumable'&&e.payload.definitionId==='reforger');seen.add(extras.length);
-   expect(gray.entries.every(e=>!('definitionId' in e.payload)||!['component-reforger','completed-reforger'].includes(e.payload.definitionId))).toBe(true);
-   if(p.orbs[0].tier==='prismatic')expect(p.orbs[0].entries.filter(e=>e.payload.kind==='consumable'&&e.payload.definitionId==='reforger')).toHaveLength(2);
-  }expect([...seen].sort()).toEqual([0,1]);
+ it('v17 box payloads have no appended duplicators; all black-market sources use the unified reforger id',()=>{
   const conquest=G23_CONQUEROR_CHESTS.flatMap(c=>g23RewardAtoms({id:`test-conquest-${c.tier}`,source:'conqueror',tier:c.tier,round:1,reward:g23ConquerorReward(c)},42));
   const atoms=[...conquest,...G23_BLACK_MARKETS.flatMap(m=>m.options.flatMap(o=>g23RewardAtoms({id:`test-${m.tier}-${o.id}`,source:'black-market',tier:m.tier,round:1,reward:o.reward},42)))];
   expect(atoms.some(a=>a.kind==='tool'&&a.options[0]==='reforger')).toBe(true);expect(atoms.some(a=>a.options.includes('completed-reforger'))).toBe(false);
@@ -225,7 +213,7 @@ describe('v17 epic rewards and unified consumables',()=>{
  });
  it('uses exact approved zh_cn names and rejects v15 state identities without migration',()=>{
   expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器'});
-  expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
+  expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
   const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v17');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const)expect(()=>restoreMatch({...state,[field]:state[field].replace('v17','v15')})).toThrow();
  });

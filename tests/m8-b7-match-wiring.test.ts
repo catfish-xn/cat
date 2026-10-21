@@ -200,14 +200,13 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       s=resolveM5Choices(s);roundTrip(s);
       s=accepted(api.nextRound(s,s.round));
       if(i<2) {
-        const id=`unit-${i+2}`,payload=lootPlan(seed,3).rounds[i].encounterPlan.drops.find(d=>d.payload.kind==='unit')!.payload;
-        if(payload.kind!=='unit')throw Error('Missing opening unit');
-        const definitionId=payload.definitionId;
-        expect(s.preparation.units.find(u=>u.id===id)).toMatchObject({definitionId,starLevel:1});
-        expect(s.m8.loot.receipts.find(receipt=>receipt.grantedUnitIds.includes(id))).toMatchObject({
-          payload:{kind:'unit',definitionId,quantity:1},grantedUnitIds:[id],
-        });
-        s=accepted(api.deployMatchUnit(s,id,{kind:'board',cell:{col:3+i*2,row:7}}));
+        const expectedDrops=lootPlan(seed,3).rounds[i].encounterPlan.drops;
+        const ids=expectedDrops.flatMap(d=>{const receipt=s.m8.loot.receipts.find(r=>r.dropId===d.dropId)!;expect(receipt.payload).toEqual(d.payload);return receipt.grantedUnitIds;});
+        for(const id of ids){const unit=s.preparation.units.find(u=>u.id===id);if(!unit)continue;
+          const board=s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(board.length>=s.level)break;
+          const col=[3,5,1,0,6,2,4].find(col=>!board.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
+          s=accepted(api.deployMatchUnit(s,id,{kind:'board',cell:{col,row:7}}));
+        }
         roundTrip(s);
       }
     }

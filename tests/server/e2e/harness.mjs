@@ -11,9 +11,11 @@
 import { spawn } from 'node:child_process';
 import { watchServerReplayErrors } from '../../../scripts/replay-error-guard.cjs';
 import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-export const ROOT = new URL('../../../', import.meta.url).pathname;
+// A native path with its trailing separator (URL.pathname gives /C:/... on Windows, which spawn cannot use as cwd).
+export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const PORT_ATTEMPTS = 5;
 const PORT_IN_USE = /EADDRINUSE|already in use/;
@@ -42,6 +44,8 @@ export function start(command, args, env, ready, timeout = 30_000) {
       if (ready.test(text)) { clearTimeout(timer); resolve(child); }
     };
     child.stdout.on('data', onData); child.stderr.on('data', onData);
+    // A child that cannot start (bad cwd or command) emits 'error' and never 'exit'.
+    child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('exit', code => {
       clearTimeout(timer);
       reject(Object.assign(new Error(`${command} exited with ${code}`), { portInUse: PORT_IN_USE.test(output) }));

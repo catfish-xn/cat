@@ -1,3 +1,4 @@
+import {lootPlan as independentLootPlan} from './orb-combo-oracle.cjs';
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
@@ -20,9 +21,16 @@ export function publicInventory(definitions: readonly string[], late = false, se
   if (late) while (components.length < 4) components.push('sword');
   // Restore the v15 funded routes: scheme A preserves original drops and shop draws.
   // The earlier replacement seeds can exhaust HP/income before nine paid copies.
-  const routeSeed = seed ?? (late ? ((components.filter(id => id === 'gloves').length >= 2 || components.every(id => id === 'tear')) ? 38 : 9)
-    : components.length === 4 && components.every(id => id === 'tear') ? 9 : undefined);
-  let state = publicEquipmentPreparation(components, routeSeed === undefined ? {} : { seed: routeSeed });
+  // Independent v17 oracle chooses a real route requiring at most two scheduled components.
+  let routeSeed=seed??1;
+  for(;routeSeed<100000;routeSeed++){
+    const drops=independentLootPlan(routeSeed,10).rounds.flatMap(r=>r.encounterPlan.drops);
+    const available=drops.flatMap(d=>d.payload.kind==='item'?[d.payload.definitionId]:[]);
+    let missing=0;for(const id of components){const i=available.indexOf(id);if(i<0)missing++;else available.splice(i,1);}
+    if(missing<=2&&drops.filter(d=>d.payload.kind==='unit').length>=2)break;
+  }
+  if(routeSeed===100000)throw Error('No bounded independent component route');
+  let state = publicEquipmentPreparation(components, {seed:routeSeed});
   const available = [...state.items], itemIds: string[] = [];
   for (const id of definitions) {
     const definition = ITEM_DEFINITIONS[id];
@@ -69,7 +77,8 @@ export function publicRecursivePurchase(state: MatchState): {
   if (costs.get(definitionId)! > state.gold) {
     // Empty-board losses exchange real HP for ordinary income and a free shop refresh.
     const settled = finishPublicEquipmentBattle(fundingState);
-    const advanced = resolvePublicEquipmentChoices(accepted(nextRound(settled,state.round)));
+    let advanced = resolvePublicEquipmentChoices(accepted(nextRound(settled,state.round)));
+    while(advanced.phase==='settlement')advanced=resolvePublicEquipmentChoices(accepted(nextRound(advanced,advanced.round)));
     return publicRecursivePurchase(advanced);
   }
   if (COST[definitionId] !== 1) throw Error('Recursive fixture requires a one-cost hero');

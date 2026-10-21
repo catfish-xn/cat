@@ -11,9 +11,9 @@ type Command = { type: string; [key: string]: unknown } | undefined;
 type Transition = { before: MatchState; after: MatchState; command: Command; events: readonly MatchEvent[] };
 let initial: MatchState, timeline: Transition[], pending: MatchState;
 async function openingWithRealConsumedReward() {
-  initial=api.createMatch(48);timeline=[];
+  initial=api.createMatch(49);timeline=[];
   const stop=new Error('captured 3-7 settlement');
-  try {await run(api,{seed:48,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+  try {await run(api,{seed:49,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
     if(!('events' in result))throw Error(result.reason);
     timeline.push({before,after:result.state,events:result.events,command});
     if(before.roundDefinitionId==='2-4'&&before.phase==='choice')pending??=before;
@@ -62,14 +62,11 @@ describe('independent B8 oracle arithmetic and frozen reference', () => {
     const plan=lootPlan(230,38);
     expect(plan.rounds.map(r=>r.encounterPlan.roundId)).toEqual(['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7']);
     expect(plan.rounds.flatMap(r=>r.choices)).toEqual([]);
-    // Restore v15's original 2-7/3-7/4-7 vectors after scheme A isolated bonuses.
-    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops.slice(0,2).map(d=>d.payload.kind!=='gold'&&d.payload.definitionId))).toEqual([['sword','tear'],['cloak','rod'],['sword','tear']]);
-    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops[2].payload)).toEqual([1,2,3].map(quantity=>({kind:'gold',quantity})));
-    // Approved v16 epic tables, independently calculated by both literal-table
-    // BigInt oracles from the preserved early stream (not production output).
-    expect(plan.rounds[6].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'unit',definitionId:'swain',quantity:1},{kind:'gold',quantity:2}]);
-    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1},{kind:'unit',definitionId:'camille',quantity:1},{kind:'gold',quantity:1},{kind:'unit',definitionId:'vi',quantity:1},{kind:'gold',quantity:4}]);
-    expect(lootPlan(230,31).rng).toEqual({state:3428120343,draws:22});expect(plan.rng).toEqual({state:2408570974,draws:27});
+    // Literal v17 vectors transcribed from the independent BigInt stage/box oracle.
+    expect(plan.rounds.slice(3,6).map(r=>r.encounterPlan.drops.map(d=>d.payload))).toEqual([[{"kind":"item","definitionId":"tear","quantity":1},{"kind":"item","definitionId":"cloak","quantity":1},{"kind":"item","definitionId":"cloak","quantity":1},{"kind":"item","definitionId":"vest","quantity":1}],[{"kind":"item","definitionId":"cloak","quantity":1},{"kind":"unit","definitionId":"camille","quantity":1},{"kind":"unit","definitionId":"zeri","quantity":1},{"kind":"consumable","definitionId":"TFT_Consumable_ChampionDuplicator_III","quantity":1},{"kind":"item","definitionId":"vest","quantity":1},{"kind":"item","definitionId":"belt","quantity":1},{"kind":"unit","definitionId":"leona","quantity":1},{"kind":"gold","quantity":1},{"kind":"unit","definitionId":"nocturne","quantity":1},{"kind":"gold","quantity":1}],[{"kind":"item","definitionId":"rod","quantity":1},{"kind":"item","definitionId":"gloves","quantity":1},{"kind":"unit","definitionId":"tristana","quantity":1},{"kind":"gold","quantity":1},{"kind":"unit","definitionId":"nunu","quantity":1},{"kind":"unit","definitionId":"vi","quantity":1},{"kind":"gold","quantity":4}]]);
+    expect(plan.rounds[6].encounterPlan.drops.map(d=>d.payload)).toEqual([{"kind":"forge","definitionId":"TFT_ArmoryKeyCompleted","quantity":1},{"kind":"unit","definitionId":"camille","quantity":1},{"kind":"gold","quantity":1},{"kind":"gold","quantity":8},{"kind":"consumable","definitionId":"reforger","quantity":1}]);
+    expect(plan.rounds[7].encounterPlan.drops.map(d=>d.payload)).toEqual([{"kind":"forge","definitionId":"TFT_ArmoryKeyCompleted","quantity":1},{"kind":"unit","definitionId":"tristana","quantity":1},{"kind":"gold","quantity":1},{"kind":"unit","definitionId":"elise","quantity":1},{"kind":"gold","quantity":4}]);
+    expect(lootPlan(230,31).rng).toEqual({"state":3038582093,"draws":4});expect(plan.rng).toEqual({"state":3547171324,"draws":9});
     expect(COMPONENTS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
   });
 });
@@ -185,11 +182,10 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);
-    expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'item')).toHaveLength(8);
-    expect(route.final.scheduleReceipts.filter((r: MatchState['scheduleReceipts'][number]) => r.kind === 'component')).toHaveLength(5);
-    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 0, 0]);
-    if (seed === 230) expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'unit')
-      .map((r: MatchState['m8']['loot']['receipts'][number]) => r.payload)).toEqual(
-        ['darius','irelia','swain','swain','swain','camille','vi'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
+    const expected=lootPlan(seed,38).rounds.flatMap(r=>r.encounterPlan.drops);
+    expect(route.final.m8.loot.receipts.filter((r:MatchState['m8']['loot']['receipts'][number])=>r.payload.kind==='item').map((r:MatchState['m8']['loot']['receipts'][number])=>r.payload)).toEqual(expected.filter(d=>d.payload.kind==='item').map(d=>d.payload));
+    expect(route.final.scheduleReceipts.filter((r:MatchState['scheduleReceipts'][number])=>r.kind==='component')).toHaveLength(5);
+    expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual(lootPlan(seed,38).rounds.map(r=>r.encounterPlan.drops.reduce((n,d)=>n+(d.payload.kind==='item'?(d.payload.definitionId==='thiefs-gloves'?2:1):0),0)));
+    expect(route.final.m8.loot.receipts.filter((r:MatchState['m8']['loot']['receipts'][number])=>r.payload.kind==='unit').map((r:MatchState['m8']['loot']['receipts'][number])=>r.payload)).toEqual(expected.filter(d=>d.payload.kind==='unit').map(d=>d.payload));
   }, 120000);
 });

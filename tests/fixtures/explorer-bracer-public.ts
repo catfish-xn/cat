@@ -1,4 +1,4 @@
-import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../../src/simulation/match';
+import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../../src/simulation/seat-mechanics';
 import { publicEquipmentPreparation } from './b8-public-equipment';
 
@@ -12,6 +12,8 @@ export function startBracerFight(twoHolders = false): MatchState {
   // Seed 3151248's 2-1 offer no longer contains a Manaflow augment; the equally
   // back-row-only Glass Cannon II keeps the row-4 Lux fight unchanged.
   let state = publicEquipmentPreparation(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))state=accepted(sellUnit(state,u.id));
+  if(!state.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))state=accepted(grantMechanicUnit(state,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));
   for (const definitionId of twoHolders ? ['lux', 'irelia'] : ['lux'])
     for (let i = 0; i < 8; i++) state = accepted(grantMechanicUnit(state, { receiptId: `${definitionId}-${i}`, source: 'test', definitionId }));
   for (const [i, definitionId] of (twoHolders ? ['lux', 'irelia'] : ['lux']).entries()) {

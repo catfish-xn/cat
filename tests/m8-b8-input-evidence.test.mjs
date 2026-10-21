@@ -1,3 +1,4 @@
+import ragebladeRoute from '../scripts/v17-rageblade-route.cjs';
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -14,22 +15,14 @@ vi.setConfig({ testTimeout: 20_000 });
  * evidence set is produced from public commands exactly as the input gate records it
  * (one artifact per interaction, manifest hashes, native mouse operations on the command's
  * controls); every tampering below must be rejected. The validator replays the route from
- * createMatch(14349), so re-hashed forgeries and placeholder ledgers fail as well. */
+ * createMatch(27), so re-hashed forgeries and placeholder ledgers fail as well. */
 const accepted = result => { if (!result.ok) throw new Error(result.reason); return result.state; };
 // The gate's recorded shape for one native mouse operation per control (pointer then compatibility mouse events).
 const clicks = targets => targets.flatMap((target, index) => [['pointerdown', 'mouse'], ['mousedown', null], ['pointerup', 'mouse'], ['mouseup', null], ['click', 'mouse']]
   .map(([type, pointerType], offset) => ({ type, time: 1000 + index * 100 + offset, trusted: true, pointerType, target })));
 function genuine() {
   const steps = [];
-  let state = api.createMatch(14349);
-  while (state.roundDefinitionId !== '2-1' || state.phase !== 'preparation') {
-    if (state.phase === 'preparation') { state = accepted(api.startMatchCombat(state)); while (state.phase === 'combat') state = api.stepMatch(state).state; }
-    else if (state.phase === 'choice') {
-      const choice = state.pendingChoice, pick = choice.offers.find(id => id !== 'placebo');
-      const next = accepted(api.selectChoice(state, choice.choiceId, choice.generation, pick));
-      steps.push({ name: `b8-opening-${choice.kind}-${pick}`, before: state, expected: next, targets: [`choice:${pick}`] }); state = next;
-    } else state = accepted(api.nextRound(state, state.round));
-  }
+  let state=ragebladeRoute.prefix(api,(before,expected,pick)=>{steps.push({name:`b8-opening-${before.pendingChoice.kind}-${pick}`,before,expected,targets:[`choice:${pick}`]});});
   const receipt = id => state.m8.loot.receipts.find(r => r.payload.kind === 'item' && r.payload.definitionId === id).grantedItemIds[0];
   const combined = accepted(api.combineItems(state, receipt('bow'), receipt('rod')));
   steps.push({ name: 'normal-opening-rageblade-recipe', before: state, expected: combined, targets: ['panel:items', `item:${receipt('bow')}`, `item:${receipt('rod')}`, 'combine-items'] });
@@ -42,7 +35,7 @@ function genuine() {
   const started = api.startMatchCombat(fielded); let fought = accepted(started);
   const events = started.events.filter(event => 'tick' in event);
   while (fought.phase === 'combat') { const next = api.stepMatch(fought); fought = next.state; events.push(...next.events.filter(event => 'tick' in event)); }
-  steps.push({ name: 'b8-rageblade-2-1-combat', before: fielded, expected: fought, events, targets: ['mobile:start-combat'] });
+  steps.push({ name: 'b8-rageblade-3-1-combat', before: fielded, expected: fought, events, targets: ['mobile:start-combat'] });
   const unit = fought.combat.units.find(u => u.id === lux.id);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'b8-evidence-'));
   const interactions = steps.map((step, index) => {
@@ -51,7 +44,7 @@ function genuine() {
       actual: { state: step.expected, combatEvents: step.events ?? [] }, inputs: clicks(step.targets) }));
     return { name: step.name, beforeHash: hash(step.before), stateHash: hash(step.expected), artifact };
   });
-  const manifest = { interactions, b8RagebladeChain: { roundId: '2-1', luxId: lux.id, ragebladeId: blade.id, combatTicks: fought.combat.tick,
+  const manifest = { interactions, b8RagebladeChain: { roundId: '3-1', luxId: lux.id, ragebladeId: blade.id, combatTicks: fought.combat.tick,
     frozenAttackIntervalTicks: unit.attackIntervalTicks, currentAttackIntervalTicks: readCombatStats(unit, fought.combat).attackIntervalTicks } };
   return { dir, manifest };
 }
@@ -66,7 +59,7 @@ const edit = (dir, artifact, change) => {
   const file = path.join(dir, artifact), value = JSON.parse(fs.readFileSync(file, 'utf8')); change(value); fs.writeFileSync(file, JSON.stringify(value));
 };
 const artifactOf = (manifest, name) => manifest.interactions.find(entry => entry.name === name).artifact;
-const combatArtifact = manifest => artifactOf(manifest, 'b8-rageblade-2-1-combat');
+const combatArtifact = manifest => artifactOf(manifest, 'b8-rageblade-3-1-combat');
 // Changes an artifact and rewrites its manifest hashes, as an author forging both files would.
 const rehashed = (manifest, dir, name, change) => {
   const entry = manifest.interactions.find(item => item.name === name);
@@ -131,7 +124,7 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
     ['inputs out of time order', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs[1].time = a.inputs[0].time - 1; }), /native time order/],
     ['re-hashed forged before state', (m, dir) => rehashed(m, dir, 'normal-opening-rageblade-recipe', a => { a.before.gold += 5; }),
       /recorded before state equals the trusted replay/],
-    ['re-hashed forged combat result', (m, dir) => rehashed(m, dir, 'b8-rageblade-2-1-combat', a => { a.expected.gold += 1; a.actual.state = a.expected; }),
+    ['re-hashed forged combat result', (m, dir) => rehashed(m, dir, 'b8-rageblade-3-1-combat', a => { a.expected.gold += 1; a.actual.state = a.expected; }),
       /recorded result equals the replayed public command/],
     ['modified recorded state', (m, dir) => edit(dir, combatArtifact(m), a => { a.actual.state.gold++; }), /recorded state was modified/],
     ['untrusted input', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs = [{ type: 'pointerdown', trusted: false }]; }), /trusted native input/],

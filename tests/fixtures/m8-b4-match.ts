@@ -10,11 +10,11 @@ function accepted(result: MatchCommandResult): MatchState {
   return result.state;
 }
 
-// Seed 3151248 independently selects Irelia and retains the cloak/rod/gloves/bow/sword component vector.
+// Independent v17 seed 206 selects Irelia and drops Lux as unit-3; all ingredients use real drops/supplies.
 // Baseline random rewards genuinely draw Maddie and Lux; no roster or raw state is patched.
 import { publicEquipmentPreparation as acquire } from './b8-public-equipment';
 // Avoid early item gifts so the independent component serials remain unchanged.
-const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:3151248,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
+const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:206,earliestRound:8,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
 
 // Cache the public route + item compilation. Each caller owns its mutable copy;
 // negative/continuation tests cannot contaminate later test fixtures.
@@ -43,7 +43,7 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
   // Keep the two-Bloodthirster control's original component births and chosen
   // augments under the v14 same-tier pool. Other controls retain their seed.
   let state = requested.length === 2 && requested.every(id => id === 'bloodthirster')
-    ? acquire(components, { seed: 76672, augmentPriorities: ['manaflow-i', 'pumping-up-ii'] })
+    ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['manaflow-i', 'pumping-up-ii'] })
     : equipmentPreparation(components);
   const available = state.items.filter(item => item.location.kind === 'inventory');
   for (const [slot, definitionId] of requested.entries()) {

@@ -27,7 +27,7 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
  diagnosticPhase('setup');
  let server,browser,page;
  try{
-  const {createServer}=await import('vite');server=await createServer({root:path.resolve(__dirname,'..'),plugins:[{name:'m6-perf-page',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url==='/__m6_perf'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><body></body>');}else next();});}}],server:{host:'127.0.0.1',port:0},optimizeDeps:{noDiscovery:true,include:[]}});await server.listen();
+  const {createServer}=await import('vite');server=await createServer({root:path.resolve(__dirname,'..'),plugins:[{name:'m6-perf-page',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url==='/__m6_perf'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><head><link rel="icon" href="data:,"></head><body></body>');}else next();});}}],server:{host:'127.0.0.1',port:0},optimizeDeps:{noDiscovery:true,include:[]}});await server.listen();
   const api=await server.ssrLoadModule('/src/simulation/match.ts'),replay=await server.ssrLoadModule('/src/replay/index.ts');
   const {digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts'),{M8_VERSION}=await server.ssrLoadModule('/src/simulation/m8/version.ts');
   const {ROUND_CATALOG}=await server.ssrLoadModule('/src/simulation/content/round-catalog.ts');
@@ -51,13 +51,14 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
    const envelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
-    // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
-    // T13-A (ba319fa, MATCH_CONTRACT "单位全槽自动合成"): a component equipped onto a unit wearing a loose
-    // component combines with it. The route's ~15 components then leave at most 9 separate worn items, and
-    // 15 completed items would need ~30 components, which no legal command route supplies (user decision
-    // 2026-10-16: keep 15 if legally reachable, otherwise 9).
-    const FULL_LOAD_EQUIPPED=9;
-    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===FULL_LOAD_EQUIPPED),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===FULL_LOAD_EQUIPPED);fullLoadEnvelope=envelope;
+    // Keep the approved nine-item workload as a minimum. v17's real seed42
+    // route has 10 worn items at 6-1 and 11 at 6-5, with 9 players / 8 enemies.
+    // Exact equality rejected this heavier legal fixture before any measurement.
+    // Keep every actual item/history entry in the import and roundtrip samples.
+    const MIN_FULL_LOAD_EQUIPPED=9;
+    report.fullLoadObserved=loads;
+    report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.enemies===8&&load.equipped>=MIN_FULL_LOAD_EQUIPPED);
+    assert(report.fullLoadCoverage.length>0,'same F1 population with at least the approved equipment load');fullLoadEnvelope=envelope;
    }
    const bytes=Buffer.byteLength(JSON.stringify(envelope));routes.push({build,bytes,incrementalBytes:currentBytes,summary:route.summary});
    if(!largestComplete||bytes>largestComplete.bytes)largestComplete={bytes,envelope};

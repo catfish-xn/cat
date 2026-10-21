@@ -70,7 +70,7 @@ describe('M6 independent route/history/playback/session integration', () => {
       deepStrictEqual({ state: active.state, events: active.combatEvents }, immutableActive);
       playback.dispose(); expect(() => playback.read()).toThrow();
     }
-    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3, runId, createdAt: '2026-10-06T00:00:00.000Z', match: route.final, battles: history.completedRecords, currentBattle: null };
+    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 4, replayFormatVersion: 3, runId, createdAt: '2026-10-06T00:00:00.000Z', match: route.final, battles: history.completedRecords, currentBattle: null };
     fullEnvelopes.set(build,envelope); // Positive full-save acceptance at the catalog capacity runs below (B9).
     if (build === 'cannon') {
       const badEvent = structuredClone(envelope.battles[0]);

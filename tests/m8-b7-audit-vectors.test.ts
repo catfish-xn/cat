@@ -5,7 +5,7 @@ import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-com
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { battle, unit } from './combat-helpers';
 import { accepted } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicHeraldTarget } from './fixtures/m8-neutral-public-route';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -127,11 +127,7 @@ describe('B7 audit: Match save/restore of real encounters', () => {
   it.each(['2-7', '3-7', '4-7', '5-7', '6-7'])('%s: restoring at every opening and mechanism tick reproduces the continuous run', roundId => {
     // Use the independently recorded public Ionic prefix: the G2-2 default route
     // leaves Sunfire on Irelia, adding unrelated per-tick aura traffic to this neutral vector.
-    let initial = roundId === '6-7' ? restoreMatch(publicHeraldRawInput(['ionic-spark'])) : encounterArmy(prepared(roundId));
-    if(roundId === '6-7') {
-      const remover = initial.consumables.find(c=>c.definitionId==='magnetic-remover')!;
-      initial=accepted(api.useConsumable(initial,remover.consumableId,{kind:'unit',unitId:'unit-1'}));
-    }
+    const initial = encounterArmy(prepared(roundId));
     let continuous = accepted(api.startMatchCombat(initial)), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
     expect(continuous.combat!.tick).toBe(0);
     expect(resumed).toEqual(continuous);

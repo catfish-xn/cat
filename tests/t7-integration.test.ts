@@ -30,7 +30,7 @@ describe('T7 public-command traversal',()=>{
         expect(steps).toBeLessThanOrEqual(api.BOT_MAX_STEPS);continue;
       }
       if(state.phase==='preparation') state=accepted(api.startMatchCombat(state));
-      else if(state.phase==='settlement'){state=accepted(api.nextRound(state,state.round));steps=0;}
+      else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(api.sellUnit(state,reserve.id));commands++;}state=accepted(api.nextRound(state,state.round));steps=0;}
       else throw new Error(`Unresolved ${state.phase}`);
     }
     expect(state.roundResults.map(r=>r.round)).toEqual(Array.from({length:20},(_,i)=>i+1));

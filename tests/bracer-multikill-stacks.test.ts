@@ -1,11 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
+import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { dispatchTriggers, EMPTY_TRIGGER_LEDGER, type TriggerSignal } from '../src/simulation/m8/triggers';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
-import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-public-equipment';
 import { freezeContent } from '../src/simulation/content/freeze';
 import { BRACER } from './fixtures/explorer-bracer-public';
@@ -46,7 +45,7 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
 }
 // Seed 3151248's v14 fallback is High Voltage; its gifted Spark stays in inventory.
 // v15 seed 5 offers Manaflow I, which the back-row contribution=false board needs.
-const frontRowRod = () => acquireEquipment(['rod'], { seed: 3151248, augmentPriorities: ['glass-cannon-ii'] });
+const frontRowRod = () => {let s=acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii']});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 let luxFixture: { initial: MatchState; before: MatchState; after: MatchState; doubleKill: MatchEvent[] };
 beforeAll(() => {
@@ -101,7 +100,8 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    let preparation = publicEquipmentPreparation(['rod']);
+    let preparation = acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii']});
+    for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));
     granted = freezeContent(structuredClone(preparation));

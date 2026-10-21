@@ -22,7 +22,7 @@ const candidates = (state: MatchState): ConsumableTarget[] => [
 ];
 
 describe('C18-B consumable target answers', () => {
-  const base=publicConsumables(26),holder=base.preparation.units.find(u=>u.team==='player')!;
+  const base=publicConsumables(27566),holder=base.preparation.units.find(u=>u.team==='player')!;
   const state=accepted(equipItem(base,base.items.find(i=>i.location.kind==='inventory')!.id,holder.id,0));
   it('the fixture holds tools of every kind (precondition)', () => {
     expect(state.consumables.length).toBeGreaterThan(0);

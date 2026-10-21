@@ -199,7 +199,7 @@ it.each(['settlement','next preparation'].flatMap(phase=>['smeech','silco','irel
 it.each(['singed','renni'])('rejects moving the earning settlement and prefix past the forged %s birth',target=>{
  const forged=structuredClone(preparation(usedMarket()));
  const claim=readG23Progress(forged)!.rewardClaims.find(c=>c.kind==='duplicator')!;
- expect(forged.round).toBe(9);expect(claim.instanceId).toBe('unit-40');
+ expect(forged.round).toBe(9);expect(claim.instanceId).toBe('unit-39');
  Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
  Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
  const entries=[...forged.resourceProvenance.entries];

@@ -11,12 +11,13 @@ const support = (id: string) => Object.hasOwn(G24_SUPPORT_ITEMS, id) || Object.h
 /** G24-FORGE-03 (user approved): keep the 29/17 source identities and admit only executable items; with the G2-4b
  * mechanism items every artifact (29) and support (17) is executable, so the exclusion lists are empty. */
 export const G24_FORGE_POOLS = freezeContent({
+  TFT_ArmoryKeyComponent: Object.values(ORDINARY).filter(item => item.kind === 'component').map(item => item.id).sort(),
   TFT_ArmoryKeyCompleted: Object.values(ORDINARY).filter(item => item.kind === 'completed' && item.recipe).map(item => item.id).sort(),
   TFT_ArmoryKeySupport: G23_SPECIAL_ITEM_POOLS.SUPPORTITEMS.filter(support).sort(),
   TFT_ArmoryKeyOrnn: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6.filter(artifact).sort(),
 });
 export const G24_FORGE_POLICY = freezeContent({
-  revision: 'g24-forge-v1', choices: 4,
+  revision: 'g24-forge-v2', choices: 4,
   pools: G24_FORGE_POOLS,
   artifactSource: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6,
   artifactExclusions: G23_SPECIAL_ITEM_POOLS.ORNNARTIFACTS_SET6.filter(id => !artifact(id)).sort(),

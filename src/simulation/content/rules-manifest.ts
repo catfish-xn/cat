@@ -5,7 +5,7 @@ import { G22_CONVENTIONS } from './g2-2-traits';
 import { PLAYER_DAMAGE_RULES, XP_TO_NEXT_LEVEL, MATCH_RULES } from '../match-rules';
 import { freezeContent } from './freeze';
 import { EPIC_LOOT } from './loot';
-import { ORB_RULES, ORB_SLOTS, EPIC_SOURCES } from './orbs';
+import { ORB_RULES, ORB_STAGE_PLAN, EPIC_SOURCES } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
 import { EQUIPMENT_RULES_VERSION } from '../equipment-policy';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
@@ -22,10 +22,10 @@ export const RULES_GAP_MANIFEST = freezeContent({
     unreachable: ['automata-6','firelight-4','family-4','family-5'] },
   playerDamage: PLAYER_DAMAGE_RULES,
   progression: {policy:'s13-14.24b-nine-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
-  opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES, rewards: {'1-2':'maddie','1-3':'lux',reservedLootWordsPerReward:1} },
+  opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES, rewards:'shared-stage-plan/per-seat-orb-box-v17/no-legacy-loot-words' },
   equipment: { version: EQUIPMENT_RULES_VERSION, operations: EQUIPMENT_OPERATION_RULES_VERSION,
     multiplayer: MULTIPLAYER_OPERATION_RULES, autoCombine: 'lowest-permanent-component-slot' },
-  orbs: { rules: ORB_RULES, slots: ORB_SLOTS, epicSources:EPIC_SOURCES, epic:EPIC_LOOT },
+  orbs: { rules: ORB_RULES, stagePlan: ORB_STAGE_PLAN, epicSources:EPIC_SOURCES, epic:EPIC_LOOT },
   consumables: { rules: CONSUMABLE_RULES, definitions: CONSUMABLE_DEFINITIONS, pools: REFORGE_POOLS },
   restoration: 'burn-refresh-canonical-program-v1',
   provenance: 'consumable-use-after-grant-v1',
