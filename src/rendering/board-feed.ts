@@ -37,6 +37,15 @@ export interface BoardFrame {
   readonly openedOrbs?: readonly string[];
   /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
   readonly hit?: BoardHit | null;
+  /** My own 征服层数 and 微光 (owner-only, like the trait column's counters; never another seat's), for the 3D chest and flask. */
+  readonly mechanics?: BoardMechanics;
+}
+/** Absent parts are not in play (trait not fielded and nothing gathered yet). */
+export interface BoardMechanics {
+  /** 征服层数 with the band toward the next chest: `from` is the last opened chest's threshold, `next` null once all are open. */
+  readonly conquest?: { readonly stacks: number; readonly opened: number; readonly from: number; readonly next: number | null };
+  /** 微光 with the next black-market breakpoint (null past the last); `offer` while a black market waits for an answer. */
+  readonly shimmer?: { readonly value: number; readonly next: number | null; readonly offer: boolean };
 }
 export interface BoardOrb {
   readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;

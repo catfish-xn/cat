@@ -19,6 +19,7 @@ import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
 import { s13IconHtml } from '../presentation/s13-assets';
 import { traitTierStyle } from '../presentation/trait-styles';
+import type { BoardMechanics } from './board-feed';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -54,11 +55,27 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   let progress; try { progress = readG23Progress(state); } catch { return undefined; }
   if (!progress) return undefined;
   const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
-  const market = (Math.floor(shimmer / 100) + 1) * 100;
+  const market = nextMarket(shimmer);
   return new Map([
     ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}` }]],
-    ['chem-baron', [{ label: '微光', value: market <= 800 ? `${shimmer}/${market}` : String(shimmer) }]],
+    ['chem-baron', [{ label: '微光', value: market ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
+}
+const nextMarket = (shimmer: number) => { const market = (Math.floor(shimmer / 100) + 1) * 100; return market <= 800 ? market : null; };
+
+/**
+ * The same owner-only counters for the 3D chest and shimmer flask (board-feed `mechanics`): a part shows while its trait
+ * is on my board or once it has gathered anything. Same source and breakpoints as g23TraitRuntime; never for a scouted board.
+ */
+export function g23BoardMechanics(state: MatchState): BoardMechanics | undefined {
+  let progress; try { progress = readG23Progress(state); } catch { return undefined; }
+  if (!progress) return undefined;
+  const traits = new Set(boardTraitRows(state.preparation).map(row => row.traitId));
+  const { stacks, chestsOpened } = progress.conquest, chem = progress.chem;
+  const conquest = traits.has('conqueror') || stacks > 0 ? { stacks, opened: chestsOpened,
+    from: G23_CONQUEROR_CHESTS[chestsOpened - 1]?.threshold ?? 0, next: G23_CONQUEROR_CHESTS[chestsOpened]?.threshold ?? null } : undefined;
+  const shimmer = traits.has('chem-baron') || chem.shimmer > 0 || chem.offer ? { value: chem.shimmer, next: nextMarket(chem.shimmer), offer: !!chem.offer } : undefined;
+  return conquest || shimmer ? { ...(conquest ? { conquest } : {}), ...(shimmer ? { shimmer } : {}) } : undefined;
 }
 
 /** Rows of the traits present on the board (count > 0): active by tier desc, then count desc, then name; inactive after. */

@@ -8,7 +8,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame } from './board-feed';
+import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -28,6 +28,7 @@ import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../st
 import type { SessionChange } from '../m6/contracts';
 import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
+import { g23BoardMechanics } from './trait-column';
 import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
@@ -1184,7 +1185,15 @@ export class BoardScene extends Phaser.Scene {
         return { orbId: orb.orbId, tier: orb.tier, queued: orb.queued, ...(variant ? { variant } : {}) };
       }),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
-      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
+      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
+      ...this.feedMechanics() };
+  }
+  private mechanicsOf: unknown = null; private mechanics: { mechanics?: BoardMechanics } = {};
+  /** ?render=3d: my 征服层数 and 微光, recomputed only when the session state object changes (frames publish every tick). */
+  private feedMechanics(): { mechanics?: BoardMechanics } {
+    const state = this.session.state;
+    if (state !== this.mechanicsOf) { this.mechanicsOf = state; const mechanics = g23BoardMechanics(state); this.mechanics = mechanics ? { mechanics } : {}; }
+    return this.mechanics;
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items'> {
