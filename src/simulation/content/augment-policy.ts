@@ -61,7 +61,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
-  sisters:'gold',
+  sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'gold',menaces:'gold','unlikely-duo':'gold',
   ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",
   "portable-forge": "gold",

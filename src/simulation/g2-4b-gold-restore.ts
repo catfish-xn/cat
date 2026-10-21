@@ -26,8 +26,10 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
+  const v20=strategy.units.some(u=>u.mechanics?.some(m=>['quickstriker','firelight','v20Teamup'].includes(m.mechanic)));
   const v19=strategy.units.some(u=>u.familyReunion||['warwick','viktor','mel'].includes(u.ability.kind==='s13'?u.ability.championId:'')||u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&(m.source.definitionId==='dominator'||m.source.definitionId==='black-rose'&&m.values.tier>=4)));
-  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19){
+  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20){
+    if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
@@ -40,7 +42,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
   // Only ordinary v19 combats reuse input-bound independent evidence.
   let expected:CombatState;
-  if(v19&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
+  if((v19||v20)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
   else{
     expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
     while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;

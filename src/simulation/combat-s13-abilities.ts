@@ -1,5 +1,6 @@
+import { executeV20Teamup } from './combat-v20-traits';
 import { sixCostCast, sixCostAttack } from './combat-six-cost';
-import { planG2Cast, planG2Attack, executeG2Task } from './combat-g2';
+import { planG2Cast, planG2Attack, executeG2Task, executeV20Powder } from './combat-g2';
 import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m8/targeting';
 import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
@@ -186,6 +187,8 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   return targets;
 }
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  if(task.kind==='v20Powder'){executeV20Powder(ctx,unit,task);return;}
+  if(task.kind==='v20Teamup'){executeV20Teamup(ctx,unit,task);return;}
   if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
   const opponents = enemies(unit, ctx.units), target = (task.attachedDot || task.inherited ? areaEnemies(unit, ctx.units) : opponents).find(u => u.id === task.targetId);
