@@ -48,6 +48,7 @@ import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
 import { OrbDock, grantedOrbIds, orbVariant, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
+import { readOrbLoot } from './online/loot-fields';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -1201,14 +1202,19 @@ export class BoardScene extends Phaser.Scene {
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
-      orbs: readUnclaimedOrbs(this.session.state).map(orb => {
-        const variant = orbVariant(this.session.state, orb.orbId);
-        return { orbId: orb.orbId, tier: orb.tier, queued: orb.queued, ...(variant ? { variant } : {}) };
-      }),
+      orbs: this.feedOrbs(),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       orbRefusals: this.orbRefusalsOf(),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
       ...this.feedMechanics() };
+  }
+  /** ?render=3d: my unclaimed orbs, each with the monster that dropped it while this round's loot names one (3D drops it there). */
+  private feedOrbs(): BoardFrame['orbs'] {
+    const state = this.session.state, drops = readOrbLoot(state)?.revealedDrops ?? [];
+    return readUnclaimedOrbs(state).map(orb => {
+      const variant = orbVariant(state, orb.orbId), source = drops.find(drop => drop.orbId === orb.orbId)?.sourceUnitId;
+      return { orbId: orb.orbId, tier: orb.tier, queued: orb.queued, ...(variant ? { variant } : {}), ...(source ? { source } : {}) };
+    });
   }
   private mechanicsOf: unknown = null; private mechanics: { mechanics?: BoardMechanics } = {};
   /** ?render=3d: my 征服层数 and 微光, recomputed only when the session state object changes (frames publish every tick). */
