@@ -64,7 +64,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
   });
   afterAll(() => { for (const own of prepared.values()) own.room.dispose(); });
 
-  it('tier 10 opens 神器锻造器 with four distinct artifacts and the deadline grants the first offer once', () => {
+  it('tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once', () => {
     const { room, clock } = prepared.get(0)!;
     toForgeWindow(room, () => clock.runNext(), 's0', 10);
     const state = room.state, s0 = seatOf(state, 's0'), choice = s0.match.pendingChoice!;
@@ -76,7 +76,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
     expect(choice.offers).toEqual(atomOptions(s0.match, 10, 0));
     // The popup the client draws from the private view: user-set name, four offers, the rules' timeout pick.
     const shown = toSeatPrivateView(s0.match).pendingChoice!;
-    expect(readChoiceExtras(shown).title).toBe('神器锻造器 · 4 选 1');
+    expect(readChoiceExtras(shown).title).toBe('神器装备锻造器 · 4 选 1');
     for (const seat of state.seats.filter(candidate => candidate.seatId !== 's0')) expect(seat.match.pendingChoice).toBeNull();
 
     const before = s0.match;
@@ -125,7 +125,7 @@ describe('G2-4b: the artifact anvil in an online room', () => {
     expect(room.state.phase).toBe('choice');
     const second = seatOf(room.state, 's0').match.pendingChoice!;
     expect(second).toMatchObject({ kind: 'forge', choiceId: TIER10 });
-    expect(readChoiceExtras(second).title).toBe('神器锻造器 · 4 选 1');
+    expect(readChoiceExtras(second).title).toBe('神器装备锻造器 · 4 选 1');
     const tier14 = atomOptions(first, 14, 1);
     for (const id of tier14) expect(artifacts).toContain(id);
 
@@ -180,7 +180,7 @@ describe('G2-4b: the artifact anvil across a reconnect', () => {
     await a2.waitFor(message => message.type === 'state');
     expect(view.phase).toMatchObject({ kind: 'choice', round: 4, endsAt: deadline });
     expect(a2.state!.pendingChoice).toMatchObject({ kind: 'forge', choiceId: TIER10, offers: choice.offers, generation: choice.generation });
-    expect(readChoiceExtras(a2.state!.pendingChoice!).title).toBe('神器锻造器 · 4 选 1');
+    expect(readChoiceExtras(a2.state!.pendingChoice!).title).toBe('神器装备锻造器 · 4 选 1');
     for (const message of b.inbox) expect(JSON.stringify(message)).not.toContain(TIER10);
 
     const itemsBefore = countOf(seatOf(room.state, seatA).match, choice.offers[3]!);

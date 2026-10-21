@@ -1240,7 +1240,10 @@ export class StrategyPanel {
       }
       shop.append(button);
     });
-    const odds = element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds');
+    // TFT's odds line: one cost-coloured figure per cost; the "Lv.N 概率" label and 费 names are for the 2D panel (3D hides them).
+    const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
+    getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
+      cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
     if (this.shopChoiceAway && this.shopChoiceAway === token) {
       const back = this.button('shop-choice-back', `返回${readChoiceExtras(choice!).title ?? '选择'}`, () => { this.shopChoiceAway = ''; this.render(); });
       back.className = 'shop-choice-toggle'; odds.append(back);

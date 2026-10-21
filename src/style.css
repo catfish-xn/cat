@@ -1185,7 +1185,9 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-tem
 body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 56px; height: 56px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 76px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 76px; height: 76px; }
-body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: fixed; z-index: 2; left: calc(45.1vw + 120px); bottom: calc(var(--online-dock-h) - 22px); }
+body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 + 3px); bottom: calc(var(--online-dock-h) - 24px); }
+/* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. */
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 - 3px); bottom: calc(var(--online-dock-h) - 24px); transform: translateX(-100%); }
 body[data-online]:has(> .render3d-layer) .economy-interest { display: none; }
 body[data-online]:has(> .render3d-layer) #online-countdown { z-index: 2; }
 @media (max-width: 1500px) {
@@ -1197,6 +1199,52 @@ body[data-online]:has(> .render3d-layer) #online-countdown { z-index: 2; }
   body[data-online]:has(> .render3d-layer) .trait-row { grid-template-columns: 30px 24px minmax(0, 1fr); min-height: 38px; font-size: 13px; }
   body[data-online]:has(> .render3d-layer) .trait-row .trait-icon, body[data-online]:has(> .render3d-layer) .trait-row .trait-letter { width: 30px; height: 30px; padding: 5px; }
 }
+/* TFT details from the reference shot: the countdown's thin progress line, the FPS readout top right, and inactive traits
+   past the fifth folded into "+N" (hover the column to see them all). */
+body[data-online]:has(> .render3d-layer) .online-countdown::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 3px; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, #68ddd0, #68ddd0) no-repeat 0 0 / calc(var(--countdown-left, 0) * 100%) 100%, #0b151f; }
+body[data-online]:has(> .render3d-layer) .online-countdown[data-phase="combat"]::after { background-image: linear-gradient(90deg, #f08080, #f08080); }
+.render3d-fps { position: absolute; z-index: 2; top: 2px; right: 8px; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #c3d2da; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.render3d-fps:empty { display: none; }
+body[data-online] > .render3d-layer .render3d-fps { position: fixed; z-index: 3; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { margin-top: 14px; }
+body[data-online]:has(> .render3d-layer) .trait-rows { counter-reset: trait-more; }
+/* Hidden but still counted: display: none would not increment the counter. */
+body[data-online]:has(> .render3d-layer) .trait-column:not(:hover) .trait-row.inactive ~ .trait-row.inactive ~ .trait-row.inactive ~ .trait-row.inactive ~ .trait-row.inactive ~ .trait-row.inactive { position: absolute; visibility: hidden; pointer-events: none; counter-increment: trait-more; }
+body[data-online]:has(> .render3d-layer) .trait-column:not(:hover) .trait-rows:has(> .inactive ~ .inactive ~ .inactive ~ .inactive ~ .inactive ~ .inactive)::after {
+  content: "+" counter(trait-more); justify-self: start; padding: 2px 10px; border: 1px solid #3a5260; border-radius: 4px; background: #0b151fcc; color: #c3d2da; font-size: 13px; }
+/* Original-UI annotation pass (user's labelled TFT shots). Items: a separate column at the far left with the traits beside it;
+   the board count large over the board; lock at the shop's top right; the streak as a flame and its count beside the gold
+   (hover for the income lines); inactive traits read "count / next"; list / stats tabs over the player column. */
+body[data-online]:has(> .render3d-layer) .item-dock { left: 0; }
+body[data-online]:has(> .render3d-layer) #panels-root { left: 60px; }
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop { position: fixed; z-index: 2; left: 50%; top: 11dvh; transform: translateX(-50%); padding: 0; border: 0; background: none; box-shadow: none; pointer-events: none; }
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop .hud-label { display: none; }
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop strong { font-size: 34px; line-height: 1; color: #f0e6d2; text-shadow: 0 2px 6px #000, 0 0 2px #000; }
+body[data-online]:has(> .render3d-layer) .left-panel-toast { top: 17dvh; }
+body[data-online]:has(> .render3d-layer) .shop-dock [data-debug="shop-lock"] { grid-area: top; justify-self: end; align-self: center; width: 52px; }
+body[data-online]:has(> .render3d-layer) .economy-bonus { display: none; }
+body[data-online]:has(> .render3d-layer) .economy-hint { cursor: help; }
+body[data-online]:has(> .render3d-layer) .economy-streak { padding: 1px 8px; border: 1px solid #785a28; border-radius: 4px; background: #0b151fcc; font-size: 0; }
+body[data-online]:has(> .render3d-layer) .economy-streak::before { content: "🔥 " attr(data-value); font-size: 15px; font-weight: 700; color: #f0e6d2; }
+body[data-online]:has(> .render3d-layer) .economy-streak[data-kind="loss"]::before { filter: hue-rotate(180deg); }
+body[data-online]:has(> .render3d-layer) .trait-row.inactive :is(.trait-step:not(:first-child), .trait-sep) { display: none; }
+body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-steps::before { content: attr(data-count) " / "; }
+.online-tabs { display: none; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-tabs { display: flex; gap: 2px; margin-right: auto; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-tab { min-height: 0; height: 22px; padding: 0 8px; font-size: 11px; border: 1px solid #3a5260; border-radius: 4px; background: #0b151fcc; color: #9aaeb9; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-tab[aria-selected="true"] { border-color: #785a28; color: #f0e6d2; }
+body[data-online]:has(> .render3d-layer) #online-sidebar[data-tab="players"] .battle-summary, body[data-online]:has(> .render3d-layer) #online-sidebar[data-tab="stats"] .online-seats { display: none; }
+@media (max-width: 1500px) { body[data-online]:has(> .render3d-layer) .item-dock { left: 0; } body[data-online]:has(> .render3d-layer) #panels-root { left: 56px; } }
+body[data-online]:has(> .render3d-layer) .trait-row.inactive { grid-template-columns: 36px minmax(0, 1fr); }
+body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-count { display: none; }
+body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-steps { grid-column: 2; }
+body[data-online]:has(> .render3d-layer) .shop-odds :is(.odds-label, .odds-sep, .odds-name) { display: none; }
+body[data-online]:has(> .render3d-layer) .shop-odds { display: flex; gap: 10px; }
+body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost::before { content: "◆"; margin-right: 2px; font-size: 9px; color: var(--odds-color, #9aaeb9); }
+.odds-cost[data-cost="1"] { --odds-color: var(--cost-1); } .odds-cost[data-cost="2"] { --odds-color: var(--cost-2); } .odds-cost[data-cost="3"] { --odds-color: var(--cost-3); }
+.odds-cost[data-cost="4"] { --odds-color: var(--cost-4); } .odds-cost[data-cost="5"] { --odds-color: var(--cost-5); }
+body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--odds-color); }
 
 /* 14.24 炼金男爵黑市: violet glass dialog, one large reward card, 接受 (filled) and 跳过 (炼金男爵 +N 生命值，微光保留). */
 .choice-dialog[data-choice-source="blackMarket"] { width: min(520px, 100%); text-align: center; border-color: #a86bf0;
