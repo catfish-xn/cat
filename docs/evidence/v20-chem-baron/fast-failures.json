@@ -1,0 +1,449 @@
+{
+  "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+  "epoch": "v20-chem-baron",
+  "runs": [
+    {
+      "shard": 1,
+      "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=1/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-1.json",
+      "exitCode": 1,
+      "passed": 1419,
+      "failed": 15,
+      "pending": 0,
+      "assertionStatuses": {
+        "passed": 1419,
+        "failed": 15
+      },
+      "files": 122,
+      "failedFiles": 7,
+      "elapsedSeconds": 684.67
+    },
+    {
+      "shard": 2,
+      "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=2/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-2.json",
+      "exitCode": 1,
+      "passed": 1611,
+      "failed": 5,
+      "pending": 0,
+      "assertionStatuses": {
+        "passed": 1611,
+        "failed": 5
+      },
+      "files": 121,
+      "failedFiles": 2,
+      "elapsedSeconds": 1059.97
+    },
+    {
+      "shard": 3,
+      "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=3/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-3.json",
+      "exitCode": 1,
+      "passed": 1822,
+      "failed": 16,
+      "pending": 0,
+      "assertionStatuses": {
+        "passed": 1822,
+        "failed": 16
+      },
+      "files": 121,
+      "failedFiles": 7,
+      "elapsedSeconds": 1511.4
+    },
+    {
+      "shard": 4,
+      "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=4/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-4.json",
+      "exitCode": 1,
+      "passed": 1532,
+      "failed": 17,
+      "pending": 0,
+      "assertionStatuses": {
+        "passed": 1532,
+        "failed": 17
+      },
+      "files": 121,
+      "failedFiles": 3,
+      "elapsedSeconds": 706.84
+    }
+  ],
+  "totals": {
+    "passed": 6384,
+    "failed": 53,
+    "pending": 0,
+    "files": 485,
+    "failedFiles": 19
+  },
+  "failureRecordsByCategory": {
+    "environment": 53
+  },
+  "failures": [
+    {
+      "shard": 1,
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "test": "G2-4b: the artifact anvil across a reconnect a resumed seat gets the same artifact popup and the unchanged deadline, and can still pick",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/lifecycle.test.ts",
+      "test": "B8 lifecycle: the network server across matches keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/replay-first-pass.test.ts",
+      "test": "game server: spot check logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/replay-first-pass.test.ts",
+      "test": "game server: spot check checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/heartbeat.test.ts",
+      "test": "server heartbeat options starts no heartbeat timer when listening fails",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/heartbeat.test.ts",
+      "test": "server heartbeat sends nothing extra when the option is off",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/heartbeat.test.ts",
+      "test": "server heartbeat keeps answering peers connected and sends them a heartbeat every interval",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/heartbeat.test.ts",
+      "test": "server heartbeat drops a seated peer that went silent, keeps its seat, and lets the token resume it",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/live-bank-wire.test.ts",
+      "test": "D11 live bank: replay-tail on the wire streams the changed records of a live battle to its seat and ends on the settled battle",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/server-close.test.ts",
+      "test": "server close and failed start cancels the delayed close of a superseded connection when the server closes",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/server-close.test.ts",
+      "test": "server close and failed start rejects a start on a taken port after releasing its lobby and WebSocketServer",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/slow-task.test.ts",
+      "test": "task.slow pending-window reports logs the first slow task immediately and ignores a fast task before expiry",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/slow-task.test.ts",
+      "test": "task.slow pending-window reports flushes count, maximum and latest slow duration on a fast task at window expiry, only once",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/slow-task.test.ts",
+      "test": "task.slow pending-window reports flushes an idle pending batch using only the loop.lag timer",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 1,
+      "file": "tests/server/net/slow-task.test.ts",
+      "test": "task.slow pending-window reports flushes the unexpired pending batch on close and cancels all timers",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 2,
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "test": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+      "category": "environment",
+      "error": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\nSerialized cause in raw log: spawnSync node EPERM (shard-2.log)"
+    },
+    {
+      "shard": 2,
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "test": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+      "category": "environment",
+      "error": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\nSerialized cause in raw log: spawnSync node EPERM (shard-2.log)"
+    },
+    {
+      "shard": 2,
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "test": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+      "category": "environment",
+      "error": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\nSerialized cause in raw log: spawnSync node EPERM (shard-2.log)"
+    },
+    {
+      "shard": 2,
+      "file": "tests/server/e2e-replay-errors.test.ts",
+      "test": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+      "category": "environment",
+      "error": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\nSerialized cause in raw log: spawnSync node EPERM (shard-2.log)"
+    },
+    {
+      "shard": 2,
+      "file": "tests/server/legend-walk.test.ts",
+      "test": "walk message (wire) reaches every seat of the room as `legend`, with no receipt, and a refused walk sends nothing",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+      "category": "environment",
+      "error": "Error: spawnSync python3 EPERM\n    at Object.spawnSync (node:internal/child_process:1160:20)\n    at spawnSync (node:child_process:928:24)\n    at profile (<repo>/scripts/profile-explorer-bracer-restore.cjs:45:22)\n    at <repo>/tests/explorer-bracer-restore-pressure.test.ts:7:18\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+    },
+    {
+      "shard": 3,
+      "file": "tests/explorer-bracer-restore-pressure.test.ts",
+      "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+      "category": "environment",
+      "error": "Error: spawnSync python3 EPERM\n    at Object.spawnSync (node:internal/child_process:1160:20)\n    at spawnSync (node:child_process:928:24)\n    at profile (<repo>/scripts/profile-explorer-bracer-restore.cjs:45:22)\n    at <repo>/tests/explorer-bracer-restore-pressure.test.ts:17:18\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/g2-4a-forge-timeout.test.ts",
+      "test": "G2-4a: the forge popup across a reconnect a resumed seat gets the same forge popup and the unchanged deadline, and can still pick",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/g2-4b-support-forge-room.test.ts",
+      "test": "G2-4b: the support anvil across a reconnect a resumed seat gets the same support popup and the unchanged deadline, and can still pick",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/little-legends.test.ts",
+      "test": "little legends: over the wire shows every seat the legend another player picked",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/projection-wire.test.ts",
+      "test": "B7 private seat view on every state path sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/projection-wire.test.ts",
+      "test": "B7 private seat view on every state path keeps the fault snapshot projected",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/projection-wire.test.ts",
+      "test": "B7 compact replay sends each battle once as the room's own replay and never as combat frames (C6)",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/v17-avarice-reconnect.test.ts",
+      "test": "v17 avarice: reconnect during and after a live battle a seat that left and came back is shown the settled live replay and settles once",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch wire contract sends the watched replay once, without a receipt, rule mutation or dedupe entry",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch wire contract ignores invalid rooms, self/nonexistent seats and unauthenticated watches without affecting another watcher",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch wire contract sends nothing for an identical battle replacement and sends a whole replay again for the next battle",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch wire contract WsGameClient resends its current watch after disconnect/resume and receives a fresh replay",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch wire contract does not confuse a reused battleId in a new round or a new battleId in the same round with a tail",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch live-bank revisions and connection cleanup mirrors side B exactly like its own replay and streams continuous revisions through the final settled replay",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 3,
+      "file": "tests/server/net/watch.test.ts",
+      "test": "watch live-bank revisions and connection cleanup stops tails on null; closed and superseded observers receive no later revisions",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/g2-4b-pr161-restore.test.ts",
+      "test": "cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice",
+      "category": "environment",
+      "error": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/g2-4b-pr161-restore.test.ts:390:26\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20\nSerialized cause in raw log: spawnSync node EPERM (shard-4.log)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: visibility shows the other seat its level and HP changes but never its shop or private state",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: rejections leave the room untouched refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: commandId dedupe executes a repeated commandId once and refuses the same id with other content",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: commandId dedupe refuses an id that fell out of the retention window and demands a resync",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: disconnect and resume returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: disconnect and resume G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: disconnect and resume drops a queued player that disconnects before the match and frees the seat",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: queue refuses the ninth join with \"full\" and leaves the queue at eight",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: queue refuses a join while a match runs and lets a new queue form after it ends",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: single writer runs 50 pipelined commands strictly in arrival order with no interleaving",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: connection limits closes a connection that sends an oversized frame",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: connection limits rate-limits a connection on the room clock and accepts again in the next window",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/server.test.ts",
+      "test": "game server: whole match over the wire drives two clients from the queue to a full ranking with replays on the manual clock",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/takeover.test.ts",
+      "test": "game server: no takeover by default (P2) keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/takeover.test.ts",
+      "test": "game server: bot takeover of a disconnected seat when switched on (B6) shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    },
+    {
+      "shard": 4,
+      "file": "tests/server/net/takeover.test.ts",
+      "test": "game server: bot takeover of a disconnected seat when switched on (B6) a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag",
+      "category": "environment",
+      "error": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+    }
+  ]
+}

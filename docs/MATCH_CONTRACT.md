@@ -1,17 +1,23 @@
-## v20-traits 当前覆盖（2026-10-21）
+## v20-traits 继承规则覆盖（2026-10-21）
 
-当前规则/内容为 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`，schema/save/replay/command＝10/6/4/4。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、输入输出、失败/跳过语义、强化赠卡唯一收据与恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧关系延期与v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。
+父 epoch 规则/内容为 `s13-g2-3-v20-traits` / `s13-14.24b-g2-3-v20-traits`，schema/save/replay/command＝10/6/4/4；当前身份以下文 v20-chem-baron 为准。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、输入输出、失败/跳过语义、强化赠卡唯一收据与恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧关系延期与v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。
 
 # M5 Match contract v5
 
-## v19 第二部分（当前合同，2026-10-21）
+## v20-chem-baron 当前炼金男爵规则（2026-10-21）
+
+本 epoch 的父版本为 v20-traits（multiplayer `ce60a8b9`），完整保留迅击、野火、五组搭档、共用移动禁止判定、66 强化及 v19 账本。本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:2d1eafb8`，LOOT_REPLAY `fnv1a32-utf16:7fd08770`；schema/save/replay/command 为 11/7/4/4（父 10/6/4/4；新增存档候选与领取决策字段，各升 schema/save 一版），旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
+
+12/17 B 公告 15 条（16 具名字段）在规则内容层采纳覆盖，raw/archive mirror 不变。标准模式只在玩家对战后获取微光，野怪不增加且不触发新 offer。黑市 N=3 为项目自定（用户要求多选一），按该档源权重无放回抽取，不足三包时全部列出，每候选一词 lcg32-v1。`choiceId/generation/options` 投影与 choose 命令不变，optionId 为完整奖励包 apiName；只发选中包，`@skip`/超时即“保留”，本轮不领且微光不清空。既有跨档/领取清空/跳过生命规则保持。
+
+## v19 第二部分（继承合同，2026-10-21）
 
 同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
 
 
-## v19 当前规则与数据合同（2026-10-21）
+## v19 规则与数据合同（历史身份）（2026-10-21）
 
-当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:ff78c2b0`、LOOT_REPLAY=`fnv1a32-utf16:df0d757c`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
+当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:242e7562`、LOOT_REPLAY=`fnv1a32-utf16:df0d757c`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。该 epoch 的录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`；当前入口与 CURRENT Herald 已推进至 v20-chem-baron，v19 及更早保持历史字节。
 
 实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/30羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
 
@@ -147,11 +153,11 @@ match.ts 与既有 server-entry 继续导出。有效调用必须传下标；TS 
 - 征服者延后神器、辅助装、冠、窃贼手套、锻造器、复制器。仅受影响档删除这些物品，保留其余奖励，Gold=max(原Gold,map22整档估值)。已有拆卸器、重铸器保留，第5档不触发折金。第14档60金+光明装备+拆卸器；第15档200金+永久光明转化。逐档源/过渡对照在RECONCILIATION，均标约定值，下一批恢复原奖励。
 - 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
 - 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
-- 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
+- 黑市按map22权重无放回抽最多3个候选，选中一个完整包；拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
 - 黑市复制器（用户2026-10-17 15:20批准）：100微光的LootA/LootA4（25%/10%）及200微光的LootB1（20%）各发1个`TFT13_Crime_Consumable_LesserShimmerDuplicator`，14.24 zh_cn名“次级微光复制器”。仅复制场上或备战席已拥有的≤3费炼金男爵；目标按既有种子派生候选顺序取首个。无合格目标或备战席满则保留托管，不消费、重抽或改发其他英雄。征服者第4档`TFT_Consumable_ChampionDuplicator_III`仍可复制≤3费任意英雄。`G23RewardAtom.duplicatorDefinitionId?`在复制器原子上保留上述API身份，`readG23MechanismState(state).rewards`原样投影它；领取记录仍为现有`kind:'duplicator'`/英雄收据，不新增命令或手动消耗品。当前分支不升版本，合并时取multiplayer届时版本+1；digest按实际策略自动重算。大小两种大复制器均不准入。
 - Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。使用 pendingChoice.kind=armory、choose/timeoutChoice；超时始终选择0金项（普通Spare、全购Finishing、三星Titan），余额不足的付费选择拒绝并保持原对象。菜单待选期间拒绝卖出Rumble；联机购买合星改变菜单时刷新offers并增加generation，旧选择失效。
 - Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
-- G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
+- G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每候选1词（每offer最多3词）；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
 - 奖励金币在唯一结算事务发放；已确定物品/英雄/工具同步发放，未决物品选择和满席英雄托管。英雄一律 grantMechanicUnit，并透传同事务 UnitLootPolicy；池空按费用折金，满席在碰池前保留待领奖励；卖出释放空间或 claimLoot 时重试。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明装备 kind=radiant 且 radiantOf 指向唯一普通成装；通用物品读取统一到 g2-3-item-registry，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
 
 - 召唤物结算约定：Sion维持阵营存活，Forge与预留桶id不维持；所有战斗召唤物不增加玩家伤害。Forge生成及复活空格搜索按席位坐标后镜像。
@@ -591,7 +597,7 @@ CHOICE_SKIP_OPTION = '@skip'
 - 打开：和强化一样是阻塞选择（用户已定军械库也这样），界面可以先收起，不选完不能离开选择阶段。`returnPhase` 必须等于当前阶段：`preparation` 在准备阶段开，`settlement` 在结算阶段开并保留战斗结果。补给回合和已有待选时拒绝（`wrong-phase`）。choiceId 不能和已有收据重复。
 - 玩家操作复用 `choose`（`selectChoice(state, choiceId, generation=0, optionId)`）。黑市跳过就是 `optionId='@skip'`，不可跳过时返回 `choice-not-skippable`。军械库钱不够返回 `insufficient-gold`。失败返回原 state，不耗资源和 RNG。
 - 选完写一条收据 `{kind:'choice', receiptId:choiceId, choiceKind, optionId, skipped, price, itemId, timedOut}`，发 `choiceSelected` 和 `mechanicGranted`，然后按 returnPhase 继续本回合日程（与强化选完后一样）。效果由机制自己读收据：已购升级就是 armory 收据列表；跳过收益由炼金男爵按 skipped 收据计算。
-- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。源表的无物品奖励包（LootA4）使用blackMarket的可选`grantItem:false`，offers为源奖励包apiName；通用层只记接受/跳过收据，不造占位物品，领域层发包内英雄/有限复制奖励。默认不带此字段仍按物品选择运行。
+- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。所有领域黑市候选使用blackMarket的`grantItem:false`，offers为各源奖励包apiName；通用层只记接受/跳过收据，不造占位物品，领域层发包内英雄/有限复制奖励。默认不带此字段仍按物品选择运行。
 - 机器人：`decideBotAction` 对新 kind 直接选 timeoutOption。Codex 可以以后换成更好的策略。
 - 存档：`restoreMatch` 接受待选的新 kind（`validateMechanicPendingChoice`）。
 

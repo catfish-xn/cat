@@ -1,0 +1,24 @@
+{
+  "parentEpoch": "v20-traits",
+  "contentDigest": "fnv1a32-utf16:2d1eafb8",
+  "lootReplayDigest": "fnv1a32-utf16:7fd08770",
+  "rulesVersion": "s13-g2-3-v20-chem-baron",
+  "contentVersion": "s13-14.24b-g2-3-v20-chem-baron",
+  "schemaVersion": 11,
+  "previousContentDigest": "fnv1a32-utf16:8bbf3521",
+  "previousLootReplayDigest": "fnv1a32-utf16:77e577f1",
+  "traceHashes": {
+    "state": "c6f6fec2891245d16c73a91417ce001c049cd2849fccc940b92dc6c26692ff77",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:f13e9067",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "Chem-Baron: adopt 16 named B-patch fields; standard PvP-only shimmer; up to three weighted distinct market bundles and keep via skip. Schema/save 11/7 increment parent v20-traits 10/6 for market optionIds and selected optionId receipts; replay/command remain 4/4; old identities rejected without migration."
+}

@@ -1,4 +1,4 @@
-import currentFingerprints from './fixtures/v20-traits-b8-fingerprints.json';
+import currentFingerprints from './fixtures/v20-chem-baron-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { expectWallClockBelow } from './fixtures/wallclock';

@@ -1,0 +1,338 @@
+{
+  "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+  "parentEpoch": "v20-traits",
+  "rulesVersion": "s13-g2-3-v20-chem-baron",
+  "contentVersion": "s13-14.24b-g2-3-v20-chem-baron",
+  "contentDigest": "fnv1a32-utf16:2d1eafb8",
+  "lootReplayDigest": "fnv1a32-utf16:7fd08770",
+  "schemaVersion": 11,
+  "saveFormatVersion": 7,
+  "replayFormatVersion": 4,
+  "commandProtocolVersion": 4,
+  "targeted": {
+    "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --maxWorkers=1 <targeted-files.json> --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/targeted.json",
+    "files": [
+      "tests/b8-resumable-battle.test.ts",
+      "tests/c19-missed-pulse.test.ts",
+      "tests/chem-baron-fix.test.ts",
+      "tests/content-identity-constants.test.ts",
+      "tests/d11-fill-source.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/g2-1-skills.test.ts",
+      "tests/g2-2-traits.test.ts",
+      "tests/g2-3-anomalies.test.ts",
+      "tests/g2-3-content.test.ts",
+      "tests/g2-3-followup.test.ts",
+      "tests/g2-3-hook-failures.test.ts",
+      "tests/g2-3-identity.test.ts",
+      "tests/g2-3-integration.test.ts",
+      "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "tests/g2-3-netcode-hooks.test.ts",
+      "tests/g2-3-traits.test.ts",
+      "tests/g2-4a-crown-gold.test.ts",
+      "tests/g2-4a-crown-history.test.ts",
+      "tests/g2-4b-artifacts.test.ts",
+      "tests/g2-4b-trench-gold.test.ts",
+      "tests/g2-augments-choice.test.ts",
+      "tests/g2-augments-static.test.ts",
+      "tests/m5-content.test.ts",
+      "tests/m5-route.test.ts",
+      "tests/m6-persistence.test.ts",
+      "tests/m6-replay.test.ts",
+      "tests/m7-hero-identity.test.ts",
+      "tests/m8-b10-temporary-replay.test.ts",
+      "tests/m8-b5-equipment-history.test.ts",
+      "tests/m8-b7-match-wiring.test.ts",
+      "tests/m8-b8-equipment-fixture.test.ts",
+      "tests/m8-b8-live-capacity.test.ts",
+      "tests/m8-b8-live-economy.test.ts",
+      "tests/m8-b8-live-reveal.test.ts",
+      "tests/m8-b8-live-transfer.test.ts",
+      "tests/m8-b9-compatibility.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m8-contracts.test.ts",
+      "tests/match-contract.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/s13-augments-p2-choice.test.ts",
+      "tests/s13-augments-p2-combat.test.ts",
+      "tests/s13-p1-acquisition.test.ts",
+      "tests/server/carousel-room.test.ts",
+      "tests/t12-offline-transfer.test.ts",
+      "tests/t13-identity.test.ts",
+      "tests/trait-runtime-g23.test.ts",
+      "tests/trait-text.test.ts",
+      "tests/ur-i3-combat-statuses.test.ts",
+      "tests/v15-anomaly-availability.test.ts",
+      "tests/v17-orb-combo.test.ts",
+      "tests/v19-mechanics.test.ts",
+      "tests/v19-part2.test.ts",
+      "tests/v19-shop-oracle.test.ts",
+      "tests/v20-traits.test.ts"
+    ],
+    "passed": 1396,
+    "failed": 0,
+    "pending": 0,
+    "exitCode": 0,
+    "durationSeconds": 581.95,
+    "log": "artifacts/v20-chem-baron-sync2/targeted.log"
+  },
+  "core": {
+    "files": 6,
+    "passed": 299,
+    "failed": 0,
+    "report": "artifacts/v20-chem-baron-sync2/core.json"
+  },
+  "epoch": {
+    "steps": 11,
+    "passed": true,
+    "historicalFiles": 220,
+    "protectedManifestByteIdentical": true,
+    "sourceAudits": 3,
+    "sourceHashesPerAudit": 363
+  },
+  "u6": {
+    "sha": "65f1704a06bf59ce60aaf0cf8c335f82e802e70a",
+    "checks": [],
+    "errors": [],
+    "passed": false,
+    "fixtures": {
+      "capacity": {
+        "file": "<repo>/artifacts/m8-u6-loot/u6-capacity-3-7.json",
+        "runId": "u6-capacity",
+        "battles": 14
+      },
+      "terminal": {
+        "file": "<repo>/artifacts/m8-u6-loot/u6-terminal-4-7.json",
+        "runId": "u6-terminal",
+        "battles": 20
+      }
+    },
+    "publicRoutePreflight": {
+      "capacityPendingHeroes": 2,
+      "terminalRetainedHero": "gangplank",
+      "passed": true
+    },
+    "failure": "Error: listen EPERM: operation not permitted 127.0.0.1:5173\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)"
+  },
+  "fast": {
+    "status": "complete",
+    "shards": 4,
+    "workersPerShard": 1,
+    "noTimeoutChanges": true,
+    "concurrentShards": 2,
+    "abortedAttempt": {
+      "concurrentShards": 4,
+      "status": "interrupted-for-memory-pressure",
+      "availableMemoryMiBAtInterruption": 175,
+      "logs": "artifacts/v20-chem-baron-sync2/aborted-four-concurrent",
+      "includedInFinalCounts": false,
+      "completedReplayEvidence": {
+        "mageSeconds": 373.662,
+        "sniperSeconds": 445.104
+      }
+    },
+    "completedShards": [
+      {
+        "shard": 1,
+        "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=1/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-1.json",
+        "exitCode": 1,
+        "passed": 1419,
+        "failed": 15,
+        "pending": 0,
+        "assertionStatuses": {
+          "passed": 1419,
+          "failed": 15
+        },
+        "files": 122,
+        "failedFiles": 7,
+        "elapsedSeconds": 684.67
+      },
+      {
+        "shard": 2,
+        "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=2/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-2.json",
+        "exitCode": 1,
+        "passed": 1611,
+        "failed": 5,
+        "pending": 0,
+        "assertionStatuses": {
+          "passed": 1611,
+          "failed": 5
+        },
+        "files": 121,
+        "failedFiles": 2,
+        "elapsedSeconds": 1059.97
+      },
+      {
+        "shard": 3,
+        "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=3/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-3.json",
+        "exitCode": 1,
+        "passed": 1822,
+        "failed": 16,
+        "pending": 0,
+        "assertionStatuses": {
+          "passed": 1822,
+          "failed": 16
+        },
+        "files": 121,
+        "failedFiles": 7,
+        "elapsedSeconds": 1511.4
+      },
+      {
+        "shard": 4,
+        "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=4/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync2/shard-4.json",
+        "exitCode": 1,
+        "passed": 1532,
+        "failed": 17,
+        "pending": 0,
+        "assertionStatuses": {
+          "passed": 1532,
+          "failed": 17
+        },
+        "files": 121,
+        "failedFiles": 3,
+        "elapsedSeconds": 706.84
+      }
+    ],
+    "completeShards": 4,
+    "totals": {
+      "passed": 6384,
+      "failed": 53,
+      "pending": 0,
+      "files": 485,
+      "failedFiles": 19
+    },
+    "failureRecordsByCategory": {
+      "environment": 53
+    },
+    "listenEnvironmentFailures": 46,
+    "childPipeEnvironmentFailures": 7,
+    "timingFailures": 0,
+    "ruleAssertionFailures": 0,
+    "fullFastGreen": false,
+    "failureList": "docs/evidence/v20-chem-baron/fast-failures.json"
+  },
+  "git": {
+    "metadataReadOnly": true,
+    "conflictContentResolved": true,
+    "indexUnmergedPathsRemainForUser": true,
+    "noNetwork": true,
+    "noPush": true,
+    "restrictedDirectoriesModifiedByThisTask": []
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "log": "artifacts/v20-chem-baron-sync2/typecheck.log"
+  },
+  "digests": {
+    "command": "node scripts/update-content-identities.cjs --check",
+    "exitCode": 0,
+    "comparison": {
+      "before": {
+        "contentDigest": "fnv1a32-utf16:8bbf3521",
+        "lootReplayDigest": "fnv1a32-utf16:77e577f1",
+        "rulesManifestDigest": "fnv1a32-utf16:c21e5955"
+      },
+      "after": {
+        "contentDigest": "fnv1a32-utf16:2d1eafb8",
+        "lootReplayDigest": "fnv1a32-utf16:7fd08770",
+        "rulesManifestDigest": "fnv1a32-utf16:942eb1f2"
+      }
+    }
+  },
+  "memoryComparison": {
+    "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+    "workersExcludePreload": true,
+    "reports": [
+      {
+        "label": "v20-traits",
+        "exitCode": 0,
+        "peakRssKiB": 282868,
+        "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":45.575900000000274}\n",
+        "stderr": ""
+      },
+      {
+        "label": "current",
+        "exitCode": 0,
+        "peakRssKiB": 284088,
+        "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":49.185575999999855}\n",
+        "stderr": ""
+      }
+    ],
+    "limitKiB": 262144,
+    "classification": "inherited-performance-gate-failure; both immutable v20-traits and current exceed 256 MiB under the same Node 24 environment; arithmetic and elapsed-time checks pass",
+    "log": "artifacts/v20-chem-baron-sync2/memory-comparison.log"
+  },
+  "coldProcessRecheck": {
+    "command": "NODE_OPTIONS=--require=<ignored-file-stdio-preload> node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --maxWorkers=1 tests/g2-4b-pr161-restore.test.ts -t 'cold Node processes'",
+    "passed": 1,
+    "failed": 0,
+    "notSelected": 10,
+    "originalTimeoutUnchanged": true,
+    "classification": "environment; same tiers4/10/14 canonical saves and assertions pass with ordinary file descriptors",
+    "report": "artifacts/v20-chem-baron-sync2/cold-process-recheck.json",
+    "log": "artifacts/v20-chem-baron-sync2/cold-process-recheck.log"
+  },
+  "finalChecks": {
+    "gitDiffCheck": "passed",
+    "conflictMarkers": 0,
+    "conflictContentResolved": true,
+    "unmergedIndexPaths": [
+      "scripts/verify-m8-herald-fixtures.cjs",
+      "src/simulation/content/identity-constants.ts",
+      "src/simulation/content/rules-manifest.ts",
+      "src/simulation/m8/contracts.ts",
+      "src/simulation/m8/version.ts",
+      "tests/b8-resumable-battle-helper.ts",
+      "tests/c19-missed-pulse.test.ts",
+      "tests/d11-wiring-bank.test.ts",
+      "tests/d14-anomalies-source.test.ts",
+      "tests/epic-loot-reforger.test.ts",
+      "tests/fixtures/m5/assert-golden.cjs",
+      "tests/fixtures/m8-golden-states.cjs",
+      "tests/fixtures/m8-neutral-public-route.ts",
+      "tests/m8-b10-temporary-replay.test.ts",
+      "tests/m8-b8-live-transfer.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m8-contracts.test.ts",
+      "tests/match-contract.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/ur-i3-combat-statuses.test.ts",
+      "tests/v19-part2.test.ts"
+    ],
+    "metadataReadOnly": true,
+    "unstagedRestrictedDirectoryChanges": [],
+    "sourceAudits": {
+      "release-audit": {
+        "hashes": 363,
+        "allMatch": true
+      },
+      "input-fixture-audit": {
+        "hashes": 363,
+        "allMatch": true
+      },
+      "live-reveal-audit": {
+        "hashes": 363,
+        "allMatch": true
+      }
+    },
+    "historicalAudit": {
+      "epoch": "v20-chem-baron",
+      "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+      "historicalFiles": 220,
+      "byteIdentical": true,
+      "protectedManifestByteIdentical": true
+    },
+    "typecheckExitCode": 0,
+    "epochComplete": true,
+    "noNetworkOrPush": true
+  },
+  "remaining": [
+    "U6 DOM verification blocked by listen EPERM; public route preflight passes",
+    "53 raw fast cases blocked by environment; cold-process case passes file-descriptor recheck",
+    "Inherited Node24 RSS gate: both v20-traits and current exceed 256 MiB",
+    "Git index conflict registration and commit left to user because metadata is read-only"
+  ]
+}

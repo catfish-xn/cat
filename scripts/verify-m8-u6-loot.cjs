@@ -9,20 +9,18 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { readProcessOutput: execFileSync } = require('./offline-process-output.cjs');
 const { chromium } = require('playwright');
 const { lootPlan: independentLootPlan } = require('../tests/fixtures/orb-combo-oracle.cjs');
 const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot');
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
-  const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), checks: [], errors: [], passed: false };
+  const report = { sha: execFileSync('git', ['rev-parse', 'HEAD']).toString().trim(), checks: [], errors: [], passed: false };
   const { createServer } = await import('vite');
   const server = await createServer({ root: path.resolve(__dirname, '..'), ...(process.env.VITE_CONFIG_LOADER ? { configLoader: process.env.VITE_CONFIG_LOADER } : {}), ...(process.env.U6_CACHE_DIR ? { cacheDir: path.resolve(process.env.U6_CACHE_DIR) } : {}), server: { host: '127.0.0.1', port: 0 } });
   let browser;
   try {
-    await server.listen();
-    const url = server.resolvedUrls.local[0];
     const api = await server.ssrLoadModule('/src/simulation/match.ts');
     const { BattleHistory, validateBattleCollection } = await server.ssrLoadModule('/src/replay/index.ts');
     const { validateEnvelope } = await server.ssrLoadModule('/src/persistence/format.ts');
@@ -116,8 +114,31 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);
     report.fixtures = { capacity: capacityFile, terminal: terminalFile };
+    // Check the selected public recipes before the browser needs a listening
+    // socket. Expanded augment offers must still exercise these exact cases.
+    const resolve = prepared => {
+      let state = accepted(api.startMatchCombat(structuredClone(prepared)));
+      while (state.phase === 'combat') state = api.stepMatch(state).state;
+      return state;
+    };
+    let capacityEnded = resolve(capacityState);
+    assert.equal(capacityEnded.pendingChoice?.kind, 'forge');
+    const forge = capacityEnded.pendingChoice;
+    capacityEnded = accepted(api.selectChoice(capacityEnded, forge.choiceId, forge.generation, forge.offers[0]));
+    assert.equal(capacityEnded.phase, 'settlement');
+    assert.deepEqual(api.readLootView(capacityEnded).pendingClaims, capacityHeroes.map(drop => drop.dropId));
+    const terminalEnded = resolve(terminalState);
+    assert.equal(terminalEnded.phase, 'gameOver');
+    assert.deepEqual(terminalEnded.combat.neutralReceipts.deaths.map(death => death.unitId), [
+      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r00']),
+      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r03']),
+    ]);
+    assert.deepEqual(api.readLootView(terminalEnded).revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal']);
+    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'gangplank', passed: true };
 
     /* ---------- the real app ---------- */
+    await server.listen();
+    const url = server.resolvedUrls.local[0];
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
     report.browser = browser.version();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

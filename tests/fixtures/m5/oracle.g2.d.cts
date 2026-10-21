@@ -39,3 +39,6 @@ export class Ledger {
   apply(before: MatchState, after: MatchState, command?: OracleCommand, events?: readonly MatchEvent[]): void;
   check(state: MatchState): void;
 }
+
+export function blackMarket(tier: number, rng: number): { offers: string[]; rng: number; draws: number };
+export function validateChemTransition(before: MatchState, after: MatchState): void;

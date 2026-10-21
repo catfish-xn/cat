@@ -17,10 +17,10 @@ export interface G23BattleFacts {
  readonly crowns?:number;
 }
 export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market'|'family';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>}
-export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly round:number}
+export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly optionIds:readonly string[];readonly round:number}
 export interface G23ChemProgress {readonly shimmer:number;readonly losses:number;readonly skips:number;readonly offeredThrough:number;readonly offer:G23MarketOffer|null}
 export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[];readonly crownGold?:number}
-export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number}
+export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number;readonly optionId?:string}
 export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision|{readonly kind:'family-start';readonly round:number}|{readonly kind:'mel-save';readonly battleId:string;readonly round:number};
 // Structural bound: every deployment cell may hold one unit with three equipment slots.
 export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZones.player.lastRow - DEFAULT_BOARD.deploymentZones.player.firstRow + 1) * 3;
@@ -54,14 +54,16 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  }
  let chem=p.chem,rngState=p.rngState,rngDraws=p.rngDraws;
  const losses=f.roundKind==='pvp'?(f.result==='loss'?chem.losses+1:0):chem.losses;
- if(f.chemBaronTier){
+ // Standard solo and multiplayer both settle here; _PVE constants belong to a separate source mode.
+ // Standard TFT13_Crime description: after each player combat.
+ if(f.chemBaronTier&&f.roundKind==='pvp'){
   const v=G23_TRAIT_SOURCE['chem-baron'].tiers.find(t=>t.threshold===f.chemBaronTier)!.values;
-  const gain=f.roundKind==='pve'?v.ShimmerPerRound_PVE+f.alliedDeaths*v.ShimmerPerDeath_PVE:losses>=v.MinStreakLength?v.ShimmerPerCombatStreaking:v.ShimmerPerCombat;
+  const gain=losses>=v.MinStreakLength?v.ShimmerPerCombatStreaking:v.ShimmerPerCombat;
   const shimmer=chem.shimmer+gain,tier=Math.min(8,Math.floor(shimmer/100));
   chem={...chem,shimmer,losses};
   if(!chem.offer&&tier>chem.offeredThrough){
-   const roll=rollG23BlackMarket(tier,rngState);rngState=roll.rngState;rngDraws++;
-   chem={...chem,offeredThrough:tier,offer:{id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.id,round:f.round}};
+   const roll=rollG23BlackMarket(tier,rngState);rngState=roll.rngState;rngDraws+=roll.draws;
+   chem={...chem,offeredThrough:tier,offer:{id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.id,optionIds:roll.options.map(o=>o.id),round:f.round}};
   }
  }else chem={...chem,losses};
  let crownGold:number|undefined;
@@ -77,10 +79,10 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  const receipt:G23EconomyAction={kind:'battle',facts:structuredClone(f),gold,bundles:ids,...(crownGold===undefined?{}:{crownGold})};
  return {progress:{...p,...(family?{family}:{}),...(mel?{mel}:{}),conquest,chem,junkerRounds,rngState,rngDraws,rewards,economyReceipts:[...p.economyReceipts,receipt]},gold};
 }
-export function decideG23Market(p:G23MatchProgress,id:string,take:boolean,round:number):G23MatchProgress{
- const offer=p.chem.offer;if(!offer||offer.id!==id||typeof take!=='boolean'||round<offer.round)throw new RangeError('Stale G23 market');
- const option=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===offer.optionId)!;
+export function decideG23Market(p:G23MatchProgress,id:string,take:boolean,round:number,optionId:string=p.chem.offer?.optionId??''):G23MatchProgress{
+ const offer=p.chem.offer;if(!offer||offer.id!==id||typeof take!=='boolean'||!Number.isSafeInteger(round)||round<offer.round||take&&!offer.optionIds.includes(optionId))throw new RangeError('Stale G23 market');
+ const option=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===(take?optionId:offer.optionId))!;
  return {...p,chem:{...p.chem,offer:null,shimmer:take?0:p.chem.shimmer,offeredThrough:take?0:p.chem.offeredThrough,skips:p.chem.skips+(take?0:1)},
   rewards:take?[...p.rewards,{id:offer.id,round,source:'black-market',tier:offer.tier,reward:option.reward}]:p.rewards,
-  economyReceipts:[...p.economyReceipts,{kind:'market',offerId:id,take,round}]};
+  economyReceipts:[...p.economyReceipts,{kind:'market',offerId:id,take,round,...(take?{optionId}:{})}]};
 }
