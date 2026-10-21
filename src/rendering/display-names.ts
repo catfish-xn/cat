@@ -10,5 +10,7 @@ const UNIT_ZH: Readonly<Record<string,string>> = {
   singed:'辛吉德', swain:'斯维因', twitch:'图奇', violet:'蔚奥莱', vladimir:'弗拉基米尔', zeri:'泽丽',
   akali:'阿卡丽', ambessa:'安蓓萨', camille:'卡蜜尔', draven:'德莱文', heimerdinger:'黑默丁格', jinx:'金克丝', mordekaiser:'莫德凯撒', morgana:'莫甘娜',
   sett:'瑟提', steb:'斯特卜', trundle:'特朗德尔', twistedfate:'崔斯特', vex:'薇古丝', vi:'蔚', ziggs:'吉格斯',
+  // v19 six-costs (same ids as the rules layer).
+  warwick:'沃里克', viktor:'维克托', mel:'梅尔',
 };
 export const displayUnitName = (id: string) => UNIT_ZH[id] ?? g23UnitName(id) ?? (Object.hasOwn(NEUTRAL_DEFINITIONS, id) ? NEUTRAL_DEFINITIONS[id].name : undefined) ?? UNIT_DEFINITIONS[id]?.name ?? '未知单位';

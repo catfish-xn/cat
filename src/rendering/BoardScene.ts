@@ -28,7 +28,7 @@ import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../st
 import type { SessionChange } from '../m6/contracts';
 import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
-import { g23BoardMechanics } from './trait-column';
+import { familyReunionDancers, g23BoardMechanics } from './trait-column';
 import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
@@ -1221,10 +1221,14 @@ export class BoardScene extends Phaser.Scene {
     });
   }
   private mechanicsOf: unknown = null; private mechanics: { mechanics?: BoardMechanics } = {};
-  /** ?render=3d: my 征服层数 and 微光, recomputed only when the session state object changes (frames publish every tick). */
+  /** ?render=3d: my 征服层数, 微光 and 家人团聚 dancers, recomputed only when the session state object changes (frames publish every tick). */
   private feedMechanics(): { mechanics?: BoardMechanics } {
     const state = this.session.state;
-    if (state !== this.mechanicsOf) { this.mechanicsOf = state; const mechanics = g23BoardMechanics(state); this.mechanics = mechanics ? { mechanics } : {}; }
+    if (state !== this.mechanicsOf) {
+      this.mechanicsOf = state;
+      const reunion = familyReunionDancers(state), mechanics = { ...g23BoardMechanics(state), ...(reunion.length ? { reunion } : {}) };
+      this.mechanics = Object.keys(mechanics).length ? { mechanics } : {};
+    }
     return this.mechanics;
   }
   private orbRefusalsOf(): Readonly<Record<string, number>> {

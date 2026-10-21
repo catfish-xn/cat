@@ -24,7 +24,21 @@ import type { ItemSummonView, RoundEconomyPreview, SeatStateView } from '../../s
  */
 export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null;
   /** G2-4b (§26): my movable preparation summons as the server placed them; RemoteSession.itemSummons reads them. */
-  readonly itemSummons?: readonly ItemSummonView[] };
+  readonly itemSummons?: readonly ItemSummonView[];
+  /** v19: the rules' 家人团聚 view of my seat and the six-cost chance per shop slot (basis points). */
+  readonly familyReunion?: { readonly eligible: boolean; readonly participantIds: readonly string[] };
+  readonly shopOdds?: { readonly sixCostBps: number } };
+
+/** The server's 家人团聚 view (eligible + the six unit ids); null when the server did not send one (offline states). */
+export function readFamilyReunion(state: MatchState): { readonly eligible: boolean; readonly participantIds: readonly string[] } | null {
+  const view = (state as DisplayMatch).familyReunion;
+  return view && typeof view.eligible === 'boolean' && Array.isArray(view.participantIds) ? view : null;
+}
+/** The server's six-cost chance per shop slot in basis points; null when the server did not send it. */
+export function readSixCostBps(state: MatchState): number | null {
+  const bps = (state as DisplayMatch).shopOdds?.sixCostBps;
+  return Number.isFinite(bps) ? bps! : null;
+}
 
 /**
  * The rules' economy preview of my current round as the server sent it (SR-G5-02, contract §14.4); null outside

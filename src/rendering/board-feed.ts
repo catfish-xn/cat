@@ -51,6 +51,8 @@ export interface BoardMechanics {
   readonly conquest?: { readonly stacks: number; readonly opened: number; readonly from: number; readonly next: number | null };
   /** 微光 with the next black-market breakpoint (null past the last); `offer` while a black market waits for an answer. */
   readonly shimmer?: { readonly value: number; readonly next: number | null; readonly offer: boolean };
+  /** 家人团聚 easter egg: the six reunited units (rules' familyReunionParticipants), dancing in planning; absent otherwise. */
+  readonly reunion?: readonly string[];
 }
 export interface BoardOrb {
   readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;
