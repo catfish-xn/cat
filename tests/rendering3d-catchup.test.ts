@@ -82,6 +82,61 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(action.time).toBeCloseTo(.016); expect(action.paused).toBe(false);
   });
 
+  it.each([
+    { restart: false, hiddenMs: 0 },
+    { restart: true, hiddenMs: 0 },
+    { restart: false, hiddenMs: 400 },
+    { restart: true, hiddenMs: 400 },
+  ])('dance uses only its own elapsed time (restart=$restart, hiddenMs=$hiddenMs)', async ({ restart, hiddenMs }) => {
+    const planning: BoardFrame = { ...frame, fighting: false };
+    const dancing: BoardFrame = { ...planning, mechanics: { reunion: ['a'] } };
+    listener.frame(planning);
+    const piece = debug().pieces.get('a')!;
+    // Synthetic asset through the existing debug hook; drive dance via the public board feed.
+    const clip = new three.AnimationClip('dance', 10, []);
+    piece.lease.animations.push(clip); piece.lease.animationNames.celebrate = clip.name;
+    const action = piece.mixer.mixer.clipAction(clip), updates = vi.spyOn(piece.mixer, 'update');
+    listener.scout!({ seatId: 'other', name: 'other' });
+    for (let i = 0; i < 6; i++) await advance(200);
+    expect(updates).not.toHaveBeenCalled();
+    listener.frame(dancing);
+    expect(action.isRunning()).toBe(true); expect(action.time).toBe(0);
+    if (restart) {
+      for (let i = 0; i < 3; i++) await advance(200);
+      // Simulate an action stopped on the same mixer: setDance must really restart it.
+      action.stop(); listener.frame(dancing);
+      expect(action.isRunning()).toBe(true); expect(action.time).toBe(0);
+    }
+    for (let elapsed = 0; elapsed < hiddenMs; elapsed += 200) {
+      await advance(200);
+      listener.frame(dancing); // Repeated board snapshots must preserve the running dance's held time.
+    }
+    expect(updates).not.toHaveBeenCalled();
+    listener.scout!(null); await advance(16);
+    expect(updates).toHaveBeenCalledTimes(1);
+    expect(updates.mock.calls[0][0]).toBeCloseTo(hiddenMs / 1000 + .016);
+    expect(action.time).toBeCloseTo(hiddenMs / 1000 + .016);
+  });
+
+  it.each([false, true])('discards hidden dance time when dance ends (combatStarts=%s)', async combatStarts => {
+    const planning: BoardFrame = { ...frame, fighting: false };
+    listener.frame(planning);
+    const piece = debug().pieces.get('a')!, original = piece.mixer;
+    const clip = new three.AnimationClip('dance', 10, []);
+    piece.lease.animations.push(clip); piece.lease.animationNames.celebrate = clip.name;
+    listener.frame({ ...planning, mechanics: { reunion: ['a'] } });
+    const dance = original.mixer.clipAction(clip);
+    expect(dance.isRunning()).toBe(true);
+    listener.scout!({ seatId: 'other', name: 'other' });
+    for (let i = 0; i < 6; i++) await advance(200);
+    listener.frame(combatStarts ? frame : planning);
+    expect(dance.isRunning()).toBe(false); expect(piece.mixer).not.toBe(original);
+    const updates = vi.spyOn(piece.mixer, 'update');
+    listener.scout!(null); await advance(16);
+    expect(updates).toHaveBeenCalledExactlyOnceWith(.016);
+    expect(piece.state.output.state).toBe('idle');
+  });
+
   it('catches up the same hidden action, but discards held time when a phase creates a new mixer', async () => {
     const piece = debug().pieces.get('a')!, original = piece.mixer;
     const updates = vi.spyOn(original, 'update');
