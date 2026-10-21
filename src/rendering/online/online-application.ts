@@ -9,7 +9,8 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, publishCarousel } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends } from '../board-feed';
+import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
 import { BattleOutcome } from './battle-outcome';
@@ -18,7 +19,8 @@ import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
 import { OnlineSound, type SoundCue } from './sound';
 import { Lobby } from './lobby';
-import { OpponentBoardPanel } from './opponent-board';
+import { OpponentBoardPanel, publicTraitRows } from './opponent-board';
+import { traitColumnShowRows } from '../trait-column';
 import { PlayersSidebar } from './players-sidebar';
 import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { EliminationCard, RankingOverlay } from './ranking';
@@ -96,7 +98,9 @@ export class OnlineApplication implements SceneApplication {
   /** board-feed subscription the 3D carousel was last sent to, and the next seat release that changes what it draws. */
   private carouselFeedGeneration = -1;
   private carouselNextRelease = Infinity;
+  private scoutFeedGeneration = -1;
   private withdrawCarouselControls: () => void;
+  private withdrawLegendControls: () => void;
   /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
   get roomInCombat(): boolean { return this.view?.phase.kind === 'combat'; }
   private unlisten: () => void;
@@ -108,14 +112,15 @@ export class OnlineApplication implements SceneApplication {
   constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
-    this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch() });
+    this.lobby = new Lobby(app, { join: name => client.joinQueue(name, readLegendChoice()), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
-    this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
+    this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
+    this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.leftToggle = new LeftPanelToggle();
@@ -135,6 +140,12 @@ export class OnlineApplication implements SceneApplication {
       refused: refusal => this.onRefused(refusal),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
+      // The room's clock onto mine (the push is taken as fresh), and whose legend it is from my seat.
+      legend: (walk, serverNow) => {
+        const shift = performance.now() - serverNow, view = this.view;
+        publishLegendWalk({ ...walk, startedAt: walk.startedAt + shift, arriveAt: walk.arriveAt + shift,
+          who: walk.seatId === view?.mySeatId ? 'me' : walk.seatId === view?.opponentSeatId ? 'opponent' : 'other' });
+      },
     });
     this.syncMode();
   }
@@ -234,7 +245,13 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
+    // 3D 看对手: my battle starting brings my board back (another seat's battle is not sent to me).
+    if (view.phase.kind === 'combat' && this.view?.phase.kind !== 'combat' && this.opponentBoard.drawnIn3d) this.opponentBoard.close();
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
+    // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
+    const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
+    setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
+    this.syncScout();
     this.syncSpectating(view);
     this.syncCarousel(view);
     this.syncBattleViews();
@@ -314,7 +331,7 @@ export class OnlineApplication implements SceneApplication {
       const elapsedMs = this.carousel.elapsedNow() ?? view.elapsedMs, pending = this.carousel.pendingSlot;
       this.carouselNextRelease = Math.min(Infinity, ...Object.values(view.releaseAtMs).filter(at => at > elapsedMs));
       return { id: view.id, elapsedMs, at: performance.now(),
-        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, releaseAtMs: view.releaseAtMs[seat.seatId] ?? Infinity })),
+        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, releaseAtMs: view.releaseAtMs[seat.seatId] ?? Infinity, ...(seat.legend ? { legend: seat.legend } : {}) })),
         slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel,
           cost: getHeroIdentity(slot.definitionId).cost,
           items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), pickedBy: slot.pickedBy,
@@ -355,8 +372,23 @@ export class OnlineApplication implements SceneApplication {
     const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
     if (!view || !seat) return;
     this.elimination.hide(); // opening a board means watching on
-    this.opponentBoard.toggle(seat, seatId === view.mySeatId);
-    this.sidebar.setViewing(this.opponentBoard.openSeatId);
+    // In 3D my own avatar is the way back to my board.
+    if (seatId === view.mySeatId && this.opponentBoard.drawnIn3d) this.opponentBoard.close();
+    else this.opponentBoard.toggle(seat, seatId === view.mySeatId);
+    this.sidebar.setViewing(this.opponentBoard.openSeatId); this.syncScout();
+  }
+  /**
+   * ?render=3d: the open seat (never mine) is drawn on the 3D board from its public build only; the panel shrinks to its
+   * strip and the trait column shows that seat's traits. Without a 3D layer nothing changes.
+   */
+  private syncScout() {
+    this.scoutFeedGeneration = boardFeedGeneration();
+    const view = this.view, seatId = this.opponentBoard.openSeatId;
+    const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
+    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs } : null) && !!seat;
+    this.opponentBoard.drawnIn3d = drawn;
+    this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
+    traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
   }
   private syncSpectating(view: PlayerView) {
     const me = view.seats.find(seat => seat.seatId === view.mySeatId);
@@ -390,7 +422,7 @@ export class OnlineApplication implements SceneApplication {
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
-    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
+    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null);
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();
@@ -401,6 +433,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
     // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
     if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
+    if (this.opponentBoard.openSeatId && this.scoutFeedGeneration !== boardFeedGeneration()) this.syncScout();
     // Last three seconds of a preparation: one tick per second.
     const seconds = this.mode === 'active' && !this.spectating && this.view?.phase.kind === 'preparation' ? this.sidebar.secondsLeft() : null;
     if (seconds !== this.lastTick) { this.lastTick = seconds; if (seconds !== null && seconds >= 1 && seconds <= 3) this.sound.play('tick'); }
@@ -437,7 +470,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

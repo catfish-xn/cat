@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Group, PerspectiveCamera, Scene } from 'three';
 import { createTabletop, LEGEND_MODEL, type TabletopContext } from '../src/rendering/three-mode/tabletop';
-import type { BoardFrame, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
+import type { BoardFrame, BoardLegendWalk, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
 /** Synthetic data only: no asset files. Effects and models are stand-in objects; the tabletop logic is production code. */
@@ -167,5 +167,87 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     for (let x = 0; x < 800 && !found; x += 4) for (let y = 0; y < 600 && !found; y += 4) if (tabletop.orbAt({ x, y }, area) === 'x') found = { x, y };
     expect(found).not.toBeNull();
     expect(tabletop.orbAt({ x: 5, y: 5 }, area)).toBeNull();
+  });
+
+  it('walks my legend to a right-clicked point at the room pace, inside the roaming area, and reports it in board cells', () => {
+    let clock = 0;
+    const { scene, tabletop } = setup({ now: () => clock });
+    tabletop.frame(frame());
+    const width = Math.sqrt(3) * 34, legend = scene.getObjectByName('render3d-legend-me')!;
+    const walk = tabletop.walkTo({ x: 35 + width * 3, y: 50 + width * 2 })!;
+    expect(walk.to.x).toBeCloseTo(3, 5); expect(walk.to.y).toBeCloseTo(2, 5);
+    expect(tabletop.debug().legends).toEqual(['legend:me:standin:walk']);
+    const cells = Math.hypot(walk.to.x - walk.from.x, walk.to.y - walk.from.y);
+    clock = cells / 5 * 1000 / 2; tabletop.update(0.016);
+    expect(legend.position.x).toBeCloseTo(35 + width * (walk.from.x + walk.to.x) / 2, 3);
+    clock = cells / 5 * 1000 + 1; tabletop.update(0.016);
+    expect(legend.position.x).toBeCloseTo(35 + width * 3, 3); expect(legend.position.z).toBeCloseTo(50 + width * 2, 3);
+    expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
+    // A new frame of the same board keeps it where it walked; a far click stops at the roaming edge.
+    tabletop.frame(frame());
+    expect(legend.position.x).toBeCloseTo(35 + width * 3, 3);
+    const far = tabletop.walkTo({ x: -5000, y: 99999 })!;
+    expect(far.to.x).toBeGreaterThan(-3); expect(far.to.y).toBeLessThan(20);
+  });
+
+  it('claims an orb my walking legend reaches, once, through the dock click', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a'), orb('b')] }));
+    tabletop.update(0.016);
+    expect(claimOrb).not.toHaveBeenCalled(); // standing at home touches nothing
+    tabletop.walkTo({ x: 0, y: 0 }, 'a');
+    clock = 60_000; tabletop.update(0.016); tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledWith('a');
+    expect(claimOrb.mock.calls.filter(([id]) => id === 'a')).toHaveLength(1);
+  });
+
+  it('draws an opponent walk from the room mirrored onto the far side of my board', () => {
+    let clock = 0;
+    const { scene, tabletop } = setup({ now: () => clock });
+    tabletop.frame(frame({ fighting: true, pieces: [piece()] }));
+    const width = Math.sqrt(3) * 34, step = 34 * 1.5;
+    const walk: BoardLegendWalk = { seatId: 's4', scene: 'board', from: { x: 0, y: 0 }, to: { x: 1, y: 1 }, startedAt: 0, arriveAt: 500, slot: null, who: 'opponent' };
+    tabletop.walk(walk);
+    tabletop.walk({ ...walk, who: 'other', to: { x: 9, y: 9 } }); // not my opponent: not drawn
+    clock = 600; tabletop.update(0.016);
+    const centerX = 35 + width * 6.5 / 2, centerZ = 50 + step * 7 / 2;
+    const legend = scene.getObjectByName('render3d-legend-opponent')!;
+    expect(legend.position.x).toBeCloseTo(2 * centerX - (35 + width), 3);
+    expect(legend.position.z).toBeCloseTo(2 * centerZ - (50 + width), 3);
+  });
+
+  it('sends one claim per orb while it is out, and another only after the session refused it', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    const width = Math.sqrt(3) * 34;
+    tabletop.walkTo({ x: 0, y: 0 }, 'a');
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(1);
+    // Still out (no queued flag yet, no answer): walking onto it again sends nothing.
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(1);
+    // Refused: the next touch may send it again, once.
+    tabletop.frame(frame({ orbs: [orb('a')], orbRefusals: { a: 1 } }));
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016); tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledTimes(2);
+  });
+
+  it('claims an orb it crossed during one long frame (a dropped frame or a background tab)', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { scene, tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    const legend = scene.getObjectByName('render3d-legend-me')!.position.clone(), at = scene.getObjectByName('render3d-orb-blue')!.position.clone();
+    // A walk straight through the orb to well beyond it, finished within a single update.
+    const beyond = at.clone().add(at.clone().sub(legend));
+    tabletop.walkTo({ x: beyond.x, y: beyond.z });
+    clock += 60_000; tabletop.update(0.25);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
   });
 });
