@@ -159,6 +159,7 @@ export function consumableShelf(consumables: readonly ConsumableInstance[], sele
   for (const [definitionId, stack] of stacks) {
     const tool = stack[0]!, button = node('button', '', 'consumable-card'); button.type = 'button';
     button.dataset.debug = `consumable:${tool.consumableId}`; button.dataset.consumableDef = definitionId;
+    button.dataset.consumableIds = stack.map(copy => copy.consumableId).join(' ');
     button.setAttribute('aria-pressed', String(stack.some(copy => copy.consumableId === selected)));
     button.insertAdjacentHTML('afterbegin', toolMark(definitionId));
     button.append(node('span', consumableName(definitionId)));
