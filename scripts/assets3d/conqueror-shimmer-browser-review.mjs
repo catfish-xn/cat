@@ -12,7 +12,8 @@ const server = await createServer({ configFile: false, optimizeDeps: { noDiscove
 let browser;
 try {
   await server.listen();
-  browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
+  if (!process.env.CHROMIUM_PATH) throw new Error('CHROMIUM_PATH-required');
+  browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors = [], results = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('requestfailed', r => errors.push(r.url()));
