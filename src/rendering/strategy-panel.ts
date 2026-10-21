@@ -935,6 +935,7 @@ export class StrategyPanel {
     const pendingLoot = readLootView(state).pendingChoice, loot = pendingLoot?.choiceId === choice.choiceId ? pendingLoot : null;
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
     if (loot) card.dataset.dropId = loot.dropId;
+    if (choice.augmentTier) card.dataset.augmentTier = choice.augmentTier;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
@@ -974,7 +975,12 @@ export class StrategyPanel {
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
-        if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
+        if (choice.kind === 'augment') {
+          // Name and effect as their own blocks (the original card sets the name large); the text content stays the label.
+          const [name = '', ...rest] = label.split('\n');
+          button.replaceChildren(element('strong', name, 'augment-name'), element('span', rest.length ? `\n${rest.join('\n')}` : '', 'augment-desc'));
+          button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label;
+        }
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
         const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
         if (!option || !rerollAugment) { offers.append(button); continue; }
@@ -1059,7 +1065,7 @@ export class StrategyPanel {
     if (payload?.skippable) {
       const skip = this.button('choice-skip', '', () => send(SKIP_OPTION));
       skip.className = 'shop-card shop-offer shop-skip';
-      skip.append(element('strong', '不买 · 跳过', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
+      skip.append(element('strong', '保留', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
       cards.append(skip);
     }
   }
@@ -1254,7 +1260,7 @@ export class StrategyPanel {
     section.append(shop, odds); (this.shopDock ?? this.root).append(section);
   }
   /**
-   * TFT's black market and Junker King upgrades replace the shop cards; 不买 is its own card (the rules' skip option), and
+   * TFT's black market and Junker King upgrades replace the shop cards; 保留 (keep the 微光) is its own card (the rules' skip option), and
    * online, where the shop stays usable through the window, 查看商店 swaps the cards back until the player returns.
    */
   private renderShopChoice(choice: NonNullable<MatchState['pendingChoice']>, token: string): void {
@@ -1278,7 +1284,7 @@ export class StrategyPanel {
       if (offer.iconUrl) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
       cards.append(card);
     }
-    if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动不买' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
+    if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动保留' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
     // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
     if (online) {
       const away = this.button('shop-choice-away', '查看商店', () => { this.shopChoiceAway = token; this.render(); });
