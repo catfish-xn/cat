@@ -57,6 +57,12 @@ export function buildPortraitTextures(scene: Phaser.Scene, size = 108): void {
 }
 
 /** DOM portrait chip: official icon when bundled, else the given fallback markup. */
+/**
+ * Rules id → 14.24 client character key where the two differ or the portrait is not bundled yet (v19 six-costs; Mel's
+ * client name is MissMage). The square portrait is `characters/<key>/hud/<key>_square.tft_set13.png`; until the manifest
+ * lists it under the rules id, heroPortraitHtml draws the code emblem in its place.
+ */
+export const CHAMPION_PORTRAIT_KEYS: Readonly<Record<string, string>> = Object.freeze({ warwick: 'tft13_warwick', viktor: 'tft13_viktor', mel: 'tft13_missmage' });
 export function heroPortraitHtml(definitionId: string, size: number, fallback: string): string {
   const url = s13AssetUrl('champion', definitionId);
   return url ? `<img class="hero-portrait" data-hero="${definitionId}" src="${url}" width="${size}" height="${size}" alt="" draggable="false" loading="lazy" decoding="async">` : fallback;

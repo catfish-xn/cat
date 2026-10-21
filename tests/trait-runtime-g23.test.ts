@@ -82,3 +82,15 @@ it('puts the 家人 5 reward and progress at the foot of the Family card only, a
   expect(familyReunionDancers({ ...reunion, phase: 'combat' } as never)).toEqual([]);
   expect(familyReunionDancers({ ...reunion, items: reunion.items.slice(1) })).toEqual([]);
 });
+
+it('names the v19 six-costs with the 14.24 zh_cn names and gives cost 6 its own colour', async () => {
+  const { getHeroIdentity } = await import('../src/presentation/hero-identity');
+  const { THEME, costColor } = await import('../src/presentation/theme');
+  const { CHAMPION_PORTRAIT_KEYS, heroPortraitHtml } = await import('../src/presentation/s13-assets');
+  expect(['warwick', 'viktor', 'mel'].map(id => getHeroIdentity(id).name)).toEqual(['沃里克', '维克托', '梅尔']);
+  expect(getHeroIdentity('mel').cost).toBe(6);
+  expect(costColor(6)).toBe(THEME.cost[5]); expect(costColor(5)).toBe(THEME.cost[4]);
+  expect(CHAMPION_PORTRAIT_KEYS.mel).toBe('tft13_missmage');
+  // Not bundled yet: the caller's emblem stands in.
+  expect(heroPortraitHtml('mel', 34, '<svg data-fallback></svg>')).toBe('<svg data-fallback></svg>');
+});
