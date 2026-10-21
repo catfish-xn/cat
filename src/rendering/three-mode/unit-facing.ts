@@ -4,13 +4,15 @@
  *
  * A piece that moves looks where it goes; standing in combat it looks at the unit it last attacked or cast on while
  * that unit is alive and drawn; with no such target (or dead itself) it keeps the way it already looks. Outside combat it
- * rests looking across the board at the other side. Every change is a turn the short way round, never a jump.
+ * rests looking across the board at the other side. Every change is a TURN_SECONDS turn the short way round, never a jump.
  */
 
 /** Board units a piece must still have to go this frame to count as moving (the renderer's glide step). */
 export const MOVE_EPSILON = 0.5;
-/** Turn time constant in seconds: a turn closes 1 - e^(-t / TURN_SECONDS) of its angle, about 95% in 0.24 s. */
-export const TURN_SECONDS = 0.08;
+/** Seconds a turn takes, whatever its angle: it lands exactly on the heading at the end. */
+export const TURN_SECONDS = 0.24;
+/** A heading this close to the one being turned to keeps the turn's schedule (a target walking a little); a larger change starts a new turn. */
+const RETARGET = 0.05;
 
 export interface PlanarPoint { readonly x: number; readonly z: number }
 
@@ -29,16 +31,29 @@ const wrap = (angle: number): number => {
   return turns === -Math.PI ? Math.PI : turns;
 };
 
-/** One frame of turning from `current` toward `desired` the short way round; snaps once within a hundredth of a radian. */
-export function turnToward(current: number, desired: number, seconds: number): number {
-  const gap = wrap(desired - current);
-  if (Math.abs(gap) < 0.01 || !(seconds > 0)) return Math.abs(gap) < 0.01 ? wrap(desired) : wrap(current);
-  return wrap(current + gap * (1 - Math.exp(-seconds / TURN_SECONDS)));
+/**
+ * A piece's heading turning toward a desired one the short way round, over TURN_SECONDS with an ease-out, ending
+ * exactly on it. A small change of the desired heading mid-turn moves the end point without restarting the clock.
+ */
+export class HeadingTurn {
+  private from: number; private gap = 0; private elapsed = 0;
+  constructor(public heading: number) { this.from = heading; }
+  /** One frame: turn toward `desired` (null: finish the turn in progress) by `seconds` and return the heading. */
+  update(desired: number | null, seconds: number): number {
+    if (desired !== null) {
+      if (Math.abs(wrap(desired - (this.from + this.gap))) > RETARGET) { this.from = this.heading; this.elapsed = 0; }
+      this.gap = wrap(desired - this.from);
+    }
+    if (seconds > 0) this.elapsed += seconds;
+    const t = Math.min(1, this.elapsed / TURN_SECONDS);
+    this.heading = wrap(this.from + this.gap * (1 - (1 - t) * (1 - t)));
+    return this.heading;
+  }
+  /** Jump to `heading` with no turn (a new piece, a team change). */
+  set(heading: number): void { this.heading = this.from = heading; this.gap = 0; this.elapsed = 0; }
 }
 
 export interface FacingInput {
-  /** Current heading. */
-  readonly current: number;
   readonly team: 'player' | 'enemy';
   readonly alive: boolean;
   /** The combat being shown (BoardFrame.fighting). */
@@ -50,11 +65,11 @@ export interface FacingInput {
   readonly target: PlanarPoint | null;
 }
 
-/** The heading a piece should turn toward this frame. */
-export function desiredHeading(input: FacingInput): number {
-  if (!input.alive) return input.current;
+/** The heading a piece should turn toward this frame; null keeps the one it has (or is already turning to). */
+export function desiredHeading(input: FacingInput): number | null {
+  if (!input.alive) return null;
   const moving = headingToward(input.position, input.destination);
   if (moving !== null) return moving;
   if (!input.fighting) return restHeading(input.team);
-  return (input.target && headingToward(input.position, input.target)) ?? input.current;
+  return input.target && headingToward(input.position, input.target);
 }

@@ -4,7 +4,7 @@ import type { BoardControls, BoardFeedListener, BoardFrame, BoardPiece } from '.
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import type { Renderer3d } from '../src/rendering/three-mode/contract';
 import type { ModelLease } from '../src/rendering3d';
-import { desiredHeading, headingToward, restHeading, turnToward } from '../src/rendering/three-mode/unit-facing';
+import { HeadingTurn, TURN_SECONDS, desiredHeading, headingToward, restHeading } from '../src/rendering/three-mode/unit-facing';
 
 const near = (angle: number, expected: number) => {
   const gap = Math.atan2(Math.sin(angle - expected), Math.cos(angle - expected));
@@ -12,33 +12,48 @@ const near = (angle: number, expected: number) => {
 };
 
 describe('unit facing rule', () => {
-  const base = { current: 0, team: 'player' as const, alive: true, fighting: true, position: { x: 0, z: 0 }, destination: { x: 0, z: 0 }, target: null };
+  const base = { team: 'player' as const, alive: true, fighting: true, position: { x: 0, z: 0 }, destination: { x: 0, z: 0 }, target: null };
 
   it('looks where it moves, then at its target, and keeps its heading with neither', () => {
-    near(desiredHeading({ ...base, destination: { x: 10, z: 0 }, target: { x: 0, z: -10 } }), Math.PI / 2);
-    near(desiredHeading({ ...base, target: { x: 0, z: -10 } }), Math.PI);
-    near(desiredHeading({ ...base, target: { x: -10, z: 0 } }), -Math.PI / 2);
-    expect(desiredHeading({ ...base, current: 1.3 })).toBe(1.3);
-    expect(desiredHeading({ ...base, current: 1.3, target: { x: 0.1, z: 0 } })).toBe(1.3); // standing on it: no heading
+    near(desiredHeading({ ...base, destination: { x: 10, z: 0 }, target: { x: 0, z: -10 } })!, Math.PI / 2);
+    near(desiredHeading({ ...base, target: { x: 0, z: -10 } })!, Math.PI);
+    near(desiredHeading({ ...base, target: { x: -10, z: 0 } })!, -Math.PI / 2);
+    expect(desiredHeading(base)).toBeNull();
+    expect(desiredHeading({ ...base, target: { x: 0.1, z: 0 } })).toBeNull(); // standing on it: no heading
   });
 
   it('a dead piece never turns; outside combat a standing piece rests facing the other side', () => {
-    expect(desiredHeading({ ...base, current: 0.7, alive: false, destination: { x: 10, z: 0 }, target: { x: 0, z: 10 } })).toBe(0.7);
-    near(desiredHeading({ ...base, fighting: false, target: { x: 10, z: 0 } }), restHeading('player'));
-    near(desiredHeading({ ...base, team: 'enemy', fighting: false, current: 2 }), restHeading('enemy'));
+    expect(desiredHeading({ ...base, alive: false, destination: { x: 10, z: 0 }, target: { x: 0, z: 10 } })).toBeNull();
+    near(desiredHeading({ ...base, fighting: false, target: { x: 10, z: 0 } })!, restHeading('player'));
+    near(desiredHeading({ ...base, team: 'enemy', fighting: false })!, restHeading('enemy'));
     expect(headingToward({ x: 0, z: 0 }, { x: 0.2, z: 0.2 })).toBeNull();
   });
 
-  it('turns smoothly the short way round and settles on the heading', () => {
-    const first = turnToward(0, Math.PI / 2, 1 / 60);
-    expect(first).toBeGreaterThan(0); expect(first).toBeLessThan(Math.PI / 4); // no jump in one frame
-    // From just under +π to just over -π is a small turn across the seam, not a full sweep back through 0.
-    const across = turnToward(Math.PI - 0.1, -Math.PI + 0.1, 1 / 60);
-    expect(Math.abs(across)).toBeGreaterThan(Math.PI - 0.1);
-    let angle = 0;
-    for (let frame = 0; frame < 30; frame++) angle = turnToward(angle, -2, 1 / 60);
-    near(angle, -2);
-    expect(turnToward(0.5, 2, 0)).toBe(0.5);
+  const frames = (turn: HeadingTurn, desired: number | null, seconds: number, step = 1 / 60) => {
+    const seen: number[] = [];
+    for (let left = seconds; left > 1e-9; left -= step) seen.push(turn.update(desired, Math.min(step, left)));
+    return seen;
+  };
+
+  it('turns 180 degrees in TURN_SECONDS, without a jump, landing exactly on the heading', () => {
+    const turn = new HeadingTurn(0), seen = frames(turn, Math.PI, TURN_SECONDS);
+    expect(Math.abs(seen[0])).toBeGreaterThan(0); expect(Math.abs(seen[0])).toBeLessThan(Math.PI / 4); // no jump in one frame
+    expect(Math.abs(Math.abs(seen.at(-1)!) - Math.PI)).toBeLessThan(1e-9); // there at 0.24 s, not 95% of the way
+    expect(frames(turn, Math.PI, 0.5).every(angle => Math.abs(Math.abs(angle) - Math.PI) < 1e-9)).toBe(true); // and stays
+  });
+
+  it('crosses the ±π seam the short way, and finishes the turn in progress when nothing new is asked', () => {
+    const turn = new HeadingTurn(Math.PI - 0.2), seen = frames(turn, -Math.PI + 0.2, TURN_SECONDS);
+    expect(seen.every(angle => Math.abs(angle) > Math.PI - 0.2 - 1e-9)).toBe(true); // never sweeps back through 0
+    near(seen.at(-1)!, -Math.PI + 0.2); expect(Math.abs(seen.at(-1)! - (-Math.PI + 0.2))).toBeLessThan(1e-9);
+    const halfway = new HeadingTurn(0);
+    frames(halfway, 2, TURN_SECONDS / 2);
+    frames(halfway, null, TURN_SECONDS / 2);
+    expect(Math.abs(halfway.heading - 2)).toBeLessThan(1e-9);
+    // A desired heading that drifts a little (a target walking) keeps the turn's schedule.
+    const drifting = new HeadingTurn(0);
+    for (let frame = 0; frame < TURN_SECONDS * 60; frame++) drifting.update(1 + frame * 0.002, 1 / 60);
+    near(drifting.heading, 1 + (TURN_SECONDS * 60 - 1) * 0.002);
   });
 });
 
@@ -132,5 +147,26 @@ describe('mounted 3D pieces turn toward their combat target', () => {
     await publish([me, { ...foe, alive: false }], false);
     advance(600);
     near(root().rotation.y, restHeading('player'));
+  });
+
+  it('stops following its old target once an attack or cast has no other unit to look at', async () => {
+    const me = piece({ id: 'me', x: 150, y: 200 }), foe = piece({ id: 'foe', team: 'enemy', x: 250, y: 200 });
+    await publish([me, foe]);
+    const [mine] = await Promise.all(vi.mocked(core.ModelCache.prototype.load).mock.results.map(result => result.value as Promise<ModelLease>));
+    const root = () => mine.scene.parent as Group;
+    const after = [
+      { type: 'cast', sourceId: 'me', targetIds: ['me'] }, // a shield on itself
+      { type: 'cast', sourceId: 'me', targetIds: [] },
+      { type: 'attack', attackerId: 'me', targetId: 'gone' }, // not on the board
+    ];
+    for (const next of after) {
+      await publish([me, foe]); advance(1000); // the target back in place
+      listener.events([{ type: 'attack', tick: 1, eventSeq: 0, attackerId: 'me', targetId: 'foe' } as unknown as DisplayCombatEvent]);
+      advance(400); near(root().rotation.y, Math.PI / 2);
+      listener.events([{ tick: 2, eventSeq: 1, ...next } as unknown as DisplayCombatEvent]);
+      await publish([me, { ...foe, x: 150, y: 300 }]); // the old target walks round to my back (+z)
+      advance(600);
+      near(root().rotation.y, Math.PI / 2);
+    }
   });
 });
