@@ -1120,3 +1120,10 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .summary-row { backgrou
   body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat .seat-hp { font-size: 15px; }
   body[data-online] > .render3d-layer .render3d-bar { max-width: 168px; }
 }
+/* R2: the 3D shop folds away under a small tab (TFT shows the whole board); the board box takes the freed height. */
+.shop-toggle { display: none; }
+body[data-online]:has(> .render3d-layer) .shop-toggle { display: block; position: absolute; z-index: 3; left: 50%; bottom: calc(var(--online-dock-h) + 1px); transform: translateX(-50%);
+  min-height: 0; height: 20px; padding: 0 16px; font-size: 12px; line-height: 18px; border: 1px solid #1d2f3d; border-bottom: 0; border-radius: 8px 8px 0 0; background: #0b151fcc; color: #c8aa6e; }
+body[data-online]:has(> .render3d-layer) .shop-toggle:hover { color: #f0e6d2; }
+body[data-online][data-online-shop="folded"]:has(> .render3d-layer) { --online-dock-h: 0px; }
+body[data-online][data-online-shop="folded"]:has(> .render3d-layer) #shop-dock { display: none; }

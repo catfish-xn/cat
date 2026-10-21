@@ -16,6 +16,7 @@ import { BattleOutcome } from './battle-outcome';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
+import { ShopToggle } from './shop-toggle';
 import { OnlineSound, type SoundCue } from './sound';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
@@ -78,6 +79,7 @@ export class OnlineApplication implements SceneApplication {
   private summary: BattleSummaryPanel;
   private economy: EconomyHint;
   private leftToggle: LeftPanelToggle;
+  private shopToggle: ShopToggle;
   private sound = new OnlineSound();
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
@@ -119,6 +121,7 @@ export class OnlineApplication implements SceneApplication {
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.leftToggle = new LeftPanelToggle();
+    this.shopToggle = new ShopToggle();
     const topbar = this.sidebar.root.querySelector('.online-topbar'); topbar?.insertBefore(this.sound.createToggle(), topbar.querySelector('.online-connection'));
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.outcome = new BattleOutcome(frame);
@@ -437,7 +440,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.shopToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }
