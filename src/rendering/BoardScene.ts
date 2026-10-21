@@ -819,7 +819,9 @@ export class BoardScene extends Phaser.Scene {
     // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
     // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
     // by its combat unit only, never as a second token at its preparation cell (C10).
-    const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    // Another seat's battle on the board (online, visiting its board): none of my units, its ids are not mine.
+    const watching = this.session instanceof RemoteSession && this.session.watchedSeat !== null;
+    const units = watching ? [] : this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
     this.departed.clear();

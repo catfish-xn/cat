@@ -638,7 +638,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
     lastFrame = frame;
-    if (scoutView) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
+    if (scoutView && !scoutView.watching) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
@@ -730,15 +730,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Scouting replaces my board the same way: let go of a press or drag first.
   const onScout = (view: Parameters<typeof scout.show>[0]) => {
-    if (view && !scout.active) {
+    if (view && !visiting()) {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
     }
-    scoutView = view; scout.show(view, lastFrame);
-    // My legend goes along: it leaves my board (no walk, no orb claims) and comes back to its own spot.
+    // Watching its battle: that battle is on my board (the frames carry it), so no static build is drawn over it.
+    scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
+    // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active);
   };
-  const mine = () => !stage.active && !scout.active;
+  /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
+  const visiting = () => scout.active || scoutView?.watching === true;
+  const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
   const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk,
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
@@ -838,8 +841,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return;
     }
     // While scouting the board is the other seat's: only a right click, which walks my visiting legend there.
-    if (scout.active) {
-      if (event.button === 2) { const point = boardPoint(event); if (point && scout.walkVisitor(point)) event.preventDefault(); }
+    // Watching its battle takes no input at all.
+    if (visiting()) {
+      if (scout.active && event.button === 2) { const point = boardPoint(event); if (point && scout.walkVisitor(point)) event.preventDefault(); }
       return;
     }
     // Right click: my legend walks there (onto my orb when it is under the pointer, which it then claims).
@@ -866,7 +870,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       canvas.style.cursor = hit?.takable ? 'pointer' : '';
       return;
     }
-    if (scout.active) return;
+    if (visiting()) return;
     const controls = feed?.controls();
     if (!press || event.pointerId !== press.pointerId) {
       if (press) return;

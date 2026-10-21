@@ -140,6 +140,11 @@ export class OnlineApplication implements SceneApplication {
       state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
       replay: (replay, unitIds) => { this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
       replayRevised: replay => { this.session.reviseReplay(replay); this.hooks.refresh(); },
+      // The battle of the seat I visit (start, then each revision); a late one for a board I left is dropped.
+      watched: (seatId, replay) => {
+        if (seatId !== this.opponentBoard.openSeatId || !this.opponentBoard.drawnIn3d) return;
+        this.session.watchReplay(seatId, replay); this.syncScout(); this.hooks.refresh();
+      },
       refused: refusal => this.onRefused(refusal),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
@@ -388,10 +393,17 @@ export class OnlineApplication implements SceneApplication {
     this.scoutFeedGeneration = boardFeedGeneration();
     const view = this.view, seatId = this.opponentBoard.openSeatId;
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
-    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}) } : null) && !!seat;
+    // TFT: on its board during combat I watch its battle (the server streams it); anywhere else, or before it arrives, the build.
+    const combat = view?.phase.kind === 'combat', wantsBattle = !!seat && combat && !!this.client.watch;
+    if (!wantsBattle || this.session.watchedSeat !== seat.seatId) this.session.stopWatching();
+    const watching = !!seat && this.session.watchedSeat === seat.seatId;
+    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}),
+      ...(watching ? { watching: true as const } : {}) } : null) && !!seat;
     this.opponentBoard.drawnIn3d = drawn;
     this.syncShopInert();
-    this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
+    this.client.watch?.(drawn && wantsBattle ? seat.seatId : null);
+    if (!drawn) this.session.stopWatching();
+    this.opponentBoard.root.toggleAttribute('data-combat', combat && !watching);
     this.minimap.render(this.view, seatId);
     traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
   }

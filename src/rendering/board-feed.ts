@@ -140,6 +140,8 @@ export interface BoardScout {
   readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null;
   /** The seat's little legend (SeatPublic.legend, cosmetic); absent means the default. */
   readonly legend?: string;
+  /** Its battle of this round is playing on my board (my frames carry it): nothing static is drawn, the board still takes no input. */
+  readonly watching?: true;
 }
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
