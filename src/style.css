@@ -66,7 +66,6 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .shop-panel p { font-size: 11px !important; margin: 5px 0; }
 .panel-tabs { position: relative; top: auto; }
 .panel-tabs button { padding: 7px 2px; font-size: 12px; }
-.mode-note { color: #97aebc; font-size: 11px !important; }
 .income-receipt { border: 1px solid #355063; border-radius: 8px; padding: 0 8px; }
 .encounter-preview { border: 1px solid #5a3a46; border-radius: 8px; padding: 0 8px; margin-bottom: 8px; }
 .encounter-preview summary { padding: 6px 0; font-weight: 600; }
@@ -160,7 +159,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 
 /* M7: shared tokens (installed from src/presentation/theme.ts), HUD, primary action, shop cards. */
 #strategy-root, #save-root, #replay-root, #stats-root { background: var(--c-surface); }
-.shop-panel p, .mode-note { font-size: var(--font-small) !important; }
+.shop-panel p { font-size: var(--font-small) !important; }
 .hud-bar { display: grid; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .hud-title { display: flex; align-items: center; gap: var(--space-md); }
 .hud-title h2 { margin: 0 !important; font-size: var(--font-title) !important; }
@@ -277,9 +276,6 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .choice-reopen.page-top { position: fixed; top: 12px; }
 body[data-m6-mode="startup"] .choice-reopen, body[data-m6-mode="import"] .choice-reopen, body[data-m6-mode="replay"] .choice-reopen,
 body[data-online-mode="online-ended"] .choice-reopen, body[data-online-spectating] .choice-reopen { display: none !important; }
-.anomaly-codex { margin-top: 10px; padding: 0 9px 6px; background: var(--c-surface-alt); border-radius: 8px; }
-.anomaly-codex > summary { cursor: pointer; padding: 6px 0; }
-.anomaly-codex-list { margin: 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12px; }
 .codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .codex-filter { font-size: 12px; padding: 4px; }
 .codex-filter[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); }

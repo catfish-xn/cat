@@ -313,7 +313,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // Layout/rotation gates are read against actual CSS bounds, not game pixels.
     for (const viewport of [{ width: 1440, height: 600 }, { width: 390, height: 650 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 360, height: 640 }]) {
       await resizeViewport(page, viewport); await reset(); const before = await state(), start = await offset();
-      await click('panel:builds', true); await click('shop-lock', true);
+      await click('shop-lock', true);
       const expected = accepted(api.setShopLock(before, true, before.shop.generation));
       const geometry = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth,
         targets: [...document.querySelectorAll('#strategy-root button')].filter(node => node.getBoundingClientRect().width).map(node => ({ id: node.dataset.debug, width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height })) }));
