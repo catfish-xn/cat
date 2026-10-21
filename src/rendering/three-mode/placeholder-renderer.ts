@@ -25,6 +25,7 @@ import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrec
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
@@ -246,9 +247,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     clearTimeout(calloutTimer); calloutTimer = setTimeout(() => callout?.classList.remove('flash'), 1800);
   };
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
+  // Each side's own little legend (board-feed legends) when the root has it, else the default 河灵.
+  const legendModel = (side: 'me' | 'opponent') => {
+    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : LEGEND_MODEL;
+    return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+  };
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
     loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
     loadEffect });
+  // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
+  const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
     loadModel: models.cache ? id => Object.hasOwn(models.cache!.manifest.models, id) ? models.cache!.load(id) : Promise.reject(new Error('unknown-model')) : null });
@@ -748,7 +756,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
