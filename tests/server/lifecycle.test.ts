@@ -108,13 +108,14 @@ describe('B8 lifecycle: the network server across matches', () => {
 });
 
 describe('B8 sliced resolution', () => {
+  // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。钩子 10 秒 → 20 秒（CI 上 :121 超时 4 次）。
   const prepared = new Map<string, ReturnType<typeof makeRoom>>();
   for (const key of ['commands', 'dispose']) beforeAll(() => {
     const own = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 50 });
     own.room.start();
     runUntil(own.room, own.clock, current => current.round === 4 && current.phase === 'preparation');
     prepared.set(key, own);
-  });
+  }, 20_000);
   // Every clock read during resolution costs 1 ms, as if each step of rules work took that long.
   class BusyClock extends ManualClock { busy = false; override now(): number { if (this.busy) this.advance(1); return super.now(); } }
   let budgetInput: { oneShot: ReturnType<typeof makeRoom>; clock: BusyClock; room: Room };
@@ -126,7 +127,7 @@ describe('B8 sliced resolution', () => {
     const ready = (current: RoomState) => current.round === 4 && current.phase === 'preparation';
     runUntil(oneShot.room, oneShot.clock, ready); runUntil(room, clock, ready);
     budgetInput = { oneShot, clock, room };
-  });
+  }, 20_000);
   afterAll(() => {
     for (const own of prepared.values()) own.room.dispose();
     budgetInput.oneShot.room.dispose(); budgetInput.room.dispose();
