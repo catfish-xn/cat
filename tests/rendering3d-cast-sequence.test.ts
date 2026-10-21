@@ -86,6 +86,22 @@ describe('staged casts with generated skeleton curves', () => {
     expect(f.mixer.mixer.clipAction(f.clips[1]).isRunning()).toBe(false);
     expect(f.state.consume(cast).state).toBe('death'); f.mixer.dispose();
   });
+  it('fades death in over blendSeconds when it interrupts a staged cast', () => {
+    const f = fixture();
+    f.mixer.apply(f.state.consume(cast)); f.mixer.update(0.25);
+    const death = f.state.consume({ type: 'death', unitId: 'alpha' });
+    f.mixer.apply({ ...death, blendSeconds: 0.2 });
+    const action = f.mixer.mixer.clipAction(f.clips[6]);
+    f.mixer.update(0.1);
+    expect(action.getEffectiveWeight()).toBeCloseTo(0.5);
+    expect(f.mixer.mixer.clipAction(f.clips[1]).isRunning()).toBe(false);
+    f.mixer.update(0.1);
+    expect(action.getEffectiveWeight()).toBeCloseTo(1);
+    f.mixer.update(4);
+    expect(f.bone.position.x).toBeCloseTo(-1);
+    for (const clip of f.clips.slice(1, 5)) expect(f.mixer.mixer.clipAction(clip).isRunning()).toBe(false);
+    f.mixer.dispose();
+  });
   it('does not restart an already playing idle when a legacy missing cast expires', () => {
     const f = fixture(), mixer = new UnitAnimationMixer(f.root, f.clips, { idle: 'rest', cast: null });
     const state = new UnitActionState('alpha'); mixer.apply(state.output); mixer.update(0.25);

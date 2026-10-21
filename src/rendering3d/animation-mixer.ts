@@ -58,7 +58,7 @@ export class UnitAnimationMixer {
     const sequence = playback?.clips.map(name => this.clips.get(name));
     if (sequence?.some(c => !c)) return !!this.active;
     const clip = sequence?.[0] ?? this.clips.get(this.names[output.state] ?? output.state);
-    if (output.state === 'death') { this.mixer.stopAllAction(); this.active = undefined; }
+    if (output.state === 'death') { this.mixer.stopAllAction(); }
     this.queue = []; this.stageLeft = 0; this.speed = 1;
     if (!clip) return !!this.active;
     if (output.state === 'idle' && this.active === this.mixer.clipAction(clip)) return true;

@@ -24,7 +24,8 @@
       "tft13_akali_spell3_in",
       "tft13_akali_spell3_out"
     ],
-    "animationNotes": "User comparison V2: export candidates for local review; do not activate an unconfirmed sequence."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: export candidates for local review; do not activate an unconfirmed sequence."
   },
   "ambessa": {
     "sourceName": "tft13_ambessa",
@@ -70,7 +71,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "amumu": {
     "sourceName": "tft13_amumu",
@@ -90,7 +92,8 @@
       "tft13_amumu_skin23_idle1": "animations/tft13_amumu_skin23_idle1.tft_set13.anm",
       "tft13_amumu_skin23_run": "animations/tft13_amumu_skin23_run.tft_set13.anm"
     },
-    "animationNotes": "User comparison V2: passive pulse has no body cast action; retain effect events."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: passive pulse has no body cast action; retain effect events."
   },
   "blitzcrank": {
     "sourceName": "tft13_blitzcrank",
@@ -159,7 +162,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "camille": {
     "sourceName": "tft13_camille",
@@ -187,7 +191,8 @@
       "out": "tft13_camille_spell1_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "cassiopeia": {
     "sourceName": "tft13_cassiopeia",
@@ -235,7 +240,8 @@
       "hold": "tft13_corki_spell_loop"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "darius": {
     "sourceName": "tft13_darius",
@@ -263,7 +269,8 @@
       "main": "spell1"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "draven": {
     "sourceName": "tft13_draven",
@@ -290,7 +297,10 @@
       "taunt": "animations/taunt.tft_set13.anm",
       "tft13_draven_idle1_rarmout": "animations/tft13_draven_idle1_rarmout.tft_set13.anm"
     },
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only.",
+    "animationNotes": {
+      "cast": "mClipDataMap has Spell1_Spin_Left_Right (spin activation) and Spell1_Arm_Catches (catch/recovery); choose the spin segment, not catches. Name-based single-segment selection, not sequence reconstruction."
+    },
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only.",
     "castSequence": {
       "main": "spell1_spin_left_right",
       "out": "spell1_arm_catches"
@@ -326,7 +336,8 @@
       "out": "tft13_drmundo_spell4_out_idle"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "ekko": {
     "sourceName": "tft13_ekko",
@@ -365,7 +376,8 @@
       "out": "tft13_ekko_spell_teleport_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "elise": {
     "sourceName": "tft13_elise",
@@ -413,7 +425,8 @@
       "out": "tft13_ezreal_spell2_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "gangplank": {
     "sourceName": "tft13_gangplank",
@@ -456,7 +469,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "garen": {
     "sourceName": "tft13_garen",
@@ -527,7 +541,8 @@
       "out": "tft13_illaoi_spell_finish_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "irelia": {
     "sourceName": "tft13_irelia",
@@ -562,7 +577,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "jayce": {
     "sourceName": "tft13_jayce",
@@ -605,7 +621,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "jinx": {
     "sourceName": "tft13_jinx",
@@ -668,7 +685,8 @@
     "castExtraClips": [
       "tft13_jinx_spell_deathrocket2"
     ],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "kogmaw": {
     "sourceName": "tft13_kogmaw",
@@ -734,7 +752,8 @@
       "hold": "tft13_leona_spell_idle"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "loris": {
     "sourceName": "tft13_beardy",
@@ -761,7 +780,8 @@
       "main": "spellout"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "lux": {
     "sourceName": "tft13_lux",
@@ -850,7 +870,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "morgana": {
     "sourceName": "tft13_morgana",
@@ -877,7 +898,8 @@
       "out": "tft13_morgana_spell_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "nami": {
     "sourceName": "tft13_nami",
@@ -943,7 +965,8 @@
       "out": "tft13_nunuwillump_spell_toidle"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "powder": {
     "sourceName": "tft13_blue",
@@ -988,7 +1011,8 @@
       "out": "tft13_rell_spell_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "renata": {
     "sourceName": "tft13_renataglasc",
@@ -1014,7 +1038,8 @@
       "out": "tft13_renataglasc_spell_toidle"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "renni": {
     "sourceName": "tft13_chainsaw",
@@ -1043,7 +1068,8 @@
       "hold": "spell1_stun_loop"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "rumble": {
     "sourceName": "tft13_rumble",
@@ -1130,7 +1156,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "sevika": {
     "sourceName": "tft13_lieutenant",
@@ -1185,7 +1212,8 @@
     "castExtraClips": [
       "spell1_reroll"
     ],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "silco": {
     "sourceName": "tft13_silco",
@@ -1229,7 +1257,8 @@
       "out": "tft13_singed_spell_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "smeech": {
     "sourceName": "tft13_gremlin",
@@ -1266,7 +1295,8 @@
     "castExtraClips": [
       "spell"
     ],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "steb": {
     "sourceName": "tft13_fish",
@@ -1314,7 +1344,8 @@
       "out": "tft13_swain_spell2_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "tristana": {
     "sourceName": "tft13_tristana",
@@ -1342,7 +1373,8 @@
       "main": "tft13_tristana_spell_attack"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "trundle": {
     "sourceName": "tft13_trundle",
@@ -1388,7 +1420,8 @@
       "main": "spell1"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "twitch": {
     "sourceName": "tft13_twitch",
@@ -1458,7 +1491,8 @@
       }
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "vex": {
     "sourceName": "tft13_vex",
@@ -1584,7 +1618,8 @@
       "out": "tft13_zeri_spell1_out"
     },
     "castExtraClips": [],
-    "animationNotes": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
+    "animationNotes": {},
+    "castReviewNote": "User comparison V2: explicit staged cast selection; hold plays once pending channel events; unbound variants require display context. Unverified candidates remain export-only."
   },
   "ziggs": {
     "sourceName": "tft13_ziggs",
