@@ -10,7 +10,7 @@ import { encodeToKTX2 } from 'ktx2-encoder';
 import sharp from 'sharp';
 import { withinRoot } from './safe-path.mjs';
 import { createPrecache } from './merge-manifests.mjs';
-import { realOutput } from './merge-root-output.mjs';
+import { realOutput, ignoredOutput } from './merge-root-output.mjs';
 
 const json = v => Buffer.from(`${JSON.stringify(v, null, 2)}\n`);
 const hash = v => createHash('sha256').update(v).digest('hex');
@@ -25,7 +25,7 @@ export async function compressionIO() {
     'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder,
   }).setLogger(new Logger(Logger.Verbosity.WARN));
 }
-/** Reuse the asset-root output policy: real paths anywhere, exclusive file creation. */
+/** Write only beneath the validated asset root, with exclusive file creation. */
 async function writeCompressionFile(path, bytes) {
   const target = await realOutput(path, false);
   await mkdir(dirname(target), { recursive: true });
@@ -35,7 +35,7 @@ async function writeCompressionFile(path, bytes) {
 /** Offline only. All writes go to an exclusively created, real output directory. */
 export async function compressAssets({ from, out, onProgress = () => {} } = {}) {
   if (!from || !out) throw new Error('usage: --from <asset-root> --out <new-root>');
-  const source = resolve(from), target = await realOutput(resolve(out));
+  const source = resolve(from), target = await ignoredOutput(resolve(out), 'compression-output-not-ignored');
   // Reject even an empty existing directory, junction, or source descendant.
   try { await lstat(resolve(out)); throw new Error('compression-output-exists'); }
   catch (e) { if (e.code !== 'ENOENT') throw e; }

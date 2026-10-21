@@ -2,6 +2,9 @@
 import { lstat, readdir, readFile, mkdir, writeFile, rename, rm, realpath } from 'node:fs/promises';
 import { dirname, join, parse, relative, resolve, isAbsolute, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 
 export const ROOT_GENERATOR = 'assets3d/build-asset-root';
 
@@ -26,6 +29,31 @@ export async function realOutput(path, directory = true) {
     } else if (!info.isFile()) throw new Error('merge-output-not-file');
   }
   return current;
+}
+/** Asset payloads inside this worktree must be covered by a .gitignore rule.
+ * check-ignore is read-only; --no-index also checks already tracked paths.
+ */
+export async function ignoredOutput(path, reason = 'merge-output-not-ignored') {
+  const output = await realOutput(path);
+  const workspace = await realpath(fileURLToPath(new URL('../../', import.meta.url)));
+  if (!contains(workspace, output)) return output;
+  const rel = relative(workspace, output).split(sep).join('/');
+  if (!rel) throw new Error(reason);
+  let stdout;
+  try {
+    const check = promisify(execFile)('git', [
+      '-c', 'core.excludesFile=', 'check-ignore', '--no-index', '--verbose', '-z', '--stdin',
+    ], { cwd: workspace, windowsHide: true });
+    check.child.stdin.end(`${rel}/\0`);
+    ({ stdout } = await check);
+  } catch (e) {
+    if (e.code === 1) throw new Error(reason);
+    throw new Error(`${reason}:ignore-check-failed`, { cause: e });
+  }
+  const [source, , pattern] = stdout.split('\0');
+  // Do not accept .git/info/exclude or a negated rule as repository protection.
+  if (!/(^|[\\/])\.gitignore$/.test(source) || !pattern || pattern.startsWith('!')) throw new Error(reason);
+  return output;
 }
 async function checkTree(path) {
   await realOutput(path);

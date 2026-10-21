@@ -8,7 +8,7 @@ import { safeInputPath } from './safe-path.mjs';
 import { readGlb } from './glb.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 import { mergeFxManifestEntries } from './merge-fx-roots.mjs';
-import { contains, realOutput, publishRoot, ROOT_GENERATOR } from './merge-root-output.mjs';
+import { contains, ignoredOutput, publishRoot, ROOT_GENERATOR } from './merge-root-output.mjs';
 
 const json = v => Buffer.from(JSON.stringify(v, null, 2) + '\n');
 const hash = v => createHash('sha256').update(v).digest('hex');
@@ -36,7 +36,7 @@ function checkKeys(value, kind) {
 export async function buildAssetRoot({ roots, out, force = false } = {}) {
   const selected = Array.isArray(roots) ? roots : (roots ?? '').split(',');
   if (!selected.length || selected.some(p => !p) || !out) throw new Error('usage: --roots <root> [<root> ...] --out <root> [--force]');
-  const output = await realOutput(out), inputs = [], sources = [];
+  const output = await ignoredOutput(out), inputs = [], sources = [];
   const { assertManifest, parseParticleDocument } = await contracts();
   for (const path of selected) {
     const root = await realpath(resolve(path));

@@ -2,6 +2,7 @@ import { afterEach, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, writeFile, readdir, symlink, lstat } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { read as readKTX, KHR_DF_MODEL_ETC1S, KHR_DF_MODEL_UASTC } from 'ktx-parse';
 import sharp from 'sharp';
@@ -9,6 +10,8 @@ import sharp from 'sharp';
 import { compressAssets, compressionIO } from '../scripts/assets3d/compress.mjs';
 // @ts-expect-error Node script.
 import { withinRoot } from '../scripts/assets3d/safe-path.mjs';
+// @ts-expect-error Node script.
+import { buildAssetRoot } from '../scripts/assets3d/build-asset-root.mjs';
 const roots: string[] = [];
 afterEach(async () => {
   for (const root of roots.splice(0)) {
@@ -86,19 +89,29 @@ it('rejects source descendants and texture destination collisions before writes'
   await put('textures/spark.webp', 'synthetic-collision');
   await expect(compressAssets({ from: input, out: output })).rejects.toThrow('compression-path-collision');
 });
-it('writes to a new real output outside assets3d-local', async () => {
-  const root = await mkdtemp(resolve('compression-output-test-'));
+it.each(['compress', 'build'] as const)('%s refuses unignored worktree output and allows ignored or external output', async tool => {
+  const root = await mkdtemp(join(tmpdir(), 'compression-output-test-'));
   try {
-    const input = join(root, 'input'), output = join(root, 'nested', 'output');
+    const input = join(root, 'input');
     await mkdir(input);
     await writeFile(join(input, 'manifest.json'), JSON.stringify({ schemaVersion: 1, models: {}, effects: {} }));
-    await writeFile(join(input, 'notes.txt'), 'synthetic-copy');
-    expect((await compressAssets({ from: input, out: output })).ready).toBe(true);
-    expect(await readFile(join(output, 'notes.txt'), 'utf8')).toBe('synthetic-copy');
-    await expect(compressAssets({ from: input, out: output })).rejects.toThrow('compression-output-exists');
+    const run = (out: string) => tool === 'compress' ? compressAssets({ from: input, out }) : buildAssetRoot({ roots: [input], out });
+    const reason = tool === 'compress' ? 'compression-output-not-ignored' : 'merge-output-not-ignored';
+    // Rejected paths are never created, so no cleanup under source/document/public trees.
+    for (const directory of ['src', 'docs', 'public', '.']) {
+      const output = resolve(directory, `compression-output-test-${root.split(/[\\/]/).pop()}`);
+      await expect(run(output)).rejects.toThrow(reason);
+      await expect(lstat(output)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+    await mkdir(resolve('assets3d-local'), { recursive: true });
+    const ignored = await mkdtemp(resolve('assets3d-local/compress-test-')); roots.push(ignored);
+    for (const output of [join(ignored, 'output'), join(root, 'nested', 'output')]) {
+      expect((await run(output)).ready).toBe(true);
+      expect(JSON.parse(await readFile(join(output, 'manifest.json'), 'utf8')).models).toEqual({});
+    }
   } finally {
-    withinRoot(resolve('.'), root);
-    expect(root).not.toBe(resolve('.'));
+    withinRoot(tmpdir(), root);
+    expect(root).not.toBe(resolve(tmpdir()));
     await rm(root, { recursive: true, force: true });
   }
 });
