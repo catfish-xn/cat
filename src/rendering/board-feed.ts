@@ -56,6 +56,8 @@ export interface BoardOrb {
   readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;
   /** S13 trait orb skin, only when this seat's own mechanic receipt names it (see orbVariant); absent → the generic tier. */
   readonly variant?: 'warband' | 'crime';
+  /** The PvE monster (its combat unit id, the drop's sourceUnitId) that dropped it, while this round's loot names one. */
+  readonly source?: string;
 }
 /** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
 export interface BoardHit { readonly key: string; readonly damage: number }

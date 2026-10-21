@@ -117,6 +117,9 @@ export function useAssetProgress(next: (text: string) => void): void { assetProg
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
+// Injected the same way: the 2D theme's cost color (presentation/theme.ts costColor) for the carousel's cost rings.
+let costColorFor: ((cost: number) => string) | undefined;
+export function useCostColor(next: (cost: number) => string): void { costColorFor = next; }
 // Injected the same way: the 2D theme's meter colors (presentation/theme.ts THEME.color), so 2D and 3D bars match.
 let meterColors: MeterColors = DEFAULT_METER_COLORS;
 export function useMeterColors(next: MeterColors): void { meterColors = next; }
@@ -269,7 +272,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
-    loadEffect, starColor: level => starColorFor(level), onReleased: () => flashCallout('可以选了') });
+    loadEffect, starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
   // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
   let callout: HTMLElement | null = null, calloutTimer: ReturnType<typeof setTimeout> | undefined;
   const flashCallout = (text: string) => {

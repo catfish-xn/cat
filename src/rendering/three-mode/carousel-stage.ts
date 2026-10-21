@@ -11,7 +11,7 @@
  * walk (src/server/legend-motion.ts) and sends it to all seats, so every legend is drawn where the room has it; with a
  * room that walks, a unit is picked when its legend reaches it, first come first served. Without one (an in-browser room)
  * a unit click is still the panel's pick at once. A unit leaves the ring only when the view names the seat that took it:
- * that seat's legend runs to it (a bot's dashes), and the unit follows it back on a tether to its cradle. A held seat
+ * that seat's legend runs to it (a bot's too, at the same pace), and the unit follows it back on a tether to its cradle. A held seat
  * counts down over its head and its chains break at release; the stage opens with a short push-in.
  * Missing models or effects draw stand-ins; the timer ring is not drawn (its extracted effect is incomplete).
  */
@@ -40,8 +40,12 @@ const LEGEND_SURFACE = ['carousel-llplatforms'], UNIT_SURFACE = ['carousel-glass
 export const LEGEND_RADIUS = 7.1, UNIT_RADIUS = 2.5, FEET = 0.25;
 /** One turn of the unit ring takes this long; the angle runs from the carousel's own start. */
 export const ORBIT_SECONDS = 48;
-/** Camera keeps the cradles' outer edge (17.2 cells across) and a legend's height in view, from my seat's side. */
-const STAGE_RADIUS = 8.9, VIEW = new Vector3(0, 1.05, 1).normalize();
+/**
+ * Camera keeps the cradles' outer edge (17.2 cells across) in view across, from my seat's side. Up and down the tilted
+ * ring is foreshortened, so it fits that way at VERTICAL_FILL of the radius: the near and far cradles reach the top and
+ * bottom edges and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full circle).
+ */
+const STAGE_RADIUS = 8.9, VERTICAL_FILL = 0.78, VIEW = new Vector3(0, 1.05, 1).normalize();
 /**
  * Effects (manifest keys). One variant of each is chosen explicitly: the plain restraint for my seat and the enemy one for
  * others, the Galaxy first-draft wall. The restraint plays only its reviewed early part (the later part shows a grey band),
@@ -62,12 +66,12 @@ const ITEM_SIZE = 18, STAR_SIZE = 12, STAR_GAP = 12;
 /** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
 const PICK_HALF_WIDTH = 0.65;
 /**
- * Legend motion, display only (cells, seconds): my legend runs at RUN_CELLS a second; another seat's dashes to the unit
- * it took in DASH_SECONDS (TFT's grab is near instant to watch); a legend with its unit walks home at WALK_CELLS. It grabs
- * within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
+ * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
+ * so the scramble can be watched even when the room picked for it at once); a legend with its unit walks home at
+ * WALK_CELLS. It grabs within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
  */
-export const RUN_CELLS = 5;
-const DASH_SECONDS = 0.8, WALK_CELLS = 3.2, GRAB_CELLS = 0.7, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
+export const RUN_CELLS = 2.5;
+const WALK_CELLS = 1.6, GRAB_CELLS = 0.7, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
 /** Opening push-in: the camera starts this much farther and higher and settles on the fixed view. */
 const INTRO_SECONDS = 1.5, INTRO_PULL = 0.45, INTRO_LIFT = 0.5;
 const COUNTDOWN_SIZE = 32;
@@ -86,6 +90,8 @@ export interface CarouselStageContext {
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
+  /** The 2D theme's cost color (1 gray … 5 gold) for the ring at each unit's feet; a neutral gray without it. */
+  readonly costColor?: (cost: number) => string;
   /** Item icon textures (tests pass a stub); defaults to three's TextureLoader. */
   readonly loadTexture?: (url: string) => Promise<Texture>;
   readonly now?: () => number;
@@ -129,6 +135,8 @@ class Stride {
 interface Body { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: Stride; disposed: boolean }
 interface UnitView extends Body {
   readonly slot: number; readonly definitionId: string; readonly holder: Group; readonly ring: Mesh;
+  /** Ring in the unit's cost color at its feet (TFT's quality circle), under the extracted tier effect; null without a cost. */
+  readonly costRing: Mesh | null;
   stars: StarMark; items: Sprite[]; data: BoardCarouselSlot; tier: Loop | null;
   /** Seat named by the view as having taken it: the unit has left the turning ring for that seat's legend. */
   takenBy: string | null;
@@ -168,7 +176,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     disc: own(new CylinderGeometry(7.55 * cell, 7.55 * cell, 0.2 * cell, 64)), glass: own(new CylinderGeometry(3.37 * cell, 3.37 * cell, 0.06 * cell, 48)),
     cradle: own(new CylinderGeometry(0.62 * cell, 0.7 * cell, 0.2 * cell, 24)), wall: own(new CylinderGeometry(4.2 * cell, 4.2 * cell, 0.6 * cell, 48, 1, true)),
     pawn: own(new CylinderGeometry(9, 13, 34, 16)), head: own(new SphereGeometry(10, 16, 12)), legend: own(new SphereGeometry(14, 20, 14)),
-    ring: own(new RingGeometry(20, 26, 32)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
+    ring: own(new RingGeometry(20, 26, 32)), cost: own(new RingGeometry(28, 36, 40)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
     marker: own(new SphereGeometry(5, 12, 8)),
     // Unit-length tether along +y, stretched and turned between legend and unit each frame.
     tether: own(new CylinderGeometry(1.4, 1.4, 1, 6, 1, true).translate(0, 0.5, 0)),
@@ -181,6 +189,14 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     tether: { me: material(COLOR.me, { emissive: COLOR.me, emissiveIntensity: 0.9 }), seat: material(COLOR.seat, { emissive: COLOR.seat, emissiveIntensity: 0.9 }) },
     ring: Object.fromEntries((['takable', 'pending', 'hover'] as const).map(key => [key,
       material(COLOR[key], { emissive: COLOR[key], emissiveIntensity: 0.6 })])) as Record<'takable' | 'pending' | 'hover', MeshStandardMaterial>,
+  };
+  /** One ring material per cost color, made on first use. */
+  const costMaterials = new Map<string, MeshStandardMaterial>();
+  const costMaterial = (cost: number) => {
+    const color = ctx.costColor?.(cost) ?? '#9aa4ae';
+    let made = costMaterials.get(color);
+    if (!made) { made = material(color, { emissive: color, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 }); costMaterials.set(color, made); }
+    return made;
   };
   const textures = new Map<string, Promise<Texture | null>>();
   const loadTexture = ctx.loadTexture ?? (url => new TextureLoader().loadAsync(url));
@@ -259,7 +275,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   let azimuth = 0, aspect = 1, intro = 0;
   const frameCamera = () => {
     const tan = Math.tan(camera.fov * Math.PI / 360), radius = STAGE_RADIUS * cell;
-    const distance = radius / Math.min(tan, tan * aspect) * 1.02;
+    const distance = Math.max(radius * VERTICAL_FILL / tan, radius / (tan * aspect)) * 1.02;
     const direction = VIEW.clone().applyAxisAngle(new Vector3(0, 1, 0), azimuth);
     const target = new Vector3(0, legendHeight * 0.5, 0);
     // Opening push-in, eased out: farther and higher at the start.
@@ -409,10 +425,13 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6));
     const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false;
+    // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
+    const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
+    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; }
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight + STAR_GAP;
-    holder.add(root, ring, stars.object);
-    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, stars, items: [], data, tier: null, takenBy: null,
+    holder.add(root, ring, stars.object); if (costRing) holder.add(costRing);
+    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, costRing, stars, items: [], data, tier: null, takenBy: null,
       lease: null, mixer: null, state: new Stride(), disposed: false };
     // Item marks bound to the same slot, above the stars.
     data.items.forEach((item, at) => {
@@ -494,12 +513,12 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   };
   /**
    * The view named `seat` as taker: the unit leaves the turning ring (keeping where it stood) and that seat's legend runs
-   * for it, mine at my running pace (it may be on its way already), another seat's in a dash. `settled` (the first view of
+   * for it at the running pace (mine may be on its way already). `settled` (the first view of
    * a carousel already taken) puts the unit by its legend at home with nothing to watch.
    */
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
     unit.takenBy = seat.seatId; seat.path = null;
-    endLoop(unit.tier); unit.tier = null; unit.ring.visible = false;
+    endLoop(unit.tier); unit.tier = null; unit.ring.visible = false; if (unit.costRing) unit.costRing.visible = false;
     taken.attach(unit.holder);
     for (const other of seatViews.values()) if (other !== seat && other.chase === unit) { other.chase = null; other.goal = null; }
     if (settled) {
@@ -508,9 +527,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       trailPoint(seat, unit.holder.position).setY(seat.anchor.y);
       return;
     }
-    const distance = seat.root.position.distanceTo(unit.holder.getWorldPosition(new Vector3()));
-    seat.chase = unit; seat.goal = null;
-    seat.speed = seat.me ? RUN_CELLS * cell : Math.max(RUN_CELLS * cell, distance / DASH_SECONDS);
+    seat.chase = unit; seat.goal = null; seat.speed = RUN_CELLS * cell;
   };
   /** The legend reached its unit: the selection burst (not on a settled view) and the walk home with it. */
   const grab = (seat: SeatView, unit: UnitView, feedback = true) => {

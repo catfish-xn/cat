@@ -5,7 +5,7 @@ import type { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { LEGEND_WALK_MIN_GAP_MS } from '../../src/server/room/legend-walk';
 import {
-  CAROUSEL_LEGEND_RADIUS, carouselHome, carouselUnitPoint, interceptCarouselUnit, walkPoint, type LegendWalk,
+  CAROUSEL_LEGEND_RADIUS, LEGEND_CELLS_PER_SECOND, carouselHome, carouselUnitPoint, interceptCarouselUnit, walkPoint, type LegendWalk,
 } from '../../src/server/legend-motion';
 import { parseClientMessage, NET_PROTOCOL_VERSION } from '../../src/server/net/messages';
 import { makeRoom, runUntil } from './helpers';
@@ -124,7 +124,7 @@ describe('little-legend walks on a board (room)', () => {
     const result = room.walkLegend(human, { scene: 'board', from: { x: 8, y: 9 }, to: { x: 3, y: 500 } }) as { ok: true; walk: LegendWalk };
     expect(result.ok).toBe(true);
     expect(result.walk).toMatchObject({ seatId: human, scene: 'board', from: { x: 8, y: 9 }, to: { x: 3, y: 20 }, slot: null, startedAt: clock.now() });
-    expect(result.walk.arriveAt - result.walk.startedAt).toBeCloseTo(Math.hypot(5, 11) / 5 * 1000, 6);
+    expect(result.walk.arriveAt - result.walk.startedAt).toBeCloseTo(Math.hypot(5, 11) / LEGEND_CELLS_PER_SECOND * 1000, 6);
     expect(walks).toEqual([result.walk]);
     expect(room.walkLegend(human, { scene: 'carousel', to: { x: 0, y: 0 } })).toMatchObject({ ok: false });
     expect(room.retained.timers).toBe(1); // only the phase deadline: a board walk arms nothing

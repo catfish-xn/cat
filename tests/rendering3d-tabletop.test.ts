@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Group, PerspectiveCamera, Scene } from 'three';
+import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
 import { createTabletop, LEGEND_MODEL, type TabletopContext } from '../src/rendering/three-mode/tabletop';
 import type { BoardFrame, BoardLegendWalk, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
@@ -178,9 +178,9 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(walk.to.x).toBeCloseTo(3, 5); expect(walk.to.y).toBeCloseTo(2, 5);
     expect(tabletop.debug().legends).toEqual(['legend:me:standin:walk']);
     const cells = Math.hypot(walk.to.x - walk.from.x, walk.to.y - walk.from.y);
-    clock = cells / 5 * 1000 / 2; tabletop.update(0.016);
+    clock = cells / 2.5 * 1000 / 2; tabletop.update(0.016);
     expect(legend.position.x).toBeCloseTo(35 + width * (walk.from.x + walk.to.x) / 2, 3);
-    clock = cells / 5 * 1000 + 1; tabletop.update(0.016);
+    clock = cells / 2.5 * 1000 + 1; tabletop.update(0.016);
     expect(legend.position.x).toBeCloseTo(35 + width * 3, 3); expect(legend.position.z).toBeCloseTo(50 + width * 2, 3);
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
     // A new frame of the same board keeps it where it walked; a far click stops at the roaming edge.
@@ -188,6 +188,26 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(legend.position.x).toBeCloseTo(35 + width * 3, 3);
     const far = tabletop.walkTo({ x: -5000, y: 99999 })!;
     expect(far.to.x).toBeGreaterThan(-3); expect(far.to.y).toBeLessThan(20);
+  });
+
+  it('drops each orb where its monster fell and keeps it there after the battle; one without a source takes the column', () => {
+    const { scene, tabletop } = setup();
+    const monster = (id: string, x: number, y: number, alive = true) => ({ id, definitionId: 'pve-krug', team: 'enemy' as const, starLevel: 1,
+      neutral: true as const, x, y, alive, visible: true });
+    tabletop.frame(frame());
+    const column = (() => { tabletop.frame(frame({ orbs: [orb('probe', 'gray')] })); return scene.getObjectByName('render3d-orb-gray')!.position.clone(); })();
+    tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 200, 120), monster('m2', 120, 90)] }));
+    tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 210, 125, false), monster('m2', 120, 90)],
+      orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray')] }));
+    const at = (tier: string) => scene.getObjectByName(`render3d-orb-${tier}`)!.position;
+    expect(at('blue').x).toBeCloseTo(210); expect(at('blue').z).toBeCloseTo(125);
+    const width = Math.sqrt(3) * 34;
+    expect(at('gold').distanceTo(new Vector3(210, 0, 125)) / width).toBeCloseTo(0.4, 5); // a second orb of m1, beside the first
+    expect(at('gray').distanceTo(column)).toBeLessThan(1e-6); // no source: the column beside my legend
+    // The battle ends and the monsters leave the board: the orbs stay where they fell.
+    tabletop.frame(frame({ orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray')] }));
+    expect(at('blue').x).toBeCloseTo(210); expect(at('blue').z).toBeCloseTo(125);
+    tabletop.dispose();
   });
 
   it('claims an orb my walking legend reaches, once, through the dock click', () => {
