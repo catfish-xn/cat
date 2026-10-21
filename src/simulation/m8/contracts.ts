@@ -487,8 +487,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 8;
-  readonly rulesVersion: 's13-g2-3-v18';
-  readonly contentVersion: 's13-14.24b-g2-3-v18';
+  readonly rulesVersion: 's13-g2-3-v19';
+  readonly contentVersion: 's13-14.24b-g2-3-v19';
   readonly contentDigest: string;
   readonly saveFormatVersion: 4;
   readonly replayFormatVersion: 3;

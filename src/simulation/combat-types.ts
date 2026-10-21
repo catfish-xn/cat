@@ -14,6 +14,7 @@ export interface CombatStatus { readonly contributionKeys?: readonly string[]; r
 export interface CombatTask { readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g24Heal' | 'g24Mana'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
+export interface V19CombatFacts { readonly garenSample?:number; readonly sharedHealth?:number; readonly smokePermanent?:boolean; readonly smokeOrdinal?:number; readonly roseTeams?:readonly Team[] }
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 /** Finite G2 state; absent in battles without G2 mechanics. No hidden counters outside the snapshot. */
@@ -53,6 +54,7 @@ export interface CombatUnit {
   readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly g23?: G23State;
   readonly g22?: G22State;
+  readonly v19?: V19CombatFacts;
   readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
   /** G2-4b: temporary items gained during this combat (Unstable Treasure Chest); their programs are bound from the frozen pool. */

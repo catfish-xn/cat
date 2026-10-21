@@ -64,7 +64,11 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
-  const projection=projectEffectiveMembership(state.preparation,context,catalog.traits,[...state.items,
+  const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
+  const sisterUnits=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&['jinx','vi'].includes(u.definitionId));
+  const sisterSources=sisterAugment&&new Set(sisterUnits.map(u=>u.definitionId)).size===2?sisterUnits.map(u=>({kind:'add-trait' as const,sourceId:sisterAugment.choiceId+':sisters:'+u.id,unitId:u.id,traitId:'sisters',activeFromRound:state.round,expiresBeforeRound:state.round+1})):[];
+  const traitContext=sisterSources.length?{round:state.round,sources:[...(context?.sources??[]),...sisterSources]}:context;
+  const projection=projectEffectiveMembership(state.preparation,traitContext,catalog.traits,[...state.items,
     ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
   const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
@@ -114,7 +118,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     };
     // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
     const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
-    const itemEffects = (definition: ItemDefinition): readonly Effect[] => isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects;
+    const itemEffects = (definition: ItemDefinition): readonly Effect[] => (isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects).map(effect=>
+      effect.kind==='mechanic'&&effect.mechanic==='v19Chainblade'?{...effect,values:{...effect.values,pvp:!ROUND_CATALOG.find(r=>r.ordinal===state.round)||ROUND_CATALOG.find(r=>r.ordinal===state.round)?.kind==='pvp'?1:0}}:effect);
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);

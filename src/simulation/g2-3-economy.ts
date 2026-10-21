@@ -28,6 +28,7 @@ export function validateG23BattleFacts(f:G23BattleFacts):void{
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
  if(f.itemGoldPayouts!==undefined)validateItemGoldPayouts(f.itemGoldPayouts,f.battleId);
+ if(f.roundKind!=='pvp'&&f.itemGoldPayouts?.some(p=>JSON.parse(p.receiptId)[4]==='perfected-chainblade'))throw new RangeError('Invalid Chainblade PvP gold');
  if(f.d11Headhunter!==undefined){
   const r=f.d11Headhunter;
   if(!r||Object.keys(r).sort().join(',')!=='combatId,holderId,kills'||r.combatId!==f.battleId||typeof r.holderId!=='string'||!r.holderId||!Array.isArray(r.kills)
@@ -41,7 +42,7 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId===f.battleId))return {progress:p,gold:0};
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.round>=f.round))throw new RangeError('Unordered G23 settlement');
  const conquest=f.conquerorTier?planG23Conquest(p.conquest,f.battleId,f.conquerorTier,f.conquestTakedowns):p.conquest;
- let gold=f.highRollerGold+(f.itemGoldPayouts?.length??0);const rewards=[...p.rewards],ids:string[]=[];
+ let gold=f.highRollerGold+(f.itemGoldPayouts?.reduce((sum,p)=>sum+p.amount,0)??0);const rewards=[...p.rewards],ids:string[]=[];
  for(const chest of G23_CONQUEROR_CHESTS.slice(p.conquest.chestsOpened,conquest.chestsOpened)){
   const id=`g23:conqueror:${chest.tier}`,{Gold=0,...reward}=g23ConquerorReward(chest);
   gold+=Gold as number;ids.push(id);rewards.push({id,round:f.round,source:'conqueror',tier:chest.tier,reward});

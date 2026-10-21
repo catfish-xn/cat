@@ -28,6 +28,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   g24Mirror:['healthBps','manaIncreaseBps'],
   g24Trench:['thresholdBps','healthBps'],
   g24Collector:['executeBps'],
+  v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
   quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
@@ -45,7 +46,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   loneHero:['attackSpeedBps', 'durabilityBps'],
   climbLadder:['adBps', 'abilityPower', 'armor', 'magicResist'],
   inspiringEpitaph:['shieldMaxHpBps', 'attackSpeedBps'],
-  rebel:['thresholdBps','adApBps','bonusHpBps','stunTicks','attackSpeedBps','durationTicks'], enforcer:['shieldBps','wanted','attackSpeedBps'], academy:['sponsoredBps','memberBaseBps'], scrap:['shieldPerComponent','conversions','durationTicks','componentCount'], emissary:['armorPerWin','healthBps','mana','starSpeedBps'],
+  rebel:['thresholdBps','adApBps','bonusHpBps','stunTicks','attackSpeedBps','durationTicks','forcedPeriodTicks'], enforcer:['shieldBps','wanted','attackSpeedBps'], academy:['sponsoredBps','memberBaseBps'], scrap:['shieldPerComponent','conversions','durationTicks','componentCount'], emissary:['armorPerWin','healthBps','mana','starSpeedBps'],
   automata: ['crystals','damage','conversionBps'], firelight: ['periodTicks','healBps','attackSpeedBps','dashTicks'], family: ['manaReductionBps','damageReductionBps','heist'],
   artillery: ['everyN', 'adBps', 'radius'], sniper: ['damageBpsPerHex'], watcher: ['reductionBps', 'healthyReductionBps', 'thresholdBps'],
   rageblade: ['attackSpeedBps'], archangel: ['periodTicks', 'abilityPower'], dragonClaw: ['periodTicks', 'healMaxHpBps'],
@@ -55,6 +56,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
+for(const name of ['v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
 MECHANICS.add('s13P2Augment');
 MECHANICS.add('s13P2Anomaly');
 MECHANICS.add('s13P2ItemAugment');
@@ -103,7 +105,7 @@ export function cloneEffect(effect: Effect): Effect {
     case 'mechanic': {
       if (!MECHANICS.has(effect.mechanic)) throw new RangeError('Unknown finite mechanic');
       const fields = MECHANIC_FIELDS[effect.mechanic];
-      if (fields.some(key => !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
+      if (fields.some(key => key!=='forcedPeriodTicks' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
       if (Object.keys(effect.values).some(key => !fields.includes(key) && !['backRowOnly', 'buddyIndex'].includes(key))) throw new RangeError('Unknown mechanic parameter');
       for (const value of Object.values(effect.values)) integer(value);
       for (const key of ['everyN', 'periodTicks', 'durationTicks']) if (Object.hasOwn(effect.values, key)) integer(effect.values[key], 1);

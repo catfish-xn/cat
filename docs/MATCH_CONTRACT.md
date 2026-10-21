@@ -1,5 +1,15 @@
 # M5 Match contract v5
 
+## v19 当前规则与数据合同（2026-10-21）
+
+当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:9ba56127`、LOOT_REPLAY=`fnv1a32-utf16:8d45a042`；schema/save/replay/command 仍8/4/3/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
+
+实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/27羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
+
+`g23Facts.itemGoldPayouts[].amount` 扩为 `1|3`；`perfected-chainblade` 必须为3，其他kind必须为1。服务器原样透传，不自行拆分或即时发金。真实结算按amount求和，通过既有唯一mechanic收据一次到账。单人相关新动态战斗从认证输入完整重演验证，不信任候选标记/采样/收据。
+
+`seatMechanics.seat.familyHeist` 只预留 `FamilyHeistReserved {CurrentReward,CurrentProgress,CurrentRewardValue,rewardReceiptIds}` 的存档/owner-only显示位置；v19不初始化、不推进、不支付。公式、奖励与结算资格仍待用户确认。赛薇卡投影合同见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 和v19说明。
+
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 
 S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与拆卸器、纹章/高档羁绊及炮手修正合并后的完整根为 CONTENT `fnv1a32-utf16:213ae9e4`、LOOT `fnv1a32-utf16:ffebff3f`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。

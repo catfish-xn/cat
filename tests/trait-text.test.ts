@@ -3,7 +3,7 @@ import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { traitDisplayValues, traitSummary, traitTierText } from '../src/presentation/trait-text';
-import { TRAIT_OFFICIAL_TEXT } from '../src/presentation/trait-official-text';
+import { CURRENT_TRAIT_OFFICIAL_TEXT as TRAIT_OFFICIAL_TEXT } from '../src/presentation/trait-text';
 import { describeTraitTier } from '../src/presentation/effect-text';
 
 const row = (id: string, threshold: number) => {
@@ -13,11 +13,11 @@ const row = (id: string, threshold: number) => {
 const archive = (name: string) => JSON.parse(gunzipSync(readFileSync(`src/simulation/content/source/s13-14.24b/raw/${name}.json.gz`)).toString());
 
 describe('14.24 official trait text with executable values', () => {
-  it('covers exactly the 25 active traits and 83 tiers; preserves every archived Chinese description', () => {
+  it('covers exactly the 27 active traits and 86 tiers; preserves every archived Chinese description', () => {
     const zh = archive('zh_cn.tft.stringtable').entries;
     expect(Object.keys(TRAIT_OFFICIAL_TEXT).sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
-    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(25);
-    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(83);
+    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(27);
+    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(86);
     for (const [id, source] of Object.entries(TRAIT_OFFICIAL_TEXT)) {
       const original = zh[`tft_trait_description_${source.apiName.toLowerCase()}`];
       if (id === 'high-roller') {
@@ -75,8 +75,6 @@ describe('14.24 official trait text with executable values', () => {
     ['family', 5, '去上城搞钱！在战斗后，获得搞钱进度，并且每个存活的【家人】都会使这个进度提升！'],
     ['scrap', 6, '所有基础装备和成装都会成为幸运装备！'],
     ['scrap', 9, '生成光明版装备！'], ['enforcer', 10, '没收敌人的所有装备！'],
-    ['rebel', 10, '烟雾信号会在战斗开始时以及之后的每 12秒触发。'],
-    ['black-rose', 4, '【黑色玫瑰】弈子们会对敌人造成更多伤害'],
     ['black-rose', 7, '当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！'],
     ['firelight', 4, '在冲刺时，获得巨额爆发攻速加成。'],
     ['quickstriker', 4, '【迅击战士】们会冲刺至一个新目标'],
@@ -86,8 +84,12 @@ describe('14.24 official trait text with executable values', () => {
   it('keeps deferred summary clauses verbatim and marks them without hiding implemented benefits', () => {
     expect(traitSummary('quickstriker', 4)).toContain('【迅击战士】移动得更快（暂未实装）且获得攻击速度');
     expect(traitSummary('firelight', 4)).toContain('他们会进行一次无限距离的攻击（暂未实装）并治疗自身');
-    expect(traitSummary('dominator', 6)).toContain('会基于已消耗的法力值获得可叠加的法术强度（暂未实装）');
-    expect(traitSummary('emissary', 4)).toContain('获得他的12%最大生命值。（暂未实装）');
+    expect(traitSummary('dominator', 6)).toContain('会基于已消耗的法力值获得可叠加的法术强度。');
+    expect(traitSummary('dominator', 6)).not.toContain('暂未实装');
+    expect(traitSummary('emissary', 4)).toContain('获得他的12%最大生命值。');
+    expect(traitSummary('emissary', 4)).not.toContain('暂未实装');
+    expect(row('rebel', 10)).not.toContain('暂未实装');
+    expect(row('black-rose', 4)).not.toContain('暂未实装');
     expect(traitSummary('emissary', 4)).toContain('【娜美】： 己方弈子的每次普攻提供2额外法力值。');
     expect(traitSummary('black-rose', 7)).toBe('【黑色玫瑰】弈子们的每个星级都会提升【赛恩】的强度');
   });

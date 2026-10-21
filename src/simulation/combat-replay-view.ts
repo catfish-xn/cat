@@ -84,7 +84,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'unitSpawned': return { ...envelope, type: event.type, sourceId: event.source.ownerId,
       ...pick(event, ['unitId', 'definitionId', 'team']), cell: cellView(event.cell) };
     case 'unitRemoved': return { ...envelope, ...pick(event, ['type', 'unitId', 'reason']) };
-    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes] };
+    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes],
+      ...(event.castVariant?{castVariant:{...pick(event.castVariant,['actionSeq','move','channelTicks','enhanced']),heroAugmentIds:[...event.castVariant.heroAugmentIds]}}:{}) };
     case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }

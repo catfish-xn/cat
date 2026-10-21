@@ -1,5 +1,13 @@
 # M5 Combat contract v5
 
+## v19 战斗规则与赛薇卡显示扩展（2026-10-21）
+
+当前规则为 `s13-g2-3-v19`；完整来源、整数公式、开场顺序、缺证约定、状态与恢复见 [V19_MECHANICS](V19_MECHANICS.md)。统领使用实际施法收据；盖伦冻结完整实际最大生命后统一广播；双形按startingCell；姐妹按强化/两种伙伴门槛和参与击杀；蓝发10用0/240/480…单一时钟。黑玫4档绑定为**推断**，标记目标的独立×1.08不叠加。链锯刃低于20%处决、400治疗、200tick击杀刷新增益；仅PvP真实敌方英雄掉3金是用户要求的**魔改**，战后唯一收据到账。
+
+`castOutcome` 领域事件及既有 `toCombatViewEvents(events)` 显示投影，新增可选 `castVariant:{actionSeq:number,move:'flamethrower'|'punch'|'chomp',channelTicks:number,enhanced:boolean,heroAugmentIds:readonly string[]}`。赛薇卡每次施法发送最终选招、实际引导tick数（非引导0）及百变铁手强化结果；当前没有已实装赛薇卡专用英雄强化，heroAugmentIds显式为空。3D按unitId/actionSeq关联cast，直接选择动画与时长，继续服从权威生命/控制状态处理打断；不得自行抽招或消费RNG。投影为脱离引用的白名单数据，首遍/重放一致；无需修改网络封套。
+
+可选 `CombatUnit.v19` 存放盖伦采样/共享生命、蓝发信号序号及一次授予标记、黑玫目标队伍标记。相关新动态战斗恢复从认证输入逐tick重建并对比完整状态；不重发任何收益。家人5只有预留契约，没有新增战斗/经济规则。
+
 ## v18 炮手 6：14.24b 的 12/17 B 补丁修正
 
 炮手（Cannoneer，内部 id `artillerist`，归档 `TFT13_Martialist`）6 档成员攻击力加成由 60% 修正为 **70%（7000 Bps）**，依据 `M9_DATA_LEDGER.md` 的 B-12/17 `effects.variables.AD` 行。2/4 档仍为 10%/45%；6 档每 4 次普攻触发的 250% AD 范围物理包不变。运行时表供战斗编译和说明共用，原始归档不改；无公共签名、失败原因、tick 或结算顺序变化。

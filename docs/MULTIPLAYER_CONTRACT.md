@@ -1,5 +1,13 @@
 # Set13 八人联机合同草案
 
+## v19 领域合同增补（2026-10-21）
+
+当前rules/content=`s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，schema/save/replay/command=8/4/3/4，领域NET4/网络NET5不变。CONTENT=`fnv1a32-utf16:9ba56127`、LOOT_REPLAY=`fnv1a32-utf16:8d45a042`；旧身份拒绝，无迁移。完整规则、推断/约定/魔改与字段见 [V19_MECHANICS](V19_MECHANICS.md)。当前61强化/27羁绊；姐妹对应强化及伙伴门槛由领域快照冻结，服务器不自行补羁绊或计算增益。
+
+`g23Facts.itemGoldPayouts` 沿既有 proposal→receipt 原样转发，`amount:1|3`：新增 `perfected-chainblade` 必须为3金，其他kind仍为1金。战后同一事务按金额合计，通过唯一收据到账；镜像仍不领取额外结算。新增可选动画字段为 `castOutcome.castVariant {actionSeq,move,channelTicks,enhanced,heroAugmentIds}`，由既有 `toCombatViewEvents` 白名单直接投影，服务端不得再抽招/生成英雄强化标记；3D消费说明见COMBAT合同。没有新增客户端命令、失败枚举或网络封套。
+
+`seatMechanics.seat.familyHeist` 只是预留的owner-only存档位置，v19不初始化、不推进、不发奖。服务器继续仅编排领域公共导出。本轮未修改服务器或3D渲染接线，也未声明端到端上线验收完成。
+
 ## v17 当前状态（草稿，覆盖下文历史身份）
 
 贪财化身恢复联机池，异常单机56/联机55→56，强化60；两模式按备战席/普通棋盘/可晋升棋盘目标过滤为54/55/56。rules/content 同升 `s13-g2-3-v17` / `s13-14.24b-g2-3-v17`，CONTENT `de829c8a→8a955c10`，LOOT `62c76cb9` 与规则manifest `31950a0f` 保持。schema/save/replay/command=7/3/3/4、领域NET4/网络NET5均不升。CURRENT与新证据切到v17，v15/v16原字节保留。发版排空对局、旧身份无静默迁移；PR保持草稿，等v16发版收口后合。完整约定见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md)。下文v15身份为历史。

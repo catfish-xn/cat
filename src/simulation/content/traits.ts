@@ -4,6 +4,7 @@ import { G2_TRAIT_DEFINITIONS } from './g2-traits';
 import type { TraitDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 export const TRAIT_DEFINITIONS: Readonly<Record<string,TraitDefinition>> = freezeContent({
+  sisters:{id:'sisters',name:'姐妹',target:'members',tiers:[{threshold:2,effects:[{kind:'mechanic',mechanic:'sisters',values:{adBps:4000,speedBps:7500,adTicks:140,speedTicks:100}}]}]},
   ...G2_TRAIT_DEFINITIONS,
   ...G22_TRAITS,
   "sentinel": {

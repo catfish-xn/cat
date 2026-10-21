@@ -1,4 +1,5 @@
 import { startG22Traits } from './combat-g2-2';
+import { startV19, smokeV19 } from './combat-v19';
 import { startP2Combat } from './s13-augments-p2-combat';
 import { nextRandom } from './rng';
 import { startAnomalies } from './anomalies/runtime';
@@ -75,7 +76,9 @@ export function applyCombatStart(state: CombatState): CombatStep {
     startP2Combat({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
       const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
     }});
-    // Final owner HP is frozen only after all P2 random boosts and broadcasts.
+    smokeV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 smoke cannot draw RNG');}});
+    startV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 opening cannot draw RNG');}});
+    // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
   }
   return stampCombatStep({ ...state, units, rngState, rngDraws, startEffectsApplied: true }, [...effects, ...shields, ...mana]);

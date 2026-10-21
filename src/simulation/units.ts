@@ -497,7 +497,7 @@ const G21_AND_G22_UNITS: Readonly<Record<string, UnitDefinition>> = freezeConten
   ...G22_UNITS,
   ...Object.fromEntries(Object.entries(G23_UNITS).filter(([id])=>!id.endsWith('-ranged'))),
 });
-export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:G23_MEMBERSHIP[id] ?? G22_MEMBERSHIP[id] ?? u.traits})])));
+export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:[...(G23_MEMBERSHIP[id] ?? G22_MEMBERSHIP[id] ?? u.traits),...(u.formSwap?['form-swapper']:[])]})])));
 
 export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "neutral-stage-2": {

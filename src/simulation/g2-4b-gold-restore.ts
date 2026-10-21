@@ -25,7 +25,9 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
-  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11){
+  const v19=strategy.units.some(u=>u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&['dominator','black-rose'].includes(m.source.definitionId)));
+  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19){
+    if(candidate.units.some(u=>u.v19!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
@@ -36,7 +38,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid dynamic combat checkpoint');
   let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
   while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${v19?'V19':anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':'Mirror forge'} replay`);
   return true;
 }
 
@@ -44,7 +46,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
  * replay only gold-item combats from the validated frozen input, without
  * settling or granting anything. Existing non-gold saves take no replay path. */
 export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
-  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul'].includes(m.mechanic)));
+  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)));
   if(!enabled){
     if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
     return;

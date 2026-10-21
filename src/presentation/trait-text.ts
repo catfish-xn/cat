@@ -5,10 +5,12 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import type { TraitDefinition, TraitTier } from '../simulation/strategy-types';
 import { describeTraitTier } from './effect-text';
 import { fillAbilityTemplate } from './ability-text';
+import { V19_OFFICIAL_TRAIT_TEXT, V19_SISTERS_DISPLAY_SOURCE } from '../simulation/content/v19-trait-text';
 import { TRAIT_OFFICIAL_TEXT } from './trait-official-text';
 
 type SourceTier = { readonly threshold: number; readonly values: Readonly<Record<string, number | null | undefined>> };
-const SOURCES = G23_TRAIT_SOURCE as Readonly<Record<string, { readonly tiers: readonly SourceTier[] }>>;
+export const CURRENT_TRAIT_OFFICIAL_TEXT:Readonly<Record<string,{readonly apiName:string;readonly locale:string;readonly description:string}>> = {...TRAIT_OFFICIAL_TEXT,...V19_OFFICIAL_TRAIT_TEXT};
+const SOURCES = {...G23_TRAIT_SOURCE,...V19_SISTERS_DISPLAY_SOURCE} as Readonly<Record<string, { readonly tiers: readonly SourceTier[] }>>;
 export function traitDisplayValues(traitId: string, threshold: number): Record<string, number> | null {
   const tiers = Object.hasOwn(SOURCES, traitId) ? SOURCES[traitId].tiers : undefined;
   const tier = tiers?.find(t => t.threshold === threshold) ?? tiers?.[0];
@@ -63,9 +65,7 @@ function annotate(id: string, text: string): string {
     mark('生成光明版装备！');
   }
   if (id === 'enforcer') mark('没收敌人的所有装备！');
-  if (id === 'rebel') text = text.replace(/烟雾信号会在战斗开始时以及之后的每 \d+秒触发。/, '$&（暂未实装）');
   if (id === 'black-rose') {
-    mark('【黑色玫瑰】弈子们会对敌人造成更多伤害');
     mark('当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！');
   }
   if (id === 'firelight') {
@@ -77,13 +77,11 @@ function annotate(id: string, text: string): string {
     mark('【迅击战士】移动得更快');
     mark('【迅击战士】们会冲刺至一个新目标');
   }
-  if (id === 'dominator') mark('会基于已消耗的法力值获得可叠加的法术强度');
-  if (id === 'emissary') text = text.replace(/【盖伦】：[^\n]+/, '$&（暂未实装）');
   return text;
 }
 
 function parts(id: string): { summary: string; rows: string[]; expanded: boolean } | null {
-  const source = Object.hasOwn(TRAIT_OFFICIAL_TEXT, id) ? TRAIT_OFFICIAL_TEXT[id] : undefined;
+  const source = Object.hasOwn(CURRENT_TRAIT_OFFICIAL_TEXT, id) ? (CURRENT_TRAIT_OFFICIAL_TEXT as Readonly<Record<string,{description:string}>>)[id] : undefined;
   if (!source) return null;
   const rows = [...source.description.matchAll(/<(row|expandRow)>([\s\S]*?)<\/\1>/g)];
   const summary = source.description

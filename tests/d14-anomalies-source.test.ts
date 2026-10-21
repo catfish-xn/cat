@@ -54,7 +54,7 @@ it('reconciles the official Chinese description keys and keeps selection semanti
 });
 it('registers the two D14 anomalies in v17 without overwriting retained intentional values',()=>{
   expect(ANOMALY_DEFINITIONS['ultimate-hero'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);expect(ANOMALY_DEFINITIONS['into-the-unknown'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);
-  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:213ae9e4');expect(M8_VERSION.rulesVersion).toBe('s13-g2-3-v18');
+  expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe('fnv1a32-utf16:9ba56127');expect(M8_VERSION.rulesVersion).toBe('s13-g2-3-v19');
   // Protect existing live source values; this pack never replaces lower-star tables.
   expect(S13_ABILITY_DATA['singed-ability'].variables.DR).toEqual([0.5,0.5,0.6]);
 });

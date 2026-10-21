@@ -33,7 +33,7 @@ ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-
 AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','hedge-fund','investment-strategy-ii');AUGMENTS.sort();
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
 // D11 raw identities/tags, independently transcribed from the retained archive.
-AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link');AUGMENTS.sort();
+AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link','sisters');AUGMENTS.sort();
 ANOMALIES.push('ultimate-hero','into-the-unknown');
 ANOMALIES.push('avarice-incarnate','headhunter');ANOMALIES.sort();
 // Literal tier identities, transcribed independently; no runtime content imports.
@@ -42,7 +42,7 @@ const AUGMENT_POOLS={
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
-AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link');
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 function augmentTier(seed,node){
  let hash=2166136261n;

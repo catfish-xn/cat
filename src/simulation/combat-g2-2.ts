@@ -125,7 +125,7 @@ export function advanceG22Traits(ctx:AbilityContext):void {
       const state=g22(u),count=state.wanted.filter(id=>ctx.units.some(x=>x.id===id&&!x.alive)).length;
       if(count>state.wantedDeaths){change(ctx,u,u,m.source,'attackSpeed',count*m.values.attackSpeedBps,'bps');state.wantedDeaths=count;}
     }
-    if(m.mechanic==='rebel'&&!g22(u).rebelTriggered){
+    if(m.mechanic==='rebel'&&!m.values.forcedPeriodTicks&&!g22(u).rebelTriggered){
       const team=ctx.units.filter(x=>x.team===u.team&&!isAttackProxy(x)),max=team.reduce((n,x)=>n+x.maxHp,0),hp=team.reduce((n,x)=>n+x.hp,0);
       if((max-hp)*10000<max*m.values.thresholdBps)continue;
       // Mark every member before any max-HP effect changes the shared trigger sample.

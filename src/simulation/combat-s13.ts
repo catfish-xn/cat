@@ -1,4 +1,6 @@
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
+import { v19DominatorCast, smokeV19, sistersV19, markRoseV19, roseAmpV19, chainblade, chainbladeGoldTarget, chainbladeKill } from './combat-v19';
+import { V19_MECHANICS } from './content/v19-mechanics';
 import { d11AvariceDamageAmpBps, d11HeadhunterAttackSpeedBps } from './d11-fill';
 import { UNIT_DEFINITIONS } from './units';
 import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3Mechanic, settleP3Deaths } from './s13-p3-combat';
@@ -119,6 +121,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
     if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
+    if (m.mechanic === 'formSwapper' && startingRows(owner.team, owner.startingCell?.row ?? owner.cell.row)==='back-two') amplifiers.push(constantModifier('damageAmp',m.values.backAmpBps,'bps'));
   }
   // G2-4b Sniper's Focus: the same per-hex reading as the Sniper trait, sampled at resolution.
   if (owner) for (const m of statusModifiers(owner, 'damageAmpPerHex', tick)) if (m.value.kind === 'constant')
@@ -127,6 +130,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
   const reductions = [...(mechanic(target, 'family', 'damageReductionBps') ? [reduction(mechanic(target, 'family', 'damageReductionBps'))] : []), ...statusModifiers(target, 'damageReduction', tick), ...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
   if (target.shieldLayers.some(s => s.remaining > 0 && s.expiresAtTick > tick) && p3Mechanic(target, 'defense-call')) reductions.push(reduction(Math.round(p3Values('defense-call').ReducedDamage * 10000)));
+  if(startingRows(target.team,target.startingCell?.row??target.cell.row)==='front-two')for(const m of target.mechanics??[])if(m.mechanic==='formSwapper')reductions.push(reduction(m.values.frontReductionBps));
   for (const m of target.mechanics ?? []) if (m.mechanic === 'watcher') reductions.push(reduction(
     BigInt(target.hp) * 10000n > BigInt(target.maxHp) * BigInt(m.values.thresholdBps) ? m.values.healthyReductionBps : m.values.reductionBps));
   return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
@@ -167,7 +171,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if(holder.openingItemBankGold===undefined||holder.team!==owner.team)continue;
       const limit=mechanic(holder,'g24Gambler','goldLimit');
       holder.currentItemBankGold=holder.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate')
-        ?holder.currentItemBankGold!+1:Math.min(limit,holder.currentItemBankGold!+1);
+        ?holder.currentItemBankGold!+next.receipts.at(-1)!.gold:Math.min(limit,holder.currentItemBankGold!+next.receipts.at(-1)!.gold);
     }
   };
   if(hasBanish)returnZephyrUnits(ctx);
@@ -248,6 +252,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   advanceSpectralCutlass(ctx);
   advanceAugmentCombat(ctx);
+  smokeV19(ctx);
   advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
   advanceG2Passives(ctx, () => actionSeq++);
   const blocked = new Set<string>();
@@ -326,6 +331,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       (ctx.castReceipts ??= []).push(receipt);
       // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
       events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
+      v19DominatorCast(ctx,unit,receipt.actualManaSpent);
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);
@@ -403,7 +409,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
-  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.mechanics?.some(m=>m.mechanic==='s13Anomaly')||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
+  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.mechanics?.some(m=>m.mechanic==='s13Anomaly'||m.mechanic==='sisters')||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
   const damageContributors = { ...state.damageContributors };
 
   ctx.virtualHp = virtualHp;
@@ -431,6 +437,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       return next;
     }); syncShield(target);
     virtualHp.set(target.id, result.hpAfter);
+    markRoseV19(units.find(u=>u.id===packet.source.ownerId),target,absorbed+actual);
     if(outcome.hit&&packet.source.definitionId.endsWith('DeftHands'))recordAnomalyProxyHit(ctx,units.find(u=>u.id===packet.source.ownerId),target,packet.actionSeq,context.redirected);
     allOutcomes.push(outcome);
     ctx.resolutionFacts = { ...ctx.resolutionFacts!, damage: allOutcomes };
@@ -456,6 +463,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (outcome.killingPacket) {
       g23RumbleDeath(ctx,target,actionSeq++,defenses(target,true,tick,units)+defenses(target,false,tick,units));
       killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
+      if(owner&&owner.team!==target.team)chainbladeKill(ctx,owner);
       if(owner?.d11Kills&&owner.team!==target.team&&!target.itemSummon&&!target.anomalySummon
         &&UNIT_DEFINITIONS[target.definitionId]&&!UNIT_DEFINITIONS[target.definitionId].summon&&target.unitKind!=='neutral'){
         const m=owner.mechanics!.find(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')!;
@@ -490,6 +498,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const finisher=owner&&p3Mechanic(owner,'the-finisher');
     const collector=finisher&&(!itemCollector||itemCollector.values.executeBps<Math.round(p3Values('the-finisher').ExecutePercent*10000))?{...finisher,values:{executeBps:Math.round(p3Values('the-finisher').ExecutePercent*10000)}}:itemCollector;
     const remaining=virtualHp.get(target.id)!;
+    const blade=chainblade(owner);
+    if(owner&&blade&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
+      &&absorbed+actual>0&&remaining>0&&owner.team!==target.team&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(V19_MECHANICS.chainblade.executeBps)){
+      const execution:S13Packet={source:blade.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,delivery:'equipment-proc',critEligibility:'never',critical:false,area:false,triggeringCastActionSeq:null};
+      const request=damageRequest(execution,ctx.combatId!,tick);
+      const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+      commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
+      ctx.heals.push({source:blade.source,targetId:owner.id,amount:V19_MECHANICS.chainblade.heal});
+      if(chainbladeGoldTarget(owner,target))awardItemGold(owner,blade,'perfected-chainblade',itemGoldReceipts?.filter(r=>r.ownerId===owner.id&&r.kind==='perfected-chainblade').length??0);
+      return;
+    }
     if(collector&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
       &&absorbed+actual>0&&remaining>0&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(collector.values.executeBps)){
       const execution:S13Packet={source:collector.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,
@@ -514,7 +533,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const weakness=Math.max(0,...(owner?.mechanismState?.statuses??[]).flatMap(g=>g.contributions.filter(c=>c.source.sourceKind==='trait'&&c.source.definitionId==='sorcerer'&&isEffective(c,tick)).map(c=>c.application.magnitudeBps)));
     const request = damageRequest(weakness&&!packet.inherited ? {...packet,raw:Math.floor(packet.raw*(10000-weakness)/10000)} : packet, state.combatId ?? 'standalone', tick);
     const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
-    const prepared = prepareDamage(request, sample);
+    const basePrepared = prepareDamage(request, sample);
+    // One target multiplier after existing amplification/mitigation, before shields/redirect. Never double-scale inherited packets.
+    const prepared = roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared;
     if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
     if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
@@ -592,7 +613,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   if (trackAssists) for (const death of allOutcomes.filter(o => o.killingPacket)) for (const actorId of damageContributors[death.context.targetId] ?? [])
     if (units.some(u => u.id === actorId && u.hp > 0)) emitMechanismSignal(ctx, { event: 'kill-or-assist', tick, actionSeq: death.context.rootActionSeq, actorId, targetId: death.context.targetId, cast: null }, { ...ctx.resolutionFacts!, damage: [death] });
-  for(const [victimId,source] of killed){const contributors=[source.ownerId,...(damageContributors[victimId]??[])];extendG23Swain(ctx,victimId,contributors);recordG23Conquest(ctx,victimId,contributors);}
+  for(const [victimId,source] of killed){const contributors=[...new Set([source.ownerId,...(damageContributors[victimId]??[])])];extendG23Swain(ctx,victimId,contributors);recordG23Conquest(ctx,victimId,contributors);sistersV19(ctx,contributors);}
   // Shield follows the death of the current target, including kills credited to another ally.
   for(const u of units.filter(u=>u.alive&&u.hp>0)) {
     const quick=u.mechanics?.find(m=>m.mechanic==='quickstriker');

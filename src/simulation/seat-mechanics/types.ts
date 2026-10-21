@@ -12,7 +12,14 @@ export type MechanicJson = null | boolean | number | string | readonly MechanicJ
 export type MechanicValue = unknown;
 
 /** Reserved `seat` keys for G2-3. Other keys are allowed; each key belongs to one mechanic. */
-export const SEAT_MECHANIC_KEYS = ['conqueror', 'academy', 'alchemist', 'junkerKing', 'experimentCells', 'radiantConversion'] as const;
+export const SEAT_MECHANIC_KEYS = ['conqueror', 'academy', 'alchemist', 'junkerKing', 'experimentCells', 'radiantConversion', 'familyHeist'] as const;
+/** Reserved only. v19 never initializes, advances or pays this field. No reward table/formula is approved. */
+export interface FamilyHeistReserved {
+  readonly CurrentReward:string|null;
+  readonly CurrentProgress:number;
+  readonly CurrentRewardValue:number;
+  readonly rewardReceiptIds:readonly string[];
+}
 export type ReservedSeatMechanicKey = typeof SEAT_MECHANIC_KEYS[number];
 
 /** Who earned a mechanic grant, e.g. 'conqueror-chest', 'high-roller', 'black-market', 'armory'. Free text, non-empty. */
