@@ -1,3 +1,4 @@
+import { loadUnitMap } from './local-config.mjs';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,10 +29,11 @@ export function summarizeRanges(file, entries) {
             unique.set(c.id, c);
     return { entries: entries.length, entryCompressedBytes: entries.reduce((s, e) => s + e.compressedSize, 0), uncompressedBytes: entries.reduce((s, e) => s + e.size, 0), chunks: unique.size, downloadBytes: [...unique.values()].reduce((s, c) => s + c.size, 0), chunkIds: [...unique.keys()].sort() };
 }
-export async function planFetch({ units: requestedUnits = 'all', cost, source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, write = true } = {}) {
+export async function planFetch({ units: requestedUnits = 'all', cost, source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, write = true, map } = {}) {
     const output = await safeOutputPath(out, { directory: true });
     const root = resolve(source), input = async (path) => readFile(await safeInputPath(root, join(root, path)));
-    const raw = await input('14.24.manifest'), manifest = readRman(raw), definitions = await unitDefinitions(), map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url), 'utf8'));
+    map ??= await loadUnitMap();
+    const raw = await input('14.24.manifest'), manifest = readRman(raw), definitions = await unitDefinitions();
     const indexes = await Promise.all(['set13-index.txt', 'tft-index.txt'].map(name => input(name)));
     const paths = new Map(indexes.flatMap(b => b.toString('utf8').split(/\r?\n/).filter(Boolean).map(line => {
         const match = /^([a-f\d]{16}) (.+)$/i.exec(line);

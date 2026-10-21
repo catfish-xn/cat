@@ -28,9 +28,9 @@ describe('six-cost converter followups (synthetic inputs only)', () => {
     expect(() => bindings(material([['DiffuseHold_Texture', 'a.tex']]), '')).toThrow('missing-static-material');
   });
   it('reproduces death aliases, then disables hit without suppressing death or other heroes', async () => {
-    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
+    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8'));
     for (const unit of ['warwick', 'viktor']) {
-      const path = `synthetic/${unit}_death.tft_set13_evolved.anm`;
+      const path = `synthetic/${unit}_death.demo_variant.anm`;
       const clips = ['Knockup', 'Death', 'Hit'].map(name => ({ atomic: true, hash: fnv1a(name), path, flags: 0 }));
       // The evolved suffix leaves a dot after death, bypassing the existing
       // underscore-delimited filename exclusion even though aliases resolve.
@@ -40,7 +40,7 @@ describe('six-cost converter followups (synthetic inputs only)', () => {
       const result = selectAnimations(clips, map.$animationRules, map[unit].animations);
       expect(result.mapped).not.toHaveProperty('hit');
       expect(result.mapped.death).toBe(original.mapped.death);
-      expect(result.files).toHaveProperty(`${unit}_death.tft_set13_evolved`, path);
+      expect(result.files).toHaveProperty(`${unit}_death.demo_variant`, path);
       expect(result.decisions.hit.reason).toBe('unit-disabled-action');
     }
     const name = map.mel.animations.hit;

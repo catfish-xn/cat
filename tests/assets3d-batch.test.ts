@@ -69,7 +69,7 @@ function rawFixtures() {
 describe('isolated per-unit batch build', () => {
   it('builds a real unit pipeline and v2 quad/mesh effects from synthetic linked BIN, without source JSON/reference', async () => {
     const root = await output(), source = join(root, 'trial/local');
-    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
+    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8'));
     const config = map.vi, f = rawFixtures();
     const raw = new Map<string, Buffer>([[`${config.base}/${config.mesh}`, f.mesh], [`${config.base}/${config.skeleton}`, f.rig],
       [`${config.base}/${config.textures.Body}`, f.texture]]);
@@ -82,15 +82,15 @@ describe('isolated per-unit batch build', () => {
     const fields = (...b: Buffer[]) => Buffer.concat([uint(b.length, 2), ...b]);
     const embed = (name: string, ...b: Buffer[]) => Buffer.concat([uint(hash(name)), block(fields(...b))]);
     const float = (n: number) => { const b = Buffer.alloc(4); b.writeFloatLE(n); return b; };
-    const graphName = 'Characters/TFT13_Vi/Animations/Skin0', graphPath = 'data/characters/tft13_vi/animations/skin0.bin';
+    const graphName = 'Characters/Demo_Vi/Animations/Skin0', graphPath = 'data/characters/demo_vi/animations/skin0.bin';
     const prop = (type: string, name: string, body: Buffer, linked: string[] = []) => Buffer.concat([Buffer.from('PROP'), uint(3), uint(linked.length),
       ...linked.map(text), uint(1), uint(hash(type)), block(Buffer.concat([uint(hash(name)), body]))]);
-    raw.set('data/characters/tft13_vi/skins/skin0.bin', prop('TftSkinCharacterDataProperties', 'skin', fields(
+    raw.set('data/characters/demo_vi/skins/skin0.bin', prop('TftSkinCharacterDataProperties', 'skin', fields(
       field('skinMeshProperties', 0x83, embed('SkinMeshDataProperties',
         field('simpleSkin', 16, text(`${config.base}/${config.mesh}`)), field('skeleton', 16, text(`${config.base}/${config.skeleton}`)),
         field('texture', 16, text(`${config.base}/${config.textures.Body}`)))),
       field('skinAnimationProperties', 0x83, embed('SkinAnimationProperties', field('animationGraphData', 0x84, uint(hash(graphName)))))
-    ), [graphPath, 'characters/tft13_vi']));
+    ), [graphPath, 'characters/demo_vi']));
     const pairs = Object.entries(config.animations).map(([alias, name]) => Buffer.concat([uint(hash(alias)), embed('AtomicClipData',
       field('mAnimationResourceData', 0x83, embed('AnimationResourceData', field('mAnimationFilePath', 16, text(`${config.base}/${config.animationFiles[name as string]}`)))))]));
     raw.set(graphPath, prop('AnimationGraphData', graphName, fields(field('mClipDataMap', 0x86,
@@ -101,7 +101,7 @@ describe('isolated per-unit batch build', () => {
       field('texture', 16, text(`${config.base}/${config.textures.Body}`)),
       ...(mesh ? [field('primitive', 0x82, embed('VfxPrimitiveMesh', field('mMesh', 0x83,
         embed('VfxMeshDefinitionData', field('mSimpleMeshName', 16, text(particleMesh))))))] : []));
-    raw.set('characters/tft13_vi', prop('VfxSystemDefinitionData', 'test_cast', fields(field('particlePath', 16, text('test_cast')),
+    raw.set('characters/demo_vi', prop('VfxSystemDefinitionData', 'test_cast', fields(field('particlePath', 16, text('test_cast')),
       field('complexEmitterDefinitionData', 0x80, Buffer.concat([uint(0x82, 1), block(Buffer.concat([uint(2), emitter(false), emitter(true)]))])))));
     raw.set(particleMesh, Buffer.concat([Buffer.from('r3d2Mesh'), uint(3, 2), uint(2, 2), Buffer.alloc(128), uint(3), uint(1), uint(2),
       Buffer.alloc(24), uint(0), ...[0, 0, 0, 1, 0, 0, 0, 1, 0].map(float), Buffer.alloc(12), uint(0), uint(1), uint(2),
@@ -122,7 +122,7 @@ describe('isolated per-unit batch build', () => {
       manifest: { files: [{ name: wadName, size: wad.length, chunks }] },
       plan: { units: { vi: { cost: 4, entries } }, wads: [{ name: wadName, entries }] } });
     expect(extraction.status).toBe('complete');
-    const result = await buildAll({ units: 'vi', source, out: join(root, 'out') });
+    const result = await buildAll({ units: 'vi', source, map, out: join(root, 'out') });
     expect(result.units.vi).toMatchObject({ status: 'success', vertices: 3, bones: 1, textures: 1,
         particles: { available: true, complete: true, reason: null, mapped: 2, systems: 1, emitters: 2 },
       reference: { available: false, reason: 'missing-reference-glb' } });
@@ -139,7 +139,7 @@ describe('isolated per-unit batch build', () => {
     // Oversized source has an intentionally stale hash: the byte preflight must
     // reject it before readRaw reaches content hashing or mesh parsing.
     await truncate(join(source, 'extracted', particleMesh), 16 * 1024 * 1024 + 1);
-    const rebuilt = await buildAll({ units: 'vi', source, out: join(root, 'out'), force: true });
+    const rebuilt = await buildAll({ units: 'vi', source, map, out: join(root, 'out'), force: true });
     expect(rebuilt.units.vi.status).toBe('success');
     expect(rebuilt.units.vi.particles).toMatchObject({ mapped: 1, skipped: 1, rejected: 0,
       byReason: { 'mesh-byte-budget': 1 } });
@@ -174,12 +174,12 @@ describe('isolated per-unit batch build', () => {
     expect(() => selectUnits(definitions, 'all', '1,0')).toThrow('invalid-cost-filter');
     expect(() => selectUnits(definitions, 'guessed')).toThrow('invalid-unit-selection');
   });
-  it('keeps the 60 default units and maps every asset definition with names/path rules', async () => {
+  it('keeps the 60 default units and validates the synthetic mapping example', async () => {
     const definitions = await unitDefinitions();
-    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
+    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8'));
     expect(selectUnits(definitions)).toHaveLength(60);
     const { $animationRules: rules, ...unitMap } = map;
-    expect(Object.keys(unitMap).sort()).toEqual(Object.keys(definitions).sort());
+    expect(Object.keys(unitMap)).toContain('vi');
     expect(Object.keys(rules)).toEqual(['idle', 'move', 'attack', 'cast', 'hit', 'death']);
     expect(selectUnits(definitions, 'all', '1,2')).toHaveLength(27);
     for (const value of Object.values(unitMap) as Array<{ missing?: boolean; base: string; mesh: string; skeleton: string; sourceName: string }>) {
