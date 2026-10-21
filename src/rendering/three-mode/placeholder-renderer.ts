@@ -242,7 +242,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (boardBox.isEmpty()) return;
     const center = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
     const tan = Math.tan(camera.fov * Math.PI / 360);
-    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.58 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
+    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
     camera.position.copy(center).addScaledVector(VIEW, distance);
     camera.lookAt(center);
   };
