@@ -1,3 +1,5 @@
+import { EMBLEM_ITEMS } from '../content/emblems';
+import type { ItemInstance } from '../strategy-types';
 import type { Team } from '../board';
 import { contains, sameCell } from '../board';
 import type { GameState } from '../game';
@@ -36,7 +38,7 @@ const ordinal = (n: number): boolean => Number.isSafeInteger(n) && n >= 1;
  * Q5: conflicting operations and duplicate grants are rejected pending policy review.
  * Native distinct-definition counting remains unchanged. No mutable-state cache. */
 export function projectEffectiveMembership(preparation: GameState, context?: TraitProjectionContext,
-  definitions: Readonly<Record<string,TraitDefinition>> = TRAIT_DEFINITIONS): EffectiveMembership {
+  definitions: Readonly<Record<string,TraitDefinition>> = TRAIT_DEFINITIONS, items: readonly ItemInstance[] = []): EffectiveMembership {
   const sources = context?.sources ?? [];
   if (context) check(ordinal(context.round) && Array.isArray(sources));
   const ids = new Set<string>();
@@ -79,6 +81,14 @@ export function projectEffectiveMembership(preparation: GameState, context?: Tra
     for (const traitId of UNIT_DEFINITIONS[unit.definitionId].traits) {
       members.push({unitId:unit.id,traitId,sourceIds:[]});
     }
+  }
+  // Equipment membership is derived from owned instances, never saved counts. Native traits do not double count.
+  for (const item of items) {
+    const traitId = EMBLEM_ITEMS[item.definitionId]?.emblemTrait;
+    if (!traitId || item.location.kind !== 'unit' || !Object.hasOwn(definitions,traitId)) continue;
+    const unitId = item.location.unitId;
+    if (boardUnits.some(u=>u.id===unitId) && !members.some(m=>m.unitId===unitId&&m.traitId===traitId))
+      members.push({unitId,traitId,sourceIds:[JSON.stringify(['emblem',item.id])]});
   }
   const membershipOperations = new Set<string>(), emblems = new Set<string>();
   for (const source of active) if (source.kind !== 'add-unit' && source.kind !== 'remove-unit') {

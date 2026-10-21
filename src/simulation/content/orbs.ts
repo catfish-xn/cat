@@ -9,7 +9,7 @@ export const ORB_RULES = freezeContent({
   componentEquivalent:{component:1,completed:2,gold:0,unit:0,consumable:0},
   order:'sourceUnitId-codepoint/slotOrdinal-numeric/entryOrdinal-numeric',
   orbId:'JSON([orb,roundId,encounterId,sourceUnitId,slotOrdinal])', dropId:'JSON([orbId,entryOrdinal])',
-  zero:['six-cost','radiant','emblem','spatula','frying-pan','masterwork','temporary-child','pve-choice','pve-fallback'],
+  zero:['six-cost','radiant','emblem','masterwork','temporary-child','pve-choice','pve-fallback'],
 });
 export interface OrbStageCombination {
   readonly weight:number; readonly components:number; readonly gray:number; readonly blue:number;

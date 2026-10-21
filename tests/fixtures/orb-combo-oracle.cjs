@@ -18,7 +18,7 @@ const BOXES={
  silverPlus:[[49,'h4','g4'],[47,'h3','h3','g2'],[3,'g8','reforger'],[1,'g3','full']],
  gold:[[20,'g12'],[15,'g4','reforger'],[3,'full','g5'],[15,'h4','h4','g2'],[13,'h3','h3','h3','g2'],[10,'gloves','g1'],[18,'completed'],[3,'full','lesser','g2'],[3,'g3','s3']],
  goldPlus:[[15,'g10','h4','h4'],[20,'g13','h5'],[20,'g2','component','component'],[15,'completed','g4'],[10,'gloves','g4'],[5,'g4','reforger','component'],[5,'full','g8'],[5,'artifact'],[5,'g7','h5','h5']],
- ultraPlus:[[10,'artifact','artifact','remover'],[15,'remover','completed','g8'],[10,'g24'],[15,'support','artifact','remover'],[10,'support','component','g8','reforger'],[10,'artifact','g25','remover'],[10,'support','g25'],[10,'support','component','g8','reforger'],[10,'artifact','remover']],
+ ultraPlus:[[10,'artifact','artifact','remover'],[15,'remover','completed','g8'],[10,'g24'],[15,'support','artifact','remover'],[10,'support','component','g8','reforger','spatula'],[10,'artifact','g25','remover'],[10,'support','g25'],[10,'support','component','g8','reforger','frying-pan'],[10,'artifact','remover']],
 };
 function stream(initial){let s=BigInt(initial>>>0),draws=0;return {draw(n){const size=BigInt(n),limit=4294967296n/size*size;do{s=(s*1664525n+1013904223n)&0xffffffffn;draws++;}while(s>=limit);return Number(s%size);},value:()=>({state:Number(s),draws})};}
 function hash(tuple){let h=2166136261n;const text=JSON.stringify(tuple);for(let i=0;i<text.length;i++)h=((h^BigInt(text.charCodeAt(i)))*16777619n)&0xffffffffn;return Number(h);}
@@ -34,6 +34,7 @@ const forge={completed:'TFT_ArmoryKeyCompleted',component:'TFT_ArmoryKeyComponen
 function atom(spec,rng){if(/^g\d+$/.test(spec))return {kind:'gold',quantity:Number(spec.slice(1))};
  if(/^[hs]\d$/.test(spec)){const cost=Number(spec[1]),pool=LIVE[cost];return {kind:'unit',definitionId:pool[rng.draw(pool.length)],quantity:1,...(spec[0]==='s'?{starLevel:2}:{})};}
  if(forge[spec])return {kind:'forge',definitionId:forge[spec],quantity:1};
+ if(['spatula','frying-pan'].includes(spec))return {kind:'item',definitionId:spec,quantity:1};
  if(spec==='gloves')return {kind:'item',definitionId:'thiefs-gloves',quantity:1};
  return {kind:'consumable',definitionId:({remover:'magnetic-remover',reforger:'reforger',lesser:LESSER,full:DUPLICATOR})[spec],quantity:1};}
 function box(seed,orbId,id){const rng=stream(hash(['orb-box-v17',seed,orbId]));

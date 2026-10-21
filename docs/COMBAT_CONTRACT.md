@@ -177,3 +177,7 @@ createCombatReplayRecorder(initialState: CombatState,
   using them. Capturing a replay does not imply that a spot check has run, and never
   authorizes another settlement. Server integration/spot-check policy is separate.
   See also [MULTIPLAYER_CONTRACT.md](MULTIPLAYER_CONTRACT.md).
+
+## v18 纹章与高档位扩展（2026-10-21）
+
+来源、数值与延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份。迅击战士按目标缺失生命计算攻速、当前目标死亡获得4档护盾；搏击手触发治疗分40个tick发放；法师8技能命中弱化输出25%、持续60tick、不叠加；先知8按技能实际生命伤害的20%治疗友军。全程整数/基点、50ms tick、显式RNG；完整来源/事件账本与恢复验证保留。

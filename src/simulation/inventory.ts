@@ -87,6 +87,7 @@ export function validateEquip(
     // Reuse the recipe validator on detached inputs; neither preview nor failure allocates anything.
     const recipe = validateCombine([item, { ...target, location: { kind: 'inventory' } }], itemId, target.id);
     if (!recipe.allowed) return { ...recipe, conflictingItemIds: [] };
+    if (!itemRestrictionAllows(ITEM_DEFINITIONS[recipe.resultDefinitionId].restriction,unit.definitionId)) return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
     const remaining = items.filter(other => other.id !== itemId && other.id !== target.id);
     const placement = checkEquipmentPlacement(remaining,
       { ...item, definitionId: recipe.resultDefinitionId }, unitId, slot);

@@ -742,3 +742,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 | `d14UnitBase(unit:Pick<Unit,'definitionId'\|'starLevel'>,promoted:boolean)`（`d14-anomalies/projection.ts`） | 返回 `{base:ResolvedUnitStats,ability:ResolvedAbility}`；调用方先认证证书，非法专用晋升抛出 `RangeError`。全部效果源随后仅解析一次。 |
 
 `restoreD14` 保留为独立 D3/D14 事务包 API；生产 `restoreMatch` 使用上述 Match/B8 账本认证，不要求另传或信任独立包的候选命令日志。两个恢复入口的可信边界不同，不能混用。
+
+## v18 纹章与高档位扩展（2026-10-21）
+
+实现、导出签名、输入输出/失败语义、来源覆盖与明确延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份，等级与固定拆卸器规则保持。`deriveTraits` 第五参数可传当前 `items`；`buildStrategySnapshot` 自动编译冻结装备身份。公开合成/装备/重铸命令签名和失败枚举不变。

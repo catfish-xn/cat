@@ -58,7 +58,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   g24Collector:['executeBps'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
-  g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
+  quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
   backup:['minimum', 'attackSpeedBps'],
@@ -148,10 +148,10 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   }
   for(const t of Object.values(content.traits)) {
     if(!t.name||!['team','members'].includes(t.target)||!t.tiers.length) fail('Invalid trait');
-    const members=Object.values(content.units).filter(u=>u.traits.includes(t.id)).length;
+    // Emblems allow distinct non-native heroes to reach source tiers up to ten.
     let previous=0;
     for(const tier of t.tiers) {
-      if(!integer(tier.threshold,previous+1)||tier.threshold>members||tier.threshold>9) fail('Unreachable trait');
+      if(!integer(tier.threshold,previous+1)||tier.threshold>10) fail('Unreachable trait');
       previous=tier.threshold;effects(tier.effects);if(tier.memberEffects) effects(tier.memberEffects);
     }
   }
@@ -165,7 +165,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram); if(item.isolatedEffects) effects(item.isolatedEffects);
     if(item.kind==='component') {if(item.recipe!==undefined) fail('Component recipe');}
     else if(item.kind==='completed') {
-      if(!item.recipe&&approved.evidenceStatus==='approved-provisional')continue;
+      if(!item.recipe&&(approved.evidenceStatus==='approved-provisional'||approved.emblemTrait))continue;
       if(!item.recipe||item.recipe.length!==2||item.recipe.some(id=>!components.includes(id))) fail('Invalid item recipe');
       const key=[...item.recipe!].sort().join('|');if(recipes.has(key)) fail('Duplicate recipe');recipes.add(key);
     } else if(item.kind==='radiant') {
@@ -174,8 +174,9 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
         ||Object.values(content.items).filter(other=>other.kind==='radiant'&&other.radiantOf===item.radiantOf).length!==1) fail('Invalid radiant item');
     } else fail('Invalid item kind');
   }
-  for(let a=0;a<components.length;a++) for(let b=a;b<components.length;b++) if(!recipes.has([components[a],components[b]].sort().join('|'))) fail('Missing completed recipe');
-  if(recipes.size!==36) fail('M8 requires 36 unique recipes');
+  const ordinaryComponents=components.filter(id=>!content.items[id].craftingOnly);
+  for(let a=0;a<ordinaryComponents.length;a++) for(let b=a;b<ordinaryComponents.length;b++) if(!recipes.has([ordinaryComponents[a],ordinaryComponents[b]].sort().join('|'))) fail('Missing completed recipe');
+  if(recipes.size!==52) fail('v18 requires 36 ordinary and 16 emblem recipes');
   if(Object.keys(content.augments).length<5||Object.keys(content.anomalies).length<2) fail('Choice pool exhausted');
   for(const c of [...Object.values(content.augments),...Object.values(content.anomalies)]) {if(!c.name||!c.description) fail('Missing choice text');effects(c.effects);}
   // This development schedule contains only the approved semantic nodes. PvE drops

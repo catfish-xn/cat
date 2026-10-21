@@ -64,7 +64,8 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
-  const projection=projectEffectiveMembership(state.preparation,context,catalog.traits);
+  const projection=projectEffectiveMembership(state.preparation,context,catalog.traits,[...state.items,
+    ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
   const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
   const voidspawn=projectVoidspawns(state,openingTraits);

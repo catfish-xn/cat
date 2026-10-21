@@ -1,3 +1,5 @@
+import { deriveTraits } from './trait-snapshot';
+import type { G23GrantEvidence } from './g2-3-grant-evidence';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { validateD14,d14OwnedUnits,d14OwnedItems,d14HeldAtPrefix,d14CertificateAtCombat } from './d14-runtime';
 import {validateAnomalyAcquisition} from './anomaly-acquisition';
@@ -85,6 +87,12 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
   const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
   const absentItems=new Set<string>();
   const checkOpening = (prefixLength: number) => {
+    for(const evidence of (next.seatMechanics?.hidden.grantEvidence??[]) as readonly G23GrantEvidence[]) {
+      if(evidence.resourcePrefixLength!==prefixLength||!evidence.receiptId.startsWith('g23:academy:'))continue;
+      const tier=Number(evidence.receiptId.split(':').at(-1));
+      const actual=deriveTraits({...preparation,units:evidence.units},'player',undefined,undefined,items).find(t=>t.traitId==='academy')?.tier??0;
+      check(actual>=tier,'historical Academy equipment qualification');
+    }
     const basis = next.combatInputBasis;
     if (basis?.provenancePrefixLength === prefixLength) {
       const hidden=new Set(d14HeldAtPrefix(next,prefixLength).heldItemIds);

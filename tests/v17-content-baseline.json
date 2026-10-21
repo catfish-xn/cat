@@ -1,13 +1,13 @@
 {
-  "contentDigest": "fnv1a32-utf16:1af51f0b",
-  "lootReplayDigest": "fnv1a32-utf16:9c8f1388",
+  "contentDigest": "fnv1a32-utf16:697f888d",
+  "lootReplayDigest": "fnv1a32-utf16:ffebff3f",
   "rulesVersion": "s13-g2-3-v18",
   "contentVersion": "s13-14.24b-g2-3-v18",
   "schemaVersion": 8,
   "previousContentDigest": "fnv1a32-utf16:de829c8a",
   "previousLootReplayDigest": "fnv1a32-utf16:62c76cb9",
   "traceHashes": {
-    "state": "a8b555cb0ed3dce5064aa35c509dabf5308188aaa5b119f70eb5841bfda10f2d",
+    "state": "dfff8d01aeb98489cf512c42acbb990fa155d6f31da1ed5a2cabee33fdfc9b57",
     "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "S13 v18: level 10, 84 XP from level 9, shop odds 5/10/20/40/25; original 14.23 onward +1 fixed remover per survived PvE independent of orb loot; schema 8/save 4 unchanged; old saves rejected without migration."
+  "reason": "S13 v18: level 10, 84 XP from level 9, shop odds 5/10/20/40/25; original 14.23 onward +1 fixed remover per survived PvE independent of orb loot; 22 S13 emblems, 16 recipes, archived crafting-input drops, source high trait tiers and B-class combat fixes; schema 8/save 4 unchanged; old saves rejected without migration."
 }

@@ -19,7 +19,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     blocked: ['form-swapper-trait','seven-teamups','cosmic-rhythm'], source: 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3',
     geometry: 'g2-finite-targeting-v1', tasks: 'g2-attached-infection-v1',
     twitchCrit: 'one-roll-per-piercing-attack', chain: 'initial-kill-empower-v1',
-    unreachable: ['automata-6','firelight-4','family-4','family-5'] },
+    unreachable: [], emblems:'archive-22/16-recipes/emblem-reforge-v18', traits:'all-source-tiers-through-10/numeric-subset-v18', quickstriker:'target-missing-health-linear/death-shield', pitHealing:'40-integer-pulses/40-ticks', sorcerer8:'all-ability-hits/25-percent/60-ticks', visionary8:'ability-hp-damage/20-percent/lowest-health-ally' },
   playerDamage: PLAYER_DAMAGE_RULES,
   progression: {policy:'s13-14.24b-ten-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
   opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES, rewards:'shared-stage-plan/per-seat-orb-box-v17/no-legacy-loot-words' },
@@ -28,5 +28,6 @@ export const RULES_GAP_MANIFEST = freezeContent({
   orbs: { rules: ORB_RULES, stagePlan: ORB_STAGE_PLAN, epicSources:EPIC_SOURCES, epic:EPIC_LOOT },
   consumables: { rules: CONSUMABLE_RULES, definitions: CONSUMABLE_DEFINITIONS, pools: REFORGE_POOLS },
   restoration: 'burn-refresh-canonical-program-v1',
+  traitSettlement: 'locked-roster/trusted-frozen-receipt-tiers/unlocked-exact-current-v18',
   provenance: 'consumable-use-after-grant-v1',
 });

@@ -1,5 +1,6 @@
 import { freezeContent } from './freeze';
 import { ITEM_DEFINITIONS } from './items';
+import { EMBLEM_REFORGE_SOURCE } from './emblem-source';
 import { G24_FORGE_POOLS } from './g2-4-forges';
 import { G23_RADIANT_MAPPING } from './g2-3-special-item-runtime';
 export const CONSUMABLE_DEFINITIONS = freezeContent({
@@ -19,5 +20,5 @@ const pool=(kind:'component'|'completed')=>Object.values(ITEM_DEFINITIONS).filte
 const entries=(ids:readonly string[])=>[...ids].sort().map(definitionId=>({apiName:definitionId,definitionId}));
 export const REFORGE_POOLS=freezeContent({component:pool('component'),completed:pool('completed'),
   radiant:entries(Object.values(G23_RADIANT_MAPPING)),artifact:entries(G24_FORGE_POOLS.TFT_ArmoryKeyOrnn),
-  support:entries(G24_FORGE_POOLS.TFT_ArmoryKeySupport),emblem:entries([])});
+  support:entries(G24_FORGE_POOLS.TFT_ArmoryKeySupport),emblem:entries(EMBLEM_REFORGE_SOURCE)});
 if (REFORGE_POOLS.component.length!==8 || REFORGE_POOLS.completed.length!==36) throw new RangeError('Invalid ordinary reforge pool');

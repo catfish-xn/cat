@@ -11,7 +11,7 @@ import type {G23RewardBundle} from './g2-3-economy';
 export interface G23RewardAtom {readonly id:string;readonly kind:'unit'|'item'|'tool'|'gold'|'duplicator';readonly options:readonly string[];readonly quantity:number;readonly gold:number;readonly starLevel?:1|2|3;readonly duplicatorDefinitionId?:keyof typeof G23_POLICY.duplicators}
 export interface G23RewardClaim {readonly id:string;readonly bundleId:string;readonly atomId:string;readonly copy:number;readonly round:number;readonly kind:G23RewardAtom['kind'];readonly definitionId:string;readonly instanceId:string|null;readonly gold:number}
 const apiUnits:Readonly<Record<string,string>>={TFT13_Lieutenant:'sevika',TFT13_Chainsaw:'renni',TFT13_Gremlin:'smeech',TFT13_RenataGlasc:'renata',TFT13_Singed:'singed',TFT13_Silco:'silco'};
-const components=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='component').map(i=>i.id).sort();
+const components=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='component'&&!i.craftingOnly).map(i=>i.id).sort();
 export function sampleG24Reward(pool:readonly string[],seedText:string,n:number):readonly string[]{
  if(!pool.length)throw new RangeError('Empty G23 reward pool');
  let seed=0x67323372;for(const c of seedText)seed=(Math.imul(seed,31)+c.charCodeAt(0))>>>0;

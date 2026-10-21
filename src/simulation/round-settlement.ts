@@ -92,8 +92,14 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
     if(r.g23Facts){
-      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext);
-      if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result||facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0)
+      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext,state.items);
+      // A locked roster's trusted resolver receipt refers to the frozen battle, while
+      // this latest live seat permits equipment edits. Recounting its emblems would
+      // reject removals/reforges or grant a newly equipped emblem retroactively.
+      // Unlocked callers and explicit projections retain the exact tier check.
+      const frozenTiers=multiplayer.combatRosterLocked===true&&traitContext===undefined;
+      if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result
+       ||!frozenTiers&&(facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0))
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
