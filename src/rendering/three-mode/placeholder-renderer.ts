@@ -6,7 +6,7 @@
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
  * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
- * Pointer input on the 3D board is replayed through BoardControls (pick() for units, the board plane for drop points):
+ * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
 import {
@@ -15,7 +15,7 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, readParticleMesh,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -79,6 +79,34 @@ const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTE
 const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
+/** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
+const PICK_RADIUS = 0.8;
+
+/**
+ * Distance along a ray (unit direction) to where it enters the upright cylinder standing on `base` (radius, from y=0 up
+ * to `height`), through its side or top; 0 when the origin is inside it, null when the ray misses it.
+ */
+function cylinderHit(origin: Vector3, direction: Vector3, base: Vector3, radius: number, height: number): number | null {
+  const ox = origin.x - base.x, oz = origin.z - base.z, top = base.y + height, bottom = base.y;
+  const inside = (t: number) => { const y = origin.y + direction.y * t; return y >= bottom && y <= top; };
+  let best: number | null = null;
+  const consider = (t: number) => { if (t >= 0 && (best === null || t < best)) best = t; };
+  const a = direction.x * direction.x + direction.z * direction.z, b = ox * direction.x + oz * direction.z, c = ox * ox + oz * oz - radius * radius;
+  if (a > 1e-12) {
+    const disc = b * b - a * c;
+    if (disc >= 0) {
+      const near = (-b - Math.sqrt(disc)) / a;
+      if (c <= 0 && inside(0)) return 0;
+      if (inside(near)) consider(near);
+    }
+  }
+  // Caps (the top seen from above, mostly): where the ray crosses y = top or y = bottom inside the circle.
+  if (Math.abs(direction.y) > 1e-12) for (const y of [top, bottom]) {
+    const t = (y - origin.y) / direction.y, x = ox + direction.x * t, z = oz + direction.z * t;
+    if (x * x + z * z <= radius * radius) consider(t);
+  }
+  return best;
+}
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
@@ -559,13 +587,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let grid: HexGrid | null = null;
   let press: { id: string; pointerId: number; x: number; y: number } | null = null, dragging: string | null = null;
   const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
-  /** pick() over the drawn pieces: my units for board gestures, any team for item drops (BoardScene judges the target). */
+  /**
+   * The drawn piece under a point: my units for board gestures, any team for item drops (BoardScene judges the target).
+   * Each piece is a hit volume, as in TFT: an upright cylinder over its cell (PICK_RADIUS of a hex) up to its star row,
+   * nearest along the ray wins. Not the model's triangles: a skinned ray test transforms every vertex by its bones on
+   * each pointer move (15–35 ms with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between
+   * limbs, the cell under the feet and a body whose cached bounds went stale after it moved could not be clicked.
+   */
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => view.alive && (anyTeam || view.team === 'player')).map(([unitId, view]) => ({ unitId, object: view.root }));
-    const hit = pick(client, area, camera, grid, units);
-    return hit?.kind === 'unit' ? hit.unitId : null;
+    const x = (client.x - area.left) / area.width, y = (client.y - area.top) / area.height;
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    camera.updateMatrixWorld();
+    ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
+    const radius = (grid.radius ?? 36) * PICK_RADIUS;
+    let best: string | null = null, bestDistance = Infinity;
+    for (const [unitId, view] of pieces) {
+      if (!view.alive || !view.root.visible || (!anyTeam && view.team !== 'player')) continue;
+      const distance = cylinderHit(ray.ray.origin, ray.ray.direction, view.root.position, radius, view.starHeight);
+      if (distance !== null && distance < bestDistance) { best = unitId; bestDistance = distance; }
+    }
+    return best;
   };
   const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
   const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
