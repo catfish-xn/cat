@@ -323,7 +323,7 @@ export function mirrorCombatReplay(replay: CombatReplay): CombatReplay {
 export function mirrorReplayTick(frame: CombatReplay['ticks'][number], rows: number): CombatReplay['ticks'][number] {
   return { tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)), ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) };
 }
-function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
+export function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
   const { player, enemy } = view.board.deploymentZones;
   return {
     ...view,

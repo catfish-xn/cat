@@ -124,7 +124,16 @@ export class RemoteSession extends MatchSession {
   reviseReplay(replay: CombatReplay): void {
     const current = this.replay;
     if (!current || !replay.ticks.length || replay.initial.combatId !== current.initial.combatId) return;
-    const shown = Math.min(this.nextTick, replay.ticks.length);
+    if (current.stream && replay.stream && current.stream.fromTick === replay.stream.fromTick
+      && current.ticks.every((frame, i) => frame === replay.ticks[i])) {
+      this.replay = replay;
+      this.finished = this.finished.map(entry => entry.replay === current ? { ...entry, replay } : entry);
+      return; // append/end preserves the displayed prefix and never replays effects
+    }
+    // A keyframe resume may later be replaced by the completed full recording: retain the actual tick, not a buffer index.
+    const shownTick = this.nextTick ? current.ticks[this.nextTick - 1]!.tick : current.initial.tick - 1;
+    const firstUnshown = replay.ticks.findIndex(frame => frame.tick > shownTick);
+    const shown = firstUnshown < 0 ? replay.ticks.length : firstUnshown;
     let view: CombatViewState = replay.initial;
     for (let index = 0; index < shown; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
     this.replay = replay; this.nextTick = shown;
@@ -139,13 +148,14 @@ export class RemoteSession extends MatchSession {
     return { playingBack: this.playingBack, played: this.played.length, tick: this.view?.tick ?? null, terminalTick: this.replay?.terminal.tick ?? null, superseded: this.superseded };
   }
   private superseded = 0;
-  get playingBack(): boolean { return this.replay !== null && this.nextTick < this.replay.ticks.length; }
+  get playingBack(): boolean { return this.replay !== null && (this.nextTick < this.replay.ticks.length || this.replay.stream?.ended === false); }
   /** Drop remaining ticks and show the battle's end (tab hidden, superseded by a newer state). */
   skipPlayback(): void {
     const replay = this.replay;
     if (!replay || !this.playingBack) return;
     for (const frame of replay.ticks.slice(this.nextTick)) this.played.push(...frame.events);
-    this.nextTick = replay.ticks.length; this.view = replay.terminal; this.accumulator = 0; this.openingPending = false;
+    this.nextTick = replay.ticks.length; this.view = replay.stream?.ended === false
+      ? replay.ticks.reduce((view, frame) => applyCombatReplayTick(view, frame), replay.initial) : replay.terminal; this.accumulator = 0; this.openingPending = false;
   }
   /** Offline stepping never runs here: the server owns the battle. */
   override advance(_delta: number): readonly LedgerCombatEvent[] { return []; }
@@ -163,7 +173,7 @@ export class RemoteSession extends MatchSession {
       this.view = applyCombatReplayTick(this.view ?? replay.initial, frame);
       this.played.push(...frame.events); events.push(...frame.events);
     }
-    if (!this.playingBack) this.accumulator = 0;
+    if (this.nextTick >= replay.ticks.length) this.accumulator = 0;
     return events;
   }
   private intent(command: WireCommand): MatchCommandResult {

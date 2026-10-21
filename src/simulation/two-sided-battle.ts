@@ -296,7 +296,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
   try {
     const freezeResult = checkedResults.get(result);
     if (!freezeResult) canonicalContent(result);
-    validateDynamicResult(result);
+    if (!freezeResult) validateDynamicResult(result);
     const stage = getMultiplayerRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
     if (result.version !== TWO_SIDED_BATTLE_VERSION || stage.kind !== 'pvp' || result.a.seatId === result.b.seatId

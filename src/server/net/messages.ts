@@ -44,7 +44,7 @@ import type { CellPoint, LegendWalk, LegendWalkRequest } from '../legend-motion'
  * would ignore it and show a battle other than the one settled. The rules did not change, so the rules' constant stays 4:
  * the independent wire version is 5.
  */
-export const NET_PROTOCOL_VERSION: number = 5;
+export const NET_PROTOCOL_VERSION: number = 6;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128, legendChars: 32 } as const;
@@ -63,7 +63,8 @@ interface ClientEnvelope {
 export interface JoinMessage extends ClientEnvelope { readonly type: 'join'; readonly name: string; readonly legend?: LittleLegendId }
 export interface LeaveQueueMessage extends ClientEnvelope { readonly type: 'leaveQueue' }
 export interface StartMessage extends ClientEnvelope { readonly type: 'start' }
-export interface ResumeMessage extends ClientEnvelope { readonly type: 'resume'; readonly token: string }
+export interface CombatCursor { readonly battleId: string; readonly revision: number; readonly nextTick: number; readonly seatId: string }
+export interface ResumeMessage extends ClientEnvelope { readonly type: 'resume'; readonly token: string; readonly combat?: CombatCursor }
 export interface CommandMessage extends ClientEnvelope {
   readonly type: 'command';
   readonly roomId: string;
@@ -79,7 +80,8 @@ export interface CommandMessage extends ClientEnvelope {
  * come back to everyone as `legend`.
  */
 export interface WalkMessage extends ClientEnvelope, LegendWalkRequest { readonly type: 'walk'; readonly roomId: string }
-export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage | WalkMessage;
+export interface WatchMessage extends ClientEnvelope { readonly type: 'watch'; readonly roomId: string; readonly seatId: string | null }
+export type ClientMessage = WatchMessage | JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage | WalkMessage;
 export type ClientMessageType = ClientMessage['type'];
 
 /* ---------------- server → client ---------------- */
@@ -93,6 +95,7 @@ export type ReceiptResult =
    * `reclaimed` (B6): a bot had taken this seat over while the player was away and this resume handed it back; absent
    * otherwise. The client shows "已接回席位" from it.
    */
+  | { readonly kind: 'watching'; readonly seatId: string | null }
   | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number; readonly reclaimed?: true }
   | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] }
   /** Contract §18.8 03: a successful useConsumable; `events` are the whitelisted seat operation events only. */
@@ -118,7 +121,12 @@ export type ErrorCode = 'invalid-json' | 'invalid-message' | 'unsupported-protoc
 
 export type SeatNotice = { readonly kind: 'orb-claim-refused'; readonly orbId: string; readonly reason: ReceiptFailure };
 
-export type ServerMessage =
+export interface CombatEnvelope { readonly roomId: string; readonly round: number; readonly battleId: string; readonly revision: number }
+export type CombatStreamMessage =
+  | (CombatEnvelope & { readonly type: 'combat-open'; readonly initial: CombatReplay['initial']; readonly frame: CombatReplay['ticks'][number]; readonly unitIds: readonly ReplayUnitId[] })
+  | (CombatEnvelope & { readonly type: 'combat-chunk'; readonly fromTick: number; readonly throughTick: number; readonly ticks: CombatReplay['ticks'] })
+  | (CombatEnvelope & { readonly type: 'combat-end'; readonly throughTick: number; readonly terminal: CombatReplay['terminal'] });
+export type ServerMessage = CombatStreamMessage
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
   /**
@@ -274,7 +282,21 @@ function validateEnvelopeBody(value: Shape, commandId: number): ClientMessage {
         ...(value.legend === undefined ? {} : { legend: littleLegend(str(value.legend, 'join.legend', LIMITS.legendChars, true)) }) };
     case 'leaveQueue': onlyKeys(value, ENVELOPE, 'leaveQueue'); return { type: 'leaveQueue', protocolVersion, commandId };
     case 'start': onlyKeys(value, ENVELOPE, 'start'); return { type: 'start', protocolVersion, commandId };
-    case 'resume': onlyKeys(value, [...ENVELOPE, 'token'], 'resume'); return { type: 'resume', protocolVersion, commandId, token: str(value.token, 'resume.token', LIMITS.tokenChars) };
+    case 'resume': {
+      onlyKeys(value, [...ENVELOPE, 'token', 'combat'], 'resume');
+      let combat: CombatCursor | undefined;
+      if (value.combat !== undefined) {
+        if (!isRecord(value.combat)) return bad('resume.combat must be an object');
+        onlyKeys(value.combat, ['battleId','revision','nextTick','seatId'], 'resume.combat');
+        combat = { battleId: str(value.combat.battleId, 'combat.battleId'), revision: int(value.combat.revision, 'combat.revision', 1),
+          nextTick: int(value.combat.nextTick, 'combat.nextTick', 0), seatId: str(value.combat.seatId, 'combat.seatId') };
+      }
+      return { type: 'resume', protocolVersion, commandId, token: str(value.token, 'resume.token', LIMITS.tokenChars), ...(combat ? { combat } : {}) };
+    }
+    case 'watch': {
+      onlyKeys(value, [...ENVELOPE, 'roomId', 'seatId'], 'watch');
+      return { type: 'watch', protocolVersion, commandId, roomId: str(value.roomId, 'watch.roomId'), seatId: value.seatId === null ? null : str(value.seatId, 'watch.seatId') };
+    }
     case 'command': onlyKeys(value, [...ENVELOPE, 'roomId', 'round', 'seatRevision', 'command'], 'command');
       return { type: 'command', protocolVersion, commandId, roomId: str(value.roomId, 'command.roomId'), round: int(value.round, 'command.round', 0),
         seatRevision: int(value.seatRevision, 'command.seatRevision', 0), command: validateClientCommand(value.command) };

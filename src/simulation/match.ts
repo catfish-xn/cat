@@ -425,6 +425,37 @@ export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPol
   const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
   return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
 }
+/** Streaming PvE: only open/advance combat here. Terminal loot, income and pool reservations
+ * are committed later in fixed seat order by settleCombatStream. No wall clock enters rules. */
+export function openMatchCombatStream(state: MatchState): MatchCommandResult & { readonly streamInitial?: CombatState } {
+  const reason = matchStartFailure(state); if (reason) return fail(state, reason);
+  const draw = nextRandom(state.battleSeedRngState);
+  const combatInputBasis = freezeCombatInput(state, draw.word, state.resourceProvenance.entries.length);
+  const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
+  const base = { ...state, combatInputBasis, battleSeedRngState: draw.state };
+  const opened = started.state.status === 'running' ? withCombat(base, started.state) : { state: base, events: [] };
+  return { ...accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]), streamInitial: started.state };
+}
+/** The final step stays outside Match until settlement; its complete ledger is still recorded immediately. */
+export function stepMatchCombatStream(state: MatchState): MatchStep & { readonly terminal: CombatState | null } {
+  if (state.phase !== 'combat' || state.multiplayer && state.m8.round.kind === 'pvp') throw new Error('wrong-phase');
+  const sampled = state.multiplayer ? sampleD11CombatGold(state.combat, 'player', state.gold) : state.combat;
+  const live = sampled === state.combat ? sampled : { ...sampled, bankSamples: [...(state.combat.bankSamples ?? []),
+    { tick: state.combat.tick, team: 'player' as const, liveGold: state.gold }] };
+  const next = stepCombat(live);
+  if (next.state.status === 'finished') return { state, events: toLedgerEvents(next.events), terminal: next.state };
+  const progressed = withCombat(state, next.state);
+  const result = accept(progressed.state, [...toLedgerEvents(next.events), ...progressed.events]);
+  return { state: result.state, events: result.ok ? result.events : [], terminal: null };
+}
+/** Trusted first-pass terminal only; a duplicate refuses before granting anything. */
+export function settleMatchCombatStream(state: MatchState, terminal: CombatState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (state.roundResults.some(record => record.round >= state.round) || terminal.status !== 'finished'
+    || terminal.combatId !== `round-${state.round}` || !state.combatInputBasis
+    || terminal.tick < (state.combat?.tick ?? 0)) return fail(state, 'wrong-phase');
+  const settled = withCombat(state, terminal, unitLootPolicy);
+  return accept(settled.state, settled.events);
+}
 export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.

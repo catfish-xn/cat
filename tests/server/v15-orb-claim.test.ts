@@ -24,17 +24,17 @@ const receipts = (match: MatchState) => readLootView(match).claimReceipts ?? [];
 const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
 
-describe('v15 wire: protocol 5, claimOrb and per-card rerollAugment', () => {
-  it('versions the rules and wire contracts independently (rules 4, wire 5) and refuses an older client with a message naming both versions', () => {
+describe('v15 wire: protocol 6, claimOrb and per-card rerollAugment', () => {
+  it('versions the rules and wire contracts independently (rules 5, wire 6) and refuses an older client with a message naming both versions', () => {
     // These contracts are versioned independently; equality is not required. D11 replay-tail only bumped the wire version.
-    expect(MULTIPLAYER_NET_PROTOCOL_VERSION).toBe(4);
-    expect(NET_PROTOCOL_VERSION).toBe(5);
-    for (const version of [3, 4]) {
+    expect(MULTIPLAYER_NET_PROTOCOL_VERSION).toBe(5);
+    expect(NET_PROTOCOL_VERSION).toBe(6);
+    for (const version of [3, 4, 5]) {
       const old = parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: version, commandId: 1, name: 'x' }));
       expect(old).toMatchObject({ ok: false, code: 'unsupported-protocol', commandId: 1 });
-      if (!old.ok) { expect(old.detail).toContain('must be 5'); expect(old.detail).toContain(`got ${version}`); }
+      if (!old.ok) { expect(old.detail).toContain('must be 6'); expect(old.detail).toContain(`got ${version}`); }
     }
-    expect(parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: 5, commandId: 1, name: 'x' }))).toMatchObject({ ok: true });
+    expect(parseClientMessage(JSON.stringify({ type: 'join', protocolVersion: 6, commandId: 1, name: 'x' }))).toMatchObject({ ok: true });
   });
 
   it('claimOrb carries exactly round and orbId; anything else is invalid', () => {
@@ -43,7 +43,7 @@ describe('v15 wire: protocol 5, claimOrb and per-card rerollAugment', () => {
     for (const value of [{ ...command, seatId: 's1' }, { ...command, gold: 9 }, { type: 'claimOrb', round: 3 }, { type: 'claimOrb', orbId: 'x' },
       { ...command, orbId: '' }, { ...command, round: -1 }, { ...command, round: 1.5 }, { ...command, orbId: 7 }])
       expect(() => validateClientCommand(value)).toThrow();
-    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 5, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
+    const message = parseClientMessage(JSON.stringify({ type: 'command', protocolVersion: 6, commandId: 2, roomId: 'r', round: 3, seatRevision: 0, command }));
     expect(message).toMatchObject({ ok: true, message: { command } });
   });
 

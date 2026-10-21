@@ -18,6 +18,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
+  combatStreaming: { version: 'live-tick-v1', terminalSettlement: 'all-terminal-fixed-seat-order', equipment: 'phase1-frozen-no-install' },
   v19:V19_MECHANICS,v19Part2:{sixCost:SIX_COST_POLICY,family:{policy:FAMILY_HEIST_POLICY,rewards:FAMILY_REWARDS,reunion:FAMILY_REUNION_POLICY},emblems:V19_EMBLEM_VALUES},
   release: 'g2-3-v1',g23:{policy:G23_POLICY,summons:G23_SUMMON_POLICY,academyLists:G23_ACADEMY_LISTS,forms:'frozen-starting-two-rows-v1',laboratories:'lcg-seed-xor-6c616273-uniform-without-replacement-v1',rewards:'conqueror-g2-4b-artifact-forge-tiers-10-14-v5',anvilChoices:4,crown:'permanent-team-size-per-granted-crown-v1',crownGold:'deployed-holder-win-roll-per-crown-v1',specialItems:'source-base-stats-finite-program-subset-v1',progress:'seat-mechanics-disjoint-v1',mechanicGold:'post-settlement-receipt-prefix-v1',unitRewards:'transaction-policy-empty-to-cost-v1',armoryTimeout:'zero-price-option-v1'},
   finiteExpansion: G22_CONVENTIONS,

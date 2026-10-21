@@ -14,7 +14,7 @@ import { canOperateMatch } from './operation-policy';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
-import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, selectChoice,
+import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
@@ -188,6 +188,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
       }
       case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
+      case 'settleCombatStream': return settleMatchCombatStream(state,command.terminal,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);
       case 'timeoutChoice': return forfeitPendingChoice(state,command.round,command.choiceId,command.generation,policy);

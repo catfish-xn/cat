@@ -103,6 +103,8 @@ export interface CombatReplayTick {
   readonly keyframe?: CombatViewState;
 }
 export interface CombatReplay {
+  /** Ephemeral NET6 display buffer; absent from completed recordings and domain saves. */
+  readonly stream?: { readonly revision: number; readonly fromTick: number; readonly ended: boolean };
   readonly initial: CombatViewState;
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;

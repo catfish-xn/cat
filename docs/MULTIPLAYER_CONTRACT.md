@@ -1,6 +1,11 @@
 # Set13 八人联机合同草案
 
-## v19 第二部分（当前合同，2026-10-21）
+## v20 B 方案第 1 阶段（当前合同）
+
+实时首遍战斗流取代开战前整轮预模拟。当前 schema/save/replay/command 为 **10/6/5/5**，规则侧多人契约为5，网络信封为 **NET6**；rules/content 为 `s13-g2-3-v20` / `s13-14.24b-g2-3-v20`。
+本节覆盖下文历史版本号；详细消息、调度、结算和第2阶段挂点见文末「B 方案第 1 阶段：权威战斗流」及 [实现说明](LIVE_COMBAT_PHASE1.md)。v19玩法与数值继续适用；历史夹具字节不变，旧运行态严格拒绝、无迁移。
+
+## v19 第二部分（历史规则合同，2026-10-21）
 
 同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
 
@@ -28,9 +33,9 @@ PR #364 收尾的最终 CONTENT/LOOT_REPLAY 为 `fnv1a32-utf16:242e7562` / `fnv1
 
 ## 规则协议与网络协议独立版本
 
-- `src/simulation/m8/version.ts` 的 `MULTIPLAYER_NET_PROTOCOL_VERSION = 4` 表示规则侧多人命令/状态契约版本；该契约发生不兼容变化时递增。
-- `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION = 5` 表示客户端与服务器之间的网络消息信封契约版本，用于消息的 `protocolVersion` 校验；网络消息（含命令、回执及服务器消息）的结构或语义发生不兼容变化时递增。兼容的视图字段追加不必递增。
-- 两者独立演进，可以不同，不要求相等或保持固定差值；修改一侧契约不自动要求另一侧升版，应分别评估兼容性。例如 D11 的 `replay-tail` 改变了网络回放消息契约，但未改变规则侧契约，因此当前分别为 4 和 5。网络版本校验比较客户端消息与服务器的 `NET_PROTOCOL_VERSION`，不比较这两个常量。
+- `src/simulation/m8/version.ts` 的 `MULTIPLAYER_NET_PROTOCOL_VERSION = 5` 表示规则侧多人命令/状态契约版本；该契约发生不兼容变化时递增。
+- `src/server/net/messages.ts` 的 `NET_PROTOCOL_VERSION = 6` 表示客户端与服务器之间的网络消息信封契约版本，用于消息的 `protocolVersion` 校验；网络消息（含命令、回执及服务器消息）的结构或语义发生不兼容变化时递增。兼容的视图字段追加不必递增。
+- 两者独立演进，可以不同，不要求相等或保持固定差值；修改一侧契约不自动要求另一侧升版，应分别评估兼容性。历史 D11 的 `replay-tail` 只改变网络回放消息契约，当时分别为 4 和 5；v20分别为5和6。网络版本校验比较客户端消息与服务器的 `NET_PROTOCOL_VERSION`，不比较这两个常量。
 
 ## D11 接线与实时银行边界（2026-10-20）
 
@@ -1897,3 +1902,54 @@ runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchC
 共享房间布局仅冻结载体与早期颜色，5-7/6-7为epic-reward占位；每席显式loot种子扩展为3或4颗冻结法球，顺序为成装锻造器/可选神器锻造器/铜箱/银箱，冠冕变体为冠冕/银箱/银箱。只有载体死亡才揭示，隐藏计划不投影。铜箱gray、银箱blue，锻造器/冠冕gold；一组一颗，箱内多条entry保持冻结顺序。两席共享早期颜色不共享箱内内容或随机游标。
 
 联机沿用claimOrb，不在揭示或结算时直接发英雄。铜/银箱对应费用的已上线英雄池独立抽1星，银箱双英雄独立可重复，不直接产2星。缺货折费用金币，满席折getUnitSellPrice；金币/工具/锻造器领取收据与英雄收据同一事务。锻造器领取后进入既有四选一forge，selectChoice成功才有装备出生；重连和重试复用唯一收据。复制器使用时先检查真实备战席空位，成功后创建机制英雄法球，领取时才扣共享池。旧版本存档和快照被v16严格拒绝，不迁移；schema7/save3/replay3/command4、netProtocol目标4不再递增。
+
+## B 方案第 1 阶段：权威战斗流（v20 / NET6，2026-10-21）
+
+本节覆盖旧的「冻结整轮→预模拟完毕→整段 replay 播放」以及 D11 双跑替换尾段的生产调度。
+`createGameServer` 默认启用流式；显式注入旧 resolver 的故障/对照测试默认保留旧路径，可用 `combatStreaming:true` 运行新路径。
+准备截止只自动部署、配对、冻结 seed/输入并初始化 tick0，随即进入 battle。
+每个 PvP 配对一个 `BattleReplayTask`，PvE 每席一个公共 Match 流；固定 50ms 逻辑边界，每场每边界只推进一 tick。
+一批最多 8 场各一步，`sliceTicks` 可缩小，`sliceMs`（生产 20ms）在每一步之后检查；单 tick 不能抢占。
+全体未结束战斗完成同一边界后，才从当前时间再等 50ms 开下一边界；超载统一减速，不追赶跳 tick。
+`Room.committedBattleTick` 为全轮已提交边界；chunk 的 throughTick 为该场权威水位。
+
+所有字段均为公开显示白名单，完整领域事件账本保留在首遍任务中，绝不随网络裁剪。
+消息均带 `{roomId,round,battleId,revision}`，本阶段 revision=1，独立于连接、控制和存档 activationEpoch：
+
+| 消息 | 字段及含义 |
+| --- | --- |
+| `combat-open` | `initial:CombatViewState, frame:CombatReplayTick, unitIds:ReplayUnitId[]`；tick0 或最近已提交关键帧。frame.tick=initial.tick。晚加入的关键帧不重播旧动画。 |
+| `combat-chunk` | `fromTick,throughTick,ticks:CombatReplayTick[]`；闭区间，逐 tick 连续，只追加。零长度 chunk 不发送。 |
+| `combat-end` | `throughTick,terminal:CombatViewState`；只在真实终局后发送，terminal.tick=throughTick。只有收到 end 且播到该 tick，客户端才完成。 |
+
+客户端缓冲耗尽保持最后画面并等待；普通追加保留已播视图与事件，不重建前缀、不重复动画。
+`resume` 可带 `combat:{battleId,revision,nextTick,seatId}`。凭证仍认证自己的席位，seatId 仅选择公开观战投影，不能控制该席位或读取其私有 state。
+匹配当前源且 `1<=nextTick<=已提交帧数` 时只发送缺失后缀及 end；游标不匹配时重发最近关键帧及其尾段。
+断线/慢客户端不暂停战斗；每连接 bufferedAmount 超过 1MiB 即断开保留席位，重新连接取权威游标。无等待客户端确认的房间屏障。
+客户端丢弃旧 battle/revision、重复 chunk/end；发现缺口后用保留游标重连。游标是优化提示，不能使服务器结算或改写战斗。
+
+在基线 `14006984` 中未找到 #376 的 watch-tail 协议或服务器实现。本次补充认证后的 `watch:{roomId,seatId:string|null}`，
+回执 `{kind:'watching',seatId}`，null 恢复本人视角；观战、玩家和重连都只调用 `Room.combatStreamFor(seatId)`，共用 recorder/chunk。
+B 方仅镜像投影已录帧，观战其他席位的 unitIds 为空；没有另开模拟、第二套 watch 账本或可视化控件。
+
+PvE 的运行帧、掉落揭示来自 `openMatchCombatStream` / `stepMatchCombatStream`（规则层）；真实终局先暂存。
+全轮实际结束后按席位 index 顺序，在最新共享池上用 `runSharedMatchCommand(...,{type:'settleCombatStream',terminal})` 暂存奖励/收入/成长，
+PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交；最终播放缓冲期间有操作则从最新资产重规划，纯暂存不会提前发奖。
+重复提交由既有 settlementId 拒绝；失败仍为原 state/pool/reason，不新增服务器规则。
+完成录像来自同一次 recorder，D11 金币直接采样当前流任务，不再预模拟再重算。既有 replay/replay-tail 仅供旧测试路径。
+抽检只在完整结果产生后启动，并继续使用 #371 同样的有界后台切片。
+
+规则公共接口（位于 `src/simulation/match.ts`；不依赖服务器/时钟）：
+
+- `openMatchCombatStream(state): MatchCommandResult & {streamInitial?:CombatState}`：成功冻结开局输入、发开局事件；不提交 tick0 终局奖励。沿用 `matchStartFailure` 失败枚举。
+- `stepMatchCombatStream(state): MatchStep & {terminal:CombatState|null}`：推进一个 tick；运行帧更新 Match，终局保留前一合法 Match，并返回可信 terminal 供稍后结算。非法阶段抛 `wrong-phase`（内部调度错误）。
+- `settleMatchCombatStream(state,terminal,unitLootPolicy?): MatchCommandResult`：只接可信首遍终局，提交原有 withCombat 路径；重复回合、无开局输入或错误终局身份返回原 state / `wrong-phase`。共享池调用必须经过新 `settleCombatStream` 命令，不能直接越过卡池。
+
+第 2 阶段 `applyBattleEquipment` 尚未实现，装备仍只改变资产；挂点为 `Room.nextBattleInputTick`（下一未封口边界）和
+`CombatStream.nextEffectiveTick`（该场下一步）。未来单写队列按 `{battleId,effectiveTick,seq,seatId,commandId,payload}` 排序，在该边界 advanceTick 前调用领域事务；
+本阶段不保存未执行装备意图、不静默重解释旧 equipmentCommands.tick。
+
+v19 已占 schema/save/replay/command=9/5/4/4，因此 v20 使用 **10/6/5/5**，NET 由5升6；RNG仍 lcg32-v1，tick仍50ms。
+新 rules/content 为 `s13-g2-3-v20` / `s13-14.24b-g2-3-v20`，CONTENT=`fnv1a32-utf16:ecca0d49`、LOOT=`fnv1a32-utf16:ca40ec4c`。
+所有 v19 及更早原始夹具、golden 和 `g2-4b-herald-raw/manifest.json` 保持历史字节；v20 公共命令独立录制，旧身份严格拒绝运行态恢复，无迁移。
+本仓库无服务器房间持久化，本阶段不新增数据库；运行中单人 Match 前缀沿既有序列化重执行校验后续进，网络恢复使用已提交关键帧/尾段。
