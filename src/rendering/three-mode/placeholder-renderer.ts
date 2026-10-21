@@ -11,7 +11,7 @@
  */
 import { installHudStyle } from './hud-style';
 import {
-  AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
+  AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
@@ -228,6 +228,8 @@ interface PieceView {
   facing: string | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
   readonly turn: HeadingTurn;
+  /** 家人团聚 easter egg in planning: its model's dance clip ('clip') or, without one, a hop in place ('hop'). */
+  dance: 'clip' | 'hop' | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -566,7 +568,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -663,7 +665,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
   };
 
-  let fighting: boolean | null = null;
+  let fighting: boolean | null = null, dancing: ReadonlySet<string> = new Set();
+  /** Starts or stops one piece's dance: the model's celebrate (dance) clip when the asset root mapped one, else a hop. */
+  const setDance = (view: PieceView, id: string, on: boolean) => {
+    if (!on) { if (view.dance === 'clip') resetAction(view, id); view.dance = null; return; }
+    const name = view.lease?.animationNames.celebrate, clip = name ? view.lease!.animations.find(c => c.name === name) : undefined;
+    // A model swap or action reset rebuilds the mixer: the clip is started again on the new one.
+    if (clip && view.mixer ? view.dance === 'clip' && view.mixer.mixer.existingAction(clip)?.isRunning() : view.dance === 'hop') return;
+    if (clip && view.mixer) { view.mixer.mixer.stopAllAction(); view.mixer.mixer.clipAction(clip).reset().setLoop(LoopRepeat, Infinity).play(); view.dance = 'clip'; }
+    else view.dance = 'hop';
+  };
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
     lastFrame = frame;
@@ -716,6 +727,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
+    dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
+    for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
     tabletop.frame(frame); traitProps.frame(frame);
   };
   const face = (sourceId: string, targetId: string | undefined) => {
@@ -1018,10 +1031,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           alive: view.alive, fighting: !!fighting, position: { x: view.root.position.x, z: view.root.position.z },
           destination: { x: view.target.x, z: view.target.z }, target }), seconds);
         view.root.position.addScaledVector(step, follow);
+        // Hop: two bounces a second, each dancer a little out of step with the next.
+        if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
-      if (view.mixer) { view.mixer.update(seconds); view.mixer.apply(output); }
+      if (view.mixer) { view.mixer.update(seconds); if (view.dance !== 'clip') view.mixer.apply(output); }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
         view.stars.object.visible = view.root.visible;

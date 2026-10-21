@@ -190,7 +190,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
   border: 2px solid var(--card-cost, var(--c-border)); background: linear-gradient(180deg, var(--c-surface-raised), var(--c-surface-alt)); white-space: normal; }
 .shop-card[data-cost="1"] { --card-cost: var(--cost-1); } .shop-card[data-cost="2"] { --card-cost: var(--cost-2); }
 .shop-card[data-cost="3"] { --card-cost: var(--cost-3); } .shop-card[data-cost="4"] { --card-cost: var(--cost-4); }
-.shop-card[data-cost="5"] { --card-cost: var(--cost-5); }
+.shop-card[data-cost="5"] { --card-cost: var(--cost-5); } .shop-card[data-cost="6"] { --card-cost: var(--cost-6); }
 .shop-card:disabled:not([data-cost]) { border-style: dashed; }
 .shop-emblem { display: block; line-height: 0; }
 .shop-name { font-size: 13px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
@@ -536,7 +536,7 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-unit { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
 .opponent-portrait { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
 .opponent-unit.cost-2 .opponent-portrait { border-color: #68c087; } .opponent-unit.cost-3 .opponent-portrait { border-color: #5aa0e6; }
-.opponent-unit.cost-4 .opponent-portrait { border-color: #b46be6; } .opponent-unit.cost-5 .opponent-portrait { border-color: #e6bc76; }
+.opponent-unit.cost-4 .opponent-portrait { border-color: #b46be6; } .opponent-unit.cost-5 .opponent-portrait { border-color: #e6bc76; } .opponent-unit.cost-6 .opponent-portrait { border-color: var(--cost-6); }
 .opponent-portrait img, .opponent-portrait svg { width: 36px; height: 36px; display: block; object-fit: cover; }
 .opponent-stars { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1; color: #c9d4da; white-space: nowrap; text-shadow: 0 1px 2px #000; }
 .opponent-stars.star-2 { color: var(--star-2, #dfe6ec); } .opponent-stars.star-3 { color: var(--star-3, #ffd34d); } .opponent-stars.star-4 { color: var(--star-4, #a6f2e6); }
@@ -610,7 +610,7 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-portrait { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 3px solid #7e95a4; display: grid; place-items: center; background: #203440; }
 .carousel-portrait img, .carousel-portrait svg { width: 44px; height: 44px; display: block; object-fit: cover; }
 .carousel-slot.cost-2 .carousel-portrait { border-color: #68c087; } .carousel-slot.cost-3 .carousel-portrait { border-color: #5aa0e6; }
-.carousel-slot.cost-4 .carousel-portrait { border-color: #b46be6; } .carousel-slot.cost-5 .carousel-portrait { border-color: #e6bc76; }
+.carousel-slot.cost-4 .carousel-portrait { border-color: #b46be6; } .carousel-slot.cost-5 .carousel-portrait { border-color: #e6bc76; } .carousel-slot.cost-6 .carousel-portrait { border-color: var(--cost-6); }
 .carousel-name { font-size: 11px; line-height: 1.1; white-space: nowrap; text-shadow: 0 1px 2px #000; }
 .carousel-items { display: flex; gap: 1px; margin-top: -2px; }
 .carousel-items .item-glyph { font-size: 8px; }
@@ -669,7 +669,7 @@ body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock { transform: t
   background: #203440; filter: grayscale(.55) brightness(.8); }
 .carousel-holding-portrait img, .carousel-holding-portrait svg { width: 40px; height: 40px; display: block; object-fit: cover; }
 .carousel-holding-unit.cost-2 .carousel-holding-portrait { border-color: #68c087; } .carousel-holding-unit.cost-3 .carousel-holding-portrait { border-color: #5aa0e6; }
-.carousel-holding-unit.cost-4 .carousel-holding-portrait { border-color: #b46be6; } .carousel-holding-unit.cost-5 .carousel-holding-portrait { border-color: #e6bc76; }
+.carousel-holding-unit.cost-4 .carousel-holding-portrait { border-color: #b46be6; } .carousel-holding-unit.cost-5 .carousel-holding-portrait { border-color: #e6bc76; } .carousel-holding-unit.cost-6 .carousel-holding-portrait { border-color: var(--cost-6); }
 .carousel-holding-name { max-width: 100%; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .carousel-holding-idle { font-size: 10px; padding: 0 6px; border-radius: 999px; background: #3a3346; color: #cbbcf5; }
 .carousel-holding-sell { width: 100%; min-height: 0; font-size: 11px; padding: 2px 4px; }
@@ -800,7 +800,7 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .unit-card-portrait { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
 .unit-card-portrait img, .unit-card-portrait svg { width: 40px; height: 40px; display: block; object-fit: cover; }
 .unit-card-portrait.cost-2 { border-color: #68c087; } .unit-card-portrait.cost-3 { border-color: #5aa0e6; }
-.unit-card-portrait.cost-4 { border-color: #b46be6; } .unit-card-portrait.cost-5 { border-color: #e6bc76; }
+.unit-card-portrait.cost-4 { border-color: #b46be6; } .unit-card-portrait.cost-5 { border-color: #e6bc76; } .unit-card-portrait.cost-6 { border-color: var(--cost-6); }
 .unit-card-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
 .unit-card-name { font-size: 15px; }
 .unit-card-stars { color: #c9d4da; font-size: 12px; } .unit-card-stars.star-2 { color: var(--star-2, #dfe6ec); } .unit-card-stars.star-3 { color: var(--star-3, #ffd34d); } .unit-card-stars.star-4, .star-mark.star-4 { color: var(--star-4, #a6f2e6); text-shadow: 0 0 4px rgba(166, 242, 230, .6); }
@@ -840,7 +840,7 @@ body[data-online][data-online-left="collapsed"] .trait-steps { grid-column: 3; f
   border-width: 2px; border-radius: 6px; background: #0b151f; box-shadow: inset 0 0 0 1px #0007; transition: transform .12s ease, box-shadow .12s ease; }
 .shop-dock .shop-card[data-cost] { background: linear-gradient(180deg, color-mix(in srgb, var(--card-cost) 22%, #0b151f), #0b151f); }
 .shop-dock .shop-card[data-cost]:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--card-cost), 0 4px 14px color-mix(in srgb, var(--card-cost) 45%, transparent); }
-.shop-dock .shop-card[data-cost="4"], .shop-dock .shop-card[data-cost="5"] { box-shadow: inset 0 0 12px color-mix(in srgb, var(--card-cost) 40%, transparent); }
+.shop-dock .shop-card[data-cost="4"], .shop-dock .shop-card[data-cost="5"], .shop-dock .shop-card[data-cost="6"] { box-shadow: inset 0 0 12px color-mix(in srgb, var(--card-cost) 40%, transparent); }
 .shop-dock .touch-shop { min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .shop-dock .shop-card .shop-emblem { position: absolute; inset: 0; overflow: hidden; }
 .shop-dock .shop-card .shop-emblem img, .shop-dock .shop-card .shop-emblem svg { width: 100%; height: 100%; border: 0; border-radius: 0; object-fit: cover; object-position: 50% 30%; }
@@ -961,7 +961,7 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 .shop-dock { grid-template-columns: 176px 136px minmax(0, 1fr); background: linear-gradient(180deg, #0f1c29, #08121c); box-shadow: inset 0 1px 0 #c8aa6e33, inset 0 0 0 1px #1d2f3d; }
 .shop-dock .shop-card[data-cost] { border: 2px solid var(--card-cost); border-radius: 4px; grid-template-rows: minmax(0, 1fr) 22px;
   background: #050b12; box-shadow: inset 0 0 0 1px #000a; }
-.shop-dock .shop-card[data-cost="4"], .shop-dock .shop-card[data-cost="5"] { box-shadow: inset 0 0 0 1px #000a, 0 0 8px color-mix(in srgb, var(--card-cost) 45%, transparent); }
+.shop-dock .shop-card[data-cost="4"], .shop-dock .shop-card[data-cost="5"], .shop-dock .shop-card[data-cost="6"] { box-shadow: inset 0 0 0 1px #000a, 0 0 8px color-mix(in srgb, var(--card-cost) 45%, transparent); }
 .shop-dock .shop-card[data-cost]:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.12);
   box-shadow: 0 0 0 1px var(--card-cost), 0 6px 16px color-mix(in srgb, var(--card-cost) 50%, transparent); }
 .shop-dock .shop-card .shop-emblem { inset: 0 0 22px; }
@@ -1267,7 +1267,7 @@ body[data-online]:has(> .render3d-layer) .shop-odds :is(.odds-label, .odds-sep, 
 body[data-online]:has(> .render3d-layer) .shop-odds { display: flex; gap: 10px; }
 body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost::before { content: "◆"; margin-right: 2px; font-size: 9px; color: var(--odds-color, #9aaeb9); }
 .odds-cost[data-cost="1"] { --odds-color: var(--cost-1); } .odds-cost[data-cost="2"] { --odds-color: var(--cost-2); } .odds-cost[data-cost="3"] { --odds-color: var(--cost-3); }
-.odds-cost[data-cost="4"] { --odds-color: var(--cost-4); } .odds-cost[data-cost="5"] { --odds-color: var(--cost-5); }
+.odds-cost[data-cost="4"] { --odds-color: var(--cost-4); } .odds-cost[data-cost="5"] { --odds-color: var(--cost-5); } .odds-cost[data-cost="6"] { --odds-color: var(--cost-6); }
 body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--odds-color); }
 
 /* 14.24 炼金男爵黑市: violet glass dialog, one large reward card, 接受 (filled) and 跳过 (炼金男爵 +N 生命值，微光保留). */
@@ -1333,3 +1333,6 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
+
+/* v19 six-costs (沃里克/维克托/梅尔): a prismatic frame on the shop card, as TFT sets its top tier apart from the gold five-costs. */
+.shop-card[data-cost="6"], .shop-dock .shop-card[data-cost="6"] { border-width: 3px; border-image: linear-gradient(135deg, #ff5fd2, #ffd23f, #3fe0ff, #a66bff, #ff5fd2) 1; }
