@@ -130,6 +130,26 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(grantedOrbIds([receipt(lootEntryId(orbA, 0)), receipt(lootEntryId(orbA, 1)), receipt(lootEntryId(orbB, 0), 'forfeited')])).toEqual([orbA]);
   });
 
+  it('gives a trait orb its own idle and open effects, and falls back to the generic tier when they are missing', async () => {
+    const loaded: string[] = [];
+    const loadEffect = vi.fn(async (id: string) => {
+      loaded.push(id);
+      if (id === 'orb-crime' || id === 'orb-crime-open') throw new Error('synthetic-missing');
+      return fakeEffect();
+    });
+    const { tabletop } = setup({ loadEffect });
+    tabletop.frame(frame({ orbs: [{ ...orb('w', 'gold'), variant: 'warband' }, { ...orb('c', 'blue'), variant: 'crime' }, orb('g', 'gray')] }));
+    await flush(); await flush();
+    expect(loaded).toEqual(expect.arrayContaining(['orb-warband', 'orb-crime', 'orb-blue', 'orb-gray']));
+    expect(loaded).not.toContain('orb-gold');
+    expect(tabletop.debug().orbs.every(view => view.effect)).toBe(true);
+    loaded.length = 0;
+    tabletop.frame(frame({ orbs: [], openedOrbs: ['w', 'c', 'g'] }));
+    await flush(); await flush();
+    expect(loaded).toEqual(expect.arrayContaining(['orb-warband-open', 'orb-crime-open', 'orb-blue-open', 'orb-gray-open']));
+    expect(loaded).not.toContain('orb-gold-open');
+    tabletop.dispose();
+  });
   it('rebuilds a bounded orb idle when it reaches its bound', async () => {
     const loadEffect = vi.fn(async (_id: string, _seconds: number) => fakeEffect());
     const { tabletop, step } = setup({ loadEffect });

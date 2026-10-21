@@ -8,7 +8,7 @@ import { createMatch } from '../../src/server-entry';
 import type { LootReceipt } from '../../src/simulation/m8/contracts';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient, WireCommand } from '../../src/rendering/online/protocol';
-import { orbPayloadName, orbReceiptText, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
+import { orbPayloadName, orbReceiptText, orbVariant, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
 
 function recordingClient() {
   const sent: unknown[] = [];
@@ -39,6 +39,18 @@ describe('v15 orb and per-card reroll commands', () => {
 });
 
 describe('v15 orb display fields', () => {
+  it('reads a trait orb skin only from a unique unit receipt of this seat; anything else keeps the generic tier', () => {
+    const base = createMatch(1);
+    const unit = (orbId: string, source: string) => ({ receiptId: `r:${orbId}:${source}`, round: 3, roundId: '2-1', source,
+      kind: 'unit', definitionId: 'jinx', resolution: 'orb', unitId: null, gold: 0, orbId });
+    const shown = (receipts: unknown[]) => ({ ...base, seatMechanics: { receipts } }) as unknown as typeof base;
+    expect(orbVariant(shown([unit('a', 'conqueror')]), 'a')).toBe('warband');
+    expect(orbVariant(shown([unit('b', 'black-market')]), 'b')).toBe('crime');
+    expect(orbVariant(shown([unit('c', 'armory')]), 'c')).toBeUndefined();
+    expect(orbVariant(shown([unit('d', 'conqueror'), unit('d', 'black-market')]), 'd')).toBeUndefined();
+    expect(orbVariant(shown([{ ...unit('e', 'conqueror'), resolution: 'held' }]), 'e')).toBeUndefined();
+    expect(orbVariant(base, 'a')).toBeUndefined();
+  });
   it('names epic rewards by their own names, never the unit fallback, and says a forge opens a choice', () => {
     const forge = { kind: 'forge', definitionId: 'TFT_ArmoryKeyCompleted', quantity: 1 } as const;
     const artifact = { kind: 'forge', definitionId: 'TFT_ArmoryKeyOrnn', quantity: 1 } as const;

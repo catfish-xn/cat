@@ -46,7 +46,7 @@ import { itemDisplayName } from '../presentation/g23-display';
 import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
-import { OrbDock, grantedOrbIds, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
+import { OrbDock, grantedOrbIds, orbVariant, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -1179,7 +1179,10 @@ export class BoardScene extends Phaser.Scene {
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
-      orbs: readUnclaimedOrbs(this.session.state).map(orb => ({ orbId: orb.orbId, tier: orb.tier, queued: orb.queued })),
+      orbs: readUnclaimedOrbs(this.session.state).map(orb => {
+        const variant = orbVariant(this.session.state, orb.orbId);
+        return { orbId: orb.orbId, tier: orb.tier, queued: orb.queued, ...(variant ? { variant } : {}) };
+      }),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null };
   }
