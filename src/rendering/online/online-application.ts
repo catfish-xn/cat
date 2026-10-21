@@ -9,7 +9,7 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
 import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
@@ -179,6 +179,7 @@ export class OnlineApplication implements SceneApplication {
     const merged = mergeNotice(serverEvents);
     if (merged) this.mergeNote = { round: state.round, text: merged };
     if (serverEvents.length) this.hooks.serverEvents?.(serverEvents);
+    this.syncWarmHints(); // a reroll or a buy changes the shop
   }
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
   private phaseLine: { readonly round: number; readonly phase: string; readonly text: string } | null = null;
@@ -387,7 +388,19 @@ export class OnlineApplication implements SceneApplication {
    * ?render=3d: the open seat (never mine) is drawn on the 3D board from its public build only; the panel shrinks to its
    * strip and the trait column shows that seat's traits. Without a 3D layer nothing changes.
    */
+  /** Models the 3D layer may warm next (board-feed.ts): my shop's heroes, the next opponent's board, the board I scout. */
+  private syncWarmHints() {
+    // Outside a match (the lobby, after leaving) nothing is warmed for it; a late close or push cannot refill the list.
+    if (this.mode !== 'active' || !this.view) { setBoardWarmHints([]); return; }
+    const view = this.view, board = (seatId: string | null | undefined) => {
+      const seat = seatId && seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
+      return (seat?.publicBoard?.units ?? []).filter(unit => !unit.summon).map(unit => unit.definitionId);
+    };
+    const shop = (this.session.state?.shop?.slots ?? []).flatMap(offer => offer.status === 'available' ? [offer.definitionId] : []);
+    setBoardWarmHints([...shop, ...board(view?.opponentSeatId), ...board(this.opponentBoard.openSeatId)]);
+  }
   private syncScout() {
+    this.syncWarmHints(); // the scouted board joins or leaves the warm list as the panel opens or closes
     this.scoutFeedGeneration = boardFeedGeneration();
     const view = this.view, seatId = this.opponentBoard.openSeatId, wasWatching = this.session.watchedSeat;
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
@@ -439,7 +452,7 @@ export class OnlineApplication implements SceneApplication {
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
-    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null);
+    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null); setBoardWarmHints([]);
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();
