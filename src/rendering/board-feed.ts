@@ -5,6 +5,8 @@
  */
 import type { DisplayCombatEvent } from '../presentation/combat-display';
 import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
+import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
+import { readLegendChoice } from './legend-choice';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
@@ -36,8 +38,19 @@ export interface BoardFrame {
   readonly orbs?: readonly BoardOrb[];
   /** Orbs (by orbId) with a claim receipt that granted something (not forfeited); an orb that leaves `orbs` and is named here was opened. */
   readonly openedOrbs?: readonly string[];
+  /** How many claims of each orb still listed the session refused (the orb dock put it back); absent orbs have none. */
+  readonly orbRefusals?: Readonly<Record<string, number>>;
   /** My HP loss of the latest settled round (roundResults, the server's projection online); null when it cost none. */
   readonly hit?: BoardHit | null;
+  /** My own 征服层数 and 微光 (owner-only, like the trait column's counters; never another seat's), for the 3D chest and flask. */
+  readonly mechanics?: BoardMechanics;
+}
+/** Absent parts are not in play (trait not fielded and nothing gathered yet). */
+export interface BoardMechanics {
+  /** 征服层数 with the band toward the next chest: `from` is the last opened chest's threshold, `next` null once all are open. */
+  readonly conquest?: { readonly stacks: number; readonly opened: number; readonly from: number; readonly next: number | null };
+  /** 微光 with the next black-market breakpoint (null past the last); `offer` while a black market waits for an answer. */
+  readonly shimmer?: { readonly value: number; readonly next: number | null; readonly offer: boolean };
 }
 export interface BoardOrb {
   readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;
@@ -77,7 +90,16 @@ export interface BoardFeedListener {
   carousel?(view: BoardCarousel | null): void;
   /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
   scout?(view: BoardScout | null): void;
+  /** A little-legend walk the room took (any seat, either scene). */
+  legendWalk?(walk: BoardLegendWalk): void;
 }
+/**
+ * A walk as the room published it (src/server/legend-motion.ts) with its times moved onto performance.now(), and whose
+ * legend it is from my seat: mine, the opponent of this round, or another seat.
+ */
+export interface BoardLegendWalk extends Omit<LegendWalk, 'startedAt' | 'arriveAt'> { readonly startedAt: number; readonly arriveAt: number; readonly who: 'me' | 'opponent' | 'other' }
+/** Sends my legend's walk to the room; false when this client cannot (no room, or a client without walks: then it is local only). */
+export interface LegendControls { walk(request: LegendWalkRequest): boolean }
 export interface BoardScreenBox { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }
 /**
  * Online 选秀 (docs/ASSETS3D_CAROUSEL.md 界面接线需求) as the 3D layer draws it: copied from `PlayerView.carousel` by the
@@ -91,7 +113,7 @@ export interface BoardCarousel {
    * Public seat order (stable legend anchors) with each seat's release time (logical ms; Infinity when the view has none):
    * the layer holds a seat while the carousel clock is before it, and a seat has picked once a slot names it in `pickedBy`.
    */
-  readonly seats: readonly { readonly seatId: string; readonly me: boolean; readonly releaseAtMs: number }[];
+  readonly seats: readonly { readonly seatId: string; readonly me: boolean; readonly releaseAtMs: number; readonly legend?: string }[];
   /** Logical ms since the carousel opened, as of `at` (performance.now()); the ring's angle and the release clock run from it. */
   readonly elapsedMs: number;
   readonly at: number;
@@ -118,7 +140,8 @@ export interface BoardScout { readonly seatId: string; readonly name: string; re
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
-let listener: BoardFeedListener | null = null, listenerGeneration = 0, controls: BoardControls | null = null, carouselControls: CarouselControls | null = null;
+let listener: BoardFeedListener | null = null, listenerGeneration = 0, controls: BoardControls | null = null, carouselControls: CarouselControls | null = null,
+  legendControls: LegendControls | null = null;
 
 export const boardFeedActive = (): boolean => listener !== null;
 /** Grows each time a layer subscribes, so a publisher of state that changes rarely (the carousel) can resend it once. */
@@ -149,6 +172,7 @@ export function publishScout(build: () => BoardScout | null): boolean {
   listener.scout(build());
   return true;
 }
+export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {
   listener = next; listenerGeneration++;
@@ -165,6 +189,43 @@ export function provideCarouselControls(next: CarouselControls): () => void {
   carouselControls = next;
   return () => { if (carouselControls === next) carouselControls = null; };
 }
+
+/**
+ * Little legends (cosmetic) the 3D layer draws beside the board: mine and the shown PvP opponent's, as the online view
+ * names them (SeatPublic.legend). Offline, or before the first view, mine is this browser's pick and there is no opponent.
+ */
+export interface BoardLegends { readonly me: string; readonly opponent: string | null }
+let legends: BoardLegends | null = null;
+/** The online application sets this from each view; null when it leaves the match. */
+export function setBoardLegends(next: BoardLegends | null): void { legends = next; }
+const currentLegends = (): BoardLegends => legends ?? { me: readLegendChoice(), opponent: null };
+
+/**
+ * The lobby's 外观 panel, drawn by the 3D chunk (three-mode/legend-picker.ts) once a mounted layer has an asset root.
+ * Opens in `host` on `current` among `choices`; `pick` gets each choice the player makes, `closed` runs once it is gone
+ * (its own close button or the returned close).
+ */
+export interface LegendPickerOptions { readonly choices: readonly string[]; readonly current: string; pick(id: string): void; closed(): void }
+export type LegendPicker = (host: HTMLElement, options: LegendPickerOptions) => () => void;
+let legendPicker: LegendPicker | null = null;
+const pickerWatchers = new Set<(picker: LegendPicker | null) => void>();
+function provideLegendPicker(next: LegendPicker | null): void { legendPicker = next; for (const watch of pickerWatchers) watch(next); }
+/** The lobby watches whether a picker is offered (called now and on every change); the returned function stops. */
+export function watchLegendPicker(watch: (picker: LegendPicker | null) => void): () => void {
+  pickerWatchers.add(watch); watch(legendPicker);
+  return () => { pickerWatchers.delete(watch); };
+}
+
+/** The online application registers my legend's walk to the room; the returned function withdraws it. */
+export function provideLegendControls(next: LegendControls): () => void {
+  legendControls = next;
+  return () => { if (legendControls === next) legendControls = null; };
+}
+
 /** What three-loader.ts hands the 3D chunk (it must not import this module itself; see placeholder-renderer.ts). */
-export interface BoardFeed { subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null; carouselControls?(): CarouselControls | null }
-export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls, carouselControls: () => carouselControls };
+export interface BoardFeed {
+  subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null; carouselControls?(): CarouselControls | null;
+  legends?(): BoardLegends; provideLegendPicker?(next: LegendPicker | null): void; legendControls?(): LegendControls | null;
+}
+export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls, carouselControls: () => carouselControls,
+  legends: currentLegends, provideLegendPicker, legendControls: () => legendControls };

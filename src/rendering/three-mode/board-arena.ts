@@ -4,13 +4,14 @@
  * this model. Without a board in the manifest, or until its model loads, the procedural tiles stay as they are.
  */
 import { Group, Vector3 } from 'three';
-import type { BoardAlignment } from '../../rendering3d';
+import type { BoardAlignment, BoardEntry } from '../../rendering3d';
 import type { ModelLease } from '../../rendering3d';
 
 /** The default arena key (first-visit asset root); other boards are optional roots chosen later. */
 export const DEFAULT_BOARD = 'board-default';
 
 export interface HexFrame { readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number } }
+interface ArenaFrame extends HexFrame { readonly columns: number; readonly rows: number }
 
 /**
  * Root transform for a live grid. The alignment maps source → a reference grid (target radius/origin); hexCenter is
@@ -25,34 +26,42 @@ export function arenaTransform(alignment: BoardAlignment, frame: HexFrame): { po
 }
 
 export interface BoardArena {
-  /** True once the arena model is in the scene (the procedural tiles can then fade back to a grid overlay). */
+  /** True once the arena model is loaded and compatible with the current grid. */
   readonly ready: boolean;
   /** Re-places the arena for a (new) grid; cheap, called on every board rebuild. */
-  place(frame: HexFrame): void;
+  place(frame: ArenaFrame): void;
   dispose(): void;
 }
 
-/** Loads `key` once; `onReady` fires when it is placed. A missing or placeholder model leaves no arena. */
-export function createBoardArena(parent: Group, alignment: BoardAlignment, load: () => Promise<ModelLease>, onReady: () => void): BoardArena {
+/** Loads once (after a matching frame if grid is declared); a missing or placeholder model leaves no arena. */
+export function createBoardArena(parent: Group, alignment: BoardAlignment, load: () => Promise<ModelLease>, onReady: () => void, grid?: BoardEntry['grid']): BoardArena {
   const root = new Group();
   root.name = 'render3d-board-arena';
-  let lease: ModelLease | null = null, frame: HexFrame | null = null, disposed = false;
+  let lease: ModelLease | null = null, frame: ArenaFrame | null = null, disposed = false, started = false;
+  const compatible = () => !grid || (frame?.columns === grid.columns && frame?.rows === grid.rows);
   const apply = () => {
+    root.visible = compatible();
     if (!frame) return;
     const { position, scale } = arenaTransform(alignment, frame);
     root.position.copy(position); root.scale.copy(scale);
   };
-  void load().then(loaded => {
-    if (disposed || loaded.placeholder) { loaded.release(); return; }
-    lease = loaded;
-    root.add(loaded.scene);
-    parent.add(root);
-    apply();
-    onReady();
-  }).catch(() => { /* keeps the procedural board */ });
+  const start = () => {
+    if (started || disposed || !compatible()) return;
+    started = true;
+    void load().then(loaded => {
+      if (disposed || loaded.placeholder) { loaded.release(); return; }
+      lease = loaded;
+      root.add(loaded.scene);
+      parent.add(root);
+      apply();
+      if (compatible()) onReady();
+    }).catch(() => { /* keeps the procedural board */ });
+  };
+  // Declared dimensions must match an actual frame before requesting the model.
+  start();
   return {
-    get ready() { return lease !== null; },
-    place(next) { frame = next; apply(); },
+    get ready() { return lease !== null && compatible(); },
+    place(next) { frame = next; apply(); start(); },
     dispose() { disposed = true; root.removeFromParent(); lease?.release(); lease = null; },
   };
 }

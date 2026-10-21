@@ -14,7 +14,7 @@ describe('toPlayerView', () => {
     expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
-    expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId']);
+    expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'legend', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId']);
     // v15: unclaimed orbs show only as the rules' public count and tiers.
     for (const entry of view.seats) expect(Object.keys(entry.orbs!).sort()).toEqual(['count', 'tiers']);
     // `publicBoard` is the one public build (C5 + 2026-10-20 scouting); everything else stays private.

@@ -25,6 +25,7 @@ export class PlayersSidebar {
   /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
   private stageTrack: StageTrack | null = null;
   private list: HTMLElement;
+  private tabs!: HTMLElement;
   private view: PlayerView | null = null;
   private viewing: string | null = null;
   private spectateBanner: HTMLElement;
@@ -32,6 +33,8 @@ export class PlayersSidebar {
   private shownHp = new Map<string, { hp: number; from: number; at: number }>();
   /** performance.now() minus the server clock, so the countdown follows the server. */
   private clockOffset = 0;
+  /** Length of the current countdown (first sight of its deadline) and the deadline it belongs to, for the TFT progress line. */
+  private countdownSpan = { endsAt: null as number | null, total: 0 };
   constructor(host: HTMLElement, private readonly countdownHost: HTMLElement | null = null, private readonly onSelect: ((seatId: string) => void) | null = null) {
     this.root = element('aside', '', 'online-sidebar'); this.root.id = 'online-sidebar'; this.root.setAttribute('aria-label', '玩家列表');
     const top = element('div', '', 'online-topbar');
@@ -46,12 +49,20 @@ export class PlayersSidebar {
     this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
     this.spectateBanner = element('span', '', 'online-spectate'); this.spectateBanner.dataset.debug = 'online:spectate'; this.spectateBanner.hidden = true;
     top.append(this.spectateBanner);
+    // TFT's player list / stats tabs at the top of the column (shown in 3D; the other view is hidden by CSS).
+    const tabs = element('div', '', 'online-tabs'); tabs.setAttribute('role', 'tablist');
+    for (const [key, label] of [['players', '玩家'], ['stats', '统计']] as const) {
+      const tab = element('button', label, 'online-tab'); tab.type = 'button'; tab.dataset.tab = key; tab.dataset.debug = `online:tab:${key}`; tab.setAttribute('role', 'tab');
+      tab.addEventListener('click', () => this.setTab(key)); tabs.append(tab);
+    }
+    top.append(tabs); this.tabs = tabs; this.setTab('players');
     this.root.append(top);
     this.list = element('ol', '', 'online-seats'); this.list.dataset.debug = 'online:seats'; this.root.append(this.list);
     host.append(this.root);
   }
   render(view: PlayerView): void {
     this.view = view; this.clockOffset = performance.now() - view.phase.serverNow;
+    if (view.phase.endsAt !== this.countdownSpan.endsAt) this.countdownSpan = { endsAt: view.phase.endsAt, total: view.phase.endsAt === null ? 0 : view.phase.endsAt - view.phase.serverNow };
     this.phaseBadge.textContent = PHASE_TEXT[view.phase.kind]; this.phaseBadge.dataset.phase = view.phase.kind;
     this.roundLabel.textContent = view.phase.roundName;
     // Eliminated before the end: TFT keeps the screen and labels it; the ranking still arrives at the end.
@@ -121,6 +132,11 @@ export class PlayersSidebar {
     const main = element('div', '', 'seat-main'); main.append(head, bar);
     row.append(avatar, main, foot); return row;
   }
+  /** Shows the player list or the battle stats in the column (3D; 2D keeps both). */
+  setTab(key: 'players' | 'stats'): void {
+    this.root.dataset.tab = key;
+    for (const tab of Array.from(this.tabs.children) as HTMLElement[]) tab.setAttribute('aria-selected', String(tab.dataset.tab === key));
+  }
   /** Whole seconds left on the phase countdown, or null when the phase has none. */
   secondsLeft(): number | null {
     const endsAt = this.view?.phase.endsAt ?? null;
@@ -130,9 +146,10 @@ export class PlayersSidebar {
   tick(): void {
     const view = this.view; if (!view) return;
     const endsAt = view.phase.endsAt;
-    if (endsAt === null) { this.timerLabel.textContent = ''; this.timerLabel.classList.remove('urgent'); return; }
+    if (endsAt === null) { this.timerLabel.textContent = ''; this.timerLabel.classList.remove('urgent'); this.countdownHost?.style.setProperty('--countdown-left', '0'); return; }
     const remaining = Math.max(0, endsAt - (performance.now() - this.clockOffset));
     const seconds = Math.ceil(remaining / 1000); const text = `${seconds}`;
+    if (this.countdownSpan.total > 0) this.countdownHost?.style.setProperty('--countdown-left', `${Math.min(1, remaining / this.countdownSpan.total).toFixed(3)}`);
     if (this.timerLabel.textContent !== text) this.timerLabel.textContent = text;
     this.timerLabel.classList.toggle('urgent', seconds <= 5);
   }

@@ -25,6 +25,14 @@ export type SeatKind = 'human' | 'bot';
  * the moment the player resumes). Exactly one controller at any time.
  */
 export type SeatController = 'human' | 'bot' | 'takeover';
+/**
+ * Little legends a seat may show (cosmetic only: never a rule, the save or a fingerprint). Short code names; the 3D layer
+ * draws `little-legend-<id>` from the asset root and falls back to `default` (河灵) when the root has no such model.
+ * A join naming anything else gets `default`; fill-in bots take the others in seat order.
+ */
+export const ROOM_LITTLE_LEGENDS = ['default', 'pengu', 'silverwing', 'choncc', 'hauntling', 'molediver', 'aoshin'] as const;
+export type LittleLegendId = typeof ROOM_LITTLE_LEGENDS[number];
+export const ROOM_DEFAULT_LEGEND: LittleLegendId = 'default';
 
 /* ---------------- views the server publishes to one seat ---------------- */
 
@@ -39,6 +47,8 @@ export interface SeatPublic {
   readonly rank: number | null;
   readonly connected: boolean;
   readonly controller: SeatController;
+  /** The seat's little legend (cosmetic). Optional so older views and tests stay valid; absent means `default`. */
+  readonly legend?: LittleLegendId;
   /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
    * Board and bench units with the items and anomaly they hold, unequipped items and owned augments (2026-10-20 scouting).

@@ -16,6 +16,7 @@ import type { Clock, ClockHandle } from './clock';
 import type { CarouselRules } from './carousel';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomTimings } from './room';
 import { ROOM_CAPACITY, type LobbyView, type PvpMode, type RoomState, type SeatSpec } from './types';
+import type { LittleLegendId } from '../protocol';
 
 /** G3 watchdog limits in room-clock milliseconds; 0 disables that check. */
 export interface LobbyWatchdog {
@@ -83,11 +84,11 @@ export class Lobby {
   get queued(): readonly SeatSpec[] { return this.queue; }
   private get inProgress(): boolean { return this.current !== null && this.current.state.phase !== 'ended'; }
 
-  join(name: string): JoinResult {
+  join(name: string, legend?: LittleLegendId): JoinResult {
     if (this.inProgress) return { ok: false, reason: 'in-progress' };
     if (this.queue.length >= ROOM_CAPACITY) return { ok: false, reason: 'full' };
     const seatId = `seat-${++this.serial}`;
-    this.queue.push({ seatId, name: name.trim() || seatId, kind: 'human' });
+    this.queue.push({ seatId, name: name.trim() || seatId, kind: 'human', ...(legend ? { legend } : {}) });
     const timeout = this.options.queueTimeoutMs ?? null;
     if (timeout !== null && this.timer === null) this.timer = this.options.clock.schedule(this.options.clock.now() + timeout, () => { this.timer = null; this.start(); });
     return { ok: true, seatId };

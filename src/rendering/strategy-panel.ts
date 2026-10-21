@@ -38,7 +38,7 @@ import { describeEffect, describeTraitTier, term } from '../presentation/effect-
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
-import { TraitColumn, g23TraitRuntime, traitIconHtml } from './trait-column';
+import { TraitColumn, boardTraitRows, g23TraitRuntime, traitIconHtml } from './trait-column';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
@@ -46,11 +46,15 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { genericOffer, isKnownChoiceKind, isShopChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
 import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
+import { g23RewardLines } from '../presentation/g23-reward-text';
+import { readG23Progress } from '../simulation/g2-3-state';
+import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
+import { G23_TRAIT_SOURCE } from '../simulation/content/g2-3-trait-runtime';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -94,8 +98,6 @@ interface PanelActions {
   readonly rerollAnomaly: (choice: string, generation: number) => void;
   /** Augment offers (v15): one free reroll per card, same tier (rules rerollAugment with the card's optionIndex); optional so panels without it hide the buttons. */
   readonly rerollAugment?: (choice: string, generation: number, optionIndex: number) => void;
-  /** G2-3 prep: optional "skip" for choices that declare one; absent until the rules expose a command. */
-  readonly skipChoice?: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
   readonly deploy: (id: string, location: UnitLocation) => void;
   readonly control: (name: ControlName) => void;
@@ -215,6 +217,9 @@ export class StrategyPanel {
   /** Docked (online): the per-unit equipment slots fold away; this keeps the player's own open/closed choice. */
   private equipOpen = false;
   private statsOpen = false;
+  /** Black market / Junker King offers in the shop row: the choice the player switched back to the shop for, and the pointer quiet window after answering. */
+  private shopChoiceAway = '';
+  private shopChoiceQuietUntil = 0;
 
   /**
    * @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel.
@@ -905,7 +910,7 @@ export class StrategyPanel {
   }
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
-    if (!choice) {
+    if (!choice || isShopChoiceKind(choice.kind)) {
       this.choiceToken = ''; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
@@ -1012,21 +1017,56 @@ export class StrategyPanel {
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
-  /** Extras slot: skip only when a generic choice declares it (disabled until a command is wired); fold always, so online augments and anomaly targets can be hidden to view the board. */
+  /** Extras slot: skip only when a generic choice declares it (sent as the rules' skip option); fold always, so online augments and anomaly targets can be hidden to view the board. */
   private choiceExtras(choice: MatchState['pendingChoice'] & object, title: string, generic: boolean, extras: ReturnType<typeof readChoiceExtras>): HTMLElement {
-    const skip = this.actions.skipChoice, row = element('div', '', 'choice-extras');
-    if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => skip?.(choice.choiceId, choice.generation), !skip));
+    const row = element('div', '', 'choice-extras');
+    if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => this.actions.choose(choice.choiceId, choice.generation, SKIP_OPTION)));
     row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
     return row;
   }
 
-  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
+  /**
+   * 炼金男爵 black market as the 14.24 shop row shows it: one reward card per offer (the offered item and the whole bundle
+   * as the rules' table names it; clicking it accepts), then the skip card with what a skip earns (炼金男爵 max health,
+   * read from the trait table at my current tier), and tier and 微光 on the bar. The rules grant; this only sends
+   * choose(offer) or choose(@skip).
+   */
+  private blackMarket(cards: HTMLElement, bar: HTMLElement, choice: MatchState['pendingChoice'] & object, send: (id: string) => void): void {
+    const state = this.actions.state();
+    let chem; try { chem = readG23Progress(state)?.chem; } catch { chem = undefined; }
+    const offer = chem?.offer?.id === choice.choiceId ? chem.offer : null;
+    const reward = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options.find(option => option.id === offer.optionId)?.reward : undefined;
+    const payload = (choice as { payload?: { skippable?: boolean } }).payload;
+    // A skip pays nothing now: every skip so far gives my 炼金男爵 heroes HealthPerSkip max health at the trait's current tier.
+    const tier = boardTraitRows(state.preparation).find(row => row.traitId === 'chem-baron')?.tier;
+    const perSkip = G23_TRAIT_SOURCE['chem-baron']?.tiers.find(entry => entry.threshold === tier)?.values.HealthPerSkip;
+    const item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
+    bar.append(element('span', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''} · 接受后微光清零`, 'market-meta'));
+    for (const id of choice.offers) {
+      const name = item(id) ? itemDisplayName(id) : choice.offers.length > 1 ? genericOffer(id, {}).name : '黑市奖励';
+      const prize = this.button(`choice:${id}`, '', () => send(id));
+      prize.className = 'shop-card shop-offer market-reward'; prize.dataset.debug = 'market:reward';
+      if (item(id)) prize.insertAdjacentHTML('afterbegin', itemMarkHtml(id, 48));
+      prize.append(element('strong', `接受 · ${name}`, 'market-name'));
+      const lines = reward ? g23RewardLines(reward, item(id) ? name : undefined) : [];
+      for (const line of lines) prize.append(element('span', line, 'market-line'));
+      prize.title = [name, ...lines].join('\n');
+      cards.append(prize);
+    }
+    if (payload?.skippable) {
+      const skip = this.button('choice-skip', '', () => send(SKIP_OPTION));
+      skip.className = 'shop-card shop-offer shop-skip';
+      skip.append(element('strong', '不买 · 跳过', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
+      cards.append(skip);
+    }
+  }
+  private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false, onPick?: () => void): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
-    const button = this.button(`choice:${offer.id}`, label, () => {
+    const button = this.button(`choice:${offer.id}`, label, onPick ?? (() => {
       this.actions.choose(choice.choiceId, choice.generation, offer.id);
       const after = this.actions.state().pendingChoice;
       if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
-    });
+    }));
     if (offer.price !== undefined) button.dataset.price = String(offer.price);
     // Name line, then the effect text in a smaller block so four offers fit one screen; the full label stays the tooltip.
     button.classList.add('generic-offer'); button.title = label;
@@ -1165,6 +1205,13 @@ export class StrategyPanel {
     for (const text of this.eventTexts.slice().reverse()) this.eventList.append(element('p', text));
   }
   private renderShop(state: MatchState, ready: boolean): void {
+    const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
+    if (choice && isShopChoiceKind(choice.kind) && !isOnlineSpectating()) {
+      if (this.shopChoiceAway !== token) { this.renderShopChoice(choice, token); return; }
+    } else this.shopChoiceAway = '';
+    // Cards answered a moment ago sat where the shop cards now are: the rest of that click burst must not buy a hero.
+    const quiet = this.shopChoiceQuietUntil - performance.now();
+    if (quiet > 0) { ready = false; window.setTimeout(() => this.render(), quiet); }
     const section = element('section', '', 'shop-panel');
     const shop = element('div', '', 'touch-shop');
     const upgrades = shopUpgradeStars(state);
@@ -1193,7 +1240,48 @@ export class StrategyPanel {
       }
       shop.append(button);
     });
-    section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); (this.shopDock ?? this.root).append(section);
+    // TFT's odds line: one cost-coloured figure per cost; the "Lv.N 概率" label and 费 names are for the 2D panel (3D hides them).
+    const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
+    getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
+      cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
+    if (this.shopChoiceAway && this.shopChoiceAway === token) {
+      const back = this.button('shop-choice-back', `返回${readChoiceExtras(choice!).title ?? '选择'}`, () => { this.shopChoiceAway = ''; this.render(); });
+      back.className = 'shop-choice-toggle'; odds.append(back);
+    }
+    section.append(shop, odds); (this.shopDock ?? this.root).append(section);
+  }
+  /**
+   * TFT's black market and Junker King upgrades replace the shop cards; 不买 is its own card (the rules' skip option), and
+   * online, where the shop stays usable through the window, 查看商店 swaps the cards back until the player returns.
+   */
+  private renderShopChoice(choice: NonNullable<MatchState['pendingChoice']>, token: string): void {
+    const extras = readChoiceExtras(choice), title = extras.title ?? '选择', online = isOnline();
+    const section = element('section', '', 'shop-panel shop-choice'), cards = element('div', '', 'touch-shop');
+    section.dataset.choiceSource = choice.kind;
+    const fallback = online ? timeoutOption(choice) : undefined;
+    const answer = (id: string) => {
+      this.shopChoiceQuietUntil = performance.now() + CHOICE_POINTER_QUIET_MS;
+      this.actions.choose(choice.choiceId, choice.generation, id);
+    };
+    const bar = element('p', '', 'shop-choice-bar');
+    bar.append(element('strong', title));
+    if (choice.kind === 'blackMarket') this.blackMarket(cards, bar, choice, answer);
+    else for (const id of choice.offers) {
+      const offer = genericOffer(id, extras);
+      const card = this.genericOfferButton(choice, offer, id === fallback, () => answer(id));
+      card.classList.add('shop-card', 'shop-offer');
+      // Shop-card style: the name alone, the price as its own gold line (the tooltip keeps the full label).
+      if (offer.price !== undefined) { card.querySelector('.offer-name')!.textContent = offer.name; card.append(element('span', offer.price ? `${offer.price} 金币` : '免费', 'offer-price')); }
+      if (offer.iconUrl) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
+      cards.append(card);
+    }
+    if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动不买' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
+    // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
+    if (online) {
+      const away = this.button('shop-choice-away', '查看商店', () => { this.shopChoiceAway = token; this.render(); });
+      away.className = 'shop-choice-toggle'; bar.append(away);
+    }
+    section.append(cards, bar); (this.shopDock ?? this.root).append(section);
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};

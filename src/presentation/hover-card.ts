@@ -27,7 +27,10 @@ export class HoverCard {
     const height = this.root.offsetHeight;
     const right = box.right + 10 + width <= window.innerWidth - 8;
     const left = right ? box.right + 10 : Math.max(8, box.left - width - 10);
-    const top = Math.max(8, Math.min(window.innerHeight - height - 8, box.top));
+    // A card for something above the shop bar stays above the bar, so it never hides the shop cards, gold or buttons.
+    const dock = document.getElementById('shop-dock')?.getBoundingClientRect?.();
+    const floor = dock && dock.height > 0 && box.bottom <= dock.top + 1 ? dock.top : window.innerHeight;
+    const top = Math.max(8, Math.min(floor - height - 8, box.top));
     this.root.style.left = `${left}px`; this.root.style.top = `${top}px`;
   }
   hide(): void {

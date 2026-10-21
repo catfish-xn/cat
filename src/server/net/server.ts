@@ -362,7 +362,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
           send(conn, { type: 'notice', roomId, round: notice.round, notice: { kind: 'orb-claim-refused', orbId: notice.orbId, reason: notice.reason } });
       });
     });
-    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); };
+    // Little-legend walks go to every seat of the room, after the publication they were decided on.
+    const unsubscribeWalks = opened.subscribeWalks(walk => queue.push(() => {
+      for (const conn of connections.values()) if (conn.session?.roomId === roomId) send(conn, { type: 'legend', roomId, serverNow: clock.now(), walk });
+    }));
+    unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); unsubscribeWalks(); };
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
@@ -443,7 +447,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function handleJoin(conn: Connection, message: ClientMessage & { type: 'join' }): void {
     if (conn.session && sessionLocked(conn.session)) return send(conn, fail(message.commandId, 'already-joined'));
     if (conn.session) { sessions.revoke(conn.session.seatId); conn.session.connection = null; conn.session = null; }
-    const joined = lobby.join(message.name);
+    const joined = lobby.join(message.name, message.legend);
     if (!joined.ok) return send(conn, fail(message.commandId, joined.reason));
     const { token, session } = sessions.issue(joined.seatId);
     bind(conn, session);
@@ -510,7 +514,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (inRoom) current.setConnected(session.seatId, true);
     send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen, ...(reclaimed ? { reclaimed: true as const } : {}) }));
     // Snapshot first (view → state → combat), increments follow through the room listener.
-    if (inRoom) pushRoom(conn, current.state); else send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
+    if (inRoom) {
+      pushRoom(conn, current.state);
+      for (const walk of current.walks) send(conn, { type: 'legend', roomId: current.state.roomId, serverNow: clock.now(), walk });
+    } else send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
     log('info', 'seat.resumed', { roomId: session.roomId ?? undefined, seatId: session.seatId, connection: conn.id, epoch: session.connectionEpoch, reclaimed });
   }
 
@@ -536,6 +543,14 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     });
   }
 
+  /** A walk answers nothing: a refusal is dropped, a walk taken reaches everyone as `legend` (room.walkLegend). */
+  function handleWalk(conn: Connection, message: ClientMessage & { type: 'walk' }): void {
+    const session = conn.session, current = room;
+    if (!session || conn.epoch !== session.connectionEpoch || !current || session.roomId !== current.state.roomId || message.roomId !== current.state.roomId) return;
+    const { type: _type, protocolVersion: _version, commandId: _id, roomId: _room, ...request } = message;
+    current.walkLegend(session.seatId, request);
+  }
+
   function dispatch(conn: Connection, message: ClientMessage): void {
     switch (message.type) {
       case 'join': return handleJoin(conn, message);
@@ -543,6 +558,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       case 'start': return handleStart(conn, message);
       case 'resume': return handleResume(conn, message);
       case 'command': return handleCommand(conn, message);
+      case 'walk': return handleWalk(conn, message);
     }
   }
 
