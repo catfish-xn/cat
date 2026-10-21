@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 // @ts-expect-error Offline Node script.
 import { packRoot, packArguments } from '../scripts/assets3d/pack-root.mjs';
-// @ts-expect-error Shared output policy.
 
 const temporary: string[] = [];
 const hash = (b: Buffer) => createHash('sha256').update(b).digest('hex');
