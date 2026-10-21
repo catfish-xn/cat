@@ -17,7 +17,9 @@ export function skinBindings(documents, submeshes) {
     if (material && material.hash !== 0) {
       const def = material.fields ? material : byHash.get(typeof material === 'string' ? fnv1a(material) : material.hash);
       if (!binIs(def, 'StaticMaterialDef')) throw new Error(`missing-static-material:${material.hash}`);
-      for (const name of ['diffuse_texture', 'diffusetexture', 'basecolor_texture', 'albedo_texture']) {
+      // Procedural cape shaders expose a static hold texture; animation of the
+      // shader remains an approximation, but the initial diffuse is rebuildable.
+      for (const name of ['diffuse_texture', 'diffusetexture', 'basecolor_texture', 'albedo_texture', 'diffusehold_texture']) {
         const paths = [...new Set((field(def, 'samplerValues') ?? []).filter(s => field(s, 'samplerName')?.toLowerCase() === name)
           .map(s => field(s, 'textureName')).filter(Boolean))];
         if (paths.length > 1) throw new Error('ambiguous-material-diffuse');
@@ -42,6 +44,7 @@ export function skinBindings(documents, submeshes) {
     seen.add(name.toLowerCase());
   }
   for (const name of submeshes) {
+    if (hidden.some(h => h.toLowerCase() === name.toLowerCase())) continue;
     const override = overrides.find(o => field(o, 'submesh').toLowerCase() === name.toLowerCase());
     const path = diffuse(override ?? mesh);
     if (typeof path === 'string') textures[name] = path;
@@ -74,6 +77,11 @@ const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm
 export function selectAnimations(clips, rules, explicit = {}) {
   const atomic = clips.filter(c => c.atomic && c.path), mapped = {}, files = {}, decisions = {};
   for (const [action, rule] of Object.entries(rules)) {
+    // Explicit null means no playback, including aliases and filename fallback.
+    if (Object.hasOwn(explicit, action) && explicit[action] === null) {
+      decisions[action] = { reason: 'unit-disabled-action', candidates: [], sourceStatus: 'intentionally-disabled' };
+      continue;
+    }
     const matches = (name, token) => new RegExp(`(?:^|_)${token}(?:_|$)`, 'i').test(name);
     // Exclusions apply to aliases as well: an alias named Hit can still point at Spell1_Hit.
     const eligible = atomic.filter(c => !(rule.excludeTokens ?? []).some(t => matches(sourceName(c.path), t)));

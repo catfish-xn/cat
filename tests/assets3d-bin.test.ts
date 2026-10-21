@@ -86,6 +86,7 @@ describe('initial material and action binding', () => {
       }) });
       const binding = skinBindings([document(skin, ...materials)], Object.keys(config.textures));
       for (const [name, path] of Object.entries(config.textures) as [string, string][]) {
+        if (binding.hidden.includes(name)) { expect(binding.textures).not.toHaveProperty(name); continue; }
         const expected = canonicalAsset(config.base + '/' + path), actual = canonicalAsset(binding.textures[name]);
         if (id === 'vi') {
           expect(actual).toBe('assets/characters/tft13_vi/skins/base/tft13_vi_base_tx_cm.tex');
@@ -111,7 +112,7 @@ describe('initial material and action binding', () => {
       texture: 'template.tex', material: link('body'), initialSubmeshToHide: 'Torch Hat', materialOverride: [
         obj('Override', { submesh: 'Torch', texture: 'torch.tex' }), obj('Override', { submesh: 'Weapon', material: link('body') })] }) });
     const result = skinBindings([document(skin), document(material)], ['Body', 'Torch', 'Weapon']);
-    expect(result.textures).toEqual({ Body: 'body.tex', Torch: 'torch.tex', Weapon: 'body.tex' });
+    expect(result.textures).toEqual({ Body: 'body.tex', Weapon: 'body.tex' });
     expect(result.hidden).toEqual(['Torch']); expect(result.mesh).toBe('mesh.skn');
     expect(() => skinBindings([document(skin)], ['Body'])).toThrow('missing-static-material');
     const diffuse = material.fields[0].value as unknown[]; diffuse.pop();
