@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Texture, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Texture, Vector3, type Object3D } from 'three';
 import { CAROUSEL_CELL, LEGEND_RADIUS, ORBIT_SECONDS, RUN_CELLS, UNIT_RADIUS, createCarouselStage, type CarouselStageContext } from '../src/rendering/three-mode/carousel-stage';
 import {
   boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, subscribeBoardFeed, boardFeed,
@@ -168,6 +168,23 @@ describe('3D carousel stage', () => {
     expect(stage.slotAt(point(0), area)).toEqual({ slot: 0, takable: true });
     expect(stage.slotAt(point(1), area)).toEqual({ slot: 1, takable: false });
     expect(stage.slotAt({ x: 2, y: 2 }, area)).toBeNull();
+  });
+
+  it('picks a turning unit by a box at its live position, from its feet up to its star, nearest wins', () => {
+    const { stage } = setup();
+    stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { takable: true })) }));
+    const area = { left: 0, top: 0, width: 1600, height: 900 };
+    const at = (object: Object3D) => { const p = object.getWorldPosition(new Vector3()).project(stage.camera); return { x: (p.x + 1) / 2 * area.width, y: (1 - p.y) / 2 * area.height }; };
+    for (const seconds of [0, 1.7, 3.1]) {
+      stage.update(seconds);
+      stage.scene.updateMatrixWorld(true);
+      stage.scene.getObjectByName('render3d-carousel-units')!.children.slice(0, 9).forEach((holder, index) => {
+        const feet = at(holder), star = at(holder.children[2]!); // root, ring, star mark
+        // Its feet and the star over its head both take the unit, wherever the ring has turned it.
+        expect(stage.slotAt({ x: feet.x, y: feet.y - 2 }, area)?.slot).toBe(index);
+        expect(stage.slotAt({ x: star.x, y: star.y + 2 }, area)?.slot).toBe(index);
+      });
+    }
   });
 
   it("sends another seat's legend dashing for the unit it took, then home with it on the tether", async () => {
