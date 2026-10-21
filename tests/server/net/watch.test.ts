@@ -133,6 +133,29 @@ describe('watch wire contract', () => {
     await a.waitFor(message => message.type === 'watch-replay', 5_000, from); // invalid seat cleared the old watch
   });
 
+  it('sends nothing for an identical battle replacement and sends a whole replay again for the next battle', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [observer, target] = await seatTwo(harness), room = harness.server.room!;
+    runUntil(room, harness.clock, state => state.phase === 'battle');
+    const opening = await watchReplay(observer, target.seatId!);
+    const from = observer.inbox.length;
+    // A publication with new battle identities but identical public records must exercise replayTail's null path.
+    (room as unknown as { replace(state: RoomState): void }).replace({ ...room.state, battles: wire(room.state.battles) });
+    await flush();
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([]);
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
+
+    runUntil(room, harness.clock, state => state.round > opening.round && state.phase === 'battle');
+    const next = await observer.waitFor<WatchReplay>(message => message.type === 'watch-replay' && message.round === room.state.round, 5_000, from);
+    await flush();
+    expect(next).toEqual({ type: 'watch-replay', roomId: room.state.roomId, round: room.state.round,
+      seatId: target.seatId, battleId: toCombatReplayFor(room.state, target.seatId!)!.battleId,
+      replay: wire(toCombatReplayFor(room.state, target.seatId!)!.replay) });
+    expect(next.battleId).not.toBe(opening.battleId);
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([next]);
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
+  });
+
   it('WsGameClient resends its current watch after disconnect/resume and receives a fresh replay', async () => {
     harness = await startServer();
     const sockets: WebSocket[] = [], replays: { seatId: string; replay: CombatReplay }[] = [];
@@ -158,6 +181,32 @@ describe('watch wire contract', () => {
     expect(replays[1]).toEqual({ seatId: target.seatId, replay: wire(toCombatReplayFor(room.state, target.seatId!)!.replay) });
     expect(harness.server.connectionCount).toBe(2);
   }, 20_000);
+
+  it('does not confuse a reused battleId in a new round or a new battleId in the same round with a tail', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [observer, target] = await seatTwo(harness), room = harness.server.room!;
+    runUntil(room, harness.clock, state => state.phase === 'battle');
+    const opening = await watchReplay(observer, target.seatId!);
+    // Publish cloned results without advancing the clock: isolate each part of the connection's battle key.
+    const publish = (state: RoomState) => (room as unknown as { replace(state: RoomState): void }).replace(state);
+    let from = observer.inbox.length;
+    const round = opening.round + 1;
+    publish({ ...room.state, round, battles: wire(room.state.battles).map(battle => ({ ...battle, round })) });
+    const reused = await observer.waitFor<WatchReplay>(message => message.type === 'watch-replay' && message.round === round, 5_000, from);
+    expect(reused).toEqual({ ...opening, round });
+    await flush();
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([reused]);
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
+
+    from = observer.inbox.length;
+    const battleId = `${opening.battleId}:replacement`;
+    publish({ ...room.state, battles: room.state.battles.map(battle => battle.battleId === opening.battleId ? { ...battle, battleId } : battle) });
+    const replaced = await observer.waitFor<WatchReplay>(message => message.type === 'watch-replay' && message.battleId === battleId, 5_000, from);
+    expect(replaced).toEqual({ ...reused, battleId });
+    await flush();
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([replaced]);
+    expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
+  });
 });
 
 describe('watch live-bank revisions and connection cleanup', () => {
@@ -196,13 +245,11 @@ describe('watch live-bank revisions and connection cleanup', () => {
       for (const key of ['bankSamples', 'liveGold', 'currentItemBankGold', 'openingItemBankGold', 'proposals', 'mapping']) expect(hasKey(tail, key)).toBe(false);
       shown = { initial: shown.initial, ticks: [...shown.ticks.slice(0, tail.fromTick), ...tail.ticks], terminal: tail.terminal };
     }
-    // `pushWatch` may send a whole replacement after the room adopts the finished live battle.
-    // Consume both public message forms in wire order, exactly as a client does.
-    for (const message of observer.inbox) {
-      if (message.type === 'watch-replay' && message.battleId === battle.battleId) shown = message.replay;
-      if (message.type === 'watch-tail' && message.battleId === battle.battleId)
-        shown = { initial: shown.initial, ticks: [...shown.ticks.slice(0, message.fromTick), ...message.ticks], terminal: message.terminal };
-    }
+    // Adopting the finished live run replaces the BattleResult object, but the same battle only sends tails.
+    expect(room.state.battles.find(entry => entry.battleId === battle.battleId)).not.toBe(battle);
+    expect(messagesOfType(observer.inbox, 'watch-replay').filter(message => message.round === opening.round && message.battleId === battle.battleId)).toEqual([opening]);
+    const final = observer.inbox.filter(message => (message.type === 'watch-replay' || message.type === 'watch-tail') && message.battleId === battle.battleId).at(-1);
+    expect(final).toEqual(tails.at(-1));
     expect(tails.at(-1)!.terminal.status).toBe('finished');
     expect(shown.terminal.status).toBe('finished');
     expect(shown.ticks.at(-1)!.tick).toBe(shown.terminal.tick);
