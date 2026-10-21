@@ -19,4 +19,4 @@ S13 默认待核实。当前 `board-default` 保留通用竞技场；未发现�
 | K/DA 演出舞台 | 56 | 33.59 MiB | 13.40 MiB |
 | 灵魂莲华·神明 | 56 | 23.42 MiB | 9.77 MiB |
 
-提交前：运行 `node scripts/assets3d/boards-preflight.mjs` 与合成数据棋盘测试。浏览器审阅脚本只从环境变量 `CHROMIUM_PATH` 读取浏览器位置；压缩器默认使用仓库内模块，可用 `BOARDS_COMPRESSOR` 覆盖。
+提交前：运行 `node scripts/assets3d/boards-preflight.mjs` 与合成数据棋盘测试。浏览器审阅脚本只从环境变量 `CHROMIUM_PATH` 读取浏览器位置；压缩器直接使用仓库内共享模块 `scripts/assets3d/compress.mjs`。
