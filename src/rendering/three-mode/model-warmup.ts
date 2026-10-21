@@ -38,8 +38,10 @@ export interface WarmupContext {
 }
 
 export interface ModelWarmup {
-  /** Adds models to warm, in order, after the ones already asked for. */
+  /** Adds models to warm, in order, after the ones already asked for (a warmed or queued one is not added again). */
   want(ids: readonly string[]): void;
+  /** Drops the models still waiting (the one being warmed finishes); warmed ones stay warmed. */
+  cancel(): void;
   /** True once a model's template was parsed and uploaded here. */
   warmed(id: string): boolean;
   readonly size: number;
@@ -66,17 +68,26 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
     const id = queue.shift()!;
     try {
       const lease = await ctx.load(id);
-      try { if (!closed && !lease.placeholder) await ctx.upload(lease); } finally { lease.release(); }
-      done.add(id);
+      try {
+        // A combat that started while it was read waits for its upload: the model goes back to the front of the queue.
+        if (closed || lease.placeholder) { if (!closed) done.add(id); return; }
+        if (ctx.busy()) { queue.unshift(id); return; }
+        await ctx.upload(lease);
+        done.add(id);
+      } finally { lease.release(); }
     } catch { /* an unreadable model stays a placeholder; the piece will say so itself */ }
-    ctx.onProgress?.(asked.size - queue.length, asked.size);
-    running = false; schedule();
+    finally {
+      running = false;
+      ctx.onProgress?.(asked.size - queue.length, asked.size);
+      if (ctx.busy()) setTimeout(schedule, 500); else schedule();
+    }
   };
   return {
     want(ids) {
-      for (const id of ids) if (!asked.has(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
+      for (const id of ids) if (!done.has(id) && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
       schedule();
     },
+    cancel() { queue.length = 0; },
     warmed: id => done.has(id),
     get size() { return asked.size; },
     dispose() { closed = true; queue.length = 0; },

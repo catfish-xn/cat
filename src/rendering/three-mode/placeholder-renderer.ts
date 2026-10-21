@@ -252,7 +252,10 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer = new WebGLRenderer({ antialias: true });
   // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
-  const loadReport = createLoadReport(), modelByUrl = new Map<string, string>();
+  // One report per match: a new match (body[data-m6-mode] turning active) starts it again.
+  let loadReport = createLoadReport();
+  const modelByUrl = new Map<string, string>();
+  delete (globalThis as { __render3dLoad?: unknown }).__render3dLoad;
   const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined,
     (url, readMs, parseMs) => loadReport.read(modelByUrl.get(url) ?? url, readMs, parseMs));
   if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
@@ -288,6 +291,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
   // Models warmed while idle (model-warmup.ts): little legends first, then the cheapest shop tiers, once the preload has
   // finished (on a first visit the reads would compete with the download). Its textures and programs go to the GPU here.
+  // A compile in flight when the renderer goes: dispose waits for it (three polls the programs until they are ready).
+  let compiling: Promise<unknown> | null = null;
   const uploadModel = async (lease: ModelLease) => {
     const started = performance.now();
     lease.scene.traverse(object => {
@@ -296,16 +301,35 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
         for (const value of Object.values(material)) if ((value as Texture | null)?.isTexture) renderer.initTexture(value as Texture);
     });
-    await renderer.compileAsync(lease.scene, camera, scene);
+    const compile = renderer.compileAsync(lease.scene, camera, scene);
+    compiling = compile.catch(() => {}).finally(() => { if (compiling === settled) compiling = null; });
+    const settled = compiling;
+    await compile;
     return performance.now() - started;
   };
   const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
     upload: uploadModel, busy: () => !!fighting }) : null;
-  void models.preloaded?.then(() => {
-    if (closed || !warmup) return;
+  const warmList = () => {
     const legends = feed?.legends?.();
-    warmup.want([LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels]);
-  });
+    return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels];
+  };
+  let preloaded = false;
+  void models.preloaded?.then(() => { preloaded = true; if (!closed) warmup?.want(warmList()); });
+  // Match edges (body[data-m6-mode]): entering a match starts a fresh first-batch report and asks for anything not yet
+  // warmed; leaving one (back to the lobby or the start screen) drops what was still waiting. Before the first match the
+  // lobby warms from the preload above.
+  const inMatch = () => typeof document === 'undefined' || document.body?.dataset?.m6Mode === 'active';
+  let matchShown = inMatch();
+  const followMatch = () => {
+    const now = inMatch();
+    if (now === matchShown) return;
+    matchShown = now;
+    if (now) {
+      loadReport = createLoadReport(); reported = false; timeUpload = false;
+      delete (globalThis as { __render3dLoad?: unknown }).__render3dLoad;
+      if (preloaded) warmup?.want(warmList());
+    } else warmup?.cancel();
+  };
   const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
     return effects.load(id, maxDuration);
@@ -678,7 +702,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
-    if (models.cache && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
+    if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
       [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
     tabletop.frame(frame); traitProps.frame(frame);
   };
@@ -974,6 +998,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
     if (fpsLabel && ++fpsFrames && now - fpsSince >= 1000) { if (fpsSince) fpsLabel.textContent = `FPS: ${Math.round(fpsFrames * 1000 / (now - fpsSince))}`; fpsFrames = 0; fpsSince = now; }
+    followMatch();
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
@@ -1054,7 +1079,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
-      renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
+      renderer.domElement.remove();
+      const release = () => { renderer.dispose(); renderer.forceContextLoss(); };
+      if (compiling) void compiling.then(release); else release();
     },
   };
   return renderer3d;
