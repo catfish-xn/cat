@@ -4,6 +4,7 @@
  * only through BoardControls, which BoardScene implements with its own 2D gesture code and the same session commands.
  */
 import type { DisplayCombatEvent } from '../presentation/combat-display';
+import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
@@ -74,7 +75,16 @@ export interface BoardFeedListener {
   screenBox?(id: string): BoardScreenBox | undefined;
   /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
   carousel?(view: BoardCarousel | null): void;
+  /** A little-legend walk the room took (any seat, either scene). */
+  legendWalk?(walk: BoardLegendWalk): void;
 }
+/**
+ * A walk as the room published it (src/server/legend-motion.ts) with its times moved onto performance.now(), and whose
+ * legend it is from my seat: mine, the opponent of this round, or another seat.
+ */
+export interface BoardLegendWalk extends Omit<LegendWalk, 'startedAt' | 'arriveAt'> { readonly startedAt: number; readonly arriveAt: number; readonly who: 'me' | 'opponent' | 'other' }
+/** Sends my legend's walk to the room; false when this client cannot (no room, or a client without walks: then it is local only). */
+export interface LegendControls { walk(request: LegendWalkRequest): boolean }
 export interface BoardScreenBox { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }
 /**
  * Online 选秀 (docs/ASSETS3D_CAROUSEL.md 界面接线需求) as the 3D layer draws it: copied from `PlayerView.carousel` by the
@@ -109,7 +119,8 @@ export interface BoardCarouselSlot {
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
-let listener: BoardFeedListener | null = null, listenerGeneration = 0, controls: BoardControls | null = null, carouselControls: CarouselControls | null = null;
+let listener: BoardFeedListener | null = null, listenerGeneration = 0, controls: BoardControls | null = null, carouselControls: CarouselControls | null = null,
+  legendControls: LegendControls | null = null;
 
 export const boardFeedActive = (): boolean => listener !== null;
 /** Grows each time a layer subscribes, so a publisher of state that changes rarely (the carousel) can resend it once. */
@@ -134,6 +145,7 @@ export function publishCarousel(build: () => BoardCarousel | null): boolean {
   listener.carousel(build());
   return true;
 }
+export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {
   listener = next; listenerGeneration++;
@@ -149,6 +161,13 @@ export function provideCarouselControls(next: CarouselControls): () => void {
   carouselControls = next;
   return () => { if (carouselControls === next) carouselControls = null; };
 }
+/** The online application registers my legend's walk to the room; the returned function withdraws it. */
+export function provideLegendControls(next: LegendControls): () => void {
+  legendControls = next;
+  return () => { if (legendControls === next) legendControls = null; };
+}
 /** What three-loader.ts hands the 3D chunk (it must not import this module itself; see placeholder-renderer.ts). */
-export interface BoardFeed { subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null; carouselControls?(): CarouselControls | null }
-export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls, carouselControls: () => carouselControls };
+export interface BoardFeed {
+  subscribe(next: BoardFeedListener): () => void; controls(): BoardControls | null; carouselControls?(): CarouselControls | null; legendControls?(): LegendControls | null;
+}
+export const boardFeed: BoardFeed = { subscribe: subscribeBoardFeed, controls: () => controls, carouselControls: () => carouselControls, legendControls: () => legendControls };

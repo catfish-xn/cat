@@ -31,6 +31,7 @@ import type {
   WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, SeatStateView,
 } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
+import type { LegendWalkRequest } from '../../server/legend-motion';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
@@ -180,6 +181,12 @@ export class WsGameClient implements GameClient {
   get pendingCount(): number { return this.inflight.size; }
   get currentSeatId(): string | null { return this.seatId; }
   get hasToken(): boolean { return this.token !== null; }
+  /** A walk has no receipt: it is not in flight and never retried (the room's `legend` push shows what it took). */
+  walk(request: LegendWalkRequest): boolean {
+    if (!this.ready || !this.bound || this.roomId === null) return false;
+    this.socket!.send(JSON.stringify({ type: 'walk', roomId: this.roomId, ...request, protocolVersion: NET_PROTOCOL_VERSION, commandId: this.nextCommandId++ }));
+    return true;
+  }
   private get ready(): boolean { return !this.disposed && !this.superseded && this.socket !== null && this.socket.readyState === SOCKET_OPEN; }
 
   /* ---------------- outbound ---------------- */
@@ -278,6 +285,7 @@ export class WsGameClient implements GameClient {
       case 'error': return this.onError(message.code, message.message);
       case 'heartbeat': return this.onHeartbeat(message.intervalMs);
       case 'notice': if (message.roomId === this.roomId) this.listeners?.notice?.(message.notice); return;
+      case 'legend': if (message.roomId === this.roomId) this.listeners?.legend?.(message.walk, message.serverNow); return;
     }
   }
   /** The first beat arms the liveness deadline (armLiveness already ran for this message, so arm it now). */
