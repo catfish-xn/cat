@@ -390,6 +390,8 @@ export class OnlineApplication implements SceneApplication {
    */
   /** Models the 3D layer may warm next (board-feed.ts): my shop's heroes, the next opponent's board, the board I scout. */
   private syncWarmHints() {
+    // Outside a match (the lobby, after leaving) nothing is warmed for it; a late close or push cannot refill the list.
+    if (this.mode !== 'active' || !this.view) { setBoardWarmHints([]); return; }
     const view = this.view, board = (seatId: string | null | undefined) => {
       const seat = seatId && seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
       return (seat?.publicBoard?.units ?? []).filter(unit => !unit.summon).map(unit => unit.definitionId);
