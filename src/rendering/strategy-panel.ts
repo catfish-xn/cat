@@ -38,7 +38,7 @@ import { describeEffect, describeTraitTier, term } from '../presentation/effect-
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
-import { TraitColumn, g23TraitRuntime, traitIconHtml } from './trait-column';
+import { TraitColumn, boardTraitRows, g23TraitRuntime, traitIconHtml } from './trait-column';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
@@ -51,6 +51,10 @@ import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-f
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
 import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
+import { g23RewardLines } from '../presentation/g23-reward-text';
+import { readG23Progress } from '../simulation/g2-3-state';
+import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
+import { G23_TRAIT_SOURCE } from '../simulation/content/g2-3-trait-runtime';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -928,59 +932,62 @@ export class StrategyPanel {
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
     if (loot) card.dataset.dropId = loot.dropId;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
-    // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
-    const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
-    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
-    card.append(element('h2', title));
-    // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
-    card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
-    // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
-    const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
-    if (fallback) card.append(element('p', fallback === SKIP_OPTION ? '倒计时结束仍未选择时，自动跳过。' : `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
-    if (choice.step === 'target') {
-      card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
-      const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
-      card.append(targets);
-      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
-    } else {
-      if (choice.kind === 'anomaly') {
-        const target = state.preparation.units.find(unit => unit.id === choice.targetId);
-        card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
+    if (choice.kind === 'blackMarket') this.blackMarket(card, choice);
+    else {
+      // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
+      const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
+      const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
+      card.append(element('h2', title));
+      // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
+      const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+      card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
+      // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
+      const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
+      if (fallback) card.append(element('p', fallback === SKIP_OPTION ? '倒计时结束仍未选择时，自动跳过。' : `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
+      if (choice.step === 'target') {
+        card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
+        const targets = element('div', '', 'choice-targets');
+        for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+        card.append(targets);
+        if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
+      } else {
+        if (choice.kind === 'anomaly') {
+          const target = state.preparation.units.find(unit => unit.id === choice.targetId);
+          card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
+        }
+        const offers = element('div', '', 'choice-cards');
+        // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
+        const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
+        for (const [index, id] of choice.offers.entries()) {
+          if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
+          const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
+          // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
+          const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
+            : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
+          // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
+          const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
+            : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
+          const button = this.button(`choice:${id}`, label, () => {
+            this.actions.choose(choice.choiceId, choice.generation, id);
+            const after = this.actions.state().pendingChoice;
+            if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+          });
+          if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
+          button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
+          const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
+          if (!option || !rerollAugment) { offers.append(button); continue; }
+          const slot = element('div', '', 'augment-slot');
+          const used = choice.rerolledSlots?.[index] === true;
+          const reroll = this.button(`augment-reroll:${index}`, used ? '已刷新' : '刷新这张', () => rerollAugment(choice.choiceId, choice.generation, index), !option.rerollAvailable);
+          reroll.className = 'augment-slot-reroll';
+          reroll.title = option.rerollAvailable ? '免费刷新这一张 · 等级不变 · 每张只能刷新 1 次，刷掉的强化本局不再出现'
+            : used ? '这张已经刷新过' : '同等级已没有可替换的强化';
+          slot.append(button, reroll); offers.append(slot);
+        }
+        card.append(offers);
+        if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
+        if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
       }
-      const offers = element('div', '', 'choice-cards');
-      // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
-      const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
-      for (const [index, id] of choice.offers.entries()) {
-        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
-        const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
-        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
-          : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
-        // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
-        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
-          : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
-        const button = this.button(`choice:${id}`, label, () => {
-          this.actions.choose(choice.choiceId, choice.generation, id);
-          const after = this.actions.state().pendingChoice;
-          if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
-        });
-        if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
-        button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
-        const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
-        if (!option || !rerollAugment) { offers.append(button); continue; }
-        const slot = element('div', '', 'augment-slot');
-        const used = choice.rerolledSlots?.[index] === true;
-        const reroll = this.button(`augment-reroll:${index}`, used ? '已刷新' : '刷新这张', () => rerollAugment(choice.choiceId, choice.generation, index), !option.rerollAvailable);
-        reroll.className = 'augment-slot-reroll';
-        reroll.title = option.rerollAvailable ? '免费刷新这一张 · 等级不变 · 每张只能刷新 1 次，刷掉的强化本局不再出现'
-          : used ? '这张已经刷新过' : '同等级已没有可替换的强化';
-        slot.append(button, reroll); offers.append(slot);
-      }
-      card.append(offers);
-      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
-      if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
     this.modal.append(card);
     // Session replacement changes the mode at the end of this same task.
@@ -1020,6 +1027,39 @@ export class StrategyPanel {
     return row;
   }
 
+  /**
+   * 炼金男爵 black market, laid out like the 14.24 popup: tier and 微光, one large reward card (the offered item and
+   * the whole bundle as the rules' table names it), then 接受 and 跳过 with what a skip earns (炼金男爵 max health, read
+   * from the trait table at my current tier). The rules grant; this only sends choose(offer) or choose(@skip).
+   */
+  private blackMarket(card: HTMLElement, choice: MatchState['pendingChoice'] & object): void {
+    const state = this.actions.state();
+    let chem; try { chem = readG23Progress(state)?.chem; } catch { chem = undefined; }
+    const offer = chem?.offer?.id === choice.choiceId ? chem.offer : null;
+    const reward = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options.find(option => option.id === offer.optionId)?.reward : undefined;
+    const payload = (choice as { payload?: { skippable?: boolean } }).payload;
+    // A skip pays nothing now: every skip so far gives my 炼金男爵 heroes HealthPerSkip max health at the trait's current tier.
+    const tier = boardTraitRows(state.preparation).find(row => row.traitId === 'chem-baron')?.tier;
+    const perSkip = G23_TRAIT_SOURCE['chem-baron']?.tiers.find(entry => entry.threshold === tier)?.values.HealthPerSkip;
+    const title = '炼金男爵 · 黑市', item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
+    card.append(element('h2', title), element('p', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''}`, 'market-meta'));
+    const prize = element('div', '', 'market-reward'); prize.dataset.debug = 'market:reward';
+    const first = choice.offers[0] ?? '';
+    if (item(first)) prize.insertAdjacentHTML('afterbegin', itemMarkHtml(first, 64));
+    prize.append(element('strong', item(first) ? itemDisplayName(first) : '黑市奖励', 'market-name'));
+    for (const line of reward ? g23RewardLines(reward, item(first) ? itemDisplayName(first) : undefined) : []) prize.append(element('span', line, 'market-line'));
+    card.append(prize);
+    const send = (id: string) => () => {
+      this.actions.choose(choice.choiceId, choice.generation, id);
+      const after = this.actions.state().pendingChoice;
+      if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+    };
+    const row = element('div', '', 'market-actions');
+    for (const id of choice.offers) row.append(this.button(`choice:${id}`, choice.offers.length > 1 ? `接受 ${genericOffer(id, {}).name}` : '接受', send(id)));
+    if (payload?.skippable) row.append(this.button('choice-skip', perSkip ? `跳过 · 炼金男爵 +${perSkip} 生命值，微光保留` : '跳过 · 微光保留', send(SKIP_OPTION)));
+    card.append(row, element('p', `接受后微光清零。${isOnline() ? '倒计时结束仍未选择时，自动跳过。' : ''}`, 'choice-timeout'));
+    if (isOnline()) card.append(this.choiceExtras(choice, title, false, {}));
+  }
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');
     const button = this.button(`choice:${offer.id}`, label, () => {
@@ -1193,7 +1233,11 @@ export class StrategyPanel {
       }
       shop.append(button);
     });
-    section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); (this.shopDock ?? this.root).append(section);
+    // TFT's odds line: one cost-coloured figure per cost; the "Lv.N 概率" label and 费 names are for the 2D panel (3D hides them).
+    const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
+    getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
+      cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
+    section.append(shop, odds); (this.shopDock ?? this.root).append(section);
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
