@@ -9,6 +9,7 @@
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
+import { installHudStyle } from './hud-style';
 import {
   AmbientLight, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
@@ -30,6 +31,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
+import { fitModel, readUnitScale } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 
 const MANIFEST_TIMEOUT_MS = 4000;
@@ -87,6 +89,10 @@ const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 const PICK_RADIUS = 0.8;
 /** Board units the camera fit adds beyond the near (bench) edge: a piece ring's outer radius (33) and a little. */
 const FRAME_NEAR_PAD = 36;
+/** Fit-then-centre passes for the camera framing (each pass shrinks the off-centre left by the previous one). */
+const FRAME_PASSES = 4;
+/** A bench cell marker's side as a fraction of the cell spacing (square, as TFT draws its bench). */
+const BENCH_CELL_FILL = 0.88;
 
 /**
  * How close a ray (unit direction) passes to a piece's upright axis, the segment from `base` up `height`. A piece is under the pointer when the distance is within its pick
@@ -213,6 +219,11 @@ interface PieceView {
   starLevel: number; form: 'front' | 'back';
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
+  /**
+   * The model's world scale when it is drawn at its official unitScale (model-fit.ts), else null. The caster's own
+   * effects (on its bones or launched from them) then share it, as the skin scale sizes the whole character.
+   */
+  modelScale: number | null;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
   facing: string | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
@@ -235,6 +246,7 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 }
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
+  installHudStyle();
   const renderer = new WebGLRenderer({ antialias: true });
   const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined);
   const actionEffects = await openActionEffects(models, options.assetBase);
@@ -272,6 +284,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id),
     loadEffect, starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
   // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
   let callout: HTMLElement | null = null, calloutTimer: ReturnType<typeof setTimeout> | undefined;
@@ -299,32 +312,48 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
-  // The estimate below can leave the near (bench) edge under the bottom of the board box once the bench reaches the
-  // arena's own strip, where the online shop sits right below it: the camera then backs off until the box's corners,
-  // the near edge padded for the rings under the bench pieces, project inside the frame. It never moves closer than the estimate.
-  const fitCorners = Array.from({ length: 8 }, () => new Vector3()), cameraSpace = new Vector3();
+  // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the rings under the
+  // bench pieces, as large as they fit. The camera keeps its tilt; it moves to the closest distance at which every corner
+  // projects inside the frame, then slides along its own up/right axes so the drawn extents sit centred (a tilted board
+  // is wider at its near edge, so centring on the box's middle left the top of the frame empty). A few passes settle both.
+  const fitCorners = Array.from({ length: 8 }, () => new Vector3()), cameraSpace = new Vector3(), cameraAxis = new Vector3();
   const frameCamera = () => {
     if (boardBox.isEmpty()) return;
-    const center = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
+    const target = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
     const tan = Math.tan(camera.fov * Math.PI / 360);
-    const place = (distance: number) => { camera.position.copy(center).addScaledVector(VIEW, distance); camera.lookAt(center); camera.updateMatrixWorld(); };
+    const place = (distance: number) => { camera.position.copy(target).addScaledVector(VIEW, distance); camera.lookAt(target); camera.updateMatrixWorld(); };
     const { min, max } = boardBox, near = max.z + FRAME_NEAR_PAD;
     fitCorners.forEach((corner, i) => corner.set(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? near : min.z));
-    const fits = (distance: number) => {
-      place(distance);
-      return fitCorners.every(corner => {
+    /** The corners' frame extents in NDC (-1..1 fits), or null when one is behind the camera. */
+    const extents = () => {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const corner of fitCorners) {
         cameraSpace.copy(corner).applyMatrix4(camera.matrixWorldInverse);
         const depth = -cameraSpace.z;
-        return depth > 0 && Math.abs(cameraSpace.x) <= depth * tan * camera.aspect && Math.abs(cameraSpace.y) <= depth * tan;
-      });
+        if (depth <= 0) return null;
+        const x = cameraSpace.x / (depth * tan * camera.aspect), y = cameraSpace.y / (depth * tan);
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      return { x0, x1, y0, y1 };
     };
+    const fits = (distance: number) => { place(distance); const e = extents(); return !!e && e.x0 >= -1 && e.x1 <= 1 && e.y0 >= -1 && e.y1 <= 1; };
     let distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
-    if (!fits(distance)) {
-      let low = distance, high = distance * 1.25;
-      for (let i = 0; i < 16 && !fits(high); i++) { low = high; high *= 1.25; }
-      for (let i = 0; i < 20; i++) { const mid = (low + high) / 2; if (fits(mid)) high = mid; else low = mid; }
+    for (let pass = 0; pass < FRAME_PASSES; pass++) {
+      let high = distance;
+      for (let i = 0; i < 16 && !fits(high); i++) high *= 1.25;
+      let low = high / 4;
+      for (let i = 0; i < 4 && fits(low); i++) { high = low; low /= 4; }
+      for (let i = 0; i < 24; i++) { const mid = (low + high) / 2; if (fits(mid)) high = mid; else low = mid; }
       distance = high;
+      place(distance);
+      const e = extents();
+      if (!e) break;
+      // Shift the look point by the extents' off-centre (NDC × the half-frame at that depth, the target's depth).
+      target.addScaledVector(cameraAxis.set(1, 0, 0).applyQuaternion(camera.quaternion), (e.x0 + e.x1) / 2 * tan * camera.aspect * distance);
+      target.addScaledVector(cameraAxis.set(0, 1, 0).applyQuaternion(camera.quaternion), (e.y0 + e.y1) / 2 * tan * distance);
     }
+    // The last shift moved the extents: back off just enough that they still fit.
+    for (let i = 0; i < 16 && !fits(distance); i++) distance *= 1.02;
     place(distance);
   };
   scene.add(boardGroup);
@@ -396,6 +425,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       mesh.position.set(point.x, -2, point.y);
       boardGroup.add(mesh);
     }
+    // Over the arena's own bench cells: a faint square per cell (as the hexes above are marked), sized to the cell spacing.
+    if (benchSlots && benchSlots.length > 1) {
+      const side = Math.hypot(benchSlots[1]!.x - benchSlots[0]!.x, benchSlots[1]!.z - benchSlots[0]!.z) * BENCH_CELL_FILL;
+      const square = own(new BoxGeometry(side, 1.2, side)), squareMaterial = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
+      for (const point of benchSlots) {
+        const mesh = new Mesh(square, squareMaterial);
+        mesh.position.set(point.x, point.y + 1, point.z);
+        boardGroup.add(mesh);
+      }
+    }
     boardBox.setFromObject(boardGroup);
     // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
     for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
@@ -427,6 +466,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
   // surroundings and effects are hidden meanwhile and the board takes no input.
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE,
     loadModel: models.cache ? id => models.cache!.load(id) : null, legendModel: legend => {
       if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
       const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
@@ -444,7 +484,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
-    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
+    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null;
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
@@ -459,8 +499,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else if (monster) {
         // The offset goes on the GLB root, which the mixer never animates (clips drive its bones).
         view.body = fit(lease.scene, MODEL_HEIGHT * monster.height); lease.scene.position.y += MODEL_HEIGHT * monster.lift;
-      } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
-      view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
+        view.starHeight = MODEL_HEIGHT * monster.height + STAR_GAP;
+      } else {
+        // Official scale when the asset root has it (short champions stay short); the stars and bars follow the drawn height.
+        const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
+        const before = Math.abs(lease.scene.scale.x) || 1;
+        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale });
+        view.body = lease.scene;
+        // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
+        view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
+        // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
+        view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
+      }
+      if (lease.placeholder) view.starHeight = PAWN_HEIGHT + STAR_GAP;
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
@@ -487,7 +538,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null,
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
@@ -528,9 +579,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.root.getWorldPosition(out).setY(IMPACT_HEIGHT);
     return true;
   };
-  /** Local scale that gives an effect FX_SCALE in world space under `parent`. */
+  /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
-  const effectScale = (parent: Object3D): number => FX_SCALE / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
+  const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
@@ -544,12 +595,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node));
+        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
-        fx.object.scale.setScalar(FX_SCALE);
+        // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
+        fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
