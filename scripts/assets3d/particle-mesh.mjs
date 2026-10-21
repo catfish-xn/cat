@@ -60,9 +60,16 @@ function readSco(b, limits) {
   // As in the local reference reader, locator metadata leaves vertices intact.
   const pivot = lines[at]?.match(/^PivotPoint\s*=\s*(.*)$/);
   const pivotPoint = pivot ? (at++, numbers(pivot[1], 3)) : undefined;
+  const colorFlag = lines[at]?.match(/^VertexColors\s*=\s*([01])$/);
+  if (colorFlag) at++;
   const n = line().match(/^Verts\s*=\s*(\d+)$/); check(n, 'invalid-sco-vertices');
   const nv = Number(n[1]); budgetCount(nv, limits.maxVertices);
   const vertices = Array.from({ length: nv }, () => numbers(line(), 3));
+  const colors = colorFlag?.[1] === '1' ? Array.from({ length: nv }, () => {
+    const c = numbers(line(), 4);
+    check(c.every(n => Number.isInteger(n) && n >= 0 && n <= 255), 'invalid-sco-color');
+    return c;
+  }) : undefined;
   const f = line().match(/^Faces\s*=\s*(\d+)$/); check(f, 'invalid-sco-faces');
   const nf = Number(f[1]); budgetCount(nf, limits.maxFaces);
   const faces = Array.from({ length: nf }, () => {
@@ -71,7 +78,7 @@ function readSco(b, limits) {
     return { indices: v.slice(1, 4).map(Number), uv: [0, 1, 2].map(j => uv.slice(j * 2, j * 2 + 2)) };
   });
   check(line() === '[ObjectEnd]' && at === lines.length, 'invalid-sco-tail');
-  return { vertices, faces, centralPoint, pivotPoint };
+  return { vertices, faces, colors, centralPoint, pivotPoint };
 }
 /** Bounded static, UV-bearing triangle mesh. No skinning/material approximation.
  * Reflect X and reverse winding exactly as the model pipeline. UVs are unchanged. */
@@ -122,7 +129,9 @@ export function convertParticleMesh(bytes, extension, options = {}) {
   const glb = writeGlb(doc, Buffer.concat([positions, texcoords, ...(rgba ? [rgba] : []), ...(faceRgba ? [faceRgba] : [])]));
   check(glb.length <= limits.maxOutputBytes, 'mesh-output-budget');
   return { glb, report: { vertices: count, triangles: faces.length, sourceVertices: vertices.length, bytes: glb.length,
-    centralPoint, ...(pivotPoint ? { pivotPoint } : {}), locatorPolicy: 'metadata-only-source-vertices-unchanged',
+    centralPoint, ...(pivotPoint ? { pivotPoint } : {}), center: centralPoint,
+    ...(extension.toLowerCase() === '.sco' ? { pivot: pivotPoint ?? centralPoint } : {}),
+    locatorPolicy: 'metadata-only-preserve-authored-vertices', vertexColors: !!colors,
     ...(faceRgba ? { faceColors: 'RGB-U8-preserved-in-_FACE_COLOR_0; shading-not-reproduced' } : {}),
-    ...(rgba ? { vertexColors: 'BGRA-U8-to-RGBA-normalized' } : {}) } };
+    ...(rgba ? { vertexColorEncoding: extension.toLowerCase() === '.scb' ? 'BGRA-U8-to-RGBA-normalized' : 'RGBA-U8-normalized' } : {}) } };
 }

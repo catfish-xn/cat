@@ -53,6 +53,22 @@ describe('3D asset preloader', () => {
     expect(describePreload(done)).toContain('2 个文件');
   });
 
+  it('reports this visit\'s download size and time, and says so when everything came from the store', async () => {
+    const store: AssetStore = { ...memoryStore(), persistent: true }, { fetch } = server({ 'a.glb': 3, 'b.png': 5 });
+    const clock = (times: number[]) => () => times.shift() ?? 0;
+    const files = list([['a.glb', 3, 1], ['b.png', 5, 2]]), digest = digestOf({ 3: 1, 5: 2 });
+    const first = new AssetPreloader(ROOT, files, store, { fetch, digest, now: clock([1000, 13345]) });
+    const seen: (number | null)[] = [];
+    first.onProgress(progress => seen.push(progress.elapsedMs));
+    const done = await first.start();
+    expect(done).toMatchObject({ downloadedFiles: 2, downloadedBytes: 8, elapsedMs: 12345 });
+    expect(seen.slice(0, -1).every(value => value === null)).toBe(true);
+    expect(describePreload(done)).toBe('素材已全部缓存到本地（2 个文件，本次下载 0.0 MB 用时 12.3 秒）');
+    const again = await new AssetPreloader(ROOT, files, store, { fetch, digest, now: clock([0, 40]) }).start();
+    expect(again).toMatchObject({ state: 'done', downloadedFiles: 0, elapsedMs: 40 });
+    expect(describePreload(again)).toBe('素材已全部缓存到本地（2 个文件，全部来自本地）');
+  });
+
   it('re-downloads only files whose hash changed and drops files no longer listed', async () => {
     const store = memoryStore();
     const first = server({ 'a.glb': 3, 'b.png': 5, 'old.png': 2 });

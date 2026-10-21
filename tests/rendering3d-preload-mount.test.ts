@@ -70,7 +70,7 @@ describe('3D mount keeps assets when IndexedDB is unusable', () => {
   it.each([['missing', undefined], ['failing to open', failingOpen]])('IndexedDB %s: stays on assets, downloads once, reads the model from the preload', async (_, idb) => {
     const progress = await mountWith(idb);
     expect(mounted!.status).toBe('assets');
-    expect(progress.at(-1)).toBe('素材已全部下载（1 个文件）'); // not "缓存到本地": nothing persisted
+    expect(progress.at(-1)).toMatch(/^素材已全部下载（1 个文件，本次下载 /); // not "缓存到本地": nothing persisted
     listener!.frame(frame);
     await vi.waitFor(() => expect(parsed).toEqual([BODY]));
     expect(requests.filter(path => path.endsWith('.glb'))).toEqual(['models/sample/model.glb']);

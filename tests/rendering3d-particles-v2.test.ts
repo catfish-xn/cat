@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdditiveBlending, BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Vector3 } from 'three';
+import { AdditiveBlending, BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Uint8BufferAttribute, Vector3 } from 'three';
 import { loadParticleEffect, parseParticleDocument, ParticleEffect, type ParticleDocumentV2,
   type ParticleEmitterV2 } from '../src/rendering3d';
 
@@ -9,17 +9,42 @@ const doc = (...emitters: unknown[]) => ({ schemaVersion: 2, limits: { maxPartic
 const mesh = (e: ParticleEffect, i = 0) => e.object.children[i] as Mesh<import('three').BufferGeometry, ShaderMaterial>;
 const manifest = { schemaVersion: 1 as const, models: {}, effects: { effect: { path: 'fx/effect.json' } } };
 
-describe('particle mesh vertex colors', () => {
-  it('uses normalized RGBA geometry including alpha, with a white fallback for ordinary particles', () => {
-    const geometry = new BoxGeometry();
-    geometry.setAttribute('color', new Float32BufferAttribute(new Float32Array(geometry.getAttribute('position').count * 4).fill(0.5), 4));
-    const fx = new ParticleEffect(doc(quad({ kind: 'mesh', mesh: 'synthetic.glb' }), quad()), { mesh: () => geometry });
-    expect(mesh(fx).material.defines.PARTICLE_MESH_RGBA).toBe(1);
-    expect(mesh(fx, 1).material.defines.PARTICLE_MESH_RGBA).toBeUndefined();
-    expect(mesh(fx).material.vertexShader).toContain('vMeshColor=color;');
-    expect(mesh(fx).material.vertexShader).toContain('vMeshColor=vec4(1.0);');
-    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity)*vMeshColor');
+describe('particle mesh vertex color runtime', () => {
+  it.each([3, 4])('uses borrowed %i-channel vertex colors without mutating or disposing geometry', channels => {
+    const geometry = new BoxGeometry(1, 1, 1);
+    const values = new Float32Array(geometry.getAttribute('position').count * channels).fill(.5);
+    geometry.setAttribute('color', new Float32BufferAttribute(values, channels));
+    const before = values.slice(), disposed = vi.fn(); geometry.addEventListener('dispose', disposed);
+    const fx = new ParticleEffect(parseParticleDocument(doc(quad({ kind: 'mesh', mesh: 'generated.glb' }), quad())),
+      { scale: 1, mesh: () => geometry });
+    expect(mesh(fx).material.vertexColors).toBe(true);
+    expect(mesh(fx, 1).material.vertexColors).toBe(false);
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=color;');
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(color,1.0);');
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(1.0);');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
     expect(mesh(fx).geometry).toBe(geometry);
+    expect(mesh(fx).material.defines.PARTICLE_MESH_RGBA).toBeUndefined();
+    expect(mesh(fx).material.vertexShader).not.toMatch(/attribute\s+vec[34]\s+color\s*;/);
+    for (const shader of [mesh(fx).material.vertexShader, mesh(fx).material.fragmentShader]) {
+      expect(shader.match(/varying vec4 vParticleColor;/g)).toHaveLength(1);
+      expect(shader).not.toContain('vMeshColor');
+    }
+    fx.update(.5); fx.dispose();
+    expect(values).toEqual(before); expect(disposed).not.toHaveBeenCalled(); geometry.dispose();
+  });
+  it('borrows normalized U8 RGBA including alpha with a white fallback for ordinary particles', () => {
+    const geometry = new BoxGeometry();
+    const values = new Uint8Array(geometry.getAttribute('position').count * 4).fill(128);
+    const color = new Uint8BufferAttribute(values, 4, true);
+    geometry.setAttribute('color', color);
+    const fx = new ParticleEffect(doc(quad({ kind: 'mesh', mesh: 'synthetic.glb' }), quad()), { mesh: () => geometry });
+    expect(mesh(fx).geometry).toBe(geometry); expect(mesh(fx).geometry.getAttribute('color')).toBe(color);
+    expect(color.normalized).toBe(true); expect(color.getW(0)).toBe(128 / 255);
+    expect(mesh(fx).material.vertexColors).toBe(true); expect(mesh(fx, 1).material.vertexColors).toBe(false);
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(1.0);');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.rgb*tint*vParticleColor.rgb');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
     fx.dispose(); geometry.dispose();
   });
 });
