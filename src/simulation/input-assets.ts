@@ -6,6 +6,7 @@ import { canonicalContent } from './content';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from './units';
 import { checkEquipmentPlacement } from './equipment-policy';
+import { MATCH_RULES } from './match-rules';
 
 /** Both restore boundaries keep their own error contract while sharing the predicates. */
 export interface InputValidation {
@@ -46,7 +47,7 @@ export function validateInputAssets(
   const record: InputValidation['record'] = validation.record;
   const checkSerial: InputValidation['checkSerial'] = validation.checkSerial;
   integer(boundary.playerLevel, 1); integer(boundary.nextUnitSerial, 1); integer(boundary.nextItemSerial, 1);
-  requireValue(boundary.playerLevel <= 9, 'level/HP bounds');
+  requireValue(boundary.playerLevel <= MATCH_RULES.maxLevel, 'level/HP bounds');
   record(input.preparation); record(input.preparation.board); record(input.preparation.board.deploymentZones);
   const { board, benchSize } = input.preparation;
   integer(board.columns, 1); integer(board.rows, 1);

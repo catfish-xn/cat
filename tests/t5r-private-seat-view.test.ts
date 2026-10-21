@@ -8,6 +8,7 @@ import { accepted, finalSettlement, catalogPreparation } from './t5r-helpers';
 import { freeze } from './combat-helpers';
 import { readEncounterPreview } from '../src/simulation/encounter-selectors';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
+import type { MechanicReceipt } from '../src/simulation/seat-mechanics/types';
 
 type Subset<T> = T extends readonly (infer V)[] ? readonly Subset<V>[] : T extends object ? {[K in keyof T]?:Subset<T[K]>} : T;
 // Compile-time proof: recursive structural subset, including phase and nested choices/history.
@@ -38,6 +39,28 @@ function richSeat():MatchState {
 }
 
 describe('T5R private own-seat whitelist',()=>{
+  it('whitelists fixed PvE remover receipts and every mechanic receipt variant without retaining input references',()=>{
+    const state=richSeat();
+    const remover=state.seatMechanics!.receipts.find(r=>r.source==='pve-remover')!;
+    expect(remover).toMatchObject({kind:'consumable',definitionId:'magnetic-remover'});
+    const identity={receiptId:'shown-receipt',round:1,roundId:'1-2',source:'shown-source'};
+    const receipts:MechanicReceipt[]=[remover,
+      {...identity,kind:'gold',amount:7},
+      {...identity,kind:'unit',definitionId:'maddie',resolution:'held',unitId:'unit-1',gold:0},
+      {...identity,kind:'unit',definitionId:'maddie',resolution:'gold',unitId:null,gold:1},
+      {...identity,kind:'unit',definitionId:'maddie',resolution:'orb',unitId:null,gold:0,orbId:'earned-orb',starLevel:2},
+      {...identity,kind:'item',definitionId:'sword',itemId:'item-1'},
+      {...identity,kind:'choice',choiceKind:'forge',optionId:'warmog',skipped:false,price:0,itemId:'item-2',timedOut:true},
+    ];
+    const raw={...state,seatMechanics:{...state.seatMechanics!,receipts:structuredClone(receipts)}};
+    for(const receipt of raw.seatMechanics.receipts)Object.assign(receipt,{futurePlan:{secret:'DO_NOT_SEND'},rngState:123});
+    const before=JSON.stringify(raw),view=toPrivateSeatView(raw);
+    expect(view.seatMechanics!.receipts).toEqual(receipts);
+    expect(JSON.stringify(view)).not.toMatch(/futurePlan|rngState|DO_NOT_SEND/);
+    expect(JSON.stringify(raw)).toBe(before);noReferences(view.seatMechanics!.receipts,raw.seatMechanics.receipts);
+    for(const receipt of raw.seatMechanics.receipts)expect(Object.isFrozen(receipt)).toBe(false);
+    for(const receipt of view.seatMechanics!.receipts)expect(Object.isFrozen(receipt)).toBe(true);
+  });
   it.each(ROUND_CATALOG.filter(r=>r.kind==='pve').map(r=>r.roundId))('SR-B7-02 %s: current public preview survives display adaptation without hidden fields',roundId=>{
     const state=catalogPreparation(roundId),before=JSON.stringify(state),view=toPrivateSeatView(freeze(state));
     expect(asSubset(view)).toBe(view);

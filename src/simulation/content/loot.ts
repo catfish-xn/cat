@@ -51,7 +51,7 @@ export const ORB_BOXES = freezeContent({
     r('completed',15,completed(),g(4)),r('gloves',10,gloves,g(4)),r('reforger-component',5,g(4),reforger(),component()),
     r('duplicator',5,full(),g(8)),r('artifact',5,artifact()),r('five-cost-pair',5,g(7),...h(5,2))],
   ultraPlus:[r('artifacts',10,artifact(),artifact(),remover()),r('completed',15,remover(),completed(),g(8)),r('gold',10,g(24)),
-    r('support-artifact',15,support(),artifact(),remover()),r('support-component-spatula',10,support(),component(),g(8),reforger()),
+    r('support-artifact',15,support(),artifact(),remover()),r('support-component-spatula',10,support(),component(),g(8),reforger(),{kind:'item',definitionId:'spatula',quantity:1}),
     r('artifact-gold',10,artifact(),g(25),remover()),r('support-gold',10,support(),g(25)),
-    r('support-component-pan',10,support(),component(),g(8),reforger()),r('six-cost-omitted',10,artifact(),remover())],
+    r('support-component-pan',10,support(),component(),g(8),reforger(),{kind:'item',definitionId:'frying-pan',quantity:1}),r('six-cost-omitted',10,artifact(),remover())],
 });

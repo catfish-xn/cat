@@ -1,4 +1,5 @@
 import type { MatchState } from '../match-types';
+import { pick } from '../view-fields';
 import { SEAT_MECHANICS_VERSION, type MechanicJson, type MechanicReceipt, type SeatMechanicsState } from './types';
 
 /** Throws RangeError unless value is plain JSON with safe-integer numbers. */
@@ -54,11 +55,23 @@ export function appendMechanicReceipt(state: MatchState, receipt: MechanicReceip
   return { ...state, seatMechanics: { ...mechanics, receipts: [...mechanics.receipts, receipt] } };
 }
 
-/** Owner-visible projection for toPrivateSeatView: seat + receipts; `hidden` is always sent empty. Undefined when absent. */
+/** Receipt fields are a closed display contract, including fixed PvE rewards. */
+function receiptView(receipt: MechanicReceipt): MechanicReceipt {
+  const identity = pick(receipt, ['receiptId', 'round', 'roundId', 'source']);
+  switch (receipt.kind) {
+    case 'gold': return { ...identity, ...pick(receipt, ['kind', 'amount']) };
+    case 'unit': return { ...identity, ...pick(receipt, ['kind', 'definitionId', 'resolution', 'unitId', 'gold', 'orbId', 'starLevel']) };
+    case 'consumable': return { ...identity, ...pick(receipt, ['kind', 'definitionId', 'consumableId']) };
+    case 'item': return { ...identity, ...pick(receipt, ['kind', 'definitionId', 'itemId']) };
+    case 'choice': return { ...identity, ...pick(receipt, ['kind', 'choiceKind', 'optionId', 'skipped', 'price', 'itemId', 'timedOut']) };
+  }
+}
+
+/** Owner-visible projection: opaque public seat data + whitelisted receipts; `hidden` is always empty. */
 export function seatMechanicsView(state: MatchState): SeatMechanicsState | undefined {
   const mechanics = state.seatMechanics;
   if (!mechanics) return undefined;
-  return { version: mechanics.version, seat: structuredClone(mechanics.seat), hidden: {}, receipts: structuredClone(mechanics.receipts) };
+  return { version: mechanics.version, seat: structuredClone(mechanics.seat), hidden: {}, receipts: mechanics.receipts.map(receiptView) };
 }
 
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;

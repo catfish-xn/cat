@@ -4,6 +4,8 @@ import { resolveRoundEconomy } from './round-economy';
 import { getMultiplayerRoundById } from './multiplayer-round';
 
 export interface RoundEconomyPreviewOutcome {
+  /** This round's base gold, excluding victory, interest, streak and loot. */
+  readonly base: number;
   readonly interest: number;
   readonly win: number;
   readonly streakGold: number;
@@ -23,7 +25,7 @@ export function previewRoundEconomy(state: MatchState): RoundEconomyPreview | nu
   const preview = (result: 'playerWin' | 'enemyWin'): RoundEconomyPreviewOutcome => {
     const plan = resolveRoundEconomy({ augments:state.augments, roundId: state.roundDefinitionId, result, gold: state.gold,
       streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: 0 });
-    return { interest: plan.incomeBreakdown.interest, win: plan.incomeBreakdown.win,
+    return { base: plan.incomeBreakdown.base, interest: plan.incomeBreakdown.interest, win: plan.incomeBreakdown.win,
       streakGold: plan.incomeBreakdown.streak, streakAfter: plan.streakAfter };
   };
   return { roundId: state.roundDefinitionId, gold: state.gold, ifWin: preview('playerWin'), ifLoss: preview('enemyWin') };

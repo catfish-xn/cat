@@ -336,12 +336,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     {
       const traitBefore = await reset(), traitStart = await offset();
       await click('panel:traits', true);
-      for (const [id, totals] of [['sorcerer', [20, 50]], ['sentinel', [36, 75]]]) {
+      for (const [id, summary, values] of [
+        ['sorcerer', '你的队伍获得10法术强度。【法师】们获得更多法术强度。', ['(2) 20 法术强度', '(4) 50 法术强度']],
+        ['sentinel', '你的队伍获得护甲和魔抗。【哨兵】们获得三倍。', ['(2) 12 护甲和魔抗', '(4) 25 护甲和魔抗']],
+      ]) {
         const text = await page.locator(`[data-debug="trait:${id}"]`).innerText();
-        assert(text.includes('全队收益') && text.includes('职业成员额外收益'));
-        for (const total of totals) assert(text.includes(`+${total}`), `visible ${id} member total ${total}`);
+        assert(text.includes(summary), `visible ${id} official summary`);
+        for (const value of values) assert(text.includes(value), `visible ${id} official tier ${value}`);
       }
-      await record('trait-team-member-and-combined-benefits-visible', traitBefore, traitBefore, traitStart);
+      await record('trait-official-summary-and-tiers-visible', traitBefore, traitBefore, traitStart);
       await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
       const before = await itemReset(); await click('panel:items', true);
       const target = page.locator('[data-debug="item:item-1"]');

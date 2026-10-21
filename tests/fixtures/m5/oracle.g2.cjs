@@ -4,8 +4,8 @@
 const assert = require('node:assert/strict');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
-const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10]};
-const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};
+const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
+const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76,9:84};
 // Literal W4 + S13 P2 pools independently transcribed from the retained raw source.
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
@@ -90,7 +90,7 @@ const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}
 function shop(rng,generation,level,locked=false){const slots=[];for(let i=0;i<5;i++){rng=word(rng);const roll=Number(BigInt(rng)*100n/4294967296n);let total=0,cost=0;for(let j=0;j<5;j++){total+=ODDS[level][j];if(roll<total){cost=j+1;break;}}rng=word(rng);const bucket=CATALOG[cost];slots.push({status:'available',definitionId:bucket[Number(BigInt(rng)*BigInt(bucket.length)/4294967296n)]});}return {rngState:rng,shop:{generation,slots,locked}};}
-function xp(level,value,amount){let applied=0;while(amount>0&&level<9){const take=Math.min(amount,XP[level]-value);amount-=take;applied+=take;value+=take;if(value===XP[level]){value=0;level++;}}return {level,xp:value,xpApplied:applied};}
+function xp(level,value,amount){let applied=0;while(amount>0&&level<10){const take=Math.min(amount,XP[level]-value);amount-=take;applied+=take;value+=take;if(value===XP[level]){value=0;level++;}}return {level,xp:value,xpApplied:applied};}
 // Hand-transcribed 38-round identity list from approved OPENING; no production imports.
 const ROUND_IDS=['1-2','1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7',
  '3-1','3-2','3-3','3-4','3-5','3-6','3-7','4-1','4-2','4-3','4-4','4-5','4-6','4-7',
@@ -182,7 +182,9 @@ function validateLoot(state){
   }
   const {payload,grantedItemIds,grantedUnitIds}=receipt;
   assert.equal(grantedItemIds.length,payload.kind==='item'?1:0,'actual loot item count');assert.equal(grantedUnitIds.length,payload.kind==='unit'?1:0,'actual loot unit count');
-  itemIds.push(...grantedItemIds);unitIds.push(...grantedUnitIds);if(payload.kind==='item')counters[counterKey(entry.roundId)]+=COMPONENTS.includes(payload.definitionId)?1:2;
+  // Eight random-component candidates are not the complete component taxonomy.
+  // Archived S13 emblem recipes consume one Spatula/Pan plus one normal component.
+  itemIds.push(...grantedItemIds);unitIds.push(...grantedUnitIds);if(payload.kind==='item')counters[counterKey(entry.roundId)]+=[...COMPONENTS,'spatula','frying-pan'].includes(payload.definitionId)?1:2;
  }
  for(const resolution of resolutions.values())assert(choices.some(c=>c.dropId===resolution.dropId)&&receipts.has(resolution.dropId),'resolution requires actual choice receipt');
  assert.equal(new Set(itemIds).size,itemIds.length,'unique loot item identities');assert.equal(new Set(unitIds).size,unitIds.length,'unique loot unit births');assert.deepEqual(loot.guaranteeCounters,counters,'actual-only component counters');
@@ -294,6 +296,11 @@ class Ledger {
   if(command?.type==='select'&&command.definitionId==='dual-wielding'){assert.equal(acquired.length,2,'source two role items');assert.equal(new Set(acquired.map(r=>r.definitionId)).size,2,'project no-repeat role draws');assert(acquired.every(r=>r.source==='s13-anomaly-acquisition'));}
   if(before.pendingChoice?.kind==='forge'&&before.pendingChoice.payload?.source==='s13-augment-acquisition'){assert.equal(acquired.length,1,'one forge item');assert.equal(acquired[0].optionId,command?.definitionId);assert(before.pendingChoice.offers.includes(acquired[0].optionId));}
   const records=appended(before.roundResults,after.roundResults,'settlementId','settlements');assert(records.length<=1,'one settlement per command');
+  // Original 14.23 onward: +1 fixed remover per survived PvE, independent of box loot.
+  const pveBonus=appendedMechanics.filter(r=>r.source==='pve-remover'||r.receiptId.startsWith('pve-remover:'));
+  const eligible=records.filter(r=>r.roundKind==='pve'&&r.hpAfter>0);
+  assert.equal(pveBonus.length,eligible.length,'independent fixed PvE remover count');
+  for(const [i,r] of pveBonus.entries()){const round=eligible[i];assert.equal(r.receiptId,`pve-remover:${round.roundId}`);assert.equal(r.source,'pve-remover');assert.equal(r.kind,'consumable');assert.equal(r.definitionId,'magnetic-remover');assert.equal(r.round,round.round);assert.equal(r.roundId,round.roundId);assert(after.consumables.some(c=>c.consumableId===r.consumableId&&c.definitionId==='magnetic-remover'));}
   let growth=before.augmentProgress;
   for(const record of records){const expected=settlement(before,after.combat,this.gold);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.income;costs.income+=expected.income;this.rows.push(expected);growth=investment(before,expected);}
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');

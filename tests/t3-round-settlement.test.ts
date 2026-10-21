@@ -69,17 +69,26 @@ describe('T3 atomic round receipt',()=>{
     expect(()=>restoreMatch(next)).toThrow('multiplayer-state');
   });
   it.each(['loss','draw'] as const)('%s uses existing loss streak and XP cap; raw damage survives HP clipping',result=>{
-    const state={...opening(),gold:19,level:9,xp:0,playerHp:1,streak:{kind:'loss' as const,count:1}};
+    const state={...opening(),gold:19,level:10,xp:0,playerHp:1,streak:{kind:'loss' as const,count:1}};
     const next=accepted(applyRoundSettlement(state,receipt(state,{result,damage:9,opposingSurvivors:7})));
-    expect(next).toMatchObject({phase:'settlement',outcome:null,playerHp:0,gold:26,level:9,xp:0,multiplayer:{status:'eliminated'}});
+    expect(next).toMatchObject({phase:'settlement',outcome:null,playerHp:0,gold:26,level:10,xp:0,multiplayer:{status:'eliminated'}});
     expect(next.roundResults.at(-1)).toMatchObject({playerDamage:9,hpLost:1,hpAfter:0,xpAwarded:0,streakAfter:{kind:'loss',count:2}});
     expect(nextRound(next,next.round).ok).toBe(false);
+  });
+  it('settles ten opposing survivors and natural XP from level nine to ten once',()=>{
+    const state={...opening(),level:9,xp:83};
+    const r=receipt(state,{result:'loss',damage:12,opposingSurvivors:10});
+    const next=accepted(applyRoundSettlement(freeze(state),r));
+    expect(next).toMatchObject({playerHp:state.playerHp-12,level:10,xp:0});
+    expect(next.roundResults.at(-1)).toMatchObject({survivingEnemyCount:10,playerDamage:12,xpRequested:2,xpAwarded:1});
+    rejection(next,r,'duplicate-settlement');
+    rejection(state,{...r,opposingSurvivors:11,damage:13},'invalid-receipt');
   });
   it('rejects stale, mirror, missing, extra, invalid numeric and wrong-owner proposals unchanged',()=>{
     const state=opening(),r=receipt(state);
     rejection(state,{...r,round:3},'stale-round'); rejection(state,{...r,settlementEligible:false},'mirror-settlement');
     for(const patch of [{damage:-1},{damage:0.5},{damage:Number.MAX_SAFE_INTEGER+1},{combatTicks:1201},{seatId:'B'},
-      {growth:[{unitId:'foreign',attackDamageBps:125}]},{extra:1},{settlementEligible:null},{opposingSurvivors:10}]) rejection(state,{...r,...patch},'invalid-receipt');
+      {growth:[{unitId:'foreign',attackDamageBps:125}]},{extra:1},{settlementEligible:null},{opposingSurvivors:11}]) rejection(state,{...r,...patch},'invalid-receipt');
     for(const key of Object.keys(r)) {const missing={...r} as Record<string,unknown>;delete missing[key];rejection(state,missing,'invalid-receipt');}
     rejection({...state,gold:Number.MAX_SAFE_INTEGER},r,'invalid-receipt');
     rejection({...state,roundResults:[]},r,'unsettled-round');

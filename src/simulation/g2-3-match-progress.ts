@@ -21,7 +21,7 @@ export function createG23Progress(seed:number):G23MatchProgress{
 }
 export function grantG23Academy(initial:MatchState):{state:MatchState;events:MatchEvent[]}{
  if(initial.phase!=='preparation'||!readG23Progress(initial))return {state:initial,events:[]};
- const tier=deriveTraits(initial.preparation,'player').find(t=>t.traitId==='academy')?.tier??0;
+ const tier=deriveTraits(initial.preparation,'player',undefined,undefined,initial.items).find(t=>t.traitId==='academy')?.tier??0;
  let state:MatchState=initial;const events:MatchEvent[]=[];
  for(const milestone of [3,4,5]){
   const id=`g23:academy:${milestone}`;

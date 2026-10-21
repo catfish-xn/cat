@@ -14,7 +14,7 @@ export function g23Laboratories(seed:number,team:Team,tier:number):readonly HexC
  return result;
 }
 export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit,traits?:readonly TraitSnapshot[]):Effect[]{
- const experiment=traits?traits.find(t=>t.team===unit.team&&t.traitId==='experiment'):deriveEffectiveTrait(projectEffectiveMembership(state.preparation),unit.team,'experiment');
+ const experiment=traits?traits.find(t=>t.team===unit.team&&t.traitId==='experiment'):deriveEffectiveTrait(projectEffectiveMembership(state.preparation,undefined,undefined,state.items),unit.team,'experiment');
  const member=(u:Unit)=>experiment?.memberUnitIds?experiment.memberUnitIds.includes(u.id):experiment?.memberDefinitionIds.includes(u.definitionId);
  if(unit.location.kind!=='board'||!member(unit))return [];
  const army=state.preparation.units.filter(u=>u.team===unit.team&&u.location.kind==='board'&&member(u));

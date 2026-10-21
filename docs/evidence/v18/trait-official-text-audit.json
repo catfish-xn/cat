@@ -1,0 +1,122 @@
+{
+  "version": "14.24",
+  "traits": 25,
+  "tiers": 83,
+  "translated": [
+    {
+      "id": "high-roller",
+      "name": "百变铁手",
+      "apiName": "TFT13_HighRoller"
+    }
+  ],
+  "differences": [
+    {
+      "id": "enforcer",
+      "name": "执法官",
+      "threshold": 2,
+      "token": "PercentMaxHealthShield*100*100",
+      "official": 1200,
+      "current": 12
+    },
+    {
+      "id": "enforcer",
+      "name": "执法官",
+      "threshold": 4,
+      "token": "PercentMaxHealthShield*100*100",
+      "official": 2000,
+      "current": 20
+    },
+    {
+      "id": "enforcer",
+      "name": "执法官",
+      "threshold": 6,
+      "token": "PercentMaxHealthShield*100*100",
+      "official": 3000,
+      "current": 30
+    },
+    {
+      "id": "enforcer",
+      "name": "执法官",
+      "threshold": 8,
+      "token": "PercentMaxHealthShield*100*100",
+      "official": 4000,
+      "current": 40
+    },
+    {
+      "id": "enforcer",
+      "name": "执法官",
+      "threshold": 10,
+      "token": "PercentMaxHealthShield*100*100",
+      "official": 10000,
+      "current": 100
+    },
+    {
+      "id": "conqueror",
+      "name": "铁血征服者",
+      "threshold": 2,
+      "token": "PercentIncreasePerChest*100",
+      "official": 3,
+      "current": 5
+    },
+    {
+      "id": "conqueror",
+      "name": "铁血征服者",
+      "threshold": 4,
+      "token": "PercentIncreasePerChest*100",
+      "official": 3,
+      "current": 5
+    },
+    {
+      "id": "conqueror",
+      "name": "铁血征服者",
+      "threshold": 6,
+      "token": "PercentIncreasePerChest*100",
+      "official": 3,
+      "current": 5
+    },
+    {
+      "id": "conqueror",
+      "name": "铁血征服者",
+      "threshold": 9,
+      "token": "PercentIncreasePerChest*100",
+      "official": 3,
+      "current": 5
+    },
+    {
+      "id": "artillerist",
+      "name": "炮手",
+      "threshold": 6,
+      "token": "AD*100",
+      "official": 60,
+      "current": 70
+    },
+    {
+      "id": "sniper",
+      "name": "狙神",
+      "threshold": 4,
+      "token": "PercentDamageIncrease",
+      "official": 16,
+      "current": 18
+    },
+    {
+      "id": "sniper",
+      "name": "狙神",
+      "threshold": 6,
+      "token": "PercentDamageIncrease",
+      "official": 35,
+      "current": 36
+    },
+    {
+      "id": "sorcerer",
+      "name": "法师",
+      "threshold": 8,
+      "token": "BaseAP",
+      "official": 110,
+      "current": 125
+    }
+  ],
+  "contentDigest": "fnv1a32-utf16:9aff2c15",
+  "lootReplayDigest": "fnv1a32-utf16:ffebff3f",
+  "digestRecomputationPassed": true,
+  "v18RerecordRequired": false
+}

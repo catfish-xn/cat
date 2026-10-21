@@ -1137,6 +1137,7 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 
 ```ts
 interface RoundEconomyPreviewOutcome {
+  readonly base: number;
   readonly interest: number;
   readonly win: number;
   readonly streakGold: number;
@@ -1155,7 +1156,7 @@ previewRoundEconomy(state: MatchState): RoundEconomyPreview | null;
 
 `resolveRoundEconomy` 是预估与真实结算的共用分流：目录回合调用 planCatalogRoundEconomy（1-x 走 OPENING_ECONOMY_RULES，利息/胜利/连胜金币为 0），加时调用原 planRoundEconomy PvP 规划。Match 的离线/PvE 结算与 applyRoundSettlement 均走该入口。预估传入己方 HP/等级/经验及固定 enemySurvivors=0，伤害参数不参与返回经济字段，无须读对手。
 
-ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.interest/win/streak，streakAfter 也相等。不承诺基础收入、掉落、XP、HP 或敌方奖励。
+ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 base/interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.base/interest/win/streak，streakAfter 也相等。base 是本回合结算的基础金币，1-2/1-3/1-4 分别为 2/3/5，后续普通战斗及加时为 5；两种胜负分支相同，直接读取共用经济规划器，不含掉落或额外奖励。不承诺掉落、XP、HP 或敌方奖励。此字段仅为只读预览输出，不改变结算、存档或协议版本；无新增失败原因。
 
 Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
 
@@ -1773,7 +1774,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；G2-3 当前对局会初始化机制容器，并可能增加形态、选择、单位及事件字段；线数据已变化，不承诺与 G2-3 前逐字节相同。兼容性由当前 rules/content/digest 身份及合同字段约束。具体说：`createMatch` 对每局（单人和联机）开局即写入 `seatMechanics`（G2-3 进度的六个 seat 键和 `hidden.progress`），所以新对局的私有视图、存档和回放都带这个容器；G2-3 之前的数据一律拒绝，不做迁移，也不会出现"没有容器的当前版本对局"：存档（`restoreMatch`）先比 rules/content 版本，按 `unsupported-version` 拒绝；双边快照（`restorePlayerBattleSnapshot`）和由它们重新编译的回放/战斗输入（`restoreBattleInput`）只带快照/战斗格式版本，这两个版本号没变，因此按内容摘要不符以 `BattleValidationError('content-digest')` 拒绝。
 
 **私有视图（toPrivateSeatView）**
-- `seatMechanics?: {version, seat, hidden:{}, receipts}`：整个本席机制容器原样进入视图，不用逐个字段加白名单。`hidden` 永远发空对象。键名与 MatchState 相同，`toDisplayMatch` 直接透传，客户端选择器用 `readSeatMechanic(display, key)` 读。
+- `seatMechanics?: {version, seat, hidden:{}, receipts}`：`seat` 是显式本席公开 JSON，按约定复制；`hidden` 永远发空对象。`receipts` 按 MechanicReceipt 的 kind 逐字段白名单投影，包含 PvE 固定拆卸器收据；不透传额外字段（如 futurePlan、rngState）。键名与 MatchState 相同，`toDisplayMatch` 直接透传，客户端选择器用 `readSeatMechanic(display, key)` 读。
 - `pendingChoice.payload?`：锻造器、黑市、军械库三种选择的载荷原样发送（候选、价格、可否跳过、跳过收益、超时选项）。
 - `preparation.units[].form?`：形态英雄在棋盘上时给出当前站位对应的形态；备战席和普通英雄没有这个字段。
 

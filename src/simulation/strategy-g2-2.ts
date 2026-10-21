@@ -22,7 +22,7 @@ export function scrapConversions(units:readonly Unit[],traits:readonly TraitSnap
       const owner=units.find(u=>u.id===item.unitId);
       if(!left||!owner||owner.team!==trait.team||!trait.targetUnitIds.includes(owner.id)||catalog[item.definitionId]?.kind!=='component')continue;
       const held=equipment.filter(i=>i.unitId===owner.id).map(i=>result.get(i.id)??i.definitionId);
-      const candidates=Object.values(catalog).filter(d=>d.kind==='completed'&&d.recipe?.includes(item.definitionId)&&d.slotCost!==3&&(!d.unique||!held.includes(d.id))).sort((a,b)=>a.id<b.id?-1:1);
+      const candidates=Object.values(catalog).filter(d=>d.kind==='completed'&&!d.emblemTrait&&d.recipe?.includes(item.definitionId)&&d.slotCost!==3&&(!d.unique||!held.includes(d.id))).sort((a,b)=>a.id<b.id?-1:1);
       if(candidates.length){result.set(item.id,candidates[0].id);left--;}
     }
   }
@@ -43,7 +43,7 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
       result.push(e);continue;
     }
     if(e.mechanic==='academy'){
-      const sponsored=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&(state.g23?.sponsored ?? G22_CONVENTIONS.academy.sponsored as readonly string[]).includes(i.definitionId)).length;
+      const sponsored=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&(state.g23?.sponsored ?? G22_CONVENTIONS.academy.sponsored as readonly string[]).includes(i.definitionId)||i.location.kind==='unit'&&i.location.unitId===unit.id&&catalog[i.definitionId]?.emblemTrait==='academy').length;
       if(sponsored){const bps=sponsored*e.values.sponsoredBps*(member?2:1)+(member?e.values.memberBaseBps:0);result.push({kind:'statPercentBps',stat:'maxHp',bps},{kind:'mechanic',mechanic:'damageAmp',values:{bps}});}continue;
     }
     if(e.mechanic==='emissary'){
@@ -60,7 +60,7 @@ export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:Trait
     }
     if(e.mechanic==='scrap'){
       const holders=new Set(board.filter(u=>u.team===unit.team).map(u=>u.id));
-      const componentCount=equipment.filter(i=>holders.has(i.unitId)).reduce((n,i)=>n+(catalog[i.definitionId]?.kind==='component'?1:catalog[i.definitionId]?.recipe?2:0),0);
+      const componentCount=equipment.filter(i=>holders.has(i.unitId)).reduce((n,i)=>n+(catalog[i.definitionId]?.kind==='component'?1:catalog[i.definitionId]?2:0),0);
       result.push({...e,values:{...e.values,componentCount}});continue;
     }
     result.push(e);

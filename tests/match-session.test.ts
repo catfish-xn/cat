@@ -114,7 +114,7 @@ describe('match session commands and fixed clock', () => {
     expect(session.state.pendingChoice).toBeNull();
     expect(session.state.m8.loot.choiceResolutions).toEqual([]);
     expect(session.state.items.map(i=>i.definitionId)).toEqual(['gloves','belt']);
-    expect(session.state.consumables).toHaveLength(0);
+    expect(session.state.consumables).toHaveLength(2);
     expect(players(session.state)).toEqual(secondSettledRoster);
     const resolved = session.state, resolvedBefore = structuredClone(resolved);
     expect(session.continue(2).ok).toBe(true);
@@ -299,7 +299,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     expect(session.state.gold).toBe(1);
   });
   it('rejects thirty max-level F events without spending or advancing anything', () => {
-    const session = new MatchSession({ ...readyMatch(6240), level: 9, xp: 0 }), before = session.state;
+    const session = new MatchSession({ ...readyMatch(6240), level: 10, xp: 0 }), before = session.state;
     for (let i = 0; i < 30; i++) rejected(session, session.buyXp(), 'max-level', before);
   });
   it('replays all accepted/rejected mixed events and isolates other sessions', () => {

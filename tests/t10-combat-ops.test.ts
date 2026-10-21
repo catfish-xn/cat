@@ -57,7 +57,7 @@ describe('t10-combat-ops phase whitelist',()=>{
     rejected({...state,gold:0},s=>buyUnit(s,0,s.shop.generation),'insufficient-gold');
     rejected({...state,gold:0},rerollShop,'insufficient-gold');
     rejected({...state,gold:0},buyXp,'insufficient-gold');
-    rejected({...state,level:9,xp:0},buyXp,'max-level');
+    rejected({...state,level:10,xp:0},buyXp,'max-level');
     rejected(state,s=>sellUnit(s,'missing'),'unknown-unit');
     rejected(state,s=>deployMatchUnit(s,'unit-2',bench(9)),'invalid-location');
     rejected(state,s=>combineItems(s,'item-1','item-1'),'same-item');

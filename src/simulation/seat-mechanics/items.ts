@@ -5,7 +5,8 @@ import type { ItemRestriction } from './types';
 /** ItemDefinition.restriction check, shared by equip validation and UI previews. No restriction: anyone may hold it. */
 export function itemRestrictionAllows(restriction: ItemRestriction | undefined, unitDefinitionId: string): boolean {
   if (!restriction) return true;
-  return restriction.kind === 'trait' && (UNIT_DEFINITIONS[unitDefinitionId]?.traits.includes(restriction.traitId) ?? false);
+  const native = UNIT_DEFINITIONS[unitDefinitionId]?.traits.includes(restriction.traitId) ?? false;
+  return restriction.kind === 'exclude-trait' ? !native : restriction.kind === 'trait' && native;
 }
 
 /** Radiant item whose `radiantOf` is this completed item, or null. G2-3 adds the definitions; none exist before it. */

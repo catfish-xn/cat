@@ -19,8 +19,14 @@ export function recordG23Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:numbe
 }
 export function recordG23Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet,absorbed=0,redirected=false):void{
   if(!redirected&&u&&packet.source.definitionId==='one-thousand-cuts'&&actual+absorbed>0){const s=g23State(u);s.cuts[packet.targetId]=(s.cuts[packet.targetId]??0)+1;}
-  if(!u||actual<=0||packet.source.definitionId!=='slime-time')return;
-  ctx.heals.push({source:packet.source,targetId:u.id,amount:actual});
+  if(!u||actual<=0)return;
+  const visionary=u.mechanics?.find(m=>m.mechanic==='visionary'&&m.values.allyHealingBps>0);
+  if(visionary && ['ability-direct','ability-periodic'].includes(packet.delivery)) {
+    const allies=ctx.units.filter(a=>a.id!==u.id&&a.team===u.team&&a.alive&&a.hp>0&&!a.definitionId.startsWith('g23-forge'))
+      .sort((a,b)=>a.hp*b.maxHp-b.hp*a.maxHp||compareText(a.id,b.id));
+    if(allies[0])ctx.heals.push({source:visionary.source,targetId:allies[0].id,amount:Math.floor(actual*visionary.values.allyHealingBps/10000)});
+  }
+  if(packet.source.definitionId==='slime-time')ctx.heals.push({source:packet.source,targetId:u.id,amount:actual});
 }
 export function advanceG23Anomalies(ctx:AbilityContext):void{
   for(const u of ctx.units.filter(u=>u.alive&&u.hp>0)){

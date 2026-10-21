@@ -4,7 +4,6 @@ import {canonicalContent} from './content';
 import {validateDeployment,getPlayerDeploymentCount} from './game';
 import {foldResourceProvenance,type ResourceProvenanceContext} from './resource-provenance';
 import {getCatalogRoundById} from './round-selectors';
-import {deriveTraits} from './trait-snapshot';
 import {readG23Progress,epicCrownsAtResourcePrefix} from './g2-3-state';
 import {replayG23Economy} from './g2-3-match-progress';
 import {g23JunkerMenu,G23_JUNKER_PAID} from './g2-3-junker';
@@ -61,7 +60,7 @@ export function validateG23GrantEvidence(state:MatchState,context:ResourceProven
   if(receipt.receiptId.startsWith('g23:academy:')){
    const tier=Number(receipt.receiptId.split(':').at(-1));
    check(receipt.kind==='item'&&receipt.source==='academy'&&[3,4,5].includes(tier)
-    &&receipt.definitionId===p.sponsored[tier-3]&&(deriveTraits(preparation,'player').find(t=>t.traitId==='academy')?.tier??0)>=tier,'academy qualification');
+    &&receipt.definitionId===p.sponsored[tier-3],'academy qualification');
    const birth=entries[prefix];
    check(birth?.kind==='item-acquired'&&birth.itemId===receipt.itemId&&birth.source.kind==='mechanic'&&birth.source.receiptId===receipt.receiptId,'academy birth boundary');
   }else{

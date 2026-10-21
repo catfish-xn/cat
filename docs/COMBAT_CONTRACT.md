@@ -1,5 +1,9 @@
 # M5 Combat contract v5
 
+## v18 炮手 6：14.24b 的 12/17 B 补丁修正
+
+炮手（Cannoneer，内部 id `artillerist`，归档 `TFT13_Martialist`）6 档成员攻击力加成由 60% 修正为 **70%（7000 Bps）**，依据 `M9_DATA_LEDGER.md` 的 B-12/17 `effects.variables.AD` 行。2/4 档仍为 10%/45%；6 档每 4 次普攻触发的 250% AD 范围物理包不变。运行时表供战斗编译和说明共用，原始归档不改；无公共签名、失败原因、tick 或结算顺序变化。
+
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`, `ability-types.ts` and `strategy-types.ts` define the boundary; [M5_RULES R5–R6](../M5_RULES.md) defines numerical rules and the19 finite abilities. Runtime S13 execution lives in `combat-s13.ts`, `combat-s13-abilities.ts` and `combat-s13-state.ts`. The legacy standalone engine remains for unchanged low-level/historical primitive tests; its max-shield behavior must not be confused with M5 layers.
@@ -177,3 +181,7 @@ createCombatReplayRecorder(initialState: CombatState,
   using them. Capturing a replay does not imply that a spot check has run, and never
   authorizes another settlement. Server integration/spot-check policy is separate.
   See also [MULTIPLAYER_CONTRACT.md](MULTIPLAYER_CONTRACT.md).
+
+## v18 纹章与高档位扩展（2026-10-21）
+
+来源、数值与延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份。迅击战士按目标缺失生命计算攻速、当前目标死亡获得4档护盾；搏击手触发治疗分40个tick发放；法师8技能命中弱化输出25%、持续60tick、不叠加；先知8按技能实际生命伤害的20%治疗友军。全程整数/基点、50ms tick、显式RNG；完整来源/事件账本与恢复验证保留。

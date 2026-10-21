@@ -96,4 +96,4 @@ export type MechanicPendingChoice = import('../strategy-types').PendingChoice
  * Item equip restriction (ItemDefinition.restriction). `trait`: only units whose definition has that trait may hold it,
  * e.g. black market items `{ kind: 'trait', traitId: <Alchemist trait id> }`. Equip on anyone else fails 'item-restricted'.
  */
-export type ItemRestriction = { readonly kind: 'trait'; readonly traitId: string };
+export type ItemRestriction = { readonly kind: 'trait' | 'exclude-trait'; readonly traitId: string };

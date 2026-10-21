@@ -84,7 +84,7 @@ export function readCombatStats(unit: CombatState['units'][number], state: Pick<
   // defenses only reads identity/alive/target fields of other units.
   // It needs no detached runtime for those read-only samples.
   const current = working(unit), units = state.units;
-  return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick),
+  return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick, state.units),
     attackRange: range(current), armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
 }
 function damageRequest(packet: S13Packet, combatId: string, tick: number): DamageRequest {
@@ -319,7 +319,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
       if(unit.unreavedMaxMana!==undefined)unit.maxMana=unit.unreavedMaxMana;
-      const oldInterval = interval(unit, tick);
+      const oldInterval = interval(unit, tick, units);
       castAnomaly(ctx,unit,target);
       const targets = planS13Cast(ctx, unit, target, seq);
       const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
@@ -350,7 +350,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
       if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
-      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
+      const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
       const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
       if(gambler)awardItemGold(unit,gambler,'gamblers-blade',unit.runtime.attackCount-1);
       hooks(unit, 'onAttack', seq);
@@ -510,7 +510,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const damageType = damageTypeForTarget(packet.damageType, targetUnit(target, tick), ctx.resolutionFacts!);
     if (damageType !== packet.damageType) packet = { ...packet, damageType };
     if (p3BurnRaw(owner, packet) !== packet.raw) packet = { ...packet, raw: p3BurnRaw(owner, packet) };
-    const request = damageRequest(packet, state.combatId ?? 'standalone', tick);
+    // Sorcerer 8 weakness is one outgoing multiplier, even when several sorcerers hit the same enemy.
+    const weakness=Math.max(0,...(owner?.mechanismState?.statuses??[]).flatMap(g=>g.contributions.filter(c=>c.source.sourceKind==='trait'&&c.source.definitionId==='sorcerer'&&isEffective(c,tick)).map(c=>c.application.magnitudeBps)));
+    const request = damageRequest(weakness&&!packet.inherited ? {...packet,raw:Math.floor(packet.raw*(10000-weakness)/10000)} : packet, state.combatId ?? 'standalone', tick);
     const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
     const prepared = prepareDamage(request, sample);
     if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
@@ -591,6 +593,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   if (trackAssists) for (const death of allOutcomes.filter(o => o.killingPacket)) for (const actorId of damageContributors[death.context.targetId] ?? [])
     if (units.some(u => u.id === actorId && u.hp > 0)) emitMechanismSignal(ctx, { event: 'kill-or-assist', tick, actionSeq: death.context.rootActionSeq, actorId, targetId: death.context.targetId, cast: null }, { ...ctx.resolutionFacts!, damage: [death] });
   for(const [victimId,source] of killed){const contributors=[source.ownerId,...(damageContributors[victimId]??[])];extendG23Swain(ctx,victimId,contributors);recordG23Conquest(ctx,victimId,contributors);}
+  // Shield follows the death of the current target, including kills credited to another ally.
+  for(const u of units.filter(u=>u.alive&&u.hp>0)) {
+    const quick=u.mechanics?.find(m=>m.mechanic==='quickstriker');
+    if(quick?.values.shield && u.targetId && killed.has(u.targetId)) grantShield(u,quick.source,quick.values.shield,tick+quick.values.durationTicks,tick,events);
+  }
   settleG23ExperimentKills(ctx,killed);
   for (const source of killed.values()) {
     const owner = units.find(u => u.id === source.ownerId);

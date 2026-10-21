@@ -1,5 +1,29 @@
 # M5 Match contract v5
 
+## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
+
+S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与拆卸器、纹章/高档羁绊及炮手修正合并后的完整根为 CONTENT `fnv1a32-utf16:213ae9e4`、LOOT `fnv1a32-utf16:ffebff3f`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+
+v18 使用独立 `scripts/verify-v18-epoch.cjs`、`record-v18-*.cjs` 与 `docs/evidence/v18/`、`tests/fixtures/v18-*`；CURRENT Herald 指向 `record-v18-herald.cjs`。v17 及更早证据保持历史字节，不作为当前规则录制目录。
+
+## v18 PvE 固定装备拆卸器（与 10 级同版）
+
+每个按仓库目录判定为 PvE 的回合，在本回合法球之外，给每个结算后仍存活的玩家固定 1 个装备拆卸器，不检查原有数量，不要求胜利或击杀载体。来源：**原版 14.23 起的规则（本任务用户确认）**。当前为 1-2、1-3、1-4、2-7、3-7、4-7、5-7、6-7；之后只有 PvP 加时。箱子/法球表中的原拆卸器行、权重、顺序及显式 lcg32-v1 随机流不变。
+
+| 原版规则值 | 值 | 来源 |
+| --- | --- | --- |
+| 每个 PvE 额外拆卸器 | 每存活玩家 1 个，无持有数量门槛 | 原版 14.23 起 |
+
+| 项目约定值 | 约定 |
+| --- | --- |
+| 发放时点/存活 | PvE 原子结算后 hpAfter > 0；淘汰席不发；单人 6-7 存活终局仍发 |
+| 唯一收据 | seatMechanics.receipts；source=pve-remover；receiptId=pve-remover:<roundId>，独立于法球领取收据 |
+| 库存/事件 | 每份独立 consumableId，沿用 mechanicGranted；随结算提交，不消费 RNG；重复 step、Continue、恢复不重发 |
+
+内部 `grantPveRemover(state: MatchState): MatchState` 只授予当前已结算 PvE；不适用或收据已存在则返回原对象。`validatePveRemover(state: MatchState): void` 从已结算回合和 hpAfter 重建应有收据，缺失、重复、错误来源/轮次/类型抛 `RangeError('Invalid PvE remover receipt')`。恢复只验证，不发奖励。公开 Match/服务器命令签名和失败枚举不变，失败保持原 state，不产生事件。
+
+规则层没有消耗品格位/容量限制：`ConsumableInstance`（`src/simulation/consumable-types.ts`）只有 consumableId/definitionId；`consumables.ts` 校验每份 ID 与唯一收据。界面建议按 definitionId 聚合显示数量，使用时提交组内一个真实 consumableId；不改变领域库存结构。
+
 ## v17 当前身份（2026-10-20，草稿，覆盖下文历史交接状态）
 
 #265 生成流程保持：`CONTENT_DIGEST` 与 `LOOT_REPLAY_DIGEST` 由 `content/identity-constants.ts` 导出同一份生成常量，浏览器、开发与服务器共用。完整根表达式保存在 `scripts/content-digest.ts` / `scripts/loot-replay-digest.ts`，四张归档表的说明来源列仍参与完整内容根。执行 `node scripts/update-content-identities.cjs --write` 后 `--check`；CI fast 从完整表重算核对。v17 法球组合本次 CONTENT 从 `fnv1a32-utf16:8a955c10` 变为 `fnv1a32-utf16:05439fc4`，LOOT 从 `fnv1a32-utf16:62c76cb9` 变为 `fnv1a32-utf16:132ae758`，规则 manifest 随阶段/RNG 政策更新。
@@ -123,12 +147,14 @@ match.ts 与既有 server-entry 继续导出。有效调用必须传下标；TS 
 
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
+Current progression: rules/content `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`, policy `s13-14.24b-ten-levels-v1`. Schema8/save4/replay3/command4 are unchanged; old identity/digest saves are rejected without migration. `getXpToNextLevel(level:number):number|null`, `getShopOdds(level:number):readonly[number,number,number,number,number]` and `grantXp(level:number,xp:number,amount:number):ProgressionResult` accept levels1–10; invalid levels/unnormalized XP throw `RangeError`. `buyXp(state:MatchState):MatchCommandResult` retains failure order wrong-phase → max-level → insufficient-gold and original-state atomic rejection. `RoundSettlementReceipt.opposingSurvivors` accepts0–10 (the surviving enemy hero count, not bench size), otherwise `invalid-receipt`; damage formula is unchanged.
+
 Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and `strategy-types.ts`. [M5_RULES](../M5_RULES.md) defines exact values and ordering. Match is the sole authority for economy, resources, schedule, progression and terminal state. The historical M4 contract is available in Git at the M4 baseline; this document describes the current API.
 
 - `createMatch(seed=42)` accepts uint32 including zero. It returns schema5/rules `m5-14.24b-v1`/content `s13-14.24b-slice-v1`/protocol2, a complete content digest, 100HP/10G/level3 and the three starting units. Opening component choices precede the first augment. Round1 means2-1; round35 means6-7.
 - Successful commands return `{ok:true,state,events}`. Failure returns `{ok:false,state,reason}` with the identical original state, no events, and no partial gold, shop generation, RNG, ID, receipt, growth or sequence mutation. `setShopLock` with the current value is a successful unchanged-state no-op.
 - Preparation permits buy/sell/reroll/XP/deploy/item/lock commands. Buy validates generation and purchased status before resources, plans recursive triples atomically and checks final bench capacity. New candidate IDs consumed in upgrades are never reused. Price and sell value come from definitions, never UI.
-- F costs4G/4XP, rejects wrong-phase then max-level then insufficient-gold, and never changes the current shop. Level9 caps XP at0. Requested and applied XP are separately recorded. D costs2G and keeps the lock flag. Natural Continue refreshes only unlocked shops; every generated shop consumes ten shop words and increments generation.
+- F costs4G/4XP, rejects wrong-phase then max-level then insufficient-gold, and never changes the current shop. Level10 caps XP at0; level9 requires84XP to reach10. Level10 shop odds are5/10/20/40/25, with levels1–9 unchanged and level11 rejected. Requested and applied XP are separately recorded. D costs2G and keeps the lock flag. Natural Continue refreshes only unlocked shops; every generated shop consumes ten shop words and increments generation.
 - Deployment shares `validateMatchDeployment` between preview and commit. Geometry is unchanged; nine bench slots and population cap `getDeploymentCap(state)` = level + granted Tactician's Crowns (G2-4a, see below). Moving a deployed unit does not consume an extra slot. Start rejects over-cap preparations. Empty player boards can concede immediately at tick0.
 - Tactician's Crown (金铲铲冠冕, `TFT_Item_ForceOfNature`, source `MaxArmySizeIncrease` 1; user rule 2026-10-17): every G2-3 reward claim with `kind:'item'` and `definitionId:'TFT_Item_ForceOfNature'` adds +1 to `getDeploymentCap` permanently, wherever the crown sits (inventory, board or bench unit) and even after its holder is sold, it is removed or the instance is gone. A grant that fails records no claim and adds nothing. Saves, frozen combat inputs and PvP snapshots add no field: each validates population against the claims in the G2-3 progress it already carries, and a frozen input's claims must be a prefix of the authoritative claims. In this slice crowns come only from Conqueror tiers 12/15 (no spatula, no recipe).
 - Crown win gold (`TFT_Item_ForceOfNature`, source `PercentGoldChance=10`): user conventions G24-CROWN-GOLD-01..05 count only crowns equipped on deployed units at combat start (dead holders still count, inventory/bench excluded). Each crown independently rolls 10% for 1 gold on PvE/PvP wins; losses/draws do not roll. The G23 lcg32-v1 stream consumes one draw per crown after the battle's black-market draw. Gold is credited directly, after high-roller/chest payouts, once under `g23:crown:<battleId>` with source `tacticians-crown`; no pickup orb. `G23BattleFacts.crowns?:number` is omitted when zero (otherwise 1..84, the structural 7×4 deployment cells × 3 equipment slots bound); `G23EconomyAction.crownGold?:number` exists when rolled, including zero. Restore validates deterministic economy replay, mechanic receipt linkage, frozen combat input and terminal facts; repeated step/settlement/Continue never pays again. Rules/content v5 and policy `g2-4a-v5`; schema/save/replay unchanged; previous identity rejected, no migration. Evidence and convention provenance: `docs/evidence/g2-3/RECONCILIATION.md`.
@@ -483,7 +509,7 @@ interface SeatMechanicsState {
   version: 'g2-3-seat-mechanics-v1';
   seat: Record<string, MechanicJson>;    // 本席可见，原样进入联机视图
   hidden: Record<string, MechanicJson>;  // 只在权威侧，永不发给客户端（RNG 字、未来候选）
-  receipts: MechanicReceipt[];           // 只追加的收据，本席可见
+  receipts: MechanicReceipt[];           // 只追加的收据，本席按 kind 白名单投影
 }
 readSeatMechanic(state, key) / readHiddenMechanic(state, key)
 writeSeatMechanic(state, key, value | undefined) / writeHiddenMechanic(...)   // 纯函数，undefined 删除
@@ -501,6 +527,8 @@ appendMechanicReceipt(state, receipt) / findMechanicReceipt(state, receiptId)
 - 凡是影响界面显示或客户端选择器（羁绊、属性、previewCombine、previewEquip、getDeploymentCap）的状态都放 `seat`；客户端拿不到 `hidden`，选择器不能读它。
 - 需要界面播提示时，同一命令里发 `{type:'seatMechanicChanged', key}` 事件。
 - `restoreMatch` 只做结构校验（`validateSeatMechanicsState`），各机制自己的不变量由 Codex 补进恢复校验。
+
+私有视图的 `seatMechanicsView(state: MatchState): SeatMechanicsState | undefined` 保留 `seat` 的公开 JSON，`hidden` 固定为空；收据只复制 `receiptId/round/roundId/source/kind` 和各类型已定义字段：gold 的 amount；unit 的 definitionId/resolution/unitId/gold/可选 orbId、starLevel；consumable 的 definitionId/consumableId；item 的 definitionId/itemId；choice 的 choiceKind/optionId/skipped/price/itemId/timedOut。PvE 拆卸器同样走 consumable 分支，额外字段不投影。返回数据与输入无共享可变引用；不改命令签名、失败原因或存档收据。
 
 ### 2 发放与收据（每个 receiptId 只发一次）
 
@@ -523,6 +551,7 @@ reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
 - 存档一致性 A2/A4/A5：首次构造 G23 DTO/atoms 之前，先按经济收据中的轮次、结算身份与事实重推完整奖励包，核对 id、round、source、tier、reward；atoms 只遍历匹配的冻结表项，不按存档数量展开。
 - 学院赠装和拾荒者选择成功后，在 `seatMechanics.hidden.grantEvidence` 逐条记录 `{receiptId,round,resourcePrefixLength,mechanicPrefixLength,economyPrefixLength,level,units}`。快照取授予/选择前，units 为当时持有者的实例、定义、星级、队伍与部署位置；不投影给客户端。
 - 恢复时独立折叠资源前缀并核对快照，校验轮次、前缀顺序、部署合法性、位置唯一性与容量。学院须满足当时 3/4/5 羁绊资格且下一资源事实恰为该物品出生；拾荒者用 seed、已验证购买前缀和当时最强 Rumble 重建菜单，核对 unitId、选项、3 星 titan 及超时默认项。当前单位售出/合星不改历史资格；冻结战斗 DTO 的购买记录须与已验证记录一致。
+  - 含学院授予证据的普通存档也必须重放历史装备绑定并检查授予时的部署资格；已有结算、未携带外部战斗回放或没有 D14 进度均不能跳过此项。对象、JSON 和序列化入口执行相同检查。
 - 相关收据缺少上述新证据即拒绝读取，不迁移、不补造；未触发这些授予的存档不需要空证据字段。规则数值、内容 digest 和各版本不变。
 - 已知边界（约定）：拾荒者购买没有资源出生事实，`resourcePrefixLength` 只要求落在该轮资源窗口内且单调；选择期间允许交易，窗口内任一前缀都对应一条合法操作顺序。没有经验购买账本，`level` 只限在 `[上一轮 levelAfter, 本轮 levelBefore 或当前等级]`。部署位置只要求合法、互不相同且不超容量。
 
@@ -718,3 +747,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 | `d14UnitBase(unit:Pick<Unit,'definitionId'\|'starLevel'>,promoted:boolean)`（`d14-anomalies/projection.ts`） | 返回 `{base:ResolvedUnitStats,ability:ResolvedAbility}`；调用方先认证证书，非法专用晋升抛出 `RangeError`。全部效果源随后仅解析一次。 |
 
 `restoreD14` 保留为独立 D3/D14 事务包 API；生产 `restoreMatch` 使用上述 Match/B8 账本认证，不要求另传或信任独立包的候选命令日志。两个恢复入口的可信边界不同，不能混用。
+
+## v18 纹章与高档位扩展（2026-10-21）
+
+实现、导出签名、输入输出/失败语义、来源覆盖与明确延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份，等级与固定拆卸器规则保持。`deriveTraits` 第五参数可传当前 `items`；`buildStrategySnapshot` 自动编译冻结装备身份。公开合成/装备/重铸命令签名和失败枚举不变。

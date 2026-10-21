@@ -1,6 +1,6 @@
 import type { TraitDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
-/** Values transcribed from normalized/g2-1-traits.json. High tiers requiring emblems remain unreachable in this slice. */
+/** Values transcribed from normalized/g2-1-traits.json. All source tiers are active in g2-3-traits.ts; this legacy table remains for archived slices. */
 export const G2_TRAIT_DEFINITIONS: Readonly<Record<string, TraitDefinition>> = freezeContent({
   automata: { id: 'automata', name: '自动机', target: 'members', tiers: [
     [2, 150, 25], [4, 400, 60],

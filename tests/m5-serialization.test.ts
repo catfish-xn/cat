@@ -1,10 +1,21 @@
 import {describe,expect,it} from 'vitest';
-import {startMatchCombat} from '../src/simulation/match';
+import {buyXp,createMatch,startMatchCombat} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {accepted,readyMatch,finish,reachRound} from './match-helpers';
 import type {MatchState} from '../src/simulation/match-types';
 const copy=(s:MatchState):any=>JSON.parse(JSON.stringify(s));
 describe('schema5 rejects corrupted domain state without replaying side effects',()=>{
+ it('restores paid XP at level nine and ten, rejecting XP at the cap and level eleven',()=>{
+  let state={...createMatch(42),gold:1000};
+  while(state.level<9)state=accepted(buyXp(state));
+  state=accepted(buyXp(state));
+  expect(state.level).toBe(9);expect(state.xp).toBeGreaterThan(0);
+  expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  while(state.level<10)state=accepted(buyXp(state));
+  expect(state.xp).toBe(0);expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  expect(()=>restoreMatch({...state,xp:1})).toThrow('current XP');
+  expect(()=>restoreMatch({...state,level:11})).toThrow('level/HP bounds');
+ });
  it.each([
   ['old schema',(s:any)=>{s.schemaVersion=4;s.rulesVersion='m4-v1';s.contentVersion='m4-slice-v1';}],
   ['unknown digest',(s:any)=>{s.contentDigest='other';}],['protocol',(s:any)=>{s.commandProtocolVersion=1;}],

@@ -151,7 +151,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
-  requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(state.level === MATCH_RULES.maxLevel ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -544,7 +544,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
       requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
       if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
       // G2-4b over-time restores: one declared item effect owns every pulse.
-      if(task.kind.startsWith('g24')) requireValue(task.source.sourceKind === 'item' && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');
+      if(task.kind.startsWith('g24')) requireValue((task.source.sourceKind === 'item' || task.source.sourceKind === 'trait' && task.source.definitionId === 'pit-fighter') && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');
       if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');

@@ -151,8 +151,8 @@ describe('M5 atomic economy and independent ledger', () => {
     let state = ledger(economyFixture(), { type: 'buyXp' });
     state = ledger(state, { type: 'buy', slot: 0, generation: 1 });
     expect(state.shop.generation).toBe(1);
-    rejects({ ...state, level: 9, xp: 0, gold: 0 }, buyXp, 'max-level');
-    expect(ledger({ ...economyFixture(), level: 8, xp: 75, gold: 4 }, { type: 'buyXp' })).toMatchObject({ level: 9, xp: 0, gold: 0 });
+    rejects({ ...state, level: 10, xp: 0, gold: 0 }, buyXp, 'max-level');
+    expect(ledger({ ...economyFixture(), level: 9, xp: 83, gold: 4 }, { type: 'buyXp' })).toMatchObject({ level: 10, xp: 0, gold: 0 });
   });
   it('keeps every failed D/F state field unchanged during a 60-command burst', () => {
     const state = freeze({ ...economyFixture(), gold: 0 });

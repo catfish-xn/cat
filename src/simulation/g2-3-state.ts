@@ -44,7 +44,7 @@ export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(sta
 }
 export function updateG23Cells(state:MatchState):MatchState{
  const p=readG23Progress(state);if(!p)return state;
- const tier=deriveTraits(state.preparation,'player').find(t=>t.traitId==='experiment')?.tier??0;
+ const tier=deriveTraits(state.preparation,'player',undefined,undefined,state.items).find(t=>t.traitId==='experiment')?.tier??0;
  return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier)}}};
 }
 /** Generic receipts authorize every grant; internal selectors can never mint a second resource birth. */

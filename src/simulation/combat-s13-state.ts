@@ -109,7 +109,7 @@ export function amount(unit: S13Unit, tick: number, coefficients: { flat?: numbe
     missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'application', cap: null },
     { holder: hpSample(unit), attackDamage: ad(unit), abilityPower: ap(unit, tick) });
 }
-export function interval(unit: S13Unit, tick: number): number {
+export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit[] = []): number {
   // R7 neutral definitions author exact integer periods; they have no speed
   // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
   if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
@@ -122,7 +122,9 @@ export function interval(unit: S13Unit, tick: number): number {
     + (unit.anomalyState?.firstCastTick !== undefined ? Math.round(P4_SOURCE.CertainDeath.values.BonusAS * 10000) : 0)
     + (unit.anomalyState?.revivedAtTick !== undefined ? Math.round(P4_SOURCE.EvenInDeath.values.BonusAttackSpeed * 10000) : 0);
   const signedSpeed = modifierValues('attackSpeed', statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
-  const speedBps = bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
+  const quick = unit.mechanics?.find(m=>m.mechanic==='quickstriker'), target=units.find(u=>u.id===unit.targetId);
+  const quickBps=quick ? quick.values.minBps+(target ? Math.floor((quick.values.maxBps-quick.values.minBps)*(target.maxHp-target.hp)/target.maxHp) : 0) : 0;
+  const speedBps = quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }

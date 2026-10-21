@@ -1,7 +1,7 @@
 /**
  * G5 / SR-G5-02: the private seat view carries `economyPreview`, the rules' `previewRoundEconomy` of the same state as
  * it returns it (contract §14.4). Over a whole room match into overtime, every seat's last preview before a settlement
- * equals that settlement's `incomeBreakdown` item by item (interest, victory gold, streak gold) and its `streakAfter`,
+ * equals that settlement's `incomeBreakdown` item by item (base, interest, victory gold, streak gold) and its `streakAfter`,
  * in the branch of the result (a draw settles as a loss), whenever gold and streak did not change in between.
  */
 import { describe, expect, it } from 'vitest';
@@ -42,8 +42,8 @@ describe('G5 economyPreview in the private seat view', () => {
             if (result.result === 'supply') expect(before.preview).toBeNull();
             else if (before.preview && before.preview.gold === result.goldBefore && before.streak.kind === result.streakBefore.kind && before.streak.count === result.streakBefore.count) {
               const branch = result.result === 'playerWin' ? 'ifWin' : 'ifLoss', outcome = before.preview[branch];
-              const got = { interest: outcome.interest, win: outcome.win, streak: outcome.streakGold, streakAfter: outcome.streakAfter };
-              const want = { interest: result.incomeBreakdown.interest, win: result.incomeBreakdown.win, streak: result.incomeBreakdown.streak, streakAfter: result.streakAfter };
+              const got = { base: outcome.base, interest: outcome.interest, win: outcome.win, streak: outcome.streakGold, streakAfter: outcome.streakAfter };
+              const want = { base: result.incomeBreakdown.base, interest: result.incomeBreakdown.interest, win: result.incomeBreakdown.win, streak: result.incomeBreakdown.streak, streakAfter: result.streakAfter };
               if (JSON.stringify(got) !== JSON.stringify(want)) mismatches.push(`${seat.seatId} ${result.roundId}: ${JSON.stringify(got)} vs ${JSON.stringify(want)}`);
               expect(before.preview.roundId).toBe(result.roundId);
               compared.push({ roundId: result.roundId, gold: before.preview.gold, branch });
