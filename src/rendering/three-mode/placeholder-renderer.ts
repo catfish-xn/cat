@@ -83,29 +83,22 @@ const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 const PICK_RADIUS = 0.8;
 
 /**
- * Distance along a ray (unit direction) to where it enters the upright cylinder standing on `base` (radius, from y=0 up
- * to `height`), through its side or top; 0 when the origin is inside it, null when the ray misses it.
+ * How close a ray (unit direction) passes to a piece's upright axis, the segment from `base` up `height`. A piece is under the pointer when the distance is within its pick
+ * radius (a capsule around the axis, so the star row on top counts too).
  */
-function cylinderHit(origin: Vector3, direction: Vector3, base: Vector3, radius: number, height: number): number | null {
-  const ox = origin.x - base.x, oz = origin.z - base.z, top = base.y + height, bottom = base.y;
-  const inside = (t: number) => { const y = origin.y + direction.y * t; return y >= bottom && y <= top; };
-  let best: number | null = null;
-  const consider = (t: number) => { if (t >= 0 && (best === null || t < best)) best = t; };
-  const a = direction.x * direction.x + direction.z * direction.z, b = ox * direction.x + oz * direction.z, c = ox * ox + oz * oz - radius * radius;
-  if (a > 1e-12) {
-    const disc = b * b - a * c;
-    if (disc >= 0) {
-      const near = (-b - Math.sqrt(disc)) / a;
-      if (c <= 0 && inside(0)) return 0;
-      if (inside(near)) consider(near);
-    }
+function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height: number): number {
+  const ox = origin.x - base.x, oz = origin.z - base.z;
+  const a = direction.x * direction.x + direction.z * direction.z;
+  // Where the ray passes the vertical line closest (seen from above), then clamped onto the segment.
+  let t = a > 1e-12 ? Math.max(0, -(ox * direction.x + oz * direction.z) / a) : 0;
+  const y = origin.y + direction.y * t, clamped = Math.min(base.y + height, Math.max(base.y, y));
+  if (clamped !== y) {
+    // Above or below the segment: the ray's closest point to that end instead.
+    const ex = base.x - origin.x, ey = clamped - origin.y, ez = base.z - origin.z;
+    t = Math.max(0, ex * direction.x + ey * direction.y + ez * direction.z);
+    return Math.hypot(origin.x + direction.x * t - base.x, origin.y + direction.y * t - clamped, origin.z + direction.z * t - base.z);
   }
-  // Caps (the top seen from above, mostly): where the ray crosses y = top or y = bottom inside the circle.
-  if (Math.abs(direction.y) > 1e-12) for (const y of [top, bottom]) {
-    const t = (y - origin.y) / direction.y, x = ox + direction.x * t, z = oz + direction.z * t;
-    if (x * x + z * z <= radius * radius) consider(t);
-  }
-  return best;
+  return Math.hypot(ox + direction.x * t, oz + direction.z * t);
 }
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
@@ -589,10 +582,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
   /**
    * The drawn piece under a point: my units for board gestures, any team for item drops (BoardScene judges the target).
-   * Each piece is a hit volume, as in TFT: an upright cylinder over its cell (PICK_RADIUS of a hex) up to its star row,
-   * nearest along the ray wins. Not the model's triangles: a skinned ray test transforms every vertex by its bones on
-   * each pointer move (15–35 ms with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between
-   * limbs, the cell under the feet and a body whose cached bounds went stale after it moved could not be clicked.
+   * Each piece is a hit volume, as in TFT: a capsule (PICK_RADIUS of a hex) around its upright axis from the floor to
+   * its star row. Where volumes overlap on screen the piece whose axis passes closest to the pointer wins, not the
+   * nearest surface: a short unit in the cell in front no longer takes an item aimed at the body behind it.
+   * Not the model's triangles: a skinned ray test transforms every vertex by its bones on each pointer move (15–35 ms
+   * with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between limbs, the cell under the feet,
+   * the star row and a body whose cached bounds went stale after it moved could not be clicked.
    */
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
@@ -602,11 +597,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     camera.updateMatrixWorld();
     ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
     const radius = (grid.radius ?? 36) * PICK_RADIUS;
-    let best: string | null = null, bestDistance = Infinity;
+    let best: string | null = null, bestDistance = radius;
     for (const [unitId, view] of pieces) {
       if (!view.alive || !view.root.visible || (!anyTeam && view.team !== 'player')) continue;
-      const distance = cylinderHit(ray.ray.origin, ray.ray.direction, view.root.position, radius, view.starHeight);
-      if (distance !== null && distance < bestDistance) { best = unitId; bestDistance = distance; }
+      const distance = axisDistance(ray.ray.origin, ray.ray.direction, view.root.position, view.starHeight);
+      if (distance <= bestDistance) { best = unitId; bestDistance = distance; }
     }
     return best;
   };
