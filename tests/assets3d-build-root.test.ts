@@ -50,6 +50,32 @@ it('accepts space/comma separated roots and repeated flags', () => {
     .toEqual({ roots: ['a', 'b', 'c', 'd'], out: 'e', force: true });
   expect(() => buildArguments(['--roots'])).toThrow();
 });
+it('keeps board alignment and model in the same winning root, including merged inputs', async () => {
+  const root = await workspace(), a = join(root, 'a'), b = join(root, 'b');
+  const first = await fixture(a), second = await fixture(b, true);
+  const board = (offset: number) => ({ alignment: { scale: [1, 1, 1], offset: [offset, 0, 0],
+    target: { radius: 34, origin: { x: 0, y: 0 } } }, grid: { columns: 7, rows: 8 } });
+  await put(a, 'manifest.json', { ...first.manifest, boards: { unit: board(1) } });
+  const merged = join(root, 'merged');
+  await buildAssetRoot({ roots: [a], out: merged });
+  const out = join(root, 'out');
+  // A later model without alignment must not inherit alignment from an older root.
+  await expect(buildAssetRoot({ roots: [merged, b], out })).rejects.toThrow('board-alignment-model-root-mismatch:unit');
+  await expect(stat(out)).rejects.toMatchObject({ code: 'ENOENT' });
+  await put(b, 'manifest.json', { ...second.manifest, boards: { unit: board(2) } });
+  await buildAssetRoot({ roots: [merged, b], out });
+  const manifest = await json(out, 'manifest.json');
+  expect(manifest.boards.unit).toEqual(board(2));
+  expect(manifest.models.unit.path).toBe('roots/1/arbitrary/hero.glb');
+  const reversed = join(root, 'reversed');
+  await buildAssetRoot({ roots: [b, merged], out: reversed });
+  expect((await json(reversed, 'manifest.json')).boards.unit).toEqual(board(1));
+  // An unrelated later root does not displace either half of the board entry.
+  await put(b, 'manifest.json', { schemaVersion: 1, models: {} });
+  await put(b, 'action-bindings.json', {});
+  await buildAssetRoot({ roots: [merged, b], out: join(root, 'unrelated') });
+  expect((await json(join(root, 'unrelated'), 'manifest.json')).boards.unit).toEqual(board(1));
+});
 it('allows force for an empty directory and marked output from a previous build', async () => {
   const root = await workspace(), input = join(root, 'input'), out = join(root, 'out');
   await fixture(input); await mkdir(out);
