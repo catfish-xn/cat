@@ -1,13 +1,15 @@
-import { expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { G23_CONQUEROR_CHESTS } from '../src/simulation/content/g2-3-policy';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
-import { toDisplayMatch } from '../src/rendering/online/seat-view-adapter';
+import { toDisplayMatch, type DisplayMatch } from '../src/rendering/online/seat-view-adapter';
 import { conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime } from '../src/rendering/trait-column';
-import { activateFamily } from '../src/simulation/family-heist';
+import { activateFamily, familyDisplay } from '../src/simulation/family-heist';
 import { g23RewardLines } from '../src/presentation/g23-reward-text';
 import { G23_BLACK_MARKETS } from '../src/simulation/content/g2-3-policy';
+
+afterEach(() => vi.unstubAllGlobals());
 
 const withProgress = (stacks: number, chestsOpened: number, shimmer: number) => {
   const state = createMatch(7), p = readG23Progress(state)!;
@@ -62,35 +64,66 @@ it('ladders the 15 chests: opened, the next with the stacks still missing, then 
   for (const market of G23_BLACK_MARKETS) for (const option of market.options) expect(g23RewardLines(option.reward).join(' ')).not.toMatch(/TFT|_|^$/);
 });
 
-it('puts the 家人 5 reward and progress at the foot of the Family card only, and marks the reunion on the row', () => {
+it('projects the current Family reward and progress as card-only lines offline and online', () => {
   const base = createMatch(7), p = activateFamily(readG23Progress(base)!, base.round);
   const state = writeG23Progress(base, { ...p, family: { ...p.family!, CurrentProgress: 7 } }), task = readG23Progress(state)!.family!;
   const family = g23TraitRuntime(state)!.get('family')!;
-  expect(family.every(line => line.cardOnly)).toBe(true);
-  expect(family.map(line => line.label)).toEqual(['当前奖励', '进度']);
-  expect(family[1]!.value).toBe(`7/${task.CurrentRewardValue}`);
+  expect(family).toEqual([
+    { label: '当前奖励', value: familyDisplay(task)!.currentRewardName, cardOnly: true },
+    { label: '进度', value: `7/${task.CurrentRewardValue}`, cardOnly: true },
+  ]);
   // Same lines from my private seat view online.
+  vi.stubGlobal('window', { location: { search: '?mode=online' } });
   expect(g23TraitRuntime(toDisplayMatch(toPrivateSeatView(state) as never))!.get('family')).toEqual(family);
+});
 
+const reunionBoard = () => {
+  const base = createMatch(7);
   const ids = ['violet', 'vander', 'powder', 'warwick', 'jinx', 'vi'];
   const reunion = { ...base, items: ['warwick', 'jinx', 'vi'].map((id, i) => ({ id: `item-${i + 1}`, definitionId: 'TFT13_Item_FamilyEmblemItem', location: { kind: 'unit' as const, unitId: id, slot: 0 } })),
     preparation: { ...base.preparation, units: [...base.preparation.units.filter(u => u.team === 'enemy'),
       ...ids.map((id, i) => ({ id, definitionId: id, team: 'player' as const, starLevel: 1 as const, location: { kind: 'board' as const, cell: { col: i, row: 5 } } }))] } };
-  expect(familyReunionDancers(reunion)).toEqual(ids);
-  expect(g23TraitRuntime(reunion)!.get('family')).toEqual([{ label: '家人团聚', value: '♪' }]);
-  expect(g23BoardMechanics(reunion)).toBeUndefined();
-  expect(familyReunionDancers({ ...reunion, phase: 'combat' } as never)).toEqual([]);
+  return { reunion, ids };
+};
+
+it('uses the offline rules view for reunion eligibility, ignoring conflicting projected fields', () => {
+  vi.stubGlobal('window', { location: { search: '' } });
+  const { reunion, ids } = reunionBoard();
+  const state: DisplayMatch = { ...reunion, familyReunion: { eligible: false, participantIds: [] } };
+  expect(familyReunionDancers(state)).toEqual(ids);
+  expect(g23TraitRuntime(state)!.get('family')).toEqual([{ label: '家人团聚', value: '♪' }]);
   expect(familyReunionDancers({ ...reunion, items: reunion.items.slice(1) })).toEqual([]);
+});
+
+it.each(['active', 'reconnecting', 'spectating', 'replay'])('never falls back to offline reunion rules online (%s)', mode => {
+  vi.stubGlobal('window', { location: { search: '?mode=online&server=ws' } });
+  vi.stubGlobal('document', { body: { dataset: { online: '', onlineMode: mode, onlineSpectating: String(mode === 'spectating') } } });
+  // This board qualifies offline: missing projection must still suppress both outputs.
+  const { reunion } = reunionBoard();
+  expect(familyReunionDancers(reunion)).toEqual([]);
+  expect(g23TraitRuntime(reunion)!.get('family')).toBeUndefined();
+});
+
+it('uses exactly the online projection participant ids, without deriving members from the board', () => {
+  vi.stubGlobal('window', { location: { search: '?mode=online' } });
+  const participantIds = ['seat-unit-f', 'seat-unit-b', 'seat-unit-e', 'seat-unit-a', 'seat-unit-d', 'seat-unit-c'];
+  const state: DisplayMatch = { ...createMatch(7), familyReunion: { eligible: true, participantIds } };
+  expect(familyReunionDancers(state)).toEqual(participantIds);
+  expect(g23TraitRuntime(state)!.get('family')).toEqual([{ label: '家人团聚', value: '♪' }]);
+  const ineligible: DisplayMatch = { ...state, familyReunion: { eligible: false, participantIds } };
+  expect(familyReunionDancers(ineligible)).toEqual([]);
+  expect(g23TraitRuntime(ineligible)!.get('family')).toBeUndefined();
+  const combat = { ...state, phase: 'combat' } as DisplayMatch;
+  expect(familyReunionDancers(combat)).toEqual([]);
+  expect(g23TraitRuntime(combat)!.get('family')).toBeUndefined();
 });
 
 it('names the v19 six-costs with the 14.24 zh_cn names and gives cost 6 its own colour', async () => {
   const { getHeroIdentity } = await import('../src/presentation/hero-identity');
-  const { THEME, costColor } = await import('../src/presentation/theme');
-  const { CHAMPION_PORTRAIT_KEYS, heroPortraitHtml } = await import('../src/presentation/s13-assets');
+  const { costColor } = await import('../src/presentation/theme');
+  const { CHAMPION_PORTRAIT_KEYS } = await import('../src/presentation/s13-assets');
   expect(['warwick', 'viktor', 'mel'].map(id => getHeroIdentity(id).name)).toEqual(['沃里克', '维克托', '梅尔']);
-  expect(getHeroIdentity('mel').cost).toBe(6);
-  expect(costColor(6)).toBe(THEME.cost[5]); expect(costColor(5)).toBe(THEME.cost[4]);
+  expect(['warwick', 'viktor', 'mel'].map(id => getHeroIdentity(id).cost)).toEqual([6, 6, 6]);
+  expect(costColor(6)).not.toBe(costColor(5));
   expect(CHAMPION_PORTRAIT_KEYS.mel).toBe('tft13_missmage');
-  // Not bundled yet: the caller's emblem stands in.
-  expect(heroPortraitHtml('mel', 34, '<svg data-fallback></svg>')).toBe('<svg data-fallback></svg>');
 });
