@@ -33,12 +33,18 @@ export interface PreloadProgress {
   readonly versioned: boolean;
   /** Files and bytes fetched from the server during this visit (0 when everything came from the store). */
   readonly downloadedFiles: number; readonly downloadedBytes: number;
+  /** Extra attempts after a failed download, size or hash check; shown so a flaky link never shrinks the set silently. */
+  readonly retriedRequests: number;
   /** Milliseconds from start() to done/partial; null until then. Used to check the first-visit download time. */
   readonly elapsedMs: number | null;
 }
 
 const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_FILES = 20000;
+/** Parallel downloads. Each request over a tunnel or distant host costs a round trip of ~0.5–1 s regardless of
+ * size, so a deeper pipeline matters more than bandwidth for ~2,300 small files; 12 stays under browser per-host limits on HTTP/2. */
+export const PRELOAD_CONCURRENCY = 12;
+export const PRELOAD_RETRIES = 3;
 
 /** Validates precache.json; anything unreadable falls back to the manifest's model and effect paths (unversioned). */
 export function readPrecacheList(value: unknown, manifest: AssetManifest): PrecacheList {
@@ -64,6 +70,8 @@ export interface PreloaderOptions {
   concurrency?: number;
   /** Retries per file after the first failure. */
   retries?: number;
+  /** Wait before retry n (1-based); defaults to 400 ms × n so a briefly dropped link can recover. */
+  retryDelayMs?: (attempt: number) => number;
   /** sha256 hex of a blob, or null when the page cannot hash (crypto.subtle needs HTTPS or localhost). */
   digest?: (blob: Blob) => Promise<string | null>;
   /** Millisecond clock for elapsedMs; defaults to performance.now. */
@@ -90,7 +98,7 @@ export class AssetPreloader {
   private readonly digest: (blob: Blob) => Promise<string | null>;
   private state: PreloadState = 'checking';
   private failed = 0; private readyBytes = 0; private persistent: boolean;
-  private downloadedFiles = 0; private downloadedBytes = 0; private startedAt = 0; private elapsedMs: number | null = null;
+  private downloadedFiles = 0; private downloadedBytes = 0; private retried = 0; private startedAt = 0; private elapsedMs: number | null = null;
   private disposed = false;
 
   constructor(private readonly root: string, private readonly list: PrecacheList, private readonly store: AssetStore,
@@ -106,7 +114,8 @@ export class AssetPreloader {
     for (const file of this.files.values()) totalBytes += file.bytes;
     return { state: this.state, totalFiles: this.files.size, readyFiles: this.ready.size, failedFiles: this.failed,
       totalBytes, readyBytes: this.readyBytes, persistent: this.persistent, versioned: this.list.versioned,
-      downloadedFiles: this.downloadedFiles, downloadedBytes: this.downloadedBytes, elapsedMs: this.elapsedMs };
+      downloadedFiles: this.downloadedFiles, downloadedBytes: this.downloadedBytes, retriedRequests: this.retried,
+      elapsedMs: this.elapsedMs };
   }
   onProgress(listener: (progress: PreloadProgress) => void): () => void {
     this.listeners.add(listener); listener(this.progress);
@@ -136,7 +145,7 @@ export class AssetPreloader {
     this.state = this.queue.length ? 'downloading' : 'done';
     if (this.state === 'done') this.elapsedMs = now() - this.startedAt;
     this.emit();
-    const workers = Array.from({ length: Math.max(1, this.options.concurrency ?? 4) }, () => this.work());
+    const workers = Array.from({ length: Math.max(1, this.options.concurrency ?? PRELOAD_CONCURRENCY) }, () => this.work());
     await Promise.all(workers);
     if (!this.disposed) { this.state = this.failed ? 'partial' : 'done'; this.elapsedMs ??= now() - this.startedAt; this.emit(); }
     return this.progress;
@@ -181,7 +190,12 @@ export class AssetPreloader {
       job.started = true;
       const file = job.file;
       let lastError: unknown = null;
-      for (let attempt = 0; attempt <= (this.options.retries ?? 2) && !this.disposed; attempt++) {
+      for (let attempt = 0; attempt <= (this.options.retries ?? PRELOAD_RETRIES) && !this.disposed; attempt++) {
+        if (attempt > 0) {
+          this.retried++; this.emit();
+          await this.pause((this.options.retryDelayMs ?? (n => 400 * n))(attempt));
+          if (this.disposed) break;
+        }
         try {
           const blob = await this.download(file.path);
           if (file.sha256 !== null && file.bytes !== blob.size) throw new Error(`size-mismatch:${file.path}`);
@@ -205,6 +219,13 @@ export class AssetPreloader {
       }
       this.emit();
     }
+  }
+  private pause(ms: number): Promise<void> {
+    if (ms <= 0) return Promise.resolve();
+    return new Promise(done => {
+      const timer = setTimeout(done, ms);
+      this.abort.signal.addEventListener('abort', () => { clearTimeout(timer); done(); }, { once: true });
+    });
   }
   private async download(path: string): Promise<Blob> {
     const response = await this.fetcher(assetUrl(this.root, path), { signal: this.abort.signal });
@@ -264,14 +285,18 @@ export function describePreload(progress: PreloadProgress): string {
     ? `${mb(progress.readyBytes)}/${mb(progress.totalBytes)} MB（${Math.floor(progress.readyBytes * 100 / progress.totalBytes)}%）`
     : `${progress.readyFiles}/${progress.totalFiles} 个文件`;
   const keep = progress.persistent ? '' : '，浏览器不允许本地保存，下次需重下';
+  // Trouble is visible while it happens, not only at the end.
+  const trouble = (progress.retriedRequests > 0 ? `，已重试 ${progress.retriedRequests} 次` : '')
+    + (progress.failedFiles > 0 ? `，${progress.failedFiles} 个失败` : '');
   // First visit: how much came over the network and how long it took; a later visit reads everything locally.
   const timing = progress.elapsedMs === null ? ''
     : progress.downloadedFiles > 0 ? `，本次下载 ${mb(progress.downloadedBytes)} MB 用时 ${(progress.elapsedMs / 1000).toFixed(1)} 秒`
     : '，全部来自本地';
   switch (progress.state) {
     case 'checking': return '检查本地素材缓存…';
-    case 'downloading': return `素材预下载 ${counted}${keep}`;
-    case 'done': return `素材已全部${progress.persistent ? '缓存到本地' : '下载'}（${progress.totalFiles} 个文件${timing}）`;
-    case 'partial': return `素材预下载完成，${progress.failedFiles} 个文件失败（用到时再从网络读）${timing}${keep}`;
+    case 'downloading': return `素材预下载 ${counted}${trouble}${keep}`;
+    case 'done': return `素材已全部${progress.persistent ? '缓存到本地' : '下载'}（${progress.totalFiles} 个文件${timing}`
+      + `${progress.retriedRequests > 0 ? `，其间重试 ${progress.retriedRequests} 次` : ''}）`;
+    case 'partial': return `素材预下载完成，${progress.failedFiles} 个文件失败（重试 ${progress.retriedRequests} 次后仍失败，用到时再从网络读）${timing}${keep}`;
   }
 }

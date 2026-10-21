@@ -62,6 +62,20 @@ Chrome 实际截图中，`orb-gray` 及其 child 呈中性灰，`orb-blue` 及�
 
 ## 界面接线需求
 
+### conqueror-shimmer 独立包体积
+
+| 键名 | 原始入口文件（字节） | 压缩入口文件（字节） |
+| --- | ---: | ---: |
+| `conqueror-chest` | 137848 | 48632 |
+| `shimmer-flask` | 162136 | 50248 |
+| `conqueror-chest-open` | 890 | 892 |
+| `shimmer-flask-offer` | 7679 | 7684 |
+| `shimmer-flask-take` | 19270 | 19281 |
+
+入口文件体积不含共享依赖与索引。
+
+2026-10-21 转正重建：完整 root 为 619031 字节，压缩包（含索引与 compression-report）为 287097 字节。微光瓶的倾斜来自源待机动画根骨骼自带的固定倾角，绑定网格本身竖直，不是导出轴或骨骼转换错误。导出时加一个 `shimmer-upright-export` 静态父节点抵消倾角并落地居中，动画和蒙皮数据不变，运行时无需转正；若源动画朝向变化，校验会拒绝这个静态修正。review 截图在 `assets3d-local/conqueror-shimmer/review/`。
+
 ### Warband / Crime 专用球（由 Claude 实现）
 
 1. `src/rendering/board-feed.ts` 的 `BoardOrb` 增加可选 `readonly variant?: "warband" | "crime"`，保留 `tier`。当前 `src/rendering/BoardScene.ts` 发布帧仅从 `readUnclaimedOrbs(this.session.state)` 复制 `{ orbId, tier, queued }`；后者读取显示状态顶层 `state.unclaimedOrbs`，来自本席私有投影。`UnclaimedOrbView.source` 只有 `pve | mechanic`，单靠它或灰球 tier 无法区分专用球。
