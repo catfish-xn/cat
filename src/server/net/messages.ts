@@ -79,7 +79,13 @@ export interface CommandMessage extends ClientEnvelope {
  * come back to everyone as `legend`.
  */
 export interface WalkMessage extends ClientEnvelope, LegendWalkRequest { readonly type: 'walk'; readonly roomId: string }
-export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage | WalkMessage;
+/**
+ * TFT: on another player's board during combat I watch their battle. Names the seat I am looking at (null: back to mine);
+ * the server then pushes that seat's battle of the round as `watch-replay`. Like `walk`: no receipt, no rule state, never
+ * deduplicated, and anything that does not name another seat of my room simply stops the watch.
+ */
+export interface WatchMessage extends ClientEnvelope { readonly type: 'watch'; readonly roomId: string; readonly seatId: string | null }
+export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage | WalkMessage | WatchMessage;
 export type ClientMessageType = ClientMessage['type'];
 
 /* ---------------- server → client ---------------- */
@@ -160,7 +166,14 @@ export type ServerMessage =
    */
   | { readonly type: 'heartbeat'; readonly intervalMs: number }
   /** A little-legend walk the room took, for every seat of the room; `serverNow` lets the client place its times. Older clients ignore it. */
-  | { readonly type: 'legend'; readonly roomId: string; readonly serverNow: number; readonly walk: LegendWalk };
+  | { readonly type: 'legend'; readonly roomId: string; readonly serverNow: number; readonly walk: LegendWalk }
+  /**
+   * The battle of the round of the seat I watch (`watch`), from that seat's point of view, as it was replayed for it. Public:
+   * TFT shows any board's fight to a visitor. No unit ids (their equipment is not mine to map). Older clients ignore it.
+   */
+  | { readonly type: 'watch-replay'; readonly roomId: string; readonly round: number; readonly seatId: string; readonly battleId: string; readonly replay: CombatReplay }
+  /** The watched battle revised from `fromTick` on while it runs (as `replay-tail` for my own): the watch is a stream, start plus updates. */
+  | { readonly type: 'watch-tail'; readonly roomId: string; readonly round: number; readonly seatId: string; readonly battleId: string; readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] };
 
 /* ---------------- validation ---------------- */
 
@@ -286,6 +299,8 @@ function validateEnvelopeBody(value: Shape, commandId: number): ClientMessage {
         ...(value.to !== undefined ? { to: point(value.to, 'walk.to') } : {}), ...(value.from !== undefined ? { from: point(value.from, 'walk.from') } : {}),
         ...(value.slot !== undefined ? { slot: int(value.slot, 'walk.slot', 0) } : {}) };
     }
+    case 'watch': onlyKeys(value, [...ENVELOPE, 'roomId', 'seatId'], 'watch');
+      return { type: 'watch', protocolVersion, commandId, roomId: str(value.roomId, 'watch.roomId'), seatId: value.seatId === null ? null : str(value.seatId, 'watch.seatId') };
     default: return bad(`type ${JSON.stringify(value.type)} is not a client message`);
   }
 }

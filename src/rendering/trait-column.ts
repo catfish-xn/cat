@@ -13,6 +13,10 @@ import { deriveTraits } from '../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import type { MatchState } from '../simulation/match-types';
 import { readG23Progress } from '../simulation/g2-3-state';
+import { familyReunionView } from '../simulation/family-reunion';
+import { readFamilyReunion } from './online/seat-view-adapter';
+import { isOnlineMode } from './online/mode';
+import { readSeatMechanic } from '../simulation/seat-mechanics/state';
 import { G23_CONQUEROR_CHESTS, G23_POLICY } from '../simulation/content/g2-3-policy';
 import { g23RewardLines } from '../presentation/g23-reward-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
@@ -44,11 +48,13 @@ export interface TraitRow {
  */
 export interface TraitRuntimeLine {
   readonly label: string; readonly value: string;
+  /** Shown at the bottom of the hover card only, not on the row (家人 5 progress). */
+  readonly cardOnly?: true;
   /** 征服层数 only: the hover card draws the 15-chest ladder from these counters. */
   readonly ladder?: { readonly stacks: number; readonly opened: number };
 }
 export type TraitRuntime = ReadonlyMap<string, readonly TraitRuntimeLine[]>;
-const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined) => (lines ?? []).map(line => `${line.label} ${line.value}`).join(' · ');
+const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined, all = false) => (lines ?? []).filter(line => all || !line.cardOnly).map(line => `${line.label} ${line.value}`).join(' · ');
 
 /**
  * My own Conqueror and Chem-Baron counters, read from the rules' G2-3 progress (offline state or my private seat view):
@@ -61,10 +67,25 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   if (!progress) return undefined;
   const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
   const market = nextMarket(shimmer);
-  return new Map([
+  const lines = new Map<string, readonly TraitRuntimeLine[]>([
     ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}`, ladder: { stacks, opened: chestsOpened } }]],
     ['chem-baron', [{ label: '微光', value: market ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
+  // 家人 5 (v19): the rules' current reward and progress toward it, as the seat view carries them; the reunion marker on the row.
+  const heist = readSeatMechanic<{ currentRewardName: string; CurrentProgress: number; CurrentRewardValue: number }>(state, 'familyHeist');
+  const family: TraitRuntimeLine[] = familyReunionDancers(state).length ? [{ label: '家人团聚', value: '♪' }] : [];
+  if (heist) family.push({ label: '当前奖励', value: heist.currentRewardName, cardOnly: true }, { label: '进度', value: `${heist.CurrentProgress}/${heist.CurrentRewardValue}`, cardOnly: true });
+  if (family.length) lines.set('family', family);
+  return lines;
+}
+/**
+ * The six 家人团聚 units in planning while the rules' view says the reunion is on: online only the seat view's (none when the
+ * server sent none), offline the rules' own familyReunionView; empty otherwise.
+ */
+export function familyReunionDancers(state: MatchState): readonly string[] {
+  if (state.phase !== 'preparation') return [];
+  let view; try { view = isOnlineMode() ? readFamilyReunion(state) : familyReunionView(state); } catch { return []; }
+  return view?.eligible ? view.participantIds : [];
 }
 /** One chest of the 征服层数 ladder: opened, the next one (with the stacks still missing) or later. */
 export interface ConquestStep { readonly threshold: number; readonly reward: string; readonly state: 'done' | 'next' | 'later'; readonly left?: number }
@@ -153,11 +174,12 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
     tiers.append(el('li', traitTierText(definition, tier), reached ? 'reached' : ''));
   }
   body.append(tiers);
-  if (runtime?.length) {
+  const rowLines = runtime?.filter(line => !line.cardOnly), footLines = runtime?.filter(line => line.cardOnly);
+  if (rowLines?.length) {
     const counters = el('ul', '', 'trait-card-runtime'); counters.dataset.debug = 'trait-card:runtime';
-    for (const line of runtime) counters.append(el('li', `${line.label}：${line.value}`));
+    for (const line of rowLines) counters.append(el('li', `${line.label}：${line.value}`));
     body.append(counters);
-    const ladder = runtime.find(line => line.ladder)?.ladder;
+    const ladder = rowLines.find(line => line.ladder)?.ladder;
     if (ladder) {
       const list = el('ol', '', 'conquest-ladder'); list.dataset.debug = 'trait-card:ladder';
       for (const step of conquestLadder(ladder.stacks, ladder.opened)) {
@@ -175,6 +197,11 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
     members.append(el('span', `${getHeroIdentity(id).name} ${unit.cost}费`, onBoard.includes(id) ? 'member on-board' : 'member'));
   }
   body.append(members);
+  if (footLines?.length) {
+    const foot = el('ul', '', 'trait-card-runtime trait-card-foot'); foot.dataset.debug = 'trait-card:foot';
+    for (const line of footLines) foot.append(el('li', `${line.label}：${line.value}`));
+    body.append(foot);
+  }
   return body;
 }
 
@@ -183,7 +210,7 @@ export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf:
   runtimeOf: (traitId: string) => readonly TraitRuntimeLine[] | undefined = () => undefined): () => void {
   return attachHoverCards(scope, card, '.trait-row[data-trait]', anchor => {
     const traitId = anchor.dataset.trait!, count = Number(anchor.dataset.count ?? 0), members = membersOf(traitId), runtime = runtimeOf(traitId);
-    return { key: `trait:${traitId}:${count}:${members.join(',')}:${runtimeText(runtime)}`, build: () => traitCardBody(traitId, count, members, runtime) ?? el('div', traitId) };
+    return { key: `trait:${traitId}:${count}:${members.join(',')}:${runtimeText(runtime, true)}`, build: () => traitCardBody(traitId, count, members, runtime) ?? el('div', traitId) };
   });
 }
 
@@ -219,7 +246,7 @@ export class TraitColumn {
     else { delete this.root.dataset.scout; if (this.own) this.draw(boardTraitRows(this.own[0]), this.own[1]); }
   }
   private draw(rows: readonly TraitRow[], runtime: TraitRuntime | undefined): void {
-    const key = `${this.shown ? 's' : ''}${rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId))}`).join('|')}`;
+    const key = `${this.shown ? 's' : ''}${rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId), true)}`).join('|')}`;
     if (key === this.key && this.root.childElementCount) return;
     this.rows = rows; this.runtime = runtime; this.key = key;
     this.root.replaceChildren(el('h3', this.shown ? '对方羁绊' : '羁绊', 'trait-column-title'), renderTraitRows(rows, 'trait-column:rows', '场上暂无单位', runtime));

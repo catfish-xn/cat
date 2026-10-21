@@ -56,6 +56,8 @@ export interface ClientListeners {
   connection?(status: ConnectionStatus): void;
   /** A little-legend walk the room took (any seat); `serverNow` is the server clock when it was sent. */
   legend?(walk: LegendWalk, serverNow: number): void;
+  /** The battle of the seat I watch (`watch`), from its point of view: the start, then the whole revised replay on each update. */
+  watched?(seatId: string, replay: CombatReplay): void;
 }
 /** What the UI talks to: the real room run in-browser (local-room-client.ts) or the game server over a socket (ws-client.ts). */
 export interface GameClient {
@@ -72,6 +74,8 @@ export interface GameClient {
   send(command: WireCommand): ClientSendResult;
   /** My legend's walk to the room (no receipt); false when it was not sent. In-browser rooms have none. */
   walk?(request: LegendWalkRequest): boolean;
+  /** Watch another seat's battles (null: stop); kept across a reconnect. In-browser rooms have none. */
+  watch?(seatId: string | null): void;
   /** Lobby again after a finished match. */
   reset(): void;
   dispose(): void;

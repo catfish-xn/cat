@@ -1,0 +1,291 @@
+{
+  "$animationRules": {
+    "idle": {
+      "aliases": [
+        "Idle1",
+        "Idle"
+      ],
+      "tokens": [
+        "idle1",
+        "idle"
+      ]
+    },
+    "move": {
+      "aliases": [
+        "Run",
+        "Run1",
+        "Run_Base",
+        "Walk"
+      ],
+      "tokens": [
+        "run",
+        "run1",
+        "walk"
+      ]
+    },
+    "attack": {
+      "aliases": [
+        "Attack1",
+        "Attack"
+      ],
+      "tokens": [
+        "attack1",
+        "attack"
+      ]
+    },
+    "cast": {
+      "aliases": [
+        "Spell1",
+        "Spell",
+        "Spell4",
+        "Spell4_Hit"
+      ],
+      "tokens": [
+        "spell1$",
+        "spell1a$",
+        "spell4_hit$",
+        "spell$",
+        "spell1_in$",
+        "spell_in$",
+        "spell2_in$",
+        "spell3_in$",
+        "spell4_in$",
+        "spell[1-4]?_start$",
+        "spell[1-4]?_intro$",
+        "spell1_activate$",
+        "spell_activate$",
+        "spell2_activate$",
+        "spell3_activate$",
+        "spell4_activate$",
+        "spell[1-4]?_first$",
+        "spell[1-4]?_(?:[a-z]+_)?activate$",
+        "spell[1-4]$",
+        "spell_[1-4]$",
+        "spellup$",
+        "spell_brace$",
+        "cast(?:_[a-z0-9]+)?$",
+        "ability(?:[1-4]|_[a-z0-9]+)?$",
+        "channel(?:_start)?$",
+        "ult(?:imate)?(?:_start)?$",
+        "spell1",
+        "spell4_hit",
+        "spell",
+        "cast"
+      ],
+      "excludeTokens": [
+        "out",
+        "toidle",
+        "idle",
+        "run",
+        "loop",
+        "end",
+        "finish"
+      ],
+      "evidenceTokens": [
+        "spell[a-z0-9]*",
+        "cast[a-z0-9]*",
+        "ability[a-z0-9]*",
+        "channel",
+        "ult(?:imate)?"
+      ]
+    },
+    "hit": {
+      "aliases": [
+        "Hit",
+        "Hit1",
+        "Hurt",
+        "Hurt1",
+        "Flinch",
+        "Flinch1",
+        "Knockup"
+      ],
+      "tokens": [
+        "hit1",
+        "hurt[0-9]*",
+        "flinch[0-9]*",
+        "knockup[0-9]*",
+        "hit"
+      ],
+      "excludeTokens": [
+        "spell[a-z0-9]*",
+        "attack[0-9]*",
+        "cast[a-z0-9]*",
+        "ability[a-z0-9]*",
+        "ult(?:imate)?",
+        "channel",
+        "death[0-9]*",
+        "die"
+      ]
+    },
+    "death": {
+      "aliases": [
+        "Death",
+        "Death1"
+      ],
+      "tokens": [
+        "death",
+        "death1"
+      ]
+    }
+  },
+  "jinx": {
+    "sourceName": "demo_jinx",
+    "base": "assets/characters/demo_jinx/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex",
+      "Torch": "demo_torch.tex"
+    },
+    "animations": {
+      "idle": "demo_idle1",
+      "move": "demo_run",
+      "attack": "demo_attack1",
+      "cast": "demo_spell1",
+      "death": "demo_death"
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    }
+  },
+  "vi": {
+    "sourceName": "demo_vi",
+    "base": "assets/characters/demo_vi/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex"
+    },
+    "animations": {
+      "idle": "demo_idle1",
+      "move": "demo_run",
+      "attack": "demo_attack1",
+      "cast": "demo_spell1",
+      "death": "demo_death"
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    }
+  },
+  "draven": {
+    "sourceName": "demo_draven",
+    "base": "assets/characters/demo_draven/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex"
+    },
+    "animations": {
+      "idle": "demo_idle1",
+      "move": "demo_run",
+      "attack": "demo_attack1",
+      "cast": "demo_spell1_spin",
+      "death": "demo_death"
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    },
+    "animationNotes": {
+      "cast": "Synthetic graph also contains Demo_Spell1_Catch; explicit choice is required."
+    }
+  },
+  "warwick": {
+    "sourceName": "demo_warwick",
+    "base": "assets/characters/demo_warwick/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex"
+    },
+    "animations": {
+      "hit": null
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    }
+  },
+  "viktor": {
+    "sourceName": "demo_viktor",
+    "base": "assets/characters/demo_viktor/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex"
+    },
+    "animations": {
+      "hit": null
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    }
+  },
+  "mel": {
+    "sourceName": "demo_mel",
+    "base": "assets/characters/demo_mel/skins/base",
+    "mesh": "demo.skn",
+    "skeleton": "demo.skl",
+    "textures": {
+      "Body": "demo_selected.tex"
+    },
+    "animations": {
+      "hit": "demo_damage_block"
+    },
+    "effectPatterns": {
+      "cast": [
+        "test_cast"
+      ]
+    },
+    "animationFiles": {
+      "demo_idle1": "animations/demo_idle1.anm",
+      "demo_run": "animations/demo_run.anm",
+      "demo_attack1": "animations/demo_attack1.anm",
+      "demo_spell1": "animations/demo_spell1.anm",
+      "demo_death": "animations/demo_death.anm"
+    }
+  }
+}

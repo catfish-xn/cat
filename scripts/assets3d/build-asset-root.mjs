@@ -6,12 +6,23 @@ import { fileURLToPath } from 'node:url';
 import { contracts } from './runtime.mjs';
 import { safeInputPath } from './safe-path.mjs';
 import { readGlb } from './glb.mjs';
+import { compressionIO } from './compress.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 import { mergeFxManifestEntries } from './merge-fx-roots.mjs';
 import { contains, ignoredOutput, publishRoot, ROOT_GENERATOR } from './merge-root-output.mjs';
 
 const json = v => Buffer.from(JSON.stringify(v, null, 2) + '\n');
 const hash = v => createHash('sha256').update(v).digest('hex');
+/** Meshopt GLBs may declare a second virtual fallback buffer. Keep the strict raw
+ * reader for converters, but validate compressed runtime inputs with the codec. */
+export async function runtimeModelJson(data) {
+  try { return readGlb(data).document; }
+  catch (e) { if (e.message !== 'unsupported-gltf') throw e; }
+  const io = await compressionIO(), document = await io.binaryToJSON(data);
+  if ([...(document.json.buffers ?? []), ...(document.json.images ?? [])].some(e => e.uri && !e.uri.startsWith('data:'))) throw new Error('merge-requires-self-contained-glb');
+  await io.readJSON(document);
+  return document.json;
+}
 const equal = (a, b) => {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
@@ -98,7 +109,7 @@ export async function buildAssetRoot({ roots, out, force = false } = {}) {
   };
   for (const [id, i] of Object.entries(merged.owners.models)) {
     const path = inputs[i].manifest.models[id].path, data = await bytes(i, path);
-    const doc = readGlb(data).document;
+    const doc = await runtimeModelJson(data);
     if ([...(doc.buffers ?? []), ...(doc.images ?? [])].some(e => e.uri && !e.uri.startsWith('data:'))) throw new Error('merge-requires-self-contained-glb');
     plan(merged.manifest.models[id].path, data, i);
     provenance.models[id] = sources[i];

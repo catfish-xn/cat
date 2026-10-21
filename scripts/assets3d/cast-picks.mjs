@@ -1,16 +1,19 @@
+import { loadUnitMap } from './local-config.mjs';
 // Offline ordinary model root. All generated payloads stay in the real cast-picks directory.
-import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { readGlb, writeGlb } from './glb.mjs';
 
-const unitMap = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url)));
-export const CAST_PICKS = Object.fromEntries(['amumu', 'ambessa', 'drmundo', 'gangplank', 'jayce'].map(id => {
-  const config = unitMap[id];
-  return [id, { clip: config.animations.cast, castSequence: config.castSequence, castVariants: config.castVariants,
-    confidence: 'medium', basis: config.animationNotes }];
-}));
+export async function loadCastPicks(unitMap) {
+  unitMap ??= await loadUnitMap();
+  return Object.fromEntries(['amumu', 'ambessa', 'drmundo', 'gangplank', 'jayce'].map(id => {
+    const config = unitMap[id];
+    if (!config?.animations) throw new Error(`missing-local-cast-map:${id}`);
+    return [id, { clip: config.animations.cast, castSequence: config.castSequence, castVariants: config.castVariants,
+      confidence: 'medium', basis: config.animationNotes }];
+  }));
+}
 const json = v => JSON.stringify(v, null, 2) + '\n';
 
 /** Build an ordinary model entry; root composition uses merge-fx-roots unchanged. */
@@ -53,7 +56,7 @@ export function appendCastClip(original, donor, name) {
 
 export async function buildCastPicks() {
   const { buildCastAnimations } = await import('./cast-animations.mjs');
-  return buildCastAnimations({ from: 'assets3d-local/all-anim', out: 'assets3d-local/cast-picks', units: Object.keys(CAST_PICKS) });
+  return buildCastAnimations({ from: 'assets3d-local/all-anim', out: 'assets3d-local/cast-picks', units: Object.keys(await loadCastPicks()) });
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { console.log(json(await buildCastPicks())); } catch (e) { console.error(e); process.exitCode = 1; }

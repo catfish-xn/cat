@@ -11,8 +11,8 @@ export const THEME = Object.freeze({
     ally: '#68ddd0', enemy: '#f08080', hp: '#5fd68a', hpEnemy: '#f08080', mana: '#449cfa', manaFull: '#bde5ff', shield: '#e8f4ff',
     boardAlly: '#1b3039', boardEnemy: '#30232e', boardLine: '#36505d', bench: '#182531',
   }),
-  /** Cost 1–5: gray, green, blue, purple, gold (shape/number always accompany the color). */
-  cost: Object.freeze(['#a9b4bc', '#5fbf7a', '#4fa3ff', '#c47cff', '#ffc83d'] as const),
+  /** Cost 1–6: gray, green, blue, purple, gold, prismatic pink for the v19 six-costs (shape/number always accompany the color). */
+  cost: Object.freeze(['#a9b4bc', '#5fbf7a', '#4fa3ff', '#c47cff', '#ffc83d', '#ff9ee8'] as const),
   /** Star marks 1–4: bronze, silver, gold, platinum teal (effective 4★ draws four platinum-teal stars, never 3 gold + 1). */
   star: Object.freeze(['#d39a6a', '#dfe6ec', '#ffd34d', '#a6f2e6'] as const),
   font: Object.freeze({ body: 14, small: 12, title: 20, hud: 15 }),
@@ -22,7 +22,7 @@ export const THEME = Object.freeze({
 });
 
 export const toNumber = (hex: string): number => Number.parseInt(hex.slice(1), 16);
-export const costColor = (cost: number): string => THEME.cost[Math.min(5, Math.max(1, cost)) - 1];
+export const costColor = (cost: number): string => THEME.cost[Math.min(THEME.cost.length, Math.max(1, cost)) - 1];
 /** One color for the whole star string of a 1–4★ unit (2D board, cards, panels, scouting and the 3D overhead marks). */
 export const starColor = (star: number): string => THEME.star[Math.min(4, Math.max(1, Math.trunc(star))) - 1];
 

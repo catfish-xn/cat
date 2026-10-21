@@ -1,6 +1,6 @@
-﻿// Public documentation contains only selected clips and qualitative evidence.
-import { readFile, writeFile } from 'node:fs/promises';
-import { safeInputPath } from './safe-path.mjs';
+﻿// Private report contains source clip names and evidence; keep it in the ignored root.
+import { readFile } from 'node:fs/promises';
+import { safeInputPath, writeOutputFile } from './safe-path.mjs';
 import { join, resolve } from 'node:path';
 const root = resolve('assets3d-local/cast-picks');
 const manifest = JSON.parse(await readFile(await safeInputPath(root, join(root, 'manifest.json')), 'utf8'));
@@ -11,7 +11,7 @@ let text = `# Cast 动作近似选择
 保留基础 GLB 的模型、贴图及既有动作，仅追加选中片段；全部选择均为表现近似，不调整规则或技能时机。
 完整候选动作与时长只写入本地 \`assets3d-local/cast-picks/candidates.json\`，不得提交。
 
-离线重新生成：\`node scripts/assets3d/cast-picks.mjs\`；更新本文：\`node scripts/assets3d/cast-picks-doc.mjs\`。
+离线重新生成：\`node scripts/assets3d/cast-picks.mjs\`；更新本地 choices.md：\`node scripts/assets3d/cast-picks-doc.mjs\`。
 设置 \`CHROMIUM_PATH\` 后运行 \`node scripts/assets3d/cast-picks-browser-review.mjs\`；截图位于本地 \`review/<英雄 ID>.png\`，以原速片段的 50% 位置采样。
 仅重截阿木木可追加 \`--unit amumu\`，验收报告写入本地 \`review/amumu-report.json\`。
 素材、报告和浏览器缓存仅写入 cast-picks 本地目录，来源只读；脚本不下载素材。
@@ -29,4 +29,4 @@ cast-picks 必须放在最后；完整动作映射随模型整体覆盖，其他
 for (const [id, entry] of Object.entries(manifest.models)) {
   text += `\n## ${id}\n\n选择：\`${entry.animations.cast}\`（approximated；可信度：${entry.confidence}）。\n\n${entry.basis}\n`;
 }
-await writeFile('docs/ASSETS3D_CAST_PICKS.md', text, 'utf8');
+await writeOutputFile(join(root, 'choices.md'), text, { force: true });

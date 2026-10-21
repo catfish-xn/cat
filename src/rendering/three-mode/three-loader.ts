@@ -9,6 +9,7 @@ import type { Renderer3d } from './contract';
 import { boardFeed } from '../board-feed';
 import { THEME, costColor, starColor } from '../../presentation/theme';
 import { s13AssetUrl } from '../../presentation/s13-assets';
+import { SHOP_CATALOG_BY_COST } from '../../simulation/match-rules';
 
 export interface ThreeModeHandle { dispose(): void }
 
@@ -57,7 +58,12 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
   const preload = document.createElement('span');
   preload.className = 'render3d-preload';
   preload.dataset.debug = 'render3d-preload';
-  bar.append(label, preload, back);
+  // The first visit downloads the whole asset root (tens of MB over a slow link): a bar shows it is moving.
+  const meter = document.createElement('div');
+  meter.className = 'render3d-progress'; meter.dataset.debug = 'render3d-progress'; meter.hidden = true;
+  const fill = document.createElement('i');
+  meter.append(fill);
+  bar.append(label, preload, meter, back);
   layer.append(bar);
   board.append(layer);
 
@@ -76,9 +82,12 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
 
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
-    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => {
+    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.((text, fraction) => {
         // Shown while it changes; six quiet seconds after the last update (done, or stalled) it clears so it never sits on the HUD.
-        if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000); });
+        if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000);
+        meter.hidden = fraction === null; if (fraction !== null) fill.style.width = `${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`; });
+      // The cheapest shop tiers are what a game shows first: their models are parsed and uploaded while idle.
+      module.useWarmModels?.([...SHOP_CATALOG_BY_COST[1], ...SHOP_CATALOG_BY_COST[2], ...SHOP_CATALOG_BY_COST[3]]);
       module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
