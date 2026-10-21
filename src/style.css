@@ -1096,6 +1096,10 @@ body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right
 body[data-online] .shop-dock .shop-choice-bar { grid-area: top; justify-self: start; align-self: center; flex-wrap: nowrap; min-width: 0; max-width: 100%; margin: 0 !important;
   overflow: hidden; font-size: 11px !important; white-space: nowrap; }
 body[data-online] .shop-dock .shop-odds:has(.shop-choice-toggle) { flex-wrap: nowrap; }
+/* 3D centres the gold chip on the top row: the bar stays left of it; the long parts shrink first, the toggle never does. */
+body[data-online]:has(.render3d-layer) .shop-dock .shop-choice-bar { max-width: 42%; }
+.shop-dock .shop-choice-bar > :is(.market-meta, .choice-timeout) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.shop-dock .shop-choice-bar > :not(.market-meta, .choice-timeout) { flex: none; }
 
 /* 锻造器四选一: a row of large item cards (icon, name, one effect line), gold rim, raised on hover and focus. */
 .choice-dialog[data-choice-source="forge"] { border-color: #c99a4a; background: linear-gradient(180deg, #2a2418, #182a37 70%); }
