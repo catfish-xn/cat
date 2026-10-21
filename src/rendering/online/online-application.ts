@@ -253,8 +253,6 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
-    // 3D 看对手: my battle starting brings my board back (another seat's battle is not sent to me).
-    if (view.phase.kind === 'combat' && this.view?.phase.kind !== 'combat' && this.opponentBoard.drawnIn3d) this.opponentBoard.close();
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
@@ -391,7 +389,7 @@ export class OnlineApplication implements SceneApplication {
    */
   private syncScout() {
     this.scoutFeedGeneration = boardFeedGeneration();
-    const view = this.view, seatId = this.opponentBoard.openSeatId;
+    const view = this.view, seatId = this.opponentBoard.openSeatId, wasWatching = this.session.watchedSeat;
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
     // TFT: on its board during combat I watch its battle (the server streams it); anywhere else, or before it arrives, the build.
     const combat = view?.phase.kind === 'combat', wantsBattle = !!seat && combat && !!this.client.watch;
@@ -406,6 +404,8 @@ export class OnlineApplication implements SceneApplication {
     this.opponentBoard.root.toggleAttribute('data-combat', combat && !watching);
     this.minimap.render(this.view, seatId);
     traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
+    // Leaving a watched battle puts my own board (or battle) back: the scene rebuilds its tokens and drops the old effects.
+    if (this.session.watchedSeat !== wasWatching) this.hooks.refresh();
   }
   private syncSpectating(view: PlayerView) {
     const me = view.seats.find(seat => seat.seatId === view.mySeatId);

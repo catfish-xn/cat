@@ -734,6 +734,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
     }
+    // Another battle on the board (a watched seat's, or mine again): nothing queued or playing belongs to it.
+    const watched = view?.watching ? view.seatId : null;
+    if (watched !== (scoutView?.watching ? scoutView.seatId : null)) { clearEffects(); for (const [id, piece] of pieces) resetAction(piece, id); }
     // Watching its battle: that battle is on my board (the frames carry it), so no static build is drawn over it.
     scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.

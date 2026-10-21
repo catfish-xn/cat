@@ -67,10 +67,11 @@ export class RemoteSession extends MatchSession {
    * True while my battle of this round is on the board and `state` is my live seat of that same round, still before
    * its settlement (T10: a PvP seat stays in preparation under the server's roster lock, a PvE seat in combat). Such a
    * state only refreshes what the battle is shown on: gold, shop, level and bench move, the battle keeps playing.
+   * A watched battle (another seat's, on my board) is held the same way, with or without one of mine.
    */
   holdsBattle(state: MatchState): boolean {
     const base = this.playbackBase;
-    return base !== null && this.replay !== null && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
+    return base !== null && (this.replay !== null || this.watched !== null) && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
   }
   /**
    * The unit whose equipment a shown unit carries (C15): a battle id of mine in the replay on the board maps to my
@@ -101,13 +102,21 @@ export class RemoteSession extends MatchSession {
     let view: CombatViewState = replay.initial;
     for (let index = 0; index < at; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
     this.watched = { seatId, replay, nextTick: at, view: at === replay.ticks.length ? replay.terminal : view, accumulator: current?.accumulator ?? (this.replay ? this.accumulator : 0) };
-    const before = this.matchState; this.notify(before, [], 'command');
+    // The board shows a battle even without one of mine (eliminated, or my battle already settled): the combat overlay.
+    // A fresh overlay also tells the scene its board changed, so it rebuilds its tokens from the watched battle.
+    const before = this.matchState; this.playbackBase = this.playbackBase ?? before; this.matchState = this.overlay();
+    this.notify(before, [], 'command');
   }
   /** Back to my own board (and my battle, where it has got to). */
   stopWatching(): void {
     if (!this.watched) return;
     this.watched = null;
-    const before = this.matchState; this.notify(before, [], 'command');
+    // My own battle keeps its overlay; without one, my last authoritative state is back. Either way a new state object,
+    // so the scene rebuilds its tokens from my board instead of the watched battle's units.
+    const before = this.matchState;
+    if (this.replay) this.matchState = this.overlay(); else { this.matchState = this.playbackBase ?? before; this.playbackBase = null; }
+    if (this.matchState === before) this.matchState = { ...before };
+    this.notify(before, [], 'command');
   }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
   get inBattle(): boolean { return this.replay !== null; }
