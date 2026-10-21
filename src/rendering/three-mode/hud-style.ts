@@ -36,7 +36,8 @@ body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augm
 body[data-online]:has(> .render3d-layer):has(.choice-overlay:not([hidden]) > .choice-dialog[data-choice-source="augment"]) .shop-dock .hud-pop { visibility: hidden; }
 `;
 export function installHudStyle(): void {
-  if (typeof document === 'undefined' || document.querySelector('style[data-owner="render3d-hud"]')) return;
+  // Unit tests mount the renderer with a stub document that has no querySelector or head.
+  if (typeof document === 'undefined' || typeof document.querySelector !== 'function' || !document.head || document.querySelector('style[data-owner="render3d-hud"]')) return;
   const style = document.createElement('style'); style.dataset.owner = 'render3d-hud'; style.textContent = STYLE;
   document.head.append(style);
 }
