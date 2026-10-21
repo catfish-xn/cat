@@ -110,8 +110,9 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
   const archiveHistory = new CompletedBattleHistory('b5-r1');
   let archivedState: MatchState;
   // Generate the public command/history fixture separately from its save assertions.
-  beforeAll(() => { archivedState = historicalProgression(true, archiveHistory); });
-  beforeAll(() => { historicalProgression(false); });
+  // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。钩子 10 秒 → 20 秒（CI 上钩子超时 3 次）。
+  beforeAll(() => { archivedState = historicalProgression(true, archiveHistory); }, 20_000);
+  beforeAll(() => { historicalProgression(false); }, 20_000);
   it('rejects a historical level5 roll forged as level7 with RNG-consistent two completed items', () => {
     const state = historicalProgression();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -183,7 +184,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
         battles: archiveHistory.completedRecords, currentBattle: null };
       // Fully validate the shared control before exercising the forged copy.
       await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
-    });
+    }, 20_000);
     it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
       expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
         .toEqual(['1-2', '1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-5', '3-6', '3-7', '4-1', '4-2', '4-3']);

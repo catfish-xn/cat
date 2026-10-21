@@ -5,17 +5,37 @@
  * previewCombine/previewEquip and, until then, the public Match command result.
  */
 import { readItemCatalog, type RuntimeItemCatalogEntry } from '../simulation/item-catalog';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
+import type { ItemDefinition } from '../simulation/strategy-types';
 import { s13AssetUrl } from './s13-assets';
 import { itemDisplayName } from './g23-display';
+import { specialItemLines } from './special-item-text';
 
 type Entry = RuntimeItemCatalogEntry;
 let cached: { list: readonly Entry[]; byId: ReadonlyMap<string, Entry> } | null = null;
-/** The catalogue is static content; one read per page. */
+/**
+ * Reward-only items (微光装备, radiant, artifacts, support, mechanism) are not in the B4 catalogue; they get an entry here
+ * with player text so every item surface (popover, bench tags, black market and loot cards) can describe them.
+ */
+function specialEntry(definition: ItemDefinition, contentVersion: string): Entry {
+  const radiantOf = definition.radiantOf && Object.hasOwn(ITEM_DEFINITIONS, definition.radiantOf) ? itemDisplayName(definition.radiantOf) : undefined;
+  return Object.freeze({ id: definition.id, apiName: definition.apiName ?? definition.id, name: definition.name, localizationStatus: 'temporary-unverified',
+    kind: definition.kind === 'radiant' ? 'radiant' : 'completed', recipe: null, effectDescriptions: Object.freeze([...specialItemLines(definition, radiantOf)]),
+    unique: definition.unique ?? false, slotCost: definition.slotCost ?? 1, referencePatch: '14.24b', contentVersion,
+    evidenceStatus: definition.evidenceStatus ?? 'source-reviewed', conventionIds: definition.conventionIds ?? [] } as const);
+}
+/** The catalogue is static content; one read per page. The codex lists the base catalogue only; lookups cover every item. */
 function catalog() {
-  if (!cached) { const list = readItemCatalog(); cached = { list, byId: new Map(list.map(entry => [entry.id, entry])) }; }
+  if (!cached) {
+    const list = readItemCatalog(), byId = new Map(list.map(entry => [entry.id, entry]));
+    for (const definition of Object.values(ITEM_DEFINITIONS)) if (!byId.has(definition.id)) byId.set(definition.id, specialEntry(definition, list[0]!.contentVersion));
+    cached = { list, byId };
+  }
   return cached;
 }
 export const catalogEntry = (id: string): Entry | undefined => catalog().byId.get(id);
+/** Base (B4) catalogue only: kind-based wording such as the plain forge names must not count reward-only items. */
+export const baseCatalogEntry = (id: string): Entry | undefined => catalog().list.find(entry => entry.id === id);
 /** Authoritative description lines, shown verbatim. */
 export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
 
