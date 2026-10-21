@@ -653,7 +653,9 @@ body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
   background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
 .carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
-body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
+body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock,
+/* TFT: on another player's board my shop is closed (it comes back with my board). */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
 .shop-dock { transition: transform .25s ease, opacity .25s ease; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */

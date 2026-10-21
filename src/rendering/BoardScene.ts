@@ -353,6 +353,8 @@ export class BoardScene extends Phaser.Scene {
       if (this.help?.open) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
+      // Online, an inert shop dock (not playing, or another seat's board shown in 3D) closes the shop and its shortcuts.
+      if (document.getElementById('shop-dock')?.inert && ['KeyD', 'KeyF', 'KeyW', 'KeyE'].includes(event.code)) return;
       if (event.code === 'KeyD') {
         event.preventDefault();
         this.command(this.session.reroll(), '商店已刷新');
