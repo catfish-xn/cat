@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Group, Scene, type Texture } from 'three';
 import { createScoutStage, readScout } from '../src/rendering/three-mode/scout-stage';
-import { publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
+import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
 
@@ -131,6 +131,16 @@ describe('board-feed scout channel', () => {
     const offOther = subscribeBoardFeed({ frame() {}, events() {} });
     expect(publishScout(() => scoutOf())).toBe(false);
     offOther();
+  });
+
+  it('moves the generation on when the 3D layer detaches, so the panel and trait column go back to 2D', () => {
+    const off = subscribeBoardFeed({ frame() {}, events() {}, scout() {} });
+    const attached = boardFeedGeneration();
+    off();
+    expect(boardFeedGeneration()).toBe(attached + 1);
+    expect(publishScout(() => scoutOf())).toBe(false);
+    off(); // a second detach of the same layer changes nothing
+    expect(boardFeedGeneration()).toBe(attached + 1);
   });
 });
 

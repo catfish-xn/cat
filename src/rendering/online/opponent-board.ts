@@ -95,7 +95,8 @@ export class OpponentBoardPanel {
     if (this.seatId === null) return;
     const target = event.target as HTMLElement | null;
     const space = event.code === 'Space' && this.drawnIn3d && !event.repeat && !target?.closest?.('input, textarea, select, button, [contenteditable]');
-    if (event.key === 'Escape' || space) { event.stopPropagation(); event.preventDefault(); this.close(); }
+    // Other document listeners (the carousel's Space switch) must not see this key too.
+    if (event.key === 'Escape' || space) { event.stopImmediatePropagation(); event.preventDefault(); this.close(); }
   };
 
   private render(seat: SeatPublic, mine: boolean): void {

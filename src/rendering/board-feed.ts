@@ -152,7 +152,8 @@ export function publishScout(build: () => BoardScout | null): boolean {
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {
   listener = next; listenerGeneration++;
-  return () => { if (listener === next) listener = null; };
+  // Detaching also moves the generation on, so whatever a 3D layer drew (carousel, scout) goes back to 2D on the next frame.
+  return () => { if (listener === next) { listener = null; listenerGeneration++; } };
 }
 /** BoardScene registers its controls while it runs; the returned function withdraws them. */
 export function provideBoardControls(next: BoardControls): () => void {
