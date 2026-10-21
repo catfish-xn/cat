@@ -257,9 +257,9 @@ describe('zero-dependency static particle meshes', () => {
     expect(() => convertParticleMesh(scb(), '.scb', limits)).toThrow(/budget/);
     expect(() => convertParticleMesh(sco(), '.sco', limits)).toThrow(/budget/);
   });
-  it('rejects unsupported flags, nonzero pivots, invalid indices, NaN and trailing/truncated bytes', () => {
+  it('rejects unsupported flags, nonfinite locators, invalid indices, NaN and trailing/truncated bytes', () => {
     const flags = scb(); flags.writeUInt32LE(1, 148);
-    const pivot = scb(); pivot.writeFloatLE(1, 216);
+    const pivot = scb(); pivot.writeFloatLE(NaN, 216);
     const index = scb(); index.writeUInt32LE(9, 228);
     const nan = scb(); nan.writeFloatLE(NaN, 180);
     for (const b of [flags, pivot, index, nan, scb().subarray(0, -1), Buffer.concat([scb(), u32(0)])]) expect(() => convertParticleMesh(b, '.scb')).toThrow();

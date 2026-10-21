@@ -194,7 +194,10 @@ export function approximateEmitter(input, system = {}, options = {}) {
   // Aspect ratio animation remains approximated; strict conversion is unchanged.
   const primitiveType = source.primitive?.__type ?? 'VfxPrimitiveCameraQuad';
   const plane = ['VfxPrimitiveArbitraryQuad', 'VfxPrimitiveCameraQuad', 'VfxPrimitiveRay'].includes(primitiveType);
-  const meshBounds = primitiveType === 'VfxPrimitiveMesh' ? options.meshBounds?.(source.primitive.mMesh?.mSimpleMeshName) : undefined;
+  const meshName = source.primitive?.mMesh?.mSimpleMeshName;
+  if (primitiveType === 'VfxPrimitiveMesh' && (typeof meshName !== 'string' || !meshName))
+    return { status: 'skipped', reason: 'mesh-resource-unavailable' };
+  const meshBounds = primitiveType === 'VfxPrimitiveMesh' && typeof meshName === 'string' ? options.meshBounds?.(meshName) : undefined;
   const axes = plane ? [0, 1] : [0, 1, 2];
   const birth = source.birthScale0?.constantValue ?? [1, 1, 1];
   const weights = plane ? birth : vector(meshBounds) ? birth.map((n, i) => n * meshBounds[i]) : undefined;
@@ -374,6 +377,11 @@ export function approximateEmitter(input, system = {}, options = {}) {
       // column-major storage is identical to this flattened row-vector matrix.
       additions.localTransform = reflectedTransform(value);
       note('system.transform', value, 'row-major-row-vector-last-row-translation-X-reflected-affine-local-position-and-orientation');
+    } else if (field === 'overrideScaleCap') {
+      if (!Number.isFinite(value) || value < 0) throw new Error('invalid-approximate-system-scale-cap');
+      // This preview uses explicit host scale, without bound-object size. Do
+      // not mistake a bound-object scaling cap for a particle size multiplier.
+      note(`system.${field}`, value, 'fixed-host-scale-omit-bound-object-scale-cap');
     } else if (['flags', 'soundOnCreateDefault', 'soundPersistentDefault', 'visibilityRadius', 'buildUpTime'].includes(field)) {
       note(`system.${field}`, value, 'ignore-preview-system-metadata');
     } else return { status: 'rejected', reason: `unmapped-system-field:${field}` };

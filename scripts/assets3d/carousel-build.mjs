@@ -74,7 +74,7 @@ export async function buildCarousel({ source = 'assets3d-local/trial/local', dis
   const materials = documents.find(d => d.path.endsWith('/carousel_set13.materials.bin'));
   const geometry = readCarouselGeometry(await load('data/maps/mapgeometry/map22/carousel_set13.mapgeo'));
   const manifest = { schemaVersion: 1, models: {}, effects: {} }, build = 'build/units/carousel';
-  const report = { ready: false, version: plan.version, offline: true, models: [], systems: [], failures: [],
+  const report = { ready: false, version: plan.version, offline: true, models: [], systems: [], particleMeshes: [], failures: [],
     geometry: { source: 'carousel_set13.mapgeo', meshTableEnd: geometry.meshTableEnd, ignoredSpatialBytes: geometry.ignoredSpatialBytes },
     coordinatePolicy: { sourceOrigin: [7500, 0, 7500], reflectX: true, scale: .44, cell: 62.4 },
     variants: { selected: 'standard-set13', excluded: ['memorybudget-empty-v13', 'set13-tmo-regional-variant'] } };
@@ -110,7 +110,11 @@ export async function buildCarousel({ source = 'assets3d-local/trial/local', dis
       const glb = readGlb(converted.glb), positions = glb.document.meshes.flatMap(m => m.primitives.flatMap(p => readAccessor(glb, p.attributes.POSITION)));
       bounds.set(key, [0, 1, 2].map(i => Math.max(...positions.map(p => p[i])) - Math.min(...positions.map(p => p[i]))));
       await write(`${build}/${path}`, converted.glb); meshes.set(key, path);
-    } catch (error) { meshReasons.set(ref, error.message); report.failures.push({ stage: 'particle-mesh', path: ref, reason: error.message }); }
+      report.particleMeshes.push({ source: ref, path, status: 'converted', ...converted.report });
+    } catch (error) {
+      meshReasons.set(ref, error.message); report.failures.push({ stage: 'particle-mesh', path: ref, reason: error.message });
+      report.particleMeshes.push({ source: ref, status: 'skipped', reason: error.message });
+    }
   }
   const { assertManifest, parseParticleDocument } = await contracts();
   const converted = convertParticles(sourceSystems, p => textures.get(canonicalAsset(p)), parseParticleDocument,
