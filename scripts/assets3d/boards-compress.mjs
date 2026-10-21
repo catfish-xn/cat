@@ -1,0 +1,40 @@
+import { readFile, stat, rename } from 'node:fs/promises';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { boardRoot, boardPlanJson } from './boards-plan.mjs';
+import { safeOutputPath, writeOutputFileAtomic } from './safe-path.mjs';
+import { finalizeBoardRoot } from './boards-package.mjs';
+
+// The supplied compressor anchors writes to its own worktree. Stage the same
+// implementation locally, changing only its two workspace helper import URLs.
+// Never alter the compressor worktree or write through the cache junctions.
+const source=process.env.BOARDS_COMPRESSOR??fileURLToPath(new URL('./compress.mjs',import.meta.url));
+const bytes=await readFile(source),original=bytes.toString('utf8');
+let adapted=original;
+for(const file of ['safe-path.mjs','merge-manifests.mjs'])adapted=adapted.replace(`'./${file}'`,JSON.stringify(new URL(file,import.meta.url).href));
+const quantize="await doc.transform(resample(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));";
+if(!adapted.includes(quantize))throw new Error('unexpected-compressor-transform');
+adapted=adapted.replace(quantize,"await doc.transform(resample());\n      if(doc.getRoot().listMeshes().some(m=>m.listPrimitives().some(p=>p.getAttribute('POSITION')))) await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));\n      else report.fallbacks.push({path,reason:'empty-geometry-rig-preserved-without-meshopt'});");
+const staged=await safeOutputPath('assets3d-local/boards/tools/compress.mjs',{force:true});
+await writeOutputFileAtomic(staged,adapted,{force:true});
+const {compressAssets}=await import(pathToFileURL(staged).href);
+const plan=JSON.parse(await readFile('assets3d-local/boards/boards-plan.json'));
+for(const pick of plan.picks){
+  const relative=boardRoot(pick.key),from=join('assets3d-local/boards',relative),out=join('assets3d-local/boards-compressed',relative);
+  try{
+    const old=JSON.parse(await readFile(join(out,'compression-report.json')));
+    if(old.ready){console.log('boards: already compressed',pick.key);continue;}
+  }catch(e){if(e.code!=='ENOENT')throw e;}
+  try{
+    await stat(out);
+    const backup=await safeOutputPath(join('assets3d-local/boards/recovery',`${pick.key}-incomplete`),{directory:true});
+    const {mkdir}=await import('node:fs/promises');await mkdir(join(backup,'..'),{recursive:true});
+    await rename(await safeOutputPath(out,{directory:true}),backup);
+  }catch(e){if(e.code!=='ENOENT')throw e;}
+  console.log('boards: compress',pick.key);
+  const r=await compressAssets({from,out,onProgress:p=>console.log(JSON.stringify({key:pick.key,...p}))});
+  const verified=await finalizeBoardRoot(out);
+  await writeOutputFileAtomic(join('assets3d-local/boards/reports',`${pick.key}-compression.json`),boardPlanJson({compressor:{source,sha256:createHash('sha256').update(bytes).digest('hex')},...r,verified}),{force:true});
+  console.log(JSON.stringify({key:pick.key,before:r.beforeBytes,after:verified.bytes,ready:r.ready}));
+}
