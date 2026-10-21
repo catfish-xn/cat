@@ -566,6 +566,25 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-board .opponent-bench .opponent-cell { height: 34px; }
 .opponent-board .opponent-unit { width: 34px; height: 34px; }
 .opponent-board .opponent-portrait, .opponent-board .opponent-portrait img, .opponent-board .opponent-portrait svg { width: 30px; height: 30px; }
+/* ?render=3d 看对手: the 3D board shows the seat; the panel is one strip under the stage bar (layout thread: same anchor and
+   layer as the panel), its augments as icons with their names on hover, and the way back. The trait column shows the seat's traits. */
+.opponent-board[data-scout-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
+  border-radius: 999px; background: rgba(14, 24, 33, .82); }
+.opponent-board[data-scout-3d] > :is(.opponent-grid, .opponent-bench, .opponent-loose-items, .opponent-traits) { display: none; }
+.opponent-board[data-scout-3d] .opponent-head { display: contents; }
+.opponent-board[data-scout-3d] .opponent-name { order: 0; white-space: nowrap; }
+.opponent-board[data-scout-3d] .opponent-name::before { content: '正在看 '; color: #9aaeb9; font-weight: 400; }
+.opponent-board[data-scout-3d] .opponent-meta { order: 1; flex: none; white-space: nowrap; }
+.opponent-board[data-scout-3d][data-combat] .opponent-meta::after { content: ' · 战斗进行中 · 仅显示阵容'; color: #e6bc76; }
+.opponent-board[data-scout-3d] .public-orbs { order: 2; }
+.opponent-board[data-scout-3d] .opponent-augments { order: 3; flex-wrap: nowrap; }
+.opponent-board[data-scout-3d] .opponent-augment { font-size: 0; padding: 0; background: none; }
+.opponent-board[data-scout-3d] .opponent-empty { display: none; }
+.opponent-anomalies { display: none; }
+.opponent-board[data-scout-3d] .opponent-anomalies { display: inline; order: 3; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #3a2f4a; color: #d9c4ff; cursor: help; white-space: nowrap; }
+.opponent-board[data-scout-3d] .opponent-close { order: 4; }
+.opponent-board[data-scout-3d] .opponent-close::after { content: ' · 空格'; color: #9fb4c2; }
+.trait-column[data-scout] .trait-column-title { color: #e3a08f; }
 /* G1-P7 carousel: a ring over the enemy half of the board; the bench rows below stay visible. */
 .carousel-panel { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
   width: min(640px, calc(100% - 16px)); display: grid; gap: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid #b4a1f5;
@@ -1078,6 +1097,32 @@ body[data-online]:has(.render3d-layer) #online-sidebar { z-index: 1; }
 /* The status and 切回 2D sit in the free corner right of the shop bar; the label wraps rather than run under the bar. */
 body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right: 8px; bottom: 26px; max-width: 220px; flex-wrap: wrap; justify-content: flex-end; }
 
+/* 14.24 炼金男爵黑市 and 机械公敌升级 take the shop cards' place: violet reward card (click accepts) beside the green 不买 card;
+   the bar under them names the source, 微光 and timeout, and online swaps back to the shop (查看商店). */
+.shop-choice .shop-card.shop-offer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 6px !important;
+  line-height: 1.3; text-align: center; overflow: hidden; border-color: #6c5733; background: linear-gradient(180deg, #2d2618, #1b2026); }
+.shop-choice .shop-offer:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #ffd782, 0 4px 14px #0008; }
+.shop-offer :is(.offer-icon, .item-mark) { width: 36px !important; height: 36px !important; flex: none; border-radius: 6px; }
+.shop-offer :is(.offer-name, .market-name) { font-size: 13px; color: #fff3d6; }
+.shop-offer :is(.offer-desc, .market-line) { font-size: 11px; line-height: 1.3; color: #d9c8ec; white-space: normal; }
+.shop-offer .choice-timeout-tag { top: 2px; right: 2px; padding: 0 4px; font-size: 10px; line-height: 14px; background: #1b2026e6; }
+.shop-offer .offer-price { font-size: 12px; font-weight: 700; color: var(--c-gold, #e8c25a); }
+.shop-choice .shop-card.market-reward { border-color: #c79bff; background: linear-gradient(180deg, #2c1e45, #1a1329); box-shadow: inset 0 0 18px #b46cff33; }
+.shop-choice .market-reward:first-child:nth-last-child(2) { grid-column: span 3; }
+.shop-choice .market-reward .item-mark { border: 2px solid #e2c7ff; box-shadow: 0 0 10px #c98bff99; }
+.shop-choice .shop-card.shop-skip { grid-column: span 2; border-color: #5fc98a; background: #1c2a24; }
+.shop-choice .shop-skip .market-line { color: #b7f2cb; }
+.shop-choice-bar, .shop-odds:has(.shop-choice-toggle) { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; }
+.shop-choice-bar strong { color: #f0dcff; }
+.market-meta { color: #e4c9ff; }
+.shop-choice-toggle { min-height: 0; padding: 0 10px; font-size: 11px; line-height: 18px; border-radius: 999px; border-color: #ffd782; }
+body[data-online] .shop-dock .shop-choice-bar { grid-area: top; justify-self: start; align-self: center; flex-wrap: nowrap; min-width: 0; max-width: 100%; margin: 0 !important;
+  overflow: hidden; font-size: 11px !important; white-space: nowrap; }
+body[data-online] .shop-dock .shop-odds:has(.shop-choice-toggle) { flex-wrap: nowrap; }
+/* 3D centres the gold chip on the top row: the bar stays left of it; the long parts shrink first, the toggle never does. */
+body[data-online]:has(.render3d-layer) .shop-dock .shop-choice-bar { max-width: 42%; }
+.shop-dock .shop-choice-bar > :is(.market-meta, .choice-timeout) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.shop-dock .shop-choice-bar > :not(.market-meta, .choice-timeout) { flex: none; }
 /* R1 3D layout (TFT today): the board takes the window. Three columns 232 / board / 232 (184 below 1500px) with no width cap;
    #board-root (the 3D camera's box) fills the middle between the round capsule and the shop instead of the 2D 480:520
    canvas. Left: owned augment icons over the trait strip; the strategy panel starts folded and opens as a drawer over the trait strip, clear of the
@@ -1259,3 +1304,20 @@ body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--od
 .conquest-ladder li.next .ladder-at { color: #ffd27a; font-weight: 700; }
 .conquest-ladder .ladder-left { color: #ffd27a; white-space: nowrap; }
 
+/* TFT bottom-right minimap (3D only): eight small boards in the corner right of the shop; a click scouts that seat.
+   The 3D status bar moves up over it. */
+.scout-minimap { display: none; }
+body[data-online]:has(> .render3d-layer) .scout-minimap:not([hidden]) { position: fixed; z-index: 30; right: 8px; bottom: 8px;
+  width: calc(100vw - 8px - var(--online-shop-left, max(11.6vw - 8px, 0px)) - var(--online-shop-w, min(67vw, 100vw - 236px)) - 16px); height: var(--online-dock-h, 180px);
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 4px; padding: 4px; border-radius: 6px; background: #0b151fcc; }
+body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { bottom: calc(var(--online-dock-h, 180px) + 16px); }
+.minimap-seat { position: relative; min-width: 0; padding: 0; border: 1px solid #1d2f3d; border-radius: 4px; background: #13202b; color: #c9d6e2; cursor: pointer; overflow: hidden; }
+.minimap-seat:hover { border-color: #6c8aa3; }
+.minimap-seat.me { border-color: #4fa3d9; }
+.minimap-seat.opponent { border-color: #d9584f; }
+.minimap-seat.shown { box-shadow: inset 0 0 0 2px #f0c75e; }
+.minimap-seat.eliminated { opacity: 0.35; }
+.minimap-board { position: absolute; inset: 3px 3px 15px; background: repeating-linear-gradient(0deg, #1a2b38 0 1px, transparent 1px 25%); }
+.minimap-board i { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-shadow: 0 0 0 1px #0b151f; }
+.minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }

@@ -83,11 +83,12 @@ describe('pure 3D animation state and optional mixer', () => {
     expect(action.loop).toBe(LoopOnce); expect(action.clampWhenFinished).toBe(true); expect(root.position.x).toBeCloseTo(-2);
     adapter.dispose();
   });
-  it('falls back to idle or gracefully handles absent animations', () => {
+  it('retains idle or gracefully handles absent animations', () => {
     const state = new UnitActionState('u');
     const empty = new UnitAnimationMixer(new Group(), []);
     expect(empty.apply(state.output)).toBe(false); empty.update(0); empty.dispose();
     const idle = new AnimationClip('idle', 1, []), adapter = new UnitAnimationMixer(new Group(), [idle]);
+    adapter.apply(state.output);
     expect(adapter.apply(state.consume({ type: 'cast', sourceId: 'u' }))).toBe(true);
     expect(adapter.mixer.clipAction(idle).isRunning()).toBe(true);
     expect(() => adapter.update(-1)).toThrow(); adapter.dispose();

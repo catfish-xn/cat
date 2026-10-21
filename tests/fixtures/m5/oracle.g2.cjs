@@ -182,7 +182,9 @@ function validateLoot(state){
   }
   const {payload,grantedItemIds,grantedUnitIds}=receipt;
   assert.equal(grantedItemIds.length,payload.kind==='item'?1:0,'actual loot item count');assert.equal(grantedUnitIds.length,payload.kind==='unit'?1:0,'actual loot unit count');
-  itemIds.push(...grantedItemIds);unitIds.push(...grantedUnitIds);if(payload.kind==='item')counters[counterKey(entry.roundId)]+=COMPONENTS.includes(payload.definitionId)?1:2;
+  // Eight random-component candidates are not the complete component taxonomy.
+  // Archived S13 emblem recipes consume one Spatula/Pan plus one normal component.
+  itemIds.push(...grantedItemIds);unitIds.push(...grantedUnitIds);if(payload.kind==='item')counters[counterKey(entry.roundId)]+=[...COMPONENTS,'spatula','frying-pan'].includes(payload.definitionId)?1:2;
  }
  for(const resolution of resolutions.values())assert(choices.some(c=>c.dropId===resolution.dropId)&&receipts.has(resolution.dropId),'resolution requires actual choice receipt');
  assert.equal(new Set(itemIds).size,itemIds.length,'unique loot item identities');assert.equal(new Set(unitIds).size,unitIds.length,'unique loot unit births');assert.deepEqual(loot.guaranteeCounters,counters,'actual-only component counters');

@@ -1,5 +1,9 @@
 # M5 Combat contract v5
 
+## v18 炮手 6：14.24b 的 12/17 B 补丁修正
+
+炮手（Cannoneer，内部 id `artillerist`，归档 `TFT13_Martialist`）6 档成员攻击力加成由 60% 修正为 **70%（7000 Bps）**，依据 `M9_DATA_LEDGER.md` 的 B-12/17 `effects.variables.AD` 行。2/4 档仍为 10%/45%；6 档每 4 次普攻触发的 250% AD 范围物理包不变。运行时表供战斗编译和说明共用，原始归档不改；无公共签名、失败原因、tick 或结算顺序变化。
+
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`, `ability-types.ts` and `strategy-types.ts` define the boundary; [M5_RULES R5–R6](../M5_RULES.md) defines numerical rules and the19 finite abilities. Runtime S13 execution lives in `combat-s13.ts`, `combat-s13-abilities.ts` and `combat-s13-state.ts`. The legacy standalone engine remains for unchanged low-level/historical primitive tests; its max-shield behavior must not be confused with M5 layers.

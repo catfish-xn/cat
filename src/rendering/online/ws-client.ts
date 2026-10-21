@@ -28,9 +28,11 @@ import {
 } from '../../server/net/messages';
 import type { CombatReplay } from '../../presentation/combat-display';
 import type {
-  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, SeatStateView,
+  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LittleLegendId, LobbyView, PlayerView, SeatStateView,
 } from './protocol';
+import { ROOM_DEFAULT_LEGEND } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
+import type { LegendWalkRequest } from '../../server/legend-motion';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
@@ -142,10 +144,11 @@ export class WsGameClient implements GameClient {
     if (this.status) listeners.connection?.(this.status);
     return () => { if (this.listeners === listeners) this.listeners = null; };
   }
-  joinQueue(name: string): void {
+  joinQueue(name: string, legend?: LittleLegendId): void {
     if (this.seatId !== null && this.roomId === null) return;
     this.lobbyError = null;
-    this.post({ type: 'join', name: name.trim().slice(0, 24) || '玩家' });
+    // The default legend is not sent, so a server from before little legends still accepts the join.
+    this.post({ type: 'join', name: name.trim().slice(0, 24) || '玩家', ...(legend && legend !== ROOM_DEFAULT_LEGEND ? { legend } : {}) });
   }
   leaveQueue(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'leaveQueue' }); }
   startMatch(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'start' }); }
@@ -180,6 +183,12 @@ export class WsGameClient implements GameClient {
   get pendingCount(): number { return this.inflight.size; }
   get currentSeatId(): string | null { return this.seatId; }
   get hasToken(): boolean { return this.token !== null; }
+  /** A walk has no receipt: it is not in flight and never retried (the room's `legend` push shows what it took). */
+  walk(request: LegendWalkRequest): boolean {
+    if (!this.ready || !this.bound || this.roomId === null) return false;
+    this.socket!.send(JSON.stringify({ type: 'walk', roomId: this.roomId, ...request, protocolVersion: NET_PROTOCOL_VERSION, commandId: this.nextCommandId++ }));
+    return true;
+  }
   private get ready(): boolean { return !this.disposed && !this.superseded && this.socket !== null && this.socket.readyState === SOCKET_OPEN; }
 
   /* ---------------- outbound ---------------- */
@@ -278,6 +287,7 @@ export class WsGameClient implements GameClient {
       case 'error': return this.onError(message.code, message.message);
       case 'heartbeat': return this.onHeartbeat(message.intervalMs);
       case 'notice': if (message.roomId === this.roomId) this.listeners?.notice?.(message.notice); return;
+      case 'legend': if (message.roomId === this.roomId) this.listeners?.legend?.(message.walk, message.serverNow); return;
     }
   }
   /** The first beat arms the liveness deadline (armLiveness already ran for this message, so arm it now). */

@@ -1,105 +1,113 @@
-# v18：S13 开放 10 级与每 PvE 固定拆卸器
+# v18：10 级、PvE 拆卸器、纹章与高档羁绊
 
-用户试玩反馈及核对线已确认的 14.24 一手数值，用户批准采用：上限 10；9→10 需要 84XP；10 级 1–5 费商店概率 5/10/20/40/25。1–9 级概率、既有升级阈值不变，不开放 11 级。完整概率表只维护 M5_RULES 原表，不在此重复。
+当前 rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`；schema/save/replay/command 保持 8/4/3/4，网络协议、50ms tick 与 lcg32-v1 不变。旧身份/摘要存档拒绝，无迁移。
 
-规则/内容身份：`s13-g2-3-v17` / `s13-14.24b-g2-3-v17` → `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`。progression policy 为 `s13-14.24b-ten-levels-v1`，G23 revision 为 `g2-4b-ten-levels-v18`。schema8/save4/replay3/command4、网络协议4、50ms tick、lcg32-v1 不变；旧身份/摘要存档拒绝，无迁移。
+## 本版改动
 
-完整根离线重算：content `fnv1a32-utf16:05439fc4` → `fnv1a32-utf16:1af51f0b`；loot replay `fnv1a32-utf16:132ae758` → `fnv1a32-utf16:9c8f1388`。两根均覆盖 progression 和 consumables manifest；10 级单项中间摘要 a76be833/854f5ac0 由本轮最终摘要覆盖，不另升版本。使用既有 `scripts/update-content-identities.cjs --write` 更新两个常量，`--check` 校验。
+- 等级上限 10；9→10 需要 84XP；10 级商店概率 5/10/20/40/25。1–9 级概率与既有升级阈值不变，不开放 11 级。progression policy 为 `s13-14.24b-ten-levels-v1`。
+- 每个结算后仍存活的玩家，在每个 PvE 固定获得 1 个装备拆卸器，无持有数量门槛；来源为用户确认的原版 14.23 起规则。独立唯一收据，不改变箱子/法球行、权重或 RNG，重复 step、Continue、恢复不重发。
+- 22 种纹章、16 个铲子/平底锅配方、独立纹章重铸池；恢复两条原始彩色法球的制作组件原子。原生英雄禁穿同羁绊纹章，失败保持原 state。普通组件与成装重铸池保持。
+- 放开来源高档羁绊，18 个新可达档位有合成阵容用例。迅击按目标缺失生命获得攻速、目标死亡触发护盾；搏击手分 40 tick 治疗；法师 8 弱化所有技能命中目标；先知 8 按技能实际 HP 伤害治疗友军。PvP 锁阵容结算读取可信冻结羁绊，保持唯一结算。
+- 收入预览的 `ifWin` / `ifLoss` 增加 `base:number`，直接读取结算规划器；接口见 `MULTIPLAYER_CONTRACT.md` §14.4。
 
-## 改动文件（10 级已提交部分）
+完整来源、接口、档位与延期范围见 [V18_TRAIT_EXPANSION](../../V18_TRAIT_EXPANSION.md)、[MATCH_CONTRACT](../../MATCH_CONTRACT.md) 与 [M5_RULES](../../../M5_RULES.md)。未验证的黑色玫瑰 7/野火帮 4 哈希字段、试验品纹章分身及家人抢劫继续按该文档列为延期。
 
-- `src/simulation/match-rules.ts`：上限、XP、10 级商店行；`content/rules-manifest.ts`：progression policy。
-- `src/simulation/input-assets.ts`、`serialization-structure.ts`、`validate-content.ts`：等级/满级 XP/表覆盖校验统一读取 `MATCH_RULES.maxLevel`。
-- `src/simulation/round-settlement.ts`：`opposingSurvivors` 是结算收据的敌方存活英雄数，传入原经济规划器计算掉血；上界改读 maxLevel（当前10），损伤公式不变。
-- `src/simulation/m8/version.ts`、`m8/contracts.ts`、`content/g2-3-policy.ts`、`content/identity-constants.ts`：版本、revision 和生成摘要。
-- `tests/progression.test.ts`、`shop.test.ts`、`match-economy.test.ts`、`m5-economy.test.ts`、`t3-round-settlement.test.ts`、`t7-bot-policy.test.ts`、`m5-serialization.test.ts`：独立数值表、9→10、10级费用桶全部边界、自然 XP 溢出、满级拒买/机器人不再买、10级读档及11级/满级非零XP拒绝。
-- `tests/match-contract.test.ts`、`m8-contracts.test.ts`、`match-lifecycle.test.ts`、`match-session.test.ts`、`t10-combat-ops.test.ts`、`m8-b6-opening-economy.test.ts`、`m5-acceptance.test.ts`、`d14-anomalies-source.test.ts`、`epic-loot-reforger.test.ts`、`opening-random-identity.test.ts`：同步有效上限或当前身份；保留历史身份断言。
-- `tests/fixtures/m5/{oracle,oracle.g2,command-oracle,command-oracle.g2}.cjs`：独立 oracle 同步确认数值，不从生产规则导入预期值；M3/M4/T13 历史 oracle 不改。
-- `scripts/record-v17-release.cjs`、`verify-m8-herald-fixtures.cjs`：按用户指定沿用 v17 epoch 入口/目录重录当前 v18 身份，CURRENT 继续指向 `record-v17-herald.cjs`，以记录内版本和摘要区分。
-- `docs/MATCH_CONTRACT.md`、`M5_RULES.md` 与本文：同步规则、失败语义、版本及交付边界。
+## PR #355 评审修正：炮手 6
 
-机器人 `src/simulation/bot/index.ts` 已使用 maxLevel；`src/server/` 只转发公共买经验命令，未发现需修改的9级硬编码。九格备战席、共享池5费9份、三星9份、明确指定9级的战斗夹具/路线均不是满级判断，保留。
+炮手（Cannoneer，内部 `artillerist`，归档 `TFT13_Martialist`）6 档攻击力加成 **60% → 70%（7000 Bps）**，依据 [M9_DATA_LEDGER](../../M9_DATA_LEDGER.md) 的 B-12/17 `effects.variables.AD` 修正。与法师 8、狙神 4/6、征服者每箱 5% 同批。
 
-## 10 级单项已完成的验证及录制（本轮最终结果见末尾）
+只修运行时数值表，原始归档保留。战斗和说明都读取该值；2/4 档 10%/45%、6 档每 4 次普攻触发 250% AD 爆炸均不变。契约、独立数值断言和说明测试同步，不新增界面或服务器修改。
 
-最终定向17文件403项全部通过；另当前 epoch 身份/轨迹5项通过（只选择当前相关用例，138项历史/其他用例未运行）、Herald集成30项全部通过，共19文件438项。完整 digest 根校验、`tsc --noEmit`、`git diff --check` 通过；改动文本均为LF。本次未运行全套测试。
+| 摘要 | 本次评审前 | 最终 |
+| --- | --- | --- |
+| CONTENT | `fnv1a32-utf16:697f888d` | `fnv1a32-utf16:213ae9e4` |
+| LOOT_REPLAY | `fnv1a32-utf16:ffebff3f` | `fnv1a32-utf16:ffebff3f` |
 
-`node scripts/verify-v17-epoch.cjs` 的9步全部成功，`docs/evidence/v17/epoch-verification.json` 为 `complete:true`；无需在沙箱外执行录制命令。已实际重跑独立经济账本、4条公共命令路线、5组Herald原始输入、真实restore与逐tick校验；没有用替换旧轨迹版本字段代替重录。以下仅为日后复核命令，均不写Git、不联网：
+## 独立 v18 epoch 与历史恢复
 
-```powershell
-node scripts/update-content-identities.cjs --check
-node scripts/verify-v17-epoch.cjs
-node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers=2 tests/epic-loot-reforger.test.ts tests/m8-b7-match-wiring.test.ts
-node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers=1 tests/opening-random-identity.test.ts -t "binds v17 recording entry|rejects each old|recomputes the first battle|raw checkpoints"
-```
+之前沿用 v17 入口/目录录制 v18 是错误的；用户未授权覆盖 v17 历史。本轮改为独立 `scripts/verify-v18-epoch.cjs`、`scripts/record-v18-{release,inputs,live-reveal}.cjs`、`tests/fixtures/record-v18-herald.cjs`、`scripts/v18-fixture-audit.cjs` 与 `scripts/compare-v18-digests.cjs`。`scripts/verify-m8-herald-fixtures.cjs` 的 CURRENT 已指向 v18。
 
-第二条依次执行 release（含 m5 golden/当前 cannon、sniper 状态）、Herald `--write`、inputs 指纹、live-reveal，然后校验 inputs、CURRENT Herald、历史字节、live-reveal、完整摘要根。固定 baseline 为 `d677a291405ac263b617844d8ae43a604139b7fb`，详细步骤见 `scripts/verify-v17-epoch.cjs`；不需要另跑会覆盖历史 g2-4b 的生成器。
+本地 `origin/multiplayer` 固定提交 `5f33119a68e2ba9e6de45d2eba89b0a0d228c044` 作为历史基线，离线读取 Git blob，将此前被覆盖的 **17 个 v17 文件**恢复为该基线原始 LF/二进制字节。包括 4 份审计、golden、cannon/sniper gzip、C19 输入、7 份 Herald 文件、版本 baseline 及 `record-v17-release.cjs`。具体清单见 [history-restoration.json](history-restoration.json)。v17 的目录、入口及历史断言保留，不再承担当前规则的录制；现用消费者转向 v18。
 
-重录输出位于 `tests/fixtures/m5/full-match-golden.v17.json`、`tests/fixtures/v17-recorded-states/{cannon,sniper}.json.gz`、`tests/fixtures/v17-herald-raw/`（五组原始JSON、manifest、trajectory）、`tests/fixtures/v17-c19-seed-9-minimal.json`、`tests/v17-content-baseline.json` 与 `docs/evidence/v17/{release-audit,input-fixture-audit,live-reveal-audit,epoch-verification}.json`。`v17-b8-fingerprints.json` 重算/核验后字节未变化。V15/V16历史58文件及历史身份断言通过Git只读字节比对。
+`tests/fixtures/g2-4b-herald-raw/manifest.json` 未改写，SHA256 始终为 `b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22`。
 
-`tests/fixtures/g2-4b-herald-raw/manifest.json` SHA256 固定为 `b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22`，本次修改后复核字节一致。全程无 Git 写操作、未写 `.git`、未联网；服务器和界面源文件均未修改。
+新输出：
 
-## 界面侧
+- `tests/fixtures/m5/full-match-golden.v18.json`、`tests/v18-content-baseline.json`。
+- `tests/fixtures/v18-recorded-states/{cannon,sniper}.json.gz`。
+- `tests/fixtures/v18-herald-raw/` 的五组原始 JSON、manifest 与 trajectory；命令构造器独立放在 `v18-herald-support/`。
+- `tests/fixtures/v18-c19-seed-9-minimal.json`、`v18-b8-fingerprints.json`。
+- 本目录的 `release-audit.json`、`input-fixture-audit.json`、`live-reveal-audit.json`、`epoch-verification.json`。
 
-未发现需要修改的9级硬编码。`src/rendering/BoardScene.ts:901–912` 与 `src/rendering/strategy-panel.ts:482–504,1187` 已调用 `getXpToNextLevel` / `getShopOdds`，会随规则显示9级84XP、10级满级和新概率。界面侧只需实际试玩确认这些位置；本次未执行浏览器验收。
+## 录制与核验命令
 
-## PvE 拆卸器追加改动与最终联合录制
-
-原版 14.23 起每个 PvE 给每个存活玩家额外 1 个装备拆卸器，不检查已有数量；来源由本任务用户确认，箱子/法球原拆卸器行不变。原版值与项目结算时点、存活定义、唯一收据等约定分别单列于 MATCH_CONTRACT/M5_RULES 的 v18 PvE 节。
-
-新增 `src/simulation/pve-remover.ts`；`match.ts` 原 PvE 结算调用该纯授予器，`consumables.ts` 恢复验证固定收据，`content/consumables.ts` 将独立固定奖励政策纳入两个摘要根。10 级数值和相关代码保持 HEAD 71bbcdcf 不变；箱子/法球表不改，不新增服务器规则。消耗品无格位/容量规则限制，界面按类型聚合、按一个真实 ID 消费即可。
-
-定向测试补每个 PvE（单人/联机）无击杀、失败存活、HP0、箱子额外拆卸器、积累/恢复/重复 step、伪造收据、共享满席和服务器各存活席发放；服务器动态找持有者，不绑定某个座位。独立 oracle 增加固定奖励收据核验，不从生产实现读取预期。
-
-本项实际文件：
-
-- 规则：`src/simulation/pve-remover.ts`（新增）、`match.ts`、`consumables.ts`、`content/consumables.ts`、`content/identity-constants.ts`。
-- 测试：`tests/pve-remover.test.ts`（新增）、`r3r4-loot.test.ts`、`r3r4-shared.test.ts`、`match-lifecycle.test.ts`、`match-session.test.ts`、`m8-b8-live-cross-round.test.ts`、`d14-anomalies-source.test.ts`、`server/c18b-use-consumable.test.ts`；独立 oracle 为 `tests/fixtures/m5/oracle.g2.cjs`。
-- 录制入口说明：`scripts/record-v17-release.cjs`；生成物沿用上节 v17 epoch 清单，只重录当前身份，不改历史 v15/v16 字节。
-- 文档：`docs/MATCH_CONTRACT.md`、`M5_RULES.md`、本文。
-
-最终相关回归 13 个文件 175 项全部通过；另当前 epoch 身份/轨迹 5 项通过（该文件其余历史/其他 138 项未选择），合计 14 个相关文件 180 项。`tsc --noEmit`、完整摘要根 `--check`、`git diff --check` 通过；未运行全套或浏览器测试。重录前普通状态/Herald 的 8 项 content-digest 不匹配已在最终夹具生成后复测消除。
-
-联合 `verify-v17-epoch.cjs` 九步全部 exitCode=0，`docs/evidence/v17/epoch-verification.json` 为 `complete:true`。四条公共命令路线均胜利完成 33 场，cannon/sniper 各 67 个状态通过完整恢复；五组 Herald 原始输入在导入恢复器前独立导出，并通过完整恢复、开场及后续 15 tick 校验。58 个 v15/v16 历史文件及历史身份断言字节比对通过。相对 10 级单项，首战战斗状态/事件摘要与 RNG 轨迹摘要保持，领域状态/事件因固定奖励收据变化。
-
-本轮已在沙箱完成联合重录，无需沙箱外执行命令。以下为已执行的单份顺序（10 级与本项合并，供复核）：
+在本 LF 克隆执行，所有命令离线，只读 Git 对象，不执行 Git 写操作、不写 `.git`。未运行历史生成器。
 
 ```powershell
 node scripts/update-content-identities.cjs --write
 node scripts/update-content-identities.cjs --check
-node scripts/verify-v17-epoch.cjs
+node scripts/verify-v18-epoch.cjs
 ```
 
-九步包含 golden、Herald --write、inputs/live-reveal 及相应校验，不另跑历史生成器。全程离线、Git 只读，不写 .git。
+九步依次为 release、Herald `--write`、inputs、live-reveal、inputs `--check`、CURRENT Herald 核验、历史字节核验、live-reveal `--check`、两个完整 digest 根比较。本克隆实际执行完毕：[epoch-verification.json](epoch-verification.json) 为 **`complete:true`，9/9 步 exitCode=0**。
 
-## 同版追加：纹章、高档位与 B 类修正（2026-10-21）
+四条公共命令路线均胜利完成 33 场，cannon/sniper 各 67 个状态通过完整 text/object 恢复与序列化字节核验。五组 Herald 在导入生产恢复器前全部导出原始字节，完整恢复、开场和后续 15 tick 验证通过；inputs 与 live-reveal 重生成及 `--check` 一致。
 
-完整来源、规则/函数签名、说明模板接线与延期范围见 [V18_TRAIT_EXPANSION](../../V18_TRAIT_EXPANSION.md)。本次基于 `codex/ten-levels` 的 `566dbe34`，不改等级与固定拆卸器实现，不升版本，不做 Git 写操作、不联网。
+95 个 v15/v16/v17 历史文件、全部历史身份断言及受保护 manifest 字节复核通过。两个完整根从历史源与当前源离线重算并与各自常量一致：v17 为 `05439fc4` / `132ae758`，v18 为 `9aff2c15` / `ffebff3f`（均带 `fnv1a32-utf16:` 前缀）。
 
-- 22种纹章、16个铲子/平底锅配方、22候选的独立纹章重铸池；恢复两条原始彩色法球的铲子/平底锅原子。原生英雄禁穿同羁绊纹章，失败不修改状态；普通8组件/36成装重铸池保持。
-- 放开原生人数与9档截断，18个新可达档位有合成阵容用例（含家人5的数值，不含抢劫）。执行已取证的顶档数值；迅击按目标缺失生命、目标死亡护盾；搏击手40 tick治疗；法师8所有技能命中目标弱化；先知8技能伤害治疗友军。
-- PvP锁阵容结算使用可信冻结战斗收据的羁绊档位，最新运营装备保留；新增纹章不能追溯加收益、拆下纹章不丢本场收益。未锁阵容和显式投影仍精确校验档位，所有路径保留唯一结算与非法范围拒绝。
-- 黑色玫瑰7 `{2e45fc86}:100`、野火帮4 `{0a9a9714}:3.5` 缺少安全字段绑定，未猜语义。用户指定特殊机制和试验品纹章分身实验加成列入 `S13_RULES_GAP.md`。本地未见#344，按授权仅改规则侧，待同步说明位置列在扩展文档。
+## 相关测试结果
 
-| 摘要 | 本轮开始（同版前两项已完成） | 最终 |
-| --- | --- | --- |
-| CONTENT | `fnv1a32-utf16:1af51f0b` | `fnv1a32-utf16:697f888d` |
-| LOOT_REPLAY | `fnv1a32-utf16:9c8f1388` | `fnv1a32-utf16:ffebff3f` |
+```powershell
+node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers=1 tests/v18-emblem-traits.test.ts tests/trait-text.test.ts
+node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers=1 tests/epic-loot-reforger.test.ts tests/c19-missed-pulse.test.ts tests/d11-wiring-bank.test.ts tests/ur-i3-combat-statuses.test.ts tests/b8-resumable-battle.test.ts tests/m8-b7-match-wiring.test.ts --reporter=json --outputFile=artifacts/v18-consumers-related.json
+node node_modules/vitest/vitest.mjs run --configLoader runner --project fast --maxWorkers=1 tests/opening-random-identity.test.ts tests/m8-content-equivalence.test.ts -t "binds|preserves the historical|rejects each old|recomputes the first battle|raw checkpoints|fixture matches the current content baseline" --reporter=json --outputFile=artifacts/v18-identity-related.json
+node node_modules/typescript/bin/tsc --noEmit
+```
 
-最终相关测试：19个文件354项全过，另当前epoch身份/首战/旧身份拒绝3项全过，合计20个文件357项（其余140项历史/其他身份用例未选择）。新增 `v18-emblem-traits.test.ts` 48项，包含每个放开档位的合成阵容、全部配方、来源/重铸、冻结战斗恢复、B类数值、运行时恢复校验、PvP纹章变更的双向结算与幂等。`tsc --noEmit`、完整摘要根 `--check`、`git diff --check` 均通过。未运行全套或浏览器测试。
+分别通过 107、91、12 项，合计 **10 个文件、210 项通过，0 失败**。最后一条定向 Vitest 命令未选择其余 270 项；当前全部 134 个记录状态的完整恢复已在 epoch release 步核验。`tsc --noEmit`、完整根 `--check`、LF 检查及只读 `git diff --check` 通过。
 
-最终联合重录 `node scripts/verify-v17-epoch.cjs` 九步全部 exitCode=0；`../v17/epoch-verification.json` 为 `complete:true`。四条公共命令路线均胜利完成33场，cannon/sniper各67个状态完整恢复；5组Herald在加载恢复器前独立导出原始字节，通过开场及后续15tick恢复。inputs/live-reveal 重新生成并核对；摘要比较通过；58个v15/v16历史文件及对应身份断言字节不变。最终证据使用当前v17录制目录承载v18，不改历史目录。
+只跑与本次规则数值、证据迁移及受影响消费者相关的测试，未跑全套或浏览器验收。生成日志与比较结果保存在不提交的 `artifacts/v18-recording/`。
 
-本轮日志在不提交的 `artifacts/v18-traits-epoch-final.log`、`v18-traits-related-final.log`、`v18-traits-identity-final.log`、`v18-traits-tsc-final.log`、`v18-traits-digest-final.log`。第一次录制在补充冻结装备结算修正前主动中断，最终九步已从头重跑，交付不依赖中断结果。
+## PR #355：tests-4 与 DBoE 追加修正
 
-## 合入 multiplayer 后的收尾（2026-10-21，HEAD a0a63ae5）
+- PvE 拆卸器的 MechanicReceipt 不再整对象复制；所有五种收据均按 kind 白名单投影。测试覆盖真实 PvE 收据、全部类型、注入 futurePlan/rngState、输入不变和引用隔离；`seat` 仍按既有显式公开 JSON 合同复制，`hidden` 为空。同步 MATCH_CONTRACT 与 MULTIPLAYER_CONTRACT。
+- 3-7 的组件当量 **实际 3 正确，旧 oracle 4 错误**。本地官方 en_us 归档的 Spatula/FryingPan composition 为空，纹章配方各消耗其一与普通组件，项目对应 `component/craftingOnly`。原 oracle 用八种随机候选名单作分类，把平底锅误计成装。仅扩充 oracle 的单组件分类；seed 4（甲、斗篷、平底锅）和 seed 730（棒、手套、铲子）均计 3，伪造 4 被拒绝。没有改掉落表、权重、运行时计数或摘要。
+- 恢复平底锅原子也使 `m8-b8-live-transfer` 旧账本断言失效：独立表给出 10 件直接物品、2 个锻造器，另有 3 件补给，共 15 次物品出生；明确核对平底锅唯一收据和资源出生事实，总记录为 77。保持原来购买/升级/成长/出售/装备及迁移场景。
+- `t11-opening-xp` 的独立经验表补齐 `9:84`，保持开局 XP/金币和八席断言。
 
-按本次用户授权同步 `src/presentation/effect-text.ts` 与 #344 的 `trait-text.ts`，全档位遍历保持，覆盖纹章可达档位、数值顶档、迅击/搏击/法师8/先知8修正。法师125 AP、狙神18%/36%读取实际效果，征服者每箱5%读取执行policy；延期机制逐档标“暂未实装”，不改原始归档或规则。未修改 rendering 或服务器实现。
+上述修正与炮手 6 的 70% AD、v18 独立录制入口、v17 历史恢复及当前消费者迁移联合重录。最终结果见下方；初次失败日志保留在 artifacts，最终复测单独记录，不以早期失败或旧 epoch 结果宣称完成。
 
-收入预览的 `ifWin` / `ifLoss` 新增 `base:number`，直接读取结算规划器的基础金币。1-2/1-3/1-4 为2/3/5，之后普通战斗与加时为5，排除利息、胜利、连胜败及掉落；合同同步到 MULTIPLAYER_CONTRACT §14.4。规则测试覆盖两阶段/两分支、开局/PvE/PvP/加时及输入不变；私有席位投影测试逐项比对真实结算。另补齐原 `match-contract` 空场投降断言漏掉的 v18 固定拆卸器收据与事件序号，未修改结算行为。
+最终本轮 **25 个相关文件、381 项通过、0 失败**（同一文件重跑只计最终结果）；身份文件另有 270 项未选择。已完整运行 `t5r-private-seat-view`、`t5r-loot-view`、`t11-opening-xp`、`m8-b8-loot-runtime`、`m8-b8-live-transfer`、`m8-b8-oracle`，以及规则/说明、PvE 发奖、公共路线、账本消费者和受影响 epoch 消费者。汇总及各 JSON 日志路径在 `artifacts/pr355-final-summary.json`，迁移场景最终 19/19 见 `artifacts/pr355-transfer-final.json`。
 
-最终 CONTENT_DIGEST 仍为 `fnv1a32-utf16:697f888d`，LOOT_REPLAY_DIGEST 仍为 `fnv1a32-utf16:ffebff3f`；完整根重算一致，无需更新摘要常量或升版本。接口源码字节改变了 Herald/审计的源码指纹，因此实际执行 `node scripts/verify-v17-epoch.cjs` 全部九步重录与核验，`../v17/epoch-verification.json` 为 `complete:true`、九项 exitCode=0。四条完整路线、五组 Herald、inputs、live-reveal 均重新生成；最终 golden、cannon/sniper 检查点、Herald原始状态及轨迹字节未变，元数据更新到最终源码。58个v15/v16历史文件与历史身份断言字节检查通过。
+最终 `verify-v18-epoch.cjs` 九步全为 exitCode=0，`epoch-verification.json` 为 complete:true；四条路线、134 个检查点的完整恢复、五组 Herald 原始输入及开场/15 tick、inputs/live-reveal 重生成与检查均通过。95 个 v15/v16/v17 历史文件、历史身份断言及受保护 manifest 字节一致；完整根重算为 CONTENT `9aff2c15`、LOOT_REPLAY `ffebff3f`（均带 `fnv1a32-utf16:`）。最终源码类型检查、LF 与 `git diff --check` 通过。仅定向测试，未跑整套 tests-4/全套或浏览器；全程离线、Git 只读，无 Git 写操作。
 
-最终相关回归29文件642项通过，当前身份/首战/恢复5项与Herald集成30项通过，合计31文件677项；身份文件其余138项历史/其他用例未选择。`tsc --noEmit`、两根离线重算、LF及 `git diff --check` 均通过。只跑相关测试，未跑全套或浏览器验收。要求保留的 `tests/fixtures/g2-4b-herald-raw/manifest.json` SHA256 仍为 `b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22`，字节不变；全程离线、Git只读、不写 `.git`。
+## PR #355：DBoE 追加项 5–8 最终复核
 
-本次日志：不提交的 `artifacts/v18-closeout-{related,final-tests,contract-final,identity,herald,tsc-final,epoch}.log`。`final-tests` 记录原契约断言的一次失败，修正后的对应文件12项全过见 `contract-final`；其他文件最终通过，不以删除测试或放宽断言消除失败。
+- **5 / T7 空池**：本机单独复现为 `Empty pooled shop should finish`，并非实际死循环。旧向量设为 9 级、100 金，v18 允许继续买 84 XP，十步预算不能自然收敛。改用实际满级 10 级隔离空池购物；不修改超时、预算或机器人规则。T7 policy 24 项、完整 integration 4 项通过。
+- **6 / D14 digest**：先由 `compare-v18-digests.cjs` 从当前完整根重算，确认 CONTENT 为 `fnv1a32-utf16:9aff2c15`，再替换旧断言 `1af51f0b`。D14 source 4 项通过，`update-content-identities.cjs --check` 通过。
+- **7 / 收益文案（已被用户新决定替代）**：此前恢复的「全队收益／职业成员额外收益／职业成员最终合计」羁绊文案已改为 14.24 官方原文，仍按当前规则值填充；对应浏览器脚本断言也已改为官方关键句。25 羁绊／83 档的来源、翻译、13 条数值差异及最新验证见 [TRAIT_OFFICIAL_TEXT.md](TRAIT_OFFICIAL_TEXT.md)。
+- **8 / G23 授予证据**：3-7 crafting-only 组件计数仍为真实的 3，组件 oracle、loot runtime 与 live transfer 均通过。实际复测另外暴露学院部署伪造未被拒绝：已有战斗的普通存档会跳过历史装备资格检查。现对含学院授予证据的存档执行该检查，覆盖对象/JSON/serialize 入口，保留纹章与历史装备绑定资格；不改授予规则、数值或 digest。`g23-grant-evidence` 全部 15 项通过，合同已补充此恢复入口要求。
+
+前轮收据白名单、3-7 组件 oracle 和 T11 修复均保留并复测；炮手 6 的 70% AD 保留，v18 规则/纹章 48 项通过。最终定向结果按文件去重为 **13 个文件、280 项通过、0 失败、0 跳过**，汇总在 `artifacts/pr355-followup-summary.json`。其中首次 `g23-grant-evidence` 的失败保留在 `pr355-followup-tests.json`，最终 15/15 以 `pr355-followup-regression.json` 为准。`tsc --noEmit` 通过，未跑全套。
+
+浏览器脚本先因 Playwright 自带 Chromium 未安装而失败，未联网下载；随后使用本机 Chrome 完整执行原脚本：
+
+```powershell
+$env:M5_NO_GIT='1'
+$env:VITE_CONFIG_LOADER='runner'
+$env:CHROMIUM_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
+$env:M5_EVIDENCE_DIR='artifacts/pr355-input-chrome'
+node scripts/verify-m5-input.cjs
+```
+
+最终 **39 项、0 跳过、0 页面错误、exitCode=0**，`passed:true`，源文件指纹前后一致；第 341 行对应的 `trait-team-member-and-combined-benefits-visible` 已执行，文字截图为 `trait-audit-benefits.png`，完整 manifest/trace 保存在上述 artifacts 目录。
+
+所有源码修复后重新执行完整 `node scripts/verify-v18-epoch.cjs`，九步全部 exitCode=0，`epoch-verification.json` 为 **complete:true**。当前两个完整根仍为 CONTENT `9aff2c15` / LOOT_REPLAY `ffebff3f`；95 个 v15/v16/v17 历史文件、历史身份断言与受保护 manifest 字节一致。全程仅本机测试与离线 Git 读取，没有 Git 写操作。
+
+## PR #355?DBoE / tests-2 ????? policy ???2026-10-21?
+
+?? 6 ? `G23_TRAIT_SOURCE` ??????? 0.6?? `g2-3-traits.ts` ??? effects ??? 7000 Bps??????????????????????? policy revision ??? `g2-4b-ten-levels-v18`?D14 ????????? CONTENT ? `fnv1a32-utf16:213ae9e4`?????? `9aff2c15`??LOOT_REPLAY ?? `fnv1a32-utf16:ffebff3f`?
+
+????????? v18 epoch ? golden????? exitCode=0?complete:true????????134 ????????? Herald?inputs/live-reveal ??????????95 ? v15/v16/v17 ????????????? manifest ??????`update-content-identities --check`?`tsc --noEmit` ??? `git diff --check` ???
+
+????? 190 ????1 ?????? 270 ??????????????v18 ???D14 ??????????????? `trait-text.test.ts` ??? 6 ????? 60%??????/???????? effects ????????? Codex ???????? `src/presentation/`????????????????????????? JSON ??????????????????????????? `artifacts/pr355-tests2-summary.json`??? inputs ???????????? `pr355-tests2-identity.json`?????? `pr355-tests2-identity-final.json` ???????????????????????? Git ????

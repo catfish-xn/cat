@@ -10,12 +10,12 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { baseCatalogEntry, catalogEntry, itemDescriptions } from './item-codex';
-import { itemDisplayName } from './g23-display';
+import { itemDisplayName, lootEntry } from './g23-display';
 import { G23_LOOT } from './s13-g23-manifest';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
 import { augmentDisplayName, augmentEffectText, augmentPlayerDescription } from './augment-display';
 
-export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number }
+export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number; readonly iconUrl?: string }
 export interface GenericChoiceExtras {
   readonly title?: string;
   /** `payload.prices` (armory): display only, the rules charge. */
@@ -26,6 +26,8 @@ export interface GenericChoiceExtras {
 
 const KNOWN_KINDS: ReadonlySet<string> = new Set(['component', 'augment', 'anomaly']);
 export const isKnownChoiceKind = (kind: string): boolean => KNOWN_KINDS.has(kind);
+/** As in TFT, the Chem-Baron black market and the Junker King armory take the shop row's place instead of a popup. */
+export const isShopChoiceKind = (kind: string): boolean => kind === 'blackMarket' || kind === 'armory';
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);
 const int = (value: unknown): number | undefined => (Number.isInteger(value) ? value as number : undefined);
@@ -33,14 +35,14 @@ const int = (value: unknown): number | undefined => (Number.isInteger(value) ? v
 /**
  * Anvil names. The rules' forge pools decide the heading (artifacts are `kind: 'completed'` in the catalogue, so the kind
  * alone cannot tell them from ordinary completed items); otherwise the item kind every offer shares; mixed or unknown
- * offers keep the plain client name. 成装锻造器 / 神器锻造器 / 辅助装锻造器 follow the user-set names (14.24 lists
+ * offers keep the plain client name. 成装锻造器 / 神器装备锻造器 / 辅助装锻造器 follow the user-set names; the artifact anvil uses the 14.24 zh_cn client name (14.24 lists
  * TFT_ArmoryKeySupport as the support anvil).
  */
 const FORGE_POOL_NAMES: readonly (readonly [readonly string[], string])[] = [
-  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeySupport, '辅助装锻造器'],
+  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器装备锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeySupport, '辅助装锻造器'],
   [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'],
 ];
-const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器锻造器', support: '辅助装锻造器' };
+const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器装备锻造器', support: '辅助装锻造器' };
 function forgeName(offers: readonly unknown[]): string {
   const pooled = FORGE_POOL_NAMES.find(([pool]) => offers.length > 0 && offers.every(id => typeof id === 'string' && pool.includes(id)));
   if (pooled) return pooled[1];
@@ -53,6 +55,8 @@ function defaultTitle(choice: object): string | undefined {
   const { kind, offers, payload } = choice as { kind?: unknown; offers?: unknown; payload?: { source?: unknown } };
   // v16: the 5-7 / 6-7 carriers' forges say where they came from.
   const epic = payload && typeof payload === 'object' && payload.source === 'epic-loot' ? '史诗奖励 · ' : '';
+  if (kind === 'blackMarket') return '炼金男爵 · 黑市';
+  if (kind === 'armory' && payload?.source === 'junker-king') return '机械公敌 · 升级';
   return kind === 'forge' && Array.isArray(offers) ? `${epic}${forgeName(offers)} · ${offers.length} 选 1` : undefined;
 }
 /** Timeout option meaning "skip" (black market): no offer is granted. */
@@ -97,6 +101,17 @@ const junkerName = (id: string): string | undefined => {
   const api = Object.hasOwn(JUNKER_API, id) ? JUNKER_API[id] : undefined;
   return api ? G23_LOOT.find(row => row.apiName === api)?.zh ?? undefined : undefined;
 };
+/**
+ * What each upgrade does, written from the rules' own effects (g2-3-junker, combat-g2-3-junker); the amounts live inline in
+ * the rules, so the lines name the effect only.
+ */
+const JUNKER_TEXT: Readonly<Record<string, string>> = {
+  flamethrower: '每秒对相邻敌人造成魔法伤害，随法术强度提高。', 'petricite-rod': '定期对射程内最远的敌人持续造成魔法伤害，随法术强度提高。',
+  'repairing-microbots': '定期按最大生命值比例回复生命。', 'self-destruct': '护甲和魔抗提高；阵亡时按自身双抗对附近敌人造成魔法伤害。',
+  tankbuster: '定期对双抗最高的敌人造成真实伤害，随法术强度提高。', 'spare-parts': '兰博获得少量生命值和法术强度。',
+  'finishing-touch': '兰博获得大量生命值和法术强度。', 'junkyard-titan': '3 星兰博获得全部升级，受到的伤害大幅降低。',
+};
+const junkerIcon = (id: string): string | undefined => (Object.hasOwn(JUNKER_API, id) ? lootEntry(JUNKER_API[id]!)?.iconUrl ?? undefined : undefined);
 type Named = { readonly name?: string; readonly description?: string; readonly effectDescriptions?: readonly string[] };
 /** Name and verbatim description of one offer id: the declared display entry, else any content definition, else the id. */
 export function genericOffer(id: string, extras: GenericChoiceExtras): GenericChoiceOffer {
@@ -104,7 +119,8 @@ export function genericOffer(id: string, extras: GenericChoiceExtras): GenericCh
   if (declared) return declared;
   const price = extras.prices && Object.hasOwn(extras.prices, id) ? { price: extras.prices[id]! } : {};
   const junker = junkerName(id);
-  if (junker) return { id, name: junker, description: '', ...price };
+  const iconUrl = junkerIcon(id);
+  if (junker) return { id, name: junker, description: JUNKER_TEXT[id] ?? '', ...price, ...(iconUrl ? { iconUrl } : {}) };
   // Augments use the same zh name and player text as the augment choice card (the W4 `name`/`description` are English and implementation notes).
   if (Object.hasOwn(AUGMENT_DEFINITIONS, id)) {
     const description = [augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join(' ');

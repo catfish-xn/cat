@@ -6,7 +6,7 @@
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
  * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
- * Pointer input on the 3D board is replayed through BoardControls (pick() for units, the board plane for drop points):
+ * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
 import {
@@ -15,19 +15,22 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, readParticleMesh,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
-import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
+import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
-import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
+import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
+import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
+import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -80,6 +83,27 @@ const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTE
 const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
+/** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
+const PICK_RADIUS = 0.8;
+
+/**
+ * How close a ray (unit direction) passes to a piece's upright axis, the segment from `base` up `height`. A piece is under the pointer when the distance is within its pick
+ * radius (a capsule around the axis, so the star row on top counts too).
+ */
+function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height: number): number {
+  const ox = origin.x - base.x, oz = origin.z - base.z;
+  const a = direction.x * direction.x + direction.z * direction.z;
+  // Where the ray passes the vertical line closest (seen from above), then clamped onto the segment.
+  let t = a > 1e-12 ? Math.max(0, -(ox * direction.x + oz * direction.z) / a) : 0;
+  const y = origin.y + direction.y * t, clamped = Math.min(base.y + height, Math.max(base.y, y));
+  if (clamped !== y) {
+    // Above or below the segment: the ray's closest point to that end instead.
+    const ex = base.x - origin.x, ey = clamped - origin.y, ez = base.z - origin.z;
+    t = Math.max(0, ex * direction.x + ey * direction.y + ez * direction.z);
+    return Math.hypot(origin.x + direction.x * t - base.x, origin.y + direction.y * t - clamped, origin.z + direction.z * t - base.z);
+  }
+  return Math.hypot(ox + direction.x * t, oz + direction.z * t);
+}
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
@@ -94,6 +118,9 @@ export function useStarColor(next: (level: number) => string): void { starColorF
 // Injected the same way: the 2D theme's meter colors (presentation/theme.ts THEME.color), so 2D and 3D bars match.
 let meterColors: MeterColors = DEFAULT_METER_COLORS;
 export function useMeterColors(next: MeterColors): void { meterColors = next; }
+// Injected the same way: the 2D bundle's item icon URL (presentation/s13-assets.ts), for a scouted seat's items.
+let itemIconFor: (id: string) => string | null = () => null;
+export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
@@ -178,8 +205,13 @@ interface PieceView {
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
+  starLevel: number; form: 'front' | 'back';
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
+  /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
+  facing: string | null;
+  /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
+  readonly turn: HeadingTurn;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -246,9 +278,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     clearTimeout(calloutTimer); calloutTimer = setTimeout(() => callout?.classList.remove('flash'), 1800);
   };
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
+  // Each side's own little legend (board-feed legends) when the root has it, else the default 河灵.
+  const legendModel = (side: 'me' | 'opponent') => {
+    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : LEGEND_MODEL;
+    return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+  };
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
     loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
-    loadEffect });
+    loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
+  // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
+  const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
     loadModel: models.cache ? id => Object.hasOwn(models.cache!.manifest.models, id) ? models.cache!.load(id) : Promise.reject(new Error('unknown-model')) : null });
@@ -272,6 +311,37 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
     () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
+  /**
+   * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
+   * of on the 2D bench coordinates, and points over them are handed back to BoardScene as its own bench slots.
+   */
+  let benchSlots: Vector3[] | null = null;
+  /** Index of the slot within half a slot spacing of (x, z), or -1. */
+  const nearestSlot = (slots: readonly { x: number; z: number }[], x: number, z: number): number => {
+    let best = -1, bestDistance = Infinity, spacing = Infinity;
+    for (let i = 1; i < slots.length; i++) spacing = Math.min(spacing, Math.hypot(slots[i]!.x - slots[i - 1]!.x, slots[i]!.z - slots[i - 1]!.z));
+    const reach = Number.isFinite(spacing) && spacing > 0 ? spacing / 2 : (lastFrame?.hexRadius ?? 34);
+    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z); if (d < reach && d < bestDistance) { best = i; bestDistance = d; } });
+    return best;
+  };
+  const benchOf2d = (frame: BoardFrame, x: number, y: number) => nearestSlot(frame.bench.map(point => ({ x: point.x, z: point.y })), x, y);
+  /**
+   * The arena bench cell under the current ray (`ray` already set from the pointer), or -1: each cell is met on its
+   * own floor height, so a raised strip is not read through the y=0 board plane (off by its height × the view slope).
+   */
+  const benchCellPlane = new Plane(new Vector3(0, 1, 0), 0), benchCellPoint = new Vector3();
+  const arenaBenchAtRay = (): number => {
+    if (!benchSlots) return -1;
+    let best = -1, bestDistance = Infinity;
+    benchSlots.forEach((slot, i) => {
+      benchCellPlane.constant = -slot.y;
+      if (!ray.ray.intersectPlane(benchCellPlane, benchCellPoint)) return;
+      if (nearestSlot(benchSlots!, benchCellPoint.x, benchCellPoint.z) !== i) return;
+      const d = Math.hypot(benchCellPoint.x - slot.x, benchCellPoint.z - slot.z);
+      if (d < bestDistance) { best = i; bestDistance = d; }
+    });
+    return best;
+  };
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
     arena?.place(frame);
@@ -279,6 +349,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}`;
     if (key === boardKey) return;
     boardKey = key;
+    benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
     boardGroup.clear();
     const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
     // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
@@ -303,6 +374,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     boardBox.setFromObject(boardGroup);
     // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
     for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
+    for (const point of benchSlots ?? []) boardBox.expandByPoint(point);
     for (const point of [...tabletop.layout(frame), ...traitProps.layout(frame)]) boardBox.expandByPoint(point);
     frameCamera();
   };
@@ -327,6 +399,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return texture;
     },
   };
+  // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
+  // surroundings and effects are hidden meanwhile and the board takes no input.
+  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
+    loadModel: models.cache ? id => models.cache!.load(id) : null, legendModel: legend => {
+      if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
+      const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
+      return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+    },
+    starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
+  let scoutView: Parameters<typeof scout.show>[0] = null;
   const pawnFor = (team: BoardPiece['team']): Object3D => {
     const pawn = new Group();
     pawn.name = 'render3d-pawn';
@@ -355,7 +437,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       } else view.body = fit(lease.scene, MODEL_HEIGHT, MODEL_WIDTH);
       view.starHeight = (lease.placeholder ? PAWN_HEIGHT : MODEL_HEIGHT * (monster?.height ?? 1)) + STAR_GAP;
       view.root.add(lease.scene);
-      view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
+      view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
     }).catch(() => {
@@ -379,16 +462,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null,
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
+    root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
   };
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
-    view.state = new UnitActionState(id);
+    view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
-    if (view.lease) { view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames); view.mixer.apply(view.state.output); }
+    if (view.lease) {
+      view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.mixer.apply(view.state.output);
+    }
   };
   const removePiece = (view: PieceView) => {
     view.disposed = true;
@@ -473,9 +562,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
+    lastFrame = frame;
+    if (scoutView) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
+    const combatStarted = fighting !== true && frame.fighting;
     if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     const seen = new Set<string>();
@@ -485,6 +577,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       let view = pieces.get(piece.id);
       const created = !view;
       if (!view) { view = createPiece(piece); pieces.set(piece.id, view); }
+      view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
+      // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
+      if (!frame.fighting || combatStarted || created) {
+        const middle = frame.origin.y + (frame.rows - 1) * frame.hexRadius * 1.5 / 2;
+        view.form = Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
+      }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
@@ -504,19 +602,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
-      view.target.set(piece.x, 0, piece.y);
+      const slot = benchSlots ? benchOf2d(frame, piece.x, piece.y) : -1;
+      if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
     tabletop.frame(frame); traitProps.frame(frame);
+  };
+  const face = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId);
+    // Every attack or cast replaces the target: one on itself, on nobody or on a unit not drawn leaves none to follow.
+    if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
-      if (event.type === 'attack') playAction('attack', event.attackerId, event.targetId);
-      else if (event.type === 'cast') playAction('cast', event.sourceId, event.targetIds[0]);
+      if (event.type === 'attack') { face(event.attackerId, event.targetId); playAction('attack', event.attackerId, event.targetId); }
+      else if (event.type === 'cast') { face(event.sourceId, event.targetIds[0]); playAction('cast', event.sourceId, event.targetIds[0]); }
     }
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
@@ -549,8 +653,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
     stage.show(view);
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel,
-    unitAt: client => stage.active ? undefined : pickUnit(client, true) ?? undefined, screenBox: id => stage.active ? undefined : screenBox(id) }) ?? (() => {});
+  // Scouting replaces my board the same way: let go of a press or drag first.
+  const onScout = (view: Parameters<typeof scout.show>[0]) => {
+    if (view && !scout.active) {
+      if (dragging) feed?.controls()?.dragCancel();
+      feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
+    }
+    scoutView = view; scout.show(view, lastFrame);
+  };
+  const mine = () => !stage.active && !scout.active;
+  const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk,
+    unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -563,13 +677,43 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let grid: HexGrid | null = null;
   let press: { id: string; pointerId: number; x: number; y: number } | null = null, dragging: string | null = null;
   const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
-  /** pick() over the drawn pieces: my units for board gestures, any team for item drops (BoardScene judges the target). */
+  /**
+   * The drawn piece under a point: my units for board gestures, any team for item drops (BoardScene judges the target).
+   * Each piece is a hit volume, as in TFT: a capsule (PICK_RADIUS of a hex) around its upright axis from the floor to
+   * its star row. Where volumes overlap the piece whose axis is drawn closest to the pointer wins, not the
+   * nearest surface: a short unit in the cell in front no longer takes an item aimed at the body behind it.
+   * Not the model's triangles: a skinned ray test transforms every vertex by its bones on each pointer move (15–35 ms
+   * with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between limbs, the cell under the feet,
+   * the star row and a body whose cached bounds went stale after it moved could not be clicked.
+   */
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => view.alive && (anyTeam || view.team === 'player')).map(([unitId, view]) => ({ unitId, object: view.root }));
-    const hit = pick(client, area, camera, grid, units);
-    return hit?.kind === 'unit' ? hit.unitId : null;
+    const x = (client.x - area.left) / area.width, y = (client.y - area.top) / area.height;
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    camera.updateMatrixWorld();
+    ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
+    const radius = (grid.radius ?? 36) * PICK_RADIUS;
+    // The capsule decides what is under the pointer; among those, the closest axis on screen wins (in world units a
+    // piece farther from the camera would win a perspective tie it loses on screen).
+    let best: string | null = null, bestDistance = Infinity;
+    for (const [unitId, view] of pieces) {
+      if (!view.alive || !view.root.visible || (!anyTeam && view.team !== 'player')) continue;
+      if (axisDistance(ray.ray.origin, ray.ray.direction, view.root.position, view.starHeight) > radius) continue;
+      const distance = screenAxisDistance(client, area, view.root.position, view.starHeight);
+      if (distance < bestDistance) { best = unitId; bestDistance = distance; }
+    }
+    return best;
+  };
+  const axisFoot = new Vector3(), axisHead = new Vector3();
+  /** CSS-pixel distance from a point to a piece's axis as drawn (both ends projected). */
+  const screenAxisDistance = (client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number },
+    base: Vector3, height: number): number => {
+    const toScreen = (point: Vector3) => ({ x: area.left + (point.x + 1) / 2 * area.width, y: area.top + (1 - point.y) / 2 * area.height });
+    const a = toScreen(axisFoot.copy(base).project(camera)), b = toScreen(axisHead.copy(base).setY(base.y + height).project(camera));
+    const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+    const t = length > 0 ? Math.min(1, Math.max(0, ((client.x - a.x) * dx + (client.y - a.y) * dy) / length)) : 0;
+    return Math.hypot(client.x - (a.x + dx * t), client.y - (a.y + dy * t));
   };
   const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
   const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
@@ -579,10 +723,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const point = ray.ray.intersectPlane(groundPlane, new Vector3());
     return point ? { x: point.x, y: point.z } : null;
   };
+  /** The drag point as BoardScene reads it (move preview and release alike): over an arena bench cell, its 2D slot. */
+  const dragPoint = (event: PointerEvent): { x: number; y: number } | null => {
+    const point = boardPoint(event);
+    const slot = point ? arenaBenchAtRay() : -1, bench = slot >= 0 ? lastFrame?.bench[slot] : undefined;
+    return bench ? { x: bench.x, y: bench.y } : point;
+  };
   const showHint = (hint: BoardDropHint) => {
     marker.visible = !!hint.target;
     if (!hint.target) return;
-    marker.position.set(hint.target.x, 1, hint.target.y);
+    const slot = hint.target.kind === 'bench' && benchSlots && lastFrame ? benchOf2d(lastFrame, hint.target.x, hint.target.y) : -1;
+    if (slot >= 0 && benchSlots?.[slot]) marker.position.copy(benchSlots[slot]!).setY(benchSlots[slot]!.y + 1);
+    else marker.position.set(hint.target.x, 1, hint.target.y);
     const color = hint.allowed ? DROP_COLOR.allowed : DROP_COLOR.refused;
     const material = marker.material as MeshStandardMaterial;
     material.color.set(color); material.emissive.set(color);
@@ -594,12 +746,27 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onPointerDown = (event: PointerEvent) => {
     if (stage.active) {
       if (event.button !== 0 && event.button !== 2) return;
-      // A unit on the carousel (left button): the 2D panel's own slot click (it checks my release and a pick still out);
-      // my legend runs for it while the pick is out. Anywhere else, either button as TFT's right click: my legend walks there.
+      // Either button, as TFT's right click: on a unit I may take my legend runs to it and the room picks it when it gets
+      // there (a client that cannot walk falls back to the panel's own slot click); anywhere else it walks there.
       const client = { x: event.clientX, y: event.clientY };
-      const hit = event.button === 0 ? stage.slotAt(client, viewport()) : null;
-      if (hit?.takable) { feed?.carouselControls?.()?.pick(hit.slot); event.preventDefault(); return; }
-      if (stage.walkTo(client, viewport())) event.preventDefault();
+      const hit = stage.slotAt(client, viewport());
+      if (hit?.takable) {
+        event.preventDefault();
+        if (!legend()?.walk({ scene: 'carousel', slot: hit.slot })) feed?.carouselControls?.()?.pick(hit.slot);
+        else stage.runTo(hit.slot);
+        return;
+      }
+      const to = stage.walkTo(client, viewport());
+      if (to) { event.preventDefault(); legend()?.walk({ scene: 'carousel', to }); }
+      return;
+    }
+    // While scouting the board is the other seat's and takes no input.
+    if (scout.active) return;
+    // Right click: my legend walks there (onto my orb when it is under the pointer, which it then claims).
+    if (event.button === 2) {
+      const point = boardPoint(event);
+      const walk = point && tabletop.walkTo(point, tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport()));
+      if (walk) { event.preventDefault(); legend()?.walk({ scene: 'board', ...walk }); }
       return;
     }
     if (event.button !== 0 || press) return;
@@ -619,6 +786,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       canvas.style.cursor = hit?.takable ? 'pointer' : '';
       return;
     }
+    if (scout.active) return;
     const controls = feed?.controls();
     if (!press || event.pointerId !== press.pointerId) {
       if (press) return;
@@ -635,13 +803,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!controls?.dragStart(press.id)) { endDrag(); return; }
       dragging = press.id; canvas.style.cursor = 'grabbing';
     }
-    const point = boardPoint(event);
-    if (point && controls) showHint(controls.dragMove(point));
+    const target = dragPoint(event);
+    if (target && controls) showHint(controls.dragMove(target));
   };
   const onPointerUp = (event: PointerEvent) => {
     if (!press || event.pointerId !== press.pointerId) return;
     const controls = feed?.controls();
-    if (dragging) controls?.dragEnd(boardPoint(event), { x: event.clientX, y: event.clientY });
+    if (dragging) controls?.dragEnd(dragPoint(event), { x: event.clientX, y: event.clientY });
     else controls?.select(press.id);
     endDrag();
   };
@@ -660,9 +828,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
-  // The carousel walks on a right click too: no browser menu over it.
-  const onContextMenu = (event: Event) => { if (stage.active) event.preventDefault(); };
-  canvas.addEventListener('contextmenu', onContextMenu);
+  // A right click walks my legend (board and carousel), and as in TFT it opens no browser menu over the game (the 3D
+  // view and the panels on it) while the 3D view is up. Links, text fields and selected text keep theirs; the page
+  // outside the game root is untouched.
+  const onContextMenu = (event: Event) => {
+    const target = event.target as Element | null;
+    if (target?.closest?.('a[href], input, textarea, [contenteditable="true"]')) return;
+    if (typeof getSelection === 'function' && getSelection()?.toString()) return;
+    event.preventDefault();
+  };
+  // The game root (#app: panels, shop, sidebars) and the canvas itself, which online moves out of it onto <body>.
+  const app = typeof document === 'undefined' ? null : document.getElementById('app');
+  const menuRoots: EventTarget[] = app ? [app, canvas] : [canvas];
+  const legend = () => feed?.legendControls?.() ?? null;
+  for (const root of menuRoots) root.addEventListener('contextmenu', onContextMenu);
 
   let width = 0, height = 0, frameId = 0, last = performance.now();
   // Online the layer fills the window behind the panels (style.css L12), so it moves from #board-root to <body>: inside
@@ -709,17 +888,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
     for (const [id, view] of pieces) {
-      if (id === dragging) view.root.position.copy(view.target).setY(DRAG_LIFT); // follows the pointer exactly
+      if (id === dragging) view.root.position.copy(view.target).setY(view.target.y + DRAG_LIFT); // follows the pointer exactly
       else {
-        view.root.position.y = 0;
-        const step = view.target.clone().sub(view.root.position);
-        if (step.lengthSq() > 0.25) view.root.rotation.y = Math.atan2(step.x, step.z);
-        else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
+        view.root.position.y = view.target.y; // the floor it stands on: 0, or an arena bench cell's own height
+        const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
+        const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
+        view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
+          alive: view.alive, fighting: !!fighting, position: { x: view.root.position.x, z: view.root.position.z },
+          destination: { x: view.target.x, z: view.target.z }, target }), seconds);
         view.root.position.addScaledVector(step, follow);
       }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
-      if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      if (view.mixer) { view.mixer.update(seconds); view.mixer.apply(output); }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
         view.stars.object.visible = view.root.visible;
@@ -730,15 +911,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); followBox();
-    if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
+    tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
+    if (width > 0) {
+      if (stage.active) renderer.render(stage.scene, stage.camera);
+      else if (scout.active) {
+        // Only the board, the lights and the scouted seat: my pieces, legend, orbs and effects stay out of the picture.
+        const hidden = scene.children.filter(child => child !== boardGroup && child !== arenaGroup && child !== scout.group && !(child as { isLight?: boolean }).isLight && child.visible);
+        for (const child of hidden) child.visible = false;
+        renderer.render(scene, camera);
+        for (const child of hidden) child.visible = true;
+      } else renderer.render(scene, camera);
+    }
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage, scout };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -746,9 +936,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
-        ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
+        ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
+      withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

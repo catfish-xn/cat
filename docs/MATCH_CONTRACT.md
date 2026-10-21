@@ -2,7 +2,9 @@
 
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 
-S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与下节拆卸器合并后的完整根为 CONTENT `fnv1a32-utf16:1af51f0b`、LOOT `fnv1a32-utf16:9c8f1388`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+S13 上限10级，9→10需要84XP；10级商店概率5/10/20/40/25，1–9级不变，不开放11级。progression policy 为 `s13-14.24b-ten-levels-v1`；rules/content 为 `s13-g2-3-v18` / `s13-14.24b-g2-3-v18`，schema/save/replay/command 保持8/4/3/4。与拆卸器、纹章/高档羁绊及炮手修正合并后的完整根为 CONTENT `fnv1a32-utf16:213ae9e4`、LOOT `fnv1a32-utf16:ffebff3f`；旧版本/摘要拒绝，无迁移。机器人、满级购买、输入/存档校验均使用权威 maxLevel；数值来源、测试、录制和界面交接见 [v18 RELEASE_NOTES](evidence/v18/RELEASE_NOTES.md)。
+
+v18 使用独立 `scripts/verify-v18-epoch.cjs`、`record-v18-*.cjs` 与 `docs/evidence/v18/`、`tests/fixtures/v18-*`；CURRENT Herald 指向 `record-v18-herald.cjs`。v17 及更早证据保持历史字节，不作为当前规则录制目录。
 
 ## v18 PvE 固定装备拆卸器（与 10 级同版）
 
@@ -507,7 +509,7 @@ interface SeatMechanicsState {
   version: 'g2-3-seat-mechanics-v1';
   seat: Record<string, MechanicJson>;    // 本席可见，原样进入联机视图
   hidden: Record<string, MechanicJson>;  // 只在权威侧，永不发给客户端（RNG 字、未来候选）
-  receipts: MechanicReceipt[];           // 只追加的收据，本席可见
+  receipts: MechanicReceipt[];           // 只追加的收据，本席按 kind 白名单投影
 }
 readSeatMechanic(state, key) / readHiddenMechanic(state, key)
 writeSeatMechanic(state, key, value | undefined) / writeHiddenMechanic(...)   // 纯函数，undefined 删除
@@ -525,6 +527,8 @@ appendMechanicReceipt(state, receipt) / findMechanicReceipt(state, receiptId)
 - 凡是影响界面显示或客户端选择器（羁绊、属性、previewCombine、previewEquip、getDeploymentCap）的状态都放 `seat`；客户端拿不到 `hidden`，选择器不能读它。
 - 需要界面播提示时，同一命令里发 `{type:'seatMechanicChanged', key}` 事件。
 - `restoreMatch` 只做结构校验（`validateSeatMechanicsState`），各机制自己的不变量由 Codex 补进恢复校验。
+
+私有视图的 `seatMechanicsView(state: MatchState): SeatMechanicsState | undefined` 保留 `seat` 的公开 JSON，`hidden` 固定为空；收据只复制 `receiptId/round/roundId/source/kind` 和各类型已定义字段：gold 的 amount；unit 的 definitionId/resolution/unitId/gold/可选 orbId、starLevel；consumable 的 definitionId/consumableId；item 的 definitionId/itemId；choice 的 choiceKind/optionId/skipped/price/itemId/timedOut。PvE 拆卸器同样走 consumable 分支，额外字段不投影。返回数据与输入无共享可变引用；不改命令签名、失败原因或存档收据。
 
 ### 2 发放与收据（每个 receiptId 只发一次）
 
@@ -547,6 +551,7 @@ reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
 - 存档一致性 A2/A4/A5：首次构造 G23 DTO/atoms 之前，先按经济收据中的轮次、结算身份与事实重推完整奖励包，核对 id、round、source、tier、reward；atoms 只遍历匹配的冻结表项，不按存档数量展开。
 - 学院赠装和拾荒者选择成功后，在 `seatMechanics.hidden.grantEvidence` 逐条记录 `{receiptId,round,resourcePrefixLength,mechanicPrefixLength,economyPrefixLength,level,units}`。快照取授予/选择前，units 为当时持有者的实例、定义、星级、队伍与部署位置；不投影给客户端。
 - 恢复时独立折叠资源前缀并核对快照，校验轮次、前缀顺序、部署合法性、位置唯一性与容量。学院须满足当时 3/4/5 羁绊资格且下一资源事实恰为该物品出生；拾荒者用 seed、已验证购买前缀和当时最强 Rumble 重建菜单，核对 unitId、选项、3 星 titan 及超时默认项。当前单位售出/合星不改历史资格；冻结战斗 DTO 的购买记录须与已验证记录一致。
+  - 含学院授予证据的普通存档也必须重放历史装备绑定并检查授予时的部署资格；已有结算、未携带外部战斗回放或没有 D14 进度均不能跳过此项。对象、JSON 和序列化入口执行相同检查。
 - 相关收据缺少上述新证据即拒绝读取，不迁移、不补造；未触发这些授予的存档不需要空证据字段。规则数值、内容 digest 和各版本不变。
 - 已知边界（约定）：拾荒者购买没有资源出生事实，`resourcePrefixLength` 只要求落在该轮资源窗口内且单调；选择期间允许交易，窗口内任一前缀都对应一条合法操作顺序。没有经验购买账本，`level` 只限在 `[上一轮 levelAfter, 本轮 levelBefore 或当前等级]`。部署位置只要求合法、互不相同且不超容量。
 
