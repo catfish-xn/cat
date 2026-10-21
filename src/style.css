@@ -712,6 +712,9 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
 .consumable-count { color: #ffe6a8; font-weight: 700; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
+/* The item icon follows the pointer while it is dragged (the card stays dimmed in its slot). */
+.item-drag-ghost { position: fixed; left: 0; top: 0; z-index: 95; width: 44px; height: 44px; pointer-events: none; filter: drop-shadow(0 2px 6px #000a); }
+.item-drag-ghost > * { width: 100%; height: 100%; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
 img.consumable-icon { display: inline-block; object-fit: cover; background: #0b151f; flex: none; }
@@ -1310,7 +1313,13 @@ body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--od
 body[data-online]:has(> .render3d-layer) .scout-minimap:not([hidden]) { position: fixed; z-index: 30; right: 8px; bottom: 8px;
   width: calc(100vw - 8px - var(--online-shop-left, max(11.6vw - 8px, 0px)) - var(--online-shop-w, min(67vw, 100vw - 236px)) - 16px); height: var(--online-dock-h, 180px);
   display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 4px; padding: 4px; border-radius: 6px; background: #0b151fcc; }
-body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { bottom: calc(var(--online-dock-h, 180px) + 16px); }
+/* The 3D status bar sits bottom-left above the shop, clear of the player list and minimap on the right; TFT shows no
+   such text, so the "3D 预览" label hides once assets load and only the clickable 切回 2D passes clicks. */
+body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { left: 8px; right: auto; bottom: calc(var(--online-dock-h, 180px) + 16px);
+  max-width: 24vw; flex-wrap: nowrap; align-items: flex-end; justify-content: flex-start; pointer-events: none; }
+body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar button { pointer-events: auto; flex: none; order: -1; }
+body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar .render3d-preload { margin-right: 0; }
+body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] [data-debug="render3d-status"] { display: none; }
 .minimap-seat { position: relative; min-width: 0; padding: 0; border: 1px solid #1d2f3d; border-radius: 4px; background: #13202b; color: #c9d6e2; cursor: pointer; overflow: hidden; }
 .minimap-seat:hover { border-color: #6c8aa3; }
 .minimap-seat.me { border-color: #4fa3d9; }
@@ -1321,3 +1330,4 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { botto
 .minimap-board i { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-shadow: 0 0 0 1px #0b151f; }
 .minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
+.choice-cards .augment-name { font-weight: 700; }

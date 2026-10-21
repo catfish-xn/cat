@@ -8,6 +8,7 @@ import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { readEconomyPreview, readRevealedLoot } from './online/seat-view-adapter';
+import { economyIncomeText } from './online/economy-hint';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -282,6 +283,7 @@ export class StrategyPanel {
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 6) drag.moved = true;
       if (!drag.moved) return;
       drag.element.classList.add('dragging');
+      this.moveDragGhost(drag.element, event.clientX, event.clientY);
       if (drag.tool) {
         const target = this.toolTarget(drag.tool, event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
         if (key === drag.target) return;
@@ -298,7 +300,7 @@ export class StrategyPanel {
     const release = (event: PointerEvent) => {
       const drag = this.itemDrag;
       if (!drag || event.pointerId !== drag.gesture.pointerId) return;
-      this.itemDrag = null; drag.element.classList.remove('dragging');
+      this.itemDrag = null; drag.element.classList.remove('dragging'); this.dropDragGhost();
       if (!this.router.release(drag.gesture)) return;
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
       if (drag.tool) {
@@ -368,7 +370,23 @@ export class StrategyPanel {
       if (target.hasPointerCapture(gesture.pointerId)) target.releasePointerCapture(gesture.pointerId);
       this.itemDrag = null;
     }
+    this.dropDragGhost();
   }
+  /**
+   * The dragged item's icon under the pointer, as TFT carries an item to a unit: a copy of the card's icon at the
+   * cursor (the card itself stays in its slot, dimmed). It takes no pointer events, so drop targets read as before.
+   */
+  private dragGhost: HTMLElement | null = null;
+  private moveDragGhost(card: HTMLElement, x: number, y: number): void {
+    if (!this.dragGhost) {
+      const ghost = element('div', '', 'item-drag-ghost'), icon = card.firstElementChild;
+      ghost.append(icon ? icon.cloneNode(true) : element('span', card.textContent ?? ''));
+      document.body.append(ghost);
+      this.dragGhost = ghost;
+    }
+    this.dragGhost.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+  }
+  private dropDragGhost(): void { this.dragGhost?.remove(); this.dragGhost = null; }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void {
@@ -503,7 +521,7 @@ export class StrategyPanel {
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
-    const chip = (label: string, value: string, kind: string, extra?: HTMLElement) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); stats.append(node); };
+    const chip = (label: string, value: string, kind: string, extra?: HTMLElement, tip = '') => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); if (tip) node.title = tip; stats.append(node); };
     // TFT's interest pips: one per 10 banked gold, five at most. Display only; the payout itself is the economy preview's.
     const pipCount = Math.min(ECONOMY_RULES.interestCap, Math.floor(state.gold / ECONOMY_RULES.interestDivisor));
     const pips = element('span', '', 'hud-interest-pips'); pips.dataset.count = String(pipCount); pips.title = `利息档 ${pipCount}/${ECONOMY_RULES.interestCap}（每 ${ECONOMY_RULES.interestDivisor} 金一档）`;
@@ -511,8 +529,10 @@ export class StrategyPanel {
     const xpBar = element('span', '', 'hud-xp-bar'); xpBar.title = xp === null ? '已满级' : `经验 ${state.xp}/${xp}`;
     const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill);
     // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
-    if (dock) chip('金币', `${state.gold}`, 'gold', pips); else chip('生命', String(state.playerHp), 'hp');
-    if (!dock) chip('金币', `${state.gold}`, 'gold', pips);
+    // As in TFT, hovering gold shows next round's income: base, interest, victory and streak gold, from the same preview.
+    const incomeTip = economy ? `本回合结算预计收入\n${economyIncomeText('胜', economy.ifWin)}\n${economyIncomeText('败/平', economy.ifLoss)}` : '';
+    if (dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip); else chip('生命', String(state.playerHp), 'hp');
+    if (!dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip);
     chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level', xpBar);
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
@@ -546,7 +566,7 @@ export class StrategyPanel {
         button.disabled = true; button.dataset.blockedReason = lootView.reason ?? 'unsettled-round';
         button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
       }
-      if (spectating) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); }
+      if (spectating || (name === 'buy-xp' && xp === null)) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); if (!spectating) button.title = '已满级'; }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
@@ -932,6 +952,7 @@ export class StrategyPanel {
     const pendingLoot = readLootView(state).pendingChoice, loot = pendingLoot?.choiceId === choice.choiceId ? pendingLoot : null;
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
     if (loot) card.dataset.dropId = loot.dropId;
+    if (choice.augmentTier) card.dataset.augmentTier = choice.augmentTier;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
@@ -971,7 +992,12 @@ export class StrategyPanel {
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
-        if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
+        if (choice.kind === 'augment') {
+          // Name and effect as their own blocks (the original card sets the name large); the text content stays the label.
+          const [name = '', ...rest] = label.split('\n');
+          button.replaceChildren(element('strong', name, 'augment-name'), element('span', rest.length ? `\n${rest.join('\n')}` : '', 'augment-desc'));
+          button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label;
+        }
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
         const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
         if (!option || !rerollAugment) { offers.append(button); continue; }
@@ -1056,7 +1082,7 @@ export class StrategyPanel {
     if (payload?.skippable) {
       const skip = this.button('choice-skip', '', () => send(SKIP_OPTION));
       skip.className = 'shop-card shop-offer shop-skip';
-      skip.append(element('strong', '不买 · 跳过', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
+      skip.append(element('strong', '保留', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
       cards.append(skip);
     }
   }
@@ -1251,7 +1277,7 @@ export class StrategyPanel {
     section.append(shop, odds); (this.shopDock ?? this.root).append(section);
   }
   /**
-   * TFT's black market and Junker King upgrades replace the shop cards; 不买 is its own card (the rules' skip option), and
+   * TFT's black market and Junker King upgrades replace the shop cards; 保留 (keep the 微光) is its own card (the rules' skip option), and
    * online, where the shop stays usable through the window, 查看商店 swaps the cards back until the player returns.
    */
   private renderShopChoice(choice: NonNullable<MatchState['pendingChoice']>, token: string): void {
@@ -1275,7 +1301,7 @@ export class StrategyPanel {
       if (offer.iconUrl) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
       cards.append(card);
     }
-    if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动不买' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
+    if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动保留' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
     // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
     if (online) {
       const away = this.button('shop-choice-away', '查看商店', () => { this.shopChoiceAway = token; this.render(); });
