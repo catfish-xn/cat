@@ -101,6 +101,16 @@ const junkerName = (id: string): string | undefined => {
   const api = Object.hasOwn(JUNKER_API, id) ? JUNKER_API[id] : undefined;
   return api ? G23_LOOT.find(row => row.apiName === api)?.zh ?? undefined : undefined;
 };
+/**
+ * What each upgrade does, written from the rules' own effects (g2-3-junker, combat-g2-3-junker); the amounts live inline in
+ * the rules, so the lines name the effect only.
+ */
+const JUNKER_TEXT: Readonly<Record<string, string>> = {
+  flamethrower: '每秒对相邻敌人造成魔法伤害，随法术强度提高。', 'petricite-rod': '定期对射程内最远的敌人持续造成魔法伤害，随法术强度提高。',
+  'repairing-microbots': '定期按最大生命值比例回复生命。', 'self-destruct': '护甲和魔抗提高；阵亡时按自身双抗对附近敌人造成魔法伤害。',
+  tankbuster: '定期对双抗最高的敌人造成真实伤害，随法术强度提高。', 'spare-parts': '兰博获得少量生命值和法术强度。',
+  'finishing-touch': '兰博获得大量生命值和法术强度。', 'junkyard-titan': '3 星兰博获得全部升级，受到的伤害大幅降低。',
+};
 const junkerIcon = (id: string): string | undefined => (Object.hasOwn(JUNKER_API, id) ? lootEntry(JUNKER_API[id]!)?.iconUrl ?? undefined : undefined);
 type Named = { readonly name?: string; readonly description?: string; readonly effectDescriptions?: readonly string[] };
 /** Name and verbatim description of one offer id: the declared display entry, else any content definition, else the id. */
@@ -110,7 +120,7 @@ export function genericOffer(id: string, extras: GenericChoiceExtras): GenericCh
   const price = extras.prices && Object.hasOwn(extras.prices, id) ? { price: extras.prices[id]! } : {};
   const junker = junkerName(id);
   const iconUrl = junkerIcon(id);
-  if (junker) return { id, name: junker, description: '', ...price, ...(iconUrl ? { iconUrl } : {}) };
+  if (junker) return { id, name: junker, description: JUNKER_TEXT[id] ?? '', ...price, ...(iconUrl ? { iconUrl } : {}) };
   // Augments use the same zh name and player text as the augment choice card (the W4 `name`/`description` are English and implementation notes).
   if (Object.hasOwn(AUGMENT_DEFINITIONS, id)) {
     const description = [augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join(' ');

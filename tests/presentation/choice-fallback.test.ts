@@ -65,6 +65,8 @@ describe('generic mechanic choice display', () => {
     const extras = readChoiceExtras(armory);
     expect(genericOffer('spare-parts', extras)).toMatchObject({ name: '备用零件！', price: 0 });
     expect(genericOffer('flamethrower', extras)).toMatchObject({ name: '喷火器', price: 5 });
+    for (const id of ['flamethrower', 'petricite-rod', 'repairing-microbots', 'self-destruct', 'tankbuster', 'spare-parts', 'finishing-touch', 'junkyard-titan'])
+      expect(genericOffer(id, extras).description).toMatch(/[一-鿿]/);
     expect(timeoutOption({ kind: 'blackMarket', payload: { timeoutOption: '@skip' } })).toBe(SKIP_OPTION);
   });
   it('sends the black market and the Junker King armory to the shop row, titled by their 14.24 trait names; forges stay popups', () => {
