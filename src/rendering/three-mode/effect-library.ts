@@ -29,15 +29,24 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
   const reads = { json: 0, texture: 0, mesh: 0 };
   const json = new Map<string, Promise<unknown>>(), textures = new Map<string, Promise<Texture>>(), meshes = new Map<string, Promise<BufferGeometry>>();
   let closed = false;
-  const once = <T>(cache: Map<string, Promise<T>>, url: string, read: () => Promise<T>): Promise<T> => {
+  // After dispose nothing new is read, and a read still in flight is disposed when it lands (an effect that was loading
+  // at the time then fails and plays nothing).
+  const once = <T>(cache: Map<string, Promise<T>>, url: string, read: () => Promise<T>, release?: (value: T) => void): Promise<T> => {
+    if (closed) return Promise.reject(new Error('effect-library-closed'));
     let value = cache.get(url);
-    if (!value) { value = read(); cache.set(url, value); value.catch(() => {}); }
+    if (!value) {
+      value = read().then(result => {
+        if (closed) { release?.(result); throw new Error('effect-library-closed'); }
+        return result;
+      });
+      cache.set(url, value); value.catch(() => {});
+    }
     return value;
   };
   const readJson = (url: string) => once(json, url, () => { reads.json++; return reader.readJson(url); });
-  const readTexture = (url: string) => once(textures, url, () => { reads.texture++; return reader.readTexture(url); });
+  const readTexture = (url: string) => once(textures, url, () => { reads.texture++; return reader.readTexture(url); }, texture => texture.dispose());
   // readParticleMesh parses its own template and disposes it, keeping a static copy: that copy is the one kept.
-  const readMesh = (url: string) => once(meshes, url, () => { reads.mesh++; return readParticleMesh(url, reader.readModel); });
+  const readMesh = (url: string) => once(meshes, url, () => { reads.mesh++; return readParticleMesh(url, reader.readModel); }, mesh => mesh.dispose());
   const budget: ParticleBudget = { live: 0, max: maxParticles };
   const pool = new ParticleMaterialPool();
   return {

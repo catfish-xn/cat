@@ -484,7 +484,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
-    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
+    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
@@ -534,9 +534,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachBody(view); syncStars(view, piece);
     return view;
   };
+  // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
+  // a new action, a new mixer or a removed piece drops it.
+  const held = new WeakMap<PieceView, { seconds: number; revision: number; mixer: UnitAnimationMixer }>();
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
+    held.delete(view);
     view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
@@ -546,7 +550,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
   };
   const removePiece = (view: PieceView) => {
-    view.disposed = true;
+    view.disposed = true; held.delete(view);
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -960,7 +964,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let fpsFrames = 0, fpsSince = 0, timeUpload = false, reported = false;
   // Pieces the board camera cannot see this frame: their skeletons are not posed (the mixer holds the time and catches
   // up when they are seen again). Hidden, off the view, or the board not drawn at all (carousel, scouting).
-  const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere(), held = new Map<PieceView, number>();
+  const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere();
   const seen = (view: PieceView): boolean => {
     if (!view.root.visible || stage.active || scout.active) return false;
     view.root.getWorldPosition(bounds.center).setY(bounds.center.y + MODEL_HEIGHT / 2);
@@ -989,8 +993,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) {
-        if (seen(view)) { view.mixer.update(seconds + (held.get(view) ?? 0)); held.delete(view); }
-        else held.set(view, (held.get(view) ?? 0) + seconds);
+        // Held time catches up only the action it was held for, on the same mixer: a new action starts from its own start.
+        const kept = held.get(view), same = !!kept && kept.mixer === view.mixer && kept.revision === output.revision;
+        if (seen(view)) { view.mixer.update(seconds + (same ? kept!.seconds : 0)); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
+        else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
         view.mixer.apply(output);
       }
       if (view.stars) {
@@ -1043,7 +1049,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); held.clear(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
