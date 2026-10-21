@@ -188,16 +188,16 @@ it('binds v16 to fresh public rules and preserved G2-4b byte evidence', () => {
   }
 });
 
-it('binds v17 to fresh public rules and preserved v16 byte evidence', () => {
+it('binds v17 recording entry to fresh v18 public rules and preserved v16 byte evidence', () => {
   const recorded = currentBaseline(), previous = load('tests/v16-content-baseline.json'), fresh = createMatch(42);
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
     expect(fresh[key]).toBe(recorded[key]);
   expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
-  // v17 has its own identity; retained v16 evidence remains byte-for-byte unchanged.
+  // v18 has its own identity; retained v16 evidence remains byte-for-byte unchanged.
   expect(recorded.contentDigest).not.toBe(previous.contentDigest);
-  expect(recorded.rulesVersion).toBe('s13-g2-3-v17');
-  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v17');
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v18');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v18');
   expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
   expect(recorded.contentVersion).not.toBe(previous.contentVersion);
   expect(recorded.previousContentDigest).toBe(previous.contentDigest);

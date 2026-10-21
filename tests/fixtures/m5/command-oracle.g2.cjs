@@ -54,7 +54,7 @@ function expectedCommand(before, command) {
     state.gold -= 2;
     Object.assign(state, expectedShop(state.rngState, state.shop.generation + 1, state.level, state.shop.locked));
   } else if (command.type === 'buyXp') {
-    if (state.level === 9) return reject('max-level');
+    if (state.level === 10) return reject('max-level');
     if (state.gold < 4) return reject('insufficient-gold');
     const xp = progression(state.level, state.xp, 4);
     state.gold -= 4; state.level = xp.level; state.xp = xp.xp;

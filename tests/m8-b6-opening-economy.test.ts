@@ -70,9 +70,9 @@ describe('B6 isolated opening economy', () => {
   it('preserves active operations and uses the existing progression rules across thresholds and cap', () => {
     const cases = [
       {roundId:'1-2', gold:17, level:3, xp:5, afterGold:19, afterLevel:4, afterXp:1, applied:2, gained:1},
-      {roundId:'1-3', gold:1, level:8, xp:75, afterGold:4, afterLevel:9, afterXp:0, applied:1, gained:1},
+      {roundId:'1-3', gold:1, level:8, xp:75, afterGold:4, afterLevel:9, afterXp:1, applied:2, gained:1},
       {roundId:'1-4', gold:23, level:4, xp:7, afterGold:28, afterLevel:4, afterXp:9, applied:2, gained:0},
-      {roundId:'1-2', gold:3, level:9, xp:0, afterGold:5, afterLevel:9, afterXp:0, applied:0, gained:0},
+      {roundId:'1-2', gold:3, level:10, xp:0, afterGold:5, afterLevel:10, afterXp:0, applied:0, gained:0},
     ];
     for (const c of cases) {
       const plan = planOpeningEconomy(input(c));
@@ -113,7 +113,7 @@ describe('B6 isolated opening economy', () => {
 
   it.each([
     {roundId:'1-1'}, {roundId:'1-5'}, {result:null}, {gold:-1}, {gold:0.5}, {gold:NaN}, {gold:Infinity},
-    {gold:Number.MAX_SAFE_INTEGER}, {level:0}, {level:10}, {xp:-1}, {xp:2}, {level:9,xp:1},
+    {gold:Number.MAX_SAFE_INTEGER}, {level:0}, {level:11}, {xp:-1}, {xp:2}, {level:10,xp:1},
     {streak:{kind:null,count:1}}, {streak:{kind:'win',count:0}}, {streak:{kind:'loss',count:-1}},
     {roundId:'2-1',result:null}, {roundId:'2-4',result:'draw'},
   ] satisfies Partial<OpeningEconomyInput>[])('rejects invalid input without mutation: %j', overrides => {

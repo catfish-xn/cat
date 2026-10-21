@@ -21,7 +21,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     twitchCrit: 'one-roll-per-piercing-attack', chain: 'initial-kill-empower-v1',
     unreachable: ['automata-6','firelight-4','family-4','family-5'] },
   playerDamage: PLAYER_DAMAGE_RULES,
-  progression: {policy:'s13-14.24b-nine-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
+  progression: {policy:'s13-14.24b-ten-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
   opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES, rewards:'shared-stage-plan/per-seat-orb-box-v17/no-legacy-loot-words' },
   equipment: { version: EQUIPMENT_RULES_VERSION, operations: EQUIPMENT_OPERATION_RULES_VERSION,
     multiplayer: MULTIPLAYER_OPERATION_RULES, autoCombine: 'lowest-permanent-component-slot' },

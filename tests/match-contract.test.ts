@@ -10,7 +10,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:8,rulesVersion:'s13-g2-3-v17',contentVersion:'s13-14.24b-g2-3-v17',commandProtocolVersion:4,
+    expect(first).toMatchObject({schemaVersion:8,rulesVersion:'s13-g2-3-v18',contentVersion:'s13-14.24b-g2-3-v18',commandProtocolVersion:4,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -56,7 +56,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(matchStartFailure(over)).toBe('population-cap');
   });
   it('prioritizes phase, max-level, then affordability for F',()=>{
-    const state=readyMatch(),max={...state,level:9,gold:0},poor={...state,gold:3};
+    const state=readyMatch(),max={...state,level:10,xp:0,gold:0},poor={...state,gold:3};
     expect(buyXp(max)).toEqual({ok:false,state:max,reason:'max-level'});expect(buyXp(poor)).toEqual({ok:false,state:poor,reason:'insufficient-gold'});
     const settled=accepted(startMatchCombat(emptyBoard(max)));expect(buyXp(settled)).toEqual({ok:false,state:settled,reason:'wrong-phase'});
   });

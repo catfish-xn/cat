@@ -7,14 +7,14 @@ export const OPENING_INITIAL_STATE = freezeContent({
   unit:{definitionId:{rule:'opening-unit-v1',catalog:'SHOP_CATALOG_BY_COST[1]',stream:'opening-unit-v1/<seatId>',rngAlgorithm:'lcg32-v1',derivation:'fnv1a32-utf16-xor-seed',sampling:'floor-word-times-length-over-2^32',seedXor:0x6f706844},id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
 } as const);
 export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.gold, rerollCost: 2, roundIncome: 5, shopSize: 5,
-  initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 9, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
+  initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 10, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
 /** SR-C7-01: occupied allied preparation locations swap; cap checks the final formation. */
 export const DEPLOYMENT_RULES_VERSION = 'preparation-swap-v1';
 export const DEFAULT_MATCH_SEED = 42;
-export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:76 });
+export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:76, 9:84 });
 export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number, number, number]>> = Object.freeze({
   1:[100,0,0,0,0], 2:[100,0,0,0,0], 3:[75,25,0,0,0], 4:[55,30,15,0,0], 5:[45,33,20,2,0],
-  6:[30,40,25,5,0], 7:[19,30,40,10,1], 8:[18,25,32,22,3], 9:[15,20,25,30,10],
+  6:[30,40,25,5,0], 7:[19,30,40,10,1], 8:[18,25,32,22,3], 9:[15,20,25,30,10], 10:[5,10,20,40,25],
 });
 for (const row of Object.values(SHOP_ODDS)) Object.freeze(row);
 export const SHOP_CATALOG_BY_COST: Readonly<Record<CostTier, readonly string[]>> = Object.freeze({

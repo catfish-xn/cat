@@ -1,4 +1,4 @@
 // Generated from the complete archived content, including explanation/provenance columns.
 // Recompute: node scripts/update-content-identities.cjs --write
-export const CONTENT_DIGEST = 'fnv1a32-utf16:05439fc4';
-export const LOOT_REPLAY_DIGEST = 'fnv1a32-utf16:132ae758';
+export const CONTENT_DIGEST = 'fnv1a32-utf16:a76be833';
+export const LOOT_REPLAY_DIGEST = 'fnv1a32-utf16:854f5ac0';

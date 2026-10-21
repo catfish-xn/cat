@@ -299,7 +299,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     expect(session.state.gold).toBe(1);
   });
   it('rejects thirty max-level F events without spending or advancing anything', () => {
-    const session = new MatchSession({ ...readyMatch(6240), level: 9, xp: 0 }), before = session.state;
+    const session = new MatchSession({ ...readyMatch(6240), level: 10, xp: 0 }), before = session.state;
     for (let i = 0; i < 30; i++) rejected(session, session.buyXp(), 'max-level', before);
   });
   it('replays all accepted/rejected mixed events and isolates other sessions', () => {

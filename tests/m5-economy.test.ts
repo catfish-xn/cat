@@ -70,8 +70,10 @@ describe('M5 independent economic answers', () => {
     const plan = planRoundEconomy(input({ gold: 500, level: 7, xp: 47 }));
     expect(plan.incomeBreakdown.interest).toBe(5);
     expect(plan.progression).toEqual({ level: 8, xp: 1, xpRequested: 2, xpApplied: 2, levelsGained: 1 });
-    expect(planRoundEconomy(input({ level: 8, xp: 75 })).progression).toEqual({ level: 9, xp: 0, xpRequested: 2, xpApplied: 1, levelsGained: 1 });
-    expect(planRoundEconomy(input({ level: 9, xp: 0 })).progression).toEqual({ level: 9, xp: 0, xpRequested: 2, xpApplied: 0, levelsGained: 0 });
+    expect(planRoundEconomy(input({ level: 8, xp: 75 })).progression).toEqual({ level: 9, xp: 1, xpRequested: 2, xpApplied: 2, levelsGained: 1 });
+    expect(planRoundEconomy(input({ level: 9, xp: 0 })).progression).toEqual({ level: 9, xp: 2, xpRequested: 2, xpApplied: 2, levelsGained: 0 });
+    expect(planRoundEconomy(input({ level: 9, xp: 83 })).progression).toEqual({ level: 10, xp: 0, xpRequested: 2, xpApplied: 1, levelsGained: 1 });
+    expect(planRoundEconomy(input({ level: 10, xp: 0 })).progression).toEqual({ level: 10, xp: 0, xpRequested: 2, xpApplied: 0, levelsGained: 0 });
   });
 
   it('is a pure planner, preserving the caller even on rejection', () => {
@@ -85,7 +87,7 @@ describe('M5 independent economic answers', () => {
 
   it.each([
     { gold: -1 }, { gold: Number.MAX_SAFE_INTEGER }, { hp: 101 }, { hp: -1 }, { stage: 1 }, { stage: 7 },
-    { enemySurvivors: 0.5 }, { level: 7, xp: 48 }, { level: 9, xp: 1 }, { result: null },
+    { enemySurvivors: 0.5 }, { level: 7, xp: 48 }, { level: 10, xp: 1 }, { level: 9, xp: 84 }, { result: null },
     { streak: { kind: null, count: 1 } }, { streak: { kind: 'win', count: 0 } },
     { streak: { kind: 'win', count: Number.MAX_SAFE_INTEGER } },
     { roundKind: 'supply', result: 'draw' }, { roundKind: 'supply', result: null, enemySurvivors: 1 },
@@ -97,14 +99,14 @@ describe('M5 independent economic answers', () => {
 });
 
 describe('M5 frozen XP and shop', () => {
-  it('uses the complete frozen level 3–9 table', () => {
-    expect([3, 4, 5, 6, 7, 8, 9].map(getXpToNextLevel)).toEqual([6, 10, 20, 36, 48, 76, null]);
-    expect([3, 4, 5, 6, 7, 8, 9].map(getShopOdds)).toEqual([
+  it('uses the complete frozen level 3–10 table', () => {
+    expect([3, 4, 5, 6, 7, 8, 9, 10].map(getXpToNextLevel)).toEqual([6, 10, 20, 36, 48, 76, 84, null]);
+    expect([3, 4, 5, 6, 7, 8, 9, 10].map(getShopOdds)).toEqual([
       [75,25,0,0,0], [55,30,15,0,0], [45,33,20,2,0], [30,40,25,5,0],
-      [19,30,40,10,1], [18,25,32,22,3], [15,20,25,30,10],
+      [19,30,40,10,1], [18,25,32,22,3], [15,20,25,30,10], [5,10,20,40,25],
     ]);
     expect(grantXp(7, 47, 4)).toEqual({ level: 8, xp: 3, xpRequested: 4, xpApplied: 4, levelsGained: 1 });
-    expect(grantXp(8, 75, 4)).toEqual({ level: 9, xp: 0, xpRequested: 4, xpApplied: 1, levelsGained: 1 });
+    expect(grantXp(9, 83, 4)).toEqual({ level: 10, xp: 0, xpRequested: 4, xpApplied: 1, levelsGained: 1 });
   });
 
   it('has exactly the 60 selectable heroes in stable code-point order', () => {
@@ -114,6 +116,7 @@ describe('M5 frozen XP and shop', () => {
   it.each([
     { level: 3, definitions: ['darius', 'irelia', 'amumu', 'darius', 'ziggs'] },
     { level: 9, definitions: ['camille', 'ezreal', 'blitzcrank', 'cassiopeia', 'zoe'] },
+    { level: 10, definitions: ['cassiopeia', 'drmundo', 'ambessa', 'corki', 'sevika'] },
   ])('seed 42 level $level uses independently tabulated 10-word shop', ({ level, definitions }) => {
     // Independent BigInt LCG tabulation: words 1/3/5/7/9 map to percentiles 25/57/37/44/87;
     // words 2/4/6/8/10 map within each bucket to 8/22/2/11/99 percentiles.
@@ -124,9 +127,9 @@ describe('M5 frozen XP and shop', () => {
   });
 
   it('keeps RNG consumption independent of level and allows seed zero', () => {
-    expect([3,4,5,6,7,8,9].map(level => generateShop(42, 1, level).rngState)).toEqual(Array(7).fill(4271921684));
+    expect([3,4,5,6,7,8,9,10].map(level => generateShop(42, 1, level).rngState)).toEqual(Array(8).fill(4271921684));
     expect(generateShop(0, 1, 3).shop.slots).toHaveLength(5);
     expect(() => generateShop(42, 0, 3)).toThrow(RangeError);
-    expect(() => generateShop(42, 1, 10)).toThrow(RangeError);
+    expect(() => generateShop(42, 1, 11)).toThrow(RangeError);
   });
 });

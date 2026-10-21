@@ -2,7 +2,7 @@ import { validateItemProgram } from './m8/item-program';
 import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
 import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, M8_NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
-import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
+import { MATCH_RULES, SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -191,9 +191,9 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     ||content.schedule.recurring.everyRounds!==ROUND_SCHEDULE.recurring.everyRounds
     ||content.schedule.recurring.randomComponents!==0
     ||content.schedule.fallbackDefinitionId!==ROUND_SCHEDULE.fallbackDefinitionId) fail('Invalid finite schedule boundary');
-  for(let level=1;level<=9;level++) {
+  for(let level=1;level<=MATCH_RULES.maxLevel;level++) {
     const row=SHOP_ODDS[level];if(!row||row.length!==5||row.some(x=>!integer(x))||row.reduce((a,b)=>a+b,0)!==100) fail('Invalid shop odds');
-    if(level<9&&!integer(XP_TO_NEXT_LEVEL[level],1)) fail('Invalid XP');
+    if(level<MATCH_RULES.maxLevel&&!integer(XP_TO_NEXT_LEVEL[level],1)) fail('Invalid XP');
   }
   validateStatBounds(content);
 }

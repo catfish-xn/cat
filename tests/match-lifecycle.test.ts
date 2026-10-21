@@ -35,7 +35,7 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   expect({shop:afterNatural.shop,rngState:afterNatural.rngState}).toEqual(shop(natural.rngState,natural.shop.generation+1,4));
  });
  it('caps XP and records requested versus applied',()=>{
-  for(const[level,xp,applied]of[[8,75,1],[9,0,0]]){const end=accepted(startMatchCombat({...emptyBoard(),level,xp}));expect(end).toMatchObject({level:9,xp:0});expect(end.roundResults[0]).toMatchObject({xpRequested:2,xpAwarded:applied});}
+  for(const[level,xp,applied]of[[9,83,1],[10,0,0]]){const end=accepted(startMatchCombat({...emptyBoard(),level,xp}));expect(end).toMatchObject({level:10,xp:0});expect(end.roundResults[0]).toMatchObject({xpRequested:2,xpAwarded:applied});}
  });
  it('rejects stale or unsettled Continue with the original complete state',()=>{
   const first=finish(battle()),second=freeze(finish(accepted(startMatchCombat(accepted(nextRound(first,1))))));

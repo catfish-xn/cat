@@ -151,7 +151,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
-  requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(state.level === MATCH_RULES.maxLevel ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');

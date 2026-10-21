@@ -11,6 +11,7 @@ import {deriveTraits} from './trait-snapshot';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
+import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
 import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResult } from './match-types';
@@ -77,7 +78,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (r.version !== ROUND_SETTLEMENT_VERSION || !id(r.settlementId) || !id(r.battleId)
       || r.seatId !== state.multiplayer.seatId || r.settlementEligible !== true
       || !['win','loss','draw'].includes(r.result) || !integer(r.damage) || !integer(r.baseDamage)
-      || !integer(r.opposingSurvivors) || r.opposingSurvivors > 9 || !integer(r.combatTicks) || r.combatTicks > 1200
+      || !integer(r.opposingSurvivors) || r.opposingSurvivors > MATCH_RULES.maxLevel || !integer(r.combatTicks) || r.combatTicks > 1200
       || !integer(r.combatEventCount,1) || !Array.isArray(r.growth)) return fail(state,'invalid-receipt');
     if (state.multiplayer.status === 'eliminated') return fail(state,'seat-eliminated');
     if (state.roundResults.some(old => old.round === r.round)

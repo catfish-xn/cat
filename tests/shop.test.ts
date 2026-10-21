@@ -8,7 +8,7 @@ const MODULUS = 4294967296n;
 // Deliberately independent copies: this oracle never calls production RNG/odds/catalog helpers.
 const CATALOG = Object.values(G23_CATALOG);
 const ODDS = [[100, 0, 0, 0, 0], [100, 0, 0, 0, 0], [75, 25, 0, 0, 0], [55, 30, 15, 0, 0],
-  [45, 33, 20, 2, 0], [30, 40, 25, 5, 0], [19, 30, 40, 10, 1], [18, 25, 32, 22, 3], [15, 20, 25, 30, 10]];
+  [45, 33, 20, 2, 0], [30, 40, 25, 5, 0], [19, 30, 40, 10, 1], [18, 25, 32, 22, 3], [15, 20, 25, 30, 10], [5, 10, 20, 40, 25]];
 const word = (seed: bigint) => (seed * 1664525n + 1013904223n) % MODULUS;
 const predecessor = (value: bigint) => ((value - 1013904223n) * 4276115653n % MODULUS + MODULUS) % MODULUS;
 const available = (names: readonly string[]) => names.map(definitionId => ({ status: 'available', definitionId }));
@@ -55,7 +55,7 @@ describe('versioned level-dependent deterministic shop', () => {
   });
 
   it.each([0, 42, 2147483648, 4294967295])('matches an independent BigInt oracle at every level from seed %s', seed => {
-    for (let level = 1; level <= 9; level++) {
+    for (let level = 1; level <= 10; level++) {
       let current = seed;
       for (let generation = 1; generation <= 4; generation++) {
         const actual = generateShop(current, generation, level);
@@ -66,7 +66,7 @@ describe('versioned level-dependent deterministic shop', () => {
   });
 
   it('maps both sides of every cumulative tier threshold and skips zero-probability tiers', () => {
-    for (let level = 1; level <= 9; level++) {
+    for (let level = 1; level <= 10; level++) {
       let cumulative = 0;
       for (const [tier, chance] of ODDS[level - 1].entries()) {
         if (chance === 0) continue;
@@ -122,7 +122,7 @@ describe('versioned level-dependent deterministic shop', () => {
     expect(JSON.stringify(first)).toBe(serialized);
   });
 
-  it.each([0, -1, 10, 3.5, NaN, Infinity])('rejects invalid level %s instead of falling back or resampling', level => {
+  it.each([0, -1, 11, 3.5, NaN, Infinity])('rejects invalid level %s instead of falling back or resampling', level => {
     expect(() => generateShop(42, 1, level)).toThrow(RangeError);
   });
   it.each([0, -1, 1.5, NaN, Infinity])('rejects invalid shop generation %s', generation => {
