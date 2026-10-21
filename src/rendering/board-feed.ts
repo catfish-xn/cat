@@ -101,6 +101,8 @@ export interface BoardCarousel {
 }
 export interface BoardCarouselSlot {
   readonly slot: number; readonly definitionId: string; readonly starLevel: number;
+  /** The unit's shop cost (1–5), from the 2D hero identity; the 3D stage draws the matching quality ring. */
+  readonly cost?: number;
   /** Item ids with the 2D icon URL (null when there is none). */
   readonly items: readonly { readonly id: string; readonly icon: string | null }[];
   /** Taken in the server's view: the layer removes the unit, its items and its feedback. */
