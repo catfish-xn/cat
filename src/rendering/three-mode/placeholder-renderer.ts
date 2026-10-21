@@ -222,7 +222,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
-    loadEffect, starColor: level => starColorFor(level) });
+    loadEffect, starColor: level => starColorFor(level), onReleased: () => flashCallout('可以选了') });
+  // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
+  let callout: HTMLElement | null = null, calloutTimer: ReturnType<typeof setTimeout> | undefined;
+  const flashCallout = (text: string) => {
+    if (typeof document === 'undefined') return;
+    if (!callout) { callout = document.createElement('div'); callout.className = 'render3d-callout'; callout.dataset.debug = 'render3d-callout'; host.append(callout); }
+    callout.textContent = text;
+    callout.classList.remove('flash'); void callout.offsetWidth; callout.classList.add('flash');
+    clearTimeout(calloutTimer); calloutTimer = setTimeout(() => callout?.classList.remove('flash'), 1800);
+  };
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
   const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
     loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
@@ -553,13 +562,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     dragging = null; press = null; marker.visible = false; canvas.style.cursor = '';
   };
   const onPointerDown = (event: PointerEvent) => {
-    if (event.button !== 0 || press) return;
     if (stage.active) {
-      // A unit on the carousel: the 2D panel's own slot click (it checks my release and a pick still out).
-      const hit = stage.slotAt({ x: event.clientX, y: event.clientY }, viewport());
-      if (hit?.takable) { feed?.carouselControls?.()?.pick(hit.slot); event.preventDefault(); }
+      if (event.button !== 0 && event.button !== 2) return;
+      // A unit on the carousel (left button): the 2D panel's own slot click (it checks my release and a pick still out);
+      // my legend runs for it while the pick is out. Anywhere else, either button as TFT's right click: my legend walks there.
+      const client = { x: event.clientX, y: event.clientY };
+      const hit = event.button === 0 ? stage.slotAt(client, viewport()) : null;
+      if (hit?.takable) { feed?.carouselControls?.()?.pick(hit.slot); event.preventDefault(); return; }
+      if (stage.walkTo(client, viewport())) event.preventDefault();
       return;
     }
+    if (event.button !== 0 || press) return;
     // My orb: the orb dock's own click (it decides whether the rules can be asked now).
     const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
     if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
@@ -617,6 +630,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
+  // The carousel walks on a right click too: no browser menu over it.
+  const onContextMenu = (event: Event) => { if (stage.active) event.preventDefault(); };
+  canvas.addEventListener('contextmenu', onContextMenu);
 
   let width = 0, frameId = 0, last = performance.now();
   const resize = (w: number, h: number) => {
@@ -670,9 +686,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
-        ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
+        ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose();
+      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

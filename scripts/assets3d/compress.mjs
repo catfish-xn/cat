@@ -1,16 +1,16 @@
-import { readFile, readdir, lstat, mkdir, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, readdir, lstat, mkdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { resolve, join, dirname, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { realpath } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { NodeIO, Logger } from '@gltf-transform/core';
 import { ALL_EXTENSIONS, KHRTextureBasisu } from '@gltf-transform/extensions';
 import { resample, meshopt } from '@gltf-transform/functions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { encodeToKTX2 } from 'ktx2-encoder';
 import sharp from 'sharp';
-import { safeOutputPath, writeOutputFileAtomic, withinRoot } from './safe-path.mjs';
+import { withinRoot } from './safe-path.mjs';
 import { createPrecache } from './merge-manifests.mjs';
+import { realOutput, ignoredOutput } from './merge-root-output.mjs';
 
 const json = v => Buffer.from(`${JSON.stringify(v, null, 2)}\n`);
 const hash = v => createHash('sha256').update(v).digest('hex');
@@ -25,10 +25,17 @@ export async function compressionIO() {
     'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder,
   }).setLogger(new Logger(Logger.Verbosity.WARN));
 }
-/** Offline only. All writes go to an exclusively created, real assets3d-local directory. */
+/** Write only beneath the validated asset root, with exclusive file creation. */
+async function writeCompressionFile(path, bytes) {
+  const target = await realOutput(path, false);
+  await mkdir(dirname(target), { recursive: true });
+  await realOutput(target, false);
+  await writeFile(target, bytes, { flag: 'wx' });
+}
+/** Offline only. All writes go to an exclusively created, real output directory. */
 export async function compressAssets({ from, out, onProgress = () => {} } = {}) {
   if (!from || !out) throw new Error('usage: --from <asset-root> --out <new-root>');
-  const source = resolve(from), target = await safeOutputPath(resolve(out), { directory: true });
+  const source = resolve(from), target = await ignoredOutput(resolve(out), 'compression-output-not-ignored');
   // Reject even an empty existing directory, junction, or source descendant.
   try { await lstat(resolve(out)); throw new Error('compression-output-exists'); }
   catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -96,7 +103,7 @@ export async function compressAssets({ from, out, onProgress = () => {} } = {}) 
     effectTextureBytes: { before: 0, after: 0 }, models: [], converted: { etc1s: 0, uastc: 0, webp: 0 }, fallbacks: [] };
   const outputFiles = new Map();
   async function put(p, bytes) {
-    await writeOutputFileAtomic(join(target, p), bytes);
+    await writeCompressionFile(join(target, p), bytes);
     outputFiles.set(p, { bytes: bytes.length, sha256: hash(bytes) });
   }
   function rewrite(value, base) {
@@ -181,7 +188,7 @@ export async function compressAssets({ from, out, onProgress = () => {} } = {}) 
   for (let i = 0; i < 5; i++) report.afterBytes = [...outputFiles.values()].reduce((s, f) => s + f.bytes, 0) + json(report).length;
   report.ratio = report.afterBytes / report.beforeBytes;
   for (let i = 0; i < 5; i++) report.afterBytes = [...outputFiles.values()].reduce((s, f) => s + f.bytes, 0) + json(report).length;
-  await writeOutputFileAtomic(join(target, 'compression-report.json'), json(report));
+  await writeCompressionFile(join(target, 'compression-report.json'), json(report));
   return report;
 }
 export function compressionArguments(args) {

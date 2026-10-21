@@ -1,26 +1,27 @@
 // Offline-only batch: reads existing reports/cache; writes only an independent real root.
-import { readFile, lstat, unlink } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, readdir, lstat, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
-import { readdir } from 'node:fs/promises';
-export async function loadBindingTables() {
- const tables = {};
- for (const name of await readdir(new URL('./fx-bindings/', import.meta.url))) {
-  if (!name.endsWith('.mjs') || name.startsWith('batch')) continue;
-  tables[name.slice(0,-4)] = (await import(new URL('./fx-bindings/' + name, import.meta.url))).default;
- }
- return tables;
-}
 import { textureAlphaLookup } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
 import { writeParticleEffects } from './build.mjs';
 import { convertParticleMesh } from './particle-mesh.mjs';
+import { refreshMeshes } from './rebuild-mesh-cache.mjs';
 import { contracts } from './runtime.mjs';
 import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './safe-path.mjs';
 import { argumentsFor } from './plan-fetch.mjs';
 import { readGlb } from './glb.mjs';
 import { readAccessor } from './model.mjs';
+
+export async function loadBindingTables() {
+  const tables = {};
+  for (const name of await readdir(new URL('./fx-bindings/', import.meta.url))) {
+    if (!name.endsWith('.mjs') || name.startsWith('batch')) continue;
+    tables[name.slice(0, -4)] = (await import(new URL('./fx-bindings/' + name, import.meta.url))).default;
+  }
+  return tables;
+}
 
 const json = v => `${JSON.stringify(v, null, 2)}\n`;
 const read = async p => JSON.parse(await readFile(p, 'utf8'));
@@ -95,6 +96,7 @@ export async function fxBatch({ units = '', out = 'assets3d-local/fx-batch-previ
     const prior = report.units[id].particles, source = {}, prefix = `units/${id}/`;
     for (const s of prior.systems) source[s.sourcePath] = JSON.parse((await input(root, s.reportPath)).toString()).originalFields;
     const textures = new Map(report.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), prefix + t.path]));
+    await refreshMeshes(prior.meshes, records, sourceCache);
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, prefix + m.path]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
     const meshBounds = new Map();

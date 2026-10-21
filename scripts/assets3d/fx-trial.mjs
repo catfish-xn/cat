@@ -1,9 +1,9 @@
-import jinxBindings from './fx-bindings/jinx.mjs';
-import viBindings from './fx-bindings/vi.mjs';
+import { createHash } from 'node:crypto';
 import { readFile, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import jinxBindings from './fx-bindings/jinx.mjs';
+import viBindings from './fx-bindings/vi.mjs';
 import { writeParticleEffects } from './build.mjs';
 import { textureAlphaLookup, pngHasEffectiveAlpha } from './texture-alpha.mjs';
 import { convertParticles } from './particles.mjs';
@@ -13,6 +13,7 @@ import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from './sa
 import { argumentsFor } from './plan-fetch.mjs';
 import { particleMode } from './particle-approximate.mjs';
 import { convertParticleMesh } from './particle-mesh.mjs';
+import { refreshMeshes } from './rebuild-mesh-cache.mjs';
 import { globalVfx } from './global-vfx.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
 
@@ -169,6 +170,7 @@ export async function fxTrial({ units = 'jinx,vi', out = units === 'jinx,vi' ? '
     const prior = previous.units[id].particles, particleSource = {};
     for (const system of prior.systems) particleSource[system.sourcePath] = (await read(await safeInputPath(root, join(root, system.reportPath)))).originalFields;
     const textures = new Map(previous.textures.filter(t => t.status === 'converted').map(t => [canonical(t.source), `${prefix}${t.path}`]));
+    await refreshMeshes(prior.meshes, sourceRecords, source);
     const meshes = new Map(prior.meshes.filter(m => m.status === 'converted').map(m => [m.source, `${prefix}${m.path}`]));
     const meshReasons = new Map(prior.meshes.filter(m => m.status !== 'converted').map(m => [m.source, m.reason]));
     const textureAlpha = mode === 'strict' ? undefined : await textureAlphaLookup(previous.textures,

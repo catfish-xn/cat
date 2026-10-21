@@ -93,9 +93,12 @@ export interface BoardCarousel {
   /** The carousel id; a new one rebuilds the stage. */
   readonly id: string;
   readonly slots: readonly BoardCarouselSlot[];
-  /** Public seat order (stable legend anchors); `locked` until the seat's release time, `picked` once it took a unit. */
-  readonly seats: readonly { readonly seatId: string; readonly me: boolean; readonly locked: boolean; readonly picked: boolean }[];
-  /** Logical ms since the carousel opened, as of `at` (performance.now()); the ring's display angle runs from it. */
+  /**
+   * Public seat order (stable legend anchors) with each seat's release time (logical ms; Infinity when the view has none):
+   * the layer holds a seat while the carousel clock is before it, and a seat has picked once a slot names it in `pickedBy`.
+   */
+  readonly seats: readonly { readonly seatId: string; readonly me: boolean; readonly releaseAtMs: number }[];
+  /** Logical ms since the carousel opened, as of `at` (performance.now()); the ring's angle and the release clock run from it. */
   readonly elapsedMs: number;
   readonly at: number;
 }
@@ -105,8 +108,8 @@ export interface BoardCarouselSlot {
   readonly cost?: number;
   /** Item ids with the 2D icon URL (null when there is none). */
   readonly items: readonly { readonly id: string; readonly icon: string | null }[];
-  /** Taken in the server's view: the layer removes the unit, its items and its feedback. */
-  readonly picked: boolean;
+  /** Seat that took it in the server's view, null while it stands: that seat's legend fetches it (the server's own field). */
+  readonly pickedBy: string | null;
   /** The 2D panel would take a click on it now (my batch is out, it still stands, no pick is pending). */
   readonly takable: boolean;
   /** My click on it is still waiting for the server's answer. */

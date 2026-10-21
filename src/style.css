@@ -615,16 +615,25 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
 body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 .carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
-/* ?render=3d: the 3D layer draws the carousel; the panel shrinks to a corner card with its countdown and release order. */
-.carousel-panel[data-ring-3d] { left: auto; right: 8px; transform: none; width: min(300px, calc(100% - 16px)); padding: 8px 10px; background: rgba(14, 24, 33, .86); }
-.carousel-panel[data-ring-3d] .carousel-head { flex-wrap: wrap; }
-.carousel-panel[data-ring-3d] .carousel-status { order: 3; flex-basis: 100%; }
-.carousel-panel[data-ring-3d] .carousel-body { grid-template-columns: 64px minmax(0, 1fr); }
-.carousel-panel[data-ring-3d] .carousel-ring { --size: 64px; width: 64px; height: 64px; background: none; animation: none; }
-.carousel-panel[data-ring-3d] .carousel-ring .carousel-slot { display: none; }
-.carousel-panel[data-ring-3d] .carousel-centre { width: 60px; height: 60px; }
-.carousel-panel[data-ring-3d] .carousel-timer { font-size: 24px; }
-.carousel-panel[data-ring-3d] .carousel-order { max-height: 200px; }
+/* ?render=3d: the 3D layer draws the carousel; the panel shrinks to one strip at the top (title, my line, countdown, the
+   way to my board), as TFT keeps only its stage bar. The release order folds into a list that opens on hover or focus. */
+.carousel-panel[data-ring-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
+  border-radius: 999px; background: rgba(14, 24, 33, .82); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.carousel-panel[data-ring-3d] :is(.carousel-head, .carousel-body) { display: contents; }
+.carousel-panel[data-ring-3d] .carousel-title { order: 0; font-size: 14px; white-space: nowrap; }
+.carousel-panel[data-ring-3d] .carousel-status { order: 1; flex: 0 1 auto; min-width: 0; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.carousel-panel[data-ring-3d] .carousel-ring { order: 2; --size: 34px; width: 34px; height: 34px; flex: none; background: none; animation: none; }
+.carousel-panel[data-ring-3d] .carousel-ring .carousel-slot, .carousel-panel[data-ring-3d] .carousel-timer-unit { display: none; }
+.carousel-panel[data-ring-3d] .carousel-centre { width: 34px; height: 34px; }
+.carousel-panel[data-ring-3d] .carousel-timer { font-size: 18px; font-variant-numeric: tabular-nums; }
+.carousel-panel[data-ring-3d]::after { content: '放行顺序 ▾'; order: 3; font-size: 12px; color: #7e95a4; white-space: nowrap; cursor: default; }
+.carousel-panel[data-ring-3d] .carousel-switch { order: 4; margin-left: 0; }
+.carousel-panel[data-ring-3d] .carousel-order { position: absolute; top: calc(100% - 2px); right: 0; width: 260px; max-height: 260px; padding: 6px; border-radius: 8px;
+  background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
+.carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
+/* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
+body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
+.shop-dock { transition: transform .25s ease, opacity .25s ease; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
 .carousel-holding { position: absolute; z-index: 30; right: 2px; bottom: calc(var(--online-dock-h, 0px) + var(--online-gap, 8px) + 10px); width: 80px; display: grid; gap: 4px;
@@ -900,6 +909,10 @@ body[data-sell-drag] .hover-card { visibility: hidden; }
 .render3d-bar button { font: inherit; color: inherit; background: #23384a; border: 1px solid #3c5a72; border-radius: 4px; padding: 3px 10px; cursor: pointer; }
 .render3d-entry { position: absolute; top: 6px; right: 6px; z-index: 5; font-size: 12px; color: #d8e2ea; background: #23384a; border: 1px solid #3c5a72;
   border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+.render3d-callout { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 6px 22px; border-radius: 999px; font-size: 20px; font-weight: 700;
+  letter-spacing: .08em; color: #68ddd0; background: rgba(10, 16, 24, .78); box-shadow: 0 0 0 1px #68ddd055, 0 0 24px #68ddd044; opacity: 0; pointer-events: none; }
+.render3d-callout.flash { animation: render3d-callout 1.8s ease-out forwards; }
+@keyframes render3d-callout { 0% { opacity: 0; transform: translate(-50%, 8px); } 12%, 70% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 .render3d-notice { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 12px; color: #f0c890; background: rgba(10, 16, 24, .85);
   padding: 3px 10px; border-radius: 4px; pointer-events: none; }
 /* ?render=3d: the 3D layer (z-index 5) covers the board; combat floats stay above it. 2D keeps the default stacking.
