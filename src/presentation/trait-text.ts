@@ -72,6 +72,7 @@ function annotate(id: string, text: string): string {
     mark('【迅击战士】移动得更快');
     mark('【迅击战士】们会冲刺至一个新目标');
   }
+  if (id === 'artillerist') mark('发射一枚造成双倍伤害的火箭。');
   if (id === 'dominator') mark('会基于已消耗的法力值获得可叠加的法术强度');
   if (id === 'emissary') text = text.replace(/【盖伦】：[^\n]+/, '$&（暂未实装）');
   return text;
