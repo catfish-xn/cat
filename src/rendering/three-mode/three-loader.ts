@@ -61,7 +61,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
   layer.append(bar);
   board.append(layer);
 
-  let renderer: Renderer3d | null = null, disposed = false;
+  let renderer: Renderer3d | null = null, disposed = false, preloadClear: ReturnType<typeof setTimeout> | undefined;
   const observer = new ResizeObserver(() => renderer?.resize(layer.clientWidth, layer.clientHeight));
   const dispose = () => {
     if (disposed) return;
@@ -76,7 +76,9 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
 
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   import('./placeholder-renderer')
-    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => { if (!disposed) preload.textContent = text; });
+    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.(text => {
+        // Shown while it changes; six quiet seconds after the last update (done, or stalled) it clears so it never sits on the HUD.
+        if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000); });
       module.useStarColor?.(starColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
