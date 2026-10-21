@@ -1,5 +1,8 @@
 # D7 素材管线
 
+`fx-batch.mjs` / `fx-trial.mjs` 重建时通过 `refreshMeshes` 校验缓存记录的大小和 SHA-256，并重新转换此前因 `unsupported-scb-vertex-colors` 跳过的 SCB/SCO 顶点色网格；缺记录或校验不符即报错。
+`compress.mjs --out` 与 `build-asset-root.mjs` 复用 `realOutput` 检查，可指定任意真实目录；仍拒绝链接、已有输出和与输入重叠的目录，并以独占方式创建文件。
+
 当前包括**第 2 步：Jinx/Vi 原始资源离线转换**和**第 3 步（a）：定向下载器与 60 单位批量构建代码**，后者用法和前置条件见文末。
 第一阶段的整理、核验和盘点工具保留可用，历史说明见下方。
 
