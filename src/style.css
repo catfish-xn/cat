@@ -789,6 +789,7 @@ body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y:
 .unit-card-stats dt { color: #7e95a4; } .unit-card-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
 .unit-card-battle { margin: 0; padding-top: 4px; border-top: 1px solid #2c4350; font-size: 12px; color: #c9d4da; font-variant-numeric: tabular-nums; }
 .trait-card-meta { font-size: 12px; color: #9aaeb9; }
+.trait-card-summary { margin: 0; font-size: 12px; line-height: 1.5; color: #c4d4dc; max-width: 320px; }
 .trait-card-tiers { margin: 0; padding-left: 16px; display: grid; gap: 3px; font-size: 12px; color: #7e95a4; }
 .trait-card-tiers li.reached { color: #e2eef1; }
 .trait-card-members { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
