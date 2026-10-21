@@ -18,6 +18,7 @@ describe('trait rule text', () => {
     expect(traitTierText(ambusher, ambusher.tiers.at(-1)!)).toContain('伤害减免 15%');
     expect(traitTierText(quick, quick.tiers[0])).not.toContain('护盾');
     expect(traitTierText(quick, quick.tiers.at(-1)!)).toContain('200 护盾');
+    expect(traitTierText(quick, quick.tiers[0])).not.toContain('目标');
   });
   it('keeps the authored-effect wording for traits without a row template', () => {
     expect(traitTierText(TRAIT_DEFINITIONS.sentinel, TRAIT_DEFINITIONS.sentinel.tiers[0])).toContain('职业成员最终合计');
