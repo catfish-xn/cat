@@ -10,7 +10,7 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
   let mounted: Renderer3d | undefined, listener: BoardFeedListener;
   let idle: (() => void)[], raf: Map<number, FrameRequestCallback>, nextRaf: number, wall: number, clock: number;
   let reads: string[], parses: string[], uploads: string[], compiles: string[];
-  let manifest: { schemaVersion: 1; models: Record<string, { path: string }> };
+  let manifest: { schemaVersion: 1; models: Record<string, { path: string; unitScale?: number }> };
   let renderer: typeof import('../src/rendering/three-mode/placeholder-renderer');
   let board: typeof import('../src/rendering/board-feed');
   let waitForParse: ((id: string) => Promise<void>) | undefined;
@@ -79,8 +79,8 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     mounted?.dispose(); mounted = undefined; await flush(); vi.clearAllTimers(); vi.useRealTimers();
     vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.doUnmock('three'); vi.resetModules();
   });
-  async function mount(ids: string[], warm: string[] = []) {
-    manifest.models = Object.fromEntries(ids.map(id => [id, { path: `${id}.glb` }]));
+  async function mount(ids: string[], warm: string[] = [], scaled = false) {
+    manifest.models = Object.fromEntries(ids.map(id => [id, { path: `${id}.glb`, ...(scaled ? { unitScale: 1 } : {}) }]));
     renderer.useWarmModels(warm);
     mounted = await renderer.mountRenderer3d({ clientWidth: 800, clientHeight: 600, append() {} } as unknown as HTMLElement, { assetBase: '/synthetic/' });
     await flush(); expect(mounted.status).toBe('assets');
@@ -96,6 +96,57 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     vi.stubGlobal('document', { body: { dataset: { m6Mode: mode === 'active' ? 'active' : 'startup', onlineMode: mode } }, getElementById: () => null,
       createElement: () => ({ width: 0, height: 0, dataset: {}, style: {}, remove() {}, getContext: () => null }) });
   }
+
+  it('queues changed hints only after preload and in a match, preserving hint order and cancelling on leave', async () => {
+    let finish!: () => void;
+    const gate = new Promise<void>(resolve => { finish = resolve; });
+    const { AssetPreloader } = await import('../src/rendering/three-mode/asset-preload');
+    const start = AssetPreloader.prototype.start;
+    vi.spyOn(AssetPreloader.prototype, 'start').mockImplementation(function (this: InstanceType<typeof AssetPreloader>) {
+      return gate.then(() => start.call(this));
+    });
+    browserMode('online-lobby'); board.setBoardWarmHints(['shop', 'opponent', 'scout']);
+    await mount(['shop', 'opponent', 'scout', 'next']);
+    const empty = { ...frame, pieces: [] };
+    listener.frame(empty); expect(idle).toHaveLength(0);
+    browserMode('active'); listener.frame(empty); expect(idle).toHaveLength(0);
+    finish(); await flush(); listener.frame(empty);
+    await stepIdle(); await stepIdle(); await stepIdle();
+    expect(reads).toEqual(['shop', 'opponent', 'scout']);
+    listener.frame(empty); expect(idle).toHaveLength(0);
+    board.setBoardWarmHints(['next']); listener.frame(empty);
+    board.setBoardWarmHints([]); await leaveGame();
+    if (idle.length) await stepIdle();
+    expect(reads).toEqual(['shop', 'opponent', 'scout']);
+    board.setBoardWarmHints(['next']); listener.frame(empty); expect(idle).toHaveLength(0);
+    browserMode('active'); listener.frame(empty); await stepIdle();
+    expect(reads).toEqual(['shop', 'opponent', 'scout', 'next']);
+  });
+
+  it.each(['complete', 'combat interruption', 'mount races warmup'] as const)('shares only completed envelopes with mounting: %s', async situation => {
+    const fit = await import('../src/rendering/three-mode/model-fit');
+    let finish!: (radius: number | null) => void;
+    const sliced = vi.spyOn(fit, 'animationEnvelopeRadiusSliced').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const sync = vi.spyOn(fit, 'animationEnvelopeRadius').mockReturnValue(91);
+    const fitted = vi.spyOn(fit, 'fitModel');
+    await mount(['toy'], ['toy'], true); await stepIdle();
+    expect(sliced).toHaveBeenCalledTimes(1); expect(sync).not.toHaveBeenCalled();
+    if (situation === 'complete') { finish(12); await flush(); }
+    if (situation === 'combat interruption') {
+      listener.frame({ ...frame, pieces: [], fighting: true });
+      expect(sliced.mock.calls[0][2]!.stop!()).toBe(true);
+      finish(null); await flush();
+    }
+    listener.frame(frame); await flush();
+    const radius = situation === 'complete' ? 12 : 91;
+    expect(fitted.mock.calls.at(-1)![1].envelopeRadius).toBe(radius);
+    expect(sync).toHaveBeenCalledTimes(situation === 'complete' ? 0 : 1);
+    if (situation === 'mount races warmup') { finish(12); await flush(); }
+    // A later lease must use the same cache entry; a late warm-up cannot overwrite the synchronous result.
+    listener.frame({ ...frame, pieces: [] }); listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], id: 'later' }] }); await flush();
+    expect(fitted.mock.calls.at(-1)![1].envelopeRadius).toBe(radius);
+    expect(sync).toHaveBeenCalledTimes(situation === 'complete' ? 0 : 1);
+  });
 
   it('warms legends before cost 1–3, one read/parse/upload/compile at a time', async () => {
     const cheap = [SHOP_CATALOG_BY_COST[1][0], SHOP_CATALOG_BY_COST[2][0], SHOP_CATALOG_BY_COST[3][0]];

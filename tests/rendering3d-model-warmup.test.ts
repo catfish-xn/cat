@@ -107,6 +107,44 @@ describe('idle model warm-up', () => {
       expect(read).toHaveBeenCalledTimes(2); held.release();
     } finally { ready.release(); cache.dispose(); }
   });
+
+  it('waits for prepare after upload and retries an interrupted prepare at the front', async () => {
+    const idle: (() => void)[] = [], prepared = deferred<boolean>(), a = lease(), b = lease();
+    let fighting = false;
+    const load = vi.fn(async (id: string) => id === 'a' ? a : b), upload = vi.fn(async () => 1);
+    const prepare = vi.fn().mockReturnValueOnce(prepared.promise).mockResolvedValue(true);
+    warmup = createModelWarmup({ load, upload, prepare, has: () => true, busy: () => fighting, idle: step => idle.push(step) });
+    warmup.want(['a', 'b']); idle.shift()!(); await flush();
+    expect(upload).toHaveBeenCalledExactlyOnceWith(a); expect(prepare).toHaveBeenCalledExactlyOnceWith('a', a);
+    expect(warmup.warmed('a')).toBe(false); expect(a.release).not.toHaveBeenCalled(); expect(idle).toHaveLength(0);
+    fighting = true; prepared.resolve(false); await flush();
+    expect(a.release).toHaveBeenCalledTimes(1); expect(warmup.warmed('a')).toBe(false);
+    fighting = false; await vi.advanceTimersByTimeAsync(500); idle.shift()!(); await flush();
+    expect(load.mock.calls).toEqual([['a'], ['a']]); expect(warmup.warmed('a')).toBe(true);
+    idle.shift()!(); await flush(); expect(load.mock.calls).toEqual([['a'], ['a'], ['b']]);
+    expect(prepare.mock.calls.map(([id]) => id)).toEqual(['a', 'a', 'b']);
+  });
+
+  it('releases an interrupted preparation on dispose without restoring its queue', async () => {
+    const idle: (() => void)[] = [], pending = deferred<boolean>(), model = lease(), load = vi.fn(async () => model);
+    warmup = createModelWarmup({ load, upload: async () => 1, prepare: () => pending.promise,
+      has: () => true, busy: () => false, idle: step => idle.push(step) });
+    warmup.want(['a', 'b']); idle.shift()!(); await flush(); warmup.dispose(); pending.resolve(false); await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(model.release).toHaveBeenCalledTimes(1); expect(warmup.warmed('a')).toBe(false);
+    expect(load).toHaveBeenCalledTimes(1); expect(idle).toHaveLength(0);
+  });
+
+  it('does not queue the active id again when hints change during prepare', async () => {
+    const idle: (() => void)[] = [], pending = deferred<boolean>(), load = vi.fn(async () => lease());
+    const prepare = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(true);
+    warmup = createModelWarmup({ load, upload: async () => 1, prepare, has: () => true, busy: () => false, idle: step => idle.push(step) });
+    warmup.want(['a']); idle.shift()!(); await flush();
+    warmup.want(['a', 'b']); pending.resolve(true); await flush();
+    while (idle.length) { idle.shift()!(); await flush(); }
+    expect(load.mock.calls).toEqual([['a'], ['b']]);
+    expect(prepare.mock.calls.map(([id]) => id)).toEqual(['a', 'b']);
+  });
 });
 
 describe('first-batch timing accounting', () => {

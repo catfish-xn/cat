@@ -14,6 +14,7 @@ class Node {
   append(...nodes: Node[]) { this.children.push(...nodes); }
   prepend(...nodes: Node[]) { this.children.unshift(...nodes); }
   replaceChildren(...nodes: Node[]) { this.children = nodes; }
+  insertAdjacentHTML() {} // portraits and trait icons are passive in this DOM double
   setAttribute(name: string) { this.attributes.add(name); }
   hasAttribute(name: string) { return this.attributes.has(name); }
   toggleAttribute(name: string, on: boolean) { if (on) this.attributes.add(name); else this.attributes.delete(name); }
@@ -158,7 +159,10 @@ describe('3D scouting shop availability', () => {
       render() {} reset() {} cancel() {} destroy() {} status() {}
     } }));
     vi.doMock('../src/presentation/help-panel', () => ({ HelpPanel: class { open = false; destroy() {} } }));
-    vi.doMock('../src/presentation/s13-assets', () => ({ buildPortraitTextures() {}, loadS13Portraits() {}, s13AssetUrl: () => '' }));
+    vi.doMock('../src/presentation/s13-assets', async importOriginal => ({
+      ...await importOriginal<typeof import('../src/presentation/s13-assets')>(),
+      buildPortraitTextures() {}, loadS13Portraits() {}, s13AssetUrl: () => '', heroPortraitHtml: () => '', s13IconHtml: () => '',
+    }));
     const drawn = new Set<string>();
     vi.doMock('../src/presentation/unit-view', () => ({ UnitView: class {
       token: Drawing;
@@ -332,5 +336,43 @@ describe('3D scouting shop availability', () => {
     app!.frame(0); keyboard.expectBlocked();
     off(); off = undefined;
     app!.frame(0); keyboard.expectEnabled();
+  }, 20_000);
+
+  function warmView(): PlayerView {
+    return { ...view, opponentSeatId: 'other', seats: ['me', 'other', 'scout'].map(seatId => ({ ...view.seats[0], seatId, name: seatId,
+      publicBoard: { units: [
+        { definitionId: ({ me: 'powder', other: 'lux', scout: 'garen' }[seatId]!), starLevel: 1, cell: { col: 0, row: 4 }, items: [] },
+        { definitionId: 'amumu', starLevel: 1, cell: { col: 1, row: 4 }, items: [] },
+        { definitionId: 'summoned', starLevel: 1, cell: { col: 2, row: 4 }, items: [], summon: true as const },
+      ], bench: [{ definitionId: `${seatId}-bench`, starLevel: 1, slot: 0, items: [] }] } })) };
+  }
+
+  it('orders own available shop, published opponent board, then scout board; excludes benches and summons and clears on leave', async () => {
+    const board = await import('../src/rendering/board-feed');
+    const keyboard = await mountKeyboard(), published = warmView();
+    listeners.state({ ...keyboard.initial, shop: { generation: 3, slots: [
+      { status: 'available', definitionId: 'ziggs' }, { status: 'purchased' }, { status: 'available', definitionId: 'amumu' },
+      { status: 'purchased' }, { status: 'purchased' },
+    ] } });
+    listeners.view(published); select('scout');
+    listeners.view(published); // a push refreshes hints for the open seat
+    const hints = board.boardFeed.warmHints!();
+    expect(hints.ids).toEqual(['ziggs', 'amumu', 'lux', 'garen']);
+    listeners.view(published); expect(board.boardFeed.warmHints!()).toBe(hints);
+    // The client only follows the public pairing field; it must not guess an opponent from candidates.
+    listeners.view({ ...published, opponentSeatId: null, opponentCandidates: ['other'] });
+    expect(board.boardFeed.warmHints!().ids).toEqual(['ziggs', 'amumu', 'garen']);
+    listeners.connection!({ kind: 'seat-lost' });
+    expect(app!.debug().mode).toBe('online-lobby'); expect(board.boardFeed.warmHints!().ids).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
+  }, 20_000);
+
+  it.each(['open', 'close'] as const)('refreshes hints immediately on scout %s without a server push', async action => {
+    const board = await import('../src/rendering/board-feed');
+    const keyboard = await mountKeyboard();
+    listeners.state({ ...keyboard.initial, shop: { generation: 3, slots: Array.from({ length: 5 }, () => ({ status: 'purchased' as const })) } });
+    listeners.view(warmView()); select('scout');
+    if (action === 'close') { listeners.view(warmView()); select('scout'); }
+    expect(board.boardFeed.warmHints!().ids).toEqual(action === 'open' ? ['lux', 'amumu', 'garen'] : ['lux', 'amumu']);
   }, 20_000);
 });
