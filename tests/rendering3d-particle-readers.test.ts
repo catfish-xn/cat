@@ -88,4 +88,20 @@ describe('particle cached readers', () => {
       expect(readTexture).not.toHaveBeenCalled();
     } finally { effect.dispose(); }
   });
+  it.each([
+    ['an adapter error code', async () => { throw new Error('ambiguous-particle-mesh'); }, 'mesh-resource-unavailable:ambiguous-particle-mesh'],
+    ['an HTTP failure', async () => { throw new Error('particle-http-404'); }, 'mesh-resource-unavailable:http-404'],
+    ['an uncoded failure', async () => { throw new Error('Something odd happened'); }, 'mesh-resource-unavailable:read-failed'],
+  ] as const)('carries the error code for %s in the mesh skip reason', async (_label, readMesh, reason) => {
+    const effect = await loadParticleEffect(manifest, 'sample', { readJson: async () => document, readMesh, readTexture: vi.fn() });
+    try {
+      expect(effect.skipped.mesh).toBe(1);
+      expect(effect.skippedReasons).toEqual([{ emitterIndex: 0, kind: 'mesh', reason }]);
+    } finally { effect.dispose(); }
+  });
+  it('names the missing mesh reader when none is supplied', async () => {
+    const effect = await loadParticleEffect(manifest, 'sample', { readJson: async () => document, readTexture: vi.fn() });
+    try { expect(effect.skippedReasons.map(s => s.reason)).toEqual(['mesh-resource-unavailable:no-mesh-reader']); }
+    finally { effect.dispose(); }
+  });
 });
