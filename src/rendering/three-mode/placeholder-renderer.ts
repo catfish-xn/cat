@@ -630,14 +630,39 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onContextMenu = (event: Event) => { if (stage.active) event.preventDefault(); };
   canvas.addEventListener('contextmenu', onContextMenu);
 
-  let width = 0, frameId = 0, last = performance.now();
+  let width = 0, height = 0, frameId = 0, last = performance.now();
+  // Online the layer fills the window behind the panels (style.css L12), so it moves from #board-root to <body>: inside
+  // #board-frame's size container a fixed layer would stay clipped to the frame. The board keeps #board-root's box: both
+  // cameras are framed for that box and offset so it lands where the box is, the rest of the window showing more scene.
+  // Offline the layer stays in the board and there is no offset.
+  const board = host.parentElement;
+  const page = typeof document === 'undefined' ? null : document.body;
+  let boxKey = '';
+  const readBox = () => board?.getBoundingClientRect?.() ?? null;
+  const frameBox = () => {
+    const view = canvas.getBoundingClientRect?.(), box = readBox();
+    boxKey = box ? `${box.left},${box.top},${box.width},${box.height}` : '';
+    if (!view) return null;
+    if (!box || box.width <= 0 || box.height <= 0 || (Math.abs(box.left - view.left) < 1 && Math.abs(box.top - view.top) < 1
+      && Math.abs(box.width - view.width) < 1 && Math.abs(box.height - view.height) < 1)) return null;
+    return { width: box.width, height: box.height, x: view.left - box.left, y: view.top - box.top };
+  };
   const resize = (w: number, h: number) => {
     if (w <= 0 || h <= 0) return;
-    width = w;
+    width = w; height = h;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    frameCamera(); stage.resize(w / h);
+    const box = frameBox();
+    camera.aspect = box ? box.width / box.height : w / h;
+    if (box) camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else camera.clearViewOffset();
+    frameCamera(); stage.resize(camera.aspect);
+    if (box) stage.camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else stage.camera.clearViewOffset();
+  };
+  // Once a frame: the online page may mark itself after the mount, and the box moves without the layer resizing (the
+  // left panel folding, a resized column, a scrolled page). One rect read; reframed only when it changed.
+  const followBox = () => {
+    if (page?.hasAttribute?.('data-online') && board && host.parentElement === board) page.append(host);
+    const box = readBox();
+    if (width > 0 && (box ? `${box.left},${box.top},${box.width},${box.height}` : '') !== boxKey) resize(width, height);
   };
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
@@ -666,7 +691,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); stage.update(seconds);
+    tabletop.update(seconds); stage.update(seconds); followBox();
     if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
   };
   resize(host.clientWidth, host.clientHeight);
